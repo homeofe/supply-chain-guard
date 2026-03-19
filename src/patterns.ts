@@ -238,6 +238,134 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Campaign-specific patterns (real-world supply-chain attacks)
+// ---------------------------------------------------------------------------
+
+export const CAMPAIGN_PATTERNS: PatternEntry[] = [
+  // --- XZ Utils Backdoor (CVE-2024-3094) ---
+  {
+    name: "xz-get-cpuid",
+    pattern: "_get_cpuid",
+    description:
+      "XZ Utils backdoor indicator: _get_cpuid function (CVE-2024-3094 payload hook)",
+    severity: "critical",
+    rule: "XZ_GET_CPUID",
+  },
+  {
+    name: "xz-lzma-crc64",
+    pattern: "lzma_crc64",
+    description:
+      "XZ Utils backdoor indicator: lzma_crc64 function reference (CVE-2024-3094 hijacked symbol)",
+    severity: "high",
+    rule: "XZ_LZMA_CRC64",
+  },
+  {
+    name: "xz-build-inject",
+    pattern:
+      "gl_cv_host_cpu_c_abi.*=.*configure\\.ac|AM_CONDITIONAL.*\\bgl_INIT\\b|m4/.*\\.m4.*ifnot",
+    description:
+      "XZ Utils backdoor indicator: build system injection pattern in configure.ac/m4 macros",
+    severity: "high",
+    rule: "XZ_BUILD_INJECT",
+  },
+  {
+    name: "xz-obfuscated-test",
+    pattern:
+      "tests/files/.*\\.xz.*\\bhead\\b.*\\btr\\b|\\bxz\\b.*-d.*\\|.*\\bhead\\b.*-c",
+    description:
+      "XZ Utils backdoor indicator: obfuscated test file extraction pattern (hidden payload in test fixtures)",
+    severity: "high",
+    rule: "XZ_OBFUSCATED_TEST",
+  },
+
+  // --- Codecov Bash Uploader ---
+  {
+    name: "codecov-curl-bash",
+    pattern:
+      "curl\\s+[^|]*codecov\\.io[^|]*\\|\\s*(?:bash|sh)",
+    description:
+      "Codecov bash uploader pattern: curl from codecov.io piped to shell (supply-chain risk vector)",
+    severity: "high",
+    rule: "CODECOV_CURL_BASH",
+  },
+  {
+    name: "codecov-exfil",
+    pattern:
+      "codecov[^;]*(?:ENV|TOKEN|SECRET|CREDENTIAL|PASSWORD|API_KEY)|(?:ENV|TOKEN|SECRET|CREDENTIAL|PASSWORD|API_KEY)[^;]*codecov",
+    description:
+      "Codecov exfiltration indicator: environment secrets referenced alongside codecov operations",
+    severity: "high",
+    rule: "CODECOV_EXFIL",
+  },
+
+  // --- SolarWinds SUNBURST ---
+  {
+    name: "sunburst-dga",
+    pattern: "avsvmcloud\\.com",
+    description:
+      "SolarWinds SUNBURST indicator: DGA C2 domain avsvmcloud.com detected",
+    severity: "critical",
+    rule: "SUNBURST_DGA",
+  },
+  {
+    name: "sunburst-orion-class",
+    pattern: "OrionImprovementBusinessLayer",
+    description:
+      "SolarWinds SUNBURST indicator: OrionImprovementBusinessLayer class name (backdoor namespace)",
+    severity: "critical",
+    rule: "SUNBURST_ORION_CLASS",
+  },
+  {
+    name: "sunburst-delayed-exec",
+    pattern:
+      "(?:Thread\\.Sleep|setTimeout|sleep)\\s*\\([^)]*?(?:[0-9]{7,}|\\d+\\s*\\*\\s*(?:3600|86400|60\\s*\\*\\s*60))",
+    description:
+      "SUNBURST-style delayed execution: sleep/timeout exceeding 1 hour (evasion technique to avoid sandbox analysis)",
+    severity: "high",
+    rule: "SUNBURST_DELAYED_EXEC",
+  },
+
+  // --- ua-parser-js hijack ---
+  {
+    name: "uaparser-miner",
+    pattern:
+      "(?:jsextension|jsextension\\.exe|__package\\.json).*(?:curl|wget|https?://)|(?:curl|wget|https?://).*(?:jsextension|jsextension\\.exe|__package\\.json)",
+    description:
+      "ua-parser-js hijack indicator: crypto miner download pattern (jsextension binary)",
+    severity: "critical",
+    rule: "UAPARSER_MINER",
+  },
+  {
+    name: "uaparser-preinstall-download",
+    pattern:
+      "preinstall[\"']?\\s*:\\s*[\"'][^\"']*(?:curl|wget)\\s+https?://[^\"']*(?:\\.exe|\\.sh|\\.bat)",
+    description:
+      "ua-parser-js hijack indicator: preinstall script downloading executables from external domains",
+    severity: "critical",
+    rule: "UAPARSER_PREINSTALL_DL",
+  },
+
+  // --- coa/rc npm hijack ---
+  {
+    name: "coa-rc-sdd-dll",
+    pattern: "sdd\\.dll",
+    description:
+      "coa/rc npm hijack indicator: reference to sdd.dll payload (trojanized npm package artifact)",
+    severity: "critical",
+    rule: "COA_RC_SDD_DLL",
+  },
+  {
+    name: "coa-rc-postinstall-encoded",
+    pattern:
+      "postinstall[\"']?\\s*:\\s*[\"'][^\"']*(?:compile\\.js|(?:Buffer|atob).*(?:exec|spawn|child_process))",
+    description:
+      "coa/rc npm hijack indicator: postinstall script with encoded payload execution",
+    severity: "critical",
+    rule: "COA_RC_POSTINSTALL",
+  },
+];
+
+// ---------------------------------------------------------------------------
 // File extensions to scan
 // ---------------------------------------------------------------------------
 

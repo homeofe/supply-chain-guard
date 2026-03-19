@@ -11,6 +11,7 @@ import type { Finding, ScanOptions, ScanReport, ScanSummary } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import {
   FILE_PATTERNS,
+  CAMPAIGN_PATTERNS,
   SUSPICIOUS_FILES,
   SUSPICIOUS_SCRIPTS,
   SCANNABLE_EXTENSIONS,
@@ -196,8 +197,9 @@ function checkFilePatterns(
   findings: Finding[],
 ): void {
   const lines = content.split("\n");
+  const allPatterns = [...FILE_PATTERNS, ...CAMPAIGN_PATTERNS];
 
-  for (const pattern of FILE_PATTERNS) {
+  for (const pattern of allPatterns) {
     const regex = new RegExp(pattern.pattern, "g");
 
     for (let i = 0; i < lines.length; i++) {
@@ -435,6 +437,33 @@ function generateRecommendations(findings: Finding[]): string[] {
     );
   }
 
+  // Campaign-specific recommendations
+  if (rules.has("XZ_GET_CPUID") || rules.has("XZ_LZMA_CRC64") || rules.has("XZ_BUILD_INJECT") || rules.has("XZ_OBFUSCATED_TEST")) {
+    recommendations.push(
+      "CRITICAL: XZ Utils backdoor indicators detected (CVE-2024-3094). Verify xz/liblzma versions and inspect build scripts for unauthorized modifications.",
+    );
+  }
+  if (rules.has("CODECOV_CURL_BASH") || rules.has("CODECOV_EXFIL")) {
+    recommendations.push(
+      "Codecov supply-chain attack indicators detected. Avoid piping remote scripts to shell. Use pinned checksums for CI uploader binaries.",
+    );
+  }
+  if (rules.has("SUNBURST_DGA") || rules.has("SUNBURST_ORION_CLASS") || rules.has("SUNBURST_DELAYED_EXEC")) {
+    recommendations.push(
+      "CRITICAL: SolarWinds SUNBURST indicators detected. Quarantine immediately. Check for DGA domains and unusual delayed execution patterns.",
+    );
+  }
+  if (rules.has("UAPARSER_MINER") || rules.has("UAPARSER_PREINSTALL_DL")) {
+    recommendations.push(
+      "CRITICAL: ua-parser-js hijack indicators detected. Check for crypto miner binaries and suspicious preinstall script downloads.",
+    );
+  }
+  if (rules.has("COA_RC_SDD_DLL") || rules.has("COA_RC_POSTINSTALL")) {
+    recommendations.push(
+      "CRITICAL: coa/rc npm hijack indicators detected. Check for sdd.dll references and encoded postinstall payloads. Pin dependency versions.",
+    );
+  }
+
   if (recommendations.length === 0 && findings.length > 0) {
     recommendations.push(
       "Review the listed findings and assess whether they represent legitimate functionality or potential threats.",
@@ -478,6 +507,33 @@ function getRecommendation(rule: string): string {
       "This pattern combines environment variable access with network requests, which is a data exfiltration indicator.",
     DNS_EXFILTRATION:
       "DNS-based exfiltration encodes data in DNS queries. This is a covert data theft technique.",
+    // Campaign-specific rules
+    XZ_GET_CPUID:
+      "This matches the XZ Utils backdoor (CVE-2024-3094). The _get_cpuid function was used to hook into sshd. Verify liblzma provenance.",
+    XZ_LZMA_CRC64:
+      "lzma_crc64 was the hijacked symbol in CVE-2024-3094. Ensure your xz/liblzma is from a trusted source.",
+    XZ_BUILD_INJECT:
+      "Build system injection matching the XZ Utils attack pattern. Inspect configure.ac and m4 macros for unauthorized changes.",
+    XZ_OBFUSCATED_TEST:
+      "Obfuscated test file extraction pattern matching CVE-2024-3094. Check test fixtures for hidden payloads.",
+    CODECOV_CURL_BASH:
+      "Piping curl output to bash is inherently risky. Use checksummed binary downloads instead.",
+    CODECOV_EXFIL:
+      "Codecov uploader was compromised to exfiltrate CI secrets. Verify uploader integrity and rotate exposed credentials.",
+    SUNBURST_DGA:
+      "avsvmcloud.com is the known SUNBURST C2 domain. This is a critical indicator of compromise.",
+    SUNBURST_ORION_CLASS:
+      "OrionImprovementBusinessLayer is the SUNBURST backdoor namespace. Quarantine this code immediately.",
+    SUNBURST_DELAYED_EXEC:
+      "Long sleep/timeout delays are a SUNBURST evasion technique to bypass sandbox analysis. Investigate the purpose of this delay.",
+    UAPARSER_MINER:
+      "This matches the ua-parser-js crypto miner pattern. Check for jsextension binaries and unauthorized downloads.",
+    UAPARSER_PREINSTALL_DL:
+      "Preinstall scripts downloading executables match the ua-parser-js hijack pattern. Review and remove.",
+    COA_RC_SDD_DLL:
+      "sdd.dll is the payload from the coa/rc npm hijack. This is a critical indicator of compromise.",
+    COA_RC_POSTINSTALL:
+      "Encoded postinstall payloads match the coa/rc npm hijack pattern. Pin dependencies and audit install scripts.",
   };
 
   return map[rule] ?? "Review this finding manually and assess the risk.";
