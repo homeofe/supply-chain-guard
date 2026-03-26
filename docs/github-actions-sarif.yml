@@ -1,0 +1,40 @@
+# Example GitHub Actions workflow for supply-chain-guard with SARIF output.
+# Runs a scan on every push and pull request, then uploads the results
+# to GitHub Code Scanning so findings appear in the Security tab.
+
+name: Supply Chain Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  supply-chain-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install supply-chain-guard
+        run: npm install -g supply-chain-guard
+
+      - name: Run supply-chain-guard scan
+        run: supply-chain-guard scan . --format sarif > results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: supply-chain-guard

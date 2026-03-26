@@ -1,6 +1,6 @@
 /**
  * Output formatting for scan reports.
- * Supports text, JSON, and markdown output.
+ * Supports text, JSON, markdown, and SARIF 2.1.0 output.
  */
 
 import type { Finding, ScanReport, Severity } from "./types.js";
@@ -29,13 +29,15 @@ const SEVERITY_ICONS: Record<Severity, string> = {
  */
 export function formatReport(
   report: ScanReport,
-  format: "text" | "json" | "markdown",
+  format: "text" | "json" | "markdown" | "sarif",
 ): string {
   switch (format) {
     case "json":
       return formatJson(report);
     case "markdown":
       return formatMarkdown(report);
+    case "sarif":
+      return formatSarif(report);
     case "text":
     default:
       return formatText(report);
@@ -249,6 +251,92 @@ function formatMarkdown(report: ScanReport): string {
   );
 
   return lines.join("\n");
+}
+
+/**
+ * Map finding severity to SARIF level.
+ */
+function sarifLevel(severity: Severity): "error" | "warning" | "note" {
+  switch (severity) {
+    case "critical":
+    case "high":
+      return "error";
+    case "medium":
+      return "warning";
+    case "low":
+    case "info":
+    default:
+      return "note";
+  }
+}
+
+/**
+ * Format as SARIF 2.1.0 for GitHub Code Scanning.
+ */
+function formatSarif(report: ScanReport): string {
+  const rules: Array<{
+    id: string;
+    shortDescription: { text: string };
+    defaultConfiguration: { level: string };
+  }> = [];
+  const ruleIndex = new Map<string, number>();
+
+  const results: Array<Record<string, unknown>> = [];
+
+  for (const finding of report.findings) {
+    if (!ruleIndex.has(finding.rule)) {
+      ruleIndex.set(finding.rule, rules.length);
+      rules.push({
+        id: finding.rule,
+        shortDescription: { text: finding.description },
+        defaultConfiguration: { level: sarifLevel(finding.severity) },
+      });
+    }
+
+    const result: Record<string, unknown> = {
+      ruleId: finding.rule,
+      ruleIndex: ruleIndex.get(finding.rule),
+      level: sarifLevel(finding.severity),
+      message: { text: finding.description },
+    };
+
+    if (finding.file) {
+      const region: Record<string, number> = {};
+      if (finding.line) {
+        region.startLine = finding.line;
+      }
+      result.locations = [
+        {
+          physicalLocation: {
+            artifactLocation: { uri: finding.file },
+            ...(finding.line ? { region } : {}),
+          },
+        },
+      ];
+    }
+
+    results.push(result);
+  }
+
+  const sarif = {
+    $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+    version: "2.1.0" as const,
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: "supply-chain-guard",
+            version: "2.0.0",
+            informationUri: "https://github.com/homeofe/supply-chain-guard",
+            rules,
+          },
+        },
+        results,
+      },
+    ],
+  };
+
+  return JSON.stringify(sarif, null, 2);
 }
 
 /**
