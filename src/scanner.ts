@@ -22,6 +22,7 @@ import {
   BEACON_MINER_PATTERNS,
 } from "./patterns.js";
 import { checkLockfile } from "./lockfile-checker.js";
+import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
 
 const TOOL_VERSION = "1.0.0";
 
@@ -115,6 +116,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Check lockfile integrity (T-006)
   const lockfileFindings = checkLockfile(scanDir);
   findings.push(...lockfileFindings);
+
+  // Check GitHub Actions workflows (#9)
+  const ghaFindings = scanGitHubActionsWorkflows(scanDir);
+  findings.push(...ghaFindings);
 
   // Filter by severity and excluded rules
   const filteredFindings = filterFindings(findings, options);
@@ -709,6 +714,40 @@ function generateRecommendations(findings: Finding[]): string[] {
     );
   }
 
+  // GitHub Actions workflow recommendations (#9)
+  if (
+    rules.has("GHA_CURL_PIPE_EXEC") ||
+    rules.has("GHA_WGET_PIPE_EXEC") ||
+    rules.has("GHA_CURL_DOWNLOAD_EXEC") ||
+    rules.has("GHA_WGET_DOWNLOAD_EXEC")
+  ) {
+    recommendations.push(
+      "CI workflow fetches and executes remote content. Pin scripts by checksum or use pinned GitHub Actions instead.",
+    );
+  }
+  if (
+    rules.has("GHA_SECRET_CURL") ||
+    rules.has("GHA_SECRET_WGET") ||
+    rules.has("GHA_SECRET_EXFIL_MULTILINE")
+  ) {
+    recommendations.push(
+      "CRITICAL: Secrets may be exfiltrated via network commands in CI workflows. Audit all workflow steps that combine secrets with curl/wget.",
+    );
+  }
+  if (rules.has("GHA_UNPINNED_ACTION")) {
+    recommendations.push(
+      "Unpinned GitHub Actions detected. Pin actions to commit SHAs to prevent supply-chain attacks via mutable branch references.",
+    );
+  }
+  if (
+    rules.has("GHA_BASE64_PAYLOAD") ||
+    rules.has("GHA_BASE64_EXEC")
+  ) {
+    recommendations.push(
+      "Base64 encoded payloads in CI workflows are suspicious. Decode and inspect the content before allowing execution.",
+    );
+  }
+
   if (recommendations.length === 0 && findings.length > 0) {
     recommendations.push(
       "Review the listed findings and assess whether they represent legitimate functionality or potential threats.",
@@ -803,6 +842,21 @@ function getRecommendation(rule: string): string {
       "Unexpected binary file in package. Inspect with a hex editor or disassembler.",
     BINARY_DIRECT_DOWNLOAD:
       "Binary download in install script. Verify the download source is trusted.",
+    // GitHub Actions rules (#9)
+    GHA_CURL_PIPE_EXEC:
+      "Do not pipe remote content directly to a shell in CI. Download, verify checksum, then execute.",
+    GHA_WGET_PIPE_EXEC:
+      "Do not pipe remote content directly to a shell in CI. Download, verify checksum, then execute.",
+    GHA_SECRET_CURL:
+      "Secrets sent to external URLs via curl may indicate credential exfiltration.",
+    GHA_SECRET_WGET:
+      "Secrets sent to external URLs via wget may indicate credential exfiltration.",
+    GHA_UNPINNED_ACTION:
+      "Pin GitHub Actions to commit SHAs instead of mutable branch references.",
+    GHA_BASE64_PAYLOAD:
+      "Base64 encoded payloads in CI workflows are suspicious. Decode and inspect.",
+    GHA_BASE64_EXEC:
+      "Base64 decoded content piped to shell is a common attack vector.",
   };
 
   return map[rule] ?? "Review this finding manually and assess the risk.";
