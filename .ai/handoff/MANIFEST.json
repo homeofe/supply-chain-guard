@@ -1,11 +1,11 @@
 {
   "schema": "aahp-handoff-v1",
   "project": "supply-chain-guard",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "repo": "https://github.com/homeofe/supply-chain-guard",
-  "description": "Open-source supply-chain security scanner for npm, PyPI, and VS Code extensions. Detects malware patterns, dependency confusion, lockfile tampering, binary anomalies, network beacons, and crypto miners.",
-  "tech_stack": ["Node.js", "TypeScript", "CLI"],
-  "entry_points": ["src/index.ts", "src/cli.ts"],
+  "description": "Open-source supply-chain security scanner for npm, PyPI, VS Code extensions, GitHub Actions workflows and Solana C2. Detects GlassWorm and similar malware campaigns.",
+  "tech_stack": ["Node.js", "TypeScript", "CLI", "GitHub Action"],
+  "entry_points": ["src/index.ts", "src/cli.ts", "src/action.ts"],
   "test_command": "npm test",
   "build_command": "npm run build",
   "handoff_files": [
