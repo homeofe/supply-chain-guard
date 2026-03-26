@@ -10,7 +10,17 @@ export { scanNpmPackage } from "./npm-scanner.js";
 export { scanPypiPackage } from "./pypi-scanner.js";
 export { scanVscodeExtension } from "./vscode-scanner.js";
 export { scanDependencyConfusion } from "./dependency-confusion.js";
-export { monitorWallet, checkWallet, formatAlert } from "./solana-monitor.js";
+export {
+  monitorWallet,
+  checkWallet,
+  formatAlert,
+  loadWatchlist,
+  saveWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  listWatchlist,
+  monitorWatchlist,
+} from "./solana-monitor.js";
 export { formatReport } from "./reporter.js";
 export { checkLockfile } from "./lockfile-checker.js";
 export type {
@@ -23,4 +33,7 @@ export type {
   SolanaMonitorOptions,
   SolanaTransaction,
   PatternEntry,
+  WatchlistEntry,
+  WatchlistConfig,
+  WatchlistAlert,
 } from "./types.js";

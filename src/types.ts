@@ -58,7 +58,7 @@ export interface ScanOptions {
   /** Target path, URL, or package name */
   target: string;
   /** Output format */
-  format: "text" | "json" | "markdown";
+  format: "text" | "json" | "markdown" | "sarif";
   /** Only report findings at or above this severity */
   minSeverity?: Severity;
   /** Exclude specific rules */
@@ -107,6 +107,27 @@ export interface PatternEntry {
   severity: Severity;
   /** Rule ID */
   rule: string;
+}
+
+export interface WatchlistEntry {
+  /** Solana wallet address */
+  address: string;
+  /** Human-readable label for this wallet */
+  name: string;
+  /** ISO 8601 timestamp when added */
+  addedAt: string;
+}
+
+export interface WatchlistConfig {
+  entries: WatchlistEntry[];
+}
+
+export interface WatchlistAlert {
+  address: string;
+  name: string;
+  txid: string;
+  memo: string;
+  timestamp: string;
 }
 
 export const SEVERITY_SCORES: Record<Severity, number> = {

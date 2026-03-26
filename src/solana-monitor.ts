@@ -7,7 +7,16 @@
  */
 
 import * as https from "node:https";
-import type { SolanaMonitorOptions, SolanaTransaction } from "./types.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
+import type {
+  SolanaMonitorOptions,
+  SolanaTransaction,
+  WatchlistConfig,
+  WatchlistEntry,
+  WatchlistAlert,
+} from "./types.js";
 
 const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
 const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
@@ -263,6 +272,192 @@ export interface C2Alert {
 /**
  * Format a C2 alert for display.
  */
+// -- Watchlist persistence ---------------------------------------------------
+
+const CONFIG_DIR = path.join(os.homedir(), ".supply-chain-guard");
+const WATCHLIST_PATH = path.join(CONFIG_DIR, "watchlist.json");
+
+function ensureConfigDir(): void {
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+}
+
+/**
+ * Load the watchlist from disk. Returns an empty list when the file is missing.
+ */
+export function loadWatchlist(): WatchlistConfig {
+  ensureConfigDir();
+  if (!fs.existsSync(WATCHLIST_PATH)) {
+    return { entries: [] };
+  }
+  const raw = fs.readFileSync(WATCHLIST_PATH, "utf-8");
+  return JSON.parse(raw) as WatchlistConfig;
+}
+
+/**
+ * Persist the watchlist to disk.
+ */
+export function saveWatchlist(config: WatchlistConfig): void {
+  ensureConfigDir();
+  fs.writeFileSync(WATCHLIST_PATH, JSON.stringify(config, null, 2) + "\n");
+}
+
+/**
+ * Add a wallet to the watchlist.
+ */
+export function addToWatchlist(address: string, name: string): WatchlistEntry {
+  const config = loadWatchlist();
+  const existing = config.entries.find((e) => e.address === address);
+  if (existing) {
+    throw new Error(`Address ${address} is already on the watchlist as "${existing.name}"`);
+  }
+  const entry: WatchlistEntry = {
+    address,
+    name,
+    addedAt: new Date().toISOString(),
+  };
+  config.entries.push(entry);
+  saveWatchlist(config);
+  return entry;
+}
+
+/**
+ * Remove a wallet from the watchlist.
+ */
+export function removeFromWatchlist(address: string): void {
+  const config = loadWatchlist();
+  const idx = config.entries.findIndex((e) => e.address === address);
+  if (idx === -1) {
+    throw new Error(`Address ${address} is not on the watchlist`);
+  }
+  config.entries.splice(idx, 1);
+  saveWatchlist(config);
+}
+
+/**
+ * Return all watchlist entries.
+ */
+export function listWatchlist(): WatchlistEntry[] {
+  return loadWatchlist().entries;
+}
+
+/**
+ * Send an alert payload to a webhook URL via HTTP POST.
+ */
+function sendWebhookAlert(webhookUrl: string, payload: WatchlistAlert): Promise<void> {
+  const body = JSON.stringify(payload);
+  return new Promise((resolve, reject) => {
+    const url = new URL(webhookUrl);
+    const transport = url.protocol === "https:" ? https : https;
+    const req = transport.request(
+      {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === "https:" ? 443 : 80),
+        path: url.pathname + url.search,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        // Consume response data to free up memory
+        res.on("data", () => {});
+        res.on("end", () => resolve());
+      },
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+/**
+ * Monitor all wallets on the watchlist. Polls each wallet and fires alerts
+ * for new memo transactions. Optionally forwards alerts to a webhook.
+ */
+export async function monitorWatchlist(
+  options: { interval: number; limit: number; webhookUrl?: string },
+  onAlert: (alert: WatchlistAlert) => void,
+): Promise<void> {
+  const entries = listWatchlist();
+  if (entries.length === 0) {
+    console.log("\n  Watchlist is empty. Add wallets with: supply-chain-guard watchlist add <address>\n");
+    return;
+  }
+
+  console.log(`\n  Monitoring ${entries.length} watched wallet(s)`);
+  console.log(`  Polling interval: ${options.interval}s | Limit: ${options.limit} tx per wallet`);
+  if (options.webhookUrl) {
+    console.log(`  Webhook: ${options.webhookUrl}`);
+  }
+  console.log("  Press Ctrl+C to stop\n");
+
+  // Track the last seen signature per wallet
+  const lastSeen = new Map<string, string | null>();
+
+  // Set baselines
+  for (const entry of entries) {
+    const sigs = await getRecentSignatures(entry.address, options.limit);
+    lastSeen.set(entry.address, sigs[0]?.signature ?? null);
+    console.log(`  [baseline] ${entry.name} (${entry.address}): ${sigs.length} existing tx`);
+  }
+  console.log("");
+
+  const poll = async (): Promise<void> => {
+    for (const entry of entries) {
+      try {
+        const sigs = await getRecentSignatures(entry.address, options.limit);
+        const prev = lastSeen.get(entry.address) ?? null;
+
+        const newSigs: Array<{ signature: string }> = [];
+        for (const sig of sigs) {
+          if (sig.signature === prev) break;
+          newSigs.push(sig);
+        }
+
+        if (newSigs.length > 0 && prev !== null) {
+          for (const sig of newSigs) {
+            const detail = await getTransactionDetail(sig.signature);
+            if (detail && detail.memos.length > 0) {
+              for (const memo of detail.memos) {
+                const alert: WatchlistAlert = {
+                  address: entry.address,
+                  name: entry.name,
+                  txid: sig.signature,
+                  memo,
+                  timestamp: new Date().toISOString(),
+                };
+
+                onAlert(alert);
+
+                if (options.webhookUrl) {
+                  try {
+                    await sendWebhookAlert(options.webhookUrl, alert);
+                  } catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    console.error(`  [webhook error] ${msg}`);
+                  }
+                }
+              }
+            }
+          }
+
+          lastSeen.set(entry.address, newSigs[0]?.signature ?? prev);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`  [${new Date().toISOString()}] Error polling ${entry.name}: ${msg}`);
+      }
+    }
+
+    setTimeout(() => void poll(), options.interval * 1000);
+  };
+
+  await poll();
+}
+
 export function formatAlert(alert: C2Alert): string {
   const lines = [
     "",
