@@ -480,6 +480,42 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PYPI_HOSTNAME_EXFIL",
   },
+
+  // Install command class override
+  {
+    name: "python-install-class-override",
+    pattern: "class\\s+\\w+\\s*\\(\\s*(?:install|develop|bdist_egg|egg_info|sdist)\\s*\\)",
+    description: "Custom command class inheriting from setuptools install/develop command",
+    severity: "medium",
+    rule: "PYPI_INSTALL_CLASS_OVERRIDE",
+  },
+
+  // marshal.loads (bytecode deserialization)
+  {
+    name: "python-marshal-loads",
+    pattern: "marshal\\.loads\\s*\\(",
+    description: "marshal.loads() detected (bytecode deserialization, common obfuscation)",
+    severity: "high",
+    rule: "PYPI_MARSHAL_LOADS",
+  },
+
+  // exec with marshal.loads
+  {
+    name: "python-exec-marshal",
+    pattern: "exec\\s*\\(\\s*marshal\\.loads\\s*\\(",
+    description: "exec(marshal.loads()) detected (executing deserialized bytecode payload)",
+    severity: "critical",
+    rule: "PYPI_EXEC_MARSHAL",
+  },
+
+  // base64.b64decode combined with exec (various arrangements on same line)
+  {
+    name: "python-b64decode-exec-combined",
+    pattern: "base64\\.b64decode\\s*\\([^)]*\\).*\\bexec\\b|\\bexec\\b.*base64\\.b64decode",
+    description: "base64.b64decode combined with exec on the same line (obfuscated execution)",
+    severity: "critical",
+    rule: "PYPI_B64_EXEC_COMBINED",
+  },
 ];
 
 /** Setup file names to check for install hooks */
@@ -519,6 +555,13 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     severity: "low",
     rule: "PYPI_CUSTOM_SDIST",
   },
+  {
+    name: "setup-cmdclass-build-ext",
+    pattern: "cmdclass\\s*=\\s*\\{[^}]*['\"]build_ext['\"]",
+    description: "Custom build_ext command class detected (code runs during native extension build)",
+    severity: "low",
+    rule: "PYPI_CUSTOM_BUILD_EXT",
+  },
 ];
 
 /** Python file extensions to scan */
@@ -527,6 +570,23 @@ export const PYTHON_EXTENSIONS = new Set([
   ".pyw",
   ".pyi",
 ]);
+
+/** Known typosquatted PyPI package name patterns */
+export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
+  // Typosquats of popular PyPI packages
+  "^(reqeusts|requsets|r3quests|reequests|requets)$",
+  "^(crypt0graphy|crytography|cryptograhpy)$",
+  "^(python-dateutill|python3-dateutil|py-dateutil)$",
+  "^(numppy|numpi|numpie)$",
+  "^(pandsa|pands)$",
+  "^(djang0|dajngo|djnago)$",
+  "^(urlib3|urllib33)$",
+  "^(colourama|colrama|coloram)$",
+  "^(setuptool|setuptoolss)$",
+  "^(flaskk|flaask|fl4sk)$",
+  // Very long single-word lowercase names
+  "^[a-z]{20,}$",
+];
 
 // ---------------------------------------------------------------------------
 // Binary / native addon detection (T-007)
