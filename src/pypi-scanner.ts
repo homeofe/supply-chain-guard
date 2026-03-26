@@ -16,6 +16,7 @@ import {
   PYPI_FILE_PATTERNS,
   PYPI_INSTALL_HOOK_PATTERNS,
   PYPI_SETUP_FILES,
+  PYPI_TYPOSQUAT_PATTERNS,
   PYTHON_EXTENSIONS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -369,6 +370,120 @@ function scanExtractedFiles(
             }
           }
         }
+
+        // File-level combined analysis for setup files
+        analyzeSetupFileContext(content, relativePath, findings);
+      }
+    }
+  }
+}
+
+/**
+ * Analyze a setup file for combined suspicious patterns.
+ *
+ * Performs file-level analysis to detect when a setup.py defines custom
+ * install hooks AND contains dangerous code (subprocess, obfuscated
+ * execution, or network downloads).
+ */
+export function analyzeSetupFileContext(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  const hasCmdclass = /cmdclass\s*=/.test(content);
+  const hasInstallClassOverride =
+    /class\s+\w+\s*\(\s*(?:install|develop)\s*\)/.test(content);
+  const hasDangerousHook = hasCmdclass || hasInstallClassOverride;
+
+  if (!hasDangerousHook) {
+    // Still check install_requires even without cmdclass
+    checkInstallRequires(content, relativePath, findings);
+    return;
+  }
+
+  const hasSubprocess =
+    /subprocess\.(?:call|run|Popen|check_output|check_call)\s*\(/.test(
+      content,
+    );
+  const hasOsSystem = /os\.system\s*\(/.test(content);
+  const hasExec = /\bexec\s*\(/.test(content);
+  const hasEval = /\beval\s*\(/.test(content);
+  const hasUrllib = /urllib\.request\.urlopen\s*\(/.test(content);
+  const hasRequests = /requests\.(?:get|post)\s*\(/.test(content);
+  const hasBase64Decode = /base64\.b64decode\s*\(/.test(content);
+  const hasMarshalLoads = /marshal\.loads\s*\(/.test(content);
+
+  if (hasSubprocess || hasOsSystem) {
+    findings.push({
+      rule: "PYPI_HOOK_SYSTEM_EXEC",
+      description:
+        "Custom install hook with system command execution (subprocess/os.system in setup file with cmdclass)",
+      severity: "critical",
+      file: relativePath,
+      recommendation:
+        "Setup file defines custom install commands that execute system commands. This code runs during pip install.",
+    });
+  }
+
+  if ((hasExec || hasEval) && (hasBase64Decode || hasMarshalLoads)) {
+    findings.push({
+      rule: "PYPI_HOOK_OBFUSCATED_EXEC",
+      description:
+        "Custom install hook with obfuscated code execution (base64/marshal + exec/eval in setup file with cmdclass)",
+      severity: "critical",
+      file: relativePath,
+      recommendation:
+        "Setup file defines custom install commands with obfuscated payload execution. Do NOT install this package.",
+    });
+  }
+
+  if (hasUrllib || hasRequests) {
+    findings.push({
+      rule: "PYPI_HOOK_DOWNLOAD",
+      description:
+        "Custom install hook with network download (urllib/requests in setup file with cmdclass)",
+      severity: "critical",
+      file: relativePath,
+      recommendation:
+        "Setup file defines custom install commands that download from the network. This code runs during pip install.",
+    });
+  }
+
+  checkInstallRequires(content, relativePath, findings);
+}
+
+/**
+ * Check install_requires for known typosquatted package names.
+ */
+export function checkInstallRequires(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  const requiresMatch = content.match(
+    /install_requires\s*=\s*\[([\s\S]*?)\]/,
+  );
+  if (!requiresMatch?.[1]) return;
+
+  const requiresBlock = requiresMatch[1];
+  const nameMatches = [...requiresBlock.matchAll(/['"]([^'"]+)['"]/g)];
+
+  for (const m of nameMatches) {
+    // Strip version specifiers to get the bare package name
+    const pkgName = (m[1] ?? "").split(/[>=<!~;]/)[0]?.trim();
+    if (!pkgName) continue;
+
+    for (const pattern of PYPI_TYPOSQUAT_PATTERNS) {
+      if (new RegExp(pattern).test(pkgName)) {
+        findings.push({
+          rule: "PYPI_TYPOSQUAT_DEP",
+          description: `Suspicious dependency "${pkgName}" in install_requires matches a known typosquatting pattern`,
+          severity: "high",
+          file: relativePath,
+          match: pkgName,
+          recommendation: `Verify "${pkgName}" is the intended package. Typosquatted package names are a common supply-chain attack vector.`,
+        });
+        break;
       }
     }
   }
@@ -521,6 +636,29 @@ function generatePypiRecommendations(
   ) {
     recommendations.push(
       "Data exfiltration patterns detected. The package may collect system information and send it to external servers.",
+    );
+  }
+  if (
+    rules.has("PYPI_HOOK_SYSTEM_EXEC") ||
+    rules.has("PYPI_HOOK_DOWNLOAD")
+  ) {
+    recommendations.push(
+      "CRITICAL: Custom install hook executes system commands or downloads from the network. This code runs automatically during pip install.",
+    );
+  }
+  if (rules.has("PYPI_HOOK_OBFUSCATED_EXEC")) {
+    recommendations.push(
+      "CRITICAL: Custom install hook contains obfuscated code execution. Do NOT install this package.",
+    );
+  }
+  if (rules.has("PYPI_TYPOSQUAT_DEP")) {
+    recommendations.push(
+      "Suspicious dependencies detected in install_requires. Verify all dependency names are spelled correctly and are the intended packages.",
+    );
+  }
+  if (rules.has("PYPI_EXEC_MARSHAL") || rules.has("PYPI_MARSHAL_LOADS")) {
+    recommendations.push(
+      "Bytecode deserialization via marshal detected. This is an advanced obfuscation technique used to hide malicious payloads.",
     );
   }
   if (rules.has("PYPI_NO_REPO")) {
