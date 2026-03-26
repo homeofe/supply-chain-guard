@@ -1,5 +1,5 @@
 {
-  "schema": "aahp-handoff-v1",
+  "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "version": "3.0.0",
   "repo": "https://github.com/homeofe/supply-chain-guard",
@@ -8,9 +8,76 @@
   "entry_points": ["src/index.ts", "src/cli.ts", "src/action.ts"],
   "test_command": "npm test",
   "build_command": "npm run build",
+  "last_session": {
+    "agent": "akido",
+    "session_id": "webchat-2026-03-26",
+    "timestamp": "2026-03-26T09:30:00.000Z",
+    "commit": "e6d9da2",
+    "phase": "maintenance",
+    "duration_minutes": 30
+  },
   "handoff_files": [
     "MANIFEST.json",
     "STATUS.md",
-    "ARCHITECTURE.md"
-  ]
+    "ARCHITECTURE.md",
+    "CONVENTIONS.md",
+    "DASHBOARD.md",
+    "NEXT_ACTIONS.md",
+    "TRUST.md",
+    "WORKFLOW.md",
+    "LOG.md"
+  ],
+  "quick_context": "v3.0.0 released. 185 tests passing. Missing tests: solana-monitor, reporter, cli. Next: T-001 solana tests.",
+  "next_task_id": 8,
+  "tasks": {
+    "T-001": {
+      "title": "Add solana-monitor unit tests",
+      "status": "ready",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-002": {
+      "title": "Add reporter unit tests (SARIF, JSON, markdown)",
+      "status": "ready",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-003": {
+      "title": "Add CLI integration tests",
+      "status": "ready",
+      "priority": "medium",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-004": {
+      "title": "SBOM export (CycloneDX/SPDX)",
+      "status": "ready",
+      "priority": "medium",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-005": {
+      "title": "--fail-on severity threshold flag for CI",
+      "status": "ready",
+      "priority": "medium",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-006": {
+      "title": "Cargo/Go module scanner",
+      "status": "ready",
+      "priority": "low",
+      "depends_on": [],
+      "created": "2026-03-26T09:30:00Z"
+    },
+    "T-007": {
+      "title": "Rate-limit handling in Solana monitor",
+      "status": "ready",
+      "priority": "low",
+      "depends_on": ["T-001"],
+      "created": "2026-03-26T09:30:00Z"
+    }
+  }
 }
