@@ -5,6 +5,10 @@ Open-source supply-chain security scanner for npm, PyPI, and VS Code extensions.
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green)](https://nodejs.org)
 
+## Background
+
+For a deep dive into how GlassWorm infiltrates the software supply chain and the detection techniques behind this tool, read the blog post: [How GlassWorm Gets In and How We Locked It Out](https://blog.elvatis.com/how-glassworm-gets-in-and-how-we-locked-it-out/).
+
 ## What It Does
 
 supply-chain-guard scans code repositories and npm packages for known indicators of compromise (IOCs) associated with supply-chain attacks. It catches threats that traditional security scanners miss because it specifically targets software supply-chain attack patterns.
@@ -31,6 +35,41 @@ Or use directly with npx:
 ```bash
 npx supply-chain-guard scan ./my-project
 ```
+
+## Quickstart
+
+**Scan a local directory:**
+
+```bash
+supply-chain-guard scan ./my-project
+```
+
+**Scan a GitHub repository:**
+
+```bash
+supply-chain-guard scan https://github.com/user/repo
+```
+
+**Scan an npm package (without installing it):**
+
+```bash
+supply-chain-guard npm suspicious-package-name
+```
+
+Example output:
+
+```
+  Risk Score: 68/100 (CRITICAL)
+  Findings:  2 critical, 1 high, 1 medium
+
+  🔴 [CRITICAL] GlassWorm campaign marker variable detected
+     Rule: GLASSWORM_MARKER  |  File: src/index.js:42
+
+  🔴 [CRITICAL] Base64-encoded eval detected
+     Rule: EVAL_ATOB  |  File: src/loader.js:15
+```
+
+See the full [Example Output](#example-output) section below for a complete scan report.
 
 ## Usage
 
