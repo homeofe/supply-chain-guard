@@ -32,7 +32,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("3.1.0");
+  .version("4.0.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ program
   .command("scan")
   .description("Scan a local directory or GitHub repo for malware indicators")
   .argument("<target>", "Local directory path or GitHub repo URL")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html", "text")
   .option(
     "-s, --min-severity <severity>",
     "Minimum severity to report: critical, high, medium, low, info",

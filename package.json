@@ -1,7 +1,7 @@
 {
   "name": "supply-chain-guard",
-  "version": "3.1.0",
-  "description": "Open-source supply-chain security scanner for npm, PyPI, VS Code extensions, GitHub Actions workflows and Solana C2. Detects GlassWorm and similar malware campaigns.",
+  "version": "4.0.0",
+  "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud and 110+ malware indicators.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -19,10 +19,18 @@
     "supply-chain",
     "malware-detection",
     "npm",
+    "pypi",
+    "cargo",
+    "golang",
+    "docker",
+    "terraform",
     "glassworm",
+    "shai-hulud",
     "scanner",
     "cli",
-    "github-action"
+    "github-action",
+    "sarif",
+    "sbom"
   ],
   "author": "Elvatis <emre.kohler@elvatis.com>",
   "license": "Apache-2.0",

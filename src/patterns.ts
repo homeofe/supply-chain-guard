@@ -782,7 +782,252 @@ export const SCANNABLE_EXTENSIONS = new Set([
   ".yml",
   ".yaml",
   ".toml",
+  ".rs",
+  ".go",
+  ".tf",
+  ".hcl",
+  ".svg",
 ]);
 
 /** Maximum file size to scan (in bytes). Files larger than this are skipped. */
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+// ---------------------------------------------------------------------------
+// Build tool config patterns (v4.0)
+// ---------------------------------------------------------------------------
+
+export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
+  {
+    name: "build-plugin-download",
+    pattern:
+      "(?:require|import)\\s*\\(?[\"'][^\"']+[\"']\\)?[^;]*(?:fetch|https?\\.get|axios|got|download)",
+    description:
+      "Build config plugin downloads code from an external URL during build.",
+    severity: "high",
+    rule: "BUILD_PLUGIN_DOWNLOAD",
+  },
+  {
+    name: "build-plugin-exec",
+    pattern:
+      "(?:child_process|execSync|spawnSync|exec)\\b",
+    description:
+      "Build config executes system commands. Verify this is expected build behavior.",
+    severity: "high",
+    rule: "BUILD_PLUGIN_EXEC",
+  },
+  {
+    name: "build-env-exfil",
+    pattern:
+      "process\\.env\\b.*(?:fetch|https?\\.(?:get|request)|axios|got)|(?:fetch|https?\\.(?:get|request)|axios|got).*process\\.env",
+    description:
+      "Build config reads environment variables near network requests (potential secret exfiltration).",
+    severity: "critical",
+    rule: "BUILD_ENV_EXFIL",
+  },
+  {
+    name: "build-dynamic-require",
+    pattern:
+      "require\\s*\\(\\s*(?:process\\.env|`|\\+)",
+    description:
+      "Dynamic require with variable input in build config. Can load unexpected modules.",
+    severity: "medium",
+    rule: "BUILD_DYNAMIC_REQUIRE",
+  },
+];
+
+/** Build config file names */
+export const BUILD_CONFIG_FILES = new Set([
+  "webpack.config.js",
+  "webpack.config.ts",
+  "webpack.config.mjs",
+  "rollup.config.js",
+  "rollup.config.ts",
+  "rollup.config.mjs",
+  "vite.config.js",
+  "vite.config.ts",
+  "vite.config.mjs",
+  "next.config.js",
+  "next.config.ts",
+  "next.config.mjs",
+  "esbuild.config.js",
+  "esbuild.config.mjs",
+  "turbo.json",
+  "babel.config.js",
+  "babel.config.json",
+  ".babelrc",
+]);
+
+// ---------------------------------------------------------------------------
+// Monorepo / workspace patterns (v4.0)
+// ---------------------------------------------------------------------------
+
+export const MONOREPO_PATTERNS: PatternEntry[] = [
+  {
+    name: "workspace-root-postinstall",
+    pattern:
+      '"postinstall"\\s*:\\s*"[^"]*(?:curl|wget|node\\s+-e|bash|sh\\s+-c)',
+    description:
+      "Root-level postinstall in monorepo workspace. Affects all workspace packages.",
+    severity: "high",
+    rule: "WORKSPACE_ROOT_POSTINSTALL",
+  },
+  {
+    name: "workspace-private-publish",
+    pattern:
+      '"private"\\s*:\\s*false[^}]*"publishConfig"',
+    description:
+      "Workspace package marked as non-private with publishConfig. Verify it should be public.",
+    severity: "high",
+    rule: "WORKSPACE_PRIVATE_PUBLISH",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// New campaign signatures (v4.0 - 2025/2026)
+// ---------------------------------------------------------------------------
+
+export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
+  // Shai-Hulud npm Worm
+  {
+    name: "shai-hulud-self-replicate",
+    pattern:
+      "npm\\s+publish|\\bnpm\\b.*\\bpublish\\b|child_process.*npm.*publish",
+    description:
+      "Self-publishing pattern detected. The Shai-Hulud worm replicates by publishing infected packages via npm.",
+    severity: "critical",
+    rule: "SHAI_HULUD_WORM",
+  },
+  {
+    name: "shai-hulud-npmrc-steal",
+    pattern:
+      "\\.npmrc|npm_config_userconfig|NPM_TOKEN|npm-cli-login",
+    description:
+      "npm credentials access pattern. The Shai-Hulud worm steals .npmrc tokens to publish malicious packages.",
+    severity: "high",
+    rule: "SHAI_HULUD_CRED_STEAL",
+  },
+
+  // Expanded protestware
+  {
+    name: "protestware-ip-geo-destruct",
+    pattern:
+      "(?:ip-api|ipinfo|geoip-lite|maxmind|geoip2).*(?:unlink|rmdir|rm\\s+-rf|del\\s+/|format\\s+c:)",
+    description:
+      "IP geolocation combined with destructive file operations. Advanced protestware pattern.",
+    severity: "critical",
+    rule: "PROTESTWARE_IP_GEO_V2",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Extended obfuscation patterns (v4.0)
+// ---------------------------------------------------------------------------
+
+export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
+  {
+    name: "template-literal-exec",
+    pattern:
+      "eval\\s*\\(\\s*`",
+    description:
+      "eval() with template literal. Template literals can hide complex expressions.",
+    severity: "high",
+    rule: "TEMPLATE_LITERAL_EXEC",
+  },
+  {
+    name: "proxy-handler-trap",
+    pattern:
+      "new\\s+Proxy\\s*\\([^)]*\\{[^}]*(?:get|set|apply|construct)\\s*:",
+    description:
+      "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
+    severity: "high",
+    rule: "PROXY_HANDLER_TRAP",
+  },
+  {
+    name: "dynamic-import-expression",
+    pattern:
+      "import\\s*\\(\\s*(?:`|\\+|process\\.env|String\\.fromCharCode)",
+    description:
+      "Dynamic import() with computed URL. Can load modules from attacker-controlled sources.",
+    severity: "high",
+    rule: "IMPORT_EXPRESSION",
+  },
+  {
+    name: "wasm-instantiate-external",
+    pattern:
+      "WebAssembly\\.instantiate(?:Streaming)?\\s*\\(\\s*(?:fetch|https?|new\\s+URL)",
+    description:
+      "WebAssembly loaded from external source. WASM modules can execute arbitrary code.",
+    severity: "medium",
+    rule: "WASM_SUSPICIOUS",
+  },
+  {
+    name: "steganography-decode",
+    pattern:
+      "(?:atob|Buffer\\.from)\\s*\\([^)]*(?:\\.png|\\.jpg|\\.gif|\\.bmp|\\.ico|\\.svg|\\.woff|\\.ttf)",
+    description:
+      "Base64 decoding applied to image/font file content. Potential steganographic payload extraction.",
+    severity: "high",
+    rule: "STEGANOGRAPHY_DECODE",
+  },
+  {
+    name: "svg-script-injection",
+    pattern:
+      "<script[^>]*>[\\s\\S]*?</script>|\\bon\\w+\\s*=\\s*[\"']",
+    description:
+      "SVG file contains <script> tag or event handler. SVG files can execute JavaScript.",
+    severity: "high",
+    rule: "SVG_SCRIPT_INJECTION",
+  },
+  {
+    name: "rtl-override",
+    pattern:
+      "\\u202E|\\u2066|\\u2067|\\u2068|\\u2069",
+    description:
+      "Right-to-left override character detected. Can be used to disguise file extensions or code meaning.",
+    severity: "high",
+    rule: "RTL_OVERRIDE",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// IaC / Terraform patterns (v4.0)
+// ---------------------------------------------------------------------------
+
+export const IAC_PATTERNS: PatternEntry[] = [
+  {
+    name: "iac-inline-script-curl",
+    pattern:
+      "(?:provisioner|user_data|inline).*(?:curl|wget)\\s+.*\\|\\s*(?:bash|sh)",
+    description:
+      "Terraform/IaC provisioner downloads and executes remote code.",
+    severity: "high",
+    rule: "IAC_INLINE_SCRIPT",
+  },
+  {
+    name: "iac-external-module",
+    pattern:
+      'source\\s*=\\s*"(?:https?://|git::|s3::|gcs::)(?!(?:github\\.com/hashicorp|registry\\.terraform\\.io))',
+    description:
+      "Terraform module from a non-standard source. Modules from untrusted sources can contain backdoors.",
+    severity: "medium",
+    rule: "IAC_EXTERNAL_MODULE",
+  },
+  {
+    name: "iac-hardcoded-secret",
+    pattern:
+      '(?:password|secret_key|access_key|api_key|private_key|token)\\s*=\\s*"[^"]{8,}"',
+    description:
+      "Hardcoded secret in IaC configuration file. Secrets should use variables or secret managers.",
+    severity: "critical",
+    rule: "IAC_HARDCODED_SECRET",
+  },
+  {
+    name: "iac-remote-exec",
+    pattern:
+      'provisioner\\s+"remote-exec"',
+    description:
+      "Terraform remote-exec provisioner. Executes commands on remote resources.",
+    severity: "medium",
+    rule: "IAC_REMOTE_EXEC",
+  },
+];

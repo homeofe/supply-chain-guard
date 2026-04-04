@@ -24,6 +24,12 @@ export {
 export { formatReport } from "./reporter.js";
 export { checkLockfile } from "./lockfile-checker.js";
 export { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
+export { scanDockerFiles, scanDockerFile } from "./dockerfile-scanner.js";
+export { scanConfigFiles, scanConfigFile } from "./config-scanner.js";
+export { scanGitSecurity } from "./git-scanner.js";
+export { analyzeEntropy, shannonEntropy } from "./entropy.js";
+export { scanCargoFiles } from "./cargo-scanner.js";
+export { scanGoFiles } from "./go-scanner.js";
 export type {
   Finding,
   ScanReport,

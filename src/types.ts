@@ -29,7 +29,7 @@ export interface ScanReport {
   /** What was scanned (path, URL, package name) */
   target: string;
   /** Type of scan performed */
-  scanType: "directory" | "github" | "npm" | "pypi" | "solana";
+  scanType: "directory" | "github" | "npm" | "pypi" | "solana" | "cargo" | "go" | "docker";
   /** Duration in milliseconds */
   durationMs: number;
   /** All findings */
@@ -58,7 +58,7 @@ export interface ScanOptions {
   /** Target path, URL, or package name */
   target: string;
   /** Output format */
-  format: "text" | "json" | "markdown" | "sarif" | "sbom";
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html";
   /** Only report findings at or above this severity */
   minSeverity?: Severity;
   /** Exclude specific rules */

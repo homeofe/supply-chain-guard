@@ -20,11 +20,23 @@ import {
   BINARY_DOWNLOAD_PATTERNS,
   KNOWN_NATIVE_PACKAGES,
   BEACON_MINER_PATTERNS,
+  BUILD_TOOL_PATTERNS,
+  BUILD_CONFIG_FILES,
+  MONOREPO_PATTERNS,
+  CAMPAIGN_PATTERNS_V2,
+  OBFUSCATION_PATTERNS_V2,
+  IAC_PATTERNS,
 } from "./patterns.js";
 import { checkLockfile } from "./lockfile-checker.js";
 import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
+import { scanDockerFiles, isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
+import { scanConfigFiles, isConfigFile, scanConfigFile } from "./config-scanner.js";
+import { scanGitSecurity } from "./git-scanner.js";
+import { analyzeEntropy } from "./entropy.js";
+import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
+import { scanGoFiles } from "./go-scanner.js";
 
-const TOOL_VERSION = "1.0.0";
+const TOOL_VERSION = "4.0.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -79,6 +91,19 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       checkBinaryFile(relativePath, findings);
     }
 
+    // Scan Docker/Config files inline (v4.0)
+    if (isDockerFile(basename) || isConfigFile(basename)) {
+      try {
+        const content = fs.readFileSync(filePath, "utf-8");
+        if (isDockerFile(basename)) {
+          findings.push(...scanDockerFile(content, relativePath));
+        }
+        if (isConfigFile(basename)) {
+          findings.push(...scanConfigFile(content, relativePath));
+        }
+      } catch { /* skip */ }
+    }
+
     // Only scan content of known file types
     if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
 
@@ -94,8 +119,22 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       // Check file content patterns
       checkFilePatterns(content, relativePath, findings);
 
+      // Check build tool configs for plugin risks (v4.0)
+      if (BUILD_CONFIG_FILES.has(basename)) {
+        checkBuildToolPatterns(content, relativePath, findings);
+      }
+
+      // Check workspace/monorepo patterns (v4.0)
+      if (basename === "package.json" && relativePath === "package.json") {
+        checkMonorepoPatterns(content, relativePath, findings);
+      }
+
       // Check beacon and miner patterns (T-008)
       checkBeaconMinerPatterns(content, relativePath, findings);
+
+      // Entropy analysis for obfuscated payloads (v4.0)
+      const entropyFindings = analyzeEntropy(content, relativePath);
+      findings.push(...entropyFindings);
 
       // Check package.json specifically
       if (basename === "package.json") {
@@ -120,6 +159,32 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Check GitHub Actions workflows (#9)
   const ghaFindings = scanGitHubActionsWorkflows(scanDir);
   findings.push(...ghaFindings);
+
+  // Check Dockerfile / container configs (v4.0)
+  const dockerFindings = scanDockerFiles(scanDir);
+  findings.push(...dockerFindings);
+
+  // Check package manager config files (v4.0)
+  const configFindings = scanConfigFiles(scanDir);
+  findings.push(...configFindings);
+
+  // Check git hooks and submodules (v4.0)
+  if (fs.existsSync(path.join(scanDir, ".git"))) {
+    const gitSecFindings = scanGitSecurity(scanDir);
+    findings.push(...gitSecFindings);
+  }
+
+  // Check Cargo/Rust files (v4.0)
+  if (fs.existsSync(path.join(scanDir, "Cargo.toml"))) {
+    const cargoFindings = scanCargoFiles(scanDir);
+    findings.push(...cargoFindings);
+  }
+
+  // Check Go module files (v4.0)
+  if (fs.existsSync(path.join(scanDir, "go.mod"))) {
+    const goFindings = scanGoFiles(scanDir);
+    findings.push(...goFindings);
+  }
 
   // Filter by severity and excluded rules
   const filteredFindings = filterFindings(findings, options);
@@ -221,7 +286,13 @@ function checkFilePatterns(
   findings: Finding[],
 ): void {
   const lines = content.split("\n");
-  const allPatterns = [...FILE_PATTERNS, ...CAMPAIGN_PATTERNS];
+  const allPatterns = [
+    ...FILE_PATTERNS,
+    ...CAMPAIGN_PATTERNS,
+    ...CAMPAIGN_PATTERNS_V2,
+    ...OBFUSCATION_PATTERNS_V2,
+    ...IAC_PATTERNS,
+  ];
 
   for (const pattern of allPatterns) {
     const regex = new RegExp(pattern.pattern, "g");
@@ -513,6 +584,80 @@ function checkMultiLineProtestware(
 }
 
 /**
+ * Check build tool config files for suspicious plugin patterns (v4.0).
+ */
+function checkBuildToolPatterns(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  const lines = content.split("\n");
+
+  for (const pattern of BUILD_TOOL_PATTERNS) {
+    const regex = new RegExp(pattern.pattern, "gi");
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? "";
+      const match = regex.exec(line);
+      if (match) {
+        findings.push({
+          rule: pattern.rule,
+          description: pattern.description,
+          severity: pattern.severity,
+          file: relativePath,
+          line: i + 1,
+          match: truncateMatch(match[0]),
+          recommendation: getRecommendation(pattern.rule),
+        });
+        regex.lastIndex = 0;
+      }
+    }
+  }
+}
+
+/**
+ * Check root package.json for monorepo/workspace risks (v4.0).
+ */
+function checkMonorepoPatterns(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let pkg: Record<string, unknown>;
+  try {
+    pkg = JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  // Only check if it has workspaces
+  if (!pkg.workspaces) return;
+
+  const lines = content.split("\n");
+
+  for (const pattern of MONOREPO_PATTERNS) {
+    const regex = new RegExp(pattern.pattern, "gi");
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? "";
+      const match = regex.exec(line);
+      if (match) {
+        findings.push({
+          rule: pattern.rule,
+          description: pattern.description,
+          severity: pattern.severity,
+          file: relativePath,
+          line: i + 1,
+          match: truncateMatch(match[0]),
+          recommendation: getRecommendation(pattern.rule),
+        });
+        regex.lastIndex = 0;
+      }
+    }
+  }
+}
+
+/**
  * Filter findings based on scan options.
  */
 function filterFindings(findings: Finding[], options: ScanOptions): Finding[] {
@@ -748,6 +893,82 @@ function generateRecommendations(findings: Finding[]): string[] {
     );
   }
 
+  // Docker recommendations (v4.0)
+  if (rules.has("DOCKER_CURL_PIPE")) {
+    recommendations.push(
+      "CRITICAL: Dockerfile pipes remote content to shell. Download, verify checksum, then execute.",
+    );
+  }
+  if (rules.has("DOCKER_UNPINNED_BASE") || rules.has("DOCKER_NO_TAG")) {
+    recommendations.push(
+      "Pin Docker base images by digest (FROM image@sha256:...) to ensure reproducible and tamper-proof builds.",
+    );
+  }
+  if (rules.has("DOCKER_SECRETS_BUILD")) {
+    recommendations.push(
+      "Remove hardcoded secrets from Dockerfile. Use BuildKit secrets or runtime environment variables.",
+    );
+  }
+
+  // Config file recommendations (v4.0)
+  if (rules.has("CONFIG_HTTP_REGISTRY")) {
+    recommendations.push(
+      "CRITICAL: Package manager uses HTTP registry. Switch to HTTPS to prevent MITM attacks.",
+    );
+  }
+  if (rules.has("CONFIG_AUTH_TOKEN_EXPOSED")) {
+    recommendations.push(
+      "CRITICAL: Auth tokens found in config files. Rotate tokens immediately and use environment variables.",
+    );
+  }
+
+  // Git recommendations (v4.0)
+  if (rules.has("GIT_HOOK_DOWNLOAD") || rules.has("GIT_HOOK_ENCODED")) {
+    recommendations.push(
+      "Suspicious git hooks detected. Remove hooks that download or decode content. Use pre-commit frameworks instead.",
+    );
+  }
+
+  // Build tool recommendations (v4.0)
+  if (rules.has("BUILD_ENV_EXFIL")) {
+    recommendations.push(
+      "CRITICAL: Build config may exfiltrate environment secrets. Audit build tool plugins and configurations.",
+    );
+  }
+
+  // Campaign recommendations (v4.0)
+  if (rules.has("SHAI_HULUD_WORM") || rules.has("SHAI_HULUD_CRED_STEAL")) {
+    recommendations.push(
+      "CRITICAL: Shai-Hulud worm indicators detected. This self-replicating malware steals npm tokens. Quarantine and rotate all npm credentials.",
+    );
+  }
+
+  // IaC recommendations (v4.0)
+  if (rules.has("IAC_HARDCODED_SECRET")) {
+    recommendations.push(
+      "CRITICAL: Hardcoded secrets in IaC files. Use secret managers (Vault, AWS Secrets Manager) or encrypted variables.",
+    );
+  }
+
+  // Entropy recommendations (v4.0)
+  if (rules.has("HIGH_ENTROPY_STRING")) {
+    recommendations.push(
+      "High-entropy strings detected. Decode and inspect these strings for hidden payloads or encoded malware.",
+    );
+  }
+
+  // Cargo/Go recommendations (v4.0)
+  if (rules.has("CARGO_BUILD_RS_EXEC") || rules.has("CARGO_PROC_MACRO_NETWORK")) {
+    recommendations.push(
+      "Suspicious Rust build.rs or proc-macro code detected. Build scripts and macros run with full privileges at compile time.",
+    );
+  }
+  if (rules.has("GO_INIT_EXEC")) {
+    recommendations.push(
+      "Go init() functions with command execution detected. init() runs automatically on import.",
+    );
+  }
+
   if (recommendations.length === 0 && findings.length > 0) {
     recommendations.push(
       "Review the listed findings and assess whether they represent legitimate functionality or potential threats.",
@@ -857,6 +1078,51 @@ function getRecommendation(rule: string): string {
       "Base64 encoded payloads in CI workflows are suspicious. Decode and inspect.",
     GHA_BASE64_EXEC:
       "Base64 decoded content piped to shell is a common attack vector.",
+    // v4.0 rules
+    BUILD_PLUGIN_DOWNLOAD:
+      "Build plugin downloads external code. Verify the source is trusted.",
+    BUILD_PLUGIN_EXEC:
+      "Build config executes system commands. Ensure this is expected build behavior.",
+    BUILD_ENV_EXFIL:
+      "Build config combines env vars with network. This can exfiltrate secrets during build.",
+    BUILD_DYNAMIC_REQUIRE:
+      "Dynamic require in build config can load unexpected modules.",
+    WORKSPACE_ROOT_POSTINSTALL:
+      "Root postinstall scripts in monorepos affect all workspaces. Audit carefully.",
+    WORKSPACE_PRIVATE_PUBLISH:
+      "Non-private workspace with publishConfig may unintentionally be published.",
+    SHAI_HULUD_WORM:
+      "CRITICAL: Self-publishing pattern matches the Shai-Hulud npm worm. Quarantine immediately.",
+    SHAI_HULUD_CRED_STEAL:
+      "npm credential access detected. This matches the Shai-Hulud worm's token theft pattern.",
+    PROTESTWARE_IP_GEO_V2:
+      "IP geolocation combined with destructive ops. Advanced protestware targeting.",
+    TEMPLATE_LITERAL_EXEC:
+      "eval with template literals can hide complex expressions. Inspect the template.",
+    PROXY_HANDLER_TRAP:
+      "Proxy handler traps can intercept all operations. Review for data interception.",
+    IMPORT_EXPRESSION:
+      "Dynamic import() with computed URL can load attacker-controlled modules.",
+    WASM_SUSPICIOUS:
+      "WebAssembly loaded from external source. Verify the WASM module is trusted.",
+    STEGANOGRAPHY_DECODE:
+      "Base64 decoding of image/font data suggests steganographic payload extraction.",
+    SVG_SCRIPT_INJECTION:
+      "SVG with embedded scripts can execute JavaScript. Sanitize SVG files.",
+    RTL_OVERRIDE:
+      "RTL override characters can disguise file names and code. Inspect in a hex editor.",
+    IAC_INLINE_SCRIPT:
+      "IaC provisioner pipes remote content to shell. Download, verify, then execute.",
+    IAC_EXTERNAL_MODULE:
+      "Terraform module from non-standard source. Use registry modules or pin by hash.",
+    IAC_HARDCODED_SECRET:
+      "Remove hardcoded secrets. Use Terraform variables with sensitive=true or a secret manager.",
+    IAC_REMOTE_EXEC:
+      "remote-exec provisioner runs commands on remote resources. Audit the commands.",
+    HIGH_ENTROPY_FILE:
+      "High-entropy file may contain obfuscated or compressed payloads.",
+    HIGH_ENTROPY_STRING:
+      "High-entropy string likely contains encoded payload. Decode and inspect.",
   };
 
   return map[rule] ?? "Review this finding manually and assess the risk.";

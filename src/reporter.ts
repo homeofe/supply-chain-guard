@@ -30,7 +30,7 @@ const SEVERITY_ICONS: Record<Severity, string> = {
  */
 export function formatReport(
   report: ScanReport,
-  format: "text" | "json" | "markdown" | "sarif" | "sbom",
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html",
 ): string {
   switch (format) {
     case "json":
@@ -41,6 +41,8 @@ export function formatReport(
       return formatSarif(report);
     case "sbom":
       return formatSbom(report);
+    case "html":
+      return formatHtml(report);
     case "text":
     default:
       return formatText(report);
@@ -329,7 +331,7 @@ function formatSarif(report: ScanReport): string {
         tool: {
           driver: {
             name: "supply-chain-guard",
-            version: "3.1.0",
+            version: "4.0.0",
             informationUri: "https://github.com/homeofe/supply-chain-guard",
             rules,
           },
@@ -372,7 +374,7 @@ function formatSbom(report: ScanReport): string {
           {
             type: "application",
             name: "supply-chain-guard",
-            version: "3.1.0",
+            version: "4.0.0",
           },
         ],
       },
@@ -406,4 +408,170 @@ function formatSbom(report: ScanReport): string {
   };
 
   return JSON.stringify(sbom, null, 2);
+}
+
+/**
+ * Format as standalone HTML report.
+ */
+function formatHtml(report: ScanReport): string {
+  const severityColors: Record<Severity, string> = {
+    critical: "#dc2626",
+    high: "#ea580c",
+    medium: "#ca8a04",
+    low: "#2563eb",
+    info: "#6b7280",
+  };
+
+  const severityBg: Record<Severity, string> = {
+    critical: "#fef2f2",
+    high: "#fff7ed",
+    medium: "#fefce8",
+    low: "#eff6ff",
+    info: "#f9fafb",
+  };
+
+  const scoreColor =
+    report.score === 0 ? "#22c55e"
+    : report.score <= 10 ? "#06b6d4"
+    : report.score <= 30 ? "#ca8a04"
+    : report.score <= 60 ? "#dc2626"
+    : "#991b1b";
+
+  const sorted = [...report.findings].sort(
+    (a, b) => severityRank(b.severity) - severityRank(a.severity),
+  );
+
+  const findingsHtml = sorted
+    .map(
+      (f, i) => `
+    <tr class="finding" data-severity="${f.severity}">
+      <td><span class="badge" style="background:${severityColors[f.severity]}">${f.severity.toUpperCase()}</span></td>
+      <td>${escapeHtml(f.rule)}</td>
+      <td>${escapeHtml(f.description)}</td>
+      <td>${f.file ? escapeHtml(f.file) + (f.line ? `:${f.line}` : "") : "-"}</td>
+      <td class="match">${f.match ? escapeHtml(f.match) : "-"}</td>
+    </tr>`,
+    )
+    .join("\n");
+
+  const recsHtml = report.recommendations
+    .map((r) => `<li>${escapeHtml(r)}</li>`)
+    .join("\n");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>supply-chain-guard Report - ${escapeHtml(report.target)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+header{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;padding:32px;border-radius:12px;margin-bottom:24px}
+header h1{font-size:24px;margin-bottom:8px}
+header .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:14px;opacity:0.85}
+.score-card{display:flex;align-items:center;gap:24px;background:#fff;padding:24px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px}
+.score-num{font-size:48px;font-weight:800;color:${scoreColor}}
+.score-label{font-size:14px;color:#64748b}
+.score-level{font-size:20px;font-weight:600;text-transform:uppercase;color:${scoreColor}}
+.summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.summary .chip{padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:24px;margin-bottom:24px}
+.card h2{font-size:18px;margin-bottom:16px;color:#1e293b}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:12px 8px;border-bottom:2px solid #e2e8f0;color:#64748b;font-weight:600}
+td{padding:10px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700}
+.match{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:12px;color:#64748b}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:13px;transition:all 0.2s}
+.filter-btn:hover,.filter-btn.active{background:#1e293b;color:#fff;border-color:#1e293b}
+ul{padding-left:20px}
+li{margin-bottom:8px}
+footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
+@media(max-width:768px){.score-card{flex-direction:column;text-align:center}.meta{flex-direction:column;gap:4px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>supply-chain-guard Scan Report</h1>
+    <div class="meta">
+      <span>Target: ${escapeHtml(report.target)}</span>
+      <span>Type: ${report.scanType}</span>
+      <span>Time: ${report.timestamp}</span>
+      <span>Duration: ${report.durationMs}ms</span>
+    </div>
+  </header>
+
+  <div class="score-card">
+    <div>
+      <div class="score-num">${report.score}</div>
+      <div class="score-label">/ 100 Risk Score</div>
+    </div>
+    <div>
+      <div class="score-level">${report.riskLevel}</div>
+      <div class="score-label">${report.summary.filesScanned} files scanned of ${report.summary.totalFiles} total</div>
+    </div>
+  </div>
+
+  <div class="summary">
+    ${report.summary.critical > 0 ? `<span class="chip" style="background:${severityBg.critical};color:${severityColors.critical}">${SEVERITY_ICONS.critical} ${report.summary.critical} Critical</span>` : ""}
+    ${report.summary.high > 0 ? `<span class="chip" style="background:${severityBg.high};color:${severityColors.high}">${SEVERITY_ICONS.high} ${report.summary.high} High</span>` : ""}
+    ${report.summary.medium > 0 ? `<span class="chip" style="background:${severityBg.medium};color:${severityColors.medium}">${SEVERITY_ICONS.medium} ${report.summary.medium} Medium</span>` : ""}
+    ${report.summary.low > 0 ? `<span class="chip" style="background:${severityBg.low};color:${severityColors.low}">${SEVERITY_ICONS.low} ${report.summary.low} Low</span>` : ""}
+    ${report.summary.info > 0 ? `<span class="chip" style="background:${severityBg.info};color:${severityColors.info}">${SEVERITY_ICONS.info} ${report.summary.info} Info</span>` : ""}
+    ${report.findings.length === 0 ? '<span class="chip" style="background:#f0fdf4;color:#22c55e">No findings</span>' : ""}
+  </div>
+
+  ${report.findings.length > 0 ? `
+  <div class="card">
+    <h2>Findings (${report.findings.length})</h2>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterFindings('all')">All</button>
+      <button class="filter-btn" onclick="filterFindings('critical')">Critical</button>
+      <button class="filter-btn" onclick="filterFindings('high')">High</button>
+      <button class="filter-btn" onclick="filterFindings('medium')">Medium</button>
+      <button class="filter-btn" onclick="filterFindings('low')">Low</button>
+      <button class="filter-btn" onclick="filterFindings('info')">Info</button>
+    </div>
+    <table>
+      <thead><tr><th>Severity</th><th>Rule</th><th>Description</th><th>File</th><th>Match</th></tr></thead>
+      <tbody>${findingsHtml}</tbody>
+    </table>
+  </div>
+  ` : ""}
+
+  ${report.recommendations.length > 0 ? `
+  <div class="card">
+    <h2>Recommendations</h2>
+    <ul>${recsHtml}</ul>
+  </div>
+  ` : ""}
+
+  <footer>
+    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v4.0.0
+  </footer>
+</div>
+<script>
+function filterFindings(severity){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.finding').forEach(row=>{
+    row.style.display=severity==='all'||row.dataset.severity===severity?'':'none';
+  });
+}
+</script>
+</body>
+</html>`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
