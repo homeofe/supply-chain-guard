@@ -52,12 +52,14 @@ import { detectTrustSignals } from "./trust-signals.js";
 import { loadThreatIntel, checkThreatIntel } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
+import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
+import { generatePlaybooks } from "./playbooks.js";
 import {
   OBFUSCATION_V3_PATTERNS,
   PROVENANCE_PATTERNS,
 } from "./patterns.js";
 
-const TOOL_VERSION = "4.5.0";
+const TOOL_VERSION = "4.6.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -330,6 +332,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
     riskDimensions: calculateRiskDimensions(filteredFindings),
+    remediations: generateRemediations(filteredFindings),
+    fixSuggestions: generateFixSuggestions(filteredFindings),
+    playbooks: correlation.incidents.length > 0
+      ? generatePlaybooks(correlation.incidents)
+      : undefined,
   };
 }
 

@@ -44,6 +44,10 @@ export { loadThreatIntel, updateThreatFeed, checkThreatIntel } from "./threat-in
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
 export { listOrgRepos, analyzeOrgFindings } from "./org-scanner.js";
+export { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
+export { generatePlaybooks } from "./playbooks.js";
+export { checkDependencyGovernance } from "./dependency-governance.js";
+export { exportIncidentBundle, exportIncidentMarkdown, exportCsvSummary } from "./soc-exporter.js";
 export type {
   Finding,
   ScanReport,

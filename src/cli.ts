@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("4.5.0");
+  .version("4.6.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -58,6 +58,8 @@ program
   .option("--baseline <file>", "Baseline file to diff against (only show new findings)")
   .option("--save-baseline <file>", "Save current findings as baseline for future diffs")
   .option("--since <commit>", "Only scan files changed since this commit (diff mode)")
+  .option("--export-incident-md", "Export incident report as markdown to stdout")
+  .option("--export-fixes", "Show fix suggestions for automatable findings")
   .action(
     async (
       target: string,
@@ -70,6 +72,8 @@ program
         baseline?: string;
         saveBaseline?: string;
         since?: string;
+        exportIncidentMd?: boolean;
+        exportFixes?: boolean;
       },
     ) => {
       try {
@@ -92,7 +96,25 @@ program
           console.error(`Baseline saved to ${opts.saveBaseline} (${report.findings.length} findings)`);
         }
 
-        console.log(formatReport(report, options.format));
+        // Export incident markdown if requested
+        if (opts.exportIncidentMd) {
+          const { exportIncidentMarkdown } = await import("./soc-exporter.js");
+          console.log(exportIncidentMarkdown(report));
+        } else {
+          console.log(formatReport(report, options.format));
+        }
+
+        // Show fix suggestions if requested
+        if (opts.exportFixes && report.fixSuggestions && report.fixSuggestions.length > 0) {
+          console.error("\n  Fix Suggestions:");
+          for (const fix of report.fixSuggestions) {
+            console.error(`\n  File: ${fix.targetFile}`);
+            if (fix.before) console.error(`  - ${fix.before}`);
+            if (fix.after) console.error(`  + ${fix.after}`);
+            console.error(`  ${fix.explanation}`);
+          }
+          console.error("");
+        }
 
         // Exit code logic
         if (opts.failOn) {

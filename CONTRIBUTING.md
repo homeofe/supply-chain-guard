@@ -98,6 +98,10 @@ src/
   risk-engine.ts          # Multi-dimensional risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
   org-scanner.ts          # Organization-level scanning
+  remediation-engine.ts   # Automated fix suggestions
+  playbooks.ts            # Incident response playbooks
+  dependency-governance.ts # Dependency policies
+  soc-exporter.ts         # SIEM/SOC export formats
   reporter.ts             # Output formatting
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces

@@ -296,6 +296,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v4.6.0 (2026-04-04)
+- **New: Remediation Engine** -- concrete, prioritized fix steps for every finding
+- **New: Fix Suggestions** -- machine-readable patches (pin actions, fix registries)
+- **New: Incident Playbooks** -- full response playbooks for GlassWorm, Vidar, npm takeover, fake repos, CI/CD poisoning
+- **New: SOC Exporter** -- JSON incident bundles, markdown incident reports, CSV summaries
+- **New: Dependency Governance** -- untrusted source detection in lockfiles
+- **New:** `--export-incident-md` for ticket-ready incident reports
+- **New:** `--export-fixes` for automatable fix suggestions
+- **New:** Remediation plan section in text/HTML reports
+- 24 new tests (525 total)
+
 ### v4.5.0 (2026-04-04)
 - **New: Threat Intelligence** -- real-time IOC feed integration with confidence scoring and decay
 - **New: Adaptive Risk Engine** -- multi-dimensional scoring (code/deps/repo/CI + confidence)

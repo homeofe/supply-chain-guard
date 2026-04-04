@@ -66,6 +66,12 @@ export interface ScanReport {
   timeline?: TimelineEvent[];
   /** Adaptive risk dimensions (v4.5) */
   riskDimensions?: RiskDimensions;
+  /** Remediation plan (v4.6) */
+  remediations?: Remediation[];
+  /** Fix suggestions (v4.6) */
+  fixSuggestions?: FixSuggestion[];
+  /** Incident playbooks (v4.6) */
+  playbooks?: Playbook[];
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +93,47 @@ export interface RiskDimensions {
   threatIntelMatches: number;
   overallScore: number;
   confidence: number;
+}
+
+// ---------------------------------------------------------------------------
+// v4.6 Remediation & Response types
+// ---------------------------------------------------------------------------
+
+export interface Remediation {
+  id: string;
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high" | "critical";
+  category: "dependency" | "ci" | "repo" | "release" | "secret" | "policy";
+  steps: string[];
+  automated: boolean;
+  riskReduction?: number;
+}
+
+export interface FixSuggestion {
+  targetFile: string;
+  changeType: "replace" | "remove" | "insert" | "policy";
+  before?: string;
+  after?: string;
+  explanation: string;
+}
+
+export interface Playbook {
+  incidentType: string;
+  severity: Severity;
+  summary: string;
+  immediateActions: string[];
+  investigationSteps: string[];
+  remediationSteps: string[];
+  preventionMeasures: string[];
+}
+
+export interface PolicyException {
+  rule: string;
+  scope?: string;
+  reason: string;
+  owner?: string;
+  expires?: string;
 }
 
 export interface ThreatIntelSource {
