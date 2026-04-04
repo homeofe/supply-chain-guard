@@ -1031,3 +1031,179 @@ export const IAC_PATTERNS: PatternEntry[] = [
     rule: "IAC_REMOTE_EXEC",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Infostealer / dropper / proxy malware patterns (v4.1)
+// ---------------------------------------------------------------------------
+
+export const INFOSTEALER_PATTERNS: PatternEntry[] = [
+  // Dead-drop resolver patterns
+  {
+    name: "dead-drop-steam",
+    pattern:
+      "steamcommunity\\.com/profiles/\\d+",
+    description:
+      "Steam Community profile URL in code. Infostealers (Vidar, Lumma) use Steam profiles as dead-drop resolvers to retrieve C2 addresses.",
+    severity: "critical",
+    rule: "DEAD_DROP_STEAM",
+  },
+  {
+    name: "dead-drop-telegram",
+    pattern:
+      "(?:telegram\\.me|t\\.me)/[a-zA-Z0-9_]+",
+    description:
+      "Telegram channel/user URL in code. Used as dead-drop resolver for C2 address retrieval by Vidar and similar stealers.",
+    severity: "critical",
+    rule: "DEAD_DROP_TELEGRAM",
+  },
+  {
+    name: "dead-drop-pastebin",
+    pattern:
+      "(?:pastebin\\.com|hastebin\\.com|ghostbin\\.com|paste\\.ee|rentry\\.co)/(?:raw/)?[a-zA-Z0-9]+",
+    description:
+      "Pastebin-like service URL in code. Often used as dead-drop resolver for malware C2 configuration.",
+    severity: "high",
+    rule: "DEAD_DROP_PASTEBIN",
+  },
+  {
+    name: "dead-drop-dns-txt",
+    pattern:
+      "(?:nslookup|dig)\\s+.*\\bTXT\\b|dns\\.resolveTxt|resolver\\.query.*TXT",
+    description:
+      "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels.",
+    severity: "high",
+    rule: "DEAD_DROP_DNS_TXT",
+  },
+
+  // Browser credential theft patterns
+  {
+    name: "vidar-browser-theft",
+    pattern:
+      "(?:Login Data|Cookies|Web Data|History|Local State).*(?:sqlite|sql|copy|read|open)|AppData.*(?:Local|Roaming).*(?:Google|Mozilla|BraveSoftware|Microsoft.*Edge)",
+    description:
+      "Browser credential/cookie file access pattern. Infostealers (Vidar, Lumma, RedLine) steal browser data from these paths.",
+    severity: "high",
+    rule: "VIDAR_BROWSER_THEFT",
+  },
+
+  // Crypto wallet theft patterns
+  {
+    name: "vidar-wallet-theft",
+    pattern:
+      "(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi|Trust.*Wallet).*(?:wallet|keystore|vault|seed|mnemonic)|wallet\\.dat",
+    description:
+      "Cryptocurrency wallet file/directory access. Infostealers target wallet files for fund theft.",
+    severity: "high",
+    rule: "VIDAR_WALLET_THEFT",
+  },
+
+  // SOCKS5 proxy / backconnect patterns
+  {
+    name: "ghostsocks-socks5",
+    pattern:
+      "\\x05[\\x00-\\x03]|SOCKS5|socks5://|socks_version.*5|connect_socks",
+    description:
+      "SOCKS5 proxy protocol pattern. GhostSocks and similar malware turn infected machines into residential proxies.",
+    severity: "critical",
+    rule: "GHOSTSOCKS_SOCKS5",
+  },
+  {
+    name: "proxy-backconnect",
+    pattern:
+      "backconnect|back_connect|reverse.*proxy.*register|proxy.*checkin|residential.*proxy",
+    description:
+      "Reverse proxy/backconnect pattern. Infected machines are registered as proxy nodes for criminal infrastructure.",
+    severity: "high",
+    rule: "PROXY_BACKCONNECT",
+  },
+
+  // Dropper / loader patterns
+  {
+    name: "dropper-temp-exec",
+    pattern:
+      "(?:TEMP|TMP|AppData|tmp).*(?:exec|spawn|ShellExecute|CreateProcess|system\\()|(?:writeFile|write_bytes|save).*(?:TEMP|TMP|\\.exe|\\.bat|\\.cmd|\\.ps1)",
+    description:
+      "Dropper pattern: writing and executing files in temporary directories.",
+    severity: "critical",
+    rule: "DROPPER_TEMP_EXEC",
+  },
+  {
+    name: "dropper-antivm",
+    pattern:
+      "(?:VMware|VirtualBox|VBOX|QEMU|Hyper-V|Xen|Parallels).*(?:detect|check|exit)|(?:GetTickCount|IsDebuggerPresent|NtQueryInformationProcess|CheckRemoteDebuggerPresent)",
+    description:
+      "Anti-VM/anti-debug evasion technique. Malware checks for sandbox environments before executing payloads.",
+    severity: "high",
+    rule: "DROPPER_ANTIVM",
+  },
+  {
+    name: "dropper-sleep-evasion",
+    pattern:
+      "(?:sleep|Sleep|usleep|nanosleep|time\\.sleep|Thread\\.sleep|Start-Sleep)\\s*\\(\\s*(?:[0-9]{5,}|\\d+\\s*\\*\\s*(?:60|1000|60000))",
+    description:
+      "Long sleep before execution. Droppers delay to evade sandbox time limits (SUNBURST/Vidar technique).",
+    severity: "high",
+    rule: "DROPPER_SLEEP_EVASION",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Fake AI-tool / SEO lure patterns (v4.1 - Claude Code campaign)
+// ---------------------------------------------------------------------------
+
+export const LURE_PATTERNS: PatternEntry[] = [
+  {
+    name: "readme-lure-leaked",
+    pattern:
+      "(?:leaked|exposed|dumped)\\s+(?:source|code|src|binary|build)",
+    description:
+      "README contains 'leaked source/code' language. This is a common social engineering lure for malware distribution.",
+    severity: "high",
+    rule: "README_LURE_LEAKED",
+  },
+  {
+    name: "readme-lure-crack",
+    pattern:
+      "\\b(?:crack(?:ed)?|keygen|license\\s*bypass|no\\s*(?:message\\s*)?limits?|unlock(?:ed)?\\s*(?:features?|enterprise|pro|premium))\\b",
+    description:
+      "README contains crack/keygen/unlock language. Malware repos promise premium features to lure downloads.",
+    severity: "critical",
+    rule: "README_LURE_CRACK",
+  },
+  {
+    name: "readme-lure-urgency",
+    pattern:
+      "(?:download|get|grab)\\s+(?:before|quickly|fast|now|while).*(?:removed|taken down|deleted|gone|available)",
+    description:
+      "README uses urgency language to pressure downloads. Classic social engineering tactic.",
+    severity: "medium",
+    rule: "README_LURE_URGENCY",
+  },
+  {
+    name: "campaign-claude-lure",
+    pattern:
+      "(?:claude\\s*code|anthropic).*(?:leaked|cracked|unlocked|free|exposed|rebuilt)",
+    description:
+      "Claude Code lure detected. The April 2026 campaign distributed Vidar/GhostSocks via fake 'leaked Claude Code' repos.",
+    severity: "critical",
+    rule: "CAMPAIGN_CLAUDE_LURE",
+  },
+  {
+    name: "campaign-ai-tool-lure",
+    pattern:
+      "(?:copilot|cursor|devin|openai|chatgpt|gemini|claude|windsurf|openclaw).*(?:leaked|cracked|free\\s*download|source\\s*dump)",
+    description:
+      "Fake AI tool lure detected. The 2026 campaign impersonated 25+ software brands to distribute malware.",
+    severity: "critical",
+    rule: "CAMPAIGN_AI_TOOL_LURE",
+  },
+  {
+    name: "fake-exe-in-release",
+    pattern:
+      "(?:_x64|_x86|_amd64|_arm64|Setup|Install)\\.(?:exe|msi|bat|cmd|ps1|7z|rar)",
+    description:
+      "Suspicious executable/archive filename pattern matching malware campaign naming conventions.",
+    severity: "high",
+    rule: "FAKE_AI_TOOL_LURE",
+  },
+];

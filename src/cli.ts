@@ -13,6 +13,7 @@ import { scanNpmPackage } from "./npm-scanner.js";
 import { scanPypiPackage } from "./pypi-scanner.js";
 import { scanVscodeExtension } from "./vscode-scanner.js";
 import { scanDependencyConfusion } from "./dependency-confusion.js";
+import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 import {
   monitorWallet,
   formatAlert,
@@ -32,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("4.0.0");
+  .version("4.1.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -251,6 +252,65 @@ program
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
+
+        if (report.summary.critical > 0) {
+          process.exit(2);
+        }
+        if (report.summary.high > 0) {
+          process.exit(1);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`\n  Error: ${message}\n`);
+        process.exit(1);
+      }
+    },
+  );
+
+// ── repo command ──────────────────────────────────────────────────
+
+program
+  .command("repo")
+  .description("Analyze a GitHub repository for trust signals and malware indicators")
+  .argument("<url>", "GitHub repository URL (e.g., https://github.com/owner/repo)")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html", "text")
+  .action(
+    async (
+      url: string,
+      opts: { format: string },
+    ) => {
+      try {
+        const parsed = parseGitHubUrl(url);
+        if (!parsed) {
+          throw new Error("Invalid GitHub URL. Expected: https://github.com/owner/repo");
+        }
+
+        // Run trust analysis
+        const trustFindings = analyzeGitHubTrust(parsed.owner, parsed.repo);
+
+        // Also run a full scan (clone + content analysis)
+        const options: ScanOptions = {
+          target: url,
+          format: opts.format as ScanOptions["format"],
+        };
+        const report = await scan(options);
+
+        // Merge trust findings (deduplicate)
+        const existingRules = new Set(report.findings.map((f) => f.rule));
+        for (const tf of trustFindings) {
+          if (!existingRules.has(tf.rule)) {
+            report.findings.push(tf);
+          }
+        }
+
+        // Recalculate summary
+        report.summary.critical = report.findings.filter((f) => f.severity === "critical").length;
+        report.summary.high = report.findings.filter((f) => f.severity === "high").length;
+        report.summary.medium = report.findings.filter((f) => f.severity === "medium").length;
+        report.summary.low = report.findings.filter((f) => f.severity === "low").length;
+        report.summary.info = report.findings.filter((f) => f.severity === "info").length;
+
+        console.log(formatReport(report, opts.format as ScanOptions["format"]));
 
         if (report.summary.critical > 0) {
           process.exit(2);

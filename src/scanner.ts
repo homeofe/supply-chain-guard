@@ -35,8 +35,14 @@ import { scanGitSecurity } from "./git-scanner.js";
 import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
+import { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
+import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
+import {
+  INFOSTEALER_PATTERNS,
+  LURE_PATTERNS,
+} from "./patterns.js";
 
-const TOOL_VERSION = "4.0.0";
+const TOOL_VERSION = "4.1.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -136,11 +142,28 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       const entropyFindings = analyzeEntropy(content, relativePath);
       findings.push(...entropyFindings);
 
+      // IOC blocklist check (v4.1)
+      const iocFindings = checkIOCBlocklist(content, relativePath);
+      findings.push(...iocFindings);
+
+      // README lure pattern scanning (v4.1)
+      if (basename.toLowerCase().startsWith("readme")) {
+        const lureFindings = scanReadmeLures(content, relativePath);
+        findings.push(...lureFindings);
+      }
+
       // Check package.json specifically
       if (basename === "package.json") {
         checkPackageJson(content, relativePath, findings);
         // Check for binary download patterns in install scripts (T-007)
         checkBinaryDownloadScripts(content, relativePath, findings);
+        // Check for known-bad package versions (v4.1)
+        checkKnownBadVersions(content, relativePath, findings);
+      }
+
+      // Check package-lock.json for known-bad versions (v4.1)
+      if (basename === "package-lock.json") {
+        checkLockfileBadVersions(content, relativePath, findings);
       }
     } catch {
       // Skip files that can't be read (binary, permissions, etc.)
@@ -159,6 +182,15 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Check GitHub Actions workflows (#9)
   const ghaFindings = scanGitHubActionsWorkflows(scanDir);
   findings.push(...ghaFindings);
+
+  // GitHub trust signal analysis (v4.1)
+  if (scanType === "github") {
+    const parsed = parseGitHubUrl(target);
+    if (parsed) {
+      const trustFindings = analyzeGitHubTrust(parsed.owner, parsed.repo);
+      findings.push(...trustFindings);
+    }
+  }
 
   // Check Dockerfile / container configs (v4.0)
   const dockerFindings = scanDockerFiles(scanDir);
@@ -292,6 +324,8 @@ function checkFilePatterns(
     ...CAMPAIGN_PATTERNS_V2,
     ...OBFUSCATION_PATTERNS_V2,
     ...IAC_PATTERNS,
+    ...INFOSTEALER_PATTERNS,
+    ...LURE_PATTERNS,
   ];
 
   for (const pattern of allPatterns) {
@@ -578,6 +612,80 @@ function checkMultiLineProtestware(
           });
         }
         return; // One finding per file is enough
+      }
+    }
+  }
+}
+
+/**
+ * Check package.json dependencies for known-bad versions (v4.1).
+ */
+function checkKnownBadVersions(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let pkg: Record<string, unknown>;
+  try {
+    pkg = JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  const allDeps = {
+    ...(pkg.dependencies as Record<string, string> | undefined),
+    ...(pkg.devDependencies as Record<string, string> | undefined),
+  };
+
+  for (const [name, versionRange] of Object.entries(allDeps)) {
+    if (!versionRange) continue;
+    // Extract exact version from range (e.g., "^1.14.1" → "1.14.1")
+    const version = versionRange.replace(/^[\^~>=<]*/, "");
+    const finding = checkBadVersion(name, version, "npm");
+    if (finding) {
+      findings.push({ ...finding, file: relativePath });
+    }
+  }
+}
+
+/**
+ * Check package-lock.json for known-bad resolved versions (v4.1).
+ */
+function checkLockfileBadVersions(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let lock: Record<string, unknown>;
+  try {
+    lock = JSON.parse(content) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  // lockfile v2+ uses "packages" key
+  const packages = lock.packages as Record<string, { version?: string }> | undefined;
+  if (packages) {
+    for (const [pkgPath, entry] of Object.entries(packages)) {
+      if (!pkgPath || !entry?.version) continue;
+      // Extract package name from path (e.g., "node_modules/axios" → "axios")
+      const name = pkgPath.replace(/^node_modules\//, "").replace(/^.*node_modules\//, "");
+      if (!name) continue;
+      const finding = checkBadVersion(name, entry.version, "npm");
+      if (finding) {
+        findings.push({ ...finding, file: relativePath });
+      }
+    }
+  }
+
+  // lockfile v1 uses "dependencies" key
+  const deps = lock.dependencies as Record<string, { version?: string }> | undefined;
+  if (deps && !packages) {
+    for (const [name, entry] of Object.entries(deps)) {
+      if (!entry?.version) continue;
+      const finding = checkBadVersion(name, entry.version, "npm");
+      if (finding) {
+        findings.push({ ...finding, file: relativePath });
       }
     }
   }
@@ -969,6 +1077,64 @@ function generateRecommendations(findings: Finding[]): string[] {
     );
   }
 
+  // Infostealer / dead-drop recommendations (v4.1)
+  if (rules.has("DEAD_DROP_STEAM") || rules.has("DEAD_DROP_TELEGRAM") || rules.has("DEAD_DROP_PASTEBIN")) {
+    recommendations.push(
+      "CRITICAL: Dead-drop resolver patterns detected. Infostealers (Vidar, Lumma, RedLine) use Steam/Telegram/Pastebin to retrieve C2 addresses. Quarantine this code.",
+    );
+  }
+  if (rules.has("VIDAR_BROWSER_THEFT") || rules.has("VIDAR_WALLET_THEFT")) {
+    recommendations.push(
+      "CRITICAL: Infostealer credential/wallet theft patterns detected. This code targets browser data and cryptocurrency wallets.",
+    );
+  }
+  if (rules.has("GHOSTSOCKS_SOCKS5") || rules.has("PROXY_BACKCONNECT")) {
+    recommendations.push(
+      "CRITICAL: Proxy/backconnect malware detected. GhostSocks turns infected machines into residential proxy nodes for criminal infrastructure.",
+    );
+  }
+  if (rules.has("DROPPER_TEMP_EXEC")) {
+    recommendations.push(
+      "CRITICAL: Dropper/loader behavior detected — writing and executing files in temporary directories.",
+    );
+  }
+
+  // IOC blocklist recommendations (v4.1)
+  if (rules.has("IOC_KNOWN_C2_DOMAIN") || rules.has("IOC_KNOWN_C2_IP") || rules.has("IOC_KNOWN_DEAD_DROP")) {
+    recommendations.push(
+      "CRITICAL: Known malicious infrastructure (C2/dead-drop) detected in code. This is a confirmed threat indicator.",
+    );
+  }
+  if (rules.has("IOC_KNOWN_BAD_VERSION")) {
+    recommendations.push(
+      "CRITICAL: Known compromised package version detected. Remove immediately and upgrade to a clean version.",
+    );
+  }
+
+  // Lure / fake repo recommendations (v4.1)
+  if (rules.has("CAMPAIGN_CLAUDE_LURE") || rules.has("CAMPAIGN_AI_TOOL_LURE")) {
+    recommendations.push(
+      "CRITICAL: This matches the 2026 fake AI tool malware campaign distributing Vidar/GhostSocks. Do NOT execute any code or binaries.",
+    );
+  }
+  if (rules.has("README_LURE_CRACK") || rules.has("RELEASE_NAME_LURE")) {
+    recommendations.push(
+      "This repository uses piracy/crack language — a strong indicator of malware distribution. Do not download or use.",
+    );
+  }
+
+  // GitHub trust recommendations (v4.1)
+  if (rules.has("REPO_KNOWN_MALICIOUS_ACCOUNT")) {
+    recommendations.push(
+      "CRITICAL: This repository belongs to a known malicious GitHub account. Do not use any code from this source.",
+    );
+  }
+  if (rules.has("RELEASE_EXE_ARTIFACT")) {
+    recommendations.push(
+      "CRITICAL: Executable files in GitHub releases. This is the primary distribution vector for the 2026 fake AI tool campaign.",
+    );
+  }
+
   if (recommendations.length === 0 && findings.length > 0) {
     recommendations.push(
       "Review the listed findings and assess whether they represent legitimate functionality or potential threats.",
@@ -1123,6 +1289,75 @@ function getRecommendation(rule: string): string {
       "High-entropy file may contain obfuscated or compressed payloads.",
     HIGH_ENTROPY_STRING:
       "High-entropy string likely contains encoded payload. Decode and inspect.",
+    // v4.1 rules
+    DEAD_DROP_STEAM:
+      "CRITICAL: Steam profile used as dead-drop resolver for C2. This is a Vidar/Lumma stealer indicator.",
+    DEAD_DROP_TELEGRAM:
+      "CRITICAL: Telegram channel used as dead-drop resolver. This is a known infostealer C2 technique.",
+    DEAD_DROP_PASTEBIN:
+      "Pastebin URL may be a dead-drop resolver for malware C2 configuration.",
+    DEAD_DROP_DNS_TXT:
+      "DNS TXT lookups can be used as covert C2 channels by malware.",
+    VIDAR_BROWSER_THEFT:
+      "Browser credential file access matches infostealer behavior. Quarantine this code.",
+    VIDAR_WALLET_THEFT:
+      "Crypto wallet file access detected. Infostealers target these paths for fund theft.",
+    GHOSTSOCKS_SOCKS5:
+      "SOCKS5 proxy protocol detected. GhostSocks malware creates residential proxy nodes.",
+    PROXY_BACKCONNECT:
+      "Backconnect/reverse proxy registration. Infected machines become proxy infrastructure.",
+    DROPPER_TEMP_EXEC:
+      "Temp directory write + execute pattern. This is classic dropper/loader behavior.",
+    DROPPER_ANTIVM:
+      "Anti-VM/anti-debug checks indicate sandbox evasion. Malware avoids analysis environments.",
+    DROPPER_SLEEP_EVASION:
+      "Long sleep before execution evades sandbox time limits. Common in infostealers.",
+    README_LURE_LEAKED:
+      "README uses 'leaked' language. Verify project legitimacy before using.",
+    README_LURE_CRACK:
+      "README promises cracked/unlocked software. This is almost certainly malware.",
+    README_LURE_URGENCY:
+      "Urgency language pressures quick downloads. Classic social engineering.",
+    CAMPAIGN_CLAUDE_LURE:
+      "CRITICAL: Claude Code lure matches April 2026 Vidar/GhostSocks campaign.",
+    CAMPAIGN_AI_TOOL_LURE:
+      "CRITICAL: Fake AI tool lure matches 2026 multi-brand malware campaign.",
+    FAKE_AI_TOOL_LURE:
+      "Suspicious executable naming pattern. Verify file origin and integrity.",
+    IOC_KNOWN_C2_DOMAIN:
+      "Known malicious C2 domain. Quarantine immediately.",
+    IOC_KNOWN_C2_IP:
+      "Known malicious C2 IP address. Quarantine immediately.",
+    IOC_KNOWN_DEAD_DROP:
+      "Known dead-drop resolver URL. This is used to retrieve malware C2 addresses.",
+    IOC_KNOWN_MALWARE_HASH:
+      "This hash matches known malware. Do not execute associated files.",
+    IOC_KNOWN_MALICIOUS_ACCOUNT:
+      "Reference to known malicious GitHub account. Do not use code from this source.",
+    IOC_KNOWN_BAD_VERSION:
+      "This package version is known to contain malware. Remove and upgrade immediately.",
+    REPO_KNOWN_MALICIOUS_ACCOUNT:
+      "This GitHub account distributes malware. Do not use.",
+    REPO_NEW_ACCOUNT:
+      "New GitHub account. Verify maintainer identity.",
+    REPO_RECENT_CREATION:
+      "New repo with many stars. Likely star-farming.",
+    REPO_STAR_FORK_RATIO:
+      "Unusual star/fork ratio indicates bot activity.",
+    REPO_FEW_CONTRIBUTORS:
+      "Few contributors on popular repo. May be fake.",
+    REPO_NO_ISSUES:
+      "Issues disabled or empty on popular repo. Red flag.",
+    REPO_SINGLE_COMMIT:
+      "Single-commit repo with stars. Strong malware indicator.",
+    RELEASE_EXE_ARTIFACT:
+      "Do NOT download. Executables in GitHub releases are a primary malware vector.",
+    RELEASE_7Z_ARCHIVE:
+      "Compressed archives bypass AV detection. Inspect before extracting.",
+    RELEASE_SIZE_ANOMALY:
+      "Unusually large release artifact. Verify this is expected.",
+    RELEASE_NAME_LURE:
+      "Release name contains piracy/crack language. Almost always malware.",
   };
 
   return map[rule] ?? "Review this finding manually and assess the risk.";

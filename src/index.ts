@@ -30,6 +30,8 @@ export { scanGitSecurity } from "./git-scanner.js";
 export { analyzeEntropy, shannonEntropy } from "./entropy.js";
 export { scanCargoFiles } from "./cargo-scanner.js";
 export { scanGoFiles } from "./go-scanner.js";
+export { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
+export { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 export type {
   Finding,
   ScanReport,
