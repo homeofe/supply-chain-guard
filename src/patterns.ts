@@ -1307,3 +1307,53 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     rule: "SECRETS_GENERIC_API_KEY",
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Advanced obfuscation v2 patterns (v4.5)
+// ---------------------------------------------------------------------------
+
+export const OBFUSCATION_V3_PATTERNS: PatternEntry[] = [
+  {
+    name: "code-split-string-obfuscation",
+    pattern:
+      "(?:['\"][a-zA-Z]{1,3}['\"]\\s*\\+\\s*){5,}",
+    description:
+      "String built by concatenating many small fragments. This technique hides suspicious strings from static analysis.",
+    severity: "high",
+    rule: "CODE_SPLIT_STRING_OBFUSCATION",
+  },
+  {
+    name: "code-multi-layer-encoding",
+    pattern:
+      "(?:atob|Buffer\\.from|decodeURIComponent|unescape)\\s*\\(\\s*(?:atob|Buffer\\.from|decodeURIComponent|unescape)",
+    description:
+      "Multi-layer encoding detected (decode inside decode). Malware uses nested encoding to evade detection.",
+    severity: "critical",
+    rule: "CODE_MULTI_LAYER_ENCODING",
+  },
+  {
+    name: "code-runtime-deobfuscation",
+    pattern:
+      "(?:setInterval|setTimeout|requestAnimationFrame)\\s*\\([^)]*(?:eval|Function|exec)",
+    description:
+      "Delayed runtime deobfuscation. Code deobfuscates and executes payload after a delay to evade analysis.",
+    severity: "high",
+    rule: "CODE_RUNTIME_DEOBFUSCATION",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Provenance & integrity signals (v4.5)
+// ---------------------------------------------------------------------------
+
+export const PROVENANCE_PATTERNS: PatternEntry[] = [
+  {
+    name: "provenance-missing-sig",
+    pattern:
+      '"integrity"\\s*:\\s*""',
+    description:
+      "Empty integrity hash in lockfile. Package integrity cannot be verified.",
+    severity: "medium",
+    rule: "PROVENANCE_MISSING",
+  },
+];

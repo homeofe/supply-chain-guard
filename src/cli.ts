@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("4.4.0");
+  .version("4.5.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -57,6 +57,7 @@ program
   )
   .option("--baseline <file>", "Baseline file to diff against (only show new findings)")
   .option("--save-baseline <file>", "Save current findings as baseline for future diffs")
+  .option("--since <commit>", "Only scan files changed since this commit (diff mode)")
   .action(
     async (
       target: string,
@@ -68,6 +69,7 @@ program
         failOn?: string;
         baseline?: string;
         saveBaseline?: string;
+        since?: string;
       },
     ) => {
       try {
@@ -78,6 +80,7 @@ program
           excludeRules: opts.exclude?.split(",").map((r) => r.trim()),
           maxDepth: parseInt(opts.depth, 10),
           baselineFile: opts.baseline,
+          sinceCommit: opts.since,
         };
 
         const report = await scan(options);
@@ -330,6 +333,70 @@ program
         }
         if (report.summary.high > 0) {
           process.exit(1);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`\n  Error: ${message}\n`);
+        process.exit(1);
+      }
+    },
+  );
+
+// ── org command ───────────────────────────────────────────────────
+
+program
+  .command("org")
+  .description("Scan all repositories in a GitHub organization")
+  .argument("<org>", "GitHub organization name")
+  .option("-f, --format <format>", "Output format: text, json", "text")
+  .option("-l, --limit <count>", "Max repos to scan", "20")
+  .action(
+    async (
+      org: string,
+      opts: { format: string; limit: string },
+    ) => {
+      try {
+        const { listOrgRepos, analyzeOrgFindings } = await import("./org-scanner.js");
+        const repos = listOrgRepos(org, parseInt(opts.limit, 10));
+
+        if (repos.length === 0) {
+          console.error(`\n  No repos found for org "${org}". Is gh CLI authenticated?\n`);
+          process.exit(1);
+        }
+
+        console.error(`\n  Scanning ${repos.length} repos in ${org}...\n`);
+
+        const repoFindings = new Map<string, import("./types.js").Finding[]>();
+        for (const repoUrl of repos) {
+          try {
+            const report = await scan({
+              target: repoUrl,
+              format: opts.format as ScanOptions["format"],
+            });
+            repoFindings.set(repoUrl, report.findings);
+            const critCount = report.findings.filter((f) => f.severity === "critical").length;
+            const highCount = report.findings.filter((f) => f.severity === "high").length;
+            if (critCount > 0 || highCount > 0) {
+              console.error(`  ${repoUrl}: ${critCount} critical, ${highCount} high`);
+            }
+          } catch {
+            console.error(`  ${repoUrl}: scan failed`);
+          }
+        }
+
+        const orgFindings = analyzeOrgFindings(repoFindings);
+        if (opts.format === "json") {
+          console.log(JSON.stringify({ org, reposScanned: repos.length, findings: orgFindings }, null, 2));
+        } else {
+          console.log(`\n  Organization: ${org} (${repos.length} repos scanned)`);
+          if (orgFindings.length === 0) {
+            console.log("  No cross-repo patterns detected.\n");
+          } else {
+            for (const f of orgFindings) {
+              console.log(`\n  [${f.severity.toUpperCase()}] ${f.description}`);
+            }
+            console.log("");
+          }
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

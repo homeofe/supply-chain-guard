@@ -40,6 +40,10 @@ export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
 export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
+export { loadThreatIntel, updateThreatFeed, checkThreatIntel } from "./threat-intel.js";
+export { calculateRiskDimensions } from "./risk-engine.js";
+export { getChangedFiles } from "./diff-scanner.js";
+export { listOrgRepos, analyzeOrgFindings } from "./org-scanner.js";
 export type {
   Finding,
   ScanReport,

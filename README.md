@@ -101,6 +101,12 @@ supply-chain-guard vscode publisher.extension-name
 # Detect dependency confusion
 supply-chain-guard confusion ./my-project
 
+# Scan an entire GitHub organization
+supply-chain-guard org my-github-org
+
+# Scan only files changed since a commit (diff mode)
+supply-chain-guard scan ./project --since HEAD~5
+
 # Monitor a Solana C2 wallet
 supply-chain-guard monitor <wallet-address> --once
 ```
@@ -289,6 +295,15 @@ scan() -> collectFiles() -> per-file analysis
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contribution is adding new detection patterns for emerging threats.
 
 ## Changelog
+
+### v4.5.0 (2026-04-04)
+- **New: Threat Intelligence** -- real-time IOC feed integration with confidence scoring and decay
+- **New: Adaptive Risk Engine** -- multi-dimensional scoring (code/deps/repo/CI + confidence)
+- **New: Diff-Based Scanning** -- `--since <commit>` scans only changed files
+- **New: Org Scanning** -- `supply-chain-guard org <github-org>` scans entire organizations
+- **New:** Advanced obfuscation v2 (split strings, multi-layer encoding, runtime deobfuscation)
+- **New:** Risk dimensions in text/JSON output (code risk, dep risk, CI/CD risk, threat intel)
+- 19 new tests (501 total)
 
 ### v4.4.0 (2026-04-04)
 - **New: Policy Engine** -- `.supply-chain-guard.yml` config for rule disable, severity overrides, allowlists, suppressions

@@ -94,6 +94,10 @@ src/
   git-scanner.ts          # Git hooks/submodules
   policy-engine.ts        # Policy config, baseline, suppressions
   trust-signals.ts        # Positive trust indicators
+  threat-intel.ts         # External IOC feed integration
+  risk-engine.ts          # Multi-dimensional risk scoring
+  diff-scanner.ts         # Git diff-based incremental scanning
+  org-scanner.ts          # Organization-level scanning
   reporter.ts             # Output formatting
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces

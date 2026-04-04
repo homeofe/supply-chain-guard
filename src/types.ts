@@ -62,6 +62,38 @@ export interface ScanReport {
   suppressedCount?: number;
   /** Whether scan completed fully (v4.4) */
   partialScan?: boolean;
+  /** Threat timeline for forensics (v4.5) */
+  timeline?: TimelineEvent[];
+  /** Adaptive risk dimensions (v4.5) */
+  riskDimensions?: RiskDimensions;
+}
+
+// ---------------------------------------------------------------------------
+// v4.5 Threat Intelligence & Risk types
+// ---------------------------------------------------------------------------
+
+export interface TimelineEvent {
+  event: string;
+  rule?: string;
+  timestamp: string;
+  severity?: Severity;
+}
+
+export interface RiskDimensions {
+  repoTrust: number;
+  codeRisk: number;
+  dependencyRisk: number;
+  ciCdRisk: number;
+  threatIntelMatches: number;
+  overallScore: number;
+  confidence: number;
+}
+
+export interface ThreatIntelSource {
+  name: string;
+  url: string;
+  trustLevel: "low" | "medium" | "high";
+  lastUpdated?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +144,8 @@ export interface ScanOptions {
   baselineFile?: string;
   /** Policy config file path (v4.4) */
   policyFile?: string;
+  /** Only scan changed files since commit (v4.5) */
+  sinceCommit?: string;
 }
 
 export interface NpmPackageInfo {

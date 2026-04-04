@@ -49,8 +49,15 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
+import { loadThreatIntel, checkThreatIntel } from "./threat-intel.js";
+import { calculateRiskDimensions } from "./risk-engine.js";
+import { getChangedFiles } from "./diff-scanner.js";
+import {
+  OBFUSCATION_V3_PATTERNS,
+  PROVENANCE_PATTERNS,
+} from "./patterns.js";
 
-const TOOL_VERSION = "4.4.0";
+const TOOL_VERSION = "4.5.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -86,8 +93,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     throw new Error(`Target is not a directory: ${scanDir}`);
   }
 
-  // Collect files
-  const allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
+  // Collect files (v4.5: diff mode filters to changed files only)
+  let allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
+  if (options.sinceCommit && fs.existsSync(path.join(scanDir, ".git"))) {
+    const changedFiles = new Set(getChangedFiles(scanDir, options.sinceCommit));
+    if (changedFiles.size > 0) {
+      allFiles = allFiles.filter((f) => changedFiles.has(f));
+    }
+  }
+
+  // v4.5: Load threat intelligence feed
+  const threatFeed = loadThreatIntel();
+
   let findings: Finding[] = [];
 
   // Scan each file
@@ -153,6 +170,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       // IOC blocklist check (v4.1)
       const iocFindings = checkIOCBlocklist(content, relativePath);
       findings.push(...iocFindings);
+
+      // Threat intelligence feed check (v4.5)
+      const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
+      findings.push(...tiFindings);
 
       // README lure pattern scanning (v4.1)
       if (basename.toLowerCase().startsWith("readme")) {
@@ -308,6 +329,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     incidents: correlation.incidents.length > 0 ? correlation.incidents : undefined,
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
+    riskDimensions: calculateRiskDimensions(filteredFindings),
   };
 }
 
@@ -393,6 +415,8 @@ function checkFilePatterns(
     ...LURE_PATTERNS,
     ...C2_EXTENDED_PATTERNS,
     ...SECRETS_PATTERNS,
+    ...OBFUSCATION_V3_PATTERNS,
+    ...PROVENANCE_PATTERNS,
   ];
 
   for (const pattern of allPatterns) {
