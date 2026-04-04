@@ -102,6 +102,11 @@ src/
   playbooks.ts            # Incident response playbooks
   dependency-governance.ts # Dependency policies
   soc-exporter.ts         # SIEM/SOC export formats
+  attack-graph.ts         # Attack path modeling
+  active-validation.ts    # Confidence tiers & validation
+  workflow-modeler.ts     # GitHub Actions chain modeling
+  secret-simulator.ts     # Honeytoken system
+  posture-engine.ts       # Org-wide risk posture
   reporter.ts             # Output formatting
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces

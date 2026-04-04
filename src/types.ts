@@ -72,7 +72,56 @@ export interface ScanReport {
   fixSuggestions?: FixSuggestion[];
   /** Incident playbooks (v4.6) */
   playbooks?: Playbook[];
+  /** Attack graph (v4.7) */
+  attackGraph?: AttackGraph;
 }
+
+// ---------------------------------------------------------------------------
+// v4.7 Attack Graph & Validation types
+// ---------------------------------------------------------------------------
+
+export type GraphNodeType =
+  | "repo" | "release" | "package" | "workflow" | "script"
+  | "secret" | "ioc" | "maintainer" | "registry" | "artifact";
+
+export type GraphEdgeType =
+  | "depends_on" | "downloads" | "executes" | "publishes"
+  | "references" | "exfiltrates" | "resolves_to"
+  | "inherits_trust_from" | "violates_policy";
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  risk?: number;
+  findings?: string[];
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  type: GraphEdgeType;
+  label?: string;
+  risk?: number;
+}
+
+export interface AttackGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  paths: AttackPath[];
+}
+
+export interface AttackPath {
+  id: string;
+  description: string;
+  severity: Severity;
+  confidence: number;
+  nodeIds: string[];
+}
+
+export type ConfidenceTier = "heuristic" | "correlated" | "validated" | "confirmed";
+
+export type ValidationMode = "static-only" | "safe-validate" | "detonate-isolated";
 
 // ---------------------------------------------------------------------------
 // v4.5 Threat Intelligence & Risk types

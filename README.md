@@ -296,6 +296,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v4.7.0 (2026-04-04)
+- **New: Attack Graph Engine** -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs with exploitable attack paths
+- **New: Active Validation Framework** -- confidence tiers (heuristic/correlated/validated/confirmed), rationale and evidence per finding
+- **New: Workflow Modeler** -- models GitHub Actions as executable chains, detects secret-to-egress and untrusted-action-in-release paths
+- **New: Secret Simulator** -- honeytoken system for sandboxed analysis (fake .npmrc, .env, SSH keys, AWS creds)
+- **New: Org Posture Engine** -- portfolio-wide risk posture with systemic drift detection, recurring risky packages/actions
+- **New:** `--export-graph json|mermaid` for attack graph visualization
+- **New:** Mermaid diagram export for attack paths
+- 19 new tests (544 total)
+
 ### v4.6.0 (2026-04-04)
 - **New: Remediation Engine** -- concrete, prioritized fix steps for every finding
 - **New: Fix Suggestions** -- machine-readable patches (pin actions, fix registries)

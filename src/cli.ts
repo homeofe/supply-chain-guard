@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("4.6.0");
+  .version("4.7.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -60,6 +60,7 @@ program
   .option("--since <commit>", "Only scan files changed since this commit (diff mode)")
   .option("--export-incident-md", "Export incident report as markdown to stdout")
   .option("--export-fixes", "Show fix suggestions for automatable findings")
+  .option("--export-graph <format>", "Export attack graph (json or mermaid)")
   .action(
     async (
       target: string,
@@ -74,6 +75,7 @@ program
         since?: string;
         exportIncidentMd?: boolean;
         exportFixes?: boolean;
+        exportGraph?: string;
       },
     ) => {
       try {
@@ -102,6 +104,16 @@ program
           console.log(exportIncidentMarkdown(report));
         } else {
           console.log(formatReport(report, options.format));
+        }
+
+        // Export attack graph if requested
+        if (opts.exportGraph && report.attackGraph) {
+          if (opts.exportGraph === "mermaid") {
+            const { exportGraphMermaid } = await import("./attack-graph.js");
+            console.log(exportGraphMermaid(report.attackGraph));
+          } else {
+            console.log(JSON.stringify(report.attackGraph, null, 2));
+          }
         }
 
         // Show fix suggestions if requested

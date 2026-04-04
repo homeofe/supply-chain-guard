@@ -48,6 +48,11 @@ export { generateRemediations, generateFixSuggestions } from "./remediation-engi
 export { generatePlaybooks } from "./playbooks.js";
 export { checkDependencyGovernance } from "./dependency-governance.js";
 export { exportIncidentBundle, exportIncidentMarkdown, exportCsvSummary } from "./soc-exporter.js";
+export { buildAttackGraph, exportGraphMermaid } from "./attack-graph.js";
+export { validateFindings, promoteConfidence } from "./active-validation.js";
+export { modelWorkflows } from "./workflow-modeler.js";
+export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
+export { calculateOrgPosture } from "./posture-engine.js";
 export type {
   Finding,
   ScanReport,

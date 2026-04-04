@@ -54,12 +54,15 @@ import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
 import { generatePlaybooks } from "./playbooks.js";
+import { buildAttackGraph } from "./attack-graph.js";
+import { validateFindings } from "./active-validation.js";
+import { modelWorkflows } from "./workflow-modeler.js";
 import {
   OBFUSCATION_V3_PATTERNS,
   PROVENANCE_PATTERNS,
 } from "./patterns.js";
 
-const TOOL_VERSION = "4.6.0";
+const TOOL_VERSION = "4.7.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -269,11 +272,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings.push(...goFindings);
   }
 
+  // v4.7: Workflow execution modeling
+  const wfFindings = modelWorkflows(scanDir);
+  findings.push(...wfFindings);
+
   // v4.4: Detect positive trust signals (only for GitHub repo scans)
   if (scanType === "github") {
     const trustSignals = detectTrustSignals(scanDir);
     findings.push(...trustSignals);
   }
+
+  // v4.7: Active validation (assign confidence tiers, rationale, evidence)
+  validateFindings(findings);
 
   // v4.2: Correlation engine — link findings into incidents
   const correlation = correlateFindings(findings);
@@ -336,6 +346,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     fixSuggestions: generateFixSuggestions(filteredFindings),
     playbooks: correlation.incidents.length > 0
       ? generatePlaybooks(correlation.incidents)
+      : undefined,
+    attackGraph: filteredFindings.length > 0
+      ? buildAttackGraph(filteredFindings, target)
       : undefined,
   };
 }
