@@ -74,6 +74,10 @@ export interface ScanReport {
   playbooks?: Playbook[];
   /** Attack graph (v4.7) */
   attackGraph?: AttackGraph;
+  /** Risk history trend (v4.8) */
+  riskHistory?: RiskHistoryEntry[];
+  /** Security metrics (v4.8) */
+  metrics?: SecurityMetrics;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +126,46 @@ export interface AttackPath {
 export type ConfidenceTier = "heuristic" | "correlated" | "validated" | "confirmed";
 
 export type ValidationMode = "static-only" | "safe-validate" | "detonate-isolated";
+
+// ---------------------------------------------------------------------------
+// v4.8 Continuous Risk Management types
+// ---------------------------------------------------------------------------
+
+export type FindingStatus =
+  | "new" | "triaged" | "accepted-risk" | "in-remediation" | "resolved" | "false-positive";
+
+export interface RiskHistoryEntry {
+  timestamp: string;
+  score: number;
+  findingsCount: number;
+  criticalCount: number;
+}
+
+export interface TriageDecision {
+  findingRule: string;
+  findingFile?: string;
+  status: FindingStatus;
+  owner?: string;
+  team?: string;
+  reason?: string;
+  decidedAt: string;
+  dueDate?: string;
+}
+
+export interface SlaConfig {
+  critical: string;
+  high: string;
+  medium: string;
+}
+
+export interface SecurityMetrics {
+  mttrCritical?: number;
+  openCritical: number;
+  openHigh: number;
+  slaComplianceRate: number;
+  riskTrend: "increasing" | "stable" | "decreasing";
+  topRiskContributors: string[];
+}
 
 // ---------------------------------------------------------------------------
 // v4.5 Threat Intelligence & Risk types

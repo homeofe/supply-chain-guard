@@ -107,6 +107,11 @@ src/
   workflow-modeler.ts     # GitHub Actions chain modeling
   secret-simulator.ts     # Honeytoken system
   posture-engine.ts       # Org-wide risk posture
+  continuous-monitor.ts   # Risk history & trend tracking
+  triage-engine.ts        # Finding ownership & triage
+  sla-engine.ts           # Remediation SLA tracking
+  risk-forecast.ts        # Risk trajectory prediction
+  metrics.ts              # Security KPIs & metrics
   reporter.ts             # Output formatting
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces

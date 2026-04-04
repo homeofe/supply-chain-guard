@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-guard",
-  "version": "4.7.0",
+  "version": "4.8.0",
   "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud and 110+ malware indicators.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -1,0 +1,44 @@
+[
+  {
+    "timestamp": "2026-04-04T19:50:36.250Z",
+    "score": 100,
+    "findingsCount": 6,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.347Z",
+    "score": 100,
+    "findingsCount": 6,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.442Z",
+    "score": 100,
+    "findingsCount": 6,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.525Z",
+    "score": 100,
+    "findingsCount": 7,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.635Z",
+    "score": 100,
+    "findingsCount": 7,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.727Z",
+    "score": 100,
+    "findingsCount": 7,
+    "criticalCount": 5
+  },
+  {
+    "timestamp": "2026-04-04T19:50:36.809Z",
+    "score": 100,
+    "findingsCount": 7,
+    "criticalCount": 5
+  }
+]

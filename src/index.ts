@@ -53,6 +53,11 @@ export { validateFindings, promoteConfidence } from "./active-validation.js";
 export { modelWorkflows } from "./workflow-modeler.js";
 export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
 export { calculateOrgPosture } from "./posture-engine.js";
+export { loadRiskHistory, saveRiskHistory, analyzeRiskTrend } from "./continuous-monitor.js";
+export { loadTriageDecisions, saveTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+export { checkSlaCompliance } from "./sla-engine.js";
+export { forecastRisk } from "./risk-forecast.js";
+export { calculateMetrics } from "./metrics.js";
 export type {
   Finding,
   ScanReport,

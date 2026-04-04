@@ -296,6 +296,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v4.8.0 (2026-04-04)
+- **New: Continuous Risk Monitor** -- persistent risk history, trend detection (spikes, stagnation, increasing)
+- **New: Triage Engine** -- finding ownership, status tracking, governance checks (unowned critical, expired acceptances)
+- **New: SLA Engine** -- remediation deadline tracking with breach and at-risk detection
+- **New: Risk Forecasting** -- linear regression-based trajectory prediction
+- **New: Security Metrics** -- open critical/high, SLA compliance rate, risk trend, top contributors
+- 18 new tests (562 total)
+
 ### v4.7.0 (2026-04-04)
 - **New: Attack Graph Engine** -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs with exploitable attack paths
 - **New: Active Validation Framework** -- confidence tiers (heuristic/correlated/validated/confirmed), rationale and evidence per finding

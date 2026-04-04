@@ -57,12 +57,16 @@ import { generatePlaybooks } from "./playbooks.js";
 import { buildAttackGraph } from "./attack-graph.js";
 import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
+import { loadRiskHistory, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
+import { loadTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+import { forecastRisk } from "./risk-forecast.js";
+import { calculateMetrics } from "./metrics.js";
 import {
   OBFUSCATION_V3_PATTERNS,
   PROVENANCE_PATTERNS,
 } from "./patterns.js";
 
-const TOOL_VERSION = "4.7.0";
+const TOOL_VERSION = "4.8.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -292,6 +296,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const hasLockfile = fs.existsSync(path.join(scanDir, "package-lock.json"));
   const trustBreakdown = calculateTrustBreakdown(findings, target, hasLockfile);
 
+  // v4.8: Continuous risk monitoring
+  const riskHistory = loadRiskHistory(scanDir);
+  const trendFindings = analyzeRiskTrend(riskHistory, calculateScore(findings));
+  findings.push(...trendFindings);
+  const forecastFindings = forecastRisk(riskHistory, calculateScore(findings));
+  findings.push(...forecastFindings);
+
+  // v4.8: Triage governance checks
+  const triageDecisions = loadTriageDecisions(scanDir);
+  const govFindings = checkTriageGovernance(findings, triageDecisions);
+  findings.push(...govFindings);
+
   // v4.4: Apply policy config (if present)
   let suppressedCount = 0;
   const policy = loadPolicyConfig(scanDir);
@@ -322,6 +338,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const riskLevel = getRiskLevel(score);
   const recommendations = generateRecommendations(filteredFindings);
 
+  // v4.8: Calculate metrics and save history
+  const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions);
+
+  // Save risk history for trend tracking (skip temp dirs)
+  if (!tempDir) {
+    try { saveRiskHistory(scanDir, { timestamp: new Date().toISOString(), score, findings: filteredFindings, summary, riskLevel, recommendations, target, scanType, tool: `supply-chain-guard v${TOOL_VERSION}`, durationMs: Date.now() - startTime }); } catch { /* skip */ }
+  }
+
   // Cleanup temp directory
   if (tempDir) {
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -350,6 +374,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     attackGraph: filteredFindings.length > 0
       ? buildAttackGraph(filteredFindings, target)
       : undefined,
+    riskHistory: riskHistory.length > 0 ? riskHistory : undefined,
+    metrics,
   };
 }
 
