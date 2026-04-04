@@ -48,7 +48,7 @@ import { analyzeDependencyRisks } from "./dependency-risk-analyzer.js";
 import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 
-const TOOL_VERSION = "4.2.0";
+const TOOL_VERSION = "4.3.0";
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.

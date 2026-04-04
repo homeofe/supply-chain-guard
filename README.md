@@ -1,32 +1,69 @@
-# 🛡️ supply-chain-guard
+# supply-chain-guard
 
-Open-source supply-chain security scanner for npm, PyPI, VS Code extensions, GitHub Actions workflows and Solana C2. Detects [GlassWorm](https://www.reversinglabs.com/blog/glassworm-backdoor-campaign-npm-vscode) and similar malware campaigns.
+Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 170+ threat indicators with a correlation engine that links findings into attack-chain incidents.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green)](https://nodejs.org)
-[![npm](https://img.shields.io/badge/npm-v3.1.0-blue)](https://www.npmjs.com/package/supply-chain-guard)
+[![npm](https://img.shields.io/npm/v/supply-chain-guard)](https://www.npmjs.com/package/supply-chain-guard)
 
 ## Background
 
 For a deep dive into how GlassWorm infiltrates the software supply chain and the detection techniques behind this tool, read the blog post: [How GlassWorm Gets In and How We Locked It Out](https://blog.elvatis.com/how-glassworm-gets-in-and-how-we-locked-it-out/).
 
-## What It Does
+## What It Detects
 
-supply-chain-guard scans code repositories and npm packages for known indicators of compromise (IOCs) associated with supply-chain attacks. It catches threats that traditional security scanners miss because it specifically targets software supply-chain attack patterns.
+### Malware Campaigns
+- GlassWorm campaign markers and Solana blockchain C2
+- Vidar/GhostSocks infostealers (April 2026 Claude Code leak campaign)
+- Shai-Hulud self-replicating npm worm
+- XZ Utils backdoor (CVE-2024-3094), SolarWinds SUNBURST, Codecov, ua-parser-js, coa/rc
+- Fake AI tool repos (Claude Code, Copilot, Cursor, ChatGPT, OpenClaw lures)
 
-**Detected threats include:**
+### Code-Level Threats
+- Obfuscated execution: `eval(atob())`, `eval(Buffer.from())`, template literal eval, dynamic `import()`
+- Invisible Unicode, RTL override, SVG script injection, steganography
+- Shannon entropy analysis for encoded payloads
+- Proxy handler traps, WebAssembly from external sources
 
-- 🔴 **GlassWorm campaign markers** (the `lzcdrtfxyqiplpd` variable and associated IOCs)
-- 🔴 **Obfuscated code execution** (`eval(atob(...))`, `eval(Buffer.from(...))`, `new Function(atob(...))`)
-- 🟠 **Invisible Unicode characters** used to hide malicious code in plain sight
-- 🟠 **Suspicious install scripts** (`postinstall`/`preinstall` that download and execute remote code)
-- 🟠 **Data exfiltration patterns** (environment variables sent over the network)
-- 🟡 **Solana blockchain C2** (mainnet-beta, Helius RPC references used as command-and-control channels)
-- 🟡 **Git history manipulation** (committer dates far newer than author dates)
-- 🔵 **Typosquatting package names** (known malicious npm package patterns)
-- 🟠 **PyPI malicious install hooks** (setup.py subprocess, base64 exec, download-and-run in cmdclass)
-- 🟠 **GitHub Actions CI/CD attacks** (unpinned actions, secrets exfiltration, encoded payloads in run blocks)
-- 🟡 **Solana C2 wallet watchlist** (persistent monitoring of known command-and-control wallets with webhook alerts)
+### Supply Chain Attacks
+- Install hook deep analysis (secret harvesting, download-exec chains, binary blobs)
+- Levenshtein-based typosquatting detection against top 80 npm packages
+- Dependency confusion and namespace squatting
+- Known-bad version blocklist (axios, ua-parser-js, coa, rc, event-stream, node-ipc, colors, faker)
+- Publishing anomaly detection (maintainer changes, version gaps, script additions)
+
+### Infrastructure & CI/CD
+- GitHub Actions: unpinned actions, secrets exfiltration, encoded payloads, curl piping
+- Dockerfile: curl pipe, unpinned base images, hardcoded secrets, SUID bits
+- Terraform/IaC: inline scripts, external modules, hardcoded secrets
+- Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
+- Git hooks and submodule security
+
+### Repository Trust Signals
+- GitHub repo metadata analysis (account age, star-farming, single-commit repos)
+- Release artifact scanning (.exe, .7z, double extensions, LNK shortcuts, PE magic)
+- README lure detection (leaked/cracked/urgency language)
+
+### Credential Detection
+- AWS access keys (AKIA/ASIA), GitHub tokens (ghp_/gho_), npm tokens
+- SSH private keys, generic API keys, PEM private keys
+
+### Dead-Drop Resolver / C2 Detection
+- Steam Community profiles, Telegram channels, Pastebin, GitHub Gists
+- DNS TXT records, DNS-over-HTTPS, dynamic WebSocket URLs
+- Known C2 domains and IPs (from IOC blocklist)
+
+### Correlation Engine (v4.2)
+Links individual findings into incident-level attack chains:
+- "GlassWorm Campaign" (marker + eval + exfiltration)
+- "Vidar Stealer Infection" (dead-drop + browser theft + dropper)
+- "npm Account Takeover" (maintainer change + install hooks + C2)
+- "Fake Repository Malware" (lure + exe release + new account)
+- 15+ correlation rules with confidence scoring
+
+### Trust Breakdown (v4.2)
+4-dimension trust scoring for every scan:
+- Publisher Trust (40%) / Code Quality (30%) / Dependency Trust (20%) / Release Process (10%)
 
 ## Installation
 
@@ -42,120 +79,55 @@ npx supply-chain-guard scan ./my-project
 
 ## Quickstart
 
-**Scan a local directory:**
-
 ```bash
+# Scan a local directory
 supply-chain-guard scan ./my-project
-```
 
-**Scan a GitHub repository:**
-
-```bash
+# Scan a GitHub repo (includes trust signal analysis)
 supply-chain-guard scan https://github.com/user/repo
-```
 
-**Scan an npm package (without installing it):**
+# Analyze a GitHub repo for trust signals + malware
+supply-chain-guard repo https://github.com/user/repo
 
-```bash
+# Scan an npm package (downloads without installing)
 supply-chain-guard npm suspicious-package-name
-```
 
-Example output:
+# Scan a PyPI package
+supply-chain-guard pypi suspicious-package
 
-```
-  Risk Score: 68/100 (CRITICAL)
-  Findings:  2 critical, 1 high, 1 medium
+# Scan a VS Code extension
+supply-chain-guard vscode publisher.extension-name
 
-  🔴 [CRITICAL] GlassWorm campaign marker variable detected
-     Rule: GLASSWORM_MARKER  |  File: src/index.js:42
+# Detect dependency confusion
+supply-chain-guard confusion ./my-project
 
-  🔴 [CRITICAL] Base64-encoded eval detected
-     Rule: EVAL_ATOB  |  File: src/loader.js:15
-```
-
-See the full [Example Output](#example-output) section below for a complete scan report.
-
-## Usage
-
-### Scan a Local Directory
-
-```bash
-supply-chain-guard scan ./my-project
-```
-
-### Scan a GitHub Repository
-
-```bash
-supply-chain-guard scan https://github.com/user/repo
-```
-
-### Scan an npm Package
-
-Downloads and analyzes the published tarball without installing it:
-
-```bash
-supply-chain-guard npm express
-supply-chain-guard npm suspicious-package-name
-```
-
-### Monitor a Solana C2 Wallet
-
-Watch a Solana wallet address for memo transactions (used by GlassWorm for C2 communication):
-
-```bash
-# Continuous monitoring
-supply-chain-guard monitor <wallet-address>
-
-# One-shot check
+# Monitor a Solana C2 wallet
 supply-chain-guard monitor <wallet-address> --once
-
-# Custom polling interval
-supply-chain-guard monitor <wallet-address> --interval 60
 ```
 
-### Output Formats
+## Output Formats
 
 ```bash
-# Human-readable text (default)
-supply-chain-guard scan ./project
-
-# JSON (for CI/CD pipelines)
-supply-chain-guard scan ./project --format json
-
-# Markdown (for PR comments)
-supply-chain-guard scan ./project --format markdown
-
-# SARIF 2.1.0 (for GitHub Code Scanning)
-supply-chain-guard scan ./project --format sarif
-
-# CycloneDX 1.5 SBOM (for compliance: NIS2, SSDF, SBOM mandates)
-supply-chain-guard scan ./project --format sbom
+supply-chain-guard scan ./project                # Human-readable text (default)
+supply-chain-guard scan ./project --format json   # JSON (for CI/CD pipelines)
+supply-chain-guard scan ./project --format html   # Standalone HTML report
+supply-chain-guard scan ./project --format markdown # Markdown (for PR comments)
+supply-chain-guard scan ./project --format sarif  # SARIF 2.1.0 (GitHub Code Scanning)
+supply-chain-guard scan ./project --format sbom   # CycloneDX 1.5 SBOM (NIS2/SSDF compliance)
 ```
 
-### CI Exit Code Control
-
-By default, the scanner exits 2 on critical findings and 1 on high findings. Use `--fail-on` to set a custom threshold:
+## CI Exit Code Control
 
 ```bash
-# Fail only on critical (ignore high/medium/low)
-supply-chain-guard scan ./project --fail-on critical
-
-# Fail on high or above (critical + high)
-supply-chain-guard scan ./project --fail-on high
-
-# Fail on any finding
-supply-chain-guard scan ./project --fail-on info
+supply-chain-guard scan ./project --fail-on critical  # Fail only on critical
+supply-chain-guard scan ./project --fail-on high       # Fail on high or above
+supply-chain-guard scan ./project --fail-on info       # Fail on any finding
 ```
 
-This is useful for tiered CI pipelines: block deploys on critical, warn on medium.
-
-### Filtering
+## Filtering
 
 ```bash
-# Only show critical and high findings
 supply-chain-guard scan ./project --min-severity high
-
-# Exclude specific rules
 supply-chain-guard scan ./project --exclude SOLANA_MAINNET,HEX_ARRAY
 ```
 
@@ -163,55 +135,58 @@ supply-chain-guard scan ./project --exclude SOLANA_MAINNET,HEX_ARRAY
 
 ```
   supply-chain-guard scan report
-  ──────────────────────────────────────────────────────
+  ──────────────────────────────────────────────────
   Target:    ./suspicious-package
   Type:      directory
-  Time:      2026-03-19T02:30:00.000Z
   Duration:  142ms
 
-  Risk Score: 68/100 (CRITICAL)
+  Risk Score: 83/100 (CRITICAL)
 
-  Summary
-  ──────────────────────────────────────────────────────
-  Files:     23/47 scanned
-  Findings:  2 critical, 1 high, 1 medium
+  Trust Breakdown
+  ──────────────────────────────────────────────────
+  Publisher:   ██░░░░░░░░ 20/100
+  Code:        ███░░░░░░░ 30/100
+  Deps:        ██████████ 100/100
+  Release:     ████████░░ 80/100
+  Overall:     ████░░░░░░ 48/100
 
-  Findings
-  ──────────────────────────────────────────────────────
+  Correlated Incidents
+  ──────────────────────────────────────────────────
 
-  🔴 [CRITICAL] GlassWorm campaign marker variable detected
-     Rule: GLASSWORM_MARKER
-     File: src/index.js:42
-     Match: lzcdrtfxyqiplpd
-     Fix: Quarantine this code immediately.
+  [CRITICAL] Vidar Stealer Infection (95% confidence)
+  Multiple infostealer indicators: dead-drop resolvers for C2,
+  browser credential theft, and crypto wallet targeting.
+  Indicators: DEAD_DROP_STEAM, VIDAR_BROWSER_THEFT, DROPPER_TEMP_EXEC
 
-  🔴 [CRITICAL] Base64-encoded eval detected (common malware obfuscation)
-     Rule: EVAL_ATOB
-     File: src/loader.js:15
-     Match: eval(atob("aHR0cHM6Ly..."))
-     Fix: Do not execute this code. Decode the base64 to inspect the payload.
+  Findings (6)
+  ──────────────────────────────────────────────────
 
-  🟠 [HIGH] Suspicious invisible Unicode characters detected
-     Rule: INVISIBLE_UNICODE
-     File: src/utils.js:3
-     Fix: Inspect this file in a hex editor.
+  [CRITICAL] Steam Community profile URL in code (dead-drop resolver)
+     Rule: DEAD_DROP_STEAM  |  File: src/config.js:12
 
-  🟡 [MEDIUM] Solana mainnet RPC reference detected
-     Rule: SOLANA_MAINNET
-     File: src/c2.js:8
-     Fix: If this project has no blockchain functionality, investigate.
+  [CRITICAL] Browser credential file access (infostealer)
+     Rule: VIDAR_BROWSER_THEFT  |  File: src/steal.js:45
 
-  Recommendations
-  ──────────────────────────────────────────────────────
-  • CRITICAL: GlassWorm malware marker detected. Quarantine immediately.
-  • CRITICAL: Encoded code execution detected. Do not run this code.
-  • Review files with invisible Unicode characters.
-  • Solana blockchain references may indicate C2 communication.
+  [CRITICAL] Dropper: write + execute in temp directory
+     Rule: DROPPER_TEMP_EXEC  |  File: src/loader.js:23
 ```
 
-## GitHub Action
+## Supported Ecosystems
 
-Add supply-chain-guard to your CI/CD pipeline:
+| Ecosystem | Command | What It Scans |
+|-----------|---------|---------------|
+| npm | `scan`, `npm` | package.json, install scripts, lockfile, tarball |
+| PyPI | `pypi` | setup.py, setup.cfg, pyproject.toml, install hooks |
+| Cargo/Rust | `scan` | Cargo.toml, build.rs, proc macros |
+| Go | `scan` | go.mod, init() functions, CGo, plugin loading |
+| Docker | `scan` | Dockerfile, docker-compose.yml, Containerfile |
+| Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets) |
+| VS Code | `vscode` | .vsix files, activation events, dangerous APIs |
+| GitHub Actions | `scan` | .github/workflows/*.yml |
+| GitHub Repos | `repo` | Trust signals, releases, README lures |
+| Solana | `monitor` | C2 wallet memo transactions |
+
+## GitHub Action
 
 ```yaml
 name: Supply Chain Security
@@ -222,10 +197,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v1
+      - uses: homeofe/supply-chain-guard@v4
         with:
-          fail-on: critical    # Fail CI on critical findings
-          comment-on-pr: true  # Post findings as PR comment
+          fail-on: critical
+          comment-on-pr: true
 ```
 
 ### Action Inputs
@@ -233,53 +208,15 @@ jobs:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `path` | Path to scan | `.` |
-| `format` | Output format (text/json/markdown) | `markdown` |
+| `format` | Output format (text/json/markdown/html/sarif/sbom) | `markdown` |
 | `min-severity` | Minimum severity to report | `low` |
 | `exclude-rules` | Comma-separated rule IDs to exclude | |
 | `fail-on` | Fail check at this severity or above | `critical` |
 | `comment-on-pr` | Post findings as PR comment | `true` |
 
-### Action Outputs
-
-| Output | Description |
-|--------|-------------|
-| `score` | Risk score (0-100) |
-| `risk-level` | clean/low/medium/high/critical |
-| `findings-count` | Total number of findings |
-| `report` | Full scan report |
-
-## Detection Rules
-
-| Rule ID | Severity | Description |
-|---------|----------|-------------|
-| `GLASSWORM_MARKER` | Critical | GlassWorm campaign marker variable |
-| `EVAL_ATOB` | Critical | Base64-encoded eval |
-| `EVAL_BUFFER` | Critical | Buffer-encoded eval |
-| `FUNCTION_ATOB` | Critical | Function constructor with base64 |
-| `EVAL_HEX` | Critical | Hex-encoded eval |
-| `SCRIPT_CURL_EXEC` | Critical | Install script with curl pipe to shell |
-| `SCRIPT_WGET_EXEC` | Critical | Install script with wget pipe to shell |
-| `INVISIBLE_UNICODE` | High | Invisible Unicode characters (obfuscation) |
-| `SUSPICIOUS_I_JS` | High | Suspicious i.js file |
-| `SUSPICIOUS_INIT_JSON` | High | GlassWorm persistence file |
-| `EXEC_ENCODED` | High | Encoded exec call |
-| `SCRIPT_NODE_INLINE` | High | Inline Node.js in install script |
-| `SCRIPT_ENCODED` | High | Encoding in install script |
-| `ENV_EXFILTRATION` | High | Environment variable exfiltration |
-| `DNS_EXFILTRATION` | High | DNS-based data exfiltration |
-| `MALICIOUS_PACKAGE_NAME` | High | Known malicious package name pattern |
-| `MALICIOUS_DEPENDENCY` | High | Dependency matches malicious pattern |
-| `SOLANA_MAINNET` | Medium | Solana mainnet RPC reference |
-| `HELIUS_RPC` | Medium | Helius RPC reference |
-| `HEX_ARRAY` | Medium | Large hex array (obfuscated payload) |
-| `CHARCODE_OBFUSCATION` | Medium | Character code string construction |
-| `SCRIPT_PREINSTALL_EXEC` | Medium | Exec in preinstall script |
-| `GIT_DATE_ANOMALY` | Medium | Git commit date manipulation |
-| `COMPLEX_INSTALL_SCRIPT` | Low | Complex install script |
-
 ## Adding Custom Patterns
 
-Edit `src/patterns.ts` to add new detection rules. Each pattern needs:
+Edit `src/patterns.ts` to add new detection rules:
 
 ```typescript
 {
@@ -291,54 +228,68 @@ Edit `src/patterns.ts` to add new detection rules. Each pattern needs:
 }
 ```
 
-## How It Works
+## Architecture
 
-1. **File Scanner**: Recursively scans directories, skipping `node_modules`, `.git`, and build artifacts. Checks file content against known malicious patterns using regex.
-
-2. **npm Scanner**: Downloads package tarballs from the npm registry without installing them. Analyzes package.json scripts, dependencies, and published file contents.
-
-3. **Solana Monitor**: Polls the Solana blockchain for transactions on known C2 wallet addresses. Decodes memo instructions that GlassWorm uses to encode payload URLs.
-
-4. **Scoring**: Each finding contributes to a risk score based on severity. The score determines the overall risk level (clean/low/medium/high/critical).
-
-## Background: The GlassWorm Campaign
-
-In early 2026, researchers discovered the GlassWorm campaign: a coordinated supply-chain attack targeting npm packages and VS Code extensions. The campaign used several novel techniques:
-
-- **Solana blockchain as C2**: Payload URLs encoded as transaction memos on the Solana blockchain, making the C2 channel uncensorable
-- **Invisible Unicode**: Zero-width characters used to hide malicious code in legitimate-looking files
-- **Git history manipulation**: Fake commit dates to make packages appear established
-- **Typosquatting**: Hundreds of packages with names similar to popular libraries
-
-supply-chain-guard was built to detect these specific attack patterns and make the detection rules available to everyone.
+```
+scan() -> collectFiles() -> per-file analysis
+  -> Pattern matching (170+ rules across 12 categories)
+  -> Entropy analysis (Shannon entropy for encoded payloads)
+  -> IOC blocklist check (known C2 domains, IPs, hashes)
+  -> Install hook deep analysis (secret harvesting, download-exec)
+  -> Dependency risk analysis (Levenshtein typosquatting)
+  -> Sub-scanners (lockfile, GitHub Actions, Docker, Cargo, Go, IaC)
+  -> GitHub trust signal analysis (account age, stars, releases)
+  -> Correlation engine (links findings into incidents)
+  -> Trust breakdown (4-dimension scoring)
+  -> Report generation (text/json/html/markdown/sarif/sbom)
+```
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contribution is adding new detection patterns for emerging threats.
 
-
 ## Changelog
 
+### v4.3.0 (2026-04-04)
+- Documentation overhaul: complete README rewrite covering all features through v4.2
+- Updated all version references, examples, and detection rule tables
+
+### v4.2.0 (2026-04-04)
+- **New: Correlation Engine** -- links findings into incident-level attack chains (15+ rules)
+- **New: Trust Breakdown** -- 4-dimension scoring (publisher/code/dependency/release)
+- **New: Install Hook Scanner** -- deep analysis (secret harvesting, download-exec, binary blobs)
+- **New: Dependency Risk Analyzer** -- Levenshtein typosquat detection
+- **New: Publishing Anomaly Detector** -- maintainer changes, version gaps
+- **New: Release Scanner** -- double extensions, LNK, PE magic, password hints
+- **New:** C2 patterns (DoH, Gist dead-drops, dynamic WebSocket)
+- **New:** Secrets detection (AWS, GitHub, SSH, npm tokens, private keys)
+- 59 new tests (464 total), ~174 detection rules
+
+### v4.1.0 (2026-04-04)
+- **New: GitHub Trust Scanner** -- repo metadata, star-farming, release artifacts, README lures
+- **New: IOC Blocklist** -- known C2 domains/IPs, malware hashes, bad npm versions, malicious accounts
+- **New:** Vidar/GhostSocks/dropper patterns, dead-drop resolver detection
+- **New:** Claude Code leak campaign signatures, fake AI tool lure detection
+- 42 new tests (405 total), ~143 detection rules
+
+### v4.0.0 (2026-04-04)
+- **New:** Dockerfile, package config, git security, Cargo/Rust, Go module, entropy scanners
+- **New:** Build-tool, monorepo, IaC/Terraform patterns
+- **New:** HTML report format with severity filtering
+- **New:** Shai-Hulud worm, advanced obfuscation, campaign signatures
+- 94 new tests (363 total), 110+ detection rules
+
 ### v3.1.0 (2026-03-26)
-- **New:** SBOM export in CycloneDX 1.5 JSON format (`--format sbom`) for compliance (NIS2, SSDF)
-- **New:** `--fail-on <severity>` flag for tiered CI pipelines (fail only at specified severity threshold)
-- **Tests:** Full unit test coverage for solana-monitor (23 tests), reporter (39 tests), CLI integration (22 tests)
-- **Total:** 269 tests, all passing
+- SBOM export (CycloneDX 1.5), `--fail-on` flag, full test coverage (269 tests)
 
 ### v3.0.0 (2026-03-26)
-- **New:** PyPI scanner detects malicious `setup.py` install hooks (subprocess, base64 exec, cmdclass downloads)
-- **New:** GitHub Actions workflow scanner detects CI/CD pipeline attacks (unpinned actions, secrets exfiltration, encoded payloads)
-- **New:** SARIF 2.1.0 output format for GitHub Code Scanning integration (`--format sarif`)
-- **New:** Solana C2 wallet watchlist with persistent monitoring and webhook alerts (`watchlist` commands)
-- **New:** Blog post reference and improved quickstart guide
-- **Docs:** Example GitHub Actions workflow for SARIF upload at `docs/github-actions-sarif.yml`
+- PyPI scanner, GitHub Actions scanner, SARIF output, Solana watchlist
 
 ### v2.0.0
-- Multi-platform scanner (npm, PyPI, VS Code)
-- Dependency confusion detection
-- Lockfile integrity checks
-- Solana C2 monitoring
+- Multi-platform scanner (npm, PyPI, VS Code), dependency confusion, lockfile checks
 
+### v1.0.0
+- Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
 ## License
 

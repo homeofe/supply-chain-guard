@@ -4,7 +4,10 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 1.x     | :white_check_mark: |
+| 4.x     | :white_check_mark: |
+| 3.x     | :x:                |
+| 2.x     | :x:                |
+| 1.x     | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -27,9 +30,10 @@ We will acknowledge your report within 48 hours and aim to release a fix within 
 This tool is designed to detect malicious patterns in code. If you find a way to bypass detection, that is considered a valid security report. We want to know about:
 
 - False negatives (malware not detected)
-- Ways to evade the scanner
+- Ways to evade the scanner (obfuscation bypasses, pattern gaps)
 - Vulnerabilities in the scanner itself (e.g., ReDoS in patterns)
 - Supply-chain risks in our own dependencies
+- Correlation engine bypasses (findings that should link but don't)
 
 ## Recognition
 
