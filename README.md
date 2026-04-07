@@ -181,41 +181,72 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 ## Example Output
 
 ```
-  supply-chain-guard scan report
-  ──────────────────────────────────────────────────
-  Target:    ./suspicious-package
-  Type:      directory
-  Duration:  142ms
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  supply-chain-guard                                                  v5.1.0 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 
-  Risk Score: 83/100 (CRITICAL)
+  Target      ./suspicious-package
+  Type        directory  ·  18 / 18 files scanned
+  Duration    142ms
+  Time        2026-04-07T12:00:00.000Z
 
-  Trust Breakdown
-  ──────────────────────────────────────────────────
-  Publisher:   ██░░░░░░░░ 20/100
-  Code:        ███░░░░░░░ 30/100
-  Deps:        ██████████ 100/100
-  Release:     ████████░░ 80/100
-  Overall:     ████░░░░░░ 48/100
+┌─────────────────────────────── RISK SCORE ─────────────────────────────────┐
+│                                                                              │
+│   83 / 100   █████████████████████████████████░░░░░   CRITICAL             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-  Correlated Incidents
-  ──────────────────────────────────────────────────
+┌──────────────────────────── FINDINGS SUMMARY ───────────────────────────────┐
+│  CRITICAL      3  ████████████████████████████████                          │
+│  HIGH          1  ██████████                                                 │
+│  MEDIUM        0  ────────────────────────────────                           │
+│  LOW           0  ────────────────────────────────                           │
+│  INFO          0  ────────────────────────────────                           │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-  [CRITICAL] Vidar Stealer Infection (95% confidence)
-  Multiple infostealer indicators: dead-drop resolvers for C2,
-  browser credential theft, and crypto wallet targeting.
-  Indicators: DEAD_DROP_STEAM, VIDAR_BROWSER_THEFT, DROPPER_TEMP_EXEC
+┌──────────────────────────────── FINDINGS ───────────────────────────────────┐
+│                                                                              │
+│  [CRITICAL]  DEAD_DROP_STEAM                                                │
+│              Steam Community profile URL used as dead-drop C2 resolver      │
+│              src/config.js:12                                                │
+│              match  https://steamcommunity.com/profiles/76561198...         │
+│              fix    Remove external URL resolution; use static configuration │
+│                                                                              │
+│ ············································································· │
+│                                                                              │
+│  [CRITICAL]  VIDAR_BROWSER_THEFT                                            │
+│              Browser credential file access (infostealer pattern)           │
+│              src/steal.js:45                                                 │
+│              match  AppData/Local/Google/Chrome/User Data/Login Data        │
+│              fix    Never access browser credential stores                   │
+│                                                                              │
+│ ············································································· │
+│                                                                              │
+│  [CRITICAL]  DROPPER_TEMP_EXEC                                              │
+│              Dropper: file written and executed from temp directory          │
+│              src/loader.js:23                                                │
+│              match  saveFile(tmpdir, payload); exec(tmpPath)                │
+│              fix    Remove dropper logic; audit all exec() call sites        │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-  Findings (6)
-  ──────────────────────────────────────────────────
+┌─────────────────────────── TRUST BREAKDOWN ─────────────────────────────────┐
+│  Publisher       ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  20/100               │
+│  Code            █████████░░░░░░░░░░░░░░░░░░░░░░░░░  30/100               │
+│  Dependencies    ████████████████████████████████████ 100/100              │
+│  Release         ██████████████████████████░░░░░░░░░  80/100               │
+│────────────────────────────────────────────────────────────────────────────│
+│  Overall         █████████████░░░░░░░░░░░░░░░░░░░░░░  48/100               │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-  [CRITICAL] Steam Community profile URL in code (dead-drop resolver)
-     Rule: DEAD_DROP_STEAM  |  File: src/config.js:12
-
-  [CRITICAL] Browser credential file access (infostealer)
-     Rule: VIDAR_BROWSER_THEFT  |  File: src/steal.js:45
-
-  [CRITICAL] Dropper: write + execute in temp directory
-     Rule: DROPPER_TEMP_EXEC  |  File: src/loader.js:23
+┌──────────────────────────── CORRELATED INCIDENTS ───────────────────────────┐
+│                                                                              │
+│  [CRITICAL]  Vidar Stealer Infection  95% confidence                        │
+│  Multiple infostealer indicators: dead-drop resolvers for C2,               │
+│  browser credential theft, and crypto wallet targeting.                     │
+│  Indicators: DEAD_DROP_STEAM, VIDAR_BROWSER_THEFT, DROPPER_TEMP_EXEC       │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Supported Ecosystems
@@ -244,7 +275,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v4
+      - uses: homeofe/supply-chain-guard@v5
         with:
           fail-on: critical
           comment-on-pr: true
@@ -298,6 +329,16 @@ scan() -> collectFiles() -> per-file analysis
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contribution is adding new detection patterns for emerging threats.
 
 ## Changelog
+
+### v5.1.0 (2026-04-07)
+**Comprehensive ASCII CLI output** — complete redesign of the default text reporter.
+- Double-line banner header (`╔╗`) with tool name and version
+- Risk score with 36-char visual gauge bar, color-coded by severity level
+- Findings summary as a severity histogram with proportional `█░` bars scaled to highest count
+- Finding cards with structured `match` / `fix` label indenting and `···` dot-line separators
+- Trust breakdown and risk dimensions with 32-char bar gauges and divider before Overall
+- All sections framed in `┌─┐ / └─┘` box-drawing borders at 80-char terminal width
+- Fixed stale hardcoded `4.8.0`/`4.9.0` version strings in SARIF, SBOM metadata, and HTML footer
 
 ### v5.0.1 (2026-04-07)
 **False positive fixes — second pass** after live workspace testing revealed additional FPs.

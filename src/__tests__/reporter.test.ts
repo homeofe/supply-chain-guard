@@ -264,12 +264,12 @@ describe("formatReport – Text", () => {
   it("should contain scan report header (stripped ANSI)", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
     expect(output).toContain("supply-chain-guard");
-    expect(output).toContain("scan report");
+    expect(output).toContain("v5.1.0");
   });
 
   it("should show risk score", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
-    expect(output).toContain("52/100");
+    expect(output).toContain("52 / 100");
     expect(output).toContain("HIGH");
   });
 
@@ -296,9 +296,9 @@ describe("formatReport – Text", () => {
     expect(output).toContain("Audit dependencies");
   });
 
-  it("should show None for empty findings", () => {
+  it("should show clean message for empty findings", () => {
     const output = stripAnsi(formatReport(makeEmptyReport(), "text"));
-    expect(output).toContain("None");
+    expect(output).toContain("No findings");
   });
 });
 
