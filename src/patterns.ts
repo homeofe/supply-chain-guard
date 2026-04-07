@@ -899,7 +899,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
       "Self-publishing pattern detected. The Shai-Hulud worm replicates by publishing infected packages via npm.",
     severity: "critical",
     rule: "SHAI_HULUD_WORM",
-    notFilePattern: /\.ya?ml$/,
+    onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
   },
   {
     name: "shai-hulud-npmrc-steal",
@@ -909,7 +909,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
       "npm credentials access pattern. The Shai-Hulud worm steals .npmrc tokens to publish malicious packages.",
     severity: "high",
     rule: "SHAI_HULUD_CRED_STEAL",
-    notFilePattern: /\.ya?ml$/,
+    onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
   },
 
   // Expanded protestware
@@ -946,7 +946,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
-    notFilePattern: /\.min\.(js|css)$/,
+    notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$/,
   },
   {
     name: "dynamic-import-expression",
@@ -1131,7 +1131,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "dropper-temp-exec",
     pattern:
-      "(?:TEMP|TMP|AppData|tmp).*(?:exec|spawn|ShellExecute|CreateProcess|system\\()|(?:writeFile|write_bytes|save).*(?:TEMP|TMP|\\.exe|\\.bat|\\.cmd|\\.ps1)",
+      "(?:TEMP|TMP|AppData|tmp).*(?:exec|spawn|ShellExecute|CreateProcess|system\\()|(?:writeFile|write_bytes|writeFileSync|saveFile\\().*(?:TEMP|TMP|\\.exe|\\.bat|\\.cmd|\\.ps1)",
     description:
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
@@ -1171,7 +1171,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "README contains 'leaked source/code' language. This is a common social engineering lure for malware distribution.",
     severity: "high",
     rule: "README_LURE_LEAKED",
-    onlyFilePattern: /README|CHANGELOG|DESCRIPTION|release[-_]notes|\.md$/i,
+    onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
   },
   {
     name: "readme-lure-crack",
@@ -1181,7 +1181,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "README contains crack/keygen/unlock language. Malware repos promise premium features to lure downloads.",
     severity: "critical",
     rule: "README_LURE_CRACK",
-    onlyFilePattern: /README|CHANGELOG|DESCRIPTION|release[-_]notes|\.md$/i,
+    onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
   },
   {
     name: "readme-lure-urgency",
@@ -1191,7 +1191,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "README uses urgency language to pressure downloads. Classic social engineering tactic.",
     severity: "medium",
     rule: "README_LURE_URGENCY",
-    onlyFilePattern: /README|CHANGELOG|DESCRIPTION|release[-_]notes|\.md$/i,
+    onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
   },
   {
     name: "campaign-claude-lure",

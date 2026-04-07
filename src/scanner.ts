@@ -748,7 +748,7 @@ function checkMultiLineProtestware(
   const localePattern =
     /(?:locale|timezone|timeZone|Intl\.DateTimeFormat|getTimezone|country_code|country_name)/i;
   const destructivePattern =
-    /(?:fs\.(?:rm|rmdir|unlink|writeFile)|process\.exit|child_process|execSync|rimraf|fs\.rmdirSync|fs\.unlinkSync|fs\.rmSync)/i;
+    /(?:fs\.(?:rmSync|unlinkSync|rmdirSync|rmdir|unlink|rm)\s*\(|rimraf\s*\(|process\.exit\s*\(|execSync\s*\(["'`](?:rm|del|format|dd\s))/i;
 
   const localeLines: number[] = [];
   const destructiveLines: number[] = [];
