@@ -330,6 +330,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.1.1 (2026-04-07)
+**CI and test fixes**
+- CI workflow: add GitHub Release creation step — after npm publish, automatically creates a GitHub Release with changelog notes extracted from README.md
+- `reporter.test.ts`: fix 3 text-format assertions that checked old output patterns (`"scan report"`, `"52/100"`, `"None"`) broken by the v5.1.0 ASCII output redesign
+
 ### v5.1.0 (2026-04-07)
 **Comprehensive ASCII CLI output** — complete redesign of the default text reporter.
 - Double-line banner header (`╔╗`) with tool name and version
