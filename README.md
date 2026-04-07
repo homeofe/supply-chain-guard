@@ -1,6 +1,6 @@
 # supply-chain-guard
 
-Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 170+ threat indicators with a correlation engine that links findings into attack-chain incidents.
+Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 170+ threat indicators. Generates CycloneDX 1.6 SBOMs with real dependency inventories, verifies SLSA provenance, and correlates findings into attack-chain incidents.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green)](https://nodejs.org)
@@ -27,7 +27,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 
 ### Supply Chain Attacks
 - Install hook deep analysis (secret harvesting, download-exec chains, binary blobs)
-- Levenshtein-based typosquatting detection against top 80 npm packages
+- Levenshtein-based typosquatting detection against top 100 npm packages with known-safe whitelist
 - Dependency confusion and namespace squatting
 - Known-bad version blocklist (axios, ua-parser-js, coa, rc, event-stream, node-ipc, colors, faker)
 - Publishing anomaly detection (maintainer changes, version gaps, script additions)
@@ -119,7 +119,8 @@ supply-chain-guard scan ./project --format json   # JSON (for CI/CD pipelines)
 supply-chain-guard scan ./project --format html   # Standalone HTML report
 supply-chain-guard scan ./project --format markdown # Markdown (for PR comments)
 supply-chain-guard scan ./project --format sarif  # SARIF 2.1.0 (GitHub Code Scanning)
-supply-chain-guard scan ./project --format sbom   # CycloneDX 1.5 SBOM (NIS2/SSDF compliance)
+supply-chain-guard scan ./project --format sbom   # CycloneDX 1.6 SBOM with real dependency inventory
+supply-chain-guard scan ./project --sbom-output sbom.json  # Write SBOM to file separately
 ```
 
 ## CI Exit Code Control
@@ -284,6 +285,8 @@ scan() -> collectFiles() -> per-file analysis
   -> Install hook deep analysis (secret harvesting, download-exec)
   -> Dependency risk analysis (Levenshtein typosquatting)
   -> Sub-scanners (lockfile, GitHub Actions, Docker, Cargo, Go, IaC)
+  -> SLSA verifier (provenance level 0-3, sigstore/cosign, attestations)
+  -> SBOM generator (reads package-lock.json → real CycloneDX 1.6 components)
   -> GitHub trust signal analysis (account age, stars, releases)
   -> Correlation engine (links findings into incidents)
   -> Trust breakdown (4-dimension scoring)
@@ -295,6 +298,24 @@ scan() -> collectFiles() -> per-file analysis
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contribution is adding new detection patterns for emerging threats.
 
 ## Changelog
+
+### v4.9.0 (2026-04-07)
+- **New: SBOM Generator** — reads `package-lock.json` (v2+) to generate CycloneDX 1.6 SBOMs with real `components[]` (name, version, PURL, hashes, licenses). Falls back to `package.json` direct deps. VEX statements for suppressed findings. Use `--sbom-output <file>` to write separately.
+- **New: SLSA Verifier** — detects SLSA provenance level (0–3) per project. Checks for sigstore/cosign signing, `slsa-github-generator` usage, hermetic build evidence, provenance attestation files. New rules: `SLSA_LEVEL_0`, `SLSA_NO_PROVENANCE`, `SLSA_UNSIGNED_ARTIFACTS`.
+- **New: GitHub Actions PPE Patterns** — `GHA_PPE_PULL_TARGET` (critical), `GHA_SCRIPT_INJECTION` (critical), `GHA_OIDC_WRITE_PERM`, `GHA_CACHE_POISONING`, `GHA_ARTIFACT_DOWNLOAD`, `GHA_SELF_MODIFY`. Known malicious SHA blocklist (tj-actions Sep 2025, reviewdog).
+- **New: Dependency Confusion Enhancements** — `DEP_HALLUCINATED_PACKAGE` (AI-hallucinated npm/PyPI names), `DEP_FRESH_PUBLISH` (version < 24h old), `DEP_SCOPED_PUBLIC` (internal-looking scoped package on public registry), `scanPypiDependencyConfusion()` for `requirements.txt`/`pyproject.toml`.
+- **False Positive Reduction** — scanning a 100k+ LOC production codebase went from 819 findings/critical to 17 findings/high:
+  - `LOCKFILE_ORPHANED_DEPENDENCY`: 794 individual findings → 1 aggregated summary (npm v7 flat lockfile fix)
+  - `TYPOSQUAT_LEVENSHTEIN`: pre-check against popular-packages set; min name length ≥4; short popular packages (ws/pg/nx) excluded from comparison; bcryptjs/swr/tsx/zod added to whitelist
+  - `SVG_SCRIPT_INJECTION`: restricted to `.svg` files only (new `onlyExtensions` field on PatternEntry)
+  - `IMPORT_EXPRESSION`: backtick without `${...}` expression no longer triggers; severity high→medium
+  - `BEACON_INTERVAL_FETCH`: severity high→medium (React polling false positive)
+  - `DEAD_DROP_DNS_TXT` / `C2_DOH_RESOLVER`: severity high→medium (false positives in security tooling)
+  - `GHA_ENV_EXFIL`: pattern tightened — only fires when secrets/env passed as curl data/header
+  - `WORKFLOW_SECRET_TO_UPLOAD_PATH`: severity high→medium, confidence 0.7→0.6
+  - `SECRETS_SSH_KEY_READ`: pattern requires specific key filenames (`id_rsa`, `id_ed25519` etc.) — no longer fires on `cat >> ~/.ssh/known_hosts` CI setup
+- **Score Calculation**: per-rule deduplication (each unique rule contributes once to score) + weights medium 8→5, low 3→2
+- 45 new tests (607 total)
 
 ### v4.8.0 (2026-04-04)
 - **New: Continuous Risk Monitor** -- persistent risk history, trend detection (spikes, stagnation, increasing)
