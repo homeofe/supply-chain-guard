@@ -7,6 +7,9 @@
 
 import type { PatternEntry, Severity } from "./types.js";
 
+/** Matches the scanner's own source files — used to prevent self-scan false positives. */
+const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/;
+
 // ---------------------------------------------------------------------------
 // GlassWorm-specific IOCs
 // ---------------------------------------------------------------------------
@@ -39,6 +42,8 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "GlassWorm campaign marker variable detected",
     severity: "critical",
     rule: "GLASSWORM_MARKER",
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
   },
 
   // Invisible Unicode characters (zero-width spaces, joiners, etc.)
@@ -50,6 +55,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Suspicious invisible Unicode characters detected (potential code obfuscation)",
     severity: "high",
     rule: "INVISIBLE_UNICODE",
+    notTestFile: true,
   },
 
   // Encoded eval/exec patterns
@@ -59,6 +65,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Base64-encoded eval detected (common malware obfuscation)",
     severity: "critical",
     rule: "EVAL_ATOB",
+    notTestFile: true,
   },
   {
     name: "eval-buffer-from",
@@ -67,6 +74,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Buffer-encoded eval detected (common malware obfuscation in Node.js)",
     severity: "critical",
     rule: "EVAL_BUFFER",
+    notTestFile: true,
   },
   {
     name: "new-function-atob",
@@ -75,6 +83,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Base64-encoded Function constructor detected (malware obfuscation)",
     severity: "critical",
     rule: "FUNCTION_ATOB",
+    notTestFile: true,
   },
   {
     name: "eval-buffer-hex",
@@ -82,6 +91,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Hex-encoded eval detected",
     severity: "critical",
     rule: "EVAL_HEX",
+    notTestFile: true,
   },
   {
     name: "exec-encoded",
@@ -90,6 +100,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Encoded exec call detected",
     severity: "high",
     rule: "EXEC_ENCODED",
+    notTestFile: true,
   },
 
   // Solana C2 references
@@ -99,6 +110,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Solana mainnet RPC reference detected (potential C2 channel)",
     severity: "medium",
     rule: "SOLANA_MAINNET",
+    notTestFile: true,
   },
   {
     name: "helius-rpc",
@@ -107,6 +119,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Helius Solana RPC reference detected (used in GlassWorm C2)",
     severity: "medium",
     rule: "HELIUS_RPC",
+    notTestFile: true,
   },
 
   // Obfuscation patterns
@@ -117,6 +130,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Large hex array detected (potential obfuscated payload)",
     severity: "medium",
     rule: "HEX_ARRAY",
+    notTestFile: true,
   },
   {
     name: "string-char-concat",
@@ -126,6 +140,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Character code string construction detected (obfuscation technique)",
     severity: "medium",
     rule: "CHARCODE_OBFUSCATION",
+    notTestFile: true,
   },
 
   // Network exfiltration
@@ -137,6 +152,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Environment variable access combined with network request (data exfiltration pattern)",
     severity: "high",
     rule: "ENV_EXFILTRATION",
+    notTestFile: true,
   },
   {
     name: "dns-exfil",
@@ -144,6 +160,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "DNS-based data exfiltration pattern detected",
     severity: "high",
     rule: "DNS_EXFILTRATION",
+    notTestFile: true,
   },
 ];
 
@@ -186,6 +203,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "postinstall script downloads and executes remote code",
     severity: "critical",
     rule: "SCRIPT_CURL_EXEC",
+    notTestFile: true,
   },
   {
     name: "postinstall-wget",
@@ -193,6 +211,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "postinstall script downloads and executes remote code",
     severity: "critical",
     rule: "SCRIPT_WGET_EXEC",
+    notTestFile: true,
   },
   {
     name: "postinstall-node-e",
@@ -201,6 +220,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
       "postinstall script executes inline Node.js with network access",
     severity: "high",
     rule: "SCRIPT_NODE_INLINE",
+    notTestFile: true,
   },
   {
     name: "postinstall-encoded",
@@ -208,6 +228,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "postinstall script contains encoding/decoding operations",
     severity: "high",
     rule: "SCRIPT_ENCODED",
+    notTestFile: true,
   },
   {
     name: "preinstall-exec",
@@ -215,6 +236,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "preinstall script executes system commands",
     severity: "medium",
     rule: "SCRIPT_PREINSTALL_EXEC",
+    notTestFile: true,
   },
 ];
 
@@ -250,6 +272,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: _get_cpuid function (CVE-2024-3094 payload hook)",
     severity: "critical",
     rule: "XZ_GET_CPUID",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "xz-lzma-crc64",
@@ -258,6 +282,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: lzma_crc64 function reference (CVE-2024-3094 hijacked symbol)",
     severity: "high",
     rule: "XZ_LZMA_CRC64",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "xz-build-inject",
@@ -267,6 +293,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: build system injection pattern in configure.ac/m4 macros",
     severity: "high",
     rule: "XZ_BUILD_INJECT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "xz-obfuscated-test",
@@ -276,6 +304,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: obfuscated test file extraction pattern (hidden payload in test fixtures)",
     severity: "high",
     rule: "XZ_OBFUSCATED_TEST",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // --- Codecov Bash Uploader ---
@@ -287,6 +317,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Codecov bash uploader pattern: curl from codecov.io piped to shell (supply-chain risk vector)",
     severity: "high",
     rule: "CODECOV_CURL_BASH",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "codecov-exfil",
@@ -296,6 +328,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Codecov exfiltration indicator: environment secrets referenced alongside codecov operations",
     severity: "high",
     rule: "CODECOV_EXFIL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // --- SolarWinds SUNBURST ---
@@ -306,6 +340,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "SolarWinds SUNBURST indicator: DGA C2 domain avsvmcloud.com detected",
     severity: "critical",
     rule: "SUNBURST_DGA",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "sunburst-orion-class",
@@ -314,6 +350,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "SolarWinds SUNBURST indicator: OrionImprovementBusinessLayer class name (backdoor namespace)",
     severity: "critical",
     rule: "SUNBURST_ORION_CLASS",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "sunburst-delayed-exec",
@@ -323,6 +361,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "SUNBURST-style delayed execution: sleep/timeout exceeding 1 hour (evasion technique to avoid sandbox analysis)",
     severity: "high",
     rule: "SUNBURST_DELAYED_EXEC",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // --- ua-parser-js hijack ---
@@ -334,6 +374,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "ua-parser-js hijack indicator: crypto miner download pattern (jsextension binary)",
     severity: "critical",
     rule: "UAPARSER_MINER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "uaparser-preinstall-download",
@@ -343,6 +385,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "ua-parser-js hijack indicator: preinstall script downloading executables from external domains",
     severity: "critical",
     rule: "UAPARSER_PREINSTALL_DL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // --- coa/rc npm hijack ---
@@ -353,6 +397,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "coa/rc npm hijack indicator: reference to sdd.dll payload (trojanized npm package artifact)",
     severity: "critical",
     rule: "COA_RC_SDD_DLL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "coa-rc-postinstall-encoded",
@@ -362,6 +408,8 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "coa/rc npm hijack indicator: postinstall script with encoded payload execution",
     severity: "critical",
     rule: "COA_RC_POSTINSTALL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 ];
 
@@ -378,6 +426,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "os.system() call detected in package file (potential code execution during install)",
     severity: "high",
     rule: "PYPI_OS_SYSTEM",
+    notTestFile: true,
   },
   {
     name: "setup-subprocess",
@@ -385,6 +434,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "subprocess execution detected in package file (potential code execution during install)",
     severity: "high",
     rule: "PYPI_SUBPROCESS",
+    notTestFile: true,
   },
 
   // Encoded execution
@@ -394,6 +444,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "exec() with encoded/decoded content detected (obfuscated code execution)",
     severity: "critical",
     rule: "PYPI_EXEC_ENCODED",
+    notTestFile: true,
   },
   {
     name: "python-eval-encoded",
@@ -401,6 +452,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "eval() with encoded/decoded content detected (obfuscated code execution)",
     severity: "critical",
     rule: "PYPI_EVAL_ENCODED",
+    notTestFile: true,
   },
   {
     name: "python-exec-compile",
@@ -408,6 +460,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "exec(compile()) detected (dynamic code compilation and execution)",
     severity: "high",
     rule: "PYPI_EXEC_COMPILE",
+    notTestFile: true,
   },
 
   // Base64 import smuggling
@@ -417,6 +470,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "__import__('base64') detected (hidden import often used for payload decoding)",
     severity: "high",
     rule: "PYPI_IMPORT_BASE64",
+    notTestFile: true,
   },
   {
     name: "python-import-codecs",
@@ -424,6 +478,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "__import__('codecs') detected (hidden import for obfuscation)",
     severity: "medium",
     rule: "PYPI_IMPORT_CODECS",
+    notTestFile: true,
   },
   {
     name: "python-import-marshal",
@@ -431,6 +486,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "__import__('marshal') detected (bytecode-level obfuscation)",
     severity: "high",
     rule: "PYPI_IMPORT_MARSHAL",
+    notTestFile: true,
   },
 
   // Network activity in setup files
@@ -440,6 +496,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "urllib.request.urlopen() detected (network access, potential payload download)",
     severity: "high",
     rule: "PYPI_URLLIB_FETCH",
+    notTestFile: true,
   },
   {
     name: "python-requests-setup",
@@ -447,6 +504,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "requests.get/post() detected (network access during install)",
     severity: "medium",
     rule: "PYPI_REQUESTS_FETCH",
+    notTestFile: true,
   },
 
   // Suspicious pip install in setup.py
@@ -456,6 +514,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "pip install from non-PyPI URL detected (potential malicious package index)",
     severity: "critical",
     rule: "PYPI_SUSPICIOUS_INDEX",
+    notTestFile: true,
   },
   {
     name: "python-pip-install-git",
@@ -463,6 +522,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "pip install from git URL in setup file (unverified dependency source)",
     severity: "medium",
     rule: "PYPI_GIT_DEPENDENCY",
+    notTestFile: true,
   },
 
   // Data exfiltration patterns in Python
@@ -472,6 +532,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "Environment variable access combined with network activity (data exfiltration pattern)",
     severity: "high",
     rule: "PYPI_ENV_EXFILTRATION",
+    notTestFile: true,
   },
   {
     name: "python-hostname-exfil",
@@ -479,6 +540,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "Hostname collection combined with network activity (reconnaissance/exfiltration)",
     severity: "high",
     rule: "PYPI_HOSTNAME_EXFIL",
+    notTestFile: true,
   },
 
   // Install command class override
@@ -488,6 +550,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "Custom command class inheriting from setuptools install/develop command",
     severity: "medium",
     rule: "PYPI_INSTALL_CLASS_OVERRIDE",
+    notTestFile: true,
   },
 
   // marshal.loads (bytecode deserialization)
@@ -497,6 +560,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "marshal.loads() detected (bytecode deserialization, common obfuscation)",
     severity: "high",
     rule: "PYPI_MARSHAL_LOADS",
+    notTestFile: true,
   },
 
   // exec with marshal.loads
@@ -506,6 +570,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "exec(marshal.loads()) detected (executing deserialized bytecode payload)",
     severity: "critical",
     rule: "PYPI_EXEC_MARSHAL",
+    notTestFile: true,
   },
 
   // base64.b64decode combined with exec (various arrangements on same line)
@@ -515,6 +580,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "base64.b64decode combined with exec on the same line (obfuscated execution)",
     severity: "critical",
     rule: "PYPI_B64_EXEC_COMBINED",
+    notTestFile: true,
   },
 ];
 
@@ -533,6 +599,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom install command class detected (code runs during pip install)",
     severity: "medium",
     rule: "PYPI_CUSTOM_INSTALL",
+    notTestFile: true,
   },
   {
     name: "setup-cmdclass-develop",
@@ -540,6 +607,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom develop command class detected (code runs during pip install -e)",
     severity: "medium",
     rule: "PYPI_CUSTOM_DEVELOP",
+    notTestFile: true,
   },
   {
     name: "setup-cmdclass-egg-info",
@@ -547,6 +615,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom egg_info command class detected (code runs during package metadata generation)",
     severity: "medium",
     rule: "PYPI_CUSTOM_EGG_INFO",
+    notTestFile: true,
   },
   {
     name: "setup-cmdclass-sdist",
@@ -554,6 +623,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom sdist command class detected (code runs during source distribution build)",
     severity: "low",
     rule: "PYPI_CUSTOM_SDIST",
+    notTestFile: true,
   },
   {
     name: "setup-cmdclass-build-ext",
@@ -561,6 +631,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom build_ext command class detected (code runs during native extension build)",
     severity: "low",
     rule: "PYPI_CUSTOM_BUILD_EXT",
+    notTestFile: true,
   },
 ];
 
@@ -610,6 +681,7 @@ export const BINARY_DOWNLOAD_PATTERNS: PatternEntry[] = [
     description: "node-pre-gyp prebuilt binary download detected in install script",
     severity: "medium",
     rule: "BINARY_PREGYP_DOWNLOAD",
+    notTestFile: true,
   },
   {
     name: "prebuild-install",
@@ -617,6 +689,7 @@ export const BINARY_DOWNLOAD_PATTERNS: PatternEntry[] = [
     description: "Prebuilt binary installer detected in install script",
     severity: "medium",
     rule: "BINARY_PREBUILD_INSTALL",
+    notTestFile: true,
   },
   {
     name: "binary-download-curl",
@@ -625,6 +698,7 @@ export const BINARY_DOWNLOAD_PATTERNS: PatternEntry[] = [
     description: "Install script downloads a binary/native file directly",
     severity: "high",
     rule: "BINARY_DIRECT_DOWNLOAD",
+    notTestFile: true,
   },
   {
     name: "node-gyp-rebuild",
@@ -632,6 +706,7 @@ export const BINARY_DOWNLOAD_PATTERNS: PatternEntry[] = [
     description: "Native addon compilation via node-gyp detected",
     severity: "low",
     rule: "BINARY_NATIVE_COMPILE",
+    notTestFile: true,
   },
 ];
 
@@ -684,6 +759,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "medium",
     rule: "BEACON_INTERVAL_FETCH",
     notFilePattern: /\.min\.(js|css)$/,
+    notTestFile: true,
   },
   {
     name: "beacon-settimeout-fetch",
@@ -693,6 +769,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Delayed network request detected (setTimeout + fetch). May be a beacon with jitter.",
     severity: "medium",
     rule: "BEACON_TIMEOUT_FETCH",
+    notTestFile: true,
   },
 
   // Crypto miner patterns
@@ -704,6 +781,8 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Stratum mining pool protocol reference detected. This is used exclusively for cryptocurrency mining.",
     severity: "critical",
     rule: "MINER_STRATUM_PROTOCOL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "mining-pool-domain",
@@ -713,6 +792,8 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Known mining pool domain detected. This package may contain a cryptocurrency miner.",
     severity: "critical",
     rule: "MINER_POOL_DOMAIN",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "mining-config-keys",
@@ -723,6 +804,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "MINER_CONFIG_KEYS",
     notFilePattern: /\.json$/,
+    notTestFile: true,
   },
   {
     name: "coinhive-reference",
@@ -732,6 +814,8 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Cryptocurrency miner library reference detected (CoinHive, XMRig, etc.).",
     severity: "critical",
     rule: "MINER_LIBRARY_REF",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // Suspicious WebSocket connections
@@ -743,6 +827,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "WebSocket connection to external host detected. Verify this is expected for the package's functionality.",
     severity: "medium",
     rule: "BEACON_WEBSOCKET_EXTERNAL",
+    notTestFile: true,
   },
 
   // Protestware patterns: locale/timezone checks + destructive actions
@@ -754,6 +839,8 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Locale/timezone check followed by destructive code. This is a protestware pattern that targets users by geography.",
     severity: "critical",
     rule: "PROTESTWARE_LOCALE_DESTRUCT",
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
   },
   {
     name: "protestware-geo-ip",
@@ -763,6 +850,8 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "GeoIP lookup combined with destructive operations detected. This is a protestware/geo-targeted attack pattern.",
     severity: "critical",
     rule: "PROTESTWARE_GEOIP_DESTRUCT",
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
   },
 ];
 
@@ -808,6 +897,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Build config plugin downloads code from an external URL during build.",
     severity: "high",
     rule: "BUILD_PLUGIN_DOWNLOAD",
+    notTestFile: true,
   },
   {
     name: "build-plugin-exec",
@@ -817,6 +907,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Build config executes system commands. Verify this is expected build behavior.",
     severity: "high",
     rule: "BUILD_PLUGIN_EXEC",
+    notTestFile: true,
   },
   {
     name: "build-env-exfil",
@@ -826,6 +917,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Build config reads environment variables near network requests (potential secret exfiltration).",
     severity: "critical",
     rule: "BUILD_ENV_EXFIL",
+    notTestFile: true,
   },
   {
     name: "build-dynamic-require",
@@ -835,6 +927,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Dynamic require with variable input in build config. Can load unexpected modules.",
     severity: "medium",
     rule: "BUILD_DYNAMIC_REQUIRE",
+    notTestFile: true,
   },
 ];
 
@@ -873,6 +966,7 @@ export const MONOREPO_PATTERNS: PatternEntry[] = [
       "Root-level postinstall in monorepo workspace. Affects all workspace packages.",
     severity: "high",
     rule: "WORKSPACE_ROOT_POSTINSTALL",
+    notTestFile: true,
   },
   {
     name: "workspace-private-publish",
@@ -882,6 +976,7 @@ export const MONOREPO_PATTERNS: PatternEntry[] = [
       "Workspace package marked as non-private with publishConfig. Verify it should be public.",
     severity: "high",
     rule: "WORKSPACE_PRIVATE_PUBLISH",
+    notTestFile: true,
   },
 ];
 
@@ -900,6 +995,8 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     severity: "critical",
     rule: "SHAI_HULUD_WORM",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "shai-hulud-npmrc-steal",
@@ -910,6 +1007,8 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     severity: "high",
     rule: "SHAI_HULUD_CRED_STEAL",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // Expanded protestware
@@ -921,6 +1020,8 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
       "IP geolocation combined with destructive file operations. Advanced protestware pattern.",
     severity: "critical",
     rule: "PROTESTWARE_IP_GEO_V2",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 ];
 
@@ -937,6 +1038,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "eval() with template literal. Template literals can hide complex expressions.",
     severity: "high",
     rule: "TEMPLATE_LITERAL_EXEC",
+    notTestFile: true,
   },
   {
     name: "proxy-handler-trap",
@@ -947,6 +1049,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
     notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$/,
+    notTestFile: true,
   },
   {
     name: "dynamic-import-expression",
@@ -956,6 +1059,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Dynamic import() with computed URL (template literal with expression, env variable, or string construction). Can load modules from attacker-controlled sources.",
     severity: "medium",
     rule: "IMPORT_EXPRESSION",
+    notTestFile: true,
   },
   {
     name: "wasm-instantiate-external",
@@ -965,6 +1069,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "WebAssembly loaded from external source. WASM modules can execute arbitrary code.",
     severity: "medium",
     rule: "WASM_SUSPICIOUS",
+    notTestFile: true,
   },
   {
     name: "steganography-decode",
@@ -974,6 +1079,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Base64 decoding applied to image/font file content. Potential steganographic payload extraction.",
     severity: "high",
     rule: "STEGANOGRAPHY_DECODE",
+    notTestFile: true,
   },
   {
     name: "svg-script-injection",
@@ -984,6 +1090,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
     severity: "high",
     rule: "SVG_SCRIPT_INJECTION",
     onlyExtensions: [".svg"],
+    notTestFile: true,
   },
   {
     name: "rtl-override",
@@ -993,6 +1100,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Right-to-left override character detected. Can be used to disguise file extensions or code meaning.",
     severity: "high",
     rule: "RTL_OVERRIDE",
+    notTestFile: true,
   },
 ];
 
@@ -1009,6 +1117,7 @@ export const IAC_PATTERNS: PatternEntry[] = [
       "Terraform/IaC provisioner downloads and executes remote code.",
     severity: "high",
     rule: "IAC_INLINE_SCRIPT",
+    notTestFile: true,
   },
   {
     name: "iac-external-module",
@@ -1018,6 +1127,7 @@ export const IAC_PATTERNS: PatternEntry[] = [
       "Terraform module from a non-standard source. Modules from untrusted sources can contain backdoors.",
     severity: "medium",
     rule: "IAC_EXTERNAL_MODULE",
+    notTestFile: true,
   },
   {
     name: "iac-hardcoded-secret",
@@ -1037,6 +1147,7 @@ export const IAC_PATTERNS: PatternEntry[] = [
       "Terraform remote-exec provisioner. Executes commands on remote resources.",
     severity: "medium",
     rule: "IAC_REMOTE_EXEC",
+    notTestFile: true,
   },
 ];
 
@@ -1054,6 +1165,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Steam Community profile URL in code. Infostealers (Vidar, Lumma) use Steam profiles as dead-drop resolvers to retrieve C2 addresses.",
     severity: "critical",
     rule: "DEAD_DROP_STEAM",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "dead-drop-telegram",
@@ -1063,6 +1176,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Telegram channel/user URL in code. Used as dead-drop resolver for C2 address retrieval by Vidar and similar stealers.",
     severity: "critical",
     rule: "DEAD_DROP_TELEGRAM",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "dead-drop-pastebin",
@@ -1072,6 +1187,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Pastebin-like service URL in code. Often used as dead-drop resolver for malware C2 configuration.",
     severity: "high",
     rule: "DEAD_DROP_PASTEBIN",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "dead-drop-dns-txt",
@@ -1081,6 +1198,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels.",
     severity: "medium",
     rule: "DEAD_DROP_DNS_TXT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // Browser credential theft patterns
@@ -1092,7 +1211,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Browser credential/cookie file access pattern. Infostealers (Vidar, Lumma, RedLine) steal browser data from these paths.",
     severity: "high",
     rule: "VIDAR_BROWSER_THEFT",
-    notFilePattern: /\.min\.(js|css)$/,
+    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notTestFile: true,
   },
 
   // Crypto wallet theft patterns
@@ -1104,6 +1224,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Cryptocurrency wallet file/directory access. Infostealers target wallet files for fund theft.",
     severity: "high",
     rule: "VIDAR_WALLET_THEFT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 
   // SOCKS5 proxy / backconnect patterns
@@ -1115,6 +1237,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "SOCKS5 proxy protocol pattern. GhostSocks and similar malware turn infected machines into residential proxies.",
     severity: "critical",
     rule: "GHOSTSOCKS_SOCKS5",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "proxy-backconnect",
@@ -1124,7 +1248,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Reverse proxy/backconnect pattern. Infected machines are registered as proxy nodes for criminal infrastructure.",
     severity: "high",
     rule: "PROXY_BACKCONNECT",
-    notFilePattern: /\.min\.(js|css)$/,
+    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notTestFile: true,
   },
 
   // Dropper / loader patterns
@@ -1136,7 +1261,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
     rule: "DROPPER_TEMP_EXEC",
-    notFilePattern: /\.json$/,
+    notFilePattern: /\.json$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notTestFile: true,
   },
   {
     name: "dropper-antivm",
@@ -1146,6 +1272,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Anti-VM/anti-debug evasion technique. Malware checks for sandbox environments before executing payloads.",
     severity: "high",
     rule: "DROPPER_ANTIVM",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "dropper-sleep-evasion",
@@ -1155,6 +1283,8 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Long sleep before execution. Droppers delay to evade sandbox time limits (SUNBURST/Vidar technique).",
     severity: "high",
     rule: "DROPPER_SLEEP_EVASION",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 ];
 
@@ -1172,6 +1302,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "README_LURE_LEAKED",
     onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
+    notTestFile: true,
   },
   {
     name: "readme-lure-crack",
@@ -1182,6 +1313,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "README_LURE_CRACK",
     onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
+    notTestFile: true,
   },
   {
     name: "readme-lure-urgency",
@@ -1192,6 +1324,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
     severity: "medium",
     rule: "README_LURE_URGENCY",
     onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
+    notTestFile: true,
   },
   {
     name: "campaign-claude-lure",
@@ -1201,6 +1334,8 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Claude Code lure detected. The April 2026 campaign distributed Vidar/GhostSocks via fake 'leaked Claude Code' repos.",
     severity: "critical",
     rule: "CAMPAIGN_CLAUDE_LURE",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "campaign-ai-tool-lure",
@@ -1210,6 +1345,8 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Fake AI tool lure detected. The 2026 campaign impersonated 25+ software brands to distribute malware.",
     severity: "critical",
     rule: "CAMPAIGN_AI_TOOL_LURE",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "fake-exe-in-release",
@@ -1219,6 +1356,8 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Suspicious executable/archive filename pattern matching malware campaign naming conventions.",
     severity: "high",
     rule: "FAKE_AI_TOOL_LURE",
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
   },
 ];
 
@@ -1235,6 +1374,8 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
     severity: "medium",
     rule: "C2_DOH_RESOLVER",
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
   },
   {
     name: "dead-drop-gist",
@@ -1244,6 +1385,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "GitHub Gist used as dead-drop resolver. Gists store C2 configuration that changes without updating malware code.",
     severity: "high",
     rule: "DEAD_DROP_GIST",
+    notTestFile: true,
   },
   {
     name: "c2-dynamic-config",
@@ -1253,6 +1395,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "Dynamic config fetch followed by code execution. Runtime C2 command pattern.",
     severity: "high",
     rule: "C2_DYNAMIC_CONFIG",
+    notTestFile: true,
   },
   {
     name: "c2-websocket-dynamic",
@@ -1262,6 +1405,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "WebSocket connection with dynamically constructed URL. Hides C2 server address.",
     severity: "high",
     rule: "C2_WEBSOCKET_DYNAMIC",
+    notTestFile: true,
   },
 ];
 
@@ -1274,6 +1418,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "AWS Access Key ID detected. Hardcoded AWS credentials can be used for unauthorized access.",
     severity: "critical",
     rule: "SECRETS_AWS_KEY",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "secrets-github-token",
@@ -1283,6 +1429,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "GitHub personal access token detected. Exposed tokens grant repository access.",
     severity: "critical",
     rule: "SECRETS_GITHUB_TOKEN",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "secrets-private-key",
@@ -1292,6 +1440,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "Private key embedded in code. Exposed private keys compromise authentication and encryption.",
     severity: "critical",
     rule: "SECRETS_PRIVATE_KEY",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "secrets-ssh-key-read",
@@ -1301,6 +1451,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "Code reads SSH private key files. Infostealers exfiltrate SSH keys for lateral movement.",
     severity: "critical",
     rule: "SECRETS_SSH_KEY_READ",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "secrets-npm-token",
@@ -1310,6 +1462,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "npm automation token detected. Exposed tokens allow publishing malicious package versions.",
     severity: "critical",
     rule: "SECRETS_NPM_TOKEN",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
   {
     name: "secrets-generic-api-key",
@@ -1319,6 +1473,8 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "Generic API key or secret detected in code.",
     severity: "high",
     rule: "SECRETS_GENERIC_API_KEY",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
   },
 ];
 
@@ -1335,6 +1491,7 @@ export const OBFUSCATION_V3_PATTERNS: PatternEntry[] = [
       "String built by concatenating many small fragments. This technique hides suspicious strings from static analysis.",
     severity: "high",
     rule: "CODE_SPLIT_STRING_OBFUSCATION",
+    notTestFile: true,
   },
   {
     name: "code-multi-layer-encoding",
@@ -1344,6 +1501,7 @@ export const OBFUSCATION_V3_PATTERNS: PatternEntry[] = [
       "Multi-layer encoding detected (decode inside decode). Malware uses nested encoding to evade detection.",
     severity: "critical",
     rule: "CODE_MULTI_LAYER_ENCODING",
+    notTestFile: true,
   },
   {
     name: "code-runtime-deobfuscation",
@@ -1353,6 +1511,7 @@ export const OBFUSCATION_V3_PATTERNS: PatternEntry[] = [
       "Delayed runtime deobfuscation. Code deobfuscates and executes payload after a delay to evade analysis.",
     severity: "high",
     rule: "CODE_RUNTIME_DEOBFUSCATION",
+    notTestFile: true,
   },
 ];
 
@@ -1369,5 +1528,6 @@ export const PROVENANCE_PATTERNS: PatternEntry[] = [
       "Empty integrity hash in lockfile. Package integrity cannot be verified.",
     severity: "medium",
     rule: "PROVENANCE_MISSING",
+    notTestFile: true,
   },
 ];

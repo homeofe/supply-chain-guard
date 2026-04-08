@@ -69,7 +69,15 @@ import { generateSbomDocument } from "./sbom-generator.js";
 import { verifySLSA, getSLSALevel } from "./slsa-verifier.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 
-const TOOL_VERSION = "5.0.1";
+const TOOL_VERSION = "5.2.0";
+
+/** Regex matching the scanner's own source files (pattern/IOC/threat-intel definitions). */
+const SCANNER_SOURCE_FILE =
+  /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/;
+
+/** Detect test / spec / fixture / mock files. Shared constant (was duplicated inline). */
+const TEST_FILE_REGEX =
+  /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i;
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -179,13 +187,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       const entropyFindings = analyzeEntropy(content, relativePath);
       findings.push(...entropyFindings);
 
-      // IOC blocklist check (v4.1)
-      const iocFindings = checkIOCBlocklist(content, relativePath);
-      findings.push(...iocFindings);
+      // IOC blocklist + threat-intel checks (skip scanner source/test files — they contain IOC definitions)
+      const normForIOC = relativePath.replace(/\\/g, "/");
+      const isIOCExcluded = SCANNER_SOURCE_FILE.test(normForIOC) || TEST_FILE_REGEX.test(normForIOC);
+      if (!isIOCExcluded) {
+        const iocFindings = checkIOCBlocklist(content, relativePath);
+        findings.push(...iocFindings);
 
-      // Threat intelligence feed check (v4.5)
-      const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
-      findings.push(...tiFindings);
+        const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
+        findings.push(...tiFindings);
+      }
 
       // README lure pattern scanning (v4.1)
       if (basename.toLowerCase().startsWith("readme")) {
@@ -193,8 +204,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         findings.push(...lureFindings);
       }
 
-      // Check package.json specifically
-      if (basename === "package.json") {
+      // Check package.json specifically (skip test fixture directories)
+      const normPkgPath = relativePath.replace(/\\/g, "/");
+      if (basename === "package.json" && !TEST_FILE_REGEX.test(normPkgPath)) {
         checkPackageJson(content, relativePath, findings);
         // Check for binary download patterns in install scripts (T-007)
         checkBinaryDownloadScripts(content, relativePath, findings);
@@ -485,7 +497,7 @@ function checkFilePatterns(
   const fileExt = path.extname(relativePath).toLowerCase();
   // Normalise path separators for cross-platform regex matching
   const normalizedPath = relativePath.replace(/\\/g, "/");
-  const isTestFile = /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i.test(normalizedPath);
+  const isTestFile = TEST_FILE_REGEX.test(normalizedPath);
 
   for (const pattern of allPatterns) {
     // Respect onlyExtensions restriction (e.g. SVG_SCRIPT_INJECTION → .svg only)
@@ -701,7 +713,7 @@ function checkBeaconMinerPatterns(
 ): void {
   const lines = content.split("\n");
   const normalizedPath = relativePath.replace(/\\/g, "/");
-  const isTestFile = /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i.test(normalizedPath);
+  const isTestFile = TEST_FILE_REGEX.test(normalizedPath);
 
   for (const pattern of BEACON_MINER_PATTERNS) {
     // Apply context-aware file filters (same guards as checkFilePatterns)
@@ -742,6 +754,10 @@ function checkMultiLineProtestware(
   relativePath: string,
   findings: Finding[],
 ): void {
+  // Skip scanner source and test files (contain protestware patterns as definitions)
+  const normPath = relativePath.replace(/\\/g, "/");
+  if (SCANNER_SOURCE_FILE.test(normPath) || TEST_FILE_REGEX.test(normPath)) return;
+
   const lines = content.split("\n");
   const PROXIMITY = 15;
 

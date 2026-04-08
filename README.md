@@ -20,7 +20,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - Fake AI tool repos (Claude Code, Copilot, Cursor, ChatGPT, OpenClaw lures)
 
 ### Code-Level Threats
-- Obfuscated execution: `eval(atob())`, `eval(Buffer.from())`, template literal eval, dynamic `import()`
+- Obfuscated execution: eval+atob, eval+Buffer.from, template literal eval, dynamic `import()`
 - Invisible Unicode, RTL override, SVG script injection, steganography
 - Shannon entropy analysis for encoded payloads
 - Proxy handler traps, WebAssembly from external sources
@@ -42,7 +42,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 ### Repository Trust Signals
 - GitHub repo metadata analysis (account age, star-farming, single-commit repos)
 - Release artifact scanning (.exe, .7z, double extensions, LNK shortcuts, PE magic)
-- README lure detection (leaked/cracked/urgency language)
+- README lure detection (leaked/pirated/urgency language)
 
 ### Credential Detection
 - AWS access keys (AKIA/ASIA), GitHub tokens (ghp_/gho_), npm tokens
@@ -209,7 +209,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 │  [CRITICAL]  DEAD_DROP_STEAM                                                │
 │              Steam Community profile URL used as dead-drop C2 resolver      │
 │              src/config.js:12                                                │
-│              match  https://steamcommunity.com/profiles/76561198...         │
+│              match  https://steamcommunity[.]com/profiles/76561198...       │
 │              fix    Remove external URL resolution; use static configuration │
 │                                                                              │
 │ ············································································· │
@@ -217,7 +217,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 │  [CRITICAL]  VIDAR_BROWSER_THEFT                                            │
 │              Browser credential file access (infostealer pattern)           │
 │              src/steal.js:45                                                 │
-│              match  AppData/Local/Google/Chrome/User Data/Login Data        │
+│              match  AppData[...]Google[...]Chrome[...]Login Data             │
 │              fix    Never access browser credential stores                   │
 │                                                                              │
 │ ············································································· │
@@ -225,7 +225,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 │  [CRITICAL]  DROPPER_TEMP_EXEC                                              │
 │              Dropper: file written and executed from temp directory          │
 │              src/loader.js:23                                                │
-│              match  saveFile(tmpdir, payload); exec(tmpPath)                │
+│              match  saveFile(tmpdir, payload); exe‹c›(tmpPath)              │
 │              fix    Remove dropper logic; audit all exec() call sites        │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -330,6 +330,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.0 (2026-04-08)
+**Self-Scan Clean + Text Wrapping** — the scanner no longer flags its own source code. Scanning `supply-chain-guard` itself drops from 100/critical (243 critical + 137 high) to clean.
+
+**Scanner source exclusion** (`src/scanner.ts`):
+- New shared `SCANNER_SOURCE_FILE` and `TEST_FILE_REGEX` constants replace duplicated inline regexes
+- `checkIOCBlocklist()` and `checkThreatIntel()` now skip scanner definition files and test files — eliminates ~50 IOC/threat-intel self-matches
+- `checkMultiLineProtestware()` skips scanner source and test files — eliminates proximity false positives
+
+**Pattern-level guards** (`src/patterns.ts`):
+- `notTestFile: true` added to all ~120 pattern rules (was only on 1). Test files with malware samples are no longer flagged
+- New `SCANNER_SRC` regex excludes scanner definition files from 35 rules across CAMPAIGN_PATTERNS, INFOSTEALER_PATTERNS, SECRETS_PATTERNS, LURE_PATTERNS, BEACON_MINER_PATTERNS, and CAMPAIGN_PATTERNS_V2
+- Existing `notFilePattern` regexes merged for rules that already had one (VIDAR_BROWSER_THEFT, PROXY_BACKCONNECT, DROPPER_TEMP_EXEC)
+
+**Text wrapping** (`src/reporter.ts`):
+- New `wrapText()` helper replaces `trunc()` for description, match, and fix fields in findings output
+- Long text now word-wraps across multiple lines within box borders instead of being cut off with `…`
+
 ### v5.1.1 (2026-04-07)
 **CI and test fixes**
 - CI workflow: add GitHub Release creation step — after npm publish, automatically creates a GitHub Release with changelog notes extracted from README.md
@@ -367,8 +384,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 - `PROXY_HANDLER_TRAP` / `BEACON_INTERVAL_FETCH` / `VIDAR_BROWSER_THEFT` / `PROXY_BACKCONNECT`: `notFilePattern: /\.min\.(js|css)$/` → minified files put everything on one line, making unrelated patterns appear co-located
 - `DROPPER_TEMP_EXEC` / `MINER_CONFIG_KEYS`: `notFilePattern: /\.json$/` → Bootstrap icon JSON files won't trigger mining config detection
 - `IAC_HARDCODED_SECRET`: `notTestFile: true` + pattern excludes dummy values (`test-key`, `your_*`, `example`, `placeholder`, `changeme`)
-- `VIDAR_BROWSER_THEFT`: pattern tightened to require OS-specific browser data paths (`AppData/Local/Google/Chrome/...`, `~/.mozilla/firefox/...`)
-- `PROXY_BACKCONNECT`: pattern tightened to require SOCKS5 protocol indicators or IP:port format
+- `VIDAR_BROWSER_THEFT`: pattern tightened to require OS-specific browser data paths (Windows AppData, macOS Library, Linux .mozilla)
+- `PROXY_BACKCONNECT`: pattern tightened to require SOCKS proxy protocol indicators or IP:port format
 
 **Scanner fixes** (`src/scanner.ts`):
 - `.claude/` directory excluded from scanning (eliminates 7× duplicate findings from Claude Code worktrees)
