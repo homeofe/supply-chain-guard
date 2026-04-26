@@ -389,6 +389,38 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notFilePattern: SCANNER_SRC,
   },
 
+  // --- Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) ---
+  {
+    name: "checkmarx-shai-hulud-third-coming",
+    pattern: "Shai-Hulud:?\\s*The\\s+Third\\s+Coming",
+    description:
+      "Shai-Hulud Third Coming marker detected. Signature string used by the April 2026 Bitwarden CLI / Checkmarx KICS supply-chain breach to label exfiltration repositories.",
+    severity: "critical",
+    rule: "CHECKMARX_SHAI_HULUD_V3",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "checkmarx-mcp-addon",
+    pattern: "mcpAddon\\.js",
+    description:
+      "Reference to mcpAddon.js. This is the hidden 'MCP addon' loader downloaded by the compromised Checkmarx KICS extensions in April 2026.",
+    severity: "critical",
+    rule: "CHECKMARX_MCP_ADDON",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "bitwarden-cli-loader",
+    pattern: "\\b(?:bw_setup|bw1)\\.js\\b",
+    description:
+      "Reference to bw_setup.js or bw1.js. Loader and credential-stealing payload from the @bitwarden/cli@2026.4.0 hijack (April 2026).",
+    severity: "critical",
+    rule: "BITWARDEN_CLI_LOADER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
   // --- coa/rc npm hijack ---
   {
     name: "coa-rc-sdd-dll",

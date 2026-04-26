@@ -326,6 +326,69 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)
+  // =================================================================
+
+  describe("Checkmarx KICS / Bitwarden CLI Breach (April 2026)", () => {
+    it("should detect the Shai-Hulud Third Coming marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const tag = "Shai-Hulud: The Third Coming";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "CHECKMARX_SHAI_HULUD_V3"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the mcpAddon.js loader filename", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const dropper = require("./mcpAddon.js");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "CHECKMARX_MCP_ADDON"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the bw_setup.js / bw1.js loader pair", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "preinstall.js"),
+        'require("bw_setup.js"); require("bw1.js");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "BITWARDEN_CLI_LOADER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the audit.checkmarx.cx C2 domain via threat intel", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'fetch("https://audit.checkmarx.cx/v1/telemetry");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) =>
+          f.description?.includes("audit.checkmarx.cx") ||
+          f.description?.toLowerCase().includes("checkmarx")
+      );
+      expect(finding).toBeDefined();
+    });
+  });
+
+  // =================================================================
   // Integration: multiple campaign indicators in same project
   // =================================================================
 

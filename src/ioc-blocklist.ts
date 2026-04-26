@@ -15,6 +15,10 @@ export const KNOWN_C2_DOMAINS: string[] = [
 
   // GlassWorm C2 domains
   "connect.*.workers.dev",
+
+  // Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)
+  "audit.checkmarx.cx",
+  "checkmarx.cx",
 ];
 
 // ---------------------------------------------------------------------------
@@ -25,6 +29,10 @@ export const KNOWN_C2_IPS: string[] = [
   // GhostSocks C2 (Claude Code leak campaign, April 2026)
   "147.45.197.92",
   "94.228.161.88",
+
+  // Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)
+  "94.154.172.43",
+  "91.195.240.123",
 ];
 
 // ---------------------------------------------------------------------------
@@ -98,6 +106,10 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "node-ipc": {
     versions: ["10.1.1", "10.1.2", "10.1.3"],
     description: "node-ipc protestware: overwrites files for Russian/Belarusian IPs (Mar 2022)",
+  },
+  "@bitwarden/cli": {
+    versions: ["2026.4.0"],
+    description: "Bitwarden CLI hijack: bw_setup.js/bw1.js credential stealer linked to Checkmarx KICS breach (April 2026)",
   },
 };
 
