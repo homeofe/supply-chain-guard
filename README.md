@@ -330,6 +330,34 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.3 (2026-04-26)
+**Documentation catch-up** — bumps version strings in `src/cli.ts`, `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) that were stuck at `5.2.0` / `5.1.0` since the v5.2.1 and v5.2.2 releases. No behavior change.
+
+### v5.2.2 (2026-04-26)
+**Solana monitor: rate-limit-aware RPC client** — closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21).
+
+The public Solana RPC (`api.mainnet-beta.solana.com`) returns HTTP 429 and JSON-RPC error `-32005` when its per-IP quota is exceeded. Previously the monitor surfaced these as fatal poll errors and skipped the interval. Now `solanaRpc()` retries with exponential backoff and recovers automatically.
+
+- **Detection**: HTTP 429, JSON-RPC code `-32005`, or message heuristics (`rate.?limit`, `too many requests`, `429`, `-32005`)
+- **Backoff**: exponential 1s -> 32s with +/- 25% jitter, capped at 5 retries
+- **Retry-After**: header (seconds or HTTP-date) is honored when present and overrides backoff
+- **Test seam**: `__setSleepForTesting()` lets tests run instantly without real timers
+- 6 new tests in `src/__tests__/solana-monitor.test.ts` cover 429 retry, `-32005` retry, Retry-After honoring, max-retry exhaustion, non-rate-limit pass-through, and message-based detection
+
+### v5.2.1 (2026-04-26)
+**Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)**
+
+A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS Docker images / VSCode-OpenVSX extensions and the `@bitwarden/cli` npm package on April 22, 2026, using a shared `audit.checkmarx.cx/v1/telemetry` exfiltration endpoint. Targets GitHub tokens, AWS/Azure/GCP credentials, npm tokens, SSH keys, and Claude configs. Marked as a successor to the Shai-Hulud npm worm.
+
+- **C2 domains**: `audit.checkmarx.cx`, `checkmarx.cx` (`src/ioc-blocklist.ts`)
+- **C2 IPs**: `94.154.172.43`, `91.195.240.123`
+- **Compromised package**: `@bitwarden/cli@2026.4.0`
+- **New campaign rules** in `src/patterns.ts`:
+  - `CHECKMARX_SHAI_HULUD_V3` — matches the `Shai-Hulud: The Third Coming` exfil marker string
+  - `CHECKMARX_MCP_ADDON` — matches the `mcpAddon.js` loader filename
+  - `BITWARDEN_CLI_LOADER` — matches `bw_setup.js` / `bw1.js` loader/payload pair
+- 4 new tests in `src/__tests__/campaigns.test.ts`
+
 ### v5.2.0 (2026-04-08)
 **Self-Scan Clean + Text Wrapping** — the scanner no longer flags its own source code. Scanning `supply-chain-guard` itself drops from 100/critical (243 critical + 137 high) to clean.
 
