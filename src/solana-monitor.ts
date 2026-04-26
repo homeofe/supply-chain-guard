@@ -21,6 +21,57 @@ import type {
 const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
 const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 
+// Rate-limit handling for the public Solana RPC (api.mainnet-beta.solana.com
+// returns HTTP 429 and JSON-RPC error -32005 when its per-IP quota is exceeded).
+const RPC_MAX_RETRIES = 5;
+const RPC_BASE_BACKOFF_MS = 1_000;
+const RPC_MAX_BACKOFF_MS = 32_000;
+const RPC_JITTER_RATIO = 0.25;
+
+// Sleep helper exposed as a module-level binding so tests can stub it without
+// having to mock global timers.
+let sleepFn: (ms: number) => Promise<void> = (ms) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Test-only hook: replace the sleep implementation used between RPC retries. */
+export function __setSleepForTesting(fn: ((ms: number) => Promise<void>) | null): void {
+  sleepFn = fn ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+}
+
+/** Parse a Retry-After header value (seconds or HTTP-date) into milliseconds. */
+function parseRetryAfter(value: string | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return parseInt(trimmed, 10) * 1000;
+  }
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+  return null;
+}
+
+/** Compute the next backoff delay (exponential with jitter, capped). */
+function backoffDelay(attempt: number): number {
+  const exp = Math.min(RPC_MAX_BACKOFF_MS, RPC_BASE_BACKOFF_MS * 2 ** attempt);
+  const jitter = exp * RPC_JITTER_RATIO * (Math.random() * 2 - 1);
+  return Math.max(0, Math.round(exp + jitter));
+}
+
+/** Heuristic: is this RPC error a rate-limit signal? */
+function isRateLimitError(message: string): boolean {
+  return /rate.?limit|too many requests|429|-32005/i.test(message);
+}
+
+/** Internal: a structured error thrown from the low-level request layer. */
+class RpcRateLimitError extends Error {
+  constructor(message: string, readonly retryAfterMs: number | null) {
+    super(message);
+    this.name = "RpcRateLimitError";
+  }
+}
+
 interface TransactionDetail {
   signature: string;
   blockTime: number | null;
@@ -200,9 +251,44 @@ async function getTransactionDetail(
 }
 
 /**
- * Make a JSON-RPC call to the Solana RPC endpoint.
+ * Make a JSON-RPC call to the Solana RPC endpoint, retrying on HTTP 429 and
+ * JSON-RPC -32005 (rate limited) responses with exponential backoff and
+ * Retry-After honoring.
  */
-function solanaRpc(method: string, params: unknown[]): Promise<unknown> {
+async function solanaRpc(method: string, params: unknown[]): Promise<unknown> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= RPC_MAX_RETRIES; attempt++) {
+    try {
+      return await solanaRpcOnce(method, params);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      const isRateLimit =
+        err instanceof RpcRateLimitError || isRateLimitError(lastError.message);
+      if (!isRateLimit || attempt === RPC_MAX_RETRIES) {
+        throw lastError;
+      }
+
+      const retryAfter =
+        err instanceof RpcRateLimitError ? err.retryAfterMs : null;
+      const delayMs = retryAfter ?? backoffDelay(attempt);
+      console.warn(
+        `  [solana-rpc] rate limited (attempt ${attempt + 1}/${RPC_MAX_RETRIES + 1}); ` +
+          `retrying in ${Math.round(delayMs / 100) / 10}s`,
+      );
+      await sleepFn(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error("Solana RPC: exhausted retries");
+}
+
+/**
+ * Single attempt at a JSON-RPC call. Throws RpcRateLimitError on HTTP 429 so
+ * the caller can apply Retry-After-aware backoff.
+ */
+function solanaRpcOnce(method: string, params: unknown[]): Promise<unknown> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     id: 1,
@@ -223,20 +309,56 @@ function solanaRpc(method: string, params: unknown[]): Promise<unknown> {
           "Content-Length": Buffer.byteLength(body),
         },
       },
-      (res) => {
+      (res: {
+        statusCode?: number;
+        headers?: Record<string, string | string[] | undefined>;
+        on: (event: string, handler: (chunk?: Buffer) => void) => void;
+      }) => {
+        const status = res.statusCode ?? 200;
+        const retryAfterHeader = res.headers?.["retry-after"];
+        const retryAfterValue = Array.isArray(retryAfterHeader)
+          ? retryAfterHeader[0]
+          : retryAfterHeader;
+
         let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
+        res.on("data", (chunk?: Buffer) => {
+          if (chunk) data += chunk.toString();
         });
         res.on("end", () => {
+          if (status === 429) {
+            reject(
+              new RpcRateLimitError(
+                `Solana RPC HTTP 429 (rate limited)`,
+                parseRetryAfter(retryAfterValue),
+              ),
+            );
+            return;
+          }
+
           try {
-            const parsed = JSON.parse(data) as { result?: unknown; error?: { message: string } };
+            const parsed = JSON.parse(data) as {
+              result?: unknown;
+              error?: { code?: number; message: string };
+            };
             if (parsed.error) {
+              if (parsed.error.code === -32005 || isRateLimitError(parsed.error.message)) {
+                reject(
+                  new RpcRateLimitError(
+                    `Solana RPC error: ${parsed.error.message}`,
+                    parseRetryAfter(retryAfterValue),
+                  ),
+                );
+                return;
+              }
               reject(new Error(`Solana RPC error: ${parsed.error.message}`));
               return;
             }
             resolve(parsed.result);
-          } catch {
+          } catch (parseErr) {
+            if (parseErr instanceof RpcRateLimitError) {
+              reject(parseErr);
+              return;
+            }
             reject(new Error("Failed to parse Solana RPC response"));
           }
         });

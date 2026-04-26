@@ -32,6 +32,7 @@ import {
   removeFromWatchlist,
   listWatchlist,
   formatAlert,
+  __setSleepForTesting,
   type C2Alert,
 } from "../solana-monitor.js";
 
@@ -63,6 +64,37 @@ function mockRpcResponses(responses: Array<{ result?: unknown; error?: { message
 }
 
 /**
+ * Like mockRpcResponses but lets each entry override HTTP status and headers
+ * (so tests can simulate a 429 or a Retry-After header).
+ */
+function mockRpcResponsesWithStatus(
+  responses: Array<{
+    status?: number;
+    headers?: Record<string, string>;
+    body?: { result?: unknown; error?: { code?: number; message: string } };
+  }>,
+): void {
+  let callIndex = 0;
+  const mockedRequest = https.request as ReturnType<typeof vi.fn>;
+  mockedRequest.mockImplementation((_opts: unknown, cb: (res: unknown) => void) => {
+    const resp = responses[callIndex] ?? responses[responses.length - 1];
+    callIndex++;
+    const body = JSON.stringify(resp.body ?? {});
+
+    cb({
+      statusCode: resp.status ?? 200,
+      headers: resp.headers ?? {},
+      on(event: string, handler: (chunk?: Buffer) => void) {
+        if (event === "data") handler(Buffer.from(body));
+        if (event === "end") handler();
+      },
+    });
+
+    return { on: vi.fn(), write: vi.fn(), end: vi.fn() };
+  });
+}
+
+/**
  * Helper: configure mock to simulate a network error.
  */
 function mockRpcError(errorMessage: string): void {
@@ -84,6 +116,12 @@ function mockRpcError(errorMessage: string): void {
 describe("Solana Monitor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Make rate-limit retries instant by stubbing the sleep helper.
+    __setSleepForTesting(() => Promise.resolve());
+  });
+
+  afterAll(() => {
+    __setSleepForTesting(null);
   });
 
   // ─── checkWallet ──────────────────────────────────────────
@@ -237,13 +275,87 @@ describe("Solana Monitor", () => {
     });
 
     it("should handle RPC errors gracefully", async () => {
-      mockRpcResponses([{ error: { message: "Rate limited" } }]);
-      await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow("Solana RPC error: Rate limited");
+      mockRpcResponses([{ error: { message: "Invalid params" } }]);
+      await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow("Solana RPC error: Invalid params");
     });
 
     it("should handle network errors", async () => {
       mockRpcError("ECONNREFUSED");
       await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow("ECONNREFUSED");
+    });
+  });
+
+  // ─── Rate-limit handling (T-007) ──────────────────────────
+
+  describe("Rate-limit handling", () => {
+    it("should retry on HTTP 429 and succeed on the second attempt", async () => {
+      mockRpcResponsesWithStatus([
+        { status: 429, body: {} },
+        { status: 200, body: { result: [] } },
+      ]);
+
+      const results = await checkWallet("FakeAddr111", 5);
+      expect(results).toEqual([]);
+      expect(https.request).toHaveBeenCalledTimes(2);
+    });
+
+    it("should retry on JSON-RPC -32005 and succeed", async () => {
+      mockRpcResponsesWithStatus([
+        { status: 200, body: { error: { code: -32005, message: "Node is behind by 1234 slots" } } },
+        { status: 200, body: { result: [] } },
+      ]);
+
+      const results = await checkWallet("FakeAddr111", 5);
+      expect(results).toEqual([]);
+      expect(https.request).toHaveBeenCalledTimes(2);
+    });
+
+    it("should honor the Retry-After header when present", async () => {
+      const sleepCalls: number[] = [];
+      __setSleepForTesting(async (ms) => {
+        sleepCalls.push(ms);
+      });
+
+      mockRpcResponsesWithStatus([
+        { status: 429, headers: { "retry-after": "2" }, body: {} },
+        { status: 200, body: { result: [] } },
+      ]);
+
+      await checkWallet("FakeAddr111", 5);
+      // Retry-After: 2 -> 2000 ms (must override exponential backoff)
+      expect(sleepCalls).toEqual([2000]);
+    });
+
+    it("should give up after the maximum number of retries", async () => {
+      // 6 = 1 initial attempt + 5 retries; mock returns 429 forever.
+      mockRpcResponsesWithStatus([
+        { status: 429, body: {} },
+      ]);
+
+      await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow(
+        /HTTP 429|rate limited/i,
+      );
+      expect(https.request).toHaveBeenCalledTimes(6);
+    });
+
+    it("should not retry on non-rate-limit errors", async () => {
+      mockRpcResponsesWithStatus([
+        { status: 200, body: { error: { code: -32602, message: "Invalid params" } } },
+      ]);
+
+      await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow("Invalid params");
+      expect(https.request).toHaveBeenCalledTimes(1);
+    });
+
+    it("should treat 'too many requests' error messages as rate-limited", async () => {
+      mockRpcResponsesWithStatus([
+        { status: 200, body: { error: { message: "Too Many Requests" } } },
+        { status: 200, body: { result: [] } },
+      ]);
+
+      const results = await checkWallet("FakeAddr111", 5);
+      expect(results).toEqual([]);
+      expect(https.request).toHaveBeenCalledTimes(2);
     });
   });
 
