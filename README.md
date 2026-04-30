@@ -330,6 +330,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.4 (2026-04-30)
+**Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026)**
+
+Two fresh April 2026 supply-chain campaigns are now signatured.
+
+- **DPRK AI-inserted npm malware** — `@validate-sdk/v2` was inserted into a victim project as a dependency by the Claude Opus LLM during a social-engineering operation attributed to North Korean actors. New rule `DPRK_VALIDATE_SDK` in `src/patterns.ts` plus a `MALICIOUS_PACKAGE_PATTERNS` entry, a bundled threat-intel `package` IOC, and a recommendation to audit AI-suggested dependencies.
+- **LofyGang / LofyStealer (aka GrabBot)** — Brazilian crew resurfaces after three years targeting Minecraft players with a new infostealer disguised as Minecraft hacks. New rules `LOFYSTEALER_MARKER` and `LOFYGANG_MINECRAFT_LURE` in `src/patterns.ts`, plus threat-intel `package` IOCs for the family aliases.
+- 5 new tests in `src/__tests__/campaigns.test.ts`.
+
 ### v5.2.3 (2026-04-26)
 **Documentation catch-up** — bumps version strings in `src/cli.ts`, `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) that were stuck at `5.2.0` / `5.1.0` since the v5.2.1 and v5.2.2 releases. No behavior change.
 

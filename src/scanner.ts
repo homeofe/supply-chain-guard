@@ -1118,6 +1118,16 @@ function generateRecommendations(findings: Finding[]): string[] {
       "CRITICAL: coa/rc npm hijack indicators detected. Check for sdd.dll references and encoded postinstall payloads. Pin dependency versions.",
     );
   }
+  if (rules.has("DPRK_VALIDATE_SDK")) {
+    recommendations.push(
+      "CRITICAL: DPRK @validate-sdk/v2 indicator detected. April 2026 campaign delivered AI-inserted malicious npm dependencies. Remove the package and audit all AI-suggested dependencies.",
+    );
+  }
+  if (rules.has("LOFYSTEALER_MARKER") || rules.has("LOFYGANG_MINECRAFT_LURE")) {
+    recommendations.push(
+      "CRITICAL: LofyGang / LofyStealer (GrabBot) indicators detected. April 2026 campaign targets Minecraft players via fake hack tools. Do not run any associated binaries.",
+    );
+  }
 
   // Lockfile recommendations (T-006)
   if (

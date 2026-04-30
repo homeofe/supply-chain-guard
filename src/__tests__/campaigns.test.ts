@@ -389,6 +389,93 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // DPRK @validate-sdk/v2 AI-inserted npm malware (April 2026)
+  // =================================================================
+
+  describe("DPRK @validate-sdk/v2 (April 2026)", () => {
+    it("should detect references to @validate-sdk/v2 in code", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.js"),
+        'require("@validate-sdk/v2");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "DPRK_VALIDATE_SDK"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag @validate-sdk/v2 listed in a package.json", async () => {
+      const pkg = {
+        name: "victim-app",
+        version: "1.0.0",
+        dependencies: {
+          "@validate-sdk/v2": "^1.0.0",
+        },
+      };
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify(pkg, null, 2)
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "DPRK_VALIDATE_SDK"
+      );
+      expect(finding).toBeDefined();
+    });
+  });
+
+  // =================================================================
+  // LofyGang / LofyStealer (April 2026)
+  // =================================================================
+
+  describe("LofyGang / LofyStealer (April 2026)", () => {
+    it("should detect the LofyStealer marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stealer.js"),
+        'const family = "LofyStealer"; load(family);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "LOFYSTEALER_MARKER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the GrabBot alias", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "alias.js"),
+        'const tag = "GrabBot v1";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "LOFYSTEALER_MARKER"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("should detect Minecraft hack lure combined with credential theft", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "lure.js"),
+        'const tool = "minecraft hack loader that will steal session token";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "LOFYGANG_MINECRAFT_LURE"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("high");
+    });
+  });
+
+  // =================================================================
   // Integration: multiple campaign indicators in same project
   // =================================================================
 

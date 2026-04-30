@@ -264,7 +264,7 @@ describe("formatReport – Text", () => {
   it("should contain scan report header (stripped ANSI)", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
     expect(output).toContain("supply-chain-guard");
-    expect(output).toContain("v5.2.3");
+    expect(output).toContain("v5.2.4");
   });
 
   it("should show risk score", () => {

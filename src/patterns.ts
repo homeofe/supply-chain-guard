@@ -255,6 +255,9 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // GlassWorm campaign packages (pattern: random-looking names)
   "^[a-z]{15,}$", // Very long single-word lowercase names
 
+  // DPRK AI-inserted npm malware (April 2026)
+  "^@validate-sdk\\/v2$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -417,6 +420,40 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Reference to bw_setup.js or bw1.js. Loader and credential-stealing payload from the @bitwarden/cli@2026.4.0 hijack (April 2026).",
     severity: "critical",
     rule: "BITWARDEN_CLI_LOADER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
+  // --- LofyGang / LofyStealer (April 2026) ---
+  {
+    name: "lofystealer-marker",
+    pattern: "\\b(?:LofyStealer|GrabBot)\\b",
+    description:
+      "LofyStealer / GrabBot marker detected. Brazilian LofyGang campaign (April 2026) targeting Minecraft players with infostealer disguised as Minecraft hacks.",
+    severity: "critical",
+    rule: "LOFYSTEALER_MARKER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "lofygang-minecraft-lure",
+    pattern: "(?:minecraft|mc)[\\s\\-_]*(?:hack|cheat|client|loader)\\b[^\\n]{0,100}\\b(?:steal|grab|exfil|token|password|wallet)",
+    description:
+      "Minecraft hack lure combined with credential/wallet theft language. LofyGang campaign distribution pattern.",
+    severity: "high",
+    rule: "LOFYGANG_MINECRAFT_LURE",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
+  // --- DPRK AI-inserted npm malware (April 2026) ---
+  {
+    name: "dprk-validate-sdk",
+    pattern: "@validate-sdk\\/v2",
+    description:
+      "Reference to @validate-sdk/v2 detected. DPRK-linked malicious npm package (April 2026) inserted as a dependency by Claude Opus LLM in social engineering attacks.",
+    severity: "critical",
+    rule: "DPRK_VALIDATE_SDK",
     notTestFile: true,
     notFilePattern: SCANNER_SRC,
   },
