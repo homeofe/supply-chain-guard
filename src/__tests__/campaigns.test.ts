@@ -476,6 +476,60 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Mini Shai-Hulud / TeamPCP (April 2026)
+  // =================================================================
+
+  describe("Mini Shai-Hulud / TeamPCP (April 2026)", () => {
+    it("should detect the dead-drop repository description marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const desc = "A Mini Shai-Hulud has Appeared"; createRepo(desc);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MINI_SHAI_HULUD_MARKER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the setup.mjs / execution.js loader filenames", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'spawn("node", ["setup.mjs"]);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MINI_SHAI_HULUD_LOADER"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("should detect a bun preinstall hook invoking setup.mjs", async () => {
+      const pkg = {
+        name: "victim-cap-pkg",
+        version: "1.0.0",
+        scripts: {
+          preinstall: "bun setup.mjs",
+        },
+      };
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify(pkg, null, 2)
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MINI_SHAI_HULUD_PREINSTALL"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
   // Integration: multiple campaign indicators in same project
   // =================================================================
 

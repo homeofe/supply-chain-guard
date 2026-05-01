@@ -458,6 +458,38 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notFilePattern: SCANNER_SRC,
   },
 
+  // --- Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) ---
+  {
+    name: "mini-shai-hulud-marker",
+    pattern: "A\\s+Mini\\s+Shai-Hulud\\s+has\\s+Appeared",
+    description:
+      "Mini Shai-Hulud campaign marker detected. Signature description string used by the April 2026 SAP CAP / PyTorch Lightning / Intercom worm to label dead-drop GitHub repositories.",
+    severity: "critical",
+    rule: "MINI_SHAI_HULUD_MARKER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "mini-shai-hulud-bun-loader",
+    pattern: "[\"'`/\\\\\\s\\[]\\s*(?:setup\\.mjs|execution\\.js)\\b",
+    description:
+      "Reference to setup.mjs or execution.js detected. Loader filenames used by the Mini Shai-Hulud preinstall worm to download Bun runtime and execute the credential stealer payload.",
+    severity: "high",
+    rule: "MINI_SHAI_HULUD_LOADER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "mini-shai-hulud-preinstall-bun",
+    pattern: "preinstall[\"']?\\s*:\\s*[\"'][^\"']*\\bbun\\b[^\"']*(?:setup\\.mjs|execution\\.js)",
+    description:
+      "preinstall script invoking Bun on setup.mjs or execution.js. Direct fingerprint of the Mini Shai-Hulud worm's npm hijack chain.",
+    severity: "critical",
+    rule: "MINI_SHAI_HULUD_PREINSTALL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
   // --- coa/rc npm hijack ---
   {
     name: "coa-rc-sdd-dll",

@@ -111,6 +111,26 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["2026.4.0"],
     description: "Bitwarden CLI hijack: bw_setup.js/bw1.js credential stealer linked to Checkmarx KICS breach (April 2026)",
   },
+  "@cap-js/sqlite": {
+    versions: ["2.2.2"],
+    description: "Mini Shai-Hulud / TeamPCP: SAP CAP npm hijack with preinstall hook + Bun-based credential stealer (April 2026)",
+  },
+  "@cap-js/postgres": {
+    versions: ["2.2.2"],
+    description: "Mini Shai-Hulud / TeamPCP: SAP CAP npm hijack with preinstall hook + Bun-based credential stealer (April 2026)",
+  },
+  "@cap-js/db-service": {
+    versions: ["2.10.1"],
+    description: "Mini Shai-Hulud / TeamPCP: SAP CAP npm hijack with preinstall hook + Bun-based credential stealer (April 2026)",
+  },
+  "mbt": {
+    versions: ["1.2.48"],
+    description: "Mini Shai-Hulud / TeamPCP: SAP MTA build tool hijack with preinstall hook + Bun-based credential stealer (April 2026)",
+  },
+  "intercom-client": {
+    versions: ["7.0.4"],
+    description: "Mini Shai-Hulud / TeamPCP: intercom-client npm hijack with preinstall hook + credential stealer (April 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -121,6 +141,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "ctx": {
     versions: ["0.1.2", "0.2.6"],
     description: "ctx PyPI hijack: steals environment variables (May 2022)",
+  },
+  "lightning": {
+    versions: ["2.6.2", "2.6.3"],
+    description: "Mini Shai-Hulud / TeamPCP: PyTorch Lightning PyPI hijack with credential stealer payload (April 2026)",
   },
 };
 
