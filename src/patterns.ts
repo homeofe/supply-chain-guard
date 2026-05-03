@@ -258,6 +258,12 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // DPRK AI-inserted npm malware (April 2026)
   "^@validate-sdk\\/v2$",
 
+  // BufferZoneCorp poisoned Ruby gems (May 2026)
+  "^knot-(activesupport-logger|devise-jwt-helper|rack-session-store|rails-assets-pipeline|rspec-formatter-json|date-utils-rb|simple-formatter)$",
+
+  // BufferZoneCorp sleeper Go modules (May 2026)
+  "^github\\.com/BufferZoneCorp/(go-metrics-sdk|go-weather-sdk|go-retryablehttp|go-stdlib-ext|grpc-client|net-helper|config-loader|log-core|go-envconfig)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

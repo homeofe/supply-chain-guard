@@ -19,6 +19,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)
   "audit.checkmarx.cx",
   "checkmarx.cx",
+
+  // CanisterSprawl npm worm / TeamPCP Update 008 (April 2026)
+  "whereisitat.lucyatemysuperbox.space",
+
+  // MacSync Stealer / malicious Homebrew ad (May 2026)
+  "glowmedaesthetics.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -33,6 +39,9 @@ export const KNOWN_C2_IPS: string[] = [
   // Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)
   "94.154.172.43",
   "91.195.240.123",
+
+  // EtherRAT fallback C2 (April 2026)
+  "135.125.255.55",
 ];
 
 // ---------------------------------------------------------------------------
@@ -58,6 +67,11 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "81fb210ba148fd39e999ee9cdc085dfc": "ClaudeCode_x64.exe Rust dropper (variant)",
   "9a6ea91491ccb1068b0592402029527f": "Vidar v18.7 stealer",
   "3388b415610f4ae018d124ea4dc99189": "GhostSocks proxy malware",
+
+  // MacSync Stealer / malicious Homebrew ad (May 2026)
+  "a4fcfecc5ac8fa57614b23928a0e9b7aa4f4a3b2b3a8c1772487b46277125571": "MacSync Stealer payload (SHA256)",
+  "0d58616c750fc8530a7e90eee18398ddedd08cc0f4908c863ab650673b9819dd": "MacSync Stealer variant (SHA256)",
+  "86d0c50cab4f394c58976c44d6d7b67a7dfbbb813fbcf622236e183d94fd944f": "MacSync Stealer variant (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -68,6 +82,9 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "idbzoomh",
   "idbzoomh1",
   "my3jie",
+
+  // BufferZoneCorp sleeper Go modules / poisoned Ruby gems (May 2026)
+  "BufferZoneCorp",
 ];
 
 // ---------------------------------------------------------------------------
@@ -145,6 +162,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "lightning": {
     versions: ["2.6.2", "2.6.3"],
     description: "Mini Shai-Hulud / TeamPCP: PyTorch Lightning PyPI hijack with credential stealer payload (April 2026)",
+  },
+  "xinference": {
+    versions: ["2.6.0", "2.6.1", "2.6.2"],
+    description: "TeamPCP Update 008: xinference PyPI hijack with '# hacked by teampcp' marker + credential stealer (April 2026)",
   },
 };
 
