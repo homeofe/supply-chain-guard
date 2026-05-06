@@ -652,4 +652,24 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // DAEMON Tools QUIC RAT Supply Chain (May 2026)
+  // =================================================================
+
+  describe("DAEMON Tools QUIC RAT Supply Chain", () => {
+    it("should detect env-check.daemontools.cc C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stage1.js"),
+        'const beacon = "https://env-check.daemontools.cc/probe";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

@@ -25,6 +25,9 @@ export const KNOWN_C2_DOMAINS: string[] = [
 
   // MacSync Stealer / malicious Homebrew ad (May 2026)
   "glowmedaesthetics.com",
+
+  // DAEMON Tools QUIC RAT supply-chain attack (May 2026)
+  "env-check.daemontools.cc",
 ];
 
 // ---------------------------------------------------------------------------
