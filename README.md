@@ -339,6 +339,31 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 - **Beagle backdoor / fake Claude AI site** - Drive-by from `claude-pro.com` delivers a 505MB ZIP with DonutLoader plus DLL sideloading via `NOVupdate.exe` + `avk.dll`, calling out to `license.claude-pro.com` (8.217.190.58). Domains and IP added to `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS` plus bundled threat-intel feed.
 - 6 new tests in `src/__tests__/campaigns.test.ts`.
 
+### v5.2.7 (2026-05-08)
+**Threat intel: DAEMON Tools QUIC RAT supply-chain attack (May 2026)**
+
+- Trojanized DAEMON Tools installers (versions 12.5.0.2421-12.5.0.2434) distributed via official website since 2026-04-08
+- Selective second-stage QUIC RAT deployed to gov/scientific/manufacturing hosts in Russia, Belarus, Thailand
+- C2 domain `env-check.daemontools.cc` added to `KNOWN_C2_DOMAINS` + threat-intel feed
+- Suspected Chinese-speaking adversary; patched in version 12.6.0.2445
+
+### v5.2.6 (2026-05-08)
+**Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026)**
+
+- **CanisterSprawl** - TeamPCP Update 008 with ICP canister-based C2 (`whereisitat.lucyatemysuperbox.space`)
+- **xinference PyPI hijack** - Versions 2.6.0-2.6.2 (TeamPCP credential stealer)
+- **BufferZoneCorp** - 7 poisoned Ruby `knot-*` sleeper gems + 9 Go modules
+- **MacSync Stealer** - Homebrew malvertising via `glowmedaesthetics.com`
+- **EtherRAT** - GitHub facade repos with Ethereum smart contract C2, fallback IP 135.125.255.55
+
+### v5.2.5 (2026-05-01)
+**Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026)**
+
+- SAP CAP npm hijacks: `@cap-js/sqlite@2.2.2`, `@cap-js/postgres@2.2.2`, `@cap-js/db-service@2.10.1`, `mbt@1.2.48`
+- Intercom npm hijack: `intercom-client@7.0.4`
+- PyTorch Lightning PyPI hijack: `lightning@2.6.2/2.6.3`
+- Worm marker "A Mini Shai-Hulud has Appeared", Bun-based preinstall hook fingerprint
+
 ### v5.2.4 (2026-04-30)
 **Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026)**
 
