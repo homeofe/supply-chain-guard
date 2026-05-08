@@ -28,6 +28,10 @@ export const KNOWN_C2_DOMAINS: string[] = [
 
   // DAEMON Tools QUIC RAT supply-chain attack (May 2026)
   "env-check.daemontools.cc",
+
+  // Beagle backdoor / fake Claude AI website (May 2026)
+  "claude-pro.com",
+  "license.claude-pro.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -45,6 +49,9 @@ export const KNOWN_C2_IPS: string[] = [
 
   // EtherRAT fallback C2 (April 2026)
   "135.125.255.55",
+
+  // Beagle backdoor / fake Claude AI website (May 2026)
+  "8.217.190.58",
 ];
 
 // ---------------------------------------------------------------------------

@@ -63,7 +63,7 @@ function formatText(report: ScanReport): string {
   const lines: string[] = [];
 
   // ── layout constants ───────────────────────────────────────────────────────
-  const VERSION = "5.2.4";
+  const VERSION = "5.2.8";
   const W = 76; // visible chars between "│ " and " │" (total line = 80)
 
   // ── ANSI helpers ───────────────────────────────────────────────────────────
@@ -536,7 +536,7 @@ function formatSarif(report: ScanReport): string {
         tool: {
           driver: {
             name: "supply-chain-guard",
-            version: "5.2.4",
+            version: "5.2.8",
             informationUri: "https://github.com/homeofe/supply-chain-guard",
             rules,
           },
@@ -602,7 +602,7 @@ function formatSbom(report: ScanReport): string {
       timestamp: report.timestamp,
       tools: {
         components: [
-          { type: "application", name: "supply-chain-guard", version: "5.2.4" },
+          { type: "application", name: "supply-chain-guard", version: "5.2.8" },
         ],
       },
       component: {

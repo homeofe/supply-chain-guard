@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.2.4");
+  .version("5.2.8");
 
 // ── scan command ────────────────────────────────────────────────────
 

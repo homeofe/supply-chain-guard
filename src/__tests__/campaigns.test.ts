@@ -672,4 +672,98 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // ZiChatBot PyPI Campaign (May 2026)
+  // =================================================================
+
+  describe("ZiChatBot PyPI Campaign", () => {
+    it("should detect uuid32-utils package reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.py"),
+        'pkg = "uuid32-utils"; install(pkg)'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ZICHATBOT_PACKAGE"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect colorinal package reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.py"),
+        'install_requires = ["colorinal>=1.0"]'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ZICHATBOT_PACKAGE"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("should detect termncolor package reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.py"),
+        'requirements = "termncolor==1.0.0"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ZICHATBOT_PACKAGE"
+      );
+      expect(finding).toBeDefined();
+    });
+  });
+
+  // =================================================================
+  // Beagle Backdoor / Fake Claude AI Site (May 2026)
+  // =================================================================
+
+  describe("Beagle Backdoor / Fake Claude AI Site", () => {
+    it("should detect claude-pro.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const dl = "https://claude-pro.com/Claude-Pro-windows-x64.zip";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect license.claude-pro.com C2 subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const c2 = "license.claude-pro.com";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect 8.217.190.58 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const host = "8.217.190.58";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

@@ -330,6 +330,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.8 (2026-05-08)
+**Threat intel: ZiChatBot PyPI + Beagle backdoor (May 2026)**
+
+Two fresh May 2026 supply-chain campaigns are now signatured.
+
+- **ZiChatBot PyPI campaign** - Three malicious PyPI packages (`uuid32-utils`, `colorinal`, `termncolor`) drop `terminate.dll` (Windows) / `terminate.so` (Linux) and abuse Zulip REST APIs as C2. Suspected APT32/OceanLotus link. New rule `ZICHATBOT_PACKAGE` in `src/patterns.ts`, `MALICIOUS_PACKAGE_PATTERNS` entries, and bundled threat-intel `package` IOCs.
+- **Beagle backdoor / fake Claude AI site** - Drive-by from `claude-pro.com` delivers a 505MB ZIP with DonutLoader plus DLL sideloading via `NOVupdate.exe` + `avk.dll`, calling out to `license.claude-pro.com` (8.217.190.58). Domains and IP added to `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS` plus bundled threat-intel feed.
+- 6 new tests in `src/__tests__/campaigns.test.ts`.
+
 ### v5.2.4 (2026-04-30)
 **Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026)**
 

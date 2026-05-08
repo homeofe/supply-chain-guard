@@ -264,6 +264,10 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // BufferZoneCorp sleeper Go modules (May 2026)
   "^github\\.com/BufferZoneCorp/(go-metrics-sdk|go-weather-sdk|go-retryablehttp|go-stdlib-ext|grpc-client|net-helper|config-loader|log-core|go-envconfig)$",
 
+  // ZiChatBot PyPI campaign (May 2026)
+  // Drops terminate.dll/terminate.so + uses Zulip REST APIs as C2; potential APT32/OceanLotus link
+  "^(uuid32-utils|colorinal|termncolor)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -460,6 +464,18 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Reference to @validate-sdk/v2 detected. DPRK-linked malicious npm package (April 2026) inserted as a dependency by Claude Opus LLM in social engineering attacks.",
     severity: "critical",
     rule: "DPRK_VALIDATE_SDK",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
+  // --- ZiChatBot PyPI campaign (May 2026) ---
+  {
+    name: "zichatbot-package-name",
+    pattern: "\\b(?:uuid32-utils|colorinal|termncolor)\\b",
+    description:
+      "Reference to ZiChatBot PyPI campaign package (uuid32-utils, colorinal, termncolor). May 2026 campaign suspected linked to APT32/OceanLotus, dropping terminate.dll/terminate.so via PyPI install.",
+    severity: "critical",
+    rule: "ZICHATBOT_PACKAGE",
     notTestFile: true,
     notFilePattern: SCANNER_SRC,
   },
