@@ -766,4 +766,66 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // TCLBANKER Brazilian Banking Trojan (May 2026)
+  // =================================================================
+
+  describe("TCLBANKER Logitech Trojanizer (REF3076)", () => {
+    it("should detect mxtestacionamentos.com WebSocket C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ws.js"),
+        'const c2 = "wss://mxtestacionamentos.com/sock";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect campagna1-api workers.dev C2", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'fetch("https://campagna1-api.ef971a42.workers.dev/cmd");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect 191.96.224.96 historical C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "host.js"),
+        'const ip = "191.96.224.96";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect TCLBANKER SHA256 component hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "701d51b7be8b034c860bf97847bd59a87dca8481c4625328813746964995b626";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

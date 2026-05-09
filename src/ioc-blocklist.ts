@@ -32,6 +32,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Beagle backdoor / fake Claude AI website (May 2026)
   "claude-pro.com",
   "license.claude-pro.com",
+
+  // TCLBANKER Brazilian banking trojan via trojanized Logitech AI Prompt Builder (May 2026)
+  "campagna1-api.ef971a42.workers.dev",
+  "documents.ef971a42.workers.dev",
+  "mxtestacionamentos.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -52,6 +57,9 @@ export const KNOWN_C2_IPS: string[] = [
 
   // Beagle backdoor / fake Claude AI website (May 2026)
   "8.217.190.58",
+
+  // TCLBANKER Brazilian banking trojan (May 2026)
+  "191.96.224.96",
 ];
 
 // ---------------------------------------------------------------------------
@@ -82,6 +90,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "a4fcfecc5ac8fa57614b23928a0e9b7aa4f4a3b2b3a8c1772487b46277125571": "MacSync Stealer payload (SHA256)",
   "0d58616c750fc8530a7e90eee18398ddedd08cc0f4908c863ab650673b9819dd": "MacSync Stealer variant (SHA256)",
   "86d0c50cab4f394c58976c44d6d7b67a7dfbbb813fbcf622236e183d94fd944f": "MacSync Stealer variant (SHA256)",
+
+  // TCLBANKER Brazilian banking trojan (May 2026) — REF3076 / trojanized Logitech AI Prompt Builder
+  "701d51b7be8b034c860bf97847bd59a87dca8481c4625328813746964995b626": "TCLBANKER component (SHA256)",
+  "8a174aa70a4396547045aef6c69eb0259bae1706880f4375af71085eeb537059": "TCLBANKER component (SHA256)",
+  "668f932433a24bbae89d60b24eee4a24808fc741f62c5a3043bb7c9152342f40": "TCLBANKER component (SHA256)",
+  "63beb7372098c03baab77e0dfc8e5dca5e0a7420f382708a4df79bed2d900394": "TCLBANKER component (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
