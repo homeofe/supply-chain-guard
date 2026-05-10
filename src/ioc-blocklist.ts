@@ -37,6 +37,14 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "campagna1-api.ef971a42.workers.dev",
   "documents.ef971a42.workers.dev",
   "mxtestacionamentos.com",
+
+  // JDownloader site compromise / Python RAT installers (May 2026)
+  "parkspringshotel.com",
+  "auraguest.lk",
+  "checkinnhotels.com",
+
+  // Fake OpenAI Privacy Filter on Hugging Face / sefirah infostealer (May 2026)
+  "recargapopular.com",
 ];
 
 // ---------------------------------------------------------------------------

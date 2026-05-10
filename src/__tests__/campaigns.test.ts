@@ -828,4 +828,72 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // JDownloader Site Compromise / Python RAT (May 2026)
+  // =================================================================
+
+  describe("JDownloader Site Compromise (May 2026)", () => {
+    it("should detect parkspringshotel.com staging domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stage.js"),
+        'const u = "https://parkspringshotel.com/m/Lu6aeloo.php";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect auraguest.lk staging domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'fetch("https://auraguest.lk/m/douV2quu.php");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect checkinnhotels.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "checkinnhotels.com";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Fake OpenAI Privacy Filter / sefirah on Hugging Face (May 2026)
+  // =================================================================
+
+  describe("Fake OpenAI Privacy Filter (May 2026)", () => {
+    it("should detect recargapopular.com sefirah C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const c2 = "https://recargapopular.com/upload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });
