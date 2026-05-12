@@ -45,6 +45,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
 
   // Fake OpenAI Privacy Filter on Hugging Face / sefirah infostealer (May 2026)
   "recargapopular.com",
+
+  // MacSync Stealer Claude.ai/Google ads variant (May 2026)
+  "customroofingcontractors.com",
+  "bernasibutuwqu2.com",
+  "briskinternet.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -104,6 +109,10 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "8a174aa70a4396547045aef6c69eb0259bae1706880f4375af71085eeb537059": "TCLBANKER component (SHA256)",
   "668f932433a24bbae89d60b24eee4a24808fc741f62c5a3043bb7c9152342f40": "TCLBANKER component (SHA256)",
   "63beb7372098c03baab77e0dfc8e5dca5e0a7420f382708a4df79bed2d900394": "TCLBANKER component (SHA256)",
+
+  // MacSync Stealer Claude.ai/Google ads variant (May 2026) - loader.sh + payload
+  "ed5ed79a674972d1506dd8d68e8e13658125267ade86bfcb1ab794e2b49e50ac": "MacSync Stealer Claude.ai variant payload (SHA256)",
+  "a833ad989b68dad582a1b591b8cf63466e79c850ff72916cf5d4c4a7f6bc650e": "MacSync Stealer Claude.ai variant loader (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -117,6 +126,10 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
 
   // BufferZoneCorp sleeper Go modules / poisoned Ruby gems (May 2026)
   "BufferZoneCorp",
+
+  // TeamPCP / Mr_Rot13 - Checkmarx Jenkins AST plugin compromise + cPanel CVE-2026-41940 (May 2026)
+  "Mr_Rot13",
+  "TeamPCP",
 ];
 
 // ---------------------------------------------------------------------------

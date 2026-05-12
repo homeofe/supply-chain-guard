@@ -896,4 +896,100 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Checkmarx Jenkins AST Plugin Compromise (May 2026) - TeamPCP / Mr_Rot13
+  // =================================================================
+
+  describe("Checkmarx Jenkins AST Plugin Compromise (May 2026)", () => {
+    it("should detect Mr_Rot13 GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "actor.js"),
+        'const repo = "https://github.com/Mr_Rot13/some-tool";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect TeamPCP GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "actor2.js"),
+        'const url = "github.com/TeamPCP/payload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // MacSync Stealer Claude.ai/Google ads variant (May 2026)
+  // =================================================================
+
+  describe("MacSync Stealer Claude.ai Variant (May 2026)", () => {
+    it("should detect customroofingcontractors.com staging domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stage.js"),
+        'const u = "https://customroofingcontractors.com/loader.sh";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect bernasibutuwqu2.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'fetch("https://bernasibutuwqu2.com/p");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect briskinternet.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "briskinternet.com";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect MacSync Claude variant payload SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "ed5ed79a674972d1506dd8d68e8e13658125267ade86bfcb1ab794e2b49e50ac";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

@@ -147,6 +147,20 @@ const BUNDLED_FEED: FeedIOC[] = [
   // Fake OpenAI repository on Hugging Face pushing sefirah infostealer (May 2026)
   // Open-OSS/privacy-filter HF repo trended; loader.py + start.bat fetch sefirah final payload
   { type: "domain", value: "recargapopular.com", severity: "critical", confidence: 1.0, family: "sefirah", campaign: "Fake OpenAI Privacy Filter HF", firstSeen: "2026-05-09" },
+
+  // Checkmarx Jenkins AST plugin supply chain attack (May 11, 2026) - TeamPCP / Mr_Rot13
+  // Rogue version 2.0.13-829.vc72453fa_1c16 published to Jenkins Marketplace; safe version is 2.0.13-848.v76e89de8a_053
+  // Repo defaced and renamed to Checkmarx-Fully-Hacked-by-TeamPCP-and-Their-Customers-Should-Cancel-Now
+  { type: "package", value: "jenkins:checkmarx-ast-plugin@2.0.13-829.vc72453fa_1c16", severity: "critical", confidence: 1.0, family: "Infostealer", campaign: "Checkmarx Jenkins AST Plugin Compromise", firstSeen: "2026-05-11" },
+
+  // MacSync Stealer Claude.ai/Google ads variant (May 10, 2026)
+  // Malvertising via Google Ads + Claude.ai shared chat URLs; base64 shell scripts -> gunzip in-memory payload via osascript
+  // Checks for Russian/CIS keyboard layouts before execution; harvests browser creds, cookies, macOS Keychain
+  { type: "domain", value: "customroofingcontractors.com", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
+  { type: "domain", value: "bernasibutuwqu2.com", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
+  { type: "domain", value: "briskinternet.com", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
+  { type: "hash", value: "ed5ed79a674972d1506dd8d68e8e13658125267ade86bfcb1ab794e2b49e50ac", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
+  { type: "hash", value: "a833ad989b68dad582a1b591b8cf63466e79c850ff72916cf5d4c4a7f6bc650e", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
 ];
 
 const CACHE_DIR = ".scg-cache";
