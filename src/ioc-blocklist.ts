@@ -50,6 +50,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "customroofingcontractors.com",
   "bernasibutuwqu2.com",
   "briskinternet.com",
+
+  // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral/OpenSearch/Guardrails compromise (May 2026)
+  "filev2.getsession.org",
+  "api.masscan.cloud",
+  "git-tanstack.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -73,6 +78,9 @@ export const KNOWN_C2_IPS: string[] = [
 
   // TCLBANKER Brazilian banking trojan (May 2026)
   "191.96.224.96",
+
+  // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral/OpenSearch/Guardrails (May 2026)
+  "83.142.209.194",
 ];
 
 // ---------------------------------------------------------------------------
@@ -193,6 +201,30 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["7.0.4"],
     description: "Mini Shai-Hulud / TeamPCP: intercom-client npm hijack with preinstall hook + credential stealer (April 2026)",
   },
+  "@opensearch-project/opensearch": {
+    versions: ["3.5.3", "3.6.2", "3.7.0", "3.8.0"],
+    description: "Mini Shai-Hulud / TeamPCP: OpenSearch npm client hijack with worm payload (May 2026)",
+  },
+  "@squawk/mcp": {
+    versions: ["0.9.5"],
+    description: "Mini Shai-Hulud / TeamPCP: Squawk MCP server hijack with worm payload (May 2026)",
+  },
+  "@squawk/weather": {
+    versions: ["0.5.10"],
+    description: "Mini Shai-Hulud / TeamPCP: Squawk weather hijack with worm payload (May 2026)",
+  },
+  "@squawk/flightplan": {
+    versions: ["0.5.6"],
+    description: "Mini Shai-Hulud / TeamPCP: Squawk flightplan hijack with worm payload (May 2026)",
+  },
+  "@tallyui/connector-medusa": {
+    versions: ["1.0.1", "1.0.2", "1.0.3"],
+    description: "Mini Shai-Hulud / TeamPCP: TallyUI Medusa connector hijack (May 2026)",
+  },
+  "@tallyui/connector-vendure": {
+    versions: ["1.0.1", "1.0.2", "1.0.3"],
+    description: "Mini Shai-Hulud / TeamPCP: TallyUI Vendure connector hijack (May 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -211,6 +243,14 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "xinference": {
     versions: ["2.6.0", "2.6.1", "2.6.2"],
     description: "TeamPCP Update 008: xinference PyPI hijack with '# hacked by teampcp' marker + credential stealer (April 2026)",
+  },
+  "guardrails-ai": {
+    versions: ["0.10.1"],
+    description: "Mini Shai-Hulud / TeamPCP: Guardrails AI PyPI hijack with worm payload (May 2026)",
+  },
+  "mistralai": {
+    versions: ["2.4.6"],
+    description: "Mini Shai-Hulud / TeamPCP: Mistral AI PyPI client hijack with worm payload (May 2026)",
   },
 };
 

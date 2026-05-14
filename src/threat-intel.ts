@@ -161,6 +161,24 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "domain", value: "briskinternet.com", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
   { type: "hash", value: "ed5ed79a674972d1506dd8d68e8e13658125267ade86bfcb1ab794e2b49e50ac", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
   { type: "hash", value: "a833ad989b68dad582a1b591b8cf63466e79c850ff72916cf5d4c4a7f6bc650e", severity: "critical", confidence: 1.0, family: "MacSync", campaign: "MacSync Claude.ai Malvertising", firstSeen: "2026-05-10" },
+
+  // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral/OpenSearch/Guardrails compromise (May 12, 2026)
+  // Self-propagating worm; CVE-2026-45321 (TanStack, CVSS 9.6); commits signed with claude@users.noreply.github.com
+  { type: "domain", value: "filev2.getsession.org", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "domain", value: "api.masscan.cloud", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "domain", value: "git-tanstack.com", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "ip", value: "83.142.209.194", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@opensearch-project/opensearch@3.5.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@opensearch-project/opensearch@3.6.2", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@opensearch-project/opensearch@3.7.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@opensearch-project/opensearch@3.8.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@squawk/mcp@0.9.5", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@squawk/weather@0.5.10", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@squawk/flightplan@0.5.6", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@tallyui/connector-medusa@1.0.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "@tallyui/connector-vendure@1.0.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "guardrails-ai@0.10.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "package", value: "mistralai@2.4.6", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
 ];
 
 const CACHE_DIR = ".scg-cache";
