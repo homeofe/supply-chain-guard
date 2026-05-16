@@ -179,6 +179,18 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "@tallyui/connector-vendure@1.0.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
   { type: "package", value: "guardrails-ai@0.10.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
   { type: "package", value: "mistralai@2.4.6", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+
+  // node-ipc credential stealer via maintainer email hijack (May 14, 2026)
+  // Versions 9.1.6, 9.2.3, 12.0.1 published with 80KB obfuscated CJS payload that harvests 90+ credential
+  // categories (AWS/Azure/GCP/SSH/k8s/GitHub CLI/Claude AI/Kiro/Terraform/DB) and exfiltrates via DNS TXT
+  // queries to 37.16.75.69. Attack vector: expired atlantis-software.net maintainer email re-registered May 7.
+  // 12.0.1 is hash-targeted - inert unless primary module path matches a pre-computed SHA-256 value.
+  { type: "package", value: "node-ipc@9.1.6", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+  { type: "package", value: "node-ipc@9.2.3", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+  { type: "package", value: "node-ipc@12.0.1", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+  { type: "domain", value: "sh.azurestaticprovider.net", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+  { type: "ip", value: "37.16.75.69", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+  { type: "hash", value: "96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
 ];
 
 const CACHE_DIR = ".scg-cache";

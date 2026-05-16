@@ -1054,4 +1054,52 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // node-ipc credential stealer via maintainer email hijack (May 2026)
+  // =================================================================
+
+  describe("node-ipc Email Hijack Credential Stealer (May 2026)", () => {
+    it("should detect sh.azurestaticprovider.net DNS exfiltration domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const host = "sh.azurestaticprovider.net";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect 37.16.75.69 DNS exfiltration IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ip.js"),
+        'const dns = "37.16.75.69";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect node-ipc.cjs credential stealer SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

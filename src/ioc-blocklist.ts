@@ -55,6 +55,9 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "filev2.getsession.org",
   "api.masscan.cloud",
   "git-tanstack.com",
+
+  // node-ipc credential stealer via maintainer email hijack (May 2026)
+  "sh.azurestaticprovider.net",
 ];
 
 // ---------------------------------------------------------------------------
@@ -81,6 +84,9 @@ export const KNOWN_C2_IPS: string[] = [
 
   // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral/OpenSearch/Guardrails (May 2026)
   "83.142.209.194",
+
+  // node-ipc credential stealer DNS exfiltration endpoint (May 2026)
+  "37.16.75.69",
 ];
 
 // ---------------------------------------------------------------------------
@@ -121,6 +127,9 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // MacSync Stealer Claude.ai/Google ads variant (May 2026) - loader.sh + payload
   "ed5ed79a674972d1506dd8d68e8e13658125267ade86bfcb1ab794e2b49e50ac": "MacSync Stealer Claude.ai variant payload (SHA256)",
   "a833ad989b68dad582a1b591b8cf63466e79c850ff72916cf5d4c4a7f6bc650e": "MacSync Stealer Claude.ai variant loader (SHA256)",
+
+  // node-ipc credential stealer via maintainer email hijack (May 2026) - obfuscated CJS bundle
+  "96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144": "node-ipc.cjs credential stealer payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -174,8 +183,8 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     description: "faker.js protestware: infinite loop + data wipe (Jan 2022)",
   },
   "node-ipc": {
-    versions: ["10.1.1", "10.1.2", "10.1.3"],
-    description: "node-ipc protestware: overwrites files for Russian/Belarusian IPs (Mar 2022)",
+    versions: ["9.1.6", "9.2.3", "10.1.1", "10.1.2", "10.1.3", "12.0.1"],
+    description: "node-ipc supply chain attacks: 9.1.6/9.2.3/12.0.1 credential stealer via maintainer email hijack with DNS exfiltration (May 2026); 10.1.x protestware (Mar 2022)",
   },
   "@bitwarden/cli": {
     versions: ["2026.4.0"],

@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-guard",
-  "version": "5.2.12",
+  "version": "5.2.13",
   "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 120+ malware indicators. Generates CycloneDX 1.6 SBOMs and verifies SLSA provenance.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
