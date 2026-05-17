@@ -19,6 +19,14 @@ Jeder Release MUSS in dieser Reihenfolge laufen. Wenn `npm run build` fehlschlae
 
 ## Harte Regeln
 
+- **IOCs immer defangen.** Domains, Subdomains, URLs und IPs von Threats werden in Doku, README, Commits, PRs und Chat NIE roh geschrieben. Schema:
+  - Domain: `example[.]com` statt `example.com`
+  - URL-Schema: `hxxps://` / `hxxp://` statt `https://` / `http://`
+  - IPv4: `1[.]2[.]3[.]4` statt `1.2.3.4`
+  - E-Mail: `user[@]example[.]com`
+  - SHA-256 / MD5 bleiben roh (nicht klickbar)
+  - **Ausnahmen** (bleiben funktional): eigene Projekt-Links (`github.com/homeofe/...`, `blog.elvatis.com`, npmjs.com-Badges) und Code in `src/` (dort werden die Werte verglichen, nicht angezeigt)
+  - **Grund:** sonst koennen externe Scanner / Crawler die roh dokumentierten IOCs als legitime Treffer einsammeln oder Klicks ausloesen
 - **Tags niemals verschieben.** Fuer Fixes immer neue Patch-Version (z.B. 5.2.13 -> 5.2.14). Kein `git tag -f`, kein `git push --force` auf Tags.
 - **Keine Em-Dashes** (`—`) in Doku oder Commits. Immer normaler Bindestrich (`-`) oder Doppelpunkt (`:`). Gilt auch fuer neue Changelog-Eintraege - aeltere Eintraege im README haben noch Em-Dashes, nicht perpetuieren.
 - **Nie Hooks oder Signaturen bypassen** (`--no-verify`, `--no-gpg-sign`) ohne explizite Erlaubnis. Wenn `prebuild` rot ist, ist das die Aufgabe, nicht das Hindernis.

@@ -333,9 +333,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 ### v5.2.13 (2026-05-16)
 **Threat intel: node-ipc credential stealer (May 2026)**
 
-Maintainer email hijack of `atlantis-software.net` (re-registered 2026-05-07) led to malicious `node-ipc` releases `9.1.6`, `9.2.3`, and `12.0.1`.
+Maintainer email hijack of `atlantis-software[.]net` (re-registered 2026-05-07) led to malicious `node-ipc` releases `9.1.6`, `9.2.3`, and `12.0.1`.
 
-- DNS exfiltration domain `sh.azurestaticprovider.net` (IP `37.16.75.69`); payload `node-ipc.cjs` SHA-256 `96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144`
+- DNS exfiltration domain `sh[.]azurestaticprovider[.]net` (IP `37[.]16[.]75[.]69`); payload `node-ipc.cjs` SHA-256 `96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144`
 - `12.0.1` uses hash-targeted activation and harvests 90+ credential categories
 - Domains, IP, hash, and npm package IOCs added to bundled threat-intel feed
 
@@ -344,7 +344,7 @@ Maintainer email hijack of `atlantis-software.net` (re-registered 2026-05-07) le
 
 Continuation of the Mini Shai-Hulud worm via the TanStack ecosystem (CVE-2026-45321, CVSS 9.6).
 
-- 3 C2 domains (`filev2.getsession.org`, `api.masscan.cloud`, `git-tanstack.com`) and 1 C2 IP (`83.142.209.194`)
+- 3 C2 domains (`filev2[.]getsession[.]org`, `api[.]masscan[.]cloud`, `git-tanstack[.]com`) and 1 C2 IP (`83[.]142[.]209[.]194`)
 - 9 compromised npm package families: OpenSearch (4 versions), Squawk (3), TallyUI (2)
 - 2 compromised PyPI packages: `guardrails-ai@0.10.1`, `mistralai@2.4.6`
 
@@ -352,22 +352,22 @@ Continuation of the Mini Shai-Hulud worm via the TanStack ecosystem (CVE-2026-45
 **Threat intel: Checkmarx Jenkins AST plugin + MacSync Claude variant (May 2026)**
 
 - Checkmarx Jenkins AST Plugin compromise by TeamPCP / Mr_Rot13 (malicious version `2.0.13-829.vc72453fa_1c16`). `Mr_Rot13` and `TeamPCP` added to known malicious GitHub accounts.
-- MacSync Stealer Claude.ai / Google Ads variant: 3 new C2 domains (`customroofingcontractors.com`, `bernasibutuwqu2.com`, `briskinternet.com`) plus loader SHA-256 `ed5ed79a...` and payload SHA-256 `a833ad98...`
+- MacSync Stealer Claude.ai / Google Ads variant: 3 new C2 domains (`customroofingcontractors[.]com`, `bernasibutuwqu2[.]com`, `briskinternet[.]com`) plus loader SHA-256 `ed5ed79a...` and payload SHA-256 `a833ad98...`
 - New campaign tests for both clusters in `src/__tests__/campaigns.test.ts`
 
 ### v5.2.10 (2026-05-10)
 **Threat intel: JDownloader compromise + fake OpenAI HF repo (May 2026)**
 
-- JDownloader site compromise (2026-05-06 to 2026-05-07): Python RAT installers via `parkspringshotel.com`, `auraguest.lk`, `checkinnhotels.com`; bogus "Zipline LLC" and "The Water Team" signers; Linux ELF package plus systemd-exec
-- Fake OpenAI Privacy Filter on Hugging Face: `Open-OSS/privacy-filter` trended; `loader.py` plus `start.bat` fetch sefirah infostealer (C2 `recargapopular.com`)
+- JDownloader site compromise (2026-05-06 to 2026-05-07): Python RAT installers via `parkspringshotel[.]com`, `auraguest[.]lk`, `checkinnhotels[.]com`; bogus "Zipline LLC" and "The Water Team" signers; Linux ELF package plus systemd-exec
+- Fake OpenAI Privacy Filter on Hugging Face: `Open-OSS/privacy-filter` trended; `loader.py` plus `start.bat` fetch sefirah infostealer (C2 `recargapopular[.]com`)
 
 ### v5.2.9 (2026-05-09)
 **Threat intel: TCLBANKER Brazilian banking trojan (May 2026)**
 
 REF3076 actor distributes trojanized `LogiAiPromptBuilder.exe` MSI; sideloads `screen_retriever_plugin.dll`; self-spreads via WhatsApp / Outlook worm modules; targets 59 banks, fintech platforms, and crypto exchanges.
 
-- C2 domains: `campagna1-api.ef971a42.workers.dev`, `documents.ef971a42.workers.dev`, `mxtestacionamentos.com`
-- C2 IP: `191.96.224.96`
+- C2 domains: `campagna1-api[.]ef971a42[.]workers[.]dev`, `documents[.]ef971a42[.]workers[.]dev`, `mxtestacionamentos[.]com`
+- C2 IP: `191[.]96[.]224[.]96`
 - 4 new SHA-256 hashes added to bundled threat-intel feed
 - 4 new campaign tests in `src/__tests__/campaigns.test.ts`
 
@@ -377,7 +377,7 @@ REF3076 actor distributes trojanized `LogiAiPromptBuilder.exe` MSI; sideloads `s
 Two fresh May 2026 supply-chain campaigns are now signatured.
 
 - **ZiChatBot PyPI campaign** - Three malicious PyPI packages (`uuid32-utils`, `colorinal`, `termncolor`) drop `terminate.dll` (Windows) / `terminate.so` (Linux) and abuse Zulip REST APIs as C2. Suspected APT32/OceanLotus link. New rule `ZICHATBOT_PACKAGE` in `src/patterns.ts`, `MALICIOUS_PACKAGE_PATTERNS` entries, and bundled threat-intel `package` IOCs.
-- **Beagle backdoor / fake Claude AI site** - Drive-by from `claude-pro.com` delivers a 505MB ZIP with DonutLoader plus DLL sideloading via `NOVupdate.exe` + `avk.dll`, calling out to `license.claude-pro.com` (8.217.190.58). Domains and IP added to `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS` plus bundled threat-intel feed.
+- **Beagle backdoor / fake Claude AI site** - Drive-by from `claude-pro[.]com` delivers a 505MB ZIP with DonutLoader plus DLL sideloading via `NOVupdate.exe` + `avk.dll`, calling out to `license[.]claude-pro[.]com` (`8[.]217[.]190[.]58`). Domains and IP added to `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS` plus bundled threat-intel feed.
 - 6 new tests in `src/__tests__/campaigns.test.ts`.
 
 ### v5.2.7 (2026-05-08)
@@ -385,17 +385,17 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 
 - Trojanized DAEMON Tools installers (versions 12.5.0.2421-12.5.0.2434) distributed via official website since 2026-04-08
 - Selective second-stage QUIC RAT deployed to gov/scientific/manufacturing hosts in Russia, Belarus, Thailand
-- C2 domain `env-check.daemontools.cc` added to `KNOWN_C2_DOMAINS` + threat-intel feed
+- C2 domain `env-check[.]daemontools[.]cc` added to `KNOWN_C2_DOMAINS` + threat-intel feed
 - Suspected Chinese-speaking adversary; patched in version 12.6.0.2445
 
 ### v5.2.6 (2026-05-08)
 **Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026)**
 
-- **CanisterSprawl** - TeamPCP Update 008 with ICP canister-based C2 (`whereisitat.lucyatemysuperbox.space`)
+- **CanisterSprawl** - TeamPCP Update 008 with ICP canister-based C2 (`whereisitat[.]lucyatemysuperbox[.]space`)
 - **xinference PyPI hijack** - Versions 2.6.0-2.6.2 (TeamPCP credential stealer)
 - **BufferZoneCorp** - 7 poisoned Ruby `knot-*` sleeper gems + 9 Go modules
-- **MacSync Stealer** - Homebrew malvertising via `glowmedaesthetics.com`
-- **EtherRAT** - GitHub facade repos with Ethereum smart contract C2, fallback IP 135.125.255.55
+- **MacSync Stealer** - Homebrew malvertising via `glowmedaesthetics[.]com`
+- **EtherRAT** - GitHub facade repos with Ethereum smart contract C2, fallback IP `135[.]125[.]255[.]55`
 
 ### v5.2.5 (2026-05-01)
 **Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026)**
@@ -431,10 +431,10 @@ The public Solana RPC (`api.mainnet-beta.solana.com`) returns HTTP 429 and JSON-
 ### v5.2.1 (2026-04-26)
 **Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)**
 
-A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS Docker images / VSCode-OpenVSX extensions and the `@bitwarden/cli` npm package on April 22, 2026, using a shared `audit.checkmarx.cx/v1/telemetry` exfiltration endpoint. Targets GitHub tokens, AWS/Azure/GCP credentials, npm tokens, SSH keys, and Claude configs. Marked as a successor to the Shai-Hulud npm worm.
+A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS Docker images / VSCode-OpenVSX extensions and the `@bitwarden/cli` npm package on April 22, 2026, using a shared `audit[.]checkmarx[.]cx/v1/telemetry` exfiltration endpoint. Targets GitHub tokens, AWS/Azure/GCP credentials, npm tokens, SSH keys, and Claude configs. Marked as a successor to the Shai-Hulud npm worm.
 
-- **C2 domains**: `audit.checkmarx.cx`, `checkmarx.cx` (`src/ioc-blocklist.ts`)
-- **C2 IPs**: `94.154.172.43`, `91.195.240.123`
+- **C2 domains**: `audit[.]checkmarx[.]cx`, `checkmarx[.]cx` (`src/ioc-blocklist.ts`)
+- **C2 IPs**: `94[.]154[.]172[.]43`, `91[.]195[.]240[.]123`
 - **Compromised package**: `@bitwarden/cli@2026.4.0`
 - **New campaign rules** in `src/patterns.ts`:
   - `CHECKMARX_SHAI_HULUD_V3` — matches the `Shai-Hulud: The Third Coming` exfil marker string
