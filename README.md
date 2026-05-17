@@ -330,6 +330,47 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.13 (2026-05-16)
+**Threat intel: node-ipc credential stealer (May 2026)**
+
+Maintainer email hijack of `atlantis-software.net` (re-registered 2026-05-07) led to malicious `node-ipc` releases `9.1.6`, `9.2.3`, and `12.0.1`.
+
+- DNS exfiltration domain `sh.azurestaticprovider.net` (IP `37.16.75.69`); payload `node-ipc.cjs` SHA-256 `96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144`
+- `12.0.1` uses hash-targeted activation and harvests 90+ credential categories
+- Domains, IP, hash, and npm package IOCs added to bundled threat-intel feed
+
+### v5.2.12 (2026-05-14)
+**Threat intel: Mini Shai-Hulud TanStack / UiPath / Mistral compromise (May 2026)**
+
+Continuation of the Mini Shai-Hulud worm via the TanStack ecosystem (CVE-2026-45321, CVSS 9.6).
+
+- 3 C2 domains (`filev2.getsession.org`, `api.masscan.cloud`, `git-tanstack.com`) and 1 C2 IP (`83.142.209.194`)
+- 9 compromised npm package families: OpenSearch (4 versions), Squawk (3), TallyUI (2)
+- 2 compromised PyPI packages: `guardrails-ai@0.10.1`, `mistralai@2.4.6`
+
+### v5.2.11 (2026-05-12)
+**Threat intel: Checkmarx Jenkins AST plugin + MacSync Claude variant (May 2026)**
+
+- Checkmarx Jenkins AST Plugin compromise by TeamPCP / Mr_Rot13 (malicious version `2.0.13-829.vc72453fa_1c16`). `Mr_Rot13` and `TeamPCP` added to known malicious GitHub accounts.
+- MacSync Stealer Claude.ai / Google Ads variant: 3 new C2 domains (`customroofingcontractors.com`, `bernasibutuwqu2.com`, `briskinternet.com`) plus loader SHA-256 `ed5ed79a...` and payload SHA-256 `a833ad98...`
+- New campaign tests for both clusters in `src/__tests__/campaigns.test.ts`
+
+### v5.2.10 (2026-05-10)
+**Threat intel: JDownloader compromise + fake OpenAI HF repo (May 2026)**
+
+- JDownloader site compromise (2026-05-06 to 2026-05-07): Python RAT installers via `parkspringshotel.com`, `auraguest.lk`, `checkinnhotels.com`; bogus "Zipline LLC" and "The Water Team" signers; Linux ELF package plus systemd-exec
+- Fake OpenAI Privacy Filter on Hugging Face: `Open-OSS/privacy-filter` trended; `loader.py` plus `start.bat` fetch sefirah infostealer (C2 `recargapopular.com`)
+
+### v5.2.9 (2026-05-09)
+**Threat intel: TCLBANKER Brazilian banking trojan (May 2026)**
+
+REF3076 actor distributes trojanized `LogiAiPromptBuilder.exe` MSI; sideloads `screen_retriever_plugin.dll`; self-spreads via WhatsApp / Outlook worm modules; targets 59 banks, fintech platforms, and crypto exchanges.
+
+- C2 domains: `campagna1-api.ef971a42.workers.dev`, `documents.ef971a42.workers.dev`, `mxtestacionamentos.com`
+- C2 IP: `191.96.224.96`
+- 4 new SHA-256 hashes added to bundled threat-intel feed
+- 4 new campaign tests in `src/__tests__/campaigns.test.ts`
+
 ### v5.2.8 (2026-05-08)
 **Threat intel: ZiChatBot PyPI + Beagle backdoor (May 2026)**
 

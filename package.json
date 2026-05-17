@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
+    "check:changelog": "node scripts/check-changelog.mjs",
+    "prebuild": "npm run check:changelog",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
