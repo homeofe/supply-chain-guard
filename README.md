@@ -330,6 +330,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.14 (2026-05-19)
+**Threat intel: Phantom Bot DDoS npm infostealer + Mini Shai-Hulud TanStack follow-up (May 2026)**
+
+Leaked Shai-Hulud worm source code was re-weaponized over the weekend of 2026-05-17 by npm publisher `deadcode09284814`. Four packages (`chalk-tempalte`, `@deadcode09284814/axios-util`, `axois-utils`, `color-style-utils`) shipped an infostealer plus a Golang Phantom Bot DDoS module (HTTP / TCP / UDP flood and TCP reset). Combined 2,678 downloads before takedown.
+
+- C2 over localhost.run tunnels `87e0bbc636999b[.]lhr[.]life` and `edcf8b03c84634[.]lhr[.]life`, plus direct TCP to `80[.]200[.]28[.]28:2222`
+- `deadcode09284814` added to known malicious GitHub / npm accounts; four packages added to `MALICIOUS_PACKAGE_PATTERNS`
+- Follow-up IOCs from SANS ISC diary 32994 for the TanStack wave: `seed1[.]getsession[.]org` (second Session messenger exfil node), `router_init.js` payload SHA-256 `ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c`, staging forks `github[.]com/voicproducoes` and `github[.]com/zblgg`
+- New campaign tests for both clusters in `src/__tests__/campaigns.test.ts`
+
 ### v5.2.13 (2026-05-16)
 **Threat intel: node-ipc credential stealer (May 2026)**
 

@@ -1102,4 +1102,128 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Phantom Bot DDoS + leaked Shai-Hulud npm infostealer (May 2026)
+  // =================================================================
+
+  describe("Phantom Bot npm DDoS / deadcode09284814 (May 2026)", () => {
+    it("should detect 87e0bbc636999b.lhr.life Phantom Bot C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'fetch("https://87e0bbc636999b.lhr.life/beacon");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect edcf8b03c84634.lhr.life Phantom Bot C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const u = "https://edcf8b03c84634.lhr.life/cmd";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect 80.200.28.28 Phantom Bot DDoS C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ip.js"),
+        'const c2 = "80.200.28.28";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect deadcode09284814 GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const url = "https://github.com/deadcode09284814/loader";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Mini Shai-Hulud TanStack wave additional IOCs (SANS ISC 32994, May 2026)
+  // =================================================================
+
+  describe("Mini Shai-Hulud TanStack additional IOCs (May 2026)", () => {
+    it("should detect seed1.getsession.org Session exfil node", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'fetch("https://seed1.getsession.org/upload");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect router_init.js payload SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect voicproducoes staging GitHub fork reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const url = "https://github.com/voicproducoes/router";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect zblgg staging GitHub fork reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const url = "https://github.com/zblgg/configuration";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

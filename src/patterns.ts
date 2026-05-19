@@ -268,6 +268,12 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // Drops terminate.dll/terminate.so + uses Zulip REST APIs as C2; potential APT32/OceanLotus link
   "^(uuid32-utils|colorinal|termncolor)$",
 
+  // Phantom Bot DDoS + Shai-Hulud clone npm infostealer (deadcode09284814, May 2026)
+  // Four packages from publisher deadcode09284814 carrying leaked Shai-Hulud worm source +
+  // Golang Phantom Bot DDoS module (HTTP/TCP/UDP flood + TCP reset). 2,678 combined downloads.
+  "^(chalk-tempalte|axois-utils|color-style-utils)$",
+  "^@deadcode09284814\\/axios-util$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

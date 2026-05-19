@@ -53,11 +53,17 @@ export const KNOWN_C2_DOMAINS: string[] = [
 
   // Mini Shai-Hulud Worm / TeamPCP - TanStack/UiPath/Mistral/OpenSearch/Guardrails compromise (May 2026)
   "filev2.getsession.org",
+  "seed1.getsession.org",
   "api.masscan.cloud",
   "git-tanstack.com",
 
   // node-ipc credential stealer via maintainer email hijack (May 2026)
   "sh.azurestaticprovider.net",
+
+  // Phantom Bot DDoS + Shai-Hulud clone npm infostealer (deadcode09284814, May 2026)
+  // Leaked Shai-Hulud source code re-weaponized for Golang DDoS + credential theft
+  "87e0bbc636999b.lhr.life",
+  "edcf8b03c84634.lhr.life",
 ];
 
 // ---------------------------------------------------------------------------
@@ -87,6 +93,9 @@ export const KNOWN_C2_IPS: string[] = [
 
   // node-ipc credential stealer DNS exfiltration endpoint (May 2026)
   "37.16.75.69",
+
+  // Phantom Bot DDoS C2 (deadcode09284814 npm infostealer, May 2026)
+  "80.200.28.28",
 ];
 
 // ---------------------------------------------------------------------------
@@ -130,6 +139,9 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
 
   // node-ipc credential stealer via maintainer email hijack (May 2026) - obfuscated CJS bundle
   "96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144": "node-ipc.cjs credential stealer payload (SHA256)",
+
+  // Mini Shai-Hulud TanStack wave router_init.js payload (May 2026)
+  "ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c": "Mini Shai-Hulud router_init.js TanStack payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -147,6 +159,13 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // TeamPCP / Mr_Rot13 - Checkmarx Jenkins AST plugin compromise + cPanel CVE-2026-41940 (May 2026)
   "Mr_Rot13",
   "TeamPCP",
+
+  // Mini Shai-Hulud TanStack wave staging forks (May 2026)
+  "voicproducoes",
+  "zblgg",
+
+  // Phantom Bot DDoS + Shai-Hulud clone npm infostealer publisher (May 2026)
+  "deadcode09284814",
 ];
 
 // ---------------------------------------------------------------------------

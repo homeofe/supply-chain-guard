@@ -191,6 +191,23 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "domain", value: "sh.azurestaticprovider.net", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
   { type: "ip", value: "37.16.75.69", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
   { type: "hash", value: "96097e0612d9575cb133021017fb1a5c68a03b60f9f3d24ebdc0e628d9034144", severity: "critical", confidence: 1.0, family: "CredStealer", campaign: "node-ipc Email Hijack", firstSeen: "2026-05-14" },
+
+  // Additional TanStack wave IOCs surfaced in SANS ISC diary 32994 (TeamPCP campaign through 2026-05-17)
+  // router_init.js payload hash + secondary Session messenger exfil node + staging GitHub forks
+  { type: "domain", value: "seed1.getsession.org", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-12" },
+  { type: "hash", value: "ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud TanStack", firstSeen: "2026-05-11" },
+
+  // Phantom Bot DDoS + leaked Shai-Hulud npm infostealer (May 17-18, 2026)
+  // Publisher "deadcode09284814" re-weaponized leaked Shai-Hulud source for an infostealer + Golang
+  // Phantom Bot DDoS module (HTTP/TCP/UDP flood, TCP reset). Four packages, 2,678 combined downloads.
+  // C2 over localhost.run tunnels (*.lhr.life) plus direct TCP to 80.200.28.28:2222.
+  { type: "package", value: "chalk-tempalte", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "package", value: "@deadcode09284814/axios-util", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "package", value: "axois-utils", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "package", value: "color-style-utils", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "domain", value: "87e0bbc636999b.lhr.life", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "domain", value: "edcf8b03c84634.lhr.life", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+  { type: "ip", value: "80.200.28.28", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
 ];
 
 const CACHE_DIR = ".scg-cache";
