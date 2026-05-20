@@ -330,6 +330,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.15 (2026-05-20)
+**Threat intel: Mini Shai-Hulud @antv + Nx Console + actions-cool triple wave (May 18-19, 2026)**
+
+TeamPCP launched a coordinated triple supply-chain wave over 18-19 May 2026, all converging on the same exfiltration endpoint `t[.]m-kosche[.]com` (masquerading as an OpenTelemetry traces collector).
+
+- **@antv ecosystem (npm)**: compromised maintainer account `atool` pushed 637 malicious versions across 317 packages in a 22-minute burst (01:39-02:18 UTC on 2026-05-19). Specific versions added: `@antv/g2@5.5.8`/`5.6.8`, `@antv/g6@5.2.1`/`5.3.1`, `echarts-for-react@3.1.7`/`3.2.7`, `timeago.js@4.1.2`/`4.2.2`. Payload: 498KB obfuscated Bun `index.js` (SHA-256 `a68dd1e6a6e35ec3771e1f94fe796f55dfe65a2b94560516ff4ac189390dfa1c`).
+- **Nx Console (VS Code)**: `nrwl.angular-console@18.95.0` published 2026-05-18 (exposure window 12:36-12:47 UTC) dropped a multi-stage credential stealer from an orphan commit `558b09d7ad0d1660e2a0fb8a06da81a6f42e06d2` in the official `nrwl/nx` repo. Persistence: `~/.local/share/kitty/cat.py` Python daemon + `com.user.kitty-monitor` LaunchAgent / `kitty-monitor.service`. Dead-drop polls GitHub Search with marker query `firedalazer`. Hashes: VSIX `1a4afce3...`, `main.js` `b0cefb66...`, `index.js` `e7347d90...`, dropper `package.json` `43f2b001...`.
+- **actions-cool GitHub Actions**: all tags of `actions-cool/issues-helper` (53 imposter commits) and `actions-cool/maintain-one-comment` (15 imposter commits) redirected to malicious payloads that read `Runner.Worker` process memory to harvest in-flight CI/CD secrets, then exfil over HTTPS to the same `t[.]m-kosche[.]com` C2.
+- New `ANTV_WAVE_KITTY_PERSISTENCE`, `ANTV_WAVE_FIREDALAZER`, `ANTV_WAVE_OTEL_C2` rules in `src/patterns.ts`; new campaign tests in `src/__tests__/campaigns.test.ts`.
+
 ### v5.2.14 (2026-05-19)
 **Threat intel: Phantom Bot DDoS npm infostealer + Mini Shai-Hulud TanStack follow-up (May 2026)**
 

@@ -208,6 +208,27 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "domain", value: "87e0bbc636999b.lhr.life", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
   { type: "domain", value: "edcf8b03c84634.lhr.life", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
   { type: "ip", value: "80.200.28.28", severity: "critical", confidence: 1.0, family: "PhantomBot", campaign: "Phantom Bot npm DDoS", firstSeen: "2026-05-17" },
+
+  // Mini Shai-Hulud @antv wave + actions-cool GitHub Action tag hijack + Nx Console (May 18-19, 2026)
+  // TeamPCP triple-wave: 637 versions across 317 @antv-ecosystem npm packages via compromised atool account,
+  // actions-cool/issues-helper + actions-cool/maintain-one-comment tag redirection to imposter commits,
+  // and nrwl.angular-console 18.95.0 VS Code extension dropping orphan-commit Bun payload.
+  // Shared C2: t.m-kosche.com (masquerades as OpenTelemetry traces endpoint).
+  { type: "domain", value: "t.m-kosche.com", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv / actions-cool / Nx Console", firstSeen: "2026-05-18" },
+  { type: "hash", value: "a68dd1e6a6e35ec3771e1f94fe796f55dfe65a2b94560516ff4ac189390dfa1c", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "@antv/g2@5.5.8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "@antv/g2@5.6.8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "@antv/g6@5.2.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "@antv/g6@5.3.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "echarts-for-react@3.1.7", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "echarts-for-react@3.2.7", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "timeago.js@4.1.2", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  { type: "package", value: "timeago.js@4.2.2", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud @antv", firstSeen: "2026-05-19" },
+  // Nx Console nrwl.angular-console 18.95.0 (VS Code Marketplace; 2.2M installs, May 18 2026 exposure window 12:36-12:47 UTC)
+  { type: "hash", value: "1a4afce34918bdc74ae3f31edaffffaa0ee074d83618f53edfd88137927340b8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+  { type: "hash", value: "b0cefb66b953e5184b6adb3035e9e267335ac5eabfe1848e07834777b9397b74", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+  { type: "hash", value: "e7347d90653efc565f03733a95e9209d78f9cfa81e31ff2b2dd9d48d75a4b8b1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+  { type: "hash", value: "43f2b001846c4966073ebffa5be8f15e491a1e7d32bbd805d57406ff540e0dd8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
 ];
 
 const CACHE_DIR = ".scg-cache";

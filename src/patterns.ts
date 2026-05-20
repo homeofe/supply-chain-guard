@@ -274,6 +274,10 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(chalk-tempalte|axois-utils|color-style-utils)$",
   "^@deadcode09284814\\/axios-util$",
 
+  // Nx Console nrwl.angular-console v18.95.0 - compromised VS Code extension (May 18, 2026)
+  // Listed for direct name match in extensions.json / dependency manifests.
+  "^nrwl\\.angular-console$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -514,6 +518,43 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "preinstall script invoking Bun on setup.mjs or execution.js. Direct fingerprint of the Mini Shai-Hulud worm's npm hijack chain.",
     severity: "critical",
     rule: "MINI_SHAI_HULUD_PREINSTALL",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
+  // --- Mini Shai-Hulud @antv / Nx Console / actions-cool wave (May 2026) ---
+  // Triple-wave TeamPCP attack: @antv ecosystem (637 versions), Nx Console
+  // nrwl.angular-console 18.95.0 VS Code extension, and actions-cool/issues-helper +
+  // actions-cool/maintain-one-comment GitHub Action tag redirection. Persistence backdoor
+  // installs `cat.py` Python daemon under kitty/kitty-monitor naming, polling GitHub Search
+  // for dead-drop commands with marker query "firedalazer".
+  {
+    name: "antv-wave-kitty-cat-py",
+    pattern: "(?:kitty/cat\\.py|com\\.user\\.kitty-monitor|kitty-monitor\\.service)",
+    description:
+      "Reference to kitty/cat.py Python backdoor or kitty-monitor persistence service. Persistence chain dropped by the May 2026 Mini Shai-Hulud @antv / Nx Console wave (TeamPCP).",
+    severity: "critical",
+    rule: "ANTV_WAVE_KITTY_PERSISTENCE",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "antv-wave-firedalazer-deaddrop",
+    pattern: "firedalazer",
+    description:
+      "Reference to 'firedalazer' marker. GitHub Search API dead-drop query string used by the Nx Console 18.95.0 backdoor (May 2026 Mini Shai-Hulud wave).",
+    severity: "critical",
+    rule: "ANTV_WAVE_FIREDALAZER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "antv-wave-otel-c2-masquerade",
+    pattern: "m-kosche\\.com[^\"']*api/public/otel/v1/traces",
+    description:
+      "Mini Shai-Hulud @antv wave C2 exfiltration endpoint masquerading as an OpenTelemetry traces collector at t.m-kosche.com (May 2026).",
+    severity: "critical",
+    rule: "ANTV_WAVE_OTEL_C2",
     notTestFile: true,
     notFilePattern: SCANNER_SRC,
   },

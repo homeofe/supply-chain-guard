@@ -64,6 +64,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Leaked Shai-Hulud source code re-weaponized for Golang DDoS + credential theft
   "87e0bbc636999b.lhr.life",
   "edcf8b03c84634.lhr.life",
+
+  // Mini Shai-Hulud @antv wave + actions-cool tag hijack + Nx Console (May 2026)
+  // Shared C2 domain across all three concurrent TeamPCP supply-chain attacks
+  // (637 @antv versions, actions-cool/issues-helper + maintain-one-comment, nrwl.angular-console 18.95.0)
+  "t.m-kosche.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -142,6 +147,18 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
 
   // Mini Shai-Hulud TanStack wave router_init.js payload (May 2026)
   "ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c": "Mini Shai-Hulud router_init.js TanStack payload (SHA256)",
+
+  // Mini Shai-Hulud @antv wave - 498KB obfuscated Bun index.js payload (May 19, 2026)
+  "a68dd1e6a6e35ec3771e1f94fe796f55dfe65a2b94560516ff4ac189390dfa1c": "Mini Shai-Hulud @antv index.js Bun payload (SHA256)",
+
+  // Nx Console nrwl.angular-console 18.95.0 compromise (May 18, 2026)
+  "1a4afce34918bdc74ae3f31edaffffaa0ee074d83618f53edfd88137927340b8": "Nx Console 18.95.0 malicious VSIX (SHA256)",
+  "b0cefb66b953e5184b6adb3035e9e267335ac5eabfe1848e07834777b9397b74": "Nx Console 18.95.0 main.js (SHA256)",
+  "e7347d90653efc565f03733a95e9209d78f9cfa81e31ff2b2dd9d48d75a4b8b1": "Nx Console 18.95.0 obfuscated index.js payload (SHA256)",
+  "43f2b001846c4966073ebffa5be8f15e491a1e7d32bbd805d57406ff540e0dd8": "Nx Console 18.95.0 dropper package.json (SHA256)",
+
+  // Nx Console malicious orphan commit SHA - referenced in VS Code globalState key (May 2026)
+  "558b09d7ad0d1660e2a0fb8a06da81a6f42e06d2": "Nx Console malicious orphan commit (Git SHA)",
 };
 
 // ---------------------------------------------------------------------------
@@ -252,6 +269,26 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@tallyui/connector-vendure": {
     versions: ["1.0.1", "1.0.2", "1.0.3"],
     description: "Mini Shai-Hulud / TeamPCP: TallyUI Vendure connector hijack (May 2026)",
+  },
+  // --- Mini Shai-Hulud @antv wave (May 19, 2026) -------------------------------
+  // Compromised npm maintainer account "atool"; 637 versions across 317 packages
+  // published 01:39-02:18 UTC on 2026-05-19. Payload: 498KB obfuscated Bun index.js
+  // exfiltrating to t.m-kosche.com. Versions below per Aikido + Snyk analysis.
+  "@antv/g2": {
+    versions: ["5.5.8", "5.6.8"],
+    description: "Mini Shai-Hulud / TeamPCP: @antv ecosystem npm hijack via atool maintainer account (May 2026)",
+  },
+  "@antv/g6": {
+    versions: ["5.2.1", "5.3.1"],
+    description: "Mini Shai-Hulud / TeamPCP: @antv ecosystem npm hijack via atool maintainer account (May 2026)",
+  },
+  "echarts-for-react": {
+    versions: ["3.1.7", "3.2.7"],
+    description: "Mini Shai-Hulud / TeamPCP: echarts-for-react hijack via atool maintainer account (May 2026)",
+  },
+  "timeago.js": {
+    versions: ["4.1.2", "4.2.2"],
+    description: "Mini Shai-Hulud / TeamPCP: timeago.js hijack via atool maintainer account (May 2026)",
   },
 };
 
