@@ -59,22 +59,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Debug npm auth
-        run: |
-          echo "--- .npmrc contents ---"
-          cat "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}" 2>/dev/null || echo "no userconfig"
-          cat .npmrc 2>/dev/null || echo "no project .npmrc"
-          echo "--- token format check ---"
-          echo "${NODE_AUTH_TOKEN:0:4}...${NODE_AUTH_TOKEN: -4}" || echo "token empty"
-          echo "--- npm whoami ---"
-          npm whoami 2>&1 || true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1. Node 20
+      # LTS bundles npm 10.x, which silently falls back to classic
+      # token auth even when id-token: write is granted. Upgrade
+      # explicitly so OIDC kicks in.
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
 
+      # Auth happens via OIDC against the npmjs Trusted Publisher
+      # configured for this package + this workflow. No NPM_TOKEN
+      # secret is used or needed.
       - name: Publish to npm
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release:
     name: Create GitHub Release
