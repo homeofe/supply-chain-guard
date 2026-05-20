@@ -1,0 +1,43 @@
+# Socket.dev configuration for supply-chain-guard.
+#
+# This package is a supply-chain security scanner. By its nature it
+# triggers two capability signals from Socket's static analyzer that
+# are intentional and required for the tool to work. Both are
+# explicitly disabled here, with the justification documented below
+# so Socket reviewers (and downstream consumers) can see the reasoning.
+#
+# Docs: https://docs.socket.dev/docs/socket-yml
+
+version: 2
+
+# Don't analyze test fixtures or test files - they intentionally
+# contain malware samples for our own test suite. These never ship
+# in the npm tarball (package.json `files` only includes `dist/`),
+# but excluding them in source repo analysis avoids noise.
+projectIgnorePaths:
+  - "src/__tests__/**"
+  - "src/__tests__/fixtures/**"
+
+issueRules:
+  # FALSE POSITIVE.
+  # The package itself never calls eval(), new Function(), or any
+  # vm.run* API. Verified: `grep -E "\beval\s*\(|new\s+Function\s*\(|vm\.(runIn|createContext)" src/`
+  # returns zero hits in non-test source.
+  # The "eval" occurrences in the published bundle (dist/patterns.js,
+  # dist/vscode-scanner.js) are detection strings and regex patterns
+  # used to flag eval usage in other people's code. Removing them
+  # would break the scanner.
+  usesEval: false
+
+  # LEGITIMATE NETWORK USE - core scanner functionality.
+  # The package makes outbound HTTPS requests for:
+  #   - src/solana-monitor.ts:  polls public Solana RPC for C2 wallet activity
+  #   - src/threat-intel.ts:    loads bundled and remote threat-intel feeds
+  #   - src/npm-scanner.ts:     downloads npm tarballs the user asks to scan
+  #   - src/pypi-scanner.ts:    downloads PyPI packages the user asks to scan
+  #   - src/vscode-scanner.ts:  downloads VSIX extensions the user asks to scan
+  #   - src/github-scanner.ts:  reads public GitHub repo metadata
+  #   - src/slsa-verifier.ts:   fetches SLSA provenance attestations
+  # All requests target user-specified or well-known public endpoints.
+  # No telemetry, no analytics, no exfiltration.
+  networkAccess: false

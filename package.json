@@ -51,7 +51,8 @@
     "dist/**/*",
     "action.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "socket.yml"
   ],
   "dependencies": {
     "commander": "^13.1.0"
