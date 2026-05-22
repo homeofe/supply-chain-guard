@@ -330,6 +330,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.16 (2026-05-22)
+**Threat intel: Checkmarx Jenkins plugin version correction + postmark-mcp hostile MCP server**
+
+Two updates driven by independent disclosures aggregated through 2026-05-22.
+
+- **Checkmarx Jenkins AST plugin (correction)**: SANS ISC diary 32994 (2026-05-18) and the official Checkmarx confirmation from 2026-05-11 establish that the tampered build was Marketplace version `2026.5.09`, exposed 2026-05-09 01:25 UTC to 2026-05-10 08:47 UTC. The last known-good build was `2.0.13-829.vc72453fa_1c16` (2025-12-17), and the remediated builds are `2.0.13-848.v76e89de8a_053` and `2.0.13-847.v08c0072b_2fd5`. The bundled threat-intel entry has been corrected from the prior placeholder version label, which was the last known-good build rather than the rogue version.
+- **postmark-mcp hostile MCP server**: First documented in-the-wild malicious MCP server (Sep 2025), re-disclosed via Bishop Fox's "Otto-Support - Supply Chain Risks in MCP Servers" post on 2026-05-13. Version `1.0.16` introduces a hidden BCC of every outbound email to an attacker-controlled address while preserving the published tool name, schema, and behavior; versions through `1.0.15` are clean. Added to `KNOWN_BAD_NPM_VERSIONS` and the bundled threat-intel feed, plus a new campaign test.
+
 ### v5.2.15 (2026-05-20)
 **Threat intel: Mini Shai-Hulud @antv + Nx Console + actions-cool triple wave (May 18-19, 2026)**
 

@@ -270,6 +270,10 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["1.0.1", "1.0.2", "1.0.3"],
     description: "Mini Shai-Hulud / TeamPCP: TallyUI Vendure connector hijack (May 2026)",
   },
+  "postmark-mcp": {
+    versions: ["1.0.16"],
+    description: "postmark-mcp hostile MCP server: developer-introduced hidden BCC of every outbound email to attacker-controlled address; 1.0.15 and earlier are clean (Sep 2025)",
+  },
   // --- Mini Shai-Hulud @antv wave (May 19, 2026) -------------------------------
   // Compromised npm maintainer account "atool"; 637 versions across 317 packages
   // published 01:39-02:18 UTC on 2026-05-19. Payload: 498KB obfuscated Bun index.js

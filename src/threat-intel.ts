@@ -148,10 +148,19 @@ const BUNDLED_FEED: FeedIOC[] = [
   // Open-OSS/privacy-filter HF repo trended; loader.py + start.bat fetch sefirah final payload
   { type: "domain", value: "recargapopular.com", severity: "critical", confidence: 1.0, family: "sefirah", campaign: "Fake OpenAI Privacy Filter HF", firstSeen: "2026-05-09" },
 
-  // Checkmarx Jenkins AST plugin supply chain attack (May 11, 2026) - TeamPCP / Mr_Rot13
-  // Rogue version 2.0.13-829.vc72453fa_1c16 published to Jenkins Marketplace; safe version is 2.0.13-848.v76e89de8a_053
-  // Repo defaced and renamed to Checkmarx-Fully-Hacked-by-TeamPCP-and-Their-Customers-Should-Cancel-Now
-  { type: "package", value: "jenkins:checkmarx-ast-plugin@2.0.13-829.vc72453fa_1c16", severity: "critical", confidence: 1.0, family: "Infostealer", campaign: "Checkmarx Jenkins AST Plugin Compromise", firstSeen: "2026-05-11" },
+  // Checkmarx Jenkins AST plugin supply chain attack (May 9-11, 2026) - TeamPCP / Mr_Rot13
+  // Per SANS ISC diary 32994 (May 18, 2026) and the Checkmarx official confirmation on May 11:
+  // tampered Marketplace version 2026.5.09 was exposed from 2026-05-09 01:25 UTC to 2026-05-10 08:47 UTC.
+  // Last known-good build 2.0.13-829.vc72453fa_1c16 (2025-12-17). Remediated builds (both 2026-05-09):
+  // 2.0.13-848.v76e89de8a_053 and 2.0.13-847.v08c0072b_2fd5. Third Checkmarx compromise in three months.
+  { type: "package", value: "jenkins:checkmarx-ast-plugin@2026.5.09", severity: "critical", confidence: 1.0, family: "Infostealer", campaign: "Checkmarx Jenkins AST Plugin Compromise", firstSeen: "2026-05-09" },
+
+  // postmark-mcp MCP server supply-chain compromise (Sep 29, 2025) - first documented malicious MCP server
+  // Developer-as-attacker scenario: legitimate package operated cleanly through 1.0.15, then version 1.0.16
+  // introduced a hidden BCC of every outbound email to an attacker-controlled address. The change was tiny
+  // and functional behavior was preserved. Re-disclosed via Bishop Fox "Otto-Support" supply-chain post,
+  // May 13, 2026, as the canonical case of a hostile MCP server.
+  { type: "package", value: "postmark-mcp@1.0.16", severity: "critical", confidence: 1.0, family: "MCPHarvest", campaign: "postmark-mcp Hostile MCP Server", firstSeen: "2025-09-29" },
 
   // MacSync Stealer Claude.ai/Google ads variant (May 10, 2026)
   // Malvertising via Google Ads + Claude.ai shared chat URLs; base64 shell scripts -> gunzip in-memory payload via osascript

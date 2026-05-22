@@ -1316,4 +1316,28 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // postmark-mcp Hostile MCP Server (Sep 2025; re-disclosed May 2026)
+  // =================================================================
+
+  describe("postmark-mcp Hostile MCP Server", () => {
+    it("should flag postmark-mcp@1.0.16 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "postmark-mcp": "1.0.16" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });
