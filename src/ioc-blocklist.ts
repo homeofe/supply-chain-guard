@@ -101,6 +101,15 @@ export const KNOWN_C2_IPS: string[] = [
 
   // Phantom Bot DDoS C2 (deadcode09284814 npm infostealer, May 2026)
   "80.200.28.28",
+
+  // Megalodon GitHub Actions workflow injection campaign (May 22, 2026)
+  // C2 receives base64-encoded CI secrets / cloud creds / SSH keys / OIDC tokens on port 8443
+  "216.126.225.129",
+
+  // DPRK OtterCookie Node.js stealer (SANS ISC diary 33006, May 22, 2026)
+  // Ports 8085 (browser creds), 8086 (file uploads), 8087/api/notify (WebSocket reverse shell)
+  // Same /24 subnet as Megalodon C2 (216.126.225.0/24) - likely shared DPRK infrastructure
+  "216.126.225.243",
 ];
 
 // ---------------------------------------------------------------------------
@@ -159,6 +168,11 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
 
   // Nx Console malicious orphan commit SHA - referenced in VS Code globalState key (May 2026)
   "558b09d7ad0d1660e2a0fb8a06da81a6f42e06d2": "Nx Console malicious orphan commit (Git SHA)",
+
+  // DPRK OtterCookie Node.js stealer (SANS ISC diary 33006, May 22, 2026)
+  // Obfuscator.io-style obfuscation; 41 crypto-wallet extension IDs; 200+ file patterns; uses
+  // hardcoded HMAC-SHA256 key "SuperStr0ngSecret@)@^"; WSL/macOS/Linux scanning
+  "049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9": "DPRK OtterCookie Node.js stealer payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------

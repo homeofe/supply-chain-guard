@@ -559,6 +559,47 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notFilePattern: SCANNER_SRC,
   },
 
+  // --- DPRK OtterCookie Node.js stealer (May 22, 2026) ---
+  // SANS ISC diary 33006. Sample uploaded to VT as "extracted-decoded.js"; obfuscator.io-style;
+  // targets 41 crypto-wallet Chrome extensions and 200+ sensitive file patterns. Exfil to
+  // 216.126.225.243 ports 8085 (browser creds) / 8086 (file uploads) / 8087 (WebSocket reverse shell).
+  {
+    name: "ottercookie-hmac-key",
+    pattern: "SuperStr0ngSecret@\\)@\\^",
+    description:
+      "Reference to 'SuperStr0ngSecret@)@^' detected. Hardcoded HMAC-SHA256 key embedded in the DPRK OtterCookie Node.js stealer (SANS ISC 33006, May 2026). Highly specific fingerprint.",
+    severity: "critical",
+    rule: "OTTERCOOKIE_HMAC_KEY",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+  {
+    name: "ottercookie-notify-endpoint",
+    pattern: "216\\.126\\.225\\.243:808[567](?:/api/notify)?",
+    description:
+      "Reference to 216.126.225.243:8085/8086/8087 detected. DPRK OtterCookie stealer C2 endpoints (browser creds / file uploads / WebSocket reverse shell at /api/notify).",
+    severity: "critical",
+    rule: "OTTERCOOKIE_C2_ENDPOINT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
+  // --- Megalodon GitHub Actions workflow injection (May 22, 2026) ---
+  // 5,718 malicious commits to 5,561 GitHub repositories in 6 hours via throwaway accounts
+  // forged as "build-bot", "auto-ci", "ci-bot", "pipeline-bot". Injected workflows ran
+  // base64-encoded bash that exfiltrated CI env vars, AWS / GCP credentials, SSH private keys,
+  // OIDC tokens, Docker / Kubernetes / Terraform configs to 216.126.225.129:8443.
+  {
+    name: "megalodon-c2-endpoint",
+    pattern: "216\\.126\\.225\\.129(?::8443)?",
+    description:
+      "Reference to 216.126.225.129:8443 detected. Megalodon GitHub Actions workflow-injection C2 (May 2026); collects base64-encoded CI secrets, AWS/GCP credentials, SSH keys, OIDC tokens, and source-code secrets.",
+    severity: "critical",
+    rule: "MEGALODON_C2_ENDPOINT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC,
+  },
+
   // --- coa/rc npm hijack ---
   {
     name: "coa-rc-sdd-dll",

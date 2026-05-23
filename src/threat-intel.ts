@@ -238,6 +238,24 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "hash", value: "b0cefb66b953e5184b6adb3035e9e267335ac5eabfe1848e07834777b9397b74", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "e7347d90653efc565f03733a95e9209d78f9cfa81e31ff2b2dd9d48d75a4b8b1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "43f2b001846c4966073ebffa5be8f15e491a1e7d32bbd805d57406ff540e0dd8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+
+  // Megalodon GitHub Actions workflow injection campaign (May 22, 2026)
+  // 5,718 malicious commits pushed to 5,561 GitHub repositories in 6 hours via throwaway accounts
+  // forged as "build-bot", "auto-ci", "ci-bot", "pipeline-bot". Injected GitHub Actions workflows
+  // ran base64-encoded bash that exfiltrated CI env vars, AWS / GCP creds, SSH private keys,
+  // OIDC tokens, Docker/k8s configs, and Terraform credentials to 216.126.225.129:8443.
+  { type: "ip", value: "216.126.225.129", severity: "critical", confidence: 1.0, family: "Megalodon", campaign: "Megalodon GitHub Workflow Injection", firstSeen: "2026-05-22" },
+
+  // DPRK OtterCookie Node.js stealer (SANS ISC diary 33006, May 22, 2026)
+  // Sample uploaded to VT as "extracted-decoded.js"; obfuscator.io-style; targets 41 crypto-wallet
+  // Chrome extensions (MetaMask/Phantom/Coinbase/Ledger) + 200+ sensitive file patterns
+  // (.env, .pem, .p12, .jks, SSH keys, seed phrases) across Windows (WSL) / macOS / Linux.
+  // Hardcoded HMAC-SHA256 key "SuperStr0ngSecret@)@^". C2 over three ports on 216.126.225.243
+  // (8085 creds, 8086 files, 8087 WebSocket reverse shell at /api/notify).
+  // Note: 216.126.225.0/24 is shared infrastructure with the Megalodon campaign.
+  { type: "ip", value: "216.126.225.243", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
+  { type: "url", value: "216.126.225.243:8087/api/notify", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
+  { type: "hash", value: "049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
 ];
 
 const CACHE_DIR = ".scg-cache";
