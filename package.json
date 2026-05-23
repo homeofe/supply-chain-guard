@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "check:changelog": "node scripts/check-changelog.mjs",
-    "prebuild": "npm run check:changelog",
+    "check:version-sync": "node scripts/check-version-sync.mjs",
+    "prebuild": "npm run check:changelog && npm run check:version-sync",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

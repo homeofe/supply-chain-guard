@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { formatReport } from "../reporter.js";
 import type { ScanReport } from "../types.js";
+import pkg from "../../package.json";
 
 /** Strip ANSI escape codes for plain-text assertions */
 function stripAnsi(str: string): string {
@@ -264,7 +265,10 @@ describe("formatReport – Text", () => {
   it("should contain scan report header (stripped ANSI)", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
     expect(output).toContain("supply-chain-guard");
-    expect(output).toContain("v5.2.16");
+    // Read the version from package.json instead of hardcoding it - this
+    // test broke twice on releases (v5.2.14, v5.2.17) because the string
+    // here was forgotten when bumping versions elsewhere.
+    expect(output).toContain(`v${pkg.version}`);
   });
 
   it("should show risk score", () => {

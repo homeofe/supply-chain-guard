@@ -9,9 +9,9 @@ Jeder Release MUSS in dieser Reihenfolge laufen. Wenn `npm run build` fehlschlae
 1. **README.md aktualisieren** - neuer `### vX.Y.Z (YYYY-MM-DD)` Block ganz oben unter `## Changelog`, mit Titel und Bullet-Liste. Stil: siehe vorherige Eintraege.
 2. **SECURITY.md** - Supported-Versions-Tabelle pflegen (nur bei neuer Major/Minor).
 3. **CONTRIBUTING.md** - nur wenn neue Module oder Dateien dazukommen.
-4. **Version bumpen** in `package.json`, `src/cli.ts`, internen Konstanten in `src/reporter.ts` (Text-Header, SARIF, SBOM, HTML-Footer) - alle gleichzeitig.
-5. **Tests anpassen**, die altes Output-Format pruefen.
-6. **`npm run build`** muss gruen sein - laeuft jetzt `check:changelog` als `prebuild` und scheitert wenn die `package.json`-Version keinen README-Eintrag hat.
+4. **Version bumpen** in `package.json`, `src/cli.ts`, internen Konstanten in `src/reporter.ts` (Text-Header, SARIF, SBOM, HTML-Footer) - alle gleichzeitig. Der `check:version-sync` Gate (siehe Punkt 6) faengt das ab wenn was vergessen wird.
+5. **Tests anpassen**, die altes Output-Format pruefen. Tests die nur die Version pruefen sollen `pkg.version` aus `../../package.json` lesen, nicht hardcoden - siehe `reporter.test.ts`.
+6. **`npm run build`** muss gruen sein - laeuft `check:changelog` UND `check:version-sync` als `prebuild`. Erster gated gegen fehlenden README-Eintrag, zweiter gegen vergessene Version-Bumps in `cli.ts` und `reporter.ts`.
 7. **`npm test`** muss gruen sein.
 8. **Ein Commit** fuer alles (Code + Docs + Tests).
 9. **`git tag vX.Y.Z`** NACH dem Commit.
@@ -33,8 +33,16 @@ Jeder Release MUSS in dieser Reihenfolge laufen. Wenn `npm run build` fehlschlae
 
 ## Historische Drift (warum es diese Datei gibt)
 
-Der README-Changelog ist zweimal hinter den Tags zurueckgeblieben:
+Der Release-Prozess hat mehrfach gerieben, jedes Mal hat ein Gate-Script die Luecke geschlossen:
+
+**README-Changelog hinter den Tags:**
 - Commit `6d0e887` - Backfill fuer v5.2.5 bis v5.2.7
 - Backfill fuer v5.2.9 bis v5.2.13
+- Konsequenz: `scripts/check-changelog.mjs` als `prebuild` verdrahtet.
 
-Konsequenz: `scripts/check-changelog.mjs` ist als `prebuild` verdrahtet. Verlass dich nicht auf Memory oder Checkliste allein - der Build muss gegen die Doku gaten.
+**Versions-Strings nicht synchron quer durch die Dateien:**
+- v5.2.14: `src/reporter.ts` auf 5.2.14, `reporter.test.ts` noch auf "v5.2.8" -> npm-Publish failed (Build-Job rot).
+- v5.2.17: `src/reporter.ts` auf 5.2.17, `reporter.test.ts` noch auf "v5.2.16" -> npm-Publish failed (Build-Job rot, Publish skipped).
+- Konsequenz: `scripts/check-version-sync.mjs` als zweiter `prebuild` verdrahtet. Plus: `reporter.test.ts` liest jetzt `pkg.version` statt String zu hardcoden, kann nicht mehr driften.
+
+Verlass dich nicht auf Memory oder Checkliste allein - der Build muss gegen die Doku UND gegen die Cross-File-Konsistenz gaten.
