@@ -1573,6 +1573,90 @@ export const LURE_PATTERNS: PatternEntry[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Prompt-injection patterns targeting downstream LLM coding agents (v5.2.19)
+//
+// When attackers compromise an npm/PyPI package, they used to target the human
+// developer who reads the README. Increasingly they target the *AI coding
+// agent* that reads the README on the developer's behalf (Claude Code, Cursor,
+// Copilot, etc.). These patterns flag known LLM-control tokens and role
+// markers embedded in package documentation where they have no business being.
+//
+// Scope: README / CHANGELOG / DESCRIPTION / CONTRIBUTING / release notes only.
+// The same tokens are legitimate in actual LLM toolkit source code, so we do
+// not scan general .ts/.js/.py source for them.
+// ---------------------------------------------------------------------------
+
+const DOC_FILE_PATTERN = /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i;
+
+export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
+  {
+    name: "prompt-injection-system-reminder",
+    // Matches Anthropic / Claude Code harness style: <system-reminder>...</system-reminder>
+    // Also catches the opening tag alone since closing tags can be malformed.
+    pattern: "<\\s*/?\\s*system[-_](?:reminder|prompt|message|instruction)\\s*>",
+    description:
+      "Anthropic-style <system-reminder> / <system-prompt> tag in package documentation. These tokens are processed as authoritative instructions by Claude-family LLMs reading the README - a prompt-injection attack on downstream AI coding agents.",
+    severity: "high",
+    rule: "PROMPT_INJECTION_SYSTEM_REMINDER",
+    onlyFilePattern: DOC_FILE_PATTERN,
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
+  },
+  {
+    name: "prompt-injection-chatml",
+    // Matches OpenAI / Llama 2+ / Mistral ChatML: <|im_start|>system ... <|im_end|>
+    pattern: "<\\|\\s*im_(?:start|end|sep)\\s*\\|>",
+    description:
+      "ChatML role-control token (<|im_start|> / <|im_end|>) in package documentation. Used by OpenAI GPT, Llama, Mistral, and Qwen models as role-boundary markers - a prompt-injection attack on downstream AI agents.",
+    severity: "high",
+    rule: "PROMPT_INJECTION_CHATML",
+    onlyFilePattern: DOC_FILE_PATTERN,
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
+  },
+  {
+    name: "prompt-injection-inst-tag",
+    // Matches Mistral / Llama instruction-tuning tags: [INST] ... [/INST]
+    // Word-boundary on both sides to avoid matching prose like "configure [INST]ance".
+    pattern: "\\[\\s*/?\\s*INST\\s*\\]",
+    description:
+      "Mistral/Llama instruction tag ([INST] or [/INST]) in package documentation. These tokens delimit user instructions in Mistral and Llama instruction-tuned models - a prompt-injection attack on downstream AI agents.",
+    severity: "high",
+    rule: "PROMPT_INJECTION_INST_TAG",
+    onlyFilePattern: DOC_FILE_PATTERN,
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
+  },
+  {
+    name: "prompt-injection-role-token",
+    // Matches generic role tokens: <|system|>, <|user|>, <|assistant|>, <|developer|>
+    pattern: "<\\|\\s*(?:system|user|assistant|developer|function|tool)\\s*\\|>",
+    description:
+      "Generic role-control token (<|system|>, <|user|>, <|assistant|>) in package documentation. Used by Phi, Gemma, Granite, and other local LLMs to switch conversational role - a prompt-injection attack on downstream AI agents.",
+    severity: "high",
+    rule: "PROMPT_INJECTION_ROLE_TOKEN",
+    onlyFilePattern: DOC_FILE_PATTERN,
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
+  },
+  {
+    name: "prompt-injection-override-prose",
+    // Natural-language jailbreak phrases. Case-insensitive. Require the
+    // imperative form to avoid matching documentation ABOUT prompt injection
+    // (e.g. "we discuss how attackers ignore previous instructions").
+    pattern:
+      "(?:^|[.!?\\n]\\s*)(?:please\\s+)?(?:ignore|disregard|forget|override)\\s+(?:all\\s+)?(?:previous|prior|above|earlier|the\\s+system)\\s+(?:instructions?|prompts?|messages?|rules?|directives?|context)",
+    description:
+      "Natural-language prompt-injection override ('ignore previous instructions', 'disregard the system prompt', etc.) in package documentation. Classic jailbreak phrasing aimed at downstream AI agents reading the README.",
+    severity: "high",
+    rule: "PROMPT_INJECTION_OVERRIDE_PROSE",
+    onlyFilePattern: DOC_FILE_PATTERN,
+    notFilePattern: SCANNER_SRC,
+    notTestFile: true,
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Extended C2 + Secrets patterns (v4.2)
 // ---------------------------------------------------------------------------
 

@@ -48,6 +48,14 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - Release artifact scanning (.exe, .7z, double extensions, LNK shortcuts, PE magic)
 - README lure detection (leaked/pirated/urgency language)
 
+### Prompt Injection Against AI Coding Agents (v5.2.19)
+Detects LLM-control tokens embedded in package READMEs that target downstream AI coding agents (Claude Code, Cursor, Copilot) reading the docs on behalf of a human developer:
+- `<system-reminder>` / `<system-prompt>` (Anthropic family)
+- `<|im_start|>` / `<|im_end|>` ChatML (OpenAI, Llama, Mistral, Qwen)
+- `[INST]` / `[/INST]` (Mistral, Llama instruction-tuned)
+- `<|system|>` / `<|user|>` / `<|assistant|>` (Phi, Gemma, Granite, generic role tokens)
+- Natural-language jailbreak phrasing ("ignore previous instructions")
+
 ### Credential Detection
 - AWS access keys (AKIA/ASIA), GitHub tokens (ghp_/gho_), npm tokens
 - SSH private keys, generic API keys, PEM private keys
@@ -333,6 +341,19 @@ scan() -> collectFiles() -> per-file analysis
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contribution is adding new detection patterns for emerging threats.
 
 ## Changelog
+
+### v5.2.19 (2026-05-24)
+**New detection: prompt injection against downstream AI coding agents**
+
+Adds five new patterns under `PROMPT_INJECTION_PATTERNS` (`src/patterns.ts`) that flag LLM-control tokens and role markers embedded in package documentation (README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release notes). These tokens target the AI coding agent that reads the README on the human developer's behalf, not the human - a growing supply-chain attack vector as LLM coding tools become standard.
+
+- `PROMPT_INJECTION_SYSTEM_REMINDER` - Anthropic/Claude Code harness tags (`<system-reminder>`, `<system-prompt>`, `<system-instruction>`)
+- `PROMPT_INJECTION_CHATML` - OpenAI/Llama/Mistral/Qwen ChatML tokens (`<|im_start|>`, `<|im_end|>`, `<|im_sep|>`)
+- `PROMPT_INJECTION_INST_TAG` - Mistral/Llama instruction tags (`[INST]`, `[/INST]`)
+- `PROMPT_INJECTION_ROLE_TOKEN` - generic role tokens used by Phi, Gemma, Granite and others (`<|system|>`, `<|user|>`, `<|assistant|>`, `<|developer|>`, `<|tool|>`)
+- `PROMPT_INJECTION_OVERRIDE_PROSE` - natural-language jailbreak phrasing ("ignore previous instructions", "disregard the system prompt", etc.) requiring imperative sentence-start form to avoid false positives in security docs that discuss the attack
+- All five are severity HIGH, scoped to README-style files only (`onlyFilePattern`), exclude scanner source (`notFilePattern: SCANNER_SRC`) and test files. 39 new tests in `src/__tests__/prompt-injection-patterns.test.ts`.
+- Motivated by a real WebFetch tag-leakage incident observed in the daily threat-intel routine on 2026-05-24: an internal Claude Code summarization model leaked its own `<system-reminder>` harness tag into the WebFetch result, demonstrating exactly the failure mode a hostile package could weaponise.
 
 ### v5.2.18 (2026-05-24)
 **Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026)**

@@ -40,6 +40,7 @@ import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-tr
 import {
   INFOSTEALER_PATTERNS,
   LURE_PATTERNS,
+  PROMPT_INJECTION_PATTERNS,
   C2_EXTENDED_PATTERNS,
   SECRETS_PATTERNS,
 } from "./patterns.js";
@@ -488,6 +489,7 @@ function checkFilePatterns(
     ...IAC_PATTERNS,
     ...INFOSTEALER_PATTERNS,
     ...LURE_PATTERNS,
+    ...PROMPT_INJECTION_PATTERNS,
     ...C2_EXTENDED_PATTERNS,
     ...SECRETS_PATTERNS,
     ...OBFUSCATION_V3_PATTERNS,
