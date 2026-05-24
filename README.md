@@ -342,6 +342,24 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.23 (2026-05-24)
+**Fix `WORKFLOW_UNTRUSTED_ACTION_IN_RELEASE_PATH` false positive on `npm@latest`**
+
+The unpinned-action detector in `workflow-modeler.ts` was firing on any `@latest` / `@main` / `@master` / `@dev` substring anywhere in a workflow file - including the `npm install -g npm@latest` step that v5.2.20 introduced as part of the OIDC trusted-publishing setup. That's a Node toolchain install, not a GitHub Action reference.
+
+The regex is now scoped to actual `uses: <action>@<branch>` declarations using a line-anchored, case-insensitive multiline match:
+
+```ts
+/^\s*-?\s*uses:\s+\S+@(?:main|master|latest|dev)\b/im
+```
+
+4 new tests in `bugfix-v5_2_23.test.ts` verify:
+- `npm install -g npm@latest` no longer triggers
+- Real `uses: actions/checkout@main` / `@master` / `@latest` / `@dev` still triggers
+- Commit-SHA pinning (the v5.2.22 fix) stays clean
+
+Expected impact on the self-scan: the last false-positive CRITICAL is gone. Remaining 2 mediums (`GHA_OIDC_WRITE_PERM` for Trusted Publishing, `WORKFLOW_SECRET_TO_UPLOAD_PATH` for `secrets.GITHUB_TOKEN` access in the GitHub Release step) are honest by-design tradeoffs.
+
 ### v5.2.22 (2026-05-24)
 **Self-scan polish: comment-aware GHA scan, pinned actions, fix changelog self-trigger**
 

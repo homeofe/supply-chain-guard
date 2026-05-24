@@ -65,9 +65,15 @@ export function modelWorkflows(dir: string): Finding[] {
         });
       }
 
-      // Check for untrusted actions in release paths
+      // Check for untrusted actions in release paths.
+      // v5.2.23: the unpinned-action check is scoped to actual `uses:`
+      // declarations. The earlier regex `/@(?:main|master|latest|dev)\b/`
+      // matched any occurrence anywhere in the file - including
+      // `npm install -g npm@latest`, which is a Node toolchain install
+      // step, not a GitHub Action reference. New regex requires the
+      // `uses: <path>@<branch>` form.
       const isReleasePath = /release|publish|deploy|npm.*publish/.test(content);
-      const hasUnpinnedAction = /@(?:main|master|latest|dev)\b/.test(content);
+      const hasUnpinnedAction = /^\s*-?\s*uses:\s+\S+@(?:main|master|latest|dev)\b/im.test(content);
 
       if (isReleasePath && hasUnpinnedAction) {
         findings.push({
