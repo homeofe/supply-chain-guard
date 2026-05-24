@@ -199,8 +199,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         findings.push(...tiFindings);
       }
 
-      // README lure pattern scanning (v4.1)
-      if (basename.toLowerCase().startsWith("readme")) {
+      // README / doc-file lure pattern scanning (v4.1, scope expanded v5.2.20)
+      // Covers README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release-notes -
+      // matches LURE_PATTERNS' onlyFilePattern. Previously only `readme*`
+      // files were routed here, but the LURE patterns themselves are scoped
+      // to all of these. After v5.2.20 removed LURE_PATTERNS from the
+      // general checkFilePatterns sweep (dedupe fix), scanReadmeLures became
+      // the sole entry point so it now covers the full doc-file family.
+      if (/^(?:readme|changelog|contributing|description|release[-_]notes)/i.test(basename)) {
         const lureFindings = scanReadmeLures(content, relativePath);
         findings.push(...lureFindings);
       }
@@ -481,6 +487,11 @@ function checkFilePatterns(
   findings: Finding[],
 ): void {
   const lines = content.split("\n");
+  // Note: LURE_PATTERNS deliberately excluded here. README-style files are
+  // already covered by scanReadmeLures() in github-trust-scanner.ts (called
+  // earlier in scanDirectory). Including them in this loop produced duplicate
+  // findings for every README hit (same rule+file+line+match, different
+  // recommendation text). v5.2.20 dedupe fix.
   const allPatterns = [
     ...FILE_PATTERNS,
     ...CAMPAIGN_PATTERNS,
@@ -488,7 +499,6 @@ function checkFilePatterns(
     ...OBFUSCATION_PATTERNS_V2,
     ...IAC_PATTERNS,
     ...INFOSTEALER_PATTERNS,
-    ...LURE_PATTERNS,
     ...PROMPT_INJECTION_PATTERNS,
     ...C2_EXTENDED_PATTERNS,
     ...SECRETS_PATTERNS,

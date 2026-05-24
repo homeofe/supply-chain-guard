@@ -366,7 +366,13 @@ function checkOrphanedDependencies(
         description: `${orphaned.length} package(s) in lockfile are not declared in package.json (likely transitive deps): ${examples}${suffix}.`,
         severity: "info",
         file: "package-lock.json",
-        recommendation: `Run \`npm prune\` to clean orphaned packages, then regenerate the lockfile.`,
+        // v5.2.20: corrected recommendation. npm v7+ lockfile format
+        // intentionally includes ALL transitive dependencies at the root
+        // node_modules/ level (flat install). These are NOT orphans in the
+        // pre-npm-v7 sense and `npm prune` will not remove them. Only act if
+        // the listed names look unexpected from a supply-chain perspective.
+        recommendation:
+          "npm v7+ lockfiles include transitive dependencies at the root node_modules/ level by design - these are not orphans. Verify the listed packages come from trusted publishers; if any are unexpected, investigate the dependency tree with `npm ls <name>`.",
       });
     }
   }

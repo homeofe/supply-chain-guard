@@ -22,6 +22,11 @@ const SLSA_LEVEL2_PATTERNS = [
   /sigstore\/gh-action-sigstore-python/i,
   /actions\/attest-build-provenance/i,
   /github\/attest/i,
+  // npm publish --provenance generates SLSA provenance via OIDC and uploads to
+  // sigstore's public transparency log. Standard path since npm 9, mandatory
+  // for Trusted Publishing setups since npm 11.5. Recognise it as Level 2.
+  // v5.2.20.
+  /npm\s+publish[^\n]*--provenance/i,
 ];
 
 /** Workflow patterns that indicate SLSA Level 3 (hermetic build) */

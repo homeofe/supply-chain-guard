@@ -8,7 +8,7 @@
 import type { PatternEntry, Severity } from "./types.js";
 
 /** Matches the scanner's own source files — used to prevent self-scan false positives. */
-const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/;
+const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
 
 // ---------------------------------------------------------------------------
 // GlassWorm-specific IOCs
@@ -110,6 +110,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Solana mainnet RPC reference detected (potential C2 channel)",
     severity: "medium",
     rule: "SOLANA_MAINNET",
+    notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
   {

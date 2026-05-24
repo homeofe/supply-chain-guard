@@ -7,14 +7,31 @@ function makeFinding(rule: string, severity: "critical" | "high" = "critical"): 
 }
 
 describe("Triage Engine", () => {
-  it("should flag critical findings without owner", () => {
+  // v5.2.20: CRITICAL_FINDING_NO_OWNER only fires for projects that have
+  // actually opted into triage (i.e. recorded at least one decision). Firing
+  // it by default would cascade a HIGH finding on every critical FP for
+  // projects that never use the triage system - exactly what happened during
+  // the self-scan in v5.2.19.
+  it("should NOT flag critical-without-owner when no triage decisions exist", () => {
     const findings = [makeFinding("EVAL_ATOB")];
     const decisions: TriageDecision[] = [];
+    const gov = checkTriageGovernance(findings, decisions);
+    expect(gov.some((f) => f.rule === "CRITICAL_FINDING_NO_OWNER")).toBe(false);
+  });
+
+  it("should flag critical-without-owner when triage system is in use", () => {
+    // Project has a decision for one rule but a new critical finding (HEX_ARRAY)
+    // appeared without an assigned owner. Now the meta-finding is meaningful.
+    const findings = [makeFinding("EVAL_ATOB"), makeFinding("HEX_ARRAY")];
+    const decisions: TriageDecision[] = [{
+      findingRule: "EVAL_ATOB", status: "triaged", owner: "security-team",
+      decidedAt: new Date().toISOString(),
+    }];
     const gov = checkTriageGovernance(findings, decisions);
     expect(gov.some((f) => f.rule === "CRITICAL_FINDING_NO_OWNER")).toBe(true);
   });
 
-  it("should not flag when critical findings have owners", () => {
+  it("should not flag when all critical findings have owners", () => {
     const findings = [makeFinding("EVAL_ATOB")];
     const decisions: TriageDecision[] = [{
       findingRule: "EVAL_ATOB", status: "triaged", owner: "security-team",

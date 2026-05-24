@@ -342,6 +342,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.20 (2026-05-24)
+**Pattern bug fixes uncovered by the v5.2.19 self-scan**
+
+Running supply-chain-guard against its own repository surfaced five structural false-positives and detection gaps. Each is now fixed at the source:
+
+- **SOLANA_MAINNET self-flagged `src/solana-monitor.ts`** - the pattern had only `notTestFile: true` and no `notFilePattern`. `SCANNER_SRC` regex extended to include `solana-monitor`, `solana-watchlist`, `slsa-verifier`, and `sbom-generator`; `SOLANA_MAINNET` now sets `notFilePattern: SCANNER_SRC` like other scanner-internal-aware patterns do.
+- **README lure findings reported twice with different recommendations** - `LURE_PATTERNS` was being executed both by the general `checkFilePatterns` sweep and by the dedicated `scanReadmeLures` path, producing one finding from each with subtly different recommendation text. `LURE_PATTERNS` removed from `checkFilePatterns`; `scanReadmeLures` routing in `scanDirectory` expanded from `readme*` only to the full doc-file family (README / CHANGELOG / CONTRIBUTING / DESCRIPTION / release-notes) so coverage is unchanged.
+- **`CRITICAL_FINDING_NO_OWNER` cascaded HIGH findings on every critical FP** - the meta-governance rule fired by default even on projects that never opted into the triage system. Now only fires when at least one triage decision has been recorded (`decisions.length > 0`).
+- **`SLSA_NO_PROVENANCE` misreported repos using `npm publish --provenance`** - the SLSA Level-2 detection list recognised `slsa-github-generator`, `cosign`, and `attest-build-provenance` actions but not the modern npm-native provenance flag (standard since npm 9, mandatory with Trusted Publishing since 11.5). Added `/npm\s+publish[^\n]*--provenance/i` to `SLSA_LEVEL2_PATTERNS`.
+- **`LOCKFILE_ORPHANED_DEPENDENCY` recommendation was wrong for npm v7+** - the message told users to run `npm prune`, which does not remove transitive dependencies from npm v7+ flat lockfiles (they are present by design). Recommendation rewritten to explain npm v7+ behaviour and direct users to verify publishers / inspect `npm ls <name>` instead.
+- 15 new regression tests in `src/__tests__/bugfix-v5_2_20.test.ts` plus updated `triage-engine.test.ts` cover all five fixes. Total test count: 739 passing.
+
 ### v5.2.19 (2026-05-24)
 **New detection: prompt injection against downstream AI coding agents**
 

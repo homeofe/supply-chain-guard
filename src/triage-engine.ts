@@ -55,19 +55,26 @@ export function checkTriageGovernance(
     decisionMap.set(`${d.findingRule}|${d.findingFile ?? ""}`, d);
   }
 
-  // Check for critical findings without owner
-  const criticalWithoutOwner = findings.filter(
-    (f) => f.severity === "critical" && !decisionMap.has(`${f.rule}|${f.file ?? ""}`),
-  );
-  if (criticalWithoutOwner.length > 0) {
-    govFindings.push({
-      rule: "CRITICAL_FINDING_NO_OWNER",
-      description: `${criticalWithoutOwner.length} critical finding(s) have no assigned owner or triage decision.`,
-      severity: "high",
-      confidence: 1.0,
-      category: "trust",
-      recommendation: "Assign owners to all critical findings. Unowned critical risks are unmanaged risks.",
-    });
+  // Check for critical findings without owner.
+  // v5.2.20: only fire this meta-governance check when the project is actually
+  // using the triage system (i.e. has at least one decision recorded). Firing
+  // it by default on every scan produced a cascade of HIGH findings every time
+  // another pattern triggered a critical FP, on projects that never opted into
+  // triage in the first place.
+  if (decisions.length > 0) {
+    const criticalWithoutOwner = findings.filter(
+      (f) => f.severity === "critical" && !decisionMap.has(`${f.rule}|${f.file ?? ""}`),
+    );
+    if (criticalWithoutOwner.length > 0) {
+      govFindings.push({
+        rule: "CRITICAL_FINDING_NO_OWNER",
+        description: `${criticalWithoutOwner.length} critical finding(s) have no assigned owner or triage decision.`,
+        severity: "high",
+        confidence: 1.0,
+        category: "trust",
+        recommendation: "Assign owners to all critical findings. Unowned critical risks are unmanaged risks.",
+      });
+    }
   }
 
   // Check for accepted risks without expiry
