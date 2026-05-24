@@ -342,6 +342,31 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.24 (2026-05-24)
+**`RISK_TRAJECTORY_UNSTABLE` no longer flags monotone improvement as instability**
+
+The risk-forecast engine used `Math.abs(slope) > 5` to detect "volatile risk", which conflated two opposite situations:
+
+- Score rising fast (real degradation) → should fire
+- Score falling fast (active remediation) → should NOT fire, that is exactly what we want
+- Score bouncing back and forth (true volatility) → should fire
+
+The v5.2.23 self-scan reported "slope -13.9/scan, highly volatile" after six consecutive releases each fixing real bugs - a strict monotone decrease being labelled as instability.
+
+The detection is now split into orthogonal concerns:
+
+- `RISK_TRAJECTORY_DEGRADING` (severity high): `slope > +5`, score consistently rising
+- `RISK_TRAJECTORY_UNSTABLE` (severity medium): high stdev around the linear-fit trend **and** at least 2 direction reversals in the sequence (true oscillation, not just non-linear improvement)
+- Fast improvement (`slope < -5` with no oscillation): silent, surfaced in the score itself
+
+5 new tests in `bugfix-v5_2_24.test.ts` verify:
+- Strict monotone decrease (including the v5.2.18-v5.2.23 release trajectory) does NOT fire UNSTABLE
+- Fast-rising score DOES fire DEGRADING
+- Real oscillation (e.g. `[20, 80, 25, 75, 30, 70]`) DOES fire UNSTABLE
+- Stable flat trajectory fires neither
+
+Expected impact on the self-scan: drops the spurious `RISK_TRAJECTORY_UNSTABLE` finding. Score should fall from 17/MEDIUM to roughly 5-10/LOW.
+
 ### v5.2.23 (2026-05-24)
 **Fix `WORKFLOW_UNTRUSTED_ACTION_IN_RELEASE_PATH` false positive on `npm@latest`**
 
