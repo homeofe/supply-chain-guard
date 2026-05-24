@@ -353,12 +353,20 @@ export async function updateThreatFeed(
 /**
  * Check content against the threat intelligence feed.
  */
+// v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
+// threat-intel IOCs - changelog entries, blog posts, security research.
+// Matching threat-intel hashes/domains in docs creates noise without security
+// value. Same rationale as patterns.ts BENIGN_DOC_FILES and ioc-blocklist.ts.
+const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
+
 export function checkThreatIntel(
   content: string,
   relativePath: string,
   feed: FeedIOC[],
 ): Finding[] {
   const findings: Finding[] = [];
+  // Skip documentation files - threat-intel matches there are discussion, not exploitation.
+  if (BENIGN_DOC_FILES.test(relativePath)) return findings;
   const contentLower = content.toLowerCase();
 
   for (const ioc of feed) {

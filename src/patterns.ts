@@ -10,6 +10,21 @@ import type { PatternEntry, Severity } from "./types.js";
 /** Matches the scanner's own source files — used to prevent self-scan false positives. */
 const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
 
+// v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
+// malware markers as part of threat-intel write-ups, changelog entries, blog
+// posts, and academic research. Patterns that match source-code-embedded
+// markers (campaign signatures, IOC strings, infostealer paths, C2 references)
+// must skip these to avoid flagging discussion as malware.
+//
+// Used together with SCANNER_SRC via SCANNER_SRC_OR_DOCS. Patterns whose
+// design is to fire on documentation (LURE_PATTERNS, PROMPT_INJECTION_PATTERNS)
+// keep plain SCANNER_SRC and stay on their onlyFilePattern scope.
+const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
+const SCANNER_SRC_OR_DOCS = new RegExp(
+  `(?:${SCANNER_SRC.source})|(?:${BENIGN_DOC_FILES.source})`,
+  "i",
+);
+
 // ---------------------------------------------------------------------------
 // GlassWorm-specific IOCs
 // ---------------------------------------------------------------------------
@@ -42,7 +57,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "GlassWorm campaign marker variable detected",
     severity: "critical",
     rule: "GLASSWORM_MARKER",
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
 
@@ -110,7 +125,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Solana mainnet RPC reference detected (potential C2 channel)",
     severity: "medium",
     rule: "SOLANA_MAINNET",
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
   {
@@ -297,7 +312,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "XZ_GET_CPUID",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "xz-lzma-crc64",
@@ -307,7 +322,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "XZ_LZMA_CRC64",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "xz-build-inject",
@@ -318,7 +333,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "XZ_BUILD_INJECT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "xz-obfuscated-test",
@@ -329,7 +344,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "XZ_OBFUSCATED_TEST",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- Codecov Bash Uploader ---
@@ -342,7 +357,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "CODECOV_CURL_BASH",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "codecov-exfil",
@@ -353,7 +368,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "CODECOV_EXFIL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- SolarWinds SUNBURST ---
@@ -365,7 +380,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SUNBURST_DGA",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "sunburst-orion-class",
@@ -375,7 +390,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SUNBURST_ORION_CLASS",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "sunburst-delayed-exec",
@@ -386,7 +401,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "SUNBURST_DELAYED_EXEC",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- ua-parser-js hijack ---
@@ -399,7 +414,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "UAPARSER_MINER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "uaparser-preinstall-download",
@@ -410,7 +425,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "UAPARSER_PREINSTALL_DL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) ---
@@ -422,7 +437,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CHECKMARX_SHAI_HULUD_V3",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "checkmarx-mcp-addon",
@@ -432,7 +447,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CHECKMARX_MCP_ADDON",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "bitwarden-cli-loader",
@@ -442,7 +457,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "BITWARDEN_CLI_LOADER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- LofyGang / LofyStealer (April 2026) ---
@@ -454,7 +469,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "LOFYSTEALER_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "lofygang-minecraft-lure",
@@ -464,7 +479,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "LOFYGANG_MINECRAFT_LURE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- DPRK AI-inserted npm malware (April 2026) ---
@@ -476,7 +491,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DPRK_VALIDATE_SDK",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- ZiChatBot PyPI campaign (May 2026) ---
@@ -488,7 +503,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ZICHATBOT_PACKAGE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) ---
@@ -500,7 +515,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINI_SHAI_HULUD_MARKER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "mini-shai-hulud-bun-loader",
@@ -510,7 +525,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "MINI_SHAI_HULUD_LOADER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "mini-shai-hulud-preinstall-bun",
@@ -520,7 +535,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINI_SHAI_HULUD_PREINSTALL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- Mini Shai-Hulud @antv / Nx Console / actions-cool wave (May 2026) ---
@@ -537,7 +552,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ANTV_WAVE_KITTY_PERSISTENCE",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "antv-wave-firedalazer-deaddrop",
@@ -547,7 +562,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ANTV_WAVE_FIREDALAZER",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "antv-wave-otel-c2-masquerade",
@@ -557,7 +572,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "ANTV_WAVE_OTEL_C2",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- DPRK OtterCookie Node.js stealer (May 22, 2026) ---
@@ -572,7 +587,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "OTTERCOOKIE_HMAC_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "ottercookie-notify-endpoint",
@@ -582,7 +597,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "OTTERCOOKIE_C2_ENDPOINT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- Megalodon GitHub Actions workflow injection (May 22, 2026) ---
@@ -598,7 +613,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MEGALODON_C2_ENDPOINT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // --- coa/rc npm hijack ---
@@ -610,7 +625,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "COA_RC_SDD_DLL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "coa-rc-postinstall-encoded",
@@ -621,7 +636,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "COA_RC_POSTINSTALL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 ];
 
@@ -970,7 +985,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Periodic network request detected (setInterval + fetch). This is a common beacon pattern for C2 communication.",
     severity: "medium",
     rule: "BEACON_INTERVAL_FETCH",
-    notFilePattern: /\.min\.(js|css)$/,
+    notFilePattern: /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
   {
@@ -994,7 +1009,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINER_STRATUM_PROTOCOL",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "mining-pool-domain",
@@ -1005,7 +1020,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINER_POOL_DOMAIN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "mining-config-keys",
@@ -1015,7 +1030,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Mining configuration keys detected. This may be a cryptocurrency miner configuration.",
     severity: "high",
     rule: "MINER_CONFIG_KEYS",
-    notFilePattern: /\.json$/,
+    notFilePattern: /\.json$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
   {
@@ -1027,7 +1042,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "MINER_LIBRARY_REF",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // Suspicious WebSocket connections
@@ -1051,7 +1066,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Locale/timezone check followed by destructive code. This is a protestware pattern that targets users by geography.",
     severity: "critical",
     rule: "PROTESTWARE_LOCALE_DESTRUCT",
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
   {
@@ -1062,7 +1077,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "GeoIP lookup combined with destructive operations detected. This is a protestware/geo-targeted attack pattern.",
     severity: "critical",
     rule: "PROTESTWARE_GEOIP_DESTRUCT",
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
 ];
@@ -1208,7 +1223,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     rule: "SHAI_HULUD_WORM",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "shai-hulud-npmrc-steal",
@@ -1220,7 +1235,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     rule: "SHAI_HULUD_CRED_STEAL",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // Expanded protestware
@@ -1233,7 +1248,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     severity: "critical",
     rule: "PROTESTWARE_IP_GEO_V2",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 ];
 
@@ -1260,7 +1275,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
-    notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$/,
+    notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
   {
@@ -1378,7 +1393,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DEAD_DROP_STEAM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "dead-drop-telegram",
@@ -1389,7 +1404,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "DEAD_DROP_TELEGRAM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "dead-drop-pastebin",
@@ -1400,7 +1415,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DEAD_DROP_PASTEBIN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "dead-drop-dns-txt",
@@ -1411,7 +1426,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "medium",
     rule: "DEAD_DROP_DNS_TXT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // Browser credential theft patterns
@@ -1423,7 +1438,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Browser credential/cookie file access pattern. Infostealers (Vidar, Lumma, RedLine) steal browser data from these paths.",
     severity: "high",
     rule: "VIDAR_BROWSER_THEFT",
-    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
 
@@ -1437,7 +1452,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "VIDAR_WALLET_THEFT",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
   // SOCKS5 proxy / backconnect patterns
@@ -1450,7 +1465,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "GHOSTSOCKS_SOCKS5",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "proxy-backconnect",
@@ -1460,7 +1475,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Reverse proxy/backconnect pattern. Infected machines are registered as proxy nodes for criminal infrastructure.",
     severity: "high",
     rule: "PROXY_BACKCONNECT",
-    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
 
@@ -1473,7 +1488,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
     rule: "DROPPER_TEMP_EXEC",
-    notFilePattern: /\.json$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/,
+    notFilePattern: /\.json$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
   {
@@ -1485,7 +1500,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DROPPER_ANTIVM",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "dropper-sleep-evasion",
@@ -1496,7 +1511,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "DROPPER_SLEEP_EVASION",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 ];
 
@@ -1547,6 +1562,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "CAMPAIGN_CLAUDE_LURE",
     notTestFile: true,
+    // Stay on .md - lure patterns target malicious READMEs by design.
     notFilePattern: SCANNER_SRC,
   },
   {
@@ -1600,6 +1616,7 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PROMPT_INJECTION_SYSTEM_REMINDER",
     onlyFilePattern: DOC_FILE_PATTERN,
+    // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
     notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
@@ -1612,6 +1629,7 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PROMPT_INJECTION_CHATML",
     onlyFilePattern: DOC_FILE_PATTERN,
+    // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
     notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
@@ -1625,6 +1643,7 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PROMPT_INJECTION_INST_TAG",
     onlyFilePattern: DOC_FILE_PATTERN,
+    // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
     notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
@@ -1637,6 +1656,7 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PROMPT_INJECTION_ROLE_TOKEN",
     onlyFilePattern: DOC_FILE_PATTERN,
+    // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
     notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
@@ -1652,6 +1672,7 @@ export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "PROMPT_INJECTION_OVERRIDE_PROSE",
     onlyFilePattern: DOC_FILE_PATTERN,
+    // Prompt-injection patterns target docs - stay on .md, only exclude scanner source.
     notFilePattern: SCANNER_SRC,
     notTestFile: true,
   },
@@ -1670,7 +1691,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
     severity: "medium",
     rule: "C2_DOH_RESOLVER",
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
   {
@@ -1681,6 +1702,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "GitHub Gist used as dead-drop resolver. Gists store C2 configuration that changes without updating malware code.",
     severity: "high",
     rule: "DEAD_DROP_GIST",
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
   {
@@ -1691,6 +1713,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "Dynamic config fetch followed by code execution. Runtime C2 command pattern.",
     severity: "high",
     rule: "C2_DYNAMIC_CONFIG",
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
   {
@@ -1701,6 +1724,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "WebSocket connection with dynamically constructed URL. Hides C2 server address.",
     severity: "high",
     rule: "C2_WEBSOCKET_DYNAMIC",
+    notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
 ];
@@ -1715,7 +1739,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_AWS_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "secrets-github-token",
@@ -1726,7 +1750,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_GITHUB_TOKEN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "secrets-private-key",
@@ -1737,7 +1761,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_PRIVATE_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "secrets-ssh-key-read",
@@ -1748,7 +1772,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_SSH_KEY_READ",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "secrets-npm-token",
@@ -1759,7 +1783,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "critical",
     rule: "SECRETS_NPM_TOKEN",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
   {
     name: "secrets-generic-api-key",
@@ -1770,7 +1794,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
     severity: "high",
     rule: "SECRETS_GENERIC_API_KEY",
     notTestFile: true,
-    notFilePattern: SCANNER_SRC,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 ];
 

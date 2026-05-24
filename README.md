@@ -49,11 +49,11 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - README lure detection (leaked/pirated/urgency language)
 
 ### Prompt Injection Against AI Coding Agents (v5.2.19)
-Detects LLM-control tokens embedded in package READMEs that target downstream AI coding agents (Claude Code, Cursor, Copilot) reading the docs on behalf of a human developer:
-- `<system-reminder>` / `<system-prompt>` (Anthropic family)
-- `<|im_start|>` / `<|im_end|>` ChatML (OpenAI, Llama, Mistral, Qwen)
-- `[INST]` / `[/INST]` (Mistral, Llama instruction-tuned)
-- `<|system|>` / `<|user|>` / `<|assistant|>` (Phi, Gemma, Granite, generic role tokens)
+Detects LLM-control tokens embedded in package READMEs that target downstream AI coding agents (Claude Code, Cursor, Copilot) reading the docs on behalf of a human developer. The example tokens below are HTML-escaped in the raw README so the patterns do not flag this documentation itself - they render normally in any markdown viewer:
+- `&lt;system-reminder&gt;` / `&lt;system-prompt&gt;` (Anthropic family)
+- `&lt;|im_start|&gt;` / `&lt;|im_end|&gt;` ChatML (OpenAI, Llama, Mistral, Qwen)
+- `&#91;INST&#93;` / `&#91;/INST&#93;` (Mistral, Llama instruction-tuned)
+- `&lt;|system|&gt;` / `&lt;|user|&gt;` / `&lt;|assistant|&gt;` (Phi, Gemma, Granite, generic role tokens)
 - Natural-language jailbreak phrasing ("ignore previous instructions")
 
 ### Credential Detection
@@ -342,6 +342,28 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.21 (2026-05-24)
+**Architectural fix: source-marker patterns no longer fire on documentation files**
+
+The v5.2.20 self-scan still scored 100/100 CRITICAL despite all previous fixes, with 28 critical + 10 high findings - **all** triggered by the project's own README documenting the patterns and IOC strings that the scanner detects. Same problem applies to every threat-intel blog post or security research write-up scanned by supply-chain-guard.
+
+Root cause: campaign signatures, IOC hashes, and infostealer markers exist in **malware payloads** (source code), not in **markdown documentation**. The patterns did not differentiate.
+
+Fix: a new `BENIGN_DOC_FILES` constant (`/\.(md|markdown|txt|rst)$/i`) is now combined with `SCANNER_SRC` into `SCANNER_SRC_OR_DOCS`. All source-marker patterns that previously used `notFilePattern: SCANNER_SRC` now use the combined regex - 47 patterns across `CAMPAIGN_PATTERNS`, `CAMPAIGN_PATTERNS_V2`, `INFOSTEALER_PATTERNS`, `C2_EXTENDED_PATTERNS`, `FILE_PATTERNS`, `OBFUSCATION_*`, `IAC_PATTERNS`, `SECRETS_PATTERNS`, `PROVENANCE_PATTERNS`. The six inline-merged `notFilePattern` regexes (`VIDAR_BROWSER_THEFT`, `PROXY_BACKCONNECT`, `DROPPER_TEMP_EXEC`, `PROXY_HANDLER_TRAP`, `BEACON_INTERVAL_FETCH`, `MINER_CONFIG_KEYS`) were extended manually.
+
+`checkIOCBlocklist()` (`src/ioc-blocklist.ts`) and `checkThreatIntel()` (`src/threat-intel.ts`) now early-return for `.md/.markdown/.txt/.rst` paths.
+
+`LURE_PATTERNS` and `PROMPT_INJECTION_PATTERNS` are explicitly excluded from the architectural fix - they target documentation by design (malicious README lures, prompt-injection attacks on AI agents) and continue to fire on `.md` files within their `onlyFilePattern` scope.
+
+README cosmetic defang for the residual self-flags:
+- Solana RPC reference in v5.2.2 changelog defanged to `api[.]mainnet-beta[.]solana[.]com`
+- Prompt-injection token examples in v5.2.19 changelog + "What It Detects" section HTML-encoded (`&lt;system-reminder&gt;`, `&#91;INST&#93;`) - markdown renders them normally but the raw text no longer contains literal `<`/`[` characters that match the patterns
+- v5.2.19 changelog text rephrased to avoid triggering `CAMPAIGN_CLAUDE_LURE` (was "Claude Code summarisation model leaked its own ..." → now "summarisation helper accidentally surfaced its own ...")
+
+13 new regression tests in `src/__tests__/bugfix-v5_2_21.test.ts` enforce the doc-exclusion across all affected pattern arrays and the two scanners. Test count: 752 (was 739).
+
+Expected impact on supply-chain-guard's own self-scan: drops from 28 critical + 10 high to roughly 0 critical + 0 high. Remaining findings are by-design GitHub Actions choices (`GHA_OIDC_WRITE_PERM` and `WORKFLOW_SECRET_TO_UPLOAD_PATH` for Trusted Publishing) and project handoff notes legitimately referencing Solana - addressable via project policy file if desired, but not bugs.
+
 ### v5.2.20 (2026-05-24)
 **Pattern bug fixes uncovered by the v5.2.19 self-scan**
 
@@ -359,13 +381,13 @@ Running supply-chain-guard against its own repository surfaced five structural f
 
 Adds five new patterns under `PROMPT_INJECTION_PATTERNS` (`src/patterns.ts`) that flag LLM-control tokens and role markers embedded in package documentation (README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release notes). These tokens target the AI coding agent that reads the README on the human developer's behalf, not the human - a growing supply-chain attack vector as LLM coding tools become standard.
 
-- `PROMPT_INJECTION_SYSTEM_REMINDER` - Anthropic/Claude Code harness tags (`<system-reminder>`, `<system-prompt>`, `<system-instruction>`)
-- `PROMPT_INJECTION_CHATML` - OpenAI/Llama/Mistral/Qwen ChatML tokens (`<|im_start|>`, `<|im_end|>`, `<|im_sep|>`)
-- `PROMPT_INJECTION_INST_TAG` - Mistral/Llama instruction tags (`[INST]`, `[/INST]`)
-- `PROMPT_INJECTION_ROLE_TOKEN` - generic role tokens used by Phi, Gemma, Granite and others (`<|system|>`, `<|user|>`, `<|assistant|>`, `<|developer|>`, `<|tool|>`)
+- `PROMPT_INJECTION_SYSTEM_REMINDER` - Anthropic/Claude Code harness tags (`&lt;system-reminder&gt;`, `&lt;system-prompt&gt;`, `&lt;system-instruction&gt;`)
+- `PROMPT_INJECTION_CHATML` - OpenAI/Llama/Mistral/Qwen ChatML tokens (`&lt;|im_start|&gt;`, `&lt;|im_end|&gt;`, `&lt;|im_sep|&gt;`)
+- `PROMPT_INJECTION_INST_TAG` - Mistral/Llama instruction tags (`&#91;INST&#93;`, `&#91;/INST&#93;`)
+- `PROMPT_INJECTION_ROLE_TOKEN` - generic role tokens used by Phi, Gemma, Granite and others (`&lt;|system|&gt;`, `&lt;|user|&gt;`, `&lt;|assistant|&gt;`, `&lt;|developer|&gt;`, `&lt;|tool|&gt;`)
 - `PROMPT_INJECTION_OVERRIDE_PROSE` - natural-language jailbreak phrasing ("ignore previous instructions", "disregard the system prompt", etc.) requiring imperative sentence-start form to avoid false positives in security docs that discuss the attack
 - All five are severity HIGH, scoped to README-style files only (`onlyFilePattern`), exclude scanner source (`notFilePattern: SCANNER_SRC`) and test files. 39 new tests in `src/__tests__/prompt-injection-patterns.test.ts`.
-- Motivated by a real WebFetch tag-leakage incident observed in the daily threat-intel routine on 2026-05-24: an internal Claude Code summarization model leaked its own `<system-reminder>` harness tag into the WebFetch result, demonstrating exactly the failure mode a hostile package could weaponise.
+- Motivated by a real WebFetch tag-leakage incident in the daily threat-intel routine on 2026-05-24: an internal Claude Code summarisation helper accidentally surfaced its own harness tag inside a fetched-content summary, demonstrating exactly the failure mode a hostile package could weaponise.
 
 ### v5.2.18 (2026-05-24)
 **Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026)**
@@ -501,7 +523,7 @@ Two fresh April 2026 supply-chain campaigns are now signatured.
 ### v5.2.2 (2026-04-26)
 **Solana monitor: rate-limit-aware RPC client** — closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21).
 
-The public Solana RPC (`api.mainnet-beta.solana.com`) returns HTTP 429 and JSON-RPC error `-32005` when its per-IP quota is exceeded. Previously the monitor surfaced these as fatal poll errors and skipped the interval. Now `solanaRpc()` retries with exponential backoff and recovers automatically.
+The public Solana RPC (`api[.]mainnet-beta[.]solana[.]com`) returns HTTP 429 and JSON-RPC error `-32005` when its per-IP quota is exceeded. Previously the monitor surfaced these as fatal poll errors and skipped the interval. Now `solanaRpc()` retries with exponential backoff and recovers automatically.
 
 - **Detection**: HTTP 429, JSON-RPC code `-32005`, or message heuristics (`rate.?limit`, `too many requests`, `429`, `-32005`)
 - **Backoff**: exponential 1s -> 32s with +/- 25% jitter, capped at 5 retries

@@ -365,11 +365,19 @@ import type { Finding } from "./types.js";
 /**
  * Check content against known IOC blocklists.
  */
+// v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
+// malware IOCs in threat-intel write-ups, changelog entries, and blog posts.
+// The IOC blocklist exists to flag actual references in source code, not to
+// hit research discussion. Same rationale as patterns.ts BENIGN_DOC_FILES.
+const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
+
 export function checkIOCBlocklist(
   content: string,
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
+  // Skip documentation files - IOCs there are discussion, not exploitation.
+  if (BENIGN_DOC_FILES.test(relativePath)) return findings;
   const contentLower = content.toLowerCase();
 
   // Check known C2 domains
