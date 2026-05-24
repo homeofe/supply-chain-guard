@@ -1436,4 +1436,73 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Laravel-Lang DebugElevator PHP credential stealer (May 23, 2026)
+  // =================================================================
+
+  describe("Laravel-Lang DebugElevator (May 2026)", () => {
+    it("should detect flipboxstudio.info C2 domain", async () => {
+      // .php is not in SCANNABLE_EXTENSIONS; use .js to exercise IOC matching
+      fs.writeFileSync(
+        path.join(tempDir, "helpers.js"),
+        'const c2 = "https://flipboxstudio.info/exfil";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect DebugElevator helpers.php SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect DebugElevator variant SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Packagist 8-package GitHub-binary attack (May 23, 2026)
+  // =================================================================
+
+  describe("Packagist parikhpreyash4 Binary Attack (May 2026)", () => {
+    it("should detect parikhpreyash4 attacker GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "postinstall.js"),
+        'const url = "https://github.com/parikhpreyash4/systemd-network-helper-aa5c751f/releases/download/v1/gvfsd-network";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

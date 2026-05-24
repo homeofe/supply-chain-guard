@@ -256,6 +256,34 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "ip", value: "216.126.225.243", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
   { type: "url", value: "216.126.225.243:8087/api/notify", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
   { type: "hash", value: "049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9", severity: "critical", confidence: 1.0, family: "OtterCookie", campaign: "DPRK OtterCookie Node.js Stealer", firstSeen: "2026-05-22" },
+
+  // Laravel-Lang DebugElevator PHP credential stealer (May 23, 2026)
+  // Four Composer packages (laravel-lang/{lang,http-statuses,attributes,actions}) had
+  // GitHub version tags abused to republish ~700 historical versions with a malicious
+  // src/helpers.php carrying a ~5,900-line PHP credential stealer that exfiltrates to
+  // flipboxstudio.info/exfil. PDB references developer "Mero" and "claude" in artifacts.
+  { type: "domain", value: "flipboxstudio.info", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "hash", value: "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "hash", value: "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:laravel-lang/lang", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:laravel-lang/http-statuses", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:laravel-lang/attributes", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:laravel-lang/actions", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+
+  // Packagist 8-package GitHub-hosted Linux binary attack (May 23, 2026)
+  // Coordinated supply-chain hit against 8 Composer packages on Packagist whose dev
+  // branches had package.json postinstall hooks added to download a Linux ELF
+  // (gvfsd-network) from github.com/parikhpreyash4/systemd-network-helper-aa5c751f and
+  // execute it from /tmp/.sshd. Attacker GitHub account removed after disclosure.
+  // Attack mixed JS toolchain hooks into PHP projects to bypass Composer-side review.
+  { type: "package", value: "composer:moritz-sauer-13/silverstripe-cms-theme", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:crosiersource/crosierlib-base", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:devdojo/wave", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:devdojo/genesis", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:katanaui/katana", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:elitedevsquad/sidecar-laravel", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:r2luna/brain", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  { type: "package", value: "composer:baskarcm/tzi-chat-ui", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
 ];
 
 const CACHE_DIR = ".scg-cache";

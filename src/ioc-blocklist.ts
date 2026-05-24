@@ -69,6 +69,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Shared C2 domain across all three concurrent TeamPCP supply-chain attacks
   // (637 @antv versions, actions-cool/issues-helper + maintain-one-comment, nrwl.angular-console 18.95.0)
   "t.m-kosche.com",
+
+  // Laravel-Lang DebugElevator PHP credential stealer (May 23, 2026)
+  // 4 Composer packages hijacked via abused GitHub version tags, ~700 historical
+  // versions republished with src/helpers.php containing ~5,900-line PHP stealer.
+  // Exfiltrates to /exfil endpoint; PDB references developer "Mero" and "claude".
+  "flipboxstudio.info",
 ];
 
 // ---------------------------------------------------------------------------
@@ -173,6 +179,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // Obfuscator.io-style obfuscation; 41 crypto-wallet extension IDs; 200+ file patterns; uses
   // hardcoded HMAC-SHA256 key "SuperStr0ngSecret@)@^"; WSL/macOS/Linux scanning
   "049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9": "DPRK OtterCookie Node.js stealer payload (SHA256)",
+
+  // Laravel-Lang DebugElevator PHP credential stealer (May 23, 2026)
+  // Hijacked Composer packages laravel-lang/{lang,http-statuses,attributes,actions}; ~700 versions
+  // republished with malicious src/helpers.php exfiltrating to flipboxstudio.info/exfil
+  "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053": "DebugElevator src/helpers.php PHP stealer (SHA256)",
+  "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2": "DebugElevator src/helpers.php PHP stealer variant (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -197,6 +209,13 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
 
   // Phantom Bot DDoS + Shai-Hulud clone npm infostealer publisher (May 2026)
   "deadcode09284814",
+
+  // Packagist 8-package Linux binary supply-chain attack (May 23, 2026)
+  // Attacker pushed dev-branch commits to 8 Composer packages whose package.json
+  // postinstall scripts pull a Linux ELF binary (gvfsd-network) from this account's
+  // GitHub Releases to /tmp/.sshd. Account removed but still referenced in package
+  // manifests of compromised dev branches.
+  "parikhpreyash4",
 ];
 
 // ---------------------------------------------------------------------------

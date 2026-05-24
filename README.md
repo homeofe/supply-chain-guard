@@ -334,6 +334,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.18 (2026-05-24)
+**Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026)**
+
+Two coordinated Composer / Packagist supply-chain attacks disclosed within hours of each other on 2026-05-23.
+
+- **Laravel-Lang DebugElevator** (The Hacker News and BleepingComputer, 2026-05-23): four Composer packages in the `laravel-lang` namespace (`laravel-lang/lang`, `laravel-lang/http-statuses`, `laravel-lang/attributes`, `laravel-lang/actions`) had their GitHub version tags abused to republish roughly 700 historical versions, each carrying a malicious `src/helpers.php` containing a ~5,900-line PHP credential-stealing framework that exfiltrates to `flipboxstudio[.]info/exfil`. PDB-style references in the artifacts mention developer handles `Mero` and `claude`. Added the C2 domain plus two payload SHA-256 hashes (`f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053`, `23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2`) and four `composer:` package IOCs to the bundled feed, plus a new campaign test block.
+- **Packagist `parikhpreyash4` binary attack** (The Hacker News, 2026-05-23): coordinated hit on eight Composer packages (`moritz-sauer-13/silverstripe-cms-theme`, `crosiersource/crosierlib-base`, `devdojo/wave`, `devdojo/genesis`, `katanaui/katana`, `elitedevsquad/sidecar-laravel`, `r2luna/brain`, `baskarcm/tzi-chat-ui`) whose dev branches had `package.json` postinstall hooks added that pull a Linux ELF (`gvfsd-network`) from `github[.]com/parikhpreyash4/systemd-network-helper-aa5c751f` and execute it from `/tmp/.sshd`. Mixing JS toolchain hooks into PHP projects let the payload sidestep Composer-side review. Added the attacker GitHub account to the malicious-accounts list, the eight `composer:` package IOCs to the bundled feed, and a campaign test block.
+
 ### v5.2.17 (2026-05-23)
 **Threat intel: Megalodon GitHub workflow injection + DPRK OtterCookie Node.js stealer (May 22, 2026)**
 
