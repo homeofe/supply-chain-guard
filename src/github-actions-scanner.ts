@@ -278,7 +278,15 @@ function checkWorkflowPatterns(
     const regex = new RegExp(pattern.pattern, pattern.flags ?? "i");
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
+      const rawLine = lines[i] ?? "";
+      // v5.2.22: strip YAML comments before matching. A comment line
+      // mentioning "id-token: write" or "secrets.X" as documentation is
+      // not the actual workflow declaring those - it's prose. Without
+      // this strip, the v5.2.21 self-scan flagged "id-token: write" in
+      // the OIDC explanation comment of ci.yml as a real permission.
+      const line = stripYamlComment(rawLine);
+      if (!line.trim()) continue;
+
       const match = regex.exec(line);
       if (match) {
         findings.push({
@@ -293,6 +301,28 @@ function checkWorkflowPatterns(
       }
     }
   }
+}
+
+/**
+ * Strip a trailing YAML comment from a line. A `#` that is preceded by
+ * whitespace or at line start starts a comment; `#` inside quoted strings
+ * is preserved. v5.2.22.
+ */
+function stripYamlComment(line: string): string {
+  let inSingle = false;
+  let inDouble = false;
+  for (let j = 0; j < line.length; j++) {
+    const ch = line[j];
+    if (ch === "'" && !inDouble) inSingle = !inSingle;
+    else if (ch === '"' && !inSingle) inDouble = !inDouble;
+    else if (ch === "#" && !inSingle && !inDouble) {
+      // Comment marker: must be at start of line or preceded by whitespace
+      if (j === 0 || /\s/.test(line[j - 1]!)) {
+        return line.slice(0, j);
+      }
+    }
+  }
+  return line;
 }
 
 /**
