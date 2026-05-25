@@ -294,6 +294,15 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // Listed for direct name match in extensions.json / dependency manifests.
   "^nrwl\\.angular-console$",
 
+  // TrapDoor cross-ecosystem credential stealer - npm packages (May 25, 2026)
+  // 21 malicious npm packages from actor ddjidd564 targeting AI/DeFi/Web3 devs.
+  // Reported by The Hacker News May 25, 2026; sibling PyPI/Crates.io waves.
+  "^(async-pipeline-builder|build-scripts-utils|chain-key-validator|crypto-credential-scanner|defi-env-auditor|defi-threat-scanner|deployment-key-auditor|dev-env-bootstrapper|eth-wallet-sentinel|llm-context-compressor|mnemonic-safety-check|model-switch-router|node-setup-helpers|project-init-tools|prompt-engineering-toolkit|solidity-deploy-guard|token-usage-tracker|wallet-backup-verifier|wallet-security-checker|web3-secrets-detector|workspace-config-loader)$",
+
+  // Polymarket impersonation - typosquats of Polymarket SDK (May 22, 2026)
+  // Publisher polymarketdev; wallet-key exfiltration via Cloudflare Worker.
+  "^polymarket-(trading-cli|terminal|trade|auto-trade|copy-trading|bot|claude-code|ai-agent|trader)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -882,6 +891,12 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   "^(colourama|colrama|coloram)$",
   "^(setuptool|setuptoolss)$",
   "^(flaskk|flaask|fl4sk)$",
+
+  // TrapDoor cross-ecosystem credential stealer - PyPI packages (May 25, 2026)
+  // 7 malicious PyPI packages from the same actor (ddjidd564) operating the npm /
+  // Crates.io waves; targets DeFi / Web3 / Solidity / Ethereum developer tooling.
+  "^(cryptowallet-safety|data-pipeline-check|defi-risk-scanner|env-loader-cli|eth-security-auditor|git-config-sync|solidity-build-guard)$",
+
   // Very long single-word lowercase names
   "^[a-z]{20,}$",
 ];

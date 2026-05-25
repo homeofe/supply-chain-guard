@@ -75,6 +75,16 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // versions republished with src/helpers.php containing ~5,900-line PHP stealer.
   // Exfiltrates to /exfil endpoint; PDB references developer "Mero" and "claude".
   "flipboxstudio.info",
+
+  // TrapDoor cross-ecosystem credential stealer (npm/PyPI/Crates.io, May 25, 2026)
+  // 34+ malicious packages across three registries by single actor ddjidd564
+  // targeting AI / DeFi / Web3 developers. GitHub Pages dead-drop C2.
+  "ddjidd564.github.io",
+
+  // Polymarket impersonation npm publisher polymarketdev (May 22, 2026)
+  // 9 npm packages typosquatting Polymarket SDK; wallet-key exfiltration via
+  // Cloudflare Worker. Surfaced alongside Megalodon GitHub Actions campaign.
+  "polymarketbot.polymarketdev.workers.dev",
 ];
 
 // ---------------------------------------------------------------------------
@@ -216,6 +226,22 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // GitHub Releases to /tmp/.sshd. Account removed but still referenced in package
   // manifests of compromised dev branches.
   "parikhpreyash4",
+
+  // TrapDoor cross-ecosystem credential stealer (May 25, 2026)
+  // Single actor maintaining 34+ malicious packages across npm/PyPI/Crates.io
+  // and a GitHub Pages dead-drop at ddjidd564.github.io.
+  "ddjidd564",
+
+  // Polymarket impersonation npm publisher (May 22, 2026)
+  // 9 typosquats of Polymarket SDK with wallet-key exfiltration.
+  "polymarketdev",
+
+  // Megalodon GitHub Actions workflow injection throwaways (May 22, 2026)
+  // Throwaway accounts pushed 5,718 workflow-injection commits to 5,561 repos in
+  // ~6 hours, forging author identities like build-bot / auto-ci / ci-bot / pipeline-bot.
+  "rkb8el9r",
+  "bhlru9nr",
+  "lo6wt4t6",
 ];
 
 // ---------------------------------------------------------------------------
@@ -353,6 +379,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "mistralai": {
     versions: ["2.4.6"],
     description: "Mini Shai-Hulud / TeamPCP: Mistral AI PyPI client hijack with worm payload (May 2026)",
+  },
+  "durabletask": {
+    versions: ["1.4.1", "1.4.2", "1.4.3"],
+    description: "Mini Shai-Hulud / TeamPCP: officially Microsoft-published durabletask Python SDK trojanized (SANS ISC diary 33016, May 24, 2026)",
   },
 };
 

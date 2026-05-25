@@ -342,6 +342,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.25 (2026-05-25)
+**Threat-intel update: TrapDoor, Polymarket typosquats, durabletask, Megalodon throwaways**
+
+Five new campaigns ingested from the daily threat-intel sweep (sources: The Hacker News, SANS ISC, BleepingComputer, May 22-25, 2026):
+
+- **TrapDoor cross-ecosystem credential stealer (2026-05-25)**: single actor `ddjidd564` pushing 34+ malicious packages across npm (21), PyPI (7), and Crates.io (6). Targets AI / DeFi / Web3 / Sui Move tooling. Dead-drop hosted at `ddjidd564[.]github[.]io`. Added 1 domain, 1 GitHub account, 34 package IOCs, 2 regex families (npm + PyPI), 2 test cases.
+- **Mini Shai-Hulud / TeamPCP durabletask (2026-05-24)**: per SANS ISC diary 33016, three malicious versions (`1.4.1`, `1.4.2`, `1.4.3`) of the officially Microsoft-published `durabletask` PyPI package were republished by the TeamPCP campaign. First confirmed compromise of an upstream Microsoft-signed package in this wave. Added to `KNOWN_BAD_PYPI_VERSIONS` and `BUNDLED_FEED`.
+- **Polymarket impersonation (2026-05-22)**: npm publisher `polymarketdev` pushed 9 typosquats of the Polymarket SDK (`polymarket-trading-cli`, `-terminal`, `-trade`, `-auto-trade`, `-copy-trading`, `-bot`, `-claude-code`, `-ai-agent`, `-trader`). Wallet-key exfiltration via Cloudflare Worker at `polymarketbot[.]polymarketdev[.]workers[.]dev/v1/wallets/keys`. Added 1 domain, 1 GitHub account, 9 package IOCs, 1 regex family.
+- **Megalodon throwaway accounts (2026-05-22)**: three previously unattributed GitHub throwaway accounts (`rkb8el9r`, `bhlru9nr`, `lo6wt4t6`) used in the 5,718-commit workflow-injection blast against 5,561 repos. C2 (`216[.]126[.]225[.]129:8443`) was already in v5.2.24. Added the three accounts to `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`.
+
+3 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domain + attacker GitHub account).
+
 ### v5.2.24 (2026-05-24)
 **`RISK_TRAJECTORY_UNSTABLE` no longer flags monotone improvement as instability**
 

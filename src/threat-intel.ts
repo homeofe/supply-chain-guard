@@ -284,6 +284,73 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "composer:elitedevsquad/sidecar-laravel", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
   { type: "package", value: "composer:r2luna/brain", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
   { type: "package", value: "composer:baskarcm/tzi-chat-ui", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+
+  // TrapDoor cross-ecosystem credential stealer (npm/PyPI/Crates.io, May 25, 2026)
+  // Reported by The Hacker News on May 25, 2026. Single actor (ddjidd564) published
+  // 34+ malicious packages targeting AI / DeFi / Web3 / Move-on-Sui developers:
+  // 21 npm packages, 7 PyPI packages, 6 Crates.io packages. C2 / dead-drop hosted
+  // on GitHub Pages at ddjidd564.github.io.
+  { type: "domain", value: "ddjidd564.github.io", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  // npm packages (21)
+  { type: "package", value: "async-pipeline-builder", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "build-scripts-utils", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "chain-key-validator", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "crypto-credential-scanner", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "defi-env-auditor", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "defi-threat-scanner", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "deployment-key-auditor", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "dev-env-bootstrapper", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "eth-wallet-sentinel", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "llm-context-compressor", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "mnemonic-safety-check", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "model-switch-router", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "node-setup-helpers", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "project-init-tools", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "prompt-engineering-toolkit", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "solidity-deploy-guard", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "token-usage-tracker", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "wallet-backup-verifier", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "wallet-security-checker", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "web3-secrets-detector", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "workspace-config-loader", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  // PyPI packages (7)
+  { type: "package", value: "cryptowallet-safety", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "data-pipeline-check", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "defi-risk-scanner", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "env-loader-cli", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "eth-security-auditor", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "git-config-sync", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "solidity-build-guard", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  // Crates.io packages (6) - Sui / Move toolchain typosquats
+  { type: "package", value: "cargo:move-analyzer-build", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "cargo:move-compiler-tools", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "cargo:move-project-builder", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "cargo:sui-framework-helpers", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "cargo:sui-move-build-helper", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+  { type: "package", value: "cargo:sui-sdk-build-utils", severity: "critical", confidence: 1.0, family: "TrapDoor", campaign: "TrapDoor Cross-Ecosystem", firstSeen: "2026-05-25" },
+
+  // Mini Shai-Hulud / TeamPCP - Microsoft-published durabletask PyPI trojanized (May 24, 2026)
+  // Per SANS ISC diary 33016 (May 25, 2026): three malicious versions published to PyPI
+  // for the officially Microsoft-maintained durabletask package, marking the first
+  // confirmed compromise of an upstream Microsoft-signed package in the TeamPCP campaign.
+  { type: "package", value: "durabletask@1.4.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", firstSeen: "2026-05-24" },
+  { type: "package", value: "durabletask@1.4.2", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", firstSeen: "2026-05-24" },
+  { type: "package", value: "durabletask@1.4.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", firstSeen: "2026-05-24" },
+
+  // Polymarket impersonation npm packages (publisher polymarketdev, May 22, 2026)
+  // Surfaced in The Hacker News Megalodon write-up: 9 typosquats of the Polymarket
+  // SDK publishing through the polymarketdev account, exfiltrating wallet keys to a
+  // Cloudflare Worker at polymarketbot.polymarketdev.workers.dev/v1/wallets/keys.
+  { type: "domain", value: "polymarketbot.polymarketdev.workers.dev", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-trading-cli", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-terminal", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-trade", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-auto-trade", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-copy-trading", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-bot", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-claude-code", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-ai-agent", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+  { type: "package", value: "polymarket-trader", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
 ];
 
 const CACHE_DIR = ".scg-cache";
