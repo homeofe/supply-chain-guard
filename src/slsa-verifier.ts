@@ -35,6 +35,32 @@ const SLSA_LEVEL3_PATTERNS = [
   /uses:\s+slsa-framework\/slsa-github-generator/i,
 ];
 
+/**
+ * Modern canonical SLSA Level 3 path for npm packages.
+ *
+ * `npm publish --provenance` (npm >= 9.5, mandatory under npm Trusted Publishing
+ * since 11.5) generates a Sigstore-signed provenance statement using the GitHub
+ * Actions OIDC identity, publishes it to the npm registry, and records it in
+ * the public Rekor transparency log. The result is cryptographically
+ * non-falsifiable provenance bound to the workflow identity and a specific
+ * source commit - the same L3 guarantees the slsa-github-generator reusable
+ * workflow produces, just specialised for the npm ecosystem.
+ *
+ * Requires both signals in the same workflow corpus:
+ *   - `npm publish ... --provenance` flag (the publish step itself)
+ *   - `id-token: write` permission (OIDC required for Sigstore signing)
+ *
+ * Without `id-token: write` the publish would fail at runtime, so the check is
+ * defence-in-depth: it ensures the workflow could actually mint provenance, not
+ * just that someone typed the flag into a non-functional config.
+ *
+ * v5.2.26: added so projects following the npm-native path (e.g. our own ci.yml)
+ * are recognised at the level they actually achieve, instead of being parked at
+ * L2 because they don't import the slsa-github-generator reusable workflow.
+ */
+const NPM_PROVENANCE_PATTERN = /npm\s+publish[^\n]*--provenance/i;
+const OIDC_TOKEN_WRITE_PATTERN = /id-token:\s*write/i;
+
 /** Attestation file names that indicate provenance is present */
 const ATTESTATION_FILES = [
   "provenance.json",
@@ -141,6 +167,14 @@ export function getSLSALevel(dir: string): number {
 
   if (hasHermeticPattern && (hasHermeticBuild || attestation)) return 3;
 
+  // Level 3 (npm-native path): `npm publish --provenance` + OIDC permission.
+  // Sigstore-signed, Rekor-logged provenance bound to the workflow identity
+  // is non-falsifiable and service-generated - the same security substance
+  // as the slsa-github-generator path, just specialised for npm artifacts.
+  const hasNpmProvenance = NPM_PROVENANCE_PATTERN.test(allWorkflowContent);
+  const hasOidcTokenWrite = OIDC_TOKEN_WRITE_PATTERN.test(allWorkflowContent);
+  if (hasNpmProvenance && hasOidcTokenWrite) return 3;
+
   // Level 2: signed provenance action or cosign
   const hasLevel2 = SLSA_LEVEL2_PATTERNS.some((p) =>
     p.test(allWorkflowContent),
@@ -187,8 +221,12 @@ export function verifySLSA(dir: string): Finding[] {
         "Build inputs are not fully verified.",
       severity: "info",
       recommendation:
-        "Move to a reusable, hermetic workflow and publish a provenance.intoto.jsonl attestation " +
-        "alongside each release to reach SLSA Level 3.",
+        "Pick the L3 path that fits your ecosystem. " +
+        "For npm packages: add `--provenance` to `npm publish` and grant `id-token: write` " +
+        "permission in the publish job - npm 9.5+ then produces Sigstore-signed, Rekor-logged " +
+        "provenance bound to the workflow identity. " +
+        "For other ecosystems: call `slsa-framework/slsa-github-generator` from a reusable " +
+        "workflow (`workflow_call`) and attach the `provenance.intoto.jsonl` to each release.",
     });
   }
   // Level 3: no findings — fully compliant

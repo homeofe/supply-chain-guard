@@ -342,6 +342,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.26 (2026-05-25)
+**SLSA verifier recognises `npm publish --provenance` + OIDC as Level 3**
+
+The SLSA verifier's L3 patterns required the literal string `slsa-framework/slsa-github-generator` in a workflow. That predated npm's `--provenance` flag (added in npm 9.5, mandatory under Trusted Publishing since npm 11.5), which produces Sigstore-signed, Rekor-logged provenance bound to the GitHub Actions OIDC identity - cryptographically the same L3 guarantees the slsa-github-generator reusable workflow produces, just specialised for npm artifacts.
+
+New L3 detection path in `slsa-verifier.ts`: a workflow corpus containing both
+- `npm publish ... --provenance`, AND
+- `id-token: write` permission
+
+is recognised as Level 3. Without `id-token: write` the publish would fail at runtime, so the OIDC permission is required defence-in-depth to ensure the workflow can actually mint provenance, not just that someone typed the flag into a non-functional config.
+
+The `SLSA_UNSIGNED_ARTIFACTS` recommendation now describes both L3 paths (npm-native vs. slsa-github-generator) so projects pick the one that fits their ecosystem.
+
+4 new tests in `slsa-verifier.test.ts` cover: combined `--provenance` + OIDC returns L3, `--provenance` alone stays at L2, OIDC alone stays at L1, and the two signals split across separate workflow files in the same `.github/workflows/` directory still register as L3.
+
+Expected impact on the self-scan: the `SLSA_UNSIGNED_ARTIFACTS` INFO finding drops because our own `ci.yml` already has the L3 npm-native combination since v5.2.20.
+
 ### v5.2.25 (2026-05-25)
 **Threat-intel update: TrapDoor, Polymarket typosquats, durabletask, Megalodon throwaways**
 

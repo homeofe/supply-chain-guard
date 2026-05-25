@@ -102,6 +102,84 @@ jobs:
     fs.writeFileSync(path.join(tmpDir, "Makefile"), "build:\n\tnpm run build\n");
     expect(getSLSALevel(tmpDir)).toBe(1);
   });
+
+  // -------------------------------------------------------------------------
+  // npm-native L3 path: `npm publish --provenance` + OIDC `id-token: write`
+  // Added v5.2.26. Mirrors the slsa-github-generator path for the npm ecosystem.
+  // -------------------------------------------------------------------------
+
+  it("should return 3 when npm publish --provenance is combined with id-token: write", () => {
+    mkWorkflow(tmpDir, "ci.yml", `
+on:
+  push:
+    tags: ['v*']
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npm publish --access public --provenance
+`);
+    expect(getSLSALevel(tmpDir)).toBe(3);
+  });
+
+  it("should return 2 when --provenance is present but id-token: write is missing", () => {
+    // Without id-token: write the publish would fail at runtime; we refuse
+    // to credit L3 for a non-functional configuration.
+    mkWorkflow(tmpDir, "ci.yml", `
+on: push
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance
+`);
+    expect(getSLSALevel(tmpDir)).toBe(2);
+  });
+
+  it("should return 1 when id-token: write is present without --provenance", () => {
+    // OIDC permission alone (e.g. for AWS auth) doesn't establish provenance.
+    mkWorkflow(tmpDir, "ci.yml", `
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: echo "deploy"
+`);
+    expect(getSLSALevel(tmpDir)).toBe(1);
+  });
+
+  it("should treat --provenance + id-token:write split across two workflow files as L3", () => {
+    // Detection scans the concatenated content of all workflows in
+    // .github/workflows/, mirroring how reviewers read a repo's CI surface.
+    mkWorkflow(tmpDir, "perms.yml", `
+on: workflow_call
+jobs:
+  setup:
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo perms
+`);
+    mkWorkflow(tmpDir, "publish.yml", `
+on: push
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance --access public
+`);
+    expect(getSLSALevel(tmpDir)).toBe(3);
+  });
 });
 
 describe("verifySLSA", () => {
@@ -146,5 +224,36 @@ jobs:
     const findings = verifySLSA(tmpDir);
     const finding = findings.find((f) => f.rule === "SLSA_LEVEL_0");
     expect(finding?.recommendation).toContain("slsa-framework");
+  });
+
+  it("should emit no findings for L3 npm-native path (--provenance + id-token: write)", () => {
+    mkWorkflow(tmpDir, "ci.yml", `
+on:
+  push:
+    tags: ['v*']
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: npm publish --provenance
+`);
+    const findings = verifySLSA(tmpDir);
+    expect(findings).toHaveLength(0);
+  });
+
+  it("should mention both L3 paths in the SLSA_UNSIGNED_ARTIFACTS recommendation", () => {
+    mkWorkflow(tmpDir, "release.yml", `
+jobs:
+  sign:
+    steps:
+      - uses: sigstore/cosign-action@v3
+`);
+    const findings = verifySLSA(tmpDir);
+    const finding = findings.find((f) => f.rule === "SLSA_UNSIGNED_ARTIFACTS");
+    expect(finding?.recommendation).toContain("--provenance");
+    expect(finding?.recommendation).toContain("id-token: write");
+    expect(finding?.recommendation).toContain("slsa-framework/slsa-github-generator");
   });
 });
