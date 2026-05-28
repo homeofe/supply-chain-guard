@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
+import { MALICIOUS_PACKAGE_PATTERNS } from "../patterns.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -1583,6 +1584,81 @@ describe("Campaign Signatures", () => {
       fs.writeFileSync(
         path.join(tempDir, "commit.js"),
         'const author = "https://github.com/rkb8el9r";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // ACR Stealer fake Claude page (SANS ISC 33018, May 26, 2026)
+  // =================================================================
+
+  describe("ACR Stealer Fake Claude Page (May 2026)", () => {
+    it("should detect primemetricsa.com payload-download domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const dl = "https://primemetricsa.com/1518925";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect enhanceblabber.cc C2 via a rotating subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "https://yw.enhanceblabber.cc/beacon";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect ACR Stealer component SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "70b5ecc110e074dbca92932c0e840ea3492ea0a43c3f215b71392c12b02213b2";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Malware-Slop npm infostealer (OX Security via THN, May 27, 2026)
+  // =================================================================
+
+  describe("Malware-Slop npm (mouse5212-super-formatter, May 2026)", () => {
+    it("should match mouse5212-super-formatter against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("mouse5212-super-formatter"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should flag the unplowed3584 attacker GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/unplowed3584/archive-sync";'
       );
 
       const report = await scan({ target: tempDir, format: "text" });

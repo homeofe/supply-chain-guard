@@ -303,6 +303,10 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // Publisher polymarketdev; wallet-key exfiltration via Cloudflare Worker.
   "^polymarket-(trading-cli|terminal|trade|auto-trade|copy-trading|bot|claude-code|ai-agent|trader)$",
 
+  // Malware-Slop npm infostealer (OX Security via The Hacker News, May 27, 2026)
+  // Fully malicious package by actor unplowed3584; uploads Claude AI user-directory files to GitHub.
+  "^mouse5212-super-formatter$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

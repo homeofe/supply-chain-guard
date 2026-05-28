@@ -351,6 +351,23 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "polymarket-claude-code", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
   { type: "package", value: "polymarket-ai-agent", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
   { type: "package", value: "polymarket-trader", severity: "critical", confidence: 1.0, family: "PolymarketStealer", campaign: "Polymarket Typosquat", firstSeen: "2026-05-22" },
+
+  // ACR Stealer fake Claude page / Google Search malvertising (SANS ISC diary 33018, May 26, 2026)
+  // Claude-impersonation pages via Google Search ads -> corrupted zip -> PowerShell loader -> ACR Stealer.
+  // Base domains stored (attacker-controlled; subdomains rotate). i.ibb.co (legit ImgBB) deliberately omitted.
+  { type: "domain", value: "fairpoint29.com", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "domain", value: "primemetricsa.com", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "domain", value: "creativecommunityinfo.art", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "domain", value: "enhanceblabber.cc", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "hash", value: "70b5ecc110e074dbca92932c0e840ea3492ea0a43c3f215b71392c12b02213b2", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "hash", value: "a14c3ecf5eb3d2543358482e43dc765dbf9ee7a4bec7571f5ecb8829ca719692", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+  { type: "hash", value: "47fa746422f1bf6b7712dc6803378e6a995488007193a7441d790f70d204728f", severity: "critical", confidence: 1.0, family: "ACRStealer", campaign: "ACR Stealer Fake Claude Page", firstSeen: "2026-05-26" },
+
+  // Malware-Slop npm infostealer (OX Security via The Hacker News, May 27, 2026)
+  // npm package mouse5212-super-formatter (~676 downloads) masquerades as an archive
+  // deployment-sync utility, authenticates to GitHub and recursively uploads files from
+  // /mnt/user-data (Claude AI user directory) into repos under attacker account unplowed3584.
+  { type: "package", value: "mouse5212-super-formatter", severity: "critical", confidence: 1.0, family: "MalwareSlop", campaign: "Malware-Slop npm", firstSeen: "2026-05-27" },
 ];
 
 const CACHE_DIR = ".scg-cache";

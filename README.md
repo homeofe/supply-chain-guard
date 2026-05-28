@@ -342,6 +342,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.27 (2026-05-28)
+**Threat-intel update: ACR Stealer fake-Claude page, Malware-Slop npm infostealer**
+
+Two new campaigns ingested from the daily threat-intel sweep (sources: SANS ISC, The Hacker News / OX Security, May 26-27, 2026):
+
+- **ACR Stealer fake Claude page (2026-05-26)**: per SANS ISC diary 33018, Claude-impersonation pages pushed via Google Search ads serve a corrupted zip that fetches a PowerShell loader leading to ACR Stealer. Added 4 attacker-controlled base domains (`fairpoint29[.]com`, `primemetricsa[.]com`, `creativecommunityinfo[.]art`, `enhanceblabber[.]cc`) and 3 component SHA-256 hashes to `ioc-blocklist.ts` + `BUNDLED_FEED`. Base domains are stored (not the reported random subdomains) so the entries survive subdomain rotation. The legitimate ImgBB host `i[.]ibb[.]co` (abused to stage `init-block.jpg`) is deliberately NOT listed, to avoid mass false positives.
+- **Malware-Slop npm infostealer (2026-05-27)**: per OX Security via The Hacker News, npm package `mouse5212-super-formatter` (~676 downloads) masquerades as an archive deployment-sync utility, authenticates to GitHub and recursively uploads files from the Claude AI user directory (`/mnt/user-data`) into repos created under attacker account `unplowed3584` (now removed). Added the package to `MALICIOUS_PACKAGE_PATTERNS` + `BUNDLED_FEED` and the account to `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`.
+
+Not ingested this sweep: the GlassWorm C2 takedown (CrowdStrike/Google/Shadowserver) is defensive news with no new blockable indicators, and BTMOB RAT is an Android banking trojan outside the developer supply-chain scope.
+
+2 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domain + component hash + attacker account + malicious package name).
+
 ### v5.2.26 (2026-05-25)
 **SLSA verifier recognises `npm publish --provenance` + OIDC as Level 3**
 

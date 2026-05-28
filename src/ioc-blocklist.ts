@@ -85,6 +85,16 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // 9 npm packages typosquatting Polymarket SDK; wallet-key exfiltration via
   // Cloudflare Worker. Surfaced alongside Megalodon GitHub Actions campaign.
   "polymarketbot.polymarketdev.workers.dev",
+
+  // ACR Stealer fake Claude page / Google Search malvertising (SANS ISC diary 33018, May 26, 2026)
+  // Claude-impersonation pages pushed via Google Search ads serve a corrupted zip that
+  // fetches a PowerShell script leading to ACR Stealer. Base domains stored (attacker-
+  // controlled; subdomains rotate). i.ibb.co (legit ImgBB image host abused to stage
+  // init-block.jpg) is intentionally NOT listed to avoid mass false positives.
+  "fairpoint29.com",
+  "primemetricsa.com",
+  "creativecommunityinfo.art",
+  "enhanceblabber.cc",
 ];
 
 // ---------------------------------------------------------------------------
@@ -195,6 +205,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // republished with malicious src/helpers.php exfiltrating to flipboxstudio.info/exfil
   "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053": "DebugElevator src/helpers.php PHP stealer (SHA256)",
   "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2": "DebugElevator src/helpers.php PHP stealer variant (SHA256)",
+
+  // ACR Stealer fake Claude page / Google Search malvertising (SANS ISC diary 33018, May 26, 2026)
+  // Corrupted zip -> PowerShell loader -> ACR Stealer infection chain.
+  "70b5ecc110e074dbca92932c0e840ea3492ea0a43c3f215b71392c12b02213b2": "ACR Stealer fake-Claude page component (SHA256)",
+  "a14c3ecf5eb3d2543358482e43dc765dbf9ee7a4bec7571f5ecb8829ca719692": "ACR Stealer fake-Claude page component (SHA256)",
+  "47fa746422f1bf6b7712dc6803378e6a995488007193a7441d790f70d204728f": "ACR Stealer fake-Claude page component (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -242,6 +258,12 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "rkb8el9r",
   "bhlru9nr",
   "lo6wt4t6",
+
+  // Malware-Slop npm infostealer mouse5212-super-formatter (OX Security via THN, May 27, 2026)
+  // Throwaway account created May 26, 2026 (hours before first malicious publish); the npm
+  // package authenticates to GitHub and recursively uploads /mnt/user-data (Claude AI user
+  // directory) files into attacker-created repos under this account. Account now removed.
+  "unplowed3584",
 ];
 
 // ---------------------------------------------------------------------------
