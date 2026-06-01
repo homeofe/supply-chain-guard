@@ -342,6 +342,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.28 (2026-06-01)
+**Threat-intel update: codexui-android Codex stealer, LiteLLM PyPI backdoor, vpmdhaj Sicoob/cloud-secret cluster**
+
+Three new campaigns ingested from the daily threat-intel sweep (sources: Aikido, The Hacker News, Trail of Bits, Socket.dev, May 22 - June 1, 2026):
+
+- **codexui-android Codex token stealer (2026-05-27)**: Aikido and The Hacker News disclosed a legitimate-looking Codex remote-UI npm package (~27K-29K weekly downloads) that since version `0.1.82` reads the OpenAI Codex auth file, XOR-encrypts with key `anyclaw2026`, base64-encodes and POSTs to `sentry[.]anyclaw[.]store/startlog`. Same endpoint is hit by the bundled Android apps "OpenClaw Codex Claude AI Agent" (`gptos.intelligence.assistant`) and "Codex" (`codex.app`) running the package in a PRoot sandbox. Added the C2 domain, the package name regex, 9 known-bad versions (`0.1.82`-`0.1.90`), and the publisher GitHub accounts `friuns2` / `BrutalStrike`.
+- **LiteLLM PyPI compromise (2026-03-24, re-disclosed 2026-05-22)**: Trail of Bits' "We hardened zizmor" post detailed the TeamPCP-claimed compromise of `litellm` `1.82.7` / `1.82.8` on PyPI, originating from a poisoned Trivy step in LiteLLM's own CI/CD security workflow. A `litellm_init.pth` auto-runs on every Python startup; three-stage payload (50+ category credential harvester with RSA-4096 + AES-256 hybrid encryption, Kubernetes lateral-movement toolkit, persistent backdoor) exfils to `models[.]litellm[.]cloud` and polls `checkmarx[.]zone` (Checkmarx-brand abuse to bypass DNS allowlists) every 50 minutes. Added the two C2 domains and the two known-bad PyPI versions.
+- **vpmdhaj Sicoob/Cloud-Secret cluster (2026-05-28)**: Socket via The Hacker News reported a single actor (`vpmdhaj`, `a39155771[@]gmail[.]com`) running two parallel waves. Five NuGet versions `Sicoob.Sdk` `2.0.0`-`2.0.4` impersonate a C# SDK for Brazilian cooperative bank Sicoob and exfiltrate PFX certificates + client IDs + PFX passwords to a hardcoded Sentry DSN. Fourteen npm typosquats of OpenSearch / ElasticSearch / DevOps / env-config libraries harvest AWS creds, HashiCorp Vault tokens, npm tokens, CI/CD secrets through preinstall hooks; C2 auth via hardcoded `X-Secret` header `l95HdDaz3kQx1Zsg3WxH6HvKANf51RY1`. Added 5 NuGet + 14 npm IOCs, the GitHub org `Sicoob-Cooperativa`, the contributor `joaobcdev`, and 2 regex families (scoped `@vpmdhaj/*` + unscoped typosquats).
+
+3 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domains + package-name patterns + attacker accounts).
+
 ### v5.2.27 (2026-05-28)
 **Threat-intel update: ACR Stealer fake-Claude page, Malware-Slop npm infostealer**
 

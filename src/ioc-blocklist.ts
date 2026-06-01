@@ -95,6 +95,24 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "primemetricsa.com",
   "creativecommunityinfo.art",
   "enhanceblabber.cc",
+
+  // codexui-android npm token stealer (Aikido, disclosed May 27, 2026; THN June 1, 2026)
+  // Legitimate-looking Codex remote-UI npm package (~27K-29K weekly downloads since
+  // 0.1.82). Reads the user's OpenAI Codex auth file, XOR-encrypts with key
+  // "anyclaw2026", base64-encodes and POSTs to /startlog on the C2. Same endpoint is
+  // hit by the bundled Android apps "OpenClaw Codex Claude AI Agent" and "Codex"
+  // running the package in a PRoot sandbox. Package still live at publish time.
+  "sentry.anyclaw.store",
+
+  // LiteLLM PyPI supply-chain compromise (March 24, 2026; re-disclosed Trail of Bits May 22, 2026)
+  // TeamPCP-claimed compromise of litellm 1.82.7 / 1.82.8 dropped a litellm_init.pth
+  // that auto-runs on every Python startup. Three-stage payload: 50+ category cred
+  // harvester (RSA-4096 + AES-256 hybrid encryption) exfil to models.litellm.cloud,
+  // Kubernetes lateral-movement toolkit, persistent backdoor polling checkmarx.zone
+  // (Checkmarx-brand abuse to bypass DNS allowlists) every 50 minutes for second
+  // stages. Origin: poisoned Trivy in LiteLLM's own CI/CD.
+  "models.litellm.cloud",
+  "checkmarx.zone",
 ];
 
 // ---------------------------------------------------------------------------
@@ -264,6 +282,21 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // package authenticates to GitHub and recursively uploads /mnt/user-data (Claude AI user
   // directory) files into attacker-created repos under this account. Account now removed.
   "unplowed3584",
+
+  // codexui-android npm token stealer publisher (Aikido, May 27, 2026)
+  // GitHub identity behind the malicious codex-mobile / codexui-android project. Also
+  // operates under the "BrutalStrike" handle (5M+ install Android FPS game uses shared
+  // infrastructure). Listed for source-code references to the project repo.
+  "friuns2",
+  "BrutalStrike",
+
+  // Sicoob.Sdk NuGet impersonation + vpmdhaj npm cloud-secret stealers (Socket via THN, May 28-29, 2026)
+  // Sicoob-Cooperativa is a GitHub org spun up to lend legitimacy to the fake Sicoob
+  // banking SDK NuGet package; joaobcdev is the listed contributor; the 14 sibling
+  // npm packages were published under the npm account "vpmdhaj" (a39155771@gmail.com)
+  // and used the X-Secret HTTP header "l95HdDaz3kQx1Zsg3WxH6HvKANf51RY1" for C2 auth.
+  "Sicoob-Cooperativa",
+  "joaobcdev",
 ];
 
 // ---------------------------------------------------------------------------
@@ -375,6 +408,10 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["4.1.2", "4.2.2"],
     description: "Mini Shai-Hulud / TeamPCP: timeago.js hijack via atool maintainer account (May 2026)",
   },
+  "codexui-android": {
+    versions: ["0.1.82", "0.1.83", "0.1.84", "0.1.85", "0.1.86", "0.1.87", "0.1.88", "0.1.89", "0.1.90"],
+    description: "codexui-android: OpenAI Codex auth-token stealer; XOR (key 'anyclaw2026') + base64 POST to sentry.anyclaw.store/startlog (Aikido, disclosed May 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -405,6 +442,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "durabletask": {
     versions: ["1.4.1", "1.4.2", "1.4.3"],
     description: "Mini Shai-Hulud / TeamPCP: officially Microsoft-published durabletask Python SDK trojanized (SANS ISC diary 33016, May 24, 2026)",
+  },
+  "litellm": {
+    versions: ["1.82.7", "1.82.8"],
+    description: "LiteLLM PyPI compromise (TeamPCP): litellm_init.pth auto-runs on Python startup; RSA-4096+AES-256 credential exfil to models.litellm.cloud; persistent backdoor polling checkmarx.zone every 50min (March 24, 2026; Trail of Bits write-up May 22, 2026)",
   },
 };
 

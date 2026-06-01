@@ -307,6 +307,19 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // Fully malicious package by actor unplowed3584; uploads Claude AI user-directory files to GitHub.
   "^mouse5212-super-formatter$",
 
+  // codexui-android npm Codex token stealer (Aikido, disclosed May 27, 2026)
+  // Legitimate-looking Codex remote-UI package; since 0.1.82 every invocation XOR-encrypts
+  // the OpenAI Codex auth file (key "anyclaw2026") + base64 + POST to sentry.anyclaw.store.
+  "^codexui-android$",
+
+  // vpmdhaj cloud-secret npm cluster (Socket via The Hacker News, May 28-29, 2026)
+  // 14 npm typosquats of OpenSearch / ElasticSearch / DevOps / env-config libraries
+  // by actor "vpmdhaj" (a39155771@gmail.com); preinstall hooks harvest AWS creds,
+  // HashiCorp Vault tokens, npm tokens, CI/CD secrets. Published alongside the
+  // Sicoob.Sdk NuGet impersonation. Scoped @vpmdhaj/* names + unscoped typosquats.
+  "^@vpmdhaj\\/(devops-tools|elastic-helper|opensearch-setup|search-setup)$",
+  "^(app-config-utility|elastic-opensearch-helper|env-config-manager|opensearch-config-utility|opensearch-security-scanner|opensearch-setup|opensearch-setup-tool|search-cluster-setup|search-engine-setup|vpmdhaj-opensearch-setup)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

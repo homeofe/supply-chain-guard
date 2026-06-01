@@ -1669,4 +1669,113 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // codexui-android npm Codex token stealer (Aikido, May 27, 2026)
+  // =================================================================
+
+  describe("codexui-android Codex token stealer (May 2026)", () => {
+    it("should detect sentry.anyclaw.store C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const u = "https://sentry.anyclaw.store/startlog";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should match codexui-android against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("codexui-android"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should flag the friuns2 attacker GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/friuns2/codex-mobile";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // LiteLLM PyPI compromise (TeamPCP, March 24, 2026 / re-disclosed May 22, 2026)
+  // =================================================================
+
+  describe("LiteLLM PyPI compromise (TeamPCP, March/May 2026)", () => {
+    it("should detect models.litellm.cloud C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const c2 = "https://models.litellm.cloud/upload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect checkmarx.zone secondary backdoor C2", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poll.js"),
+        'const b = "https://checkmarx.zone/stage2";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // vpmdhaj Sicoob/Cloud-Secret cluster (Socket via THN, May 28-29, 2026)
+  // =================================================================
+
+  describe("vpmdhaj Sicoob/Cloud-Secret cluster (May 2026)", () => {
+    it("should match @vpmdhaj/devops-tools against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("@vpmdhaj/devops-tools"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should match opensearch-security-scanner against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("opensearch-security-scanner"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should flag the Sicoob-Cooperativa attacker GitHub org reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/Sicoob-Cooperativa/sdk-csharp";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

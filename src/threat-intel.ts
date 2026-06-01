@@ -368,6 +368,65 @@ const BUNDLED_FEED: FeedIOC[] = [
   // deployment-sync utility, authenticates to GitHub and recursively uploads files from
   // /mnt/user-data (Claude AI user directory) into repos under attacker account unplowed3584.
   { type: "package", value: "mouse5212-super-formatter", severity: "critical", confidence: 1.0, family: "MalwareSlop", campaign: "Malware-Slop npm", firstSeen: "2026-05-27" },
+
+  // codexui-android npm Codex token stealer (Aikido disclosed May 27, 2026; The Hacker News June 1, 2026)
+  // Legitimate-looking Codex remote-UI npm package with 27K-29K weekly downloads.
+  // Since 0.1.82 every invocation reads the OpenAI Codex auth file, XOR-encrypts with
+  // key "anyclaw2026", base64-encodes and POSTs to sentry.anyclaw.store/startlog.
+  // Mobile vector: Android apps "OpenClaw Codex Claude AI Agent" (gptos.intelligence.assistant)
+  // and "Codex" (codex.app) run the package in PRoot sandbox and hit the same endpoint.
+  { type: "domain", value: "sentry.anyclaw.store", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.82", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.83", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.84", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.85", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.86", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.87", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.88", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.89", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+  { type: "package", value: "codexui-android@0.1.90", severity: "critical", confidence: 1.0, family: "CodexTokenStealer", campaign: "codexui-android", firstSeen: "2026-05-27" },
+
+  // LiteLLM PyPI supply-chain compromise (TeamPCP; March 24, 2026)
+  // Re-disclosed in detail by Trail of Bits "We hardened zizmor" (May 22, 2026) as the
+  // canonical case of upstream-CI-dependency poisoning. Compromised PyPI versions
+  // 1.82.7 and 1.82.8 dropped litellm_init.pth that auto-runs on every Python startup;
+  // three-stage payload (50+ category credential harvester, k8s lateral-movement,
+  // persistent backdoor) exfils via HTTPS to models.litellm.cloud and polls
+  // checkmarx.zone (Checkmarx brand abuse to bypass DNS allowlists) for second stages.
+  // Origin: trojanized Trivy in LiteLLM's own CI/CD security workflow.
+  { type: "domain", value: "models.litellm.cloud", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "LiteLLM PyPI Compromise", firstSeen: "2026-03-24" },
+  { type: "domain", value: "checkmarx.zone", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "LiteLLM PyPI Compromise", firstSeen: "2026-03-24" },
+  { type: "package", value: "litellm@1.82.7", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "LiteLLM PyPI Compromise", firstSeen: "2026-03-24" },
+  { type: "package", value: "litellm@1.82.8", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "LiteLLM PyPI Compromise", firstSeen: "2026-03-24" },
+
+  // Sicoob.Sdk NuGet impersonation + vpmdhaj npm cloud-secret stealers (Socket via THN, May 28-29, 2026)
+  // Single actor "vpmdhaj" (a39155771@gmail.com) ran two parallel waves:
+  //   - 5 NuGet versions (Sicoob.Sdk 2.0.0-2.0.4) impersonating a C# SDK for Brazilian
+  //     cooperative bank Sicoob; exfiltrates PFX certificates + client IDs + PFX passwords
+  //     to a hardcoded Sentry DSN (o4511335034847232.ingest.de.sentry.io/4511337546317904).
+  //   - 14 npm packages typosquatting OpenSearch / ElasticSearch / DevOps / env-config
+  //     libraries; preinstall hook harvests AWS creds, HashiCorp Vault tokens, npm tokens,
+  //     CI/CD secrets. C2 auth via hardcoded X-Secret header "l95HdDaz3kQx1Zsg3WxH6HvKANf51RY1".
+  // Supporting GitHub org Sicoob-Cooperativa + contributor joaobcdev tracked in account list.
+  { type: "package", value: "nuget:Sicoob.Sdk@2.0.0", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "nuget:Sicoob.Sdk@2.0.1", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "nuget:Sicoob.Sdk@2.0.2", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "nuget:Sicoob.Sdk@2.0.3", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "nuget:Sicoob.Sdk@2.0.4", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "@vpmdhaj/devops-tools", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "@vpmdhaj/elastic-helper", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "@vpmdhaj/opensearch-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "@vpmdhaj/search-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "app-config-utility", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "elastic-opensearch-helper", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "env-config-manager", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "opensearch-config-utility", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "opensearch-security-scanner", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "opensearch-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "opensearch-setup-tool", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "search-cluster-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "search-engine-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+  { type: "package", value: "vpmdhaj-opensearch-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
 ];
 
 const CACHE_DIR = ".scg-cache";
