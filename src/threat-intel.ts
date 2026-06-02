@@ -427,6 +427,16 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "search-cluster-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
   { type: "package", value: "search-engine-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
   { type: "package", value: "vpmdhaj-opensearch-setup", severity: "critical", confidence: 1.0, family: "SicoobStealer", campaign: "vpmdhaj Sicoob/Cloud-Secret", firstSeen: "2026-05-28" },
+
+  // Miasma / @redhat-cloud-services Mini Shai-Hulud variant (BleepingComputer + Socket.dev, June 1, 2026)
+  // 32 packages, 96 versions under Red Hat's @redhat-cloud-services namespace trojanized
+  // via a compromised Red Hat employee GitHub account abusing a GitHub Actions workflow
+  // to auto-publish backdoored versions. Payload is a Shai-Hulud descendant labelled
+  // "Miasma: The Spreading Blight"; preinstall runs a ~4.2 MB index.js that steals
+  // GitHub Actions secrets, AWS / GCP / Azure credentials, HashiCorp Vault tokens,
+  // Kubernetes SA tokens, npm and PyPI publishing tokens, SSH keys, Docker creds,
+  // GPG keys, and .env files into ~309 attacker-controlled GitHub repos.
+  { type: "package", value: "@redhat-cloud-services/chrome@2.3.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma / @redhat-cloud-services", firstSeen: "2026-06-01" },
 ];
 
 const CACHE_DIR = ".scg-cache";

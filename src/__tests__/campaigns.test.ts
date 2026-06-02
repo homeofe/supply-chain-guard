@@ -1778,4 +1778,24 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Miasma / @redhat-cloud-services Mini Shai-Hulud variant (June 2026)
+  // =================================================================
+
+  describe("Miasma @redhat-cloud-services Mini Shai-Hulud (June 2026)", () => {
+    it("should detect the 'Miasma: The Spreading Blight' campaign marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const desc = "Miasma: The Spreading Blight"; createRepo(desc);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MIASMA_SPREADING_BLIGHT_MARKER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

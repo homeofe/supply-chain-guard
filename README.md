@@ -342,6 +342,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.29 (2026-06-02)
+**Threat-intel update: Miasma / @redhat-cloud-services Mini Shai-Hulud variant**
+
+One new campaign ingested from the daily threat-intel sweep (sources: BleepingComputer, Socket.dev, June 1, 2026):
+
+- **Miasma / @redhat-cloud-services Mini Shai-Hulud variant (2026-06-01)**: BleepingComputer and Socket.dev disclosed that 32 packages under Red Hat's `@redhat-cloud-services` namespace were trojanized (96 versions) via a compromised Red Hat employee GitHub account abusing a GitHub Actions workflow to auto-publish backdoored versions. Payload is a Shai-Hulud descendant labelled `Miasma: The Spreading Blight`; the preinstall hook runs a ~4.2 MB `node index.js` that steals GitHub Actions secrets, AWS / GCP / Azure credentials, HashiCorp Vault tokens, Kubernetes SA tokens, npm and PyPI publishing tokens, SSH keys, Docker creds, GPG keys, and `.env` files into ~309 attacker-controlled GitHub repos. Added the `Miasma: The Spreading Blight` content-marker pattern, and the Socket-confirmed `@redhat-cloud-services/chrome@2.3.1` known-bad version (the namespace itself is deliberately NOT blocked - clean upstream versions remain legitimate).
+
+Not ingested this sweep: DriveSurge ClickFix/FakeUpdates is web-traffic malvertising with no package IOCs; the Operation Dragon Weave / AdaptixC2 cluster, Dutch 17M-device residential-proxy takedown, and the various non-package CVEs (Windows Netlogon `CVE-2026-41089`, WP Maps Pro `CVE-2026-8732`, PAN-OS GlobalProtect `CVE-2026-0257`, the Linux kernel CIFSwitch privesc) are all outside the developer supply-chain scope. The `api.anthropic.com` endpoint that one threat-intel summary listed as a Miasma "C2 domain" was rejected as either summarizer hallucination or feed poisoning - it is the legitimate Anthropic API host and is intentionally not added.
+
+1 new describe block in `campaigns.test.ts` covers the campaign-marker detection.
+
 ### v5.2.28 (2026-06-01)
 **Threat-intel update: codexui-android Codex stealer, LiteLLM PyPI backdoor, vpmdhaj Sicoob/cloud-secret cluster**
 

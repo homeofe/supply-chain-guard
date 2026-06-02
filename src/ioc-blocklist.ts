@@ -412,6 +412,17 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["0.1.82", "0.1.83", "0.1.84", "0.1.85", "0.1.86", "0.1.87", "0.1.88", "0.1.89", "0.1.90"],
     description: "codexui-android: OpenAI Codex auth-token stealer; XOR (key 'anyclaw2026') + base64 POST to sentry.anyclaw.store/startlog (Aikido, disclosed May 2026)",
   },
+  // --- Miasma / @redhat-cloud-services Mini Shai-Hulud variant (June 1, 2026) -----
+  // 32 packages, 96 versions trojanized via compromised Red Hat employee GitHub
+  // account abusing a GitHub Actions workflow. Payload "Miasma: The Spreading
+  // Blight" - preinstall runs ~4.2 MB index.js, exfils CI/cloud creds to ~309
+  // attacker-controlled GitHub repos. Only the package@version pair confirmed by
+  // Socket is recorded here; the @redhat-cloud-services namespace itself is NOT
+  // blocked, the clean upstream versions remain legitimate.
+  "@redhat-cloud-services/chrome": {
+    versions: ["2.3.1"],
+    description: "Mini Shai-Hulud variant 'Miasma: The Spreading Blight': trojanized @redhat-cloud-services/chrome with preinstall credential stealer; Red Hat employee GitHub account compromise + GitHub Actions abuse (BleepingComputer + Socket.dev, June 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------

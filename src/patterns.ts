@@ -664,6 +664,26 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
+
+  // --- Miasma / @redhat-cloud-services Mini Shai-Hulud variant (June 2026) ---
+  // BleepingComputer + Socket.dev disclosed (June 1, 2026) that 32 packages under
+  // Red Hat's @redhat-cloud-services namespace were trojanized (96 versions) via a
+  // compromised Red Hat employee GitHub account + abused GitHub Actions workflow.
+  // Payload is a Shai-Hulud descendant labelled "Miasma: The Spreading Blight",
+  // preinstall runs a ~4.2 MB node index.js stealing GitHub Actions secrets, AWS
+  // and GCP and Azure credentials, HashiCorp Vault tokens, Kubernetes SA tokens,
+  // npm and PyPI publishing tokens, SSH keys, Docker creds, GPG keys, and .env
+  // files. Exfiltration into ~309 attacker-controlled GitHub repos.
+  {
+    name: "miasma-spreading-blight-marker",
+    pattern: "Miasma:?\\s*The\\s+Spreading\\s+Blight",
+    description:
+      "Miasma campaign marker detected. Signature string used by the June 2026 @redhat-cloud-services Mini Shai-Hulud variant to label dead-drop GitHub repositories.",
+    severity: "critical",
+    rule: "MIASMA_SPREADING_BLIGHT_MARKER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
 ];
 
 // ---------------------------------------------------------------------------
