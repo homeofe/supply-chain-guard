@@ -437,6 +437,19 @@ const BUNDLED_FEED: FeedIOC[] = [
   // Kubernetes SA tokens, npm and PyPI publishing tokens, SSH keys, Docker creds,
   // GPG keys, and .env files into ~309 attacker-controlled GitHub repos.
   { type: "package", value: "@redhat-cloud-services/chrome@2.3.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma / @redhat-cloud-services", firstSeen: "2026-06-01" },
+
+  // June 2026 npm/PyPI infostealer cluster (The Hacker News Weekly Recap, June 8, 2026)
+  // Throwaway-package wave surfaced alongside the GitHub-worm coverage:
+  //   - turbo-axios / faster-axios: trojanized axios copies whose postinstall hooks
+  //     deploy Epsilon Stealer.
+  //   - cms-store-ren: exfiltrates harvested data to Telegram via an exposed bot API token.
+  //   - parsimonius: typosquat of "parsimonious" deploying a Telegram-based backdoor
+  //     (published to both npm and PyPI; ~2,474 downloads before removal).
+  // Bare-name entries: each package is fully malicious, so the name alone is the indicator.
+  { type: "package", value: "turbo-axios", severity: "critical", confidence: 0.9, family: "EpsilonStealer", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
+  { type: "package", value: "faster-axios", severity: "critical", confidence: 0.9, family: "EpsilonStealer", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
+  { type: "package", value: "cms-store-ren", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
+  { type: "package", value: "parsimonius", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm/PyPI cluster", firstSeen: "2026-06-08" },
 ];
 
 const CACHE_DIR = ".scg-cache";

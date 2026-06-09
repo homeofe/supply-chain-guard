@@ -342,6 +342,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.30 (2026-06-09)
+**Threat-intel update: THN Weekly Recap npm/PyPI infostealer cluster**
+
+Four fully-malicious throwaway packages ingested from the daily threat-intel sweep (source: The Hacker News Weekly Recap, June 8, 2026):
+
+- **turbo-axios / faster-axios (npm)**: trojanized copies of `axios` whose `postinstall` hooks deploy Epsilon Stealer.
+- **cms-store-ren (npm)**: exfiltrates harvested data to Telegram via an exposed bot API token.
+- **parsimonius (npm + PyPI)**: typosquat of `parsimonious` deploying a Telegram-based backdoor (~2,474 downloads before removal).
+
+Each package is malicious in its entirety, so the package name itself is the indicator: added to `MALICIOUS_PACKAGE_PATTERNS` (npm), `PYPI_TYPOSQUAT_PATTERNS` (the `parsimonius` PyPI typosquat), and `BUNDLED_FEED` (confidence 0.9, single-source).
+
+Not ingested this sweep: the new Shai-Hulud "Hades" wave against 19 science-focused PyPI packages (Dynamo, Spateo, CoolBox, U-FISH, Napari-UFISH) was confirmed but the affected releases are bad versions of otherwise-legitimate packages and no exact version numbers were published, so blocking the bare names would false-positive on clean installs; its only listed C2 was `api.anthropic.com`, the legitimate Anthropic API host, which is intentionally not added (same call as v5.2.29). The Miasma worm hitting 73 Microsoft GitHub repositories is the same `Miasma: The Spreading Blight` campaign already covered in v5.2.29 (the named Microsoft / `icflorescu` repositories are victims, not malicious accounts). Rust-written IronWorm npm, NFCShare Android, C0XMO botnet, VerdantBamboo BRICKSTORM, and the LiteLLM `CVE-2026-42271` RCE flaw either yielded no extractable package/host IOCs or are outside the developer supply-chain scope.
+
+1 new describe block in `campaigns.test.ts` covers the four package-name patterns.
+
 ### v5.2.29 (2026-06-02)
 **Threat-intel update: Miasma / @redhat-cloud-services Mini Shai-Hulud variant**
 

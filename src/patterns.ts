@@ -320,6 +320,13 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^@vpmdhaj\\/(devops-tools|elastic-helper|opensearch-setup|search-setup)$",
   "^(app-config-utility|elastic-opensearch-helper|env-config-manager|opensearch-config-utility|opensearch-security-scanner|opensearch-setup|opensearch-setup-tool|search-cluster-setup|search-engine-setup|vpmdhaj-opensearch-setup)$",
 
+  // June 2026 npm infostealer cluster (The Hacker News Weekly Recap, June 8, 2026)
+  // turbo-axios / faster-axios: trojanized axios copies whose postinstall hooks deploy
+  // Epsilon Stealer. cms-store-ren: exfiltrates harvested data to Telegram via an exposed
+  // bot API token. parsimonius: typosquat of "parsimonious" deploying a Telegram-based
+  // backdoor (published to both npm and PyPI; ~2,474 downloads before removal).
+  "^(turbo-axios|faster-axios|cms-store-ren|parsimonius)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -933,6 +940,10 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   // 7 malicious PyPI packages from the same actor (ddjidd564) operating the npm /
   // Crates.io waves; targets DeFi / Web3 / Solidity / Ethereum developer tooling.
   "^(cryptowallet-safety|data-pipeline-check|defi-risk-scanner|env-loader-cli|eth-security-auditor|git-config-sync|solidity-build-guard)$",
+
+  // parsimonius: PyPI typosquat of "parsimonious" deploying a Telegram-based backdoor
+  // (also published to npm; The Hacker News Weekly Recap, June 8, 2026).
+  "^parsimonius$",
 
   // Very long single-word lowercase names
   "^[a-z]{20,}$",

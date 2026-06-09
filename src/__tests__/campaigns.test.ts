@@ -1798,4 +1798,38 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // THN Weekly Recap npm/PyPI infostealer cluster (June 8, 2026)
+  // =================================================================
+
+  describe("THN Weekly Recap npm/PyPI cluster (June 2026)", () => {
+    it("should match turbo-axios against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("turbo-axios"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should match faster-axios against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("faster-axios"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should match cms-store-ren against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("cms-store-ren"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should match the parsimonius typosquat against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("parsimonius"),
+      );
+      expect(matches).toBe(true);
+    });
+  });
 });
