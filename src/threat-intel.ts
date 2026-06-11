@@ -450,6 +450,16 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "faster-axios", severity: "critical", confidence: 0.9, family: "EpsilonStealer", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
   { type: "package", value: "cms-store-ren", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
   { type: "package", value: "parsimonius", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm/PyPI cluster", firstSeen: "2026-06-08" },
+
+  // ThreatsDay Bulletin npm cluster (The Hacker News, June 11, 2026)
+  //   - tw-style-utils: poisoned npm package delivering the cross-platform SStar Agent
+  //     RAT (Windows + macOS), pushed via the star45674/smart-contract-engineer-role
+  //     fake job-assignment lure (GitHub account tracked in ioc-blocklist).
+  //   - ambar-src: fully malicious npm package (Tenable) whose download count was
+  //     artificially "pumped" to 50,000+ in three days to manufacture credibility.
+  // Bare-name entries: each package is fully malicious, so the name alone is the indicator.
+  { type: "package", value: "tw-style-utils", severity: "critical", confidence: 0.9, family: "SStarAgent", campaign: "SStar Agent smart-contract-engineer lure", firstSeen: "2026-06-11" },
+  { type: "package", value: "ambar-src", severity: "critical", confidence: 0.9, family: "DownloadPumping", campaign: "ThreatsDay ambar-src", firstSeen: "2026-06-11" },
 ];
 
 const CACHE_DIR = ".scg-cache";

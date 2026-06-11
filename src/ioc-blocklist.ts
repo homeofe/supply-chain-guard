@@ -297,6 +297,18 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // and used the X-Secret HTTP header "l95HdDaz3kQx1Zsg3WxH6HvKANf51RY1" for C2 auth.
   "Sicoob-Cooperativa",
   "joaobcdev",
+
+  // SStar Agent fake "smart contract engineer" job lure (THN ThreatsDay Bulletin, June 11, 2026)
+  // Social-engineering / contagious-interview style lure: a GitHub repo
+  // star45674/smart-contract-engineer-role poses as a coding assignment whose
+  // npm dependency tw-style-utils deploys the cross-platform SStar Agent RAT
+  // (Windows + macOS). Account tracked for repo references in lure assignments.
+  "star45674",
+
+  // Malicious Android APK host (THN ThreatsDay Bulletin, June 11, 2026)
+  // GitHub account antoniocastaldo1998 hosts a malicious Android APK in its
+  // app-scuola repository, pulled down by a separate dropper chain.
+  "antoniocastaldo1998",
 ];
 
 // ---------------------------------------------------------------------------

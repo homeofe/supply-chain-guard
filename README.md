@@ -342,6 +342,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.31 (2026-06-11)
+**Threat-intel update: ThreatsDay Bulletin npm cluster (SStar Agent lure + ambar-src)**
+
+Two fully-malicious npm packages and two malicious GitHub accounts ingested from the daily threat-intel sweep (source: The Hacker News ThreatsDay Bulletin, June 11, 2026):
+
+- **tw-style-utils (npm)**: poisoned package that delivers the cross-platform `SStar Agent` RAT (Windows + macOS). Distributed through the `star45674/smart-contract-engineer-role` fake job-assignment lure (contagious-interview style), tracked as a malicious GitHub account.
+- **ambar-src (npm)**: fully malicious package (Tenable) whose download count was artificially "pumped" to 50,000+ in three days to manufacture credibility.
+- **antoniocastaldo1998 (GitHub account)**: hosts a malicious Android APK in its `app-scuola` repository.
+
+Each package is malicious in its entirety, so the package name itself is the indicator: added to `MALICIOUS_PACKAGE_PATTERNS` and `BUNDLED_FEED` (confidence 0.9, single-source). The two GitHub accounts were added to `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`.
+
+Not ingested this sweep: the Shai-Hulud "Hades" Python variant against PyPI is the same Miasma family already covered in v5.2.29/v5.2.30, and the bulletin published no exact compromised package versions or extractable host IOCs (blocking bare names of otherwise-legitimate packages would false-positive on clean installs). The TeamPCP "Phantom Gyp" wave (SANS ISC diary 33060) named `@vapi-ai/server-sdk` as a victim but disclosed no exact bad version numbers. OnyxC2 stealer (a MaaS builder), the JDY IoT botnet, OceanLotus SPECTRALVIPER, and the Proto6 / `protobuf.js` RCE CVEs either yielded no extractable package/host IOCs or are outside the developer supply-chain scope.
+
+1 new describe block in `campaigns.test.ts` covers the two package-name patterns and the two malicious-account references.
+
 ### v5.2.30 (2026-06-09)
 **Threat-intel update: THN Weekly Recap npm/PyPI infostealer cluster**
 

@@ -1832,4 +1832,52 @@ describe("Campaign Signatures", () => {
       expect(matches).toBe(true);
     });
   });
+
+  // =================================================================
+  // ThreatsDay Bulletin npm cluster (The Hacker News, June 11, 2026)
+  // =================================================================
+
+  describe("ThreatsDay Bulletin npm cluster (June 2026)", () => {
+    it("should match tw-style-utils against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("tw-style-utils"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should match ambar-src against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("ambar-src"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should flag the star45674 SStar Agent lure GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/star45674/smart-contract-engineer-role";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag the antoniocastaldo1998 malicious-APK GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "dropper.js"),
+        'const apk = "https://github.com/antoniocastaldo1998/app-scuola/releases/download/v1/app.apk";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

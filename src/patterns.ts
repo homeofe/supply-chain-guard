@@ -327,6 +327,13 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // backdoor (published to both npm and PyPI; ~2,474 downloads before removal).
   "^(turbo-axios|faster-axios|cms-store-ren|parsimonius)$",
 
+  // ThreatsDay Bulletin npm cluster (The Hacker News, June 11, 2026)
+  // tw-style-utils: poisoned npm package delivering the cross-platform SStar Agent
+  // RAT (Windows + macOS), distributed via the star45674/smart-contract-engineer-role
+  // fake job-assignment lure. ambar-src: fully malicious npm package (Tenable) whose
+  // download count was artificially "pumped" to 50,000+ in three days.
+  "^(tw-style-utils|ambar-src)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
