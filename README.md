@@ -342,6 +342,22 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.32 (2026-06-13)
+**Threat-intel update: Arch Linux AUR mass-hijack npm dropper (atomic-lockfile)**
+
+One confirmed, cross-verified indicator ingested from the daily threat-intel sweep (sources: The Hacker News + BleepingComputer, June 12, 2026):
+
+- **atomic-lockfile@1.4.2 (npm)**: fully malicious package pulled and executed by `preinstall` hooks added to 400+ hijacked Arch User Repository (AUR) build scripts. It installs a credential stealer and an eBPF rootkit on any machine that builds an affected AUR package. The version was published 2026-06-10 and removed by npm security 2026-06-12 (the registry now serves only the `0.0.1-security` holding placeholder), confirming the package had no legitimate history. Added to `MALICIOUS_PACKAGE_PATTERNS` (bare-name), `KNOWN_BAD_NPM_VERSIONS` (version 1.4.2), and `BUNDLED_FEED` (confidence 1.0).
+
+Deliberately not ingested this sweep:
+
+- **temp.sh** (named as the AUR campaign's HTTP exfiltration host): a legitimate public file-sharing service. Blocking it would false-positive on benign code, same rationale used to omit `i.ibb.co` previously.
+- **alvr / premake-git** (named compromised AUR packages): legitimate upstream packages that were hijacked, in an ecosystem this scanner does not version-track; the names alone are not safe indicators.
+- The single-source SHA-256 reported for the AUR payload was not cross-confirmed by a second source, so it was left out rather than risk a hallucinated hash.
+- **TeamPCP "Phantom Gyp" wave** (`@vapi-ai/server-sdk`, SANS ISC diary 33060) and the **Miasma 73-Microsoft-repos worm** (Dark Reading) disclosed no exact compromised versions or extractable host IOCs beyond the `@redhat-cloud-services` coverage already shipped in v5.2.29.
+
+1 new describe block in `campaigns.test.ts` covers the `atomic-lockfile` package-name pattern.
+
 ### v5.2.31 (2026-06-11)
 **Threat-intel update: ThreatsDay Bulletin npm cluster (SStar Agent lure + ambar-src)**
 

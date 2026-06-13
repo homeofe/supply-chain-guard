@@ -334,6 +334,14 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // download count was artificially "pumped" to 50,000+ in three days.
   "^(tw-style-utils|ambar-src)$",
 
+  // Arch Linux AUR mass hijack npm dropper (The Hacker News + BleepingComputer, June 12, 2026)
+  // 400+ Arch User Repository packages had their build scripts rewritten with preinstall
+  // hooks that download and run the fully malicious npm package atomic-lockfile, which
+  // installs a credential stealer + eBPF rootkit. atomic-lockfile@1.4.2 was published
+  // 2026-06-10 and pulled by npm security 2026-06-12 (replaced by the 0.0.1-security
+  // holding placeholder). Bare-name indicator: the package has no legitimate history.
+  "^atomic-lockfile$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

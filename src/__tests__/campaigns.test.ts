@@ -1880,4 +1880,17 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Arch Linux AUR mass hijack npm dropper (June 12, 2026)
+  // =================================================================
+
+  describe("Arch Linux AUR Mass Hijack (June 2026)", () => {
+    it("should match atomic-lockfile against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("atomic-lockfile"),
+      );
+      expect(matches).toBe(true);
+    });
+  });
 });

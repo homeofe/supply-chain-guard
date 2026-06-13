@@ -460,6 +460,13 @@ const BUNDLED_FEED: FeedIOC[] = [
   // Bare-name entries: each package is fully malicious, so the name alone is the indicator.
   { type: "package", value: "tw-style-utils", severity: "critical", confidence: 0.9, family: "SStarAgent", campaign: "SStar Agent smart-contract-engineer lure", firstSeen: "2026-06-11" },
   { type: "package", value: "ambar-src", severity: "critical", confidence: 0.9, family: "DownloadPumping", campaign: "ThreatsDay ambar-src", firstSeen: "2026-06-11" },
+
+  // Arch Linux AUR mass hijack npm dropper (The Hacker News + BleepingComputer, June 12, 2026)
+  //   - atomic-lockfile@1.4.2: fully malicious npm package pulled and executed by preinstall
+  //     hooks added to 400+ hijacked Arch User Repository (AUR) build scripts; installs a
+  //     credential stealer + eBPF rootkit. Published 2026-06-10, removed by npm security
+  //     2026-06-12 (superseded by the 0.0.1-security holding placeholder).
+  { type: "package", value: "atomic-lockfile@1.4.2", severity: "critical", confidence: 1.0, family: "AURInfostealer", campaign: "Arch Linux AUR Mass Hijack", firstSeen: "2026-06-12" },
 ];
 
 const CACHE_DIR = ".scg-cache";

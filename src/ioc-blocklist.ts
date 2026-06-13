@@ -435,6 +435,16 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["2.3.1"],
     description: "Mini Shai-Hulud variant 'Miasma: The Spreading Blight': trojanized @redhat-cloud-services/chrome with preinstall credential stealer; Red Hat employee GitHub account compromise + GitHub Actions abuse (BleepingComputer + Socket.dev, June 2026)",
   },
+  // --- Arch Linux AUR mass hijack npm dropper (June 12, 2026) ---------------------
+  // 400+ Arch User Repository packages had their build scripts rewritten to pull and run
+  // the malicious npm package atomic-lockfile, which installs a credential stealer + eBPF
+  // rootkit on any machine that builds them. Version 1.4.2 was published 2026-06-10 and
+  // removed by npm security 2026-06-12 (superseded by the 0.0.1-security holding
+  // placeholder). Confirmed by The Hacker News + BleepingComputer and the npm registry.
+  "atomic-lockfile": {
+    versions: ["1.4.2"],
+    description: "Arch Linux AUR mass-hijack npm dropper: atomic-lockfile@1.4.2 installs a credential stealer + eBPF rootkit via AUR build-script preinstall hooks; pulled by npm security 2026-06-12 (The Hacker News + BleepingComputer, June 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
