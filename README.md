@@ -342,6 +342,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.33 (2026-06-14)
+**Security: fix devDependency vulnerabilities (vitest, esbuild)**
+
+Dependabot flagged three advisories in the dev/test toolchain. All are `devDependencies` and none ship in the published npm tarball (`files[]` is limited to `dist`, `action.yml`, `README.md`, `LICENSE`, `socket.yml`), so consumers of the package were never exposed - but a security tool should not carry known-vulnerable dev deps.
+
+- **vitest** bumped from `^3.0.0` to `^3.2.6`, resolving CVE-2026-47429 (critical). Stays within the 3.x line to avoid the breaking changes of the Dependabot-proposed 4.x major bump; all 799 tests pass unchanged.
+- **esbuild** forced to `^0.28.1` via an `overrides` entry, resolving GHSA-gv7w-rqvm-qjhr (high) and GHSA-g7r4-m6w7-qqqr (low). vitest 3.x's transitive vite otherwise pins an older esbuild; the override pulls the patched build without a vitest major upgrade.
+- `npm audit` now reports 0 vulnerabilities. Supersedes Dependabot PR #25.
+
+Also adds `.supply-chain-guard.yml` (committed separately) with documented accepted-risk suppressions for the project's own self-scan: `GHA_OIDC_WRITE_PERM` and `WORKFLOW_SECRET_TO_UPLOAD_PATH` are by-design tradeoffs for npm Trusted Publishing, `LOCKFILE_ORPHANED_DEPENDENCY` is informational. Self-scan result: 0/100 clean.
+
 ### v5.2.32 (2026-06-13)
 **Threat-intel update: Arch Linux AUR mass-hijack npm dropper (atomic-lockfile)**
 
