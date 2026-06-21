@@ -342,6 +342,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.35 (2026-06-21)
+**Security: fix vite devDependency vulnerabilities**
+
+Two new advisories in the transitive vite dependency (via vitest), both `devDependencies` that do not ship in the published npm tarball (`files[]` is `dist`, `action.yml`, `README.md`, `LICENSE`, `socket.yml`), so package consumers were never exposed.
+
+- **vite** forced from 7.3.2 to `^7.3.5` via the existing `overrides` block, resolving GHSA-fx2h-pf6j-xcff (high) and GHSA-v6wh-96g9-6wx3 (medium). Patch-level bump within 7.x; all 803 tests pass unchanged.
+- `npm audit` reports 0 vulnerabilities.
+
+Also documents the GitHub Action distribution model in `CLAUDE.md`: `uses: homeofe/supply-chain-guard@v5` now resolves to a floating `v5` branch (kept current by a new `update-major-branch` CI job via fast-forward push), and the GitHub Marketplace publishing limitation (web-UI only, not automatable).
+
 ### v5.2.34 (2026-06-21)
 **Threat-intel update: Mastra npm scope takeover (Sapphire Sleet) + NastyC2 + crypto-javascript worm**
 

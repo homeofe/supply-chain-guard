@@ -17,6 +17,14 @@ Jeder Release MUSS in dieser Reihenfolge laufen. Wenn `npm run build` fehlschlae
 9. **`git tag vX.Y.Z`** NACH dem Commit.
 10. **`git push origin main && git push origin vX.Y.Z`** - CI erzeugt das GitHub-Release.
 
+## GitHub Action Distribution (v5-Branch + Marketplace)
+
+Die Action wird ueber `uses: homeofe/supply-chain-guard@v5` genutzt (README). Wichtig:
+
+- **`v5` ist ein BRANCH, kein Tag.** Er ist ein floatender Major-Ref der immer auf den letzten v5.x.y-Release zeigt. Branches duerfen sich bewegen - das verletzt die "Tags niemals verschieben"-Regel NICHT. Die CI (`update-major-branch` Job in `ci.yml`) zieht ihn bei jedem Tag-Release per Fast-Forward-Push nach (kein `--force`). Nichts manuell noetig.
+- **Die Action ist `composite`** (`action.yml`) und macht `npm install -g supply-chain-guard` zur Laufzeit. Sie braucht KEIN committetes `dist/` (dist ist gitignored). Der `v5`-Branch muss nur `action.yml` enthalten.
+- **Marketplace-Publishing ist NICHT automatisierbar.** GitHub gated es hinter einem Web-UI-Haken ("Publish this Action to the GitHub Marketplace") beim Release-Edit. Es gibt keinen `gh`-Flag, keinen REST/GraphQL-Endpoint, keine offizielle Action. `gh release create` (unsere CI) publiziert NIE zum Marketplace. KEINEN inoffiziellen Cookie/Session-Hack in die CI bauen - das waere selbst ein Supply-Chain-Risiko. Das Marketplace-Dropdown ist reine Discovery-UI; die Action laeuft ueber `@v5` unabhaengig davon auf der neuesten Version. Wenn das Listing aktualisiert werden soll: einmalig manuell im Release-Edit den Haken setzen.
+
 ## Harte Regeln
 
 - **IOCs immer defangen.** Domains, Subdomains, URLs und IPs von Threats werden in Doku, README, Commits, PRs und Chat NIE roh geschrieben. Schema:
