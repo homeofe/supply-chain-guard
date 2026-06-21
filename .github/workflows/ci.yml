@@ -102,3 +102,26 @@ jobs:
             --notes-file release_notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-major-branch:
+    name: Update major version branch
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      # Floating major-version branch so `uses: homeofe/supply-chain-guard@v5`
+      # always resolves to the latest v5.x.y release. This is a BRANCH, not a
+      # tag - branches are meant to move, so this fast-forward push does not
+      # violate the "never move tags" rule. Each release commit descends from
+      # the previous one on main, so this is always a fast-forward (no --force).
+      - name: Fast-forward the major-version branch to this release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"   # 5.2.34
+          MAJOR="v${VERSION%%.*}"          # v5
+          git push origin "HEAD:refs/heads/${MAJOR}"
