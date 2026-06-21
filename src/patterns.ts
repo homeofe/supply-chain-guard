@@ -342,6 +342,19 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // holding placeholder). Bare-name indicator: the package has no legitimate history.
   "^atomic-lockfile$",
 
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // easy-day-js is an attacker-created dayjs clone (no legitimate history) injected as a
+  // dependency into 141 republished @mastra packages via compromised maintainer "ehindero".
+  // Its postinstall hook drops a cross-platform Node.js crypto-stealer RAT. Microsoft
+  // attributes to Sapphire Sleet/BlueNoroff (also behind the April 2026 axios hijack).
+  "^easy-day-js$",
+
+  // NastyC2 npm framework (THN ThreatsDay Bulletin, June 18, 2026)
+  // Three fully malicious npm packages bundling NastyC2, a Rust post-exploitation implant
+  // (80+ commands: credential harvesting, AD attacks, container escape, cloud-metadata
+  // theft, fileless execution). Bare names; each package has no legitimate purpose.
+  "^(node-ci-utils|win-env-setup|macos-ci-utils)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

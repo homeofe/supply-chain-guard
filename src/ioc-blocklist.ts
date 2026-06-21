@@ -154,6 +154,12 @@ export const KNOWN_C2_IPS: string[] = [
   // Ports 8085 (browser creds), 8086 (file uploads), 8087/api/notify (WebSocket reverse shell)
   // Same /24 subnet as Megalodon C2 (216.126.225.0/24) - likely shared DPRK infrastructure
   "216.126.225.243",
+
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // easy-day-js@1.11.22 postinstall dropper -> cross-platform Node.js crypto-stealer RAT.
+  // Dropper C2 on :8000 (/update/49890878); RAT C2 on :443 (/49890878). Both Hostwinds-hosted.
+  "23.254.164.92",
+  "23.254.164.123",
 ];
 
 // ---------------------------------------------------------------------------
@@ -229,6 +235,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "70b5ecc110e074dbca92932c0e840ea3492ea0a43c3f215b71392c12b02213b2": "ACR Stealer fake-Claude page component (SHA256)",
   "a14c3ecf5eb3d2543358482e43dc765dbf9ee7a4bec7571f5ecb8829ca719692": "ACR Stealer fake-Claude page component (SHA256)",
   "47fa746422f1bf6b7712dc6803378e6a995488007193a7441d790f70d204728f": "ACR Stealer fake-Claude page component (SHA256)",
+
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // Only the malicious easy-day-js@1.11.22 tarball + stage-2 RAT are recorded; the clean
+  // precursor easy-day-js@1.11.21 is intentionally NOT listed to avoid false positives.
+  "221c45a790dec2a296af57969e1165a16f8f49733aeab64c0bbd768d9943badf": "Mastra attack easy-day-js stage-2 Node.js crypto-stealer RAT (SHA256)",
+  "4a8860240e4231c3a74c81949be655a28e096a7d72f38fbe84e5b37636b98417": "easy-day-js@1.11.22 malicious npm tarball (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -309,6 +321,14 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // GitHub account antoniocastaldo1998 hosts a malicious Android APK in its
   // app-scuola repository, pulled down by a separate dropper chain.
   "antoniocastaldo1998",
+
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // Compromised npm maintainer account "ehindero" (forgotten contributor with publish
+  // rights across the @mastra scope) republished 141 packages with the malicious
+  // easy-day-js dependency; "sergey2016" is the linked attacker-controlled account.
+  // npm publisher handles, tracked here for source-reference matching.
+  "ehindero",
+  "sergey2016",
 ];
 
 // ---------------------------------------------------------------------------
@@ -444,6 +464,75 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "atomic-lockfile": {
     versions: ["1.4.2"],
     description: "Arch Linux AUR mass-hijack npm dropper: atomic-lockfile@1.4.2 installs a credential stealer + eBPF rootkit via AUR build-script preinstall hooks; pulled by npm security 2026-06-12 (The Hacker News + BleepingComputer, June 2026)",
+  },
+  // --- Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026) ----
+  // Forgotten-contributor npm account "ehindero" was compromised and used to republish
+  // 141 packages across the @mastra scope (01:12-02:36 UTC, 2026-06-17), each gaining a
+  // single new dependency: easy-day-js, a dayjs clone whose postinstall hook disables TLS
+  // verification, contacts attacker C2 (23.254.164.92:8000), downloads and detaches a
+  // cross-platform Node.js crypto-stealer RAT (166 wallet-extension inventory + browser
+  // history harvest). Microsoft attributes to Sapphire Sleet/BlueNoroff (also behind the
+  // April 2026 axios hijack). easy-day-js@1.11.21 is the clean precursor; only 1.11.22 is
+  // malicious. Representative subset of the 143 compromised package@version pairs recorded.
+  "easy-day-js": {
+    versions: ["1.11.22"],
+    description: "Mastra npm scope takeover (Sapphire Sleet/BlueNoroff, DPRK): dayjs clone whose postinstall hook drops a cross-platform Node.js crypto-stealer RAT (disables TLS verify, C2 23.254.164.92); injected as a dependency into 143 republished @mastra packages via compromised maintainer 'ehindero' (June 2026)",
+  },
+  "@mastra/core": {
+    versions: ["1.42.1"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "@mastra/agent-builder": {
+    versions: ["1.0.42"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "@mastra/auth": {
+    versions: ["1.0.3"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "@mastra/claude": {
+    versions: ["1.0.3"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "@mastra/express": {
+    versions: ["1.3.31"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "@mastra/openai": {
+    versions: ["1.0.2"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "mastra": {
+    versions: ["1.13.1"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  "create-mastra": {
+    versions: ["1.13.1"],
+    description: "Mastra npm scope takeover (Sapphire Sleet, DPRK): republished with malicious easy-day-js dependency dropping a crypto-stealer RAT (June 2026)",
+  },
+  // --- NastyC2 npm framework (THN ThreatsDay Bulletin, June 18, 2026) ------------------
+  // Three fully malicious npm packages bundling NastyC2, a Rust post-exploitation implant
+  // implementing 80+ commands (credential harvesting, Active Directory attacks, container
+  // escape, cloud-metadata theft, fileless execution).
+  "node-ci-utils": {
+    versions: ["2.1.4"],
+    description: "NastyC2 npm framework: Rust post-exploitation implant (80+ commands: credential harvesting, AD attacks, container escape, cloud-metadata theft, fileless execution) (THN ThreatsDay, June 2026)",
+  },
+  "win-env-setup": {
+    versions: ["3.0.6"],
+    description: "NastyC2 npm framework: Rust post-exploitation implant (80+ commands: credential harvesting, AD attacks, container escape, cloud-metadata theft, fileless execution) (THN ThreatsDay, June 2026)",
+  },
+  "macos-ci-utils": {
+    versions: ["1.0.0"],
+    description: "NastyC2 npm framework: Rust post-exploitation implant (80+ commands: credential harvesting, AD attacks, container escape, cloud-metadata theft, fileless execution) (THN ThreatsDay, June 2026)",
+  },
+  // --- crypto-javascript cross-ecosystem worm (THN ThreatsDay Bulletin, June 18, 2026) -
+  // Self-propagating supply-chain worm spreading across Rust/Cargo, Python, CMake, and npm
+  // ecosystems; drops a Monero cryptominer and the "Dirty Frag" Linux kernel LPE exploit.
+  // GCC build timestamp 2026-04-30. Version-pinned (common-sounding name).
+  "crypto-javascript": {
+    versions: ["4.2.5"],
+    description: "Cross-ecosystem supply-chain worm (Rust/Cargo/Python/CMake/npm): bundles a Monero cryptominer + 'Dirty Frag' Linux kernel LPE exploit (THN ThreatsDay, June 2026)",
   },
 };
 

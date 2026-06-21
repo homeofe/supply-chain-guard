@@ -467,6 +467,40 @@ const BUNDLED_FEED: FeedIOC[] = [
   //     credential stealer + eBPF rootkit. Published 2026-06-10, removed by npm security
   //     2026-06-12 (superseded by the 0.0.1-security holding placeholder).
   { type: "package", value: "atomic-lockfile@1.4.2", severity: "critical", confidence: 1.0, family: "AURInfostealer", campaign: "Arch Linux AUR Mass Hijack", firstSeen: "2026-06-12" },
+
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // Microsoft-attributed: forgotten-contributor npm account "ehindero" was compromised and
+  // used to republish 141 @mastra-scope packages, each gaining the easy-day-js dependency
+  // (dayjs clone). Its postinstall hook disables TLS verification, contacts the dropper C2
+  // (23.254.164.92:8000 /update/49890878), downloads a stage-2 cross-platform Node.js
+  // crypto-stealer RAT (RAT C2 23.254.164.123:443 /49890878). Both C2s Hostwinds-hosted.
+  // Representative subset of the 143 compromised package@version pairs recorded.
+  { type: "ip", value: "23.254.164.92", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "ip", value: "23.254.164.123", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "hash", value: "221c45a790dec2a296af57969e1165a16f8f49733aeab64c0bbd768d9943badf", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "hash", value: "4a8860240e4231c3a74c81949be655a28e096a7d72f38fbe84e5b37636b98417", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "easy-day-js@1.11.22", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/core@1.42.1", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/agent-builder@1.0.42", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/auth@1.0.3", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/claude@1.0.3", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/express@1.3.31", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "@mastra/openai@1.0.2", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "mastra@1.13.1", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+  { type: "package", value: "create-mastra@1.13.1", severity: "critical", confidence: 1.0, family: "SapphireSleetRAT", campaign: "Mastra npm Scope Takeover", firstSeen: "2026-06-17" },
+
+  // NastyC2 npm framework (The Hacker News ThreatsDay Bulletin, June 18, 2026)
+  // Three fully malicious npm packages bundling NastyC2, a Rust post-exploitation implant
+  // (80+ commands: credential harvesting, AD attacks, container escape, cloud-metadata
+  // theft, fileless execution). No C2 / hashes disclosed in the bulletin.
+  { type: "package", value: "node-ci-utils@2.1.4", severity: "critical", confidence: 0.9, family: "NastyC2", campaign: "NastyC2 npm Framework", firstSeen: "2026-06-18" },
+  { type: "package", value: "win-env-setup@3.0.6", severity: "critical", confidence: 0.9, family: "NastyC2", campaign: "NastyC2 npm Framework", firstSeen: "2026-06-18" },
+  { type: "package", value: "macos-ci-utils@1.0.0", severity: "critical", confidence: 0.9, family: "NastyC2", campaign: "NastyC2 npm Framework", firstSeen: "2026-06-18" },
+
+  // crypto-javascript cross-ecosystem worm (The Hacker News ThreatsDay Bulletin, June 18, 2026)
+  // Self-propagating supply-chain worm across Rust/Cargo, Python, CMake, and npm; drops a
+  // Monero cryptominer + the "Dirty Frag" Linux kernel LPE exploit. GCC timestamp 2026-04-30.
+  { type: "package", value: "crypto-javascript@4.2.5", severity: "critical", confidence: 0.9, family: "CryptoJsWorm", campaign: "crypto-javascript Worm", firstSeen: "2026-06-18" },
 ];
 
 const CACHE_DIR = ".scg-cache";

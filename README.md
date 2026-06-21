@@ -342,6 +342,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.34 (2026-06-21)
+**Threat-intel update: Mastra npm scope takeover (Sapphire Sleet) + NastyC2 + crypto-javascript worm**
+
+Three supply-chain threats ingested from the daily threat-intel sweep:
+
+- **Mastra npm scope takeover (June 17, 2026)**: Microsoft attributes a large-scale npm compromise to Sapphire Sleet (BlueNoroff, DPRK) - the same actor behind the April 2026 axios hijack. A forgotten-contributor npm maintainer account (`ehindero`) was compromised and used to republish 141 packages across the `@mastra` scope (01:12-02:36 UTC), each gaining a single new dependency: `easy-day-js`, a dayjs clone. Its `postinstall` hook disables TLS certificate verification, contacts a dropper C2 at `23[.]254[.]164[.]92:8000` (`/update/49890878`), and downloads a cross-platform Node.js crypto-stealer RAT (RAT C2 `23[.]254[.]164[.]123:443`, both Hostwinds-hosted) that inventories 166 wallet browser extensions and harvests Chrome/Brave/Edge history. Added: `easy-day-js` (bare-name pattern), `easy-day-js@1.11.22` plus a representative subset of the 143 compromised `@mastra` package versions to `KNOWN_BAD_NPM_VERSIONS`, both C2 IPs, two SHA-256 hashes (stage-2 RAT + malicious tarball), the `ehindero`/`sergey2016` accounts, and matching `BUNDLED_FEED` entries (confidence 1.0). The clean precursor `easy-day-js@1.11.21` is deliberately not listed.
+- **NastyC2 npm framework (June 18, 2026)**: three fully malicious npm packages (`node-ci-utils@2.1.4`, `win-env-setup@3.0.6`, `macos-ci-utils@1.0.0`) bundling NastyC2, a Rust post-exploitation implant with 80+ commands (credential harvesting, Active Directory attacks, container escape, cloud-metadata theft, fileless execution). Added as bare-name patterns and version-pinned blocklist/feed entries (confidence 0.9; source: The Hacker News ThreatsDay Bulletin).
+- **crypto-javascript@4.2.5 (June 18, 2026)**: a self-propagating supply-chain worm spreading across Rust/Cargo, Python, CMake, and npm that drops a Monero cryptominer and the "Dirty Frag" Linux kernel LPE exploit. Version-pinned (common-sounding name) in `KNOWN_BAD_NPM_VERSIONS` and `BUNDLED_FEED` (confidence 0.9).
+
+Deliberately not ingested this sweep: the Klue OAuth breach (Icarus), FortiBleed, the NGINX/Splunk CVEs, and the SocGholish takedown - none are package-ecosystem compromises with extractable, version-pinned IOCs. Two new `campaigns.test.ts` describe blocks cover the Mastra and NastyC2 signatures.
+
 ### v5.2.33 (2026-06-14)
 **Security: fix devDependency vulnerabilities (vitest, esbuild)**
 

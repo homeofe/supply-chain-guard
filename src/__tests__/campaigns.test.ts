@@ -1893,4 +1893,60 @@ describe("Campaign Signatures", () => {
       expect(matches).toBe(true);
     });
   });
+
+  // =================================================================
+  // Mastra npm scope takeover / Sapphire Sleet (BlueNoroff, DPRK) (June 17, 2026)
+  // =================================================================
+
+  describe("Mastra npm Scope Takeover (Sapphire Sleet, June 2026)", () => {
+    it("should match easy-day-js against the malicious-name patterns", () => {
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("easy-day-js"),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should flag the ehindero compromised maintainer GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/ehindero/mastra";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag the easy-day-js dropper C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "dropper.js"),
+        'const c2 = "http://23.254.164.92:8000/update/49890878";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // NastyC2 npm framework (THN ThreatsDay Bulletin, June 18, 2026)
+  // =================================================================
+
+  describe("NastyC2 npm Framework (June 2026)", () => {
+    it("should match the NastyC2 package names against the malicious-name patterns", () => {
+      for (const name of ["node-ci-utils", "win-env-setup", "macos-ci-utils"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+  });
 });
