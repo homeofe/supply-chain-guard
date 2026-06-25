@@ -501,6 +501,13 @@ const BUNDLED_FEED: FeedIOC[] = [
   // Self-propagating supply-chain worm across Rust/Cargo, Python, CMake, and npm; drops a
   // Monero cryptominer + the "Dirty Frag" Linux kernel LPE exploit. GCC timestamp 2026-04-30.
   { type: "package", value: "crypto-javascript@4.2.5", severity: "critical", confidence: 0.9, family: "CryptoJsWorm", campaign: "crypto-javascript Worm", firstSeen: "2026-06-18" },
+
+  // PostCSS-impersonation npm packages deliver Windows RAT (The Hacker News, June 23, 2026)
+  // Malicious npm packages posing as PostCSS tooling deliver a Windows-based remote access
+  // trojan. aes-decode-runner-pro (145 downloads) + postcss-min are fully malicious; the feed
+  // excerpt disclosed no C2 / hashes / publisher, so the bare package names are the indicators.
+  { type: "package", value: "postcss-min", severity: "critical", confidence: 0.9, family: "WindowsRAT", campaign: "PostCSS Tools Windows RAT", firstSeen: "2026-06-23" },
+  { type: "package", value: "aes-decode-runner-pro", severity: "critical", confidence: 0.9, family: "WindowsRAT", campaign: "PostCSS Tools Windows RAT", firstSeen: "2026-06-23" },
 ];
 
 const CACHE_DIR = ".scg-cache";

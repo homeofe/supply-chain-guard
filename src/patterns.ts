@@ -355,6 +355,11 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // theft, fileless execution). Bare names; each package has no legitimate purpose.
   "^(node-ci-utils|win-env-setup|macos-ci-utils)$",
 
+  // PostCSS-impersonation npm packages deliver Windows RAT (The Hacker News, June 23, 2026)
+  // Malicious npm packages posing as PostCSS tooling deliver a Windows-based remote access
+  // trojan. aes-decode-runner-pro (145 downloads) + postcss-min are fully malicious; bare names.
+  "^(postcss-min|aes-decode-runner-pro)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

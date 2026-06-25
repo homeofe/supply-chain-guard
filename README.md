@@ -342,6 +342,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.36 (2026-06-25)
+**Threat-intel update: PostCSS Tools Windows RAT npm campaign**
+
+One confirmed campaign ingested from the daily threat-intel sweep (source: The Hacker News, June 23, 2026):
+
+- **PostCSS Tools Windows RAT (June 23, 2026)**: malicious npm packages posing as PostCSS tooling deliver a Windows-based remote access trojan. The two confirmed, fully malicious packages are `aes-decode-runner-pro` (145 downloads) and `postcss-min`. The feed excerpt disclosed no C2 infrastructure, file hashes, or publisher account, so the bare package names are the only extractable indicators. Added to `MALICIOUS_PACKAGE_PATTERNS` (bare-name) and `BUNDLED_FEED` (confidence 0.9), with a new `campaigns.test.ts` describe block covering both names.
+
+Deliberately not ingested this sweep: the Operation Endgame Amadey/StealC takedown, the Cisco SD-WAN (CVE-2026-20245) and Ubiquiti/Lantronix CVEs, Edgecution, Mistic RAT, and FortiBleed - none are package-ecosystem compromises with extractable, version-pinned or named-package IOCs.
+
 ### v5.2.35 (2026-06-21)
 **Security: fix vite devDependency vulnerabilities**
 

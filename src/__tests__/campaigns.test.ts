@@ -1949,4 +1949,19 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // PostCSS Tools Windows RAT npm campaign (The Hacker News, June 23, 2026)
+  // =================================================================
+
+  describe("PostCSS Tools Windows RAT (June 2026)", () => {
+    it("should match the PostCSS-impersonation package names against the malicious-name patterns", () => {
+      for (const name of ["postcss-min", "aes-decode-runner-pro"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+  });
 });
