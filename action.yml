@@ -119,9 +119,16 @@ runs:
     - name: Comment on PR
       if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && steps.scan.outputs.findings-count != '0'
       uses: actions/github-script@v7
+      continue-on-error: true
       with:
         script: |
-          const report = `${{ steps.scan.outputs.report }}`;
+          const fs = require('fs');
+          let report = '';
+          try {
+            report = fs.readFileSync('/tmp/scg-report.txt', 'utf8');
+          } catch (err) {
+            console.error('Failed to read report file:', err);
+          }
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
