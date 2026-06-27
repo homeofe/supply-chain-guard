@@ -342,6 +342,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.37 (2026-06-27)
+**Fix: PR-comment step crash on findings containing backticks**
+
+The Comment on PR step built a JavaScript template literal from the scan
+report. Because the report markdown contains backticks, the literal broke and
+the step threw, failing the check on essentially every consumer pull request
+(the scan logic itself was never affected). The step now reads the report from
+a file via `fs.readFileSync` and is marked `continue-on-error`, so a comment
+failure can never fail the scan. No rule, threat-intel, or scan-engine changes
+in this release.
+
+- Composite action `Comment on PR` step rewritten to read `/tmp/scg-report.txt`
+  instead of interpolating the report into an inline template literal (#27).
+- Added `continue-on-error: true` so PR-comment failures are non-fatal.
+
 ### v5.2.36 (2026-06-25)
 **Threat-intel update: PostCSS Tools Windows RAT npm campaign**
 
