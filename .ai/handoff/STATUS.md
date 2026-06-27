@@ -1,5 +1,15 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-27, claude-opus-4-8): Full AAHP gate onboarded. Added the
+> canonical toolchain (scripts/_aahp-lib.sh, scripts/aahp-manifest.sh,
+> scripts/lint-handoff.sh, scripts/verify-handoff.sh,
+> scripts/validate-pii-allowlist.py), the .github/workflows/aahp-verify.yml
+> required-check workflow, the missing canonical handoff files
+> (pii-allowlist.json, LOG-ARCHIVE.md, LOG-ARCHIVE.index.json), and an AAHP
+> Verify badge in README.md. The handoff state was previously dormant since the
+> 2026-03-26 v3.1.0 session; this refresh brings the manifest commit-pointer and
+> file index current. No application code changed in this onboarding.
+
 ## Current Version: 3.1.0
 
 ### Published
