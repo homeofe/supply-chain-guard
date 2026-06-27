@@ -119,9 +119,12 @@ runs:
     - name: Comment on PR
       if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && steps.scan.outputs.findings-count != '0'
       uses: actions/github-script@v7
+      continue-on-error: true
+      env:
+        SCG_REPORT: ${{ steps.scan.outputs.report }}
       with:
         script: |
-          const report = `${{ steps.scan.outputs.report }}`;
+          const report = process.env.SCG_REPORT || '';
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
