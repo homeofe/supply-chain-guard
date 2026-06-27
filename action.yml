@@ -120,11 +120,15 @@ runs:
       if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && steps.scan.outputs.findings-count != '0'
       uses: actions/github-script@v7
       continue-on-error: true
-      env:
-        SCG_REPORT: ${{ steps.scan.outputs.report }}
       with:
         script: |
-          const report = process.env.SCG_REPORT || '';
+          const fs = require('fs');
+          let report = '';
+          try {
+            report = fs.readFileSync('/tmp/scg-report.txt', 'utf8');
+          } catch (err) {
+            console.error('Failed to read report file:', err);
+          }
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
