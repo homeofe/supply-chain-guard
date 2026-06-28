@@ -390,3 +390,37 @@ describe("formatReport – SBOM (CycloneDX 1.6)", () => {
     }
   });
 });
+
+// ─── Markdown injection hardening ─────────────────────────────────────────────
+
+describe("formatReport – markdown injection hardening", () => {
+  it("neutralizes attacker-controlled scan content in the markdown report", () => {
+    const md = formatReport(
+      makeReport({
+        target: "evil`pkg",
+        findings: [
+          {
+            rule: "EVIL`RULE",
+            description: "Heading <img src=x onerror=alert(1)>\n# Injected Heading",
+            severity: "critical",
+            file: "a.js",
+            line: 1,
+            match: "payload`); rm -rf ~\n# Fake Heading",
+            recommendation: "Do <b>not</b> trust this",
+          },
+        ],
+        summary: { totalFiles: 1, filesScanned: 1, critical: 1, high: 0, medium: 0, low: 0, info: 0 },
+      }),
+      "markdown",
+    );
+    // HTML is escaped in plain-text fields, not left live.
+    expect(md).not.toContain("<img");
+    expect(md).toContain("&lt;img");
+    // A backtick in scan content cannot close an inline code span.
+    expect(md).not.toContain("payload`)");
+    expect(md).toContain("payload')");
+    // A newline in scan content cannot inject a new markdown line or header.
+    expect(md).not.toContain("\n# Fake Heading");
+    expect(md).not.toContain("\n# Injected Heading");
+  });
+});

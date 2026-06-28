@@ -6,6 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import { execSync, execFileSync } from "node:child_process";
 import type { Finding, ScanOptions, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
@@ -105,7 +106,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       );
     }
     scanType = "github";
-    tempDir = fs.mkdtempSync(path.join("/tmp", "scg-"));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-"));
     const cloneDir = path.join(tempDir, "repo");
     try {
       // execFileSync runs git directly without a shell, so the URL can never

@@ -57,25 +57,34 @@ runs:
     - name: Run scan
       id: scan
       shell: bash
+      env:
+        SCG_PATH: ${{ inputs.path }}
+        SCG_FORMAT: ${{ inputs.format }}
+        SCG_MIN_SEVERITY: ${{ inputs.min-severity }}
+        SCG_EXCLUDE_RULES: ${{ inputs.exclude-rules }}
+        SCG_FAIL_ON: ${{ inputs.fail-on }}
       run: |
         set +e
 
-        ARGS="scan ${{ inputs.path }} --format ${{ inputs.format }}"
+        # Inputs arrive via env (set by the runner), never interpolated into this
+        # script at template-render time. Build the argument list as an array so
+        # values cannot word-split or be parsed by the shell.
+        ARGS=(scan "$SCG_PATH" --format "$SCG_FORMAT")
 
-        if [ -n "${{ inputs.min-severity }}" ] && [ "${{ inputs.min-severity }}" != "" ]; then
-          ARGS="$ARGS --min-severity ${{ inputs.min-severity }}"
+        if [ -n "$SCG_MIN_SEVERITY" ]; then
+          ARGS+=(--min-severity "$SCG_MIN_SEVERITY")
         fi
 
-        if [ -n "${{ inputs.exclude-rules }}" ] && [ "${{ inputs.exclude-rules }}" != "" ]; then
-          ARGS="$ARGS --exclude ${{ inputs.exclude-rules }}"
+        if [ -n "$SCG_EXCLUDE_RULES" ]; then
+          ARGS+=(--exclude "$SCG_EXCLUDE_RULES")
         fi
 
         # Run scan and capture output
-        REPORT=$(supply-chain-guard $ARGS 2>&1)
+        REPORT=$(supply-chain-guard "${ARGS[@]}" 2>&1)
         EXIT_CODE=$?
 
         # Also get JSON for parsing
-        JSON_REPORT=$(supply-chain-guard scan ${{ inputs.path }} --format json 2>/dev/null)
+        JSON_REPORT=$(supply-chain-guard scan "$SCG_PATH" --format json 2>/dev/null)
 
         # Extract values from JSON
         SCORE=$(echo "$JSON_REPORT" | jq -r '.score // 0')
@@ -86,19 +95,22 @@ runs:
         echo "risk-level=$RISK_LEVEL" >> $GITHUB_OUTPUT
         echo "findings-count=$FINDINGS_COUNT" >> $GITHUB_OUTPUT
 
-        # Save report to file for multi-line output
-        echo "$REPORT" > /tmp/scg-report.txt
+        # Save report to a per-job temp file for multi-line output. RUNNER_TEMP
+        # is per-job and cross-platform; a random heredoc delimiter prevents scan
+        # output from closing the block early and injecting step outputs.
+        echo "$REPORT" > "$RUNNER_TEMP/scg-report.txt"
+        REPORT_DELIM="SCG_REPORT_$(date +%s%N)_${RANDOM}${RANDOM}"
         {
-          echo "report<<EOF"
-          cat /tmp/scg-report.txt
-          echo "EOF"
+          echo "report<<$REPORT_DELIM"
+          cat "$RUNNER_TEMP/scg-report.txt"
+          echo "$REPORT_DELIM"
         } >> $GITHUB_OUTPUT
 
         # Print report to log
         echo "$REPORT"
 
         # Determine if we should fail
-        FAIL_SEVERITY="${{ inputs.fail-on }}"
+        FAIL_SEVERITY="$SCG_FAIL_ON"
         case "$FAIL_SEVERITY" in
           critical)
             [ "$(echo "$JSON_REPORT" | jq '.summary.critical')" -gt 0 ] && exit 2
@@ -125,7 +137,7 @@ runs:
           const fs = require('fs');
           let report = '';
           try {
-            report = fs.readFileSync('/tmp/scg-report.txt', 'utf8');
+            report = fs.readFileSync(process.env.RUNNER_TEMP + '/scg-report.txt', 'utf8');
           } catch (err) {
             console.error('Failed to read report file:', err);
           }

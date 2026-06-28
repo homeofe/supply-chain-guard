@@ -343,6 +343,25 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.39 (2026-06-28)
+**Security: harden the GitHub Action and PR-comment report against injection**
+
+Remediates findings from an internal AAHP Swarm review of this tool. The composite
+Action interpolated workflow inputs straight into a bash run block (script
+injection) and used an unquoted argument string; the markdown report embedded
+attacker-controlled scan content (finding match, rule, file, description, target,
+and recommendations) into code spans and headers without escaping, allowing
+markdown and HTML injection into the PR comment the Action posts. No rule or
+scan-engine behavior changed.
+
+- `action.yml` passes inputs via `env:` and builds a quoted bash array, so a
+  crafted input can no longer reach the shell as code; the report file uses
+  `RUNNER_TEMP` and a random `GITHUB_OUTPUT` delimiter.
+- `reporter.ts` escapes every attacker-controlled value in the markdown report
+  (new `mdInlineCode`, `mdText`, and table-cell `mdCell` helpers).
+- `scanner.ts` uses `os.tmpdir()` instead of a hardcoded `/tmp` for the clone.
+- Added a markdown-injection regression test.
+
 ### v5.2.38 (2026-06-28)
 **Security: command injection in GitHub clone and diff scanning**
 

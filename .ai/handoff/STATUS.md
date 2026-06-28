@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): v5.2.39 security release. Remediated findings
+> from an AAHP Swarm review of this tool: action.yml GitHub Actions script injection
+> (inputs now via env: + quoted bash array; RUNNER_TEMP + random GITHUB_OUTPUT
+> delimiter), markdown/HTML injection in the PR-comment report (reporter.ts now
+> escapes every attacker-controlled value via mdInlineCode/mdText/mdCell), and the
+> hardcoded /tmp in scanner.ts (now os.tmpdir()). Added a markdown-injection
+> regression test. Security-reviewed (APPROVE). Tagged v5.2.39 -> OIDC publish + v5.
+
 > Note (2026-06-28, claude-opus-4-8): Gate-consistency fix. Added `.ai/logs/` to
 > .gitignore (keeps ephemeral agent log output out of version control) and
 > committed the previously-uncommitted NEXT_ACTIONS.md issue-link annotations
