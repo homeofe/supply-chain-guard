@@ -7,8 +7,9 @@
 > unquoted sinceCommit into git diff. Both now use execFileSync (no shell) plus
 > strict input validation: a clean GitHub-URL regex for the clone target and a ref
 > allowlist for sinceCommit. The git-log anomaly check also moved to execFileSync.
-> Added src/__tests__/diff-scanner.test.ts. Build and the affected tests pass. A
-> v5.2.38 release should be cut to ship this to consumers.
+> Added src/__tests__/diff-scanner.test.ts. Build and the affected tests pass.
+> Released as v5.2.38 in this commit (tag v5.2.38 triggers the OIDC publish and
+> moves the floating v5 branch).
 
 > Note (2026-06-27, claude-opus-4-8): Full AAHP gate onboarded. Added the
 > canonical toolchain (scripts/_aahp-lib.sh, scripts/aahp-manifest.sh,
@@ -20,10 +21,10 @@
 > 2026-03-26 v3.1.0 session; this refresh brings the manifest commit-pointer and
 > file index current. No application code changed in this onboarding.
 
-## Current Version: 3.1.0
+## Current Version: 5.2.38
 
 ### Published
-- npm: supply-chain-guard@3.1.0 (unscoped, public)
+- npm: supply-chain-guard@5.2.38 (unscoped, public)
 - GitHub: homeofe/supply-chain-guard (Apache-2.0)
 - GitHub Marketplace: supply-chain-guard (GitHub Action)
 - ClawHub: not published (CLI tool, not an OpenClaw skill)

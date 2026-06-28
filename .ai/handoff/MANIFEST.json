@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-opus-4-8",
-    "session_id": "cli-1782637958",
-    "timestamp": "2026-06-28T09:12:38Z",
-    "commit": "b442177",
+    "session_id": "cli-1782640629",
+    "timestamp": "2026-06-28T09:57:10Z",
+    "commit": "af5ae42",
     "phase": "fix",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:1c8d6673747fef389baab4ac325bf9bad8e7fb93d2c190aca40ec56ec1eb80d5",
-      "updated": "2026-06-28T09:12:13Z",
-      "lines": 60,
+      "checksum": "sha256:dfe167e528b99716d26f134c366078d9484919282f26132979c4883d32d558d9",
+      "updated": "2026-06-28T09:56:35Z",
+      "lines": 61,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Security fix: hardened git execSync against command injection in scanner.ts (clone) and diff-scanner.ts (diff), execFileSync + input validation, plus a regression test.",
+  "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 2304,
-    "full_read": 6401
+    "manifest_plus_core": 2314,
+    "full_read": 6411
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"ready","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"ready","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z"}}

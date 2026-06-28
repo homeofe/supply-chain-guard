@@ -343,6 +343,22 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.38 (2026-06-28)
+**Security: command injection in GitHub clone and diff scanning**
+
+The GitHub clone path and the diff scanner ran git through a shell with the target
+URL and the `--since` ref interpolated into the command string, guarded only by a
+`startsWith` prefix check. A crafted value could break out of the quoting and run
+arbitrary shell commands on the host running the scan. Both now invoke git via
+`execFileSync` (no shell) with strict input validation, and the git-log anomaly
+check moved off the shell too. Found by an internal AAHP Swarm review.
+
+- `scanner.ts` clones via `execFileSync` plus a strict GitHub-URL allowlist for
+  the clone target.
+- `diff-scanner.ts` runs `git diff` and `ls-files` via `execFileSync` and rejects
+  a `sinceCommit` that is not a clean git ref.
+- Added a regression test for the rejected-ref path.
+
 ### v5.2.37 (2026-06-27)
 **Fix: PR-comment step crash on findings containing backticks**
 
