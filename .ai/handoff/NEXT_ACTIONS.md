@@ -158,7 +158,7 @@
 
 ---
 
-### T-006: Cargo/Go module scanner [low]
+### T-006: Cargo/Go module scanner [low] (issue #30)
 
 **Goal:** Add supply-chain scanning for Rust (Cargo.toml/Cargo.lock) and Go (go.mod/go.sum) dependency files.
 
@@ -178,7 +178,7 @@
 
 ---
 
-### T-007: Rate-limit handling in Solana monitor [low]
+### T-007: Rate-limit handling in Solana monitor [low] (issue #31)
 
 **Goal:** The Solana RPC endpoint (`api.mainnet-beta.solana.com`) rate-limits aggressive polling. Add exponential backoff and user-configurable rate limiting.
 

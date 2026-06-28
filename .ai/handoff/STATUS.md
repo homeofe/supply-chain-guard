@@ -1,5 +1,11 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): Gate-consistency fix. Added `.ai/logs/` to
+> .gitignore (keeps ephemeral agent log output out of version control) and
+> committed the previously-uncommitted NEXT_ACTIONS.md issue-link annotations
+> (issue #30, issue #31). Re-synced MANIFEST.json so the committed checksum for
+> NEXT_ACTIONS.md matches the committed file. No application code changed.
+
 > Note (2026-06-28, claude-opus-4-8): Added .ai/swarm/profile.md - the public swarm review profile that tells an aahp-swarm what to scrutinize in this scanner (detector bypasses, logic gaps, shell surface, output integrity, prompt-injection).
 
 > Note (2026-06-28, claude-opus-4-8): Security fix, hardened git command execution

@@ -5,3 +5,4 @@ dist/
 *.log
 coverage/
 .vitest/
+.ai/logs/
