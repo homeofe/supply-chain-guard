@@ -424,3 +424,26 @@ describe("formatReport – markdown injection hardening", () => {
     expect(md).not.toContain("\n# Injected Heading");
   });
 });
+
+// ─── Suppressed findings excluded from machine output ─────────────────────────
+
+describe("formatReport – suppressed findings excluded from SARIF and SBOM", () => {
+  const reportWithSuppressed = makeReport({
+    findings: [
+      { rule: "ACTIVE_RULE", description: "active", severity: "high", recommendation: "fix", file: "a.js" },
+      { rule: "SUPPRESSED_RULE", description: "policy-suppressed", severity: "high", recommendation: "fix", file: "b.js", suppressed: true },
+    ],
+  });
+
+  it("omits suppressed findings from SARIF output", () => {
+    const sarif = formatReport(reportWithSuppressed, "sarif");
+    expect(sarif).toContain("ACTIVE_RULE");
+    expect(sarif).not.toContain("SUPPRESSED_RULE");
+  });
+
+  it("omits suppressed findings from the fallback SBOM", () => {
+    const sbom = formatReport(reportWithSuppressed, "sbom");
+    expect(sbom).toContain("ACTIVE_RULE");
+    expect(sbom).not.toContain("SUPPRESSED_RULE");
+  });
+});

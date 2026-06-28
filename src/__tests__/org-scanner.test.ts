@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeOrgFindings } from "../org-scanner.js";
+import { analyzeOrgFindings, listOrgRepos } from "../org-scanner.js";
 import type { Finding } from "../types.js";
 
 function makeFinding(rule: string, severity: "critical" | "high" = "high"): Finding {
@@ -48,5 +48,22 @@ describe("Org Scanner", () => {
 
     const findings = analyzeOrgFindings(repoFindings);
     expect(findings).toHaveLength(0);
+  });
+});
+
+describe("listOrgRepos input validation", () => {
+  it("rejects an org with shell metacharacters and does not execute gh", () => {
+    // A crafted org must never reach a shell or be read as a flag; the guard
+    // returns an empty list before any command runs.
+    expect(listOrgRepos("foo; echo pwned")).toEqual([]);
+    expect(listOrgRepos("$(touch /tmp/scg-pwned)")).toEqual([]);
+    expect(listOrgRepos("a && rm -rf ~")).toEqual([]);
+    expect(listOrgRepos("`id`")).toEqual([]);
+    expect(listOrgRepos("--flag-injection")).toEqual([]);
+  });
+
+  it("rejects an out-of-range limit", () => {
+    expect(listOrgRepos("validorg", 0)).toEqual([]);
+    expect(listOrgRepos("validorg", 99999)).toEqual([]);
   });
 });

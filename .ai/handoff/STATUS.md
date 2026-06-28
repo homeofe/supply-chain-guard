@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): v5.2.40 security release. Remediated the
+> first findings from the now-live continuous AAHP Swarm review (elvatis/ideabase
+> #24): org-scanner.ts listOrgRepos command injection (gh repo list ${org} via
+> string execSync; now execFileSync + org-name allowlist forbidding a leading
+> hyphen) and two suppressed-finding leaks (SARIF results + fallback SBOM now
+> filter f.suppressed, matching the primary SBOM path). Regression tests added.
+> Tagged v5.2.40 -> OIDC publish + v5.
+
 > Note (2026-06-28, claude-opus-4-8): v5.2.39 security release. Remediated findings
 > from an AAHP Swarm review of this tool: action.yml GitHub Actions script injection
 > (inputs now via env: + quoted bash array; RUNNER_TEMP + random GITHUB_OUTPUT

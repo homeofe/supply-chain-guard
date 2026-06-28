@@ -343,6 +343,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.40 (2026-06-28)
+**Security: org-scanner command injection and suppressed findings in SARIF/SBOM**
+
+Remediates findings from the continuous AAHP Swarm review (elvatis/ideabase#24).
+No rule or scan-engine behavior changed.
+
+- `org-scanner.ts`: `listOrgRepos` built `gh repo list ${org}` and ran it through a
+  shell with the `org` CLI argument unvalidated (command injection, the same class
+  as the v5.2.38 clone fix, in a sibling path). It now uses `execFileSync` with an
+  org-name allowlist that also forbids a leading hyphen (no gh flag injection).
+- `reporter.ts`: SARIF results and the fallback SBOM emitted policy-suppressed
+  findings as active results. Both now filter out `suppressed` findings, matching
+  the primary SBOM path.
+- Added regression tests for the rejected-org path and suppressed-finding output.
+
 ### v5.2.39 (2026-06-28)
 **Security: harden the GitHub Action and PR-comment report against injection**
 

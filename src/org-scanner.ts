@@ -5,16 +5,26 @@
  * malicious patterns, compromised maintainers, and suspicious clusters.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import type { Finding } from "./types.js";
+
+// GitHub org / user names: alphanumeric with hyphens, up to 39 chars, and may
+// not begin with a hyphen. Forbidding a leading hyphen stops the value from being
+// read as a gh flag; the allowlist also keeps shell metacharacters out even
+// though execFileSync already runs gh without a shell (defense in depth).
+const ORG_NAME = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/;
 
 /**
  * List repositories in a GitHub organization via `gh` CLI.
  */
 export function listOrgRepos(org: string, limit = 50): string[] {
+  if (!ORG_NAME.test(org) || !Number.isInteger(limit) || limit < 1 || limit > 1000) {
+    return [];
+  }
   try {
-    const output = execSync(
-      `gh repo list ${org} --limit ${limit} --json url --jq '.[].url'`,
+    const output = execFileSync(
+      "gh",
+      ["repo", "list", org, "--limit", String(limit), "--json", "url", "--jq", ".[].url"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     return output.trim().split("\n").filter(Boolean);
