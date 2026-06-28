@@ -1,5 +1,7 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): Added .ai/swarm/profile.md - the public swarm review profile that tells an aahp-swarm what to scrutinize in this scanner (detector bypasses, logic gaps, shell surface, output integrity, prompt-injection).
+
 > Note (2026-06-28, claude-opus-4-8): Security fix, hardened git command execution
 > against command injection (found by an aahp-swarm review). scanner.ts cloned a
 > GitHub target via string execSync guarded only by startsWith (bypassable with
