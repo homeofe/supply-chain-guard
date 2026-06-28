@@ -6,7 +6,7 @@
  * Uses `gh` CLI for API access (no token configuration needed).
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
@@ -47,11 +47,29 @@ interface Release {
  */
 function hasGhCli(): boolean {
   try {
-    execSync("gh --version", { stdio: "pipe" });
+    execFileSync("gh", ["--version"], { stdio: "pipe" });
     return true;
   } catch {
     return false;
   }
+}
+
+// GitHub owner (user/org) and repo name allowlists. Owner: alphanumeric with
+// hyphens, no leading hyphen, up to 39 chars. Repo: alphanumeric with . _ -, no
+// '..' path traversal. These guard the values interpolated into the gh-api paths
+// below; the calls also use execFileSync (no shell) so a metacharacter can never
+// reach a shell even if validation is ever bypassed.
+const GH_OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+const GH_REPO = /^[A-Za-z0-9._-]{1,100}$/;
+
+function validGitHubName(owner: string, repo: string): boolean {
+  return (
+    GH_OWNER.test(owner) &&
+    GH_REPO.test(repo) &&
+    repo !== "." &&
+    repo !== ".." &&
+    !repo.includes("..")
+  );
 }
 
 /**
@@ -59,8 +77,9 @@ function hasGhCli(): boolean {
  */
 function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
   try {
-    const json = execSync(
-      `gh api repos/${owner}/${repo} --jq '{stars: .stargazers_count, forks: .forks_count, openIssues: .open_issues_count, hasIssues: .has_issues, createdAt: .created_at, pushedAt: .pushed_at, isOrg: (.owner.type == "Organization"), ownerLogin: .owner.login, defaultBranch: .default_branch}'`,
+    const json = execFileSync(
+      "gh",
+      ["api", `repos/${owner}/${repo}`, "--jq", '{stars: .stargazers_count, forks: .forks_count, openIssues: .open_issues_count, hasIssues: .has_issues, createdAt: .created_at, pushedAt: .pushed_at, isOrg: (.owner.type == "Organization"), ownerLogin: .owner.login, defaultBranch: .default_branch}'],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     const data = JSON.parse(json);
@@ -68,8 +87,9 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch owner account age
     let ownerCreatedAt: string | undefined;
     try {
-      const ownerJson = execSync(
-        `gh api users/${owner} --jq '.created_at'`,
+      const ownerJson = execFileSync(
+        "gh",
+        ["api", `users/${owner}`, "--jq", ".created_at"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
       );
       ownerCreatedAt = ownerJson.trim();
@@ -78,8 +98,9 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch commit count
     let commitCount: number | undefined;
     try {
-      const commitJson = execSync(
-        `gh api repos/${owner}/${repo}/commits?per_page=1 --jq 'length'`,
+      const commitJson = execFileSync(
+        "gh",
+        ["api", `repos/${owner}/${repo}/commits?per_page=1`, "--jq", "length"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
       );
       commitCount = parseInt(commitJson.trim(), 10);
@@ -88,8 +109,9 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
     // Fetch contributor count
     let contributorCount: number | undefined;
     try {
-      const contribJson = execSync(
-        `gh api repos/${owner}/${repo}/contributors?per_page=5 --jq 'length'`,
+      const contribJson = execFileSync(
+        "gh",
+        ["api", `repos/${owner}/${repo}/contributors?per_page=5`, "--jq", "length"],
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
       );
       contributorCount = parseInt(contribJson.trim(), 10);
@@ -120,8 +142,9 @@ function fetchRepoMetadata(owner: string, repo: string): RepoMetadata | null {
  */
 function fetchReleases(owner: string, repo: string): Release[] {
   try {
-    const json = execSync(
-      `gh api repos/${owner}/${repo}/releases?per_page=5 --jq '[.[] | {tagName: .tag_name, name: .name, createdAt: .created_at, assets: [.assets[] | {name: .name, size: .size, downloadCount: .download_count}]}]'`,
+    const json = execFileSync(
+      "gh",
+      ["api", `repos/${owner}/${repo}/releases?per_page=5`, "--jq", "[.[] | {tagName: .tag_name, name: .name, createdAt: .created_at, assets: [.assets[] | {name: .name, size: .size, downloadCount: .download_count}]}]"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     return JSON.parse(json) as Release[];
@@ -140,7 +163,10 @@ export function parseGitHubUrl(
     /github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)/,
   );
   if (!match) return null;
-  return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
+  const owner = match[1];
+  const repo = match[2].replace(/\.git$/, "");
+  if (!validGitHubName(owner, repo)) return null;
+  return { owner, repo };
 }
 
 /**
@@ -153,6 +179,12 @@ export function analyzeGitHubTrust(
   if (!hasGhCli()) return [];
 
   const findings: Finding[] = [];
+
+  // Reject owner/repo that are not valid GitHub names before any gh-api call,
+  // since this function is part of the public API and may be called directly.
+  if (!validGitHubName(owner, repo)) {
+    return findings;
+  }
 
   // Check known malicious accounts
   if (KNOWN_MALICIOUS_GITHUB_ACCOUNTS.includes(owner.toLowerCase())) {

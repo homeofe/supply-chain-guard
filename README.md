@@ -343,6 +343,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.41 (2026-06-28)
+**Security: command injection in the GitHub trust scanner**
+
+Remediates a finding from the continuous AAHP Swarm review (elvatis/ideabase#24).
+`github-trust-scanner.ts` built five `gh api repos/${owner}/${repo}` calls as shell
+strings via `execSync`, with `owner` and `repo` unvalidated. Because
+`analyzeGitHubTrust` and `parseGitHubUrl` are public API, a consumer passing crafted
+values could reach shell command execution. No rule or scan-engine change.
+
+- Every `gh api` call now uses `execFileSync` (no shell).
+- `analyzeGitHubTrust` validates owner and repo against GitHub-name allowlists (owner
+  cannot begin with a hyphen; repo forbids `..`) before any call, and `parseGitHubUrl`
+  rejects values that fail the same allowlists.
+- Added regression tests.
+
 ### v5.2.40 (2026-06-28)
 **Security: org-scanner command injection and suppressed findings in SARIF/SBOM**
 

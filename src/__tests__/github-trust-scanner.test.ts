@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseGitHubUrl, scanReadmeLures } from "../github-trust-scanner.js";
+import { parseGitHubUrl, scanReadmeLures, analyzeGitHubTrust } from "../github-trust-scanner.js";
 
 describe("GitHub Trust Scanner", () => {
   describe("parseGitHubUrl", () => {
@@ -76,5 +76,22 @@ describe("GitHub Trust Scanner", () => {
       const f = findings.find((f) => f.rule === "README_LURE_LEAKED");
       expect(f?.line).toBe(3);
     });
+  });
+});
+
+describe("github-trust-scanner input validation (injection hardening)", () => {
+  it("parseGitHubUrl rejects a leading-hyphen owner or a '..' repo", () => {
+    expect(parseGitHubUrl("https://github.com/--evil/repo")).toBeNull();
+    expect(parseGitHubUrl("https://github.com/owner/..")).toBeNull();
+  });
+
+  it("parseGitHubUrl still accepts a valid owner/repo with dots and hyphens", () => {
+    expect(parseGitHubUrl("https://github.com/ok-org/ok.repo")).toEqual({ owner: "ok-org", repo: "ok.repo" });
+  });
+
+  it("analyzeGitHubTrust returns no findings for names with shell metacharacters (no gh call)", () => {
+    // A crafted owner/repo must never reach gh; the guard returns [] first.
+    expect(analyzeGitHubTrust("foo; rm -rf ~", "repo")).toEqual([]);
+    expect(analyzeGitHubTrust("owner", "$(id)")).toEqual([]);
   });
 });

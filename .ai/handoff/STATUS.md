@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): v5.2.41 security release. github-trust-scanner.ts
+> built five `gh api repos/${owner}/${repo}` calls as shell strings via execSync with
+> owner/repo unvalidated; analyzeGitHubTrust + parseGitHubUrl are public API, so a
+> crafted value could reach shell RCE (continuous swarm review, elvatis/ideabase#24).
+> All gh api calls now use execFileSync (no shell); analyzeGitHubTrust + parseGitHubUrl
+> validate owner/repo against GitHub-name allowlists (no leading hyphen, no '..').
+> Regression tests added. Tagged v5.2.41 -> OIDC publish + v5.
+
 > Note (2026-06-28, claude-opus-4-8): v5.2.40 security release. Remediated the
 > first findings from the now-live continuous AAHP Swarm review (elvatis/ideabase
 > #24): org-scanner.ts listOrgRepos command injection (gh repo list ${org} via
