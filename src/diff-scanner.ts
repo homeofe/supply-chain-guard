@@ -5,7 +5,7 @@
  * those paths for scanning, enabling incremental CI integration.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 
 /**
@@ -15,9 +15,15 @@ export function getChangedFiles(
   dir: string,
   sinceCommit: string,
 ): string[] {
+  // Reject a ref that could be read as a git option or inject arguments;
+  // execFileSync (no shell) handles the rest.
+  if (!/^[A-Za-z0-9._/-]+$/.test(sinceCommit) || sinceCommit.startsWith("-")) {
+    return [];
+  }
   try {
-    const output = execSync(
-      `git -C "${dir}" diff --name-only ${sinceCommit} HEAD`,
+    const output = execFileSync(
+      "git",
+      ["-C", dir, "diff", "--name-only", sinceCommit, "HEAD"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     return output
@@ -35,14 +41,16 @@ export function getChangedFiles(
  */
 export function getUncommittedFiles(dir: string): string[] {
   try {
-    const output = execSync(
-      `git -C "${dir}" diff --name-only HEAD`,
+    const output = execFileSync(
+      "git",
+      ["-C", dir, "diff", "--name-only", "HEAD"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     const tracked = output.trim().split("\n").filter(Boolean);
 
-    const untracked = execSync(
-      `git -C "${dir}" ls-files --others --exclude-standard`,
+    const untracked = execFileSync(
+      "git",
+      ["-C", dir, "ls-files", "--others", "--exclude-standard"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     ).trim().split("\n").filter(Boolean);
 

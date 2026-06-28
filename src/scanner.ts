@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import type { Finding, ScanOptions, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import {
@@ -92,16 +92,31 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // If target is a GitHub URL, clone it
   if (target.startsWith("https://github.com/")) {
+    // Strict allowlist for the clone target: reject anything that is not a
+    // clean https GitHub repo URL, so a crafted value cannot inject shell
+    // metacharacters or git options into the clone below.
+    if (
+      !/^https:\/\/github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\.git)?\/?$/.test(
+        target,
+      )
+    ) {
+      throw new Error(
+        `Refusing to clone: not a valid GitHub repository URL: ${target}`,
+      );
+    }
     scanType = "github";
     tempDir = fs.mkdtempSync(path.join("/tmp", "scg-"));
+    const cloneDir = path.join(tempDir, "repo");
     try {
-      execSync(`git clone --depth 1 "${target}" "${tempDir}/repo"`, {
+      // execFileSync runs git directly without a shell, so the URL can never
+      // be interpreted as a command.
+      execFileSync("git", ["clone", "--depth", "1", target, cloneDir], {
         stdio: "pipe",
       });
     } catch {
       throw new Error(`Failed to clone repository: ${target}`);
     }
-    scanDir = path.join(tempDir, "repo");
+    scanDir = cloneDir;
   }
 
   // Validate directory exists
@@ -609,8 +624,9 @@ function checkPackageJson(
  */
 function checkGitDateAnomalies(dir: string, findings: Finding[]): void {
   try {
-    const log = execSync(
-      `git -C "${dir}" log --format="%H|%aI|%cI" -20 2>/dev/null`,
+    const log = execFileSync(
+      "git",
+      ["-C", dir, "log", "--format=%H|%aI|%cI", "-20"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
 

@@ -3,79 +3,79 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-opus-4-8",
-    "session_id": "cli-1782541398",
-    "timestamp": "2026-06-27T06:23:20Z",
-    "commit": "be1d718",
-    "phase": "implementation",
+    "session_id": "cli-1782637958",
+    "timestamp": "2026-06-28T09:12:38Z",
+    "commit": "b442177",
+    "phase": "fix",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:55f7c67fe6196bd9b8e4f21fb1ac45a02ef5ddec4161249f136d000233b43500",
-      "updated": "2026-06-27T06:20:24Z",
-      "lines": 50,
+      "checksum": "sha256:1c8d6673747fef389baab4ac325bf9bad8e7fb93d2c190aca40ec56ec1eb80d5",
+      "updated": "2026-06-28T09:12:13Z",
+      "lines": 60,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:efc425f20e6b8b1cbb497f6a15cd6b7a9b20f18d78f0150a5adf5f979c8a93cd",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 212,
       "summary": "(no summary available)"
     },
     "LOG.md": {
       "checksum": "sha256:aa858b37c2484b18b954ba20af746d14ac28a77ef00dd967f8463c0ec9e9be1f",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-04-04T09:00:30Z",
       "lines": 93,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:5d6ecd3b44b6088e95f48ce30d7e3f62392eac197b6640473b6ead6f17c9cece",
-      "updated": "2026-06-27T06:20:03Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 8,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-06-27T06:20:06Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:68497e89b38a8f5925041d2706bb328c2f38e7ce3072628f8465daef55bf6f75",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-04-04T09:00:30Z",
       "lines": 112,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
       "checksum": "sha256:e587681171dff99751abcc62559349905edb9bb8789e3b4e16b7b138e35c2861",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-04-04T09:00:30Z",
       "lines": 56,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d70c32d4ce09782e7afad0b53ab356bdbed510bfbcc000dc7c96a0497e1adda5",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-04-04T09:00:30Z",
       "lines": 90,
       "summary": "(no summary available)"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:518f3213137d344d1ca6a5cfb78a77cd3cf344da03884e1fd6ff02efccbbbc84",
-      "updated": "2026-06-27T06:16:31Z",
+      "updated": "2026-04-04T09:00:30Z",
       "lines": 120,
       "summary": "(no summary available)"
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-06-27T06:19:38Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "(no summary available) (no summary available) ",
+  "quick_context": "Security fix: hardened git execSync against command injection in scanner.ts (clone) and diff-scanner.ts (diff), execFileSync + input validation, plus a regression test.",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 2168,
-    "full_read": 6265
+    "manifest_plus_core": 2304,
+    "full_read": 6401
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"ready","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"ready","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z"}}

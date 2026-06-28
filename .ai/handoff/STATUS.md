@@ -1,5 +1,15 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-06-28, claude-opus-4-8): Security fix, hardened git command execution
+> against command injection (found by an aahp-swarm review). scanner.ts cloned a
+> GitHub target via string execSync guarded only by startsWith (bypassable with
+> shell metacharacters after the prefix), and diff-scanner.ts interpolated an
+> unquoted sinceCommit into git diff. Both now use execFileSync (no shell) plus
+> strict input validation: a clean GitHub-URL regex for the clone target and a ref
+> allowlist for sinceCommit. The git-log anomaly check also moved to execFileSync.
+> Added src/__tests__/diff-scanner.test.ts. Build and the affected tests pass. A
+> v5.2.38 release should be cut to ship this to consumers.
+
 > Note (2026-06-27, claude-opus-4-8): Full AAHP gate onboarded. Added the
 > canonical toolchain (scripts/_aahp-lib.sh, scripts/aahp-manifest.sh,
 > scripts/lint-handoff.sh, scripts/verify-handoff.sh,
