@@ -343,6 +343,27 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.42 (2026-06-29)
+**Threat intel: Miasma LeoPlatform / GitHub Actions wave (June 26, 2026)**
+
+Adds indicators for the latest evolution of the Mini Shai-Hulud / Miasma / Hades npm
+worm family, reported by The Hacker News on June 26, 2026. A compromised LeoPlatform npm
+maintainer account (`czirker`) republished the LeoPlatform / RStreams SDK packages plus
+`hexo-*` plugins with a preinstall credential stealer; the worm also propagated to the Go
+ecosystem and abused the `codfish/semantic-release-action` GitHub Action.
+
+- 23 compromised npm package@version pairs pinned in `KNOWN_BAD_NPM_VERSIONS` (clean
+  upstream versions stay legitimate): `leo-sdk@6.0.19`, `leo-streams@2.0.1`, `leo-auth@4.0.6`,
+  `leo-aws@2.0.4`, the `leo-connector-*` set, `rstreams-metrics@2.0.2`,
+  `rstreams-shard-util@1.0.1`, `serverless-leo@3.0.14`, `serverless-convention@2.0.4`,
+  `prism-silq@1.0.1`, `solo-nav@1.0.1`, `hexo-deployer-wrangler@1.0.4`, and others.
+- Go module `github.com/verana-labs/verana-blockchain@v0.10.1-dev.20` recorded in the
+  bundled threat-intel feed.
+- New campaign signature `MIASMA_LEO_REVOKE_KABOOM` for the `RevokeAndItGoesKaboom`
+  token-relay marker.
+- Compromised maintainer handle `czirker` added to the malicious-account blocklist.
+- 24 new bundled-feed IOC entries and a `campaigns.test.ts` regression suite.
+
 ### v5.2.41 (2026-06-28)
 **Security: command injection in the GitHub trust scanner**
 

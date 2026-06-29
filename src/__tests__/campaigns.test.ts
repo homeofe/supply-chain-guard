@@ -1964,4 +1964,91 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026)
+  // =================================================================
+
+  describe("Miasma LeoPlatform wave (June 2026)", () => {
+    it("should flag leo-sdk@6.0.19 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "leo-sdk": "6.0.19" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag serverless-leo@3.0.14 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "serverless-leo": "3.0.14" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag a clean upstream version of leo-sdk", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "leo-sdk": "6.0.18" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it("should detect the RevokeAndItGoesKaboom token-relay marker", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "relay.js"),
+        'const marker = "RevokeAndItGoesKaboom"; relay(marker);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MIASMA_LEO_REVOKE_KABOOM"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag the czirker compromised maintainer GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/czirker/leo-sdk";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

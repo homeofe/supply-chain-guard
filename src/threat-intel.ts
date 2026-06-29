@@ -508,6 +508,39 @@ const BUNDLED_FEED: FeedIOC[] = [
   // excerpt disclosed no C2 / hashes / publisher, so the bare package names are the indicators.
   { type: "package", value: "postcss-min", severity: "critical", confidence: 0.9, family: "WindowsRAT", campaign: "PostCSS Tools Windows RAT", firstSeen: "2026-06-23" },
   { type: "package", value: "aes-decode-runner-pro", severity: "critical", confidence: 0.9, family: "WindowsRAT", campaign: "PostCSS Tools Windows RAT", firstSeen: "2026-06-23" },
+
+  // Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026)
+  // Latest evolution of the Mini Shai-Hulud / Miasma / Hades worm family. Compromised
+  // npm maintainer "czirker" (LeoPlatform) republished the LeoPlatform / RStreams SDK
+  // packages + hexo-* plugins with a preinstall credential stealer; the worm also
+  // propagated to the Go ecosystem (verana-blockchain) and abused the
+  // codfish/semantic-release-action GitHub Action. Dead-drop repos described "Alright
+  // Lets See If This Works" (559 repos); token-relay marker "RevokeAndItGoesKaboom".
+  { type: "package", value: "leo-sdk@6.0.19", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-streams@2.0.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-auth@4.0.6", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-aws@2.0.4", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-cache@1.0.2", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-cdk-lib@0.0.2", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-cli@3.0.3", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-config@1.1.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-connector-elasticsearch@2.0.6", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-connector-mongo@3.0.8", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-connector-mysql@3.0.3", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-connector-oracle@2.0.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-connector-redshift@3.0.6", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-cron@2.0.2", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "leo-logger@1.0.8", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "rstreams-metrics@2.0.2", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "rstreams-shard-util@1.0.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "serverless-leo@3.0.14", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "serverless-convention@2.0.4", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "prism-silq@1.0.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "solo-nav@1.0.1", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "hexo-deployer-wrangler@1.0.4", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  { type: "package", value: "hexo-shoka-swiper@0.1.10", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+  // Go ecosystem propagation - version-pinned (clean upstream versions remain legitimate)
+  { type: "package", value: "go:github.com/verana-labs/verana-blockchain@v0.10.1-dev.20", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
 ];
 
 const CACHE_DIR = ".scg-cache";

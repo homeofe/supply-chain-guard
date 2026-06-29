@@ -329,6 +329,12 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // npm publisher handles, tracked here for source-reference matching.
   "ehindero",
   "sergey2016",
+
+  // Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026)
+  // "czirker" is the compromised LeoPlatform npm maintainer account used to republish the
+  // leo-* / rstreams-* / serverless-leo / hexo-* packages with a preinstall stealer. npm
+  // publisher handle tracked here for source-reference matching (github.com/czirker).
+  "czirker",
 ];
 
 // ---------------------------------------------------------------------------
@@ -533,6 +539,107 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "crypto-javascript": {
     versions: ["4.2.5"],
     description: "Cross-ecosystem supply-chain worm (Rust/Cargo/Python/CMake/npm): bundles a Monero cryptominer + 'Dirty Frag' Linux kernel LPE exploit (THN ThreatsDay, June 2026)",
+  },
+  // --- Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026) ---
+  // Latest evolution of the Mini Shai-Hulud / Miasma / Hades worm family. The compromised
+  // npm maintainer account "czirker" (LeoPlatform) republished the LeoPlatform / RStreams
+  // SDK packages plus hexo-* plugins with a preinstall stealer; the worm also propagated to
+  // the Go ecosystem (github.com/verana-labs/verana-blockchain@v0.10.1-dev.20, recorded in
+  // BUNDLED_FEED) and abused the codfish/semantic-release-action GitHub Action. Exfil into
+  // ~559 dead-drop repos with description "Alright Lets See If This Works"; token-relay
+  // marker "RevokeAndItGoesKaboom". Only the confirmed package@version pairs are pinned;
+  // the clean upstream versions of these packages remain legitimate.
+  "leo-sdk": {
+    versions: ["6.0.19"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-sdk republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-streams": {
+    versions: ["2.0.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-streams republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-auth": {
+    versions: ["4.0.6"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-auth republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-aws": {
+    versions: ["2.0.4"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-aws republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-cache": {
+    versions: ["1.0.2"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-cache republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-cdk-lib": {
+    versions: ["0.0.2"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-cdk-lib republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-cli": {
+    versions: ["3.0.3"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-cli republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-config": {
+    versions: ["1.1.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-config republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-connector-elasticsearch": {
+    versions: ["2.0.6"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-connector-elasticsearch republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-connector-mongo": {
+    versions: ["3.0.8"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-connector-mongo republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-connector-mysql": {
+    versions: ["3.0.3"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-connector-mysql republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-connector-oracle": {
+    versions: ["2.0.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-connector-oracle republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-connector-redshift": {
+    versions: ["3.0.6"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-connector-redshift republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-cron": {
+    versions: ["2.0.2"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-cron republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "leo-logger": {
+    versions: ["1.0.8"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): leo-logger republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "rstreams-metrics": {
+    versions: ["2.0.2"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): rstreams-metrics republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "rstreams-shard-util": {
+    versions: ["1.0.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): rstreams-shard-util republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "serverless-leo": {
+    versions: ["3.0.14"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): serverless-leo republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "serverless-convention": {
+    versions: ["2.0.4"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): serverless-convention republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "prism-silq": {
+    versions: ["1.0.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): prism-silq republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "solo-nav": {
+    versions: ["1.0.1"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): solo-nav republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "hexo-deployer-wrangler": {
+    versions: ["1.0.4"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): hexo-deployer-wrangler republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  "hexo-shoka-swiper": {
+    versions: ["0.1.10"],
+    description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): hexo-shoka-swiper republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
   },
 };
 

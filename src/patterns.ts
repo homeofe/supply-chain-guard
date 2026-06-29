@@ -724,6 +724,24 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
+
+  // --- Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026) ---
+  // Latest evolution of the Mini Shai-Hulud / Miasma / Hades worm family. Compromised
+  // npm maintainer "czirker" republished the LeoPlatform / RStreams SDK + hexo-* packages
+  // (version-pinned in ioc-blocklist), propagated to Go, and abused the
+  // codfish/semantic-release-action GitHub Action. "RevokeAndItGoesKaboom" is the unique
+  // token-relay marker for the current iteration (firedalazer remains the GitHub commit-
+  // polling string, already covered by ANTV_WAVE_FIREDALAZER).
+  {
+    name: "miasma-leo-revoke-kaboom-marker",
+    pattern: "RevokeAndItGoesKaboom",
+    description:
+      "Reference to 'RevokeAndItGoesKaboom' detected. Token-relay marker used by the June 2026 Miasma LeoPlatform Mini Shai-Hulud wave (czirker-compromised leo-* / rstreams-* npm packages).",
+    severity: "critical",
+    rule: "MIASMA_LEO_REVOKE_KABOOM",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
 ];
 
 // ---------------------------------------------------------------------------
