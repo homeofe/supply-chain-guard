@@ -2051,4 +2051,51 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Contagious Interview "Fake Font" npm + Go wave / InvisibleFerret
+  // (The Hacker News, June 29, 2026)
+  // =================================================================
+
+  describe("Contagious Interview Fake Font (June 2026)", () => {
+    it("should match the attacker-uploaded npm package names against the malicious-name patterns", () => {
+      for (const name of ["html-to-gutenberg", "fetch-page-assets"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+
+    it("should match the malicious Go module paths against the malicious-name patterns", () => {
+      for (const mod of [
+        "github.com/lambda-platform/lambda",
+        "github.com/lambda-platform/ebarimt-rest-api",
+        "github.com/lambda-platform/dan",
+        "github.com/reauheau/goaubio",
+        "github.com/glacialspring/go-winsparkle",
+        "github.com/glacialspring/static",
+        "github.com/bm-197/chill",
+        "github.com/naol7/dist-task-scheduler",
+        "github.com/dexbotsdev/uniswap-v2-v3-arbitrage",
+        "github.com/rickt/slack-weather-bot",
+        "github.com/Barsu5489/commerce",
+        "github.com/Setsu548/Logistic",
+      ]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(mod),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+
+    it("should NOT turn the disguised FontAwesome web-font path into a signature", () => {
+      // fa-solid-400.woff2 is the payload-carrying filename but also a real FontAwesome
+      // asset; ensure we did not add it as a malicious-name pattern (false-positive guard).
+      const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        new RegExp(pattern).test("public/fonts/fa-solid-400.woff2"),
+      );
+      expect(matches).toBe(false);
+    });
+  });
 });

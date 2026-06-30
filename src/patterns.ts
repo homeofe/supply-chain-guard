@@ -360,6 +360,17 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // trojan. aes-decode-runner-pro (145 downloads) + postcss-min are fully malicious; bare names.
   "^(postcss-min|aes-decode-runner-pro)$",
 
+  // Contagious Interview "Fake Font" npm + Go wave / InvisibleFerret (The Hacker News, June 29, 2026)
+  // DPRK Contagious Interview operation. Two attacker-uploaded npm packages and a cluster of
+  // 16 Go modules conceal a hidden VS Code task ("eslint-check") plus a JavaScript payload
+  // disguised as a web font (public/fonts/fa-solid-400.woff2) that deploys the InvisibleFerret
+  // Python backdoor, using TronGrid/Aptos blockchain transactions as a dead-drop resolver.
+  // The npm packages were uploaded 2026-05-25 and removed - bare-name indicators with no
+  // legitimate history. The font filename and task name are deliberately NOT used as
+  // signatures: both collide with legitimate FontAwesome assets / lint tasks (false positives).
+  "^(html-to-gutenberg|fetch-page-assets)$",
+  "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|amantsehay/a2sv-go-course|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

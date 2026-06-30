@@ -343,6 +343,25 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.43 (2026-06-30)
+**Threat intel: Contagious Interview "Fake Font" npm + Go wave (June 29, 2026)**
+
+Adds indicators for a DPRK Contagious Interview operation reported by The Hacker News on
+June 29, 2026. Two attacker-uploaded npm packages and a cluster of 16 Go modules hide a
+JavaScript payload disguised as a web font (`public/fonts/fa-solid-400.woff2`) plus a
+hidden VS Code task (`eslint-check`) that deploys the InvisibleFerret Python backdoor.
+TronGrid and Aptos blockchain transactions act as the dead-drop resolver; harvested data
+is exfiltrated as ZIP archives to a C2 server or a runtime-supplied Telegram bot.
+
+- npm package names `html-to-gutenberg` and `fetch-page-assets` (uploaded 2026-05-25, since
+  removed) added to `MALICIOUS_PACKAGE_PATTERNS` as bare-name indicators.
+- 16 malicious Go module paths (e.g. `github.com/lambda-platform/lambda`,
+  `github.com/reauheau/goaubio`, `github.com/dexbotsdev/uniswap-v2-v3-arbitrage`) added as a
+  `MALICIOUS_PACKAGE_PATTERNS` alternation and recorded in the bundled threat-intel feed.
+- 18 new bundled-feed IOC entries and a `campaigns.test.ts` regression suite, including a
+  guard that the disguised FontAwesome filename is deliberately NOT used as a signature.
+- No file hashes, C2 domains, IPs, or wallet addresses were disclosed in the report.
+
 ### v5.2.42 (2026-06-29)
 **Threat intel: Miasma LeoPlatform / GitHub Actions wave (June 26, 2026)**
 

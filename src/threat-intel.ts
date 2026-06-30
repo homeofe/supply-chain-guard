@@ -541,6 +541,33 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "hexo-shoka-swiper@0.1.10", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
   // Go ecosystem propagation - version-pinned (clean upstream versions remain legitimate)
   { type: "package", value: "go:github.com/verana-labs/verana-blockchain@v0.10.1-dev.20", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
+
+  // Contagious Interview "Fake Font" npm + Go wave / InvisibleFerret (The Hacker News, June 29, 2026)
+  // DPRK Contagious Interview operation. Two attacker-uploaded npm packages (html-to-gutenberg,
+  // fetch-page-assets; uploaded 2026-05-25, since removed) and a cluster of 16 Go modules conceal
+  // a hidden VS Code task ("eslint-check") plus a JavaScript payload disguised as a web font
+  // (public/fonts/fa-solid-400.woff2) that drops the InvisibleFerret Python backdoor. TronGrid +
+  // Aptos blockchain transactions act as the dead-drop resolver; harvested data is packaged into
+  // ZIP archives and uploaded to a C2 server or a runtime-supplied Telegram bot. No file hashes,
+  // C2 domains, IPs, or wallet addresses were disclosed in the report.
+  { type: "package", value: "html-to-gutenberg", severity: "critical", confidence: 0.9, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "fetch-page-assets", severity: "critical", confidence: 0.9, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/lambda-platform/lambda", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/lambda-platform/ebarimt-rest-api", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/lambda-platform/dan", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/reauheau/goaubio", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/glacialspring/go-winsparkle", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/glacialspring/static", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/bm-197/chill", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/naol7/dist-task-scheduler", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/anatoli-derese/a2sv-excercise", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/amantsehay/a2sv-go-course", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/zainirfan13/graphql-client", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/hngi/team-fierce-backend-golang", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/rickt/slack-weather-bot", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/Barsu5489/commerce", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/Setsu548/Logistic", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
 ];
 
 const CACHE_DIR = ".scg-cache";
