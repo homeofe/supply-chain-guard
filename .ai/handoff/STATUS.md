@@ -91,3 +91,5 @@
 - PyPI scanning requires local package download (no remote API)
 - VS Code extension scanning needs .vsix file on disk
 - No real-time monitoring (scan-based only)
+
+> 2026-06-30 ci: add Dependabot config (per-repo ecosystems) + exempt Dependabot from the aahp-verify handoff gate.
