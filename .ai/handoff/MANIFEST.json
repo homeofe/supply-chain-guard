@@ -3,10 +3,10 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-opus-4-8",
-    "session_id": "cli-1782925219",
-    "timestamp": "2026-07-01T17:00:19Z",
-    "commit": "37cf622",
-    "phase": "fix",
+    "session_id": "cli-1782925808",
+    "timestamp": "2026-07-01T17:10:08Z",
+    "commit": "00f1686",
+    "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
@@ -17,9 +17,9 @@
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:f25f789025c20f7e7fe5218e6ffa056fe63d9756a6c092e94644872f9b704868",
-      "updated": "2026-06-28T10:11:46Z",
-      "lines": 212,
+      "checksum": "sha256:275cc1d3ae47d5ad0f893363f0e29183ba794d0527b968519a687cc60a1d841e",
+      "updated": "2026-07-01T17:08:13Z",
+      "lines": 59,
       "summary": "(no summary available)"
     },
     "LOG.md": {
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Close stale issues #30/#31; mark T-006/T-007 done",
+  "quick_context": "Refresh NEXT_ACTIONS.md: all T-001..T-007 done, no queued work",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 3294,
-    "full_read": 7391
+    "manifest_plus_core": 2095,
+    "full_read": 6192
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}
