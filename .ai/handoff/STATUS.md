@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): Closed stale auto-generated issues #30 (T-006
+> Cargo/Go scanner) and #31 (T-007 Solana rate-limit handling). Both features were
+> already implemented and tested (src/cargo-scanner.ts + src/go-scanner.ts wired into
+> scanner.ts; exponential backoff + Retry-After + 429/-32005 handling in
+> src/solana-monitor.ts). The issues had been auto-created on 2026-06-28 from AAHP
+> manifest tasks that were never flipped off "ready" after the work shipped (v3/v4
+> era). Marked T-006 and T-007 "done" in MANIFEST.json so they are not recreated.
+
 > Note (2026-07-01, claude-opus-4-8): Released v5.2.44 - dependency-maintenance release
 > that publishes the commander 13->14 runtime bump (plus the TS6 / vitest 4 / @types/node 26
 > / vite 8 dev-tree refresh) to npm. Version bumped across package.json, src/cli.ts, and

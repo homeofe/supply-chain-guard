@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-opus-4-8",
-    "session_id": "cli-1782924583",
-    "timestamp": "2026-07-01T16:49:43Z",
-    "commit": "cf5f782",
+    "session_id": "cli-1782925219",
+    "timestamp": "2026-07-01T17:00:19Z",
+    "commit": "37cf622",
     "phase": "fix",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2213151a182cbb1c893a9c06ed7e1d5ce735e6aa6ce40ca80413cf9a04ec2238",
-      "updated": "2026-07-01T16:49:31Z",
-      "lines": 127,
+      "checksum": "sha256:a68f2b027e6138b5118790887b828062c15984ccacabf57b8696a0e5bacf19d1",
+      "updated": "2026-07-01T17:00:03Z",
+      "lines": 135,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -71,12 +71,12 @@
       "summary": "{"
     }
   },
-  "quick_context": "Release v5.2.44: dependency-maintenance release (commander 14 + toolchain refresh)",
+  "quick_context": "Close stale issues #30/#31; mark T-006/T-007 done",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 3189,
-    "full_read": 7286
+    "manifest_plus_core": 3294,
+    "full_read": 7391
   }
   ,"next_task_id": 8
-  ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"ready","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"ready","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}
+  ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}
 }
