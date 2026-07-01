@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): Test-hygiene fix. cli.test.ts scanned the
+> version-controlled fixture dirs in-place, and the scanner writes a .scg-history/ into
+> whatever directory it scans - so every `npm test` run dirtied two tracked fixture files
+> (worked around by reverting them all session). Fixed at the root: cli.test.ts now copies
+> the fixtures to a temp dir and scans the copy; removed the two tracked fixture
+> risk-history.json files; added .scg-history/ to .gitignore. Verified `npm test` now
+> leaves the working tree clean.
+
 > Note (2026-07-01, claude-opus-4-8): AAHP protocol fix (Option A). Root cause of the
 > doc drift: the content-drift gate only forces STATUS.md + MANIFEST.json, so every other
 > handoff doc rotted (DASHBOARD/TRUST sat at v3.1.0 for ~40 releases). Fix: DASHBOARD.md

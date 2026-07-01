@@ -4,16 +4,36 @@
  * Requires `npm run build` to have been run first.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
 const CLI = path.join(ROOT, "dist", "cli.js");
-const CLEAN_FIXTURE = path.join(__dirname, "fixtures", "clean-npm-pkg");
-const MALICIOUS_FIXTURE = path.join(__dirname, "fixtures", "malicious-npm-pkg");
+const FIXTURES_SRC = path.join(__dirname, "fixtures");
+
+// Scan temp COPIES of the fixtures, never the source dirs. The scanner writes a
+// .scg-history/ folder into whatever directory it scans, which otherwise dirtied
+// the version-controlled fixtures on every `npm test` run.
+let workdir: string;
+let CLEAN_FIXTURE: string;
+let MALICIOUS_FIXTURE: string;
+
+beforeAll(() => {
+  workdir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cli-test-"));
+  CLEAN_FIXTURE = path.join(workdir, "clean-npm-pkg");
+  MALICIOUS_FIXTURE = path.join(workdir, "malicious-npm-pkg");
+  fs.cpSync(path.join(FIXTURES_SRC, "clean-npm-pkg"), CLEAN_FIXTURE, { recursive: true });
+  fs.cpSync(path.join(FIXTURES_SRC, "malicious-npm-pkg"), MALICIOUS_FIXTURE, { recursive: true });
+});
+
+afterAll(() => {
+  fs.rmSync(workdir, { recursive: true, force: true });
+});
 
 /** Run the CLI with the given args. Returns stdout, stderr, and exit status. */
 function cli(args: string[]): { stdout: string; stderr: string; status: number } {
