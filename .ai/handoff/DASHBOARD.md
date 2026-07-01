@@ -1,55 +1,55 @@
 # supply-chain-guard: Build Dashboard
 
 > Single source of truth for build health, test coverage, and pipeline state.
-> Updated by agents at the end of every completed task.
+> Exact per-file test counts live in `npm test` output; this file summarizes.
+> Last refreshed: 2026-07-01 (claude-opus-4-8).
+
+---
+
+## Pipeline State
+
+| Field | Value |
+|-------|-------|
+| Current version | 5.2.44 |
+| npm | supply-chain-guard@5.2.44 (unscoped, public, OIDC trusted publish) |
+| Build | green (`tsc`, TypeScript 6) |
+| Tests | 823 passing / 836 (13 vscode-scanner tests need a local `zip` binary; green on Linux CI) |
+| Vulnerabilities | 0 (`npm audit`) |
+| Current phase | maintenance |
+| Blocking issues | none |
+| Open GitHub issues | none |
+
+---
+
+## Toolchain
+
+| Item | Version | Notes |
+|------|---------|-------|
+| Runtime dep | commander ^14.0.3 | CommonJS line; 15+ is ESM-only + Node >=22.12, ignored by dependabot |
+| TypeScript | ^6.0.3 | tsconfig needs `"types": ["node"]` (TS6 dropped auto @types include) |
+| vitest | ^4.1.9 | transitive vite 8.1.2 |
+| @types/node | ^26.0.1 | dev only |
+| Node engines | >=20 | CI runs Node 20 |
 
 ---
 
 ## Components
 
-| Name | Path | Build | Tests | Status | Notes |
-|------|------|-------|-------|--------|-------|
-| CLI entry | `src/cli.ts` | ✅ | ✅ 22 | ✅ | commander-based, all subcommands |
-| Central scanner | `src/scanner.ts` | ✅ | ✅ 18 | ✅ | delegates to all sub-scanners |
-| npm scanner | `src/npm-scanner.ts` | ✅ | ✅ 10 | ✅ | install scripts, obfuscation, typosquatting |
-| PyPI scanner | `src/pypi-scanner.ts` | ✅ | ✅ 44 | ✅ | incl. install hook detection |
-| VS Code scanner | `src/vscode-scanner.ts` | ✅ | ✅ 14 | ✅ | .vsix analysis |
-| GitHub Actions scanner | `src/github-actions-scanner.ts` | ✅ | ✅ 20 | ✅ | CI/CD pipeline attacks |
-| Dependency confusion | `src/dependency-confusion.ts` | ✅ | ✅ 12 | ✅ | namespace confusion detection |
-| Lockfile checker | `src/lockfile-checker.ts` | ✅ | ✅ 14 | ✅ | integrity verification |
-| Binary detection | `src/patterns.ts` + scanner | ✅ | ✅ 11 | ✅ | 30-entry whitelist |
-| Beacon/miner detection | `src/patterns.ts` | ✅ | ✅ 21 | ✅ | network beacons, crypto miners |
-| Campaign signatures | `src/patterns.ts` | ✅ | ✅ 21 | ✅ | 13 campaigns (XZ, SolarWinds...) |
-| Solana C2 monitor | `src/solana-monitor.ts` | ✅ | ✅ 23 | ✅ | wallet monitoring, watchlist, webhook |
-| Reporter | `src/reporter.ts` | ✅ | ✅ 39 | ✅ | text/JSON/markdown/SARIF/SBOM tested |
-| SBOM export | `src/reporter.ts` | ✅ | ✅ | ✅ | CycloneDX 1.5 JSON format |
-| --fail-on flag | `src/cli.ts` | ✅ | ✅ | ✅ | severity threshold for CI pipelines |
-| GitHub Action | `action.yml` + `src/action.ts` | ✅ | manual | ✅ | branding: shield/red |
-| CI workflow | `.github/workflows/ci.yml` | ✅ | n/a | ✅ | build+test on push/PR, npm publish on v* |
+49 source modules under `src/` (~53 Vitest test files). Grouped:
 
-**Legend:** ✅ passing / complete · ❌ failing/missing · ⚠️ needs attention · manual = tested manually only
+| Group | Modules | Status |
+|-------|---------|--------|
+| Core | scanner, cli, reporter, patterns, types, index | ✅ |
+| Package scanners | npm, pypi, cargo, go, vscode | ✅ |
+| CI/CD + repo | github-actions-scanner, github-trust-scanner, workflow-modeler, release-scanner, org-scanner, dockerfile-scanner, config-scanner, git-scanner | ✅ |
+| Dependency analysis | dependency-confusion, dependency-risk-analyzer, dependency-governance, lockfile-checker, publishing-anomaly-detector | ✅ |
+| Detection + intel | ioc-blocklist, threat-intel, entropy, install-hook-scanner, active-validation | ✅ |
+| Scoring + risk | risk-engine, risk-forecast, trust-breakdown, trust-signals, correlation-engine, attack-graph, posture-engine, metrics | ✅ |
+| Supply-chain provenance | sbom-generator, slsa-verifier, soc-exporter | ✅ |
+| Ops + response | remediation-engine, playbooks, triage-engine, sla-engine, continuous-monitor, secret-simulator, diff-scanner, policy-engine | ✅ |
+| Solana C2 | solana-monitor (backoff + Retry-After + 429/-32005 handling) | ✅ |
 
----
-
-## Test Coverage
-
-| Suite | Tests | Status | Last Run |
-|-------|-------|--------|----------|
-| scanner.test.ts | 18 | ✅ All pass | 2026-03-26 |
-| pypi-scanner.test.ts | 44 | ✅ All pass | 2026-03-26 |
-| beacon-miner.test.ts | 21 | ✅ All pass | 2026-03-26 |
-| campaigns.test.ts | 21 | ✅ All pass | 2026-03-26 |
-| github-actions-scanner.test.ts | 20 | ✅ All pass | 2026-03-26 |
-| vscode-scanner.test.ts | 14 | ✅ All pass | 2026-03-26 |
-| lockfile-checker.test.ts | 14 | ✅ All pass | 2026-03-26 |
-| dependency-confusion.test.ts | 12 | ✅ All pass | 2026-03-26 |
-| binary-detection.test.ts | 11 | ✅ All pass | 2026-03-26 |
-| npm-scanner.test.ts | 10 | ✅ All pass | 2026-03-26 |
-| solana-monitor.test.ts | 23 | ✅ All pass | 2026-03-26 |
-| reporter.test.ts | 39 | ✅ All pass | 2026-03-26 |
-| cli.test.ts | 22 | ✅ All pass | 2026-03-26 |
-
-**Total: 269 tests, 269 passing**
+**Legend:** ✅ passing / complete · ❌ failing/missing · ⚠️ needs attention
 
 ---
 
@@ -58,55 +58,29 @@
 | Component | Status | Notes |
 |-----------|--------|-------|
 | GitHub repo | ✅ | homeofe/supply-chain-guard (Apache-2.0) |
-| GitHub Actions CI | ✅ | build + test on push/PR |
-| npm auto-publish | ✅ | triggers on `v*` tags via CI |
-| npm package | ✅ | supply-chain-guard@3.1.0 (unscoped, public) |
-| GitHub Marketplace | ✅ | supply-chain-guard GitHub Action |
-| ClawHub | n/a | CLI tool, not an OpenClaw skill |
-
----
-
-## Pipeline State
-
-| Field | Value |
-|-------|-------|
-| Current version | 3.1.0 |
-| Current phase | feature development |
-| Last completed | v3.1.0 release (2026-03-26) |
-| Blocking issues | None |
+| CI (`ci.yml`) | ✅ | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, `v5` branch fast-forward |
+| AAHP Verify (`aahp-verify.yml`) | ✅ | handoff gate; dependabot exempt |
+| Prebuild gates | ✅ | `check:changelog` + `check:version-sync` (block release drift) |
+| npm publish | ✅ | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
+| GitHub Action | ✅ | composite; `uses: homeofe/supply-chain-guard@v5` (floating branch), runs `npm install -g supply-chain-guard` |
+| GitHub Marketplace | ✅ | listing updated manually (not automatable) |
+| Dependabot | ✅ | weekly npm + github-actions; commander >=15 ignored |
 
 ---
 
 ## Open Tasks
 
-| ID | Task | Priority | Status |
-|----|------|----------|--------|
-| T-006 | Cargo/Go module scanner | low | ready |
-| T-007 | Rate-limit handling in Solana monitor | low | ready |
-
-## Completed Tasks
-
-| ID | Task | Completed |
-|----|------|-----------|
-| - | v1.0.0: Initial npm scanner | 2026-03-19 |
-| - | v2.0.0: Multi-platform (PyPI, VS Code, dep confusion, lockfile, binary, beacon) | 2026-03-19 |
-| - | v3.0.0: GitHub Actions scanner, SARIF output, Solana watchlist, PyPI install hooks | 2026-03-26 |
-| - | CI workflow (auto-publish on tag) | 2026-03-26 |
-| - | AAHP handoff docs completed | 2026-03-26 |
-| T-001 | Add solana-monitor unit tests (23 tests) | 2026-03-26 |
-| T-002 | Add reporter unit tests (39 tests – JSON, SARIF, markdown, text, SBOM) | 2026-03-26 |
-| T-003 | Add CLI integration tests (22 tests) | 2026-03-26 |
-| T-004 | SBOM export (CycloneDX 1.5 JSON) | 2026-03-26 |
-| T-005 | --fail-on severity threshold flag | 2026-03-26 |
+None. All tracked AAHP tasks (T-001..T-007) are done; see NEXT_ACTIONS.md.
 
 ---
 
 ## Update Instructions (for agents)
 
-After completing any task:
+The authoritative release process is in the repo-root `CLAUDE.md`. After any change:
 
-1. Update component status table and test counts
-2. Move task from Open to Completed
-3. Update Pipeline State (version, phase, last completed)
-4. Add entry to LOG.md
-5. Notify project owner on task completion
+1. Update `STATUS.md` (a top-of-file note) and regenerate `MANIFEST.json`
+   (`bash scripts/aahp-manifest.sh . --agent <id> --phase <phase>`) - the AAHP
+   gate (`scripts/verify-handoff.sh --level ci`) blocks the commit otherwise.
+2. Refresh this DASHBOARD if version/tests/components changed.
+3. Append an entry to `LOG.md`; re-prioritize `NEXT_ACTIONS.md`.
+4. Mark newly verified facts in `TRUST.md`.

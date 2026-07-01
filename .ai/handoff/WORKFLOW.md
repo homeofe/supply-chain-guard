@@ -59,11 +59,16 @@ Updates: STATUS.md (if version changed)
 ### Phase 4: Release (on version bump tasks only)
 
 ```
-Does:    Bumps version in package.json, README, CHANGELOG, STATUS.md, MANIFEST.json
-         Commits: chore: bump version to vX.Y.Z
-         Tags: git tag vX.Y.Z && git push origin vX.Y.Z
-         GitHub Release: gh release create vX.Y.Z
-         npm: npm publish --access public (or triggered via CI tag)
+Does:    (Authoritative, gated process is in the repo-root CLAUDE.md.)
+         Adds a README ## Changelog entry for the new version
+         Bumps the version in package.json, package-lock.json, src/cli.ts, and
+           src/reporter.ts (text header + SARIF + SBOM + HTML footer) -- the
+           check:changelog + check:version-sync prebuild gates enforce this
+         Updates STATUS.md + regenerates MANIFEST.json (AAHP gate)
+         One commit, then git tag vX.Y.Z (after the commit)
+         git push origin main && git push origin vX.Y.Z
+         CI does the rest on the tag: OIDC npm publish (no NPM_TOKEN),
+           GitHub Release, and fast-forward of the floating v5 branch
 ```
 
 ---
@@ -75,7 +80,9 @@ Does:    Bumps version in package.json, README, CHANGELOG, STATUS.md, MANIFEST.j
 - **All tasks blocked** → notify project owner
 - **Notify project owner** only on fully completed tasks (not mid-task)
 - **Never skip tests** -- `npm test` must pass before committing
-- **Never push directly to main** -- use feature branches + PR (unless trivial docs)
+- **Main-branch policy:** dependabot uses PRs; day-to-day maintenance (docs, threat-intel
+  IOCs, dependency bumps, releases) commits directly to main per CLAUDE.md. Every commit
+  must still build and pass the AAHP gate.
 - **Each commit must build** -- broken builds block the CI publish pipeline
 
 ---
@@ -100,11 +107,13 @@ Does:    Bumps version in package.json, README, CHANGELOG, STATUS.md, MANIFEST.j
 
 ### Bumping a version
 
-All of these must change in one commit:
-- `package.json` → `"version"`
-- `README.md` → npm badge + Changelog section
-- `.ai/handoff/STATUS.md` → `## Current Version`
-- `.ai/handoff/MANIFEST.json` → `"version"`
+See CLAUDE.md for the full mandatory sequence. All version strings move together
+(the `check:version-sync` gate enforces it):
+- `package.json` `"version"` + `package-lock.json`
+- `src/cli.ts` (`.version(...)`)
+- `src/reporter.ts` (text header, SARIF, SBOM, HTML footer)
+- `README.md` `## Changelog` entry (the `check:changelog` gate enforces it)
+- `.ai/handoff/STATUS.md` note + regenerated `MANIFEST.json`
 
 ---
 

@@ -16,7 +16,9 @@
 - **Imports:** Node.js built-ins use `node:` prefix (e.g. `import * as fs from "node:fs"`)
 - **JSON:** 2-space indentation, no trailing commas
 - **Markdown:** ATX headers, tables with alignment, code blocks with language tags
-- All modules use ES module syntax (`import`/`export`), not CommonJS
+- Source uses ES module syntax (`import`/`export`) but compiles to **CommonJS** output
+  (`module`/`moduleResolution: Node16`). The published package is CommonJS, so runtime
+  deps must be CJS-importable (this is why commander is pinned to the 14.x line, not 15)
 
 ## Module Structure
 
@@ -59,18 +61,21 @@ chore/<short-name>           → build, deps, tooling
 - MAJOR: breaking CLI changes or removed detection rules
 - MINOR: new scanner module or new detection rules
 - PATCH: bug fixes, rule tuning, dependency updates
-- All version bumps: `package.json` + README badge + CHANGELOG + handoff STATUS.md + MANIFEST.json
+- All version bumps move together (enforced by `check:version-sync`): `package.json`,
+  `package-lock.json`, `src/cli.ts`, `src/reporter.ts`, README `## Changelog`, plus
+  STATUS.md + MANIFEST.json. See CLAUDE.md for the authoritative sequence.
 
 ## Release Checklist
 
-1. All tests pass (`npm test`)
-2. Build succeeds (`npm run build`)
-3. Version bumped in `package.json`, README, CHANGELOG, STATUS.md, MANIFEST.json
-4. Commit: `chore: bump version to vX.Y.Z`
-5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-6. GitHub Release created via `gh release create`
-7. npm published: `npm publish --access public`
-8. Stale feature branches deleted
+The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary:
+
+1. README `## Changelog` entry for the new version
+2. Version bumped everywhere (see Versioning above)
+3. `npm run build` green (prebuild gates: `check:changelog` + `check:version-sync`)
+4. `npm test` green
+5. One commit (code + docs + handoff), then `git tag vX.Y.Z` **after** the commit
+6. `git push origin main && git push origin vX.Y.Z`
+7. CI publishes to npm via OIDC, creates the GitHub Release, and fast-forwards the `v5` branch
 
 ## Detection Rule Conventions
 

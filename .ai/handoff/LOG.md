@@ -6,6 +6,42 @@
 
 ---
 
+## [2026-07-01] Claude Opus 4.8: dependency overhaul, v5.2.44 release, handoff-doc refresh
+
+**Agent:** Claude Opus 4.8 (claude-opus-4-8)
+**Phase:** fix / maintenance
+
+> Journal gap: this file was not maintained between 2026-03-26 (v3.1.0) and today,
+> despite ~40 releases (v3.1.0 -> v5.2.44) including major security-hardening work.
+> The AAHP content-drift gate only forces STATUS.md + MANIFEST.json per commit, so
+> LOG / DASHBOARD / TRUST / NEXT_ACTIONS drifted. This entry catches up; those state
+> docs were refreshed against the live repo today. STATUS.md's top notes carry the
+> detailed per-release history since March.
+
+### What was done today
+- Translated repo-root CLAUDE.md to English (was German).
+- Handled all 8 open dependabot PRs (#32-#39): consolidated into one tested batch
+  (638c11c) instead of merging conflicting PRs one-by-one. typescript 6 (plus the
+  tsconfig `"types": ["node"]` fix TS6 requires), vitest 4, @types/node 26,
+  commander 13->14 (NOT 15: ESM-only + Node >=22.12), and 4 GitHub Actions bumps
+  (SHA pins verified against upstream tags).
+- "Update all packages" pass (cf5f782): removed the obsolete esbuild/vite overrides,
+  `npm update` -> vite 8; vite 8's stricter oxc parser surfaced a latent
+  duplicate-import bug in dependency-confusion.test.ts, fixed.
+- Released v5.2.44 (37cf622): OIDC npm publish + GitHub Release + v5 branch update, all green.
+- Closed stale auto-created issues #30 (Cargo/Go scanner) and #31 (Solana rate-limit):
+  both features already shipped in the v4 era; marked T-006/T-007 done in MANIFEST.json.
+- Refreshed handoff docs: NEXT_ACTIONS, DASHBOARD, TRUST, LOG (this entry), and fixed
+  stale specifics in WORKFLOW + CONVENTIONS.
+
+### Decisions / findings
+- commander stays on the CommonJS 14.x line; dependabot now ignores commander >=15.
+- @types/node kept at 26 (dev-only dependency; owner's call).
+- AAHP protocol gap: the content-drift gate enforces ONLY STATUS.md + MANIFEST.json,
+  so every other handoff doc silently rots. Flagged to the owner for a durable fix.
+
+---
+
 ## [2026-03-26] Claude Sonnet 4.6: v3.1.0 - test coverage, SBOM export, --fail-on flag
 
 **Agent:** Claude Sonnet 4.6 (claude-sonnet-4-6)
