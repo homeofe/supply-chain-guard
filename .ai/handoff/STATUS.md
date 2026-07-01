@@ -1,5 +1,14 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): Made the generated handoff docs un-drift-able.
+> The earlier Option A made DASHBOARD/TRUST generated but still snapshot-on-demand, so
+> they could lag if nobody ran the generator. Now the generator emits a PURE function of
+> committed files (package.json + tsconfig + src/ list - no timestamps/HEAD/audit), and a
+> new `check:handoff` gate (added to `prebuild`, alongside check:changelog +
+> check:version-sync) regenerates in-memory and fails the build if the committed docs
+> differ. So a stale DASHBOARD/TRUST now turns the build red in CI - it cannot silently
+> drift. Verified the gate fails on a corrupted doc and passes when fresh.
+
 > Note (2026-07-01, claude-opus-4-8): Test-hygiene fix. cli.test.ts scanned the
 > version-controlled fixture dirs in-place, and the scanner writes a .scg-history/ into
 > whatever directory it scans - so every `npm test` run dirtied two tracked fixture files
