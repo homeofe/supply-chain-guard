@@ -1,5 +1,16 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): "Update all packages" pass (follow-up to the
+> dependabot batch). Removed the now-obsolete esbuild/vite overrides (they patched
+> vitest 3's vulnerable transitive tree; vitest 4's tree is clean) and ran
+> `npm update` -> everything now at latest within semver: vite 7->8.1.2, esbuild
+> refreshed, 0 vulnerabilities. commander stays 14.0.3 (15 is ESM-only + Node
+> >=22.12; dependabot ignores >=15). vite 8's stricter oxc parser surfaced a latent
+> bug: dependency-confusion.test.ts imported fs+path twice (top + a duplicate
+> mid-file block); consolidated all imports at the top and removed the duplicates.
+> Build green; 823 tests pass, only the 13 vscode-scanner zip tests fail locally
+> (missing `zip` binary; green in CI). No version bump/publish.
+
 > Note (2026-07-01, claude-opus-4-8): Dependabot batch (8 PRs). Landed the safe
 > updates and fixed the two that broke `tsc`: typescript 5.7->6.0.3 (added
 > "types": ["node"] to tsconfig.json - TS6 no longer auto-includes @types/node,

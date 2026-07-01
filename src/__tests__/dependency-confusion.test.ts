@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { scanDependencyConfusion } from "../dependency-confusion.js";
+import * as os from "node:os";
+import { scanDependencyConfusion, scanPypiDependencyConfusion } from "../dependency-confusion.js";
 
 describe("Dependency Confusion Detector", () => {
   let tempDir: string;
@@ -299,11 +300,6 @@ describe("Dependency Confusion Heuristics (unit)", () => {
 });
 
 // ─── v4.9 new feature unit tests ──────────────────────────────────────────
-
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
-import { scanPypiDependencyConfusion } from "../dependency-confusion.js";
 
 describe("PyPI confusion detection — parseRequirementsTxt (v4.9)", () => {
   let tmpDir: string;
