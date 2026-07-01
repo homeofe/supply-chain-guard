@@ -42,19 +42,20 @@ Does:    Implements the task (code + tests)
          Commits on a feature branch: feat/issue-N-description
 ```
 
-### Phase 3: Merge & Update Handoff
+### Phase 3: Update Handoff
 
 ```
-Does:    Opens PR, merges to main (squash)
-         Deletes feature branch
+Updates: STATUS.md   (a top-of-file note; the hand-maintained living state doc)
+         LOG.md      (append-only: what was done, decisions made)
+         NEXT_ACTIONS.md (backlog, only if it changed)
 
-Updates: STATUS.md (if version changed)
-         DASHBOARD.md (component status, test counts)
-         NEXT_ACTIONS.md (move task to completed, re-prioritize)
-         LOG.md (what was done, decisions made)
-         MANIFEST.json (last_session, task status)
-         TRUST.md (mark newly verified properties)
+Runs:    npm run handoff:refresh                  (regenerates DASHBOARD.md + TRUST.md
+                                                    from live data; do NOT hand-edit them)
+         bash scripts/aahp-manifest.sh . \
+           --agent <id> --phase <phase>           (regenerates MANIFEST.json)
 ```
+
+The AAHP gate (aahp-verify.yml) enforces STATUS.md + MANIFEST.json on any code change.
 
 ### Phase 4: Release (on version bump tasks only)
 

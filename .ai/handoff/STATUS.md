@@ -1,5 +1,15 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): AAHP protocol fix (Option A). Root cause of the
+> doc drift: the content-drift gate only forces STATUS.md + MANIFEST.json, so every other
+> handoff doc rotted (DASHBOARD/TRUST sat at v3.1.0 for ~40 releases). Fix: DASHBOARD.md
+> and TRUST.md are now GENERATED from live repo data by scripts/aahp-dashboard.mjs
+> (`npm run handoff:refresh`) - version, module/test-file counts, audit, and HEAD are
+> derived, so there is nothing to hand-maintain or drift. STATUS.md stays the single
+> hand-maintained living state doc; NEXT_ACTIONS.md is the one curated backlog; build/test
+> pass-fail is left to CI (authoritative). Updated CONVENTIONS + WORKFLOW handoff protocol
+> to match.
+
 > Note (2026-07-01, claude-opus-4-8): Closed stale auto-generated issues #30 (T-006
 > Cargo/Go scanner) and #31 (T-007 Solana rate-limit handling). Both features were
 > already implemented and tested (src/cargo-scanner.ts + src/go-scanner.ts wired into

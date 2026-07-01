@@ -14,6 +14,7 @@
     "lint": "tsc --noEmit",
     "check:changelog": "node scripts/check-changelog.mjs",
     "check:version-sync": "node scripts/check-version-sync.mjs",
+    "handoff:refresh": "node scripts/aahp-dashboard.mjs",
     "prebuild": "npm run check:changelog && npm run check:version-sync",
     "prepublishOnly": "npm run build"
   },

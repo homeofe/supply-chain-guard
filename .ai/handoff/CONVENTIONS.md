@@ -86,10 +86,14 @@ The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary
 
 ## Handoff Protocol
 
+Doc roles: **STATUS.md** is the hand-maintained living state doc (append a note).
+**DASHBOARD.md + TRUST.md are GENERATED** from live repo data - never hand-edit them.
+**NEXT_ACTIONS.md** is the one hand-curated backlog. The AAHP gate enforces steps 1 + 5.
+
 After completing any task:
 
-1. Update `STATUS.md` (current version, open issues)
-2. Update `DASHBOARD.md` (component status, test counts)
-3. Add an entry to `LOG.md` (what was done, decisions made)
-4. Update `NEXT_ACTIONS.md` (re-prioritize remaining tasks)
-5. Update `MANIFEST.json` (version, last_session, task statuses)
+1. Add a note to `STATUS.md` (what changed, why)
+2. Regenerate the derived docs: `npm run handoff:refresh` (DASHBOARD.md + TRUST.md)
+3. Append an entry to `LOG.md` (append-only: what was done, decisions made)
+4. Update `NEXT_ACTIONS.md` only if the backlog changed
+5. Regenerate `MANIFEST.json`: `bash scripts/aahp-manifest.sh . --agent <id> --phase <phase>`
