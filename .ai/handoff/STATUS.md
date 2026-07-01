@@ -1,5 +1,12 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): Released v5.2.44 - dependency-maintenance release
+> that publishes the commander 13->14 runtime bump (plus the TS6 / vitest 4 / @types/node 26
+> / vite 8 dev-tree refresh) to npm. Version bumped across package.json, src/cli.ts, and
+> src/reporter.ts (text header, SARIF, SBOM, HTML footer); README changelog entry added.
+> Maintenance-only: no detection-logic or output-format changes. Tag v5.2.44 triggers the
+> OIDC publish + GitHub Release + floating v5 branch fast-forward.
+
 > Note (2026-07-01, claude-opus-4-8): "Update all packages" pass (follow-up to the
 > dependabot batch). Removed the now-obsolete esbuild/vite overrides (they patched
 > vitest 3's vulnerable transitive tree; vitest 4's tree is clean) and ran

@@ -343,6 +343,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The most impactful contri
 
 ## Changelog
 
+### v5.2.44 (2026-07-01)
+**Dependency maintenance: latest toolchain + commander 14**
+
+Routine dependency refresh. All dependencies are now at their latest versions with zero known
+vulnerabilities. No detection-logic or output-format changes: this is a maintenance-only release.
+
+- Runtime: commander 13 -> 14 (stays on the CommonJS line; commander 15 is ESM-only and requires
+  Node >=22.12, incompatible with this CommonJS package on Node >=20).
+- Dev/build: typescript 5 -> 6 (added an explicit `"types": ["node"]` to tsconfig.json, since
+  TypeScript 6 no longer auto-includes @types/node), vitest 3 -> 4, @types/node 22 -> 26, and the
+  test runner's transitive vite 7 -> 8 plus an esbuild refresh. Removed two now-obsolete
+  esbuild/vite overrides.
+- CI: pinned GitHub Actions bumped to current releases (checkout v7, setup-node v6, github-script
+  v9, setup-python v6); SHA pins verified against the upstream tags.
+
 ### v5.2.43 (2026-06-30)
 **Threat intel: Contagious Interview "Fake Font" npm + Go wave (June 29, 2026)**
 
