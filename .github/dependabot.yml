@@ -8,6 +8,13 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # commander 15+ is ESM-only (no CommonJS "require" export) and requires
+      # Node >=22.12. This package ships as a CommonJS CLI + require()-able
+      # library with engines node >=20, so it stays on the commander 14.x (CJS)
+      # line until a deliberate ESM migration. See PR #39.
+      - dependency-name: "commander"
+        versions: [">=15"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

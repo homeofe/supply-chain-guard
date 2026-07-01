@@ -1,5 +1,19 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-01, claude-opus-4-8): Dependabot batch (8 PRs). Landed the safe
+> updates and fixed the two that broke `tsc`: typescript 5.7->6.0.3 (added
+> "types": ["node"] to tsconfig.json - TS6 no longer auto-includes @types/node,
+> which is why console/process/node:* stopped resolving), vitest 3->4.1.9,
+> @types/node 22->26, commander 13->14.0.x. Commander was held on the CommonJS
+> 14.x line: commander 15 is ESM-only and needs Node >=22.12, incompatible with
+> this CJS CLI+library on engines node >=20; dependabot now ignores commander >=15
+> (see .github/dependabot.yml, PR #39). GitHub Actions bumped: checkout v4->v7
+> (SHA 9c091bb, verified against upstream tag), setup-node v4->v6 (SHA 48b55a0,
+> verified), github-script v7->v9, setup-python v5->v6. Build + all
+> non-environmental tests green (the 13 vscode-scanner tests fail locally only for
+> lack of a `zip` binary; green in CI). No version bump/publish in this commit -
+> commander 14 (the only runtime-dep change) ships with the next tagged release.
+
 > Note (2026-06-28, claude-opus-4-8): v5.2.41 security release. github-trust-scanner.ts
 > built five `gh api repos/${owner}/${repo}` calls as shell strings via execSync with
 > owner/repo unvalidated; analyzeGitHubTrust + parseGitHubUrl are public API, so a

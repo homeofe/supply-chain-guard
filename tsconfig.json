@@ -4,6 +4,11 @@
     "module": "Node16",
     "moduleResolution": "Node16",
     "lib": ["ES2022"],
+    // Load-bearing under TypeScript 6+: TS6 changed the default of "types" from
+    // auto-including every @types/* package to []. Without this, @types/node is
+    // not loaded and Node globals (console, process) + node: builtins fail to
+    // resolve. Do not remove.
+    "types": ["node"],
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
