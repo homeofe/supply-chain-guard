@@ -382,6 +382,21 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // v4.7: Active validation (assign confidence tiers, rationale, evidence)
   validateFindings(findings);
 
+  // v5.4.2: Apply policy BEFORE all downstream analytics. Correlation, trust
+  // breakdown, trend/forecast and governance previously consumed raw findings,
+  // so policy-suppressed findings leaked into "incidents" (a clean report
+  // showed a 100%-confidence worm incident built from suppressed FPs) and the
+  // trend check compared a pre-suppression score against the post-suppression
+  // history (guaranteed phantom RISK_TREND_SPIKE on the second scan of any
+  // repo with suppressions). Same bug class as the v5.2.40 SARIF/SBOM leak.
+  let suppressedCount = 0;
+  const policy = loadPolicyConfig(scanDir);
+  if (policy) {
+    const policyResult = applyPolicy(findings, policy);
+    findings = policyResult.findings;
+    suppressedCount += policyResult.suppressedCount;
+  }
+
   // v4.2: Correlation engine — link findings into incidents
   const correlation = correlateFindings(findings);
 
@@ -389,7 +404,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const hasLockfile = fs.existsSync(path.join(scanDir, "package-lock.json"));
   const trustBreakdown = calculateTrustBreakdown(findings, target, hasLockfile);
 
-  // v4.8: Continuous risk monitoring
+  // v4.8: Continuous risk monitoring (scores are now post-suppression,
+  // matching what saveRiskHistory persists)
   const riskHistory = loadRiskHistory(scanDir);
   const trendFindings = analyzeRiskTrend(riskHistory, calculateScore(findings));
   findings.push(...trendFindings);
@@ -401,13 +417,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const govFindings = checkTriageGovernance(findings, triageDecisions);
   findings.push(...govFindings);
 
-  // v4.4: Apply policy config (if present)
-  let suppressedCount = 0;
-  const policy = loadPolicyConfig(scanDir);
+  // v5.4.2: Second policy pass over the late-added findings (trend, forecast,
+  // governance) so rules like RISK_TREND_SPIKE stay suppressible. Findings
+  // removed by the first pass are already gone; this only affects the
+  // additions above.
   if (policy) {
-    const policyResult = applyPolicy(findings, policy);
-    findings = policyResult.findings;
-    suppressedCount += policyResult.suppressedCount;
+    const latePass = applyPolicy(findings, policy);
+    findings = latePass.findings;
+    suppressedCount += latePass.suppressedCount;
   }
 
   // v4.4: Apply baseline (if configured)

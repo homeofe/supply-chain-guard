@@ -4,6 +4,28 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.4.2 (2026-07-02)
+**Fix: policy-suppressed findings leaked into incidents and the trend check**
+
+Found by a real user scan of this repository: the report said "No findings -
+clean" while simultaneously showing a "[CRITICAL] Shai-Hulud npm Worm, 100%
+confidence" incident, and the second scan of any repo with suppressions raised
+a phantom RISK_TREND_SPIKE ("spiked from 8 to 51"). Same bug class as the
+v5.2.40 SARIF/SBOM suppressed-finding leaks.
+
+- Policy suppression now runs BEFORE the downstream analytics: the correlation
+  engine, trust breakdown, risk trend, forecast, and triage governance all
+  operate on the post-suppression finding set. Suppressed findings can no
+  longer produce incident boxes, correlation risk boosts, or phantom trend
+  spikes.
+- A second policy pass covers the late-generated findings, so rules like
+  RISK_TREND_SPIKE remain suppressible via .supply-chain-guard.yml.
+- Side effect: this repo's own self-scan now reports an honest 0/100 CLEAN -
+  the previous constant 8/100 was itself leak residue (correlation risk boost
+  computed from the two documented doc-generator suppressions).
+- 5 regression tests (bugfix-v5_4_2.test.ts) covering the incident leak, the
+  score-boost leak, the phantom spike, and trend-rule suppressibility.
+
 ### v5.4.1 (2026-07-02)
 **Docs: PowerShell-safe MCP install instructions**
 

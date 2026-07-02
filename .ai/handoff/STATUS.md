@@ -1,5 +1,16 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.4.2 - suppressed-finding leak fix,
+> found by the maintainer's own scan of this repo (report said "clean" AND showed a
+> 100%-confidence Shai-Hulud incident; second scan raised a phantom RISK_TREND_SPIKE
+> 8->51). Root cause: correlateFindings/trust/trend/forecast/governance consumed RAW
+> findings before applyPolicy ran (scanner.ts). Fix: policy pass moved BEFORE the
+> analytics + a second pass over late-generated findings keeps RISK_TREND_* rules
+> suppressible. Bonus: the constant self-scan score of 8 was itself leak residue
+> (correlation riskBoost from the two doc-generator suppressions) - the repo now scans
+> an honest 0/100 CLEAN. 5 regression tests in bugfix-v5_4_2.test.ts. Same bug class
+> as the v5.2.40 SARIF/SBOM leaks; correlation/trend consumers were missed back then.
+
 > Note (2026-07-02, claude-fable-5): Released v5.4.1 - docs patch release so the npm
 > package page (the live landing funnel for launch-day traffic) carries the
 > PowerShell-safe MCP install instructions. Also untracked + gitignored the .scg-cache/
