@@ -35,10 +35,20 @@ jobs:
       - name: Stage the demo target (malicious test fixture)
         run: cp -r src/__tests__/fixtures/malicious-npm-pkg ./suspicious-package
 
+      # vhs comes from Charm's official apt repo (vendor-signed); ffmpeg is
+      # preinstalled on ubuntu-24.04 runners. This replaces vhs-action, whose
+      # "install latest ffmpeg" download step is flaky (failed run 28602409278)
+      # and was our only third-party action.
+      - name: Install VHS from the Charm apt repo
+        run: |
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+          sudo apt-get update -q
+          sudo apt-get install -y -q vhs ttyd
+
       - name: Render the tape
-        uses: charmbracelet/vhs-action@59641cdc7fadf3978db65eb8c6937ea2752f4ec3 # v2.1.0
-        with:
-          path: assets/demo.tape
+        run: vhs assets/demo.tape
 
       - name: Upload the GIF as an artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

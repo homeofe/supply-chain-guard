@@ -17,7 +17,8 @@
 > legitimately trip the Shai-Hulud patterns in a .mjs file (benign-doc exclusion only
 > covers .md). Fixed via two documented suppressions in .supply-chain-guard.yml
 > (detection stays strict for scanned user projects). Self-scan now 9/100 with one
-> honest info finding (SHA-pinned vhs-action in the manual demo workflow).
+> honest info finding, later eliminated: vhs-action ffmpeg install proved flaky, replaced
+> with vhs from the Charm apt repo - zero third-party actions remain.
 
 > Note (2026-07-01, claude-opus-4-8): Made the generated handoff docs un-drift-able.
 > The earlier Option A made DASHBOARD/TRUST generated but still snapshot-on-demand, so
