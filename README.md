@@ -370,8 +370,15 @@ supply-chain-guard is both a scanner OF the agentic ecosystem and a tool FOR it.
 **Built-in MCP server** - let your AI agent vet packages BEFORE installing them:
 
 ```bash
-claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp
+npm install -g supply-chain-guard
+claude mcp add supply-chain-guard supply-chain-guard mcp
 ```
+
+This form works in every shell (bash, zsh, PowerShell, cmd) and avoids npx
+cold-start timeouts on first connect. On bash/zsh you can use the one-liner
+`claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp` instead;
+note that PowerShell swallows the bare `--` itself, so on Windows prefer the
+global-install form above.
 
 Exposes three tools over stdio: `ioc_lookup` (offline IOC + known-bad-version check
 for npm/PyPI/RubyGems/Composer/NuGet), `scan_directory`, and `scan_npm_package`.

@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-fable-5",
-    "session_id": "cli-1783013142",
-    "timestamp": "2026-07-02T17:25:42Z",
-    "commit": "5f04f3e",
-    "phase": "implementation",
+    "session_id": "cli-1783014955",
+    "timestamp": "2026-07-02T17:55:55Z",
+    "commit": "b077971",
+    "phase": "fix",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:edd9819b10e698b32e936c6b4e088aa34fa482f9cff6e5006400f9cda6ae07fd",
-      "updated": "2026-07-02T17:24:41Z",
-      "lines": 232,
+      "checksum": "sha256:bc03f13bd56d4b65d6d3c928187396d957f0fd76b8fa616c1cc0324e0866e0c4",
+      "updated": "2026-07-02T17:55:55Z",
+      "lines": 243,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Release v5.4.0: agentic security suite (mcp-scanner, skills-scanner, MCP server) + live threat feed",
+  "quick_context": "Docs: PowerShell-safe MCP install instructions",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 3605,
-    "full_read": 7413
+    "manifest_plus_core": 3781,
+    "full_read": 7589
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

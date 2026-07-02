@@ -24,9 +24,23 @@ The snippets below use `supply-chain-guard@latest` so the bundled threat-intel f
 
 ## Claude Code
 
+Recommended (works in every shell, including PowerShell, and avoids npx
+cold-start timeouts on the first MCP connect):
+
+```bash
+npm install -g supply-chain-guard
+claude mcp add supply-chain-guard supply-chain-guard mcp
+```
+
+On bash/zsh you can use the npx one-liner instead:
+
 ```bash
 claude mcp add supply-chain-guard -- npx -y supply-chain-guard@latest mcp
 ```
+
+PowerShell note: PowerShell consumes the bare `--` before the claude CLI sees
+it, so the one-liner fails there with `error: unknown option '-y'`. Use the
+global-install form above on Windows (or quote the token: `'--'`).
 
 Or in `.mcp.json` (project scope):
 

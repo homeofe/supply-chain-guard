@@ -1,5 +1,16 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Docs fix - the documented MCP install one-liner
+> (claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp) fails in
+> PowerShell: PowerShell consumes the bare -- itself, so the claude CLI sees -y as its
+> own option (error: unknown option '-y'). Verified empirically (works in Git Bash,
+> fails in PS). Also found the npx form risks first-connect timeouts (cold npx exceeded
+> the MCP probe once). README + docs/mcp.md now lead with the shell-agnostic robust
+> form: npm install -g supply-chain-guard && claude mcp add supply-chain-guard
+> supply-chain-guard mcp (dash-free, no npx cold start), with the npx one-liner kept
+> as a bash/zsh alternative + PowerShell note. Blog post patched via OpenClaw to match.
+> npm README carries the old command until the next release; fold into v5.4.1.
+
 > Note (2026-07-02, claude-fable-5): Released v5.4.0 - the agentic security suite +
 > live threat feed (roadmap Bet 1). Built by 4 worktree-isolated agents, merged with
 > only trivial append-point conflicts: (1) mcp-scanner (6 MCP_ rules: malicious server
