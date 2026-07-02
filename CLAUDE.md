@@ -6,12 +6,12 @@ This file is automatically loaded into every Claude Code session. It is the sing
 
 Every release MUST follow this order. If `npm run build` fails because `check:changelog` is red, do NOT bypass it - add the missing entry.
 
-1. **Update README.md** - new `### vX.Y.Z (YYYY-MM-DD)` block at the very top of `## Changelog`, with title and bullet list. Style: follow previous entries.
+1. **Update CHANGELOG.md** - new `### vX.Y.Z (YYYY-MM-DD)` block at the very top (below the intro), with title and bullet list. Style: follow previous entries. (The changelog moved out of README.md in v5.2.45; the README keeps only a pointer.)
 2. **SECURITY.md** - keep the Supported Versions table up to date (only for new Major/Minor).
 3. **CONTRIBUTING.md** - only when new modules or files are added.
 4. **Bump version** in `package.json`, `src/cli.ts`, internal constants in `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) - all at the same time. The `check:version-sync` gate (see step 6) catches any that are missed.
 5. **Update tests** that check old output format. Tests that only check the version should read `pkg.version` from `../../package.json` rather than hardcoding it - see `reporter.test.ts`.
-6. **`npm run build`** must be green - runs `check:changelog` AND `check:version-sync` as `prebuild`. The first gates against a missing README entry, the second against forgotten version bumps in `cli.ts` and `reporter.ts`.
+6. **`npm run build`** must be green - runs `check:changelog`, `check:version-sync` AND `check:handoff` as `prebuild`. The first gates against a missing CHANGELOG.md entry, the second against forgotten version bumps in `cli.ts` and `reporter.ts`, the third against stale generated handoff docs (fix with `npm run handoff:refresh`).
 7. **`npm test`** must be green.
 8. **One commit** for everything (code + docs + tests).
 9. **`git tag vX.Y.Z`** AFTER the commit.

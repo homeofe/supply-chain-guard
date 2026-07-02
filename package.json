@@ -1,7 +1,7 @@
 {
   "name": "supply-chain-guard",
   "version": "5.2.44",
-  "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 120+ malware indicators. Generates CycloneDX 1.6 SBOMs and verifies SLSA provenance.",
+  "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 170+ threat indicators. Generates CycloneDX 1.6 SBOMs, verifies SLSA provenance, and correlates findings into attack-chain incidents.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -35,7 +35,11 @@
     "cli",
     "github-action",
     "sarif",
-    "sbom"
+    "sbom",
+    "slsa",
+    "cyclonedx",
+    "devsecops",
+    "threat-intelligence"
   ],
   "author": "Elvatis <emre.kohler@elvatis.com>",
   "license": "Apache-2.0",

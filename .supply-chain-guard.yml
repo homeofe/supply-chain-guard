@@ -23,3 +23,15 @@ suppress:
   # finding is informational only.
   - rule: LOCKFILE_ORPHANED_DEPENDENCY
     reason: transitive dependencies at lockfile root per npm v7+ flat-install format; not orphans, informational only
+
+  # scripts/aahp-dashboard.mjs generates the handoff docs and its embedded
+  # markdown templates legitimately contain the strings "npm publish" and
+  # "NPM_TOKEN" (describing this repo's own OIDC publish pipeline). In .md
+  # files these are benign-doc-excluded; in a .mjs file the Shai-Hulud
+  # patterns fire by design - scripts/*.mjs is exactly where the worm lives
+  # in victim repos, so the detection itself must stay strict for users.
+  # This repo's own tooling discussing its publish process is not a worm.
+  - rule: SHAI_HULUD_WORM
+    reason: doc-generator template in scripts/aahp-dashboard.mjs describes this repo's npm publish pipeline; detection stays active for scanned user projects
+  - rule: SHAI_HULUD_CRED_STEAL
+    reason: same generator template mentions NPM_TOKEN only to document that OIDC publishing uses no token; no credential access occurs

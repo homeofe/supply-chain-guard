@@ -92,11 +92,12 @@ jobs:
         id: changelog
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Extract the section for this version from README.md
-          NOTES=$(awk "/^### v${VERSION}/,/^### v[0-9]/" README.md | head -n -1)
+          # Extract the section for this version from CHANGELOG.md (moved out of
+          # README.md in v5.2.45 to keep the landing page readable)
+          NOTES=$(awk "/^### v${VERSION}/,/^### v[0-9]/" CHANGELOG.md | head -n -1)
           # Fallback if nothing found
           if [ -z "$NOTES" ]; then
-            NOTES="See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md#changelog) for full changelog."
+            NOTES="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full changelog."
           fi
           # Write to file to preserve multiline
           echo "$NOTES" > release_notes.md

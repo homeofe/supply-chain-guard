@@ -1,5 +1,24 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): README adoption package, part 1 (restructure).
+> Executing the ideation roadmap top item: the changelog (63 entries, ~70KB, two thirds
+> of the README) moved to CHANGELOG.md; README slimmed 90KB -> ~19KB with a table of
+> contents and a fact-checked "How It Compares" section (osv-scanner / Socket / GuardDog /
+> Scorecard / npm audit - positioning: we are the malware/behavior/campaign layer, pair
+> with a CVE scanner). Gates moved with the changelog in the same commit:
+> scripts/check-changelog.mjs and the ci.yml release-notes awk now read CHANGELOG.md;
+> CLAUDE.md release process updated (also now documents check:handoff). Added
+> assets/demo.tape + .github/workflows/demo.yml (manual VHS render, artifact-only upload -
+> a bot push would fail the AAHP gate). Discoverability: GitHub description updated (was
+> claiming 3 ecosystems), topics 9 -> 19, npm keywords +4, package.json description synced
+> to the 170+ indicator claim. Part 2 = release v5.2.45 with the rendered GIF.
+> Dogfooding catch: the pre-commit self-scan surfaced 4 criticals - scripts/
+> aahp-dashboard.mjs's doc templates contain "npm publish"/"NPM_TOKEN" strings that
+> legitimately trip the Shai-Hulud patterns in a .mjs file (benign-doc exclusion only
+> covers .md). Fixed via two documented suppressions in .supply-chain-guard.yml
+> (detection stays strict for scanned user projects). Self-scan now 9/100 with one
+> honest info finding (SHA-pinned vhs-action in the manual demo workflow).
+
 > Note (2026-07-01, claude-opus-4-8): Made the generated handoff docs un-drift-able.
 > The earlier Option A made DASHBOARD/TRUST generated but still snapshot-on-demand, so
 > they could lag if nobody ran the generator. Now the generator emits a PURE function of
