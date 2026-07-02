@@ -11,6 +11,8 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Docker, Terr
 [![Last commit](https://img.shields.io/github/last-commit/homeofe/supply-chain-guard?logo=github)](https://github.com/homeofe/supply-chain-guard/commits/main)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+![supply-chain-guard scanning a malicious npm package: risk gauges, GlassWorm incident correlation, and a remediation plan](assets/demo.gif)
+
 ## Contents
 
 - [Background](#background)

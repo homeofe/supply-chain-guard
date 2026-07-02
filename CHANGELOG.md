@@ -4,6 +4,30 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.2.45 (2026-07-02)
+**README adoption package: demo GIF, comparison table, changelog split**
+
+Documentation and discoverability release. No detection-logic changes.
+
+- Animated demo GIF at the top of the README (rendered by VHS in CI from
+  assets/demo.tape, scanning the malicious test fixture: risk gauges, GlassWorm
+  incident correlation, remediation plan).
+- New "How It Compares" README section: fact-checked, honest comparison with
+  OSV-Scanner, Socket, GuardDog, OpenSSF Scorecard, and npm audit, plus
+  "pairs well with" CI recipes. Positioning: supply-chain-guard is the
+  malware / behavior / campaign-IOC layer; pair it with a CVE scanner.
+- Changelog moved out of the README into this CHANGELOG.md (README went from
+  90KB to ~23KB) with a table of contents; the check:changelog prebuild gate
+  and the CI release-notes extraction now read CHANGELOG.md.
+- Discoverability: GitHub repo description and topics refreshed (9 -> 19
+  topics), npm keywords extended, package description synced to the current
+  170+ indicator claim.
+- Self-scan hygiene: two documented Shai-Hulud suppressions for this repo's
+  own doc-generator script (its templates mention the npm publish pipeline);
+  detection unchanged for scanned projects. The demo render workflow installs
+  vhs from the Charm apt repo, so the repo is back to zero third-party
+  GitHub Actions.
+
 ### v5.2.44 (2026-07-01)
 **Dependency maintenance: latest toolchain + commander 14**
 

@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-fable-5",
-    "session_id": "cli-1783006772",
-    "timestamp": "2026-07-02T15:39:32Z",
-    "commit": "02b3e34",
+    "session_id": "cli-1783007358",
+    "timestamp": "2026-07-02T15:49:18Z",
+    "commit": "19b3020",
     "phase": "implementation",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:d2992c37731678cff4372fbc4a9174c38e3d62bc8312464968ae8366e1f34a24",
-      "updated": "2026-07-02T15:39:32Z",
-      "lines": 182,
+      "checksum": "sha256:bf3f0638784c03604bc8ad86fba3614e52703536aff08ff9c92797f6dfa80ef1",
+      "updated": "2026-07-02T15:49:01Z",
+      "lines": 191,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:0fd2ee399d45154ac7a4521b28fedd8e522829fe7d772025c6fe641965df1297",
-      "updated": "2026-07-01T18:27:16Z",
+      "checksum": "sha256:ee6d6f8178ed91dabd7a40e8cdefb27f6d536546fc06b8de56a5dc11fe6d022c",
+      "updated": "2026-07-02T15:48:38Z",
       "lines": 64,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:654b6c28b44bdfe793bb81d92d3d07fcc3572a0c668c1de3855f3f26cbedc984",
-      "updated": "2026-07-01T18:27:16Z",
+      "checksum": "sha256:62be78cb7f5c3d4ca5e51b2c8605fc13ab8070b3b7a96bc6e09ef9b398212864",
+      "updated": "2026-07-02T15:48:38Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "demo.yml: replace flaky vhs-action with Charm apt vhs install",
+  "quick_context": "Release v5.2.45: README adoption package (demo GIF, comparison table, changelog split)",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 2788,
-    "full_read": 6587
+    "manifest_plus_core": 2927,
+    "full_read": 6726
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

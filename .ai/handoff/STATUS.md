@@ -1,5 +1,14 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.2.45 - README adoption package, part 2.
+> The CI-rendered demo GIF (240 frames, 165KB, VHS scanning the malicious fixture: risk
+> gauges + GlassWorm incident correlation + remediation plan) now sits at the top of the
+> README; CHANGELOG.md carries the v5.2.45 entry; versions bumped across package.json,
+> lockfile, cli.ts, reporter.ts x4. Self-scan at release: score 8, zero findings (the
+> vhs-action info finding disappeared with the Charm-apt switch). Tag v5.2.45 -> OIDC
+> publish + GitHub Release + v5 fast-forward. The npm package page now gets the slim
+> README with working GIF (npm rewrites relative image paths to raw.githubusercontent).
+
 > Note (2026-07-02, claude-fable-5): README adoption package, part 1 (restructure).
 > Executing the ideation roadmap top item: the changelog (63 entries, ~70KB, two thirds
 > of the README) moved to CHANGELOG.md; README slimmed 90KB -> ~19KB with a table of
