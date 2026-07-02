@@ -6,6 +6,7 @@
  */
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
 import { execSync } from "node:child_process";
@@ -220,7 +221,7 @@ async function downloadAndScanSdist(
   url: string,
   findings: Finding[],
 ): Promise<void> {
-  const tempDir = fs.mkdtempSync(path.join("/tmp", "scg-pypi-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-"));
   const archivePath = path.join(tempDir, "package.tar.gz");
 
   try {
@@ -253,7 +254,7 @@ async function downloadAndScanWheel(
   url: string,
   findings: Finding[],
 ): Promise<void> {
-  const tempDir = fs.mkdtempSync(path.join("/tmp", "scg-pypi-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-"));
   const wheelPath = path.join(tempDir, "package.whl");
 
   try {

@@ -6,6 +6,7 @@
  */
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
 import { execSync } from "node:child_process";
@@ -242,7 +243,7 @@ async function downloadAndScanTarball(
   tarballUrl: string,
   findings: Finding[],
 ): Promise<void> {
-  const tempDir = fs.mkdtempSync(path.join("/tmp", "scg-npm-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-"));
   const tarballPath = path.join(tempDir, "package.tgz");
 
   try {

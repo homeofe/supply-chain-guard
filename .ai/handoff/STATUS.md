@@ -1,5 +1,21 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-03, claude-fable-5): Released v5.6.0 - the last two roadmap bets
+> (install-time guard + GitLab-native format) plus the 5 v5.5.0 gate should-fixes, all
+> built by 4 worktree agents. Gate round 2 BLOCKED the first candidate with 5 confirmed
+> findings, all fixed pre-tag: (1) CRITICAL Windows command injection in the install
+> guard - the cmd.exe .cmd-shim escaping was single-pass but %* re-parses, so
+> `guard npm install 'x"&echo ...&"'` executed arbitrary commands; fixed to cross-spawn
+> double-escape and PROVEN closed by re-running the gate's own PoC (old=vulnerable,
+> new=safe); (2)+(3) install-verb bypasses: npm typo-aliases (isntall/i/in/...),
+> `yarn global add`, and value-taking global flags before the verb all skipped scanning
+> - verb detection rewritten; (4) GitLab report name >255 chars fails the v15.2.4 schema
+> so GitLab drops the whole report - now capped; (5) stale rev pins - the v5.5.0
+> check:version-sync addition caught them automatically this time. 8 new guard
+> regression tests incl. the injection escaper. 40 new tests (1115 green), self-scan
+> 0/0/0, GitLab output schema-valid. Roadmap is now 100% shipped; NEXT_ACTIONS holds
+> only 3 small doc/cosmetic items. 57 src modules.
+
 > Note (2026-07-02, claude-fable-5): Released v5.5.0 - all 8 seeded issues (#40-#47)
 > implemented by 5 worktree agents, then gated by a NEW 4-lens adversarial verification
 > workflow (security/interaction/cross-env/functionality) that BLOCKED the first

@@ -451,8 +451,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // v4.8: Calculate metrics and save history
   const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions);
 
-  // Save risk history for trend tracking (skip temp dirs)
-  if (!tempDir) {
+  // Save risk history for trend tracking (skip temp dirs; --no-history lets
+  // read-only callers like the pre-commit hook avoid writing state into the
+  // scanned repo)
+  if (!tempDir && !options.noHistory) {
     try { saveRiskHistory(scanDir, { timestamp: new Date().toISOString(), score, findings: filteredFindings, summary, riskLevel, recommendations, target, scanType, tool: `supply-chain-guard v${TOOL_VERSION}`, durationMs: Date.now() - startTime }); } catch { /* skip */ }
   }
 

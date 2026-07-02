@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.5.0");
+  .version("5.6.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ program
   .command("scan")
   .description("Scan a local directory or GitHub repo for malware indicators")
   .argument("<target>", "Local directory path or GitHub repo URL")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab", "text")
   .option(
     "-s, --min-severity <severity>",
     "Minimum severity to report: critical, high, medium, low, info",
@@ -62,6 +62,7 @@ program
   .option("--export-fixes", "Show fix suggestions for automatable findings")
   .option("--export-graph <format>", "Export attack graph (json or mermaid)")
   .option("--sbom-output <file>", "Write CycloneDX 1.6 SBOM to a separate file")
+  .option("--no-history", "Do not write risk history to .scg-history/ in the scanned repo")
   .action(
     async (
       target: string,
@@ -78,6 +79,7 @@ program
         exportFixes?: boolean;
         exportGraph?: string;
         sbomOutput?: string;
+        history: boolean;
       },
     ) => {
       try {
@@ -89,6 +91,7 @@ program
           maxDepth: parseInt(opts.depth, 10),
           baselineFile: opts.baseline,
           sinceCommit: opts.since,
+          noHistory: opts.history === false,
         };
 
         const report = await scan(options);
@@ -343,7 +346,7 @@ program
   .command("repo")
   .description("Analyze a GitHub repository for trust signals and malware indicators")
   .argument("<url>", "GitHub repository URL (e.g., https://github.com/owner/repo)")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab", "text")
   .action(
     async (
       url: string,
@@ -703,5 +706,44 @@ program
     const { startMcpServer } = await import("./mcp-server.js");
     startMcpServer();
   });
+
+// ── guard command ───────────────────────────────────────────────────
+
+// Required so the guard command can pass the manager's own flags through
+// untouched (passThroughOptions below); program-level options (-V/-h) keep
+// working before the subcommand name, which is the only place they were
+// ever recognized.
+program.enablePositionalOptions();
+
+program
+  .command("guard")
+  .description(
+    "Run an install command through the offline IOC blocklist first; known-bad packages block the install (exit 2)",
+  )
+  .passThroughOptions()
+  .argument("<manager>", "Package manager: npm, pnpm, yarn, bun")
+  .argument("[managerArgs...]", "Arguments passed to the package manager unchanged")
+  .option("--force", "Proceed despite findings (loud warning)")
+  .option("--dry-run", "Check only; never invoke the package manager")
+  .action(
+    async (
+      manager: string,
+      managerArgs: string[],
+      opts: { force?: boolean; dryRun?: boolean },
+    ) => {
+      try {
+        const { runInstallGuard } = await import("./install-guard.js");
+        const code = runInstallGuard(manager, managerArgs, {
+          force: opts.force,
+          dryRun: opts.dryRun,
+        });
+        process.exit(code);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`\n  Error: ${message}\n`);
+        process.exit(1);
+      }
+    },
+  );
 
 program.parse();

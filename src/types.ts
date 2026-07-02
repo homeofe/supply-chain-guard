@@ -344,7 +344,7 @@ export interface ScanOptions {
   /** Target path, URL, or package name */
   target: string;
   /** Output format */
-  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge";
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab";
   /** Only report findings at or above this severity */
   minSeverity?: Severity;
   /** Exclude specific rules */
@@ -357,6 +357,8 @@ export interface ScanOptions {
   policyFile?: string;
   /** Only scan changed files since commit (v4.5) */
   sinceCommit?: string;
+  /** Skip writing risk history to .scg-history/ (--no-history) */
+  noHistory?: boolean;
 }
 
 export interface NpmPackageInfo {

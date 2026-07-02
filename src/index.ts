@@ -78,6 +78,14 @@ export {
   scanAgentSettingsContent,
 } from "./skills-scanner.js";
 export { handleMcpMessage, handleMcpLine, startMcpServer } from "./mcp-server.js";
+export {
+  analyzeInstallCommand,
+  runInstallGuard,
+  extractInstallSpecs,
+  parseSpecToken,
+  resolveManagerBinary,
+  SUPPORTED_MANAGERS,
+} from "./install-guard.js";
 export type {
   Finding,
   ScanReport,

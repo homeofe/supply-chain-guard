@@ -25,8 +25,8 @@ const required = [
   { file: "src/cli.ts", minOccurrences: 1, note: "CLI --version output" },
   {
     file: "src/reporter.ts",
-    minOccurrences: 4,
-    note: "text-header VERSION const + SARIF + SBOM + HTML footer",
+    minOccurrences: 5,
+    note: "text-header VERSION const + SARIF + SBOM + HTML footer + GitLab scanner version",
   },
   // The pre-commit docs pin a release tag (rev: vX.Y.Z). v5.5.0 verification
   // gate finding MF-3: the snippet shipped pinning a tag that did not contain

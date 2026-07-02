@@ -24,6 +24,51 @@ const MARKETPLACE_API = "https://marketplace.visualstudio.com/_apis/public/galle
 // Open VSX registry REST API base (https://open-vsx.org/api/{namespace}/{name})
 const OPENVSX_API_BASE = "https://open-vsx.org/api";
 
+// Hosts a .vsix download resolved via Open VSX may legitimately live on.
+// The public open-vsx.org instance serves files either directly from the
+// registry host or from its Azure Blob storage account
+// (openvsxorg.blob.core.windows.net, see the eclipse-openvsx deployment and
+// mirror-mode documentation). Everything else is refused: a compromised or
+// spoofed metadata response must not be able to point the scanner at an
+// arbitrary download host.
+const OPENVSX_ALLOWED_HOSTS = [
+  "open-vsx.org",
+  "openvsxorg.blob.core.windows.net",
+];
+
+/**
+ * Validate that an Open VSX related URL is https: and points at an
+ * allowlisted host (exact match or subdomain). Throws a descriptive error
+ * otherwise. Applied to the files.download URL from the metadata response
+ * and re-applied on every redirect hop of the Open VSX download path.
+ * The marketplace path is intentionally not affected.
+ */
+function assertAllowedOpenVsxUrl(rawUrl: string, context: string): void {
+  let urlObj: URL;
+  try {
+    urlObj = new URL(rawUrl);
+  } catch {
+    throw new Error(`Open VSX ${context} is not a valid URL: ${rawUrl}`);
+  }
+
+  if (urlObj.protocol !== "https:") {
+    throw new Error(
+      `Open VSX ${context} must use https:, got "${urlObj.protocol}" (${rawUrl}). Refusing to fetch.`,
+    );
+  }
+
+  const hostname = urlObj.hostname.toLowerCase();
+  const allowed = OPENVSX_ALLOWED_HOSTS.some(
+    (host) => hostname === host || hostname.endsWith(`.${host}`),
+  );
+  if (!allowed) {
+    throw new Error(
+      `Open VSX ${context} points at non-allowlisted host "${hostname}" (${rawUrl}). ` +
+        `Allowed hosts: ${OPENVSX_ALLOWED_HOSTS.join(", ")} (and subdomains). Refusing to fetch.`,
+    );
+  }
+}
+
 /** Supported extension registries for extension-ID targets. */
 export type VscodeRegistry = "marketplace" | "openvsx";
 
@@ -253,7 +298,13 @@ async function downloadVsix(
   const downloadUrl = await resolveVsixDownloadUrl(extensionId, registry);
 
   const vsixPath = path.join(destDir, `${extensionId}.vsix`);
-  await downloadFile(downloadUrl, vsixPath);
+  // Open VSX only: re-validate every hop (initial URL and each redirect)
+  // against the host allowlist. The marketplace path stays unchanged.
+  const validateHop =
+    registry === "openvsx"
+      ? (hopUrl: string): void => assertAllowedOpenVsxUrl(hopUrl, "download hop")
+      : undefined;
+  await downloadFile(downloadUrl, vsixPath, validateHop);
 
   // Verify it's a valid file (at least check size)
   const stat = fs.statSync(vsixPath);
@@ -295,6 +346,7 @@ export async function resolveVsixDownloadUrl(
         `Open VSX metadata for "${extensionId}" does not contain a download URL (files.download).`,
       );
     }
+    assertAllowedOpenVsxUrl(download, "download URL (files.download)");
     return download;
   }
 
@@ -336,6 +388,13 @@ function fetchOpenVsxMetadata(
             (response.statusCode === 302 || response.statusCode === 301) &&
             response.headers.location
           ) {
+            // Metadata redirects must stay on allowlisted Open VSX hosts too.
+            try {
+              assertAllowedOpenVsxUrl(response.headers.location, "metadata redirect");
+            } catch (err) {
+              reject(err instanceof Error ? err : new Error(String(err)));
+              return;
+            }
             doRequest(response.headers.location, redirects + 1);
             return;
           }
@@ -697,14 +756,32 @@ function generateVscodeRecommendations(
 
 /**
  * Download a file from a URL, following redirects.
+ *
+ * When a validateHop callback is given it runs on the initial URL and on
+ * every redirect target before the request is made; a thrown error aborts
+ * the download (used to pin Open VSX downloads to allowlisted hosts).
  */
-function downloadFile(url: string, dest: string): Promise<void> {
+function downloadFile(
+  url: string,
+  dest: string,
+  validateHop?: (hopUrl: string) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     const doRequest = (requestUrl: string, redirects = 0): void => {
       if (redirects > 5) {
         reject(new Error("Too many redirects"));
         return;
+      }
+
+      if (validateHop) {
+        try {
+          validateHop(requestUrl);
+        } catch (err) {
+          file.close();
+          reject(err instanceof Error ? err : new Error(String(err)));
+          return;
+        }
       }
 
       const urlObj = new URL(requestUrl);

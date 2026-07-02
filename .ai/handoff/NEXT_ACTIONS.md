@@ -10,46 +10,36 @@
 
 | Status | Count |
 |--------|-------|
-| Ready (gate should-fixes) | 5 |
+| Ready (small next-patch items) | 3 |
 | Blocked | 0 |
-| Roadmap bets remaining | 2 |
+| Roadmap bets remaining | 0 |
 
-Current version: **v5.5.0**. The 2026-07 ideation roadmap quick wins are complete
-(README adoption package, contributor funnel, lockfile + ecosystem expansion,
-fail-closed policy, live feed) and strategic Bet 1 (agentic security suite) shipped.
+Current version: **v5.6.0**. The entire 2026-07 ideation roadmap is shipped:
+quick wins, both strategic bets (agentic suite / live feed in v5.4.0; install-time
+guard / GitLab format in v5.6.0), and the full seeded-issue backlog (#40-#47).
 
 ---
 
-## Ready - Verification-Gate Should-Fixes (small, next patch)
+## Ready - Small next-patch items (from the v5.6.0 gate should-fixes)
 
-From the v5.5.0 adversarial release gate (all evidence in the gate report):
+| Item | Where | Note |
+|------|-------|------|
+| GitLab `location.dependency.package.name` uses the scan target path (can leak an absolute runner path); use a stable per-finding coordinate | src/reporter.ts formatGitlab | low, cosmetic |
+| Jenkinsfile pins `@latest` (non-reproducible); add a one-line "pin a version for reproducible CI" comment | examples/Jenkinsfile | doc only |
+| Install Guard: version ranges/tags (^1.2.3, latest) are not resolved offline, so pinned-version IOCs only fire on exact pins; document this limitation in the README Install Guard section | README.md | doc / known-limitation |
 
-| Item | Where |
-|------|-------|
-| Jenkinsfile: replace global npm install with npx --yes pattern (PATH/EACCES in docker agents) | examples/Jenkinsfile |
-| Pin Docker base image by digest (node:20-alpine floats; inconsistent with SHA-pinned Actions) | Dockerfile |
-| OpenVSX: allowlist download/redirect hosts (open-vsx.org + CDN) | src/vscode-scanner.ts |
-| Finish /tmp -> os.tmpdir() migration | src/npm-scanner.ts, src/pypi-scanner.ts |
-| Consider gating .scg-history writes behind a flag for hook/CI use | src/scanner.ts, continuous-monitor.ts |
+---
 
-## Remaining Strategic Bets (2026-07 roadmap)
+## Ideas / not-yet-scheduled (no owner)
 
-### Bet 2: Install-time guard [L]
-The only install blocker whose entire blocklist is auditable in git history, offline,
-no vendor account. Preconditions now MET: multi-lockfile support (v5.3.0) and the live
-feed (v5.4.0) are shipped. Best started after the feed has produced at least one
-documented "blocked campaign X the day it broke" story to anchor the launch.
-
-### Bet 3: Docker image + GitLab native format beachhead [M+M]
-GHCR image (issue #47) is the prerequisite; gl-dependency-scanning-report.json output
-buys the GitLab security UI. Start on the first inbound GitLab demand signal.
-
-### Post-launch follow-ups for the agentic suite (v5.4.0)
-- Announce: blog writeup + MCP directory/registry listings (manual, maintainer).
-- MCP rug-pull detection (baseline tool-description hashes in .scg-cache) - documented
-  as future work in src/mcp-scanner.ts.
-- OSV-format export of the feed (same pipeline as feed.json; slow diplomatic track
-  toward ossf/malicious-packages).
+- Install Guard v2: resolve version ranges against the offline metadata cache so
+  pinned IOCs fire on ranges too; add a `guard` shell shim/alias so it can wrap npm
+  transparently.
+- MCP rug-pull detection (baseline tool-description hashes in .scg-cache) - noted as
+  future work in src/mcp-scanner.ts.
+- OSV-format export of the bundled feed (same pipeline as feed.json); slow diplomatic
+  track toward ossf/malicious-packages.
+- Post-launch marketing: submit the MCP server to MCP directories/registries (manual).
 
 ---
 
@@ -57,10 +47,10 @@ buys the GitLab security UI. Start on the first inbound GitLab demand signal.
 
 | Item | Date |
 |------|------|
-| v5.5.0: all 8 seeded issues (#40-#47) + adversarial release gate (6 must-fixes caught pre-tag) | 2026-07-02 |
-| v5.4.0: agentic suite (mcp-scanner, skills-scanner, MCP server) + live feed | 2026-07-02 |
-| v5.3.0: pnpm/yarn/bun lockfiles, RubyGems/Composer/NuGet scanners, fail-closed policy, devcontainer + examples | 2026-07-02 |
-| Contributor funnel: new-pattern label, 8 seeded good-first-issues (#40-#47) | 2026-07-02 |
+| v5.6.0: install guard (Bet 2) + GitLab format (Bet 3) + registry hardening; gate caught a Windows RCE + 4 more pre-tag | 2026-07-03 |
+| v5.5.0: all 8 seeded issues (#40-#47) + adversarial release gate (6 must-fixes) | 2026-07-02 |
+| v5.4.x: agentic suite + live feed + MCP-install/PowerShell/leak fixes | 2026-07-02 |
+| v5.3.0: pnpm/yarn/bun lockfiles + RubyGems/Composer/NuGet + fail-closed policy | 2026-07-02 |
 | v5.2.45: README adoption package (demo GIF, comparison table, changelog split) | 2026-07-02 |
-| Release-notes extraction fixed (was broken since day one) | 2026-07-02 |
+| All 5 v5.5.0 gate should-fixes (OpenVSX allowlist, /tmp migration, Docker digest, Jenkins npx, --no-history) | 2026-07-03 |
 | T-001..T-007 (v3-v4 era backlog) | done, see MANIFEST.json |

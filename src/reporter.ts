@@ -1,6 +1,7 @@
 /**
  * Output formatting for scan reports.
- * Supports text, JSON, markdown, and SARIF 2.1.0 output.
+ * Supports text, JSON, markdown, SARIF 2.1.0, and GitLab Dependency
+ * Scanning report output.
  */
 
 import { randomUUID } from "node:crypto";
@@ -30,7 +31,7 @@ const SEVERITY_ICONS: Record<Severity, string> = {
  */
 export function formatReport(
   report: ScanReport,
-  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge",
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab",
 ): string {
   switch (format) {
     case "json":
@@ -45,6 +46,8 @@ export function formatReport(
       return formatHtml(report);
     case "badge":
       return formatBadge(report);
+    case "gitlab":
+      return formatGitlab(report);
     case "text":
     default:
       return formatText(report);
@@ -65,7 +68,7 @@ function formatText(report: ScanReport): string {
   const lines: string[] = [];
 
   // ── layout constants ───────────────────────────────────────────────────────
-  const VERSION = "5.5.0";
+  const VERSION = "5.6.0";
   const W = 76; // visible chars between "│ " and " │" (total line = 80)
 
   // ── ANSI helpers ───────────────────────────────────────────────────────────
@@ -569,7 +572,7 @@ function formatSarif(report: ScanReport): string {
         tool: {
           driver: {
             name: "supply-chain-guard",
-            version: "5.5.0",
+            version: "5.6.0",
             informationUri: "https://github.com/homeofe/supply-chain-guard",
             rules,
           },
@@ -635,7 +638,7 @@ function formatSbom(report: ScanReport): string {
       timestamp: report.timestamp,
       tools: {
         components: [
-          { type: "application", name: "supply-chain-guard", version: "5.5.0" },
+          { type: "application", name: "supply-chain-guard", version: "5.6.0" },
         ],
       },
       component: {
@@ -666,7 +669,7 @@ function formatSbom(report: ScanReport): string {
  * riskLevel: a single critical finding scores ~25 points ("medium" risk
  * level), which would render a yellow badge while the CLI exit code is 2 -
  * a security badge must never look calmer than the gate it represents
- * (v5.5.0 verification-gate finding MF-2). Mapping mirrors the exit-code
+ * (verification-gate finding MF-2, v5.5 series). Mapping mirrors the exit-code
  * semantics: critical = red, high = orange, medium = yellow, else green.
  */
 function formatBadge(report: ScanReport): string {
@@ -699,6 +702,110 @@ function formatBadge(report: ScanReport): string {
     message,
     color,
   });
+}
+
+/**
+ * Map internal severity to the GitLab security report severity enum
+ * (Info | Unknown | Low | Medium | High | Critical).
+ */
+function gitlabSeverity(severity: Severity): string {
+  switch (severity) {
+    case "critical":
+      return "Critical";
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+      return "Low";
+    case "info":
+    default:
+      return "Info";
+  }
+}
+
+/**
+ * Format a timestamp for GitLab security reports. The schema requires the
+ * pattern ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$ - ISO 8601 WITHOUT
+ * milliseconds and without the trailing "Z".
+ */
+function gitlabTime(epochMs: number): string {
+  const d = Number.isFinite(epochMs) ? new Date(epochMs) : new Date();
+  return d.toISOString().slice(0, 19);
+}
+
+/**
+ * Format as a GitLab Dependency Scanning report
+ * (gl-dependency-scanning-report.json).
+ *
+ * Targets security-report-schemas v15.2.4, the current 15.x line that
+ * GitLab validates dependency_scanning artifacts against (see
+ * gitlab-org/security-products/security-report-schemas, dist/
+ * dependency-scanning-report-format.json). Required top-level fields:
+ * version, vulnerabilities[], scan{analyzer, scanner, start_time,
+ * end_time, status, type}. Exposed to the GitLab security UI via
+ * artifacts:reports:dependency_scanning (see examples/gitlab-ci.yml).
+ *
+ * Suppressed findings are excluded, mirroring SARIF/SBOM (v5.2.40 rule:
+ * policy/baseline suppressions must never leak into machine output).
+ */
+function formatGitlab(report: ScanReport): string {
+  const startMs = Date.parse(report.timestamp);
+  const scannerBlock = {
+    id: "supply_chain_guard",
+    name: "supply-chain-guard",
+    url: "https://github.com/homeofe/supply-chain-guard",
+    vendor: { name: "supply-chain-guard" },
+    version: "5.6.0",
+  };
+
+  const vulnerabilities = report.findings
+    .filter((f) => !f.suppressed)
+    .map((finding, idx) => ({
+      // id must be unique per vulnerability; findings can share a rule.
+      id: `${finding.rule}-${idx}`,
+      // The v15.2.4 schema caps name at 255 chars; GitLab discards the ENTIRE
+      // report on validation failure, so an over-long name would hide all
+      // findings exactly when they exist (v5.6 gate finding M4). Full text
+      // stays in description.
+      name: finding.description.length > 255
+        ? finding.description.slice(0, 252) + "..."
+        : finding.description,
+      description: finding.description,
+      severity: gitlabSeverity(finding.severity),
+      solution: finding.recommendation,
+      identifiers: [
+        {
+          type: "supply_chain_guard_rule",
+          name: finding.rule,
+          value: finding.rule,
+        },
+      ],
+      location: {
+        // location.file and location.dependency are required by the schema;
+        // findings without a file anchor fall back to the scanned manifest.
+        file: finding.file ?? "package.json",
+        dependency: {
+          package: { name: report.target },
+          version: "unknown",
+        },
+      },
+    }));
+
+  const gitlab = {
+    version: "15.2.4",
+    scan: {
+      analyzer: scannerBlock,
+      scanner: scannerBlock,
+      type: "dependency_scanning" as const,
+      start_time: gitlabTime(startMs),
+      end_time: gitlabTime(startMs + (report.durationMs ?? 0)),
+      status: report.partialScan ? ("failure" as const) : ("success" as const),
+    },
+    vulnerabilities,
+  };
+
+  return JSON.stringify(gitlab, null, 2);
 }
 
 /**
@@ -842,7 +949,7 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
   ` : ""}
 
   <footer>
-    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v5.5.0
+    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v5.6.0
   </footer>
 </div>
 <script>

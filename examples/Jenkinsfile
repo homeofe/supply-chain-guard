@@ -2,13 +2,12 @@
 // Copy the whole file as your Jenkinsfile, or lift the stage and post
 // blocks into an existing declarative pipeline.
 //
-// The stage installs the CLI, scans the repository with JSON output and
-// fails the build on high or critical findings. The report is archived
-// as a build artifact even when the scan fails.
+// The stage runs the CLI via "npx --yes" (one-shot download into the npm
+// cache, no global install, no root, no PATH surgery), scans the repository
+// with JSON output and fails the build on high or critical findings. The
+// report is archived as a build artifact even when the scan fails.
 //
-// Requires the Docker Pipeline plugin. The npm prefix is redirected into
-// the workspace so "npm install -g" works without root inside the
-// node:20 container.
+// Requires the Docker Pipeline plugin.
 
 pipeline {
     agent {
@@ -17,16 +16,10 @@ pipeline {
         }
     }
 
-    environment {
-        NPM_CONFIG_PREFIX = "${WORKSPACE}/.npm-global"
-        PATH = "${WORKSPACE}/.npm-global/bin:${PATH}"
-    }
-
     stages {
         stage('Supply Chain Scan') {
             steps {
-                sh 'npm install -g supply-chain-guard'
-                sh 'supply-chain-guard scan . --format json --fail-on high > scg-report.json'
+                sh 'npx --yes supply-chain-guard@latest scan . --format json --fail-on high > scg-report.json'
             }
         }
     }

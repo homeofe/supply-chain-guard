@@ -488,6 +488,124 @@ describe("formatReport – Badge (Shields.io endpoint)", () => {
   });
 });
 
+// ─── GitLab format (Dependency Scanning report) ───────────────────────────────
+
+interface GitlabOutput {
+  version: string;
+  scan: {
+    analyzer: { id: string; name: string; version: string; vendor: { name: string } };
+    scanner: { id: string; name: string; version: string; vendor: { name: string } };
+    type: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+  };
+  vulnerabilities: Array<{
+    id: string;
+    name: string;
+    description: string;
+    severity: string;
+    solution: string;
+    identifiers: Array<{ type: string; name: string; value: string }>;
+    location: {
+      file: string;
+      dependency: { package: { name: string }; version: string };
+    };
+  }>;
+}
+
+describe("formatReport – GitLab (Dependency Scanning report)", () => {
+  it("should produce valid JSON", () => {
+    const output = formatReport(makeReport(), "gitlab");
+    expect(() => JSON.parse(output)).not.toThrow();
+  });
+
+  it("should have schema version 15.2.4 and required top-level fields", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    expect(parsed.version).toBe("15.2.4");
+    expect(parsed).toHaveProperty("scan");
+    expect(parsed).toHaveProperty("vulnerabilities");
+    expect(Array.isArray(parsed.vulnerabilities)).toBe(true);
+  });
+
+  it("should identify supply-chain-guard as analyzer and scanner with pkg version", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    expect(parsed.scan.type).toBe("dependency_scanning");
+    expect(parsed.scan.status).toBe("success");
+    for (const block of [parsed.scan.analyzer, parsed.scan.scanner]) {
+      expect(block.id).toBe("supply_chain_guard");
+      expect(block.name).toBe("supply-chain-guard");
+      expect(block.vendor.name).toBe("supply-chain-guard");
+      // Version must track package.json - hardcoding broke releases before
+      // (v5.2.14, v5.2.17); the check:version-sync gate counts this string.
+      expect(block.version).toBe(pkg.version);
+    }
+  });
+
+  it("should format start_time/end_time without milliseconds or timezone suffix", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    // Schema pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$
+    const pattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+    expect(parsed.scan.start_time).toMatch(pattern);
+    expect(parsed.scan.end_time).toMatch(pattern);
+    expect(parsed.scan.start_time).toBe("2026-03-26T10:00:00");
+  });
+
+  it("should map internal severities to the GitLab enum", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    const bySeverity = new Map(
+      parsed.vulnerabilities.map((v) => [v.identifiers[0].value, v.severity]),
+    );
+    expect(bySeverity.get("EVIL_CRITICAL")).toBe("Critical");
+    expect(bySeverity.get("EVIL_HIGH")).toBe("High");
+    expect(bySeverity.get("EVIL_MEDIUM")).toBe("Medium");
+    expect(bySeverity.get("EVIL_LOW")).toBe("Low");
+    expect(bySeverity.get("EVIL_INFO")).toBe("Info");
+  });
+
+  it("should derive vulnerability id and identifiers from the rule", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    const crit = parsed.vulnerabilities.find((v) => v.identifiers[0].value === "EVIL_CRITICAL");
+    expect(crit?.id).toContain("EVIL_CRITICAL");
+    expect(crit?.identifiers[0].type).toBe("supply_chain_guard_rule");
+    expect(crit?.identifiers[0].name).toBe("EVIL_CRITICAL");
+    // ids must be unique across all vulnerabilities
+    const ids = parsed.vulnerabilities.map((v) => v.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("should set location.file from the finding and fall back to package.json", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    const crit = parsed.vulnerabilities.find((v) => v.identifiers[0].value === "EVIL_CRITICAL");
+    const med = parsed.vulnerabilities.find((v) => v.identifiers[0].value === "EVIL_MEDIUM");
+    expect(crit?.location.file).toBe("index.js");
+    // EVIL_MEDIUM has no file in the fixture
+    expect(med?.location.file).toBe("package.json");
+    expect(med?.location.dependency.package.name).toBe("test-package");
+  });
+
+  it("should carry description and recommendation as solution", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "gitlab")) as GitlabOutput;
+    const crit = parsed.vulnerabilities.find((v) => v.identifiers[0].value === "EVIL_CRITICAL");
+    expect(crit?.description).toBe("Critical evil thing");
+    expect(crit?.solution).toBe("Remove the eval call");
+  });
+
+  it("should produce a schema-valid report with zero vulnerabilities for an empty report", () => {
+    const parsed = JSON.parse(formatReport(makeEmptyReport(), "gitlab")) as GitlabOutput;
+    expect(parsed.version).toBe("15.2.4");
+    expect(parsed.vulnerabilities).toHaveLength(0);
+    expect(parsed.scan.status).toBe("success");
+  });
+
+  it("should report scan status failure for partial scans", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ partialScan: true }), "gitlab"),
+    ) as GitlabOutput;
+    expect(parsed.scan.status).toBe("failure");
+  });
+});
+
 // ─── Markdown injection hardening ─────────────────────────────────────────────
 
 describe("formatReport – markdown injection hardening", () => {
@@ -524,7 +642,7 @@ describe("formatReport – markdown injection hardening", () => {
 
 // ─── Suppressed findings excluded from machine output ─────────────────────────
 
-describe("formatReport – suppressed findings excluded from SARIF and SBOM", () => {
+describe("formatReport – suppressed findings excluded from SARIF, SBOM and GitLab", () => {
   const reportWithSuppressed = makeReport({
     findings: [
       { rule: "ACTIVE_RULE", description: "active", severity: "high", recommendation: "fix", file: "a.js" },
@@ -542,5 +660,11 @@ describe("formatReport – suppressed findings excluded from SARIF and SBOM", ()
     const sbom = formatReport(reportWithSuppressed, "sbom");
     expect(sbom).toContain("ACTIVE_RULE");
     expect(sbom).not.toContain("SUPPRESSED_RULE");
+  });
+
+  it("omits suppressed findings from the GitLab report", () => {
+    const gitlab = formatReport(reportWithSuppressed, "gitlab");
+    expect(gitlab).toContain("ACTIVE_RULE");
+    expect(gitlab).not.toContain("SUPPRESSED_RULE");
   });
 });

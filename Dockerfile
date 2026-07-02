@@ -7,8 +7,17 @@
 # the prebuild gates (check:changelog, check:version-sync, check:handoff,
 # check:feed) validate repo files (CHANGELOG.md, .ai/handoff, feed.json) that
 # are intentionally not copied into the image context.
+#
+# Base image pinning: both stages pin node:20-alpine by its multi-arch LIST
+# (image index) digest so a compromised or re-pushed tag on Docker Hub cannot
+# silently change what we build and ship. The digest is refreshed DELIBERATELY,
+# not implicitly: dependabot's docker ecosystem (.github/dependabot.yml) opens
+# a weekly PR when a newer node:20-alpine digest exists, and that PR is the
+# only sanctioned way to bump it. Resolve manually with:
+#   docker buildx imagetools inspect node:20-alpine
+# (the top-level "Digest:" line is the list digest FROM needs).
 
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
 
 WORKDIR /build
 
@@ -30,7 +39,7 @@ RUN npx tsc
 COPY LICENSE README.md action.yml socket.yml policy-schema.json ./
 RUN npm pack --ignore-scripts --pack-destination /tmp
 
-FROM node:20-alpine
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
 
 # unzip extracts .vsix archives in the VS Code extension scanner path; zip is
 # used by tests and kept for parity with the devcontainer.

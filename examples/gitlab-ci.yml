@@ -1,18 +1,31 @@
 # GitLab CI job template for supply-chain-guard.
 # Merge into your .gitlab-ci.yml (or include it as a template).
 #
-# The job installs the CLI, scans the repository with JSON output, fails
-# the pipeline on high or critical findings, and always uploads the report
-# as a job artifact (even when the scan fails).
+# The job installs the CLI, scans the repository twice (plain JSON for
+# archival, GitLab Dependency Scanning report for the security UI), fails
+# the pipeline on high or critical findings, and always uploads both
+# reports as job artifacts (even when the scan fails).
+#
+# The gl-dependency-scanning-report.json is exposed via
+# artifacts:reports:dependency_scanning, so findings appear in the merge
+# request security widget and the pipeline Security tab. The report step
+# neutralizes the exit code (|| true) so the artifact is still written and
+# uploaded when findings exist; the gate step afterwards carries the
+# pipeline verdict (same pattern as the badge publish in README.md - the
+# report must never be missing exactly when it matters most).
 
 supply_chain_scan:
   image: node:20
   stage: test
   script:
     - npm install -g supply-chain-guard
+    - supply-chain-guard scan . --format gitlab > gl-dependency-scanning-report.json || true
     - supply-chain-guard scan . --format json --fail-on high > scg-report.json
   artifacts:
     when: always
+    reports:
+      dependency_scanning: gl-dependency-scanning-report.json
     paths:
       - scg-report.json
+      - gl-dependency-scanning-report.json
     expire_in: 30 days

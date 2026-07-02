@@ -30,6 +30,7 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 - [GitHub Action](#github-action)
 - [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp)
 - [Live Threat Feed](#live-threat-feed)
+- [Install Guard](#install-guard)
 - [Adding Custom Patterns](#adding-custom-patterns)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
@@ -121,13 +122,14 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.5.0
+    rev: v5.6.0
     hooks:
       - id: supply-chain-guard
 ```
 
 The scanner writes its risk history to `.scg-history/` in the scanned repo;
-add that folder to your `.gitignore`.
+it is not written when `--no-history` is set, which the hook now uses. For
+plain scans without that flag, add the folder to your `.gitignore`.
 
 The hook scans the repository root on every commit and fails on high or critical findings.
 
@@ -189,6 +191,7 @@ supply-chain-guard scan ./project --format sarif  # SARIF 2.1.0 (GitHub Code Sca
 supply-chain-guard scan ./project --format sbom   # CycloneDX 1.6 SBOM with real dependency inventory
 supply-chain-guard scan ./project --sbom-output sbom.json  # Write SBOM to file separately
 supply-chain-guard scan ./project --format badge   # Shields.io endpoint JSON
+supply-chain-guard scan ./project --format gitlab  # GitLab Dependency Scanning report (security-report-schemas 15.2.4, see examples/gitlab-ci.yml)
 ```
 
 ### Badge
@@ -449,6 +452,26 @@ supply-chain-guard feed refresh   # pull the latest published feed into the loca
 ```
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
+
+## Install Guard
+
+Block known-bad packages BEFORE the package manager runs their lifecycle scripts -
+the only install blocker whose entire blocklist is auditable in git history,
+offline, no account:
+
+```bash
+supply-chain-guard guard npm install lodash        # clean: npm runs normally
+supply-chain-guard guard pnpm add axios@1.14.1     # known-bad: blocked, exit 2
+```
+
+Supports npm, pnpm, yarn, and bun. Guard flags go BEFORE the manager name:
+`--dry-run` checks the command without ever invoking the manager, `--force`
+proceeds despite findings (with a loud warning). Everything after the manager
+name is passed through to it unchanged.
+
+All checks are offline against the bundled IOC feed (plus a `feed refresh`
+cache when present), the known-bad-version blocklist, and the typosquat
+heuristics - no network call, no telemetry.
 
 ## Adding Custom Patterns
 

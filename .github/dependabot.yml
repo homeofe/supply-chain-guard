@@ -19,3 +19,13 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  # Keeps the digest-pinned node:20-alpine base image in the Dockerfile fresh:
+  # the FROM lines pin by sha256 digest, so security updates only arrive via
+  # these deliberate weekly bump PRs.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"

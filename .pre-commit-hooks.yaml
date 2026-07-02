@@ -4,7 +4,7 @@
 #
 #   repos:
 #     - repo: https://github.com/homeofe/supply-chain-guard
-#       rev: v5.5.0
+#       rev: v5.6.0
 #       hooks:
 #         - id: supply-chain-guard
 #
@@ -15,6 +15,8 @@
   name: supply-chain-guard scan
   description: Scan the repository for supply-chain malware indicators (fails on high or critical findings)
   language: node
-  entry: supply-chain-guard scan . --fail-on high
+  # --no-history: a hook must not write state (.scg-history/) into the
+  # repository it is gating.
+  entry: supply-chain-guard scan . --fail-on high --no-history
   pass_filenames: false
   always_run: true
