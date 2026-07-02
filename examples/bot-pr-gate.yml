@@ -1,0 +1,48 @@
+# Bot PR gate: block Dependabot / Renovate auto-merge on malware indicators.
+# Copy to .github/workflows/bot-pr-gate.yml in your repository.
+#
+# Why: automated dependency-update PRs with auto-merge enabled are a prime
+# supply-chain attack path. A malicious patch release gets published, the
+# bot opens a PR within hours, and auto-merge lands it before any human
+# looks at it. This workflow runs ONLY on bot PRs, diff-scans just the
+# files changed against origin/main (--since), and fails on high/critical
+# findings - which blocks auto-merge when this check is marked "required"
+# in your branch protection rules.
+#
+# Setup:
+# 1. Copy this file into .github/workflows/
+# 2. In branch protection for your default branch, add "bot-pr-scan" to
+#    the required status checks
+# 3. Adjust the actor list if you use other bots
+
+name: Bot PR Gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  bot-pr-scan:
+    # Run only for PRs opened by dependency-update bots.
+    if: github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so origin/main is available for --since diffing.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install supply-chain-guard
+        run: npm install -g supply-chain-guard
+
+      - name: Diff-scan changed files against origin/main
+        # --since: only scan files changed since the given commit/ref
+        # --fail-on high: exit non-zero on high or critical findings,
+        # failing this check and blocking auto-merge.
+        run: supply-chain-guard scan . --since origin/main --fail-on high

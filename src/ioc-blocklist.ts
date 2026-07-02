@@ -784,10 +784,17 @@ export function checkIOCBlocklist(
 export function checkBadVersion(
   name: string,
   version: string,
-  ecosystem: "npm" | "pypi",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget",
 ): Finding | null {
-  const blocklist =
-    ecosystem === "npm" ? KNOWN_BAD_NPM_VERSIONS : KNOWN_BAD_PYPI_VERSIONS;
+  // ruby/composer/nuget have no pinned entries yet (their curated IOCs live in
+  // threat-intel.ts as ecosystem-prefixed package entries); the union is open
+  // so future BAD_VERSIONS entries can target them without an API change.
+  const blocklist: Record<string, { versions: string[]; description: string }> =
+    ecosystem === "npm"
+      ? KNOWN_BAD_NPM_VERSIONS
+      : ecosystem === "pypi"
+        ? KNOWN_BAD_PYPI_VERSIONS
+        : {};
 
   const entry = blocklist[name];
   if (!entry) return null;

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { applyPolicy, applyBaseline, saveBaseline, loadPolicyConfig } from "../policy-engine.js";
 import type { Finding, PolicyConfig } from "../types.js";
 
@@ -136,6 +138,176 @@ describe("Policy Engine", () => {
 
     it("should return null when no config exists", () => {
       expect(loadPolicyConfig(tmpDir)).toBeNull();
+    });
+  });
+
+  describe("Fail-closed config validation (v5.3)", () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-val-"));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    function loadConfig(lines: string[]): PolicyConfig {
+      fs.writeFileSync(path.join(tmpDir, ".supply-chain-guard.yml"), lines.join("\n"));
+      const config = loadPolicyConfig(tmpDir);
+      expect(config).not.toBeNull();
+      return config!;
+    }
+
+    it("should flag a typo'd top-level section (supress:) as POLICY_UNKNOWN_KEY", () => {
+      const config = loadConfig([
+        "supress:",
+        "  - rule: EVAL_ATOB",
+        "    reason: reviewed and accepted",
+      ]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_UNKNOWN_KEY" && w.message.includes('"supress"'))).toBe(true);
+      // The fail-open condition the warning is about: nothing was suppressed
+      expect(config.suppress).toBeUndefined();
+    });
+
+    it("should convert warnings into high-severity findings via applyPolicy", () => {
+      const config = loadConfig(["supress:", "  - rule: EVAL_ATOB"]);
+      const result = applyPolicy([makeFinding("EVAL_ATOB", "critical")], config);
+      // Original finding stays (the typo'd suppression must NOT apply)...
+      expect(result.findings.some((f) => f.rule === "EVAL_ATOB")).toBe(true);
+      // ...and the broken config is reported as a finding
+      const policyFinding = result.findings.find((f) => f.rule === "POLICY_UNKNOWN_KEY");
+      expect(policyFinding).toBeDefined();
+      expect(policyFinding!.severity).toBe("high");
+      expect(policyFinding!.category).toBe("config");
+      expect(policyFinding!.confidence).toBeGreaterThan(0);
+      expect(policyFinding!.file).toBe(".supply-chain-guard.yml");
+      expect(policyFinding!.line).toBe(1);
+      expect(result.suppressedCount).toBe(0);
+    });
+
+    it("should flag an unknown key inside a suppress entry", () => {
+      const config = loadConfig([
+        "suppress:",
+        "  - rule: EVAL_ATOB",
+        "    reason: reviewed and accepted",
+        "    owner: someone",
+      ]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_UNKNOWN_KEY" && w.message.includes('"owner"'))).toBe(true);
+      // The entry itself is still parsed
+      expect(config.suppress).toHaveLength(1);
+      expect(config.suppress![0].rule).toBe("EVAL_ATOB");
+      // A documented reason exists, so no POLICY_SUPPRESSION_NO_REASON
+      expect(warnings.some((w) => w.rule === "POLICY_SUPPRESSION_NO_REASON")).toBe(false);
+    });
+
+    it("should flag an unknown subsection under rules", () => {
+      const config = loadConfig(["rules:", "  disble:", "    - HEX_ARRAY"]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_UNKNOWN_KEY" && w.message.includes('"disble"'))).toBe(true);
+      expect(config.rules?.disable).toBeUndefined();
+    });
+
+    it("should flag a suppress entry with a missing reason", () => {
+      const config = loadConfig(["suppress:", "  - rule: EVAL_ATOB"]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_SUPPRESSION_NO_REASON")).toBe(true);
+      const result = applyPolicy([], config);
+      const finding = result.findings.find((f) => f.rule === "POLICY_SUPPRESSION_NO_REASON");
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe("medium");
+      expect(finding!.category).toBe("config");
+    });
+
+    it("should flag a suppress entry with an empty reason", () => {
+      const config = loadConfig(["suppress:", "  - rule: EVAL_ATOB", "    reason:"]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_SUPPRESSION_NO_REASON")).toBe(true);
+    });
+
+    it("should flag a malformed suppress rule id (not SCREAMING_SNAKE_CASE)", () => {
+      const config = loadConfig([
+        "suppress:",
+        "  - rule: eval-atob",
+        "    reason: reviewed and accepted",
+      ]);
+      const warnings = config.warnings ?? [];
+      expect(warnings.some((w) => w.rule === "POLICY_MALFORMED_RULE_ID" && w.message.includes('"eval-atob"'))).toBe(true);
+    });
+
+    it("should not flag a well-formed suppress rule id", () => {
+      const config = loadConfig([
+        "suppress:",
+        "  - rule: GHA_UNPINNED_ACTION",
+        "    reason: reviewed and accepted",
+      ]);
+      expect((config.warnings ?? []).some((w) => w.rule === "POLICY_MALFORMED_RULE_ID")).toBe(false);
+    });
+
+    it("should produce zero warnings and zero policy findings for a valid config", () => {
+      const config = loadConfig([
+        "rules:",
+        "  disable:",
+        "    - HEX_ARRAY",
+        "  severityOverrides:",
+        "    GHA_UNPINNED_ACTION: medium",
+        "allowlist:",
+        "  packages:",
+        "    - internal-utils",
+        "  domains:",
+        "    - registry.internal",
+        "  githubOrgs:",
+        "    - homeofe",
+        "suppress:",
+        "  - rule: RELEASE_EXE_ARTIFACT",
+        "    reason: legit installer artifact",
+        "baseline:",
+        "  file: .scg-baseline.json",
+      ]);
+      expect(config.warnings).toBeUndefined();
+      const result = applyPolicy([makeFinding("EVAL_ATOB", "critical")], config);
+      expect(result.findings.some((f) => f.rule.startsWith("POLICY_"))).toBe(false);
+    });
+
+    it("should tolerate a leading yaml-language-server schema comment", () => {
+      const config = loadConfig([
+        "# yaml-language-server: $schema=./policy-schema.json",
+        "suppress:",
+        "  - rule: RELEASE_EXE_ARTIFACT",
+        "    reason: legit installer artifact",
+      ]);
+      expect(config.warnings).toBeUndefined();
+      expect(config.suppress).toHaveLength(1);
+      expect(config.suppress![0].rule).toBe("RELEASE_EXE_ARTIFACT");
+      expect(config.suppress![0].reason).toBe("legit installer artifact");
+    });
+
+    it("should not allow the config to suppress its own validation findings", () => {
+      const config = loadConfig([
+        "supress:",
+        "  - rule: EVAL_ATOB",
+        "suppress:",
+        "  - rule: POLICY_UNKNOWN_KEY",
+        "    reason: trying to silence the validator",
+      ]);
+      const result = applyPolicy([], config);
+      // Fail-closed: the diagnosis is still reported
+      expect(result.findings.some((f) => f.rule === "POLICY_UNKNOWN_KEY")).toBe(true);
+    });
+
+    it("repo's own .supply-chain-guard.yml should validate clean against the parser", () => {
+      const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+      const config = loadPolicyConfig(repoRoot);
+      expect(config).not.toBeNull();
+      expect(config!.warnings).toBeUndefined();
+      expect(config!.suppress!.length).toBeGreaterThan(0);
+      // The schema referenced by the leading comment exists and is strict
+      const schemaPath = path.join(repoRoot, "policy-schema.json");
+      const schema = JSON.parse(fs.readFileSync(schemaPath, "utf-8"));
+      expect(schema.$schema).toContain("draft-07");
+      expect(schema.additionalProperties).toBe(false);
     });
   });
 });

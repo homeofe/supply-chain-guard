@@ -686,6 +686,60 @@ export function checkThreatIntel(
   return findings;
 }
 
+// ---------------------------------------------------------------------------
+// Ecosystem package IOC matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Match a package name (and optional exact version) against type:"package"
+ * feed entries carrying an ecosystem prefix ("ruby:", "composer:", "nuget:",
+ * "go:"). checkThreatIntel() deliberately skips package entries (they would
+ * false-positive on file content); ecosystem scanners resolve them here
+ * against parsed manifest/lockfile package lists instead.
+ *
+ * IOC values come in two shapes:
+ *   - bare name    ("ruby:knot-date-utils-rb") - matches every version
+ *   - name@version ("nuget:Sicoob.Sdk@2.0.0")  - matches only that version
+ *
+ * NuGet package ids are case-insensitive, so the "nuget" ecosystem compares
+ * names ignoring case. Other registries treat names as case-sensitive
+ * (RubyGems/Packagist names are lowercase by convention).
+ */
+export function matchPackageIOC(
+  ecosystem: string,
+  name: string,
+  version?: string,
+  feed?: FeedIOC[],
+): FeedIOC | null {
+  const entries = feed ?? loadThreatIntel();
+  const eco = ecosystem.toLowerCase();
+  const prefix = `${eco}:`;
+  const caseInsensitive = eco === "nuget";
+  const wantName = caseInsensitive ? name.toLowerCase() : name;
+
+  for (const ioc of entries) {
+    if (ioc.type !== "package") continue;
+    if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
+
+    const rest = ioc.value.substring(prefix.length);
+    // Split "name@version" at the last "@". Ecosystem-prefixed names never
+    // start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
+    const at = rest.lastIndexOf("@");
+    const iocName = at > 0 ? rest.substring(0, at) : rest;
+    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+
+    const nameMatches = caseInsensitive
+      ? iocName.toLowerCase() === wantName
+      : iocName === wantName;
+    if (!nameMatches) continue;
+
+    if (iocVersion === undefined) return ioc; // bare-name IOC: any version
+    if (version !== undefined && iocVersion === version) return ioc;
+  }
+
+  return null;
+}
+
 /**
  * Merge two feeds, deduplicating by type+value.
  */

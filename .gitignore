@@ -8,3 +8,4 @@ coverage/
 .ai/logs/
 # Scanner runtime output (self-scans, test-fixture scans). Never source.
 .scg-history/
+.claude/

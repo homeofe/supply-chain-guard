@@ -1,5 +1,19 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.3.0 - ecosystem expansion, the largest
+> coverage release since v5.0. Built by 4 parallel worktree-isolated agents, merged with
+> zero conflicts: (1) pnpm/yarn-v1/yarn-Berry/bun lockfile support in lockfile-checker
+> (reuses existing LOCKFILE_* rule ids; bun.lockb flagged as unauditable binary),
+> (2) rubygems/composer/nuget scanners activating the previously-dead ruby:/composer:/
+> nuget: package IOCs via a new matchPackageIOC helper in threat-intel.ts (10 new rules),
+> (3) fail-closed policy validation (POLICY_UNKNOWN_KEY high on typos like "supress:",
+> POLICY_SUPPRESSION_NO_REASON, POLICY_MALFORMED_RULE_ID) + policy-schema.json shipped in
+> the npm tarball, (4) .devcontainer (zip preinstalled: all 930 tests green in-container)
+> + examples/ (bot-PR gate for Renovate/Dependabot, GitLab CI, GH Action basic) +
+> CONTRIBUTING refresh. Also: new-pattern + ecosystem labels created, 8 good-first-issues
+> seeded (#40-#47). 94 new tests (917 total green), tsc clean, self-scan 8/100 with zero
+> findings. Version 5.3.0 (MINOR per conventions: new scanner modules). 52 src modules.
+
 > Note (2026-07-02, claude-fable-5): Fixed a from-day-one release-notes bug found while
 > verifying v5.2.45: the ci.yml awk range /^### vX/,/^### v[0-9]/ starts AND ends on the
 > heading line (it matches both patterns), so extraction always yielded one line, head -n -1

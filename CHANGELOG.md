@@ -4,6 +4,38 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.3.0 (2026-07-02)
+**Ecosystem expansion: 3 new ecosystems, 4 new lockfile formats, fail-closed policy config**
+
+The largest coverage release since v5.0: three new package ecosystems, full modern
+JavaScript lockfile coverage, strict policy validation, and community infrastructure.
+94 new tests (917 total).
+
+- **pnpm / yarn / bun lockfile support**: `checkLockfile` now parses pnpm-lock.yaml
+  (v6 + v9 key styles), yarn.lock (classic v1 AND Berry v2+), and bun.lock (JSONC),
+  applying the same integrity, registry-URL, git/tarball-dependency, and known-bad-
+  version checks as package-lock.json. Binary bun.lockb files are flagged
+  (LOCKFILE_BUN_BINARY_UNAUDITABLE) with a migration hint. All hand-rolled parsers,
+  zero new dependencies.
+- **RubyGems, Composer, and NuGet scanners**: new rubygems-scanner, composer-scanner,
+  and nuget-scanner modules parse Gemfile/Gemfile.lock, composer.json/composer.lock,
+  and packages.lock.json/*.csproj/nuget.config. This activates the ruby:/composer:/
+  nuget: package IOCs already bundled in the threat-intel feed (previously dead
+  weight: BufferZoneCorp sleeper gems, Laravel-Lang DebugElevator, Sicoob.Sdk and
+  friends now fire). 10 new rules across RUBY_/COMPOSER_/NUGET_ categories, plus
+  hygiene checks for plain-http gem sources, dist URLs, and package feeds.
+- **Fail-closed policy validation**: .supply-chain-guard.yml is now strictly
+  validated. Unknown sections or keys (e.g. a typo like "supress:") raise
+  POLICY_UNKNOWN_KEY (high) instead of being silently ignored - a misspelled policy
+  no longer fails open. Suppressions without a reason raise
+  POLICY_SUPPRESSION_NO_REASON; malformed rule ids raise POLICY_MALFORMED_RULE_ID.
+  Ships policy-schema.json (JSON Schema) in the npm package for editor validation
+  via yaml-language-server.
+- **Community infrastructure**: .devcontainer (all 930 tests green in-container,
+  including the 13 zip-dependent ones), examples/ directory (GitHub Action basic,
+  Renovate/Dependabot bot-PR gate, GitLab CI), CONTRIBUTING refresh, new-pattern
+  label, and 8 seeded good-first-issues (#40-#47).
+
 ### v5.2.45 (2026-07-02)
 **README adoption package: demo GIF, comparison table, changelog split**
 

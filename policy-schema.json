@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/homeofe/supply-chain-guard/main/policy-schema.json",
+  "title": "supply-chain-guard policy config",
+  "description": "Schema for .supply-chain-guard.yml (also .supply-chain-guard.yaml, .scg.yml, .scg.yaml). Mirrors exactly what the built-in parser in src/policy-engine.ts understands. Reference it in your config with a leading comment line: # yaml-language-server: $schema=./node_modules/supply-chain-guard/policy-schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "rules": {
+      "description": "Rule-level tuning: disable rules entirely or override their severity.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "disable": {
+          "description": "Rule ids to disable entirely. Disabled findings are dropped and counted as suppressed.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          }
+        },
+        "severityOverrides": {
+          "description": "Map of rule id to the severity it should be reported with.",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Z][A-Z0-9_]*$": {
+              "type": "string",
+              "enum": ["critical", "high", "medium", "low", "info"]
+            }
+          }
+        }
+      }
+    },
+    "allowlist": {
+      "description": "Entities that are trusted and excluded from specific checks.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "packages": {
+          "description": "Package names excluded from typosquat and dependency-confusion checks (TYPOSQUAT_LEVENSHTEIN, DEP_INTERNAL_NAME_PUBLIC).",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "domains": {
+          "description": "Trusted domains.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "githubOrgs": {
+          "description": "Trusted GitHub organizations.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "suppress": {
+      "description": "Reviewed, accepted findings. Every entry needs the exact rule id and a reason as audit trail; entries without a reason are reported as POLICY_SUPPRESSION_NO_REASON.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "reason"],
+        "properties": {
+          "rule": {
+            "description": "Exact rule id as reported by the scanner (SCREAMING_SNAKE_CASE).",
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "reason": {
+            "description": "Why this finding is an accepted tradeoff (audit trail).",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "baseline": {
+      "description": "Baseline diffing: only findings not present in the baseline file are reported.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "description": "Path to the baseline JSON file, relative to the scan root (or absolute).",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

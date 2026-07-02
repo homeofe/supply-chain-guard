@@ -22,7 +22,13 @@ export {
   monitorWatchlist,
 } from "./solana-monitor.js";
 export { formatReport } from "./reporter.js";
-export { checkLockfile } from "./lockfile-checker.js";
+export {
+  checkLockfile,
+  checkNpmLockfile,
+  checkPnpmLockfile,
+  checkYarnLockfile,
+  checkBunLockfile,
+} from "./lockfile-checker.js";
 export { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
 export { scanDockerFiles, scanDockerFile } from "./dockerfile-scanner.js";
 export { scanConfigFiles, scanConfigFile } from "./config-scanner.js";
@@ -30,6 +36,9 @@ export { scanGitSecurity } from "./git-scanner.js";
 export { analyzeEntropy, shannonEntropy } from "./entropy.js";
 export { scanCargoFiles } from "./cargo-scanner.js";
 export { scanGoFiles } from "./go-scanner.js";
+export { scanRubyGemsFiles } from "./rubygems-scanner.js";
+export { scanComposerFiles } from "./composer-scanner.js";
+export { scanNuGetFiles } from "./nuget-scanner.js";
 export { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
 export { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 export { analyzeInstallHooks } from "./install-hook-scanner.js";
@@ -40,7 +49,7 @@ export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
 export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
-export { loadThreatIntel, updateThreatFeed, checkThreatIntel } from "./threat-intel.js";
+export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC } from "./threat-intel.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
 export { listOrgRepos, analyzeOrgFindings } from "./org-scanner.js";

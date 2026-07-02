@@ -88,6 +88,9 @@ src/
   pypi-scanner.ts         # PyPI package analysis
   cargo-scanner.ts        # Rust/Cargo analysis
   go-scanner.ts           # Go module analysis
+  rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
+  composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
+  nuget-scanner.ts        # NuGet/.NET (packages.lock.json/csproj/nuget.config) analysis
   entropy.ts              # Shannon entropy analysis
   lockfile-checker.ts     # Lockfile integrity
   config-scanner.ts       # Package manager configs
@@ -127,6 +130,30 @@ npm install
 npm run build
 npm test
 ```
+
+## Development Environments
+
+### Dev container (recommended)
+
+The repository ships a [dev container](.devcontainer/devcontainer.json). Open the
+repo in VS Code and choose "Reopen in Container" (or use GitHub Codespaces) - it
+installs Node 20, the `zip` CLI, and runs `npm ci` automatically. In the
+container ALL tests pass, including the 13 vscode-scanner tests that need the
+`zip` binary.
+
+### Bare Windows checkout
+
+On a bare Windows machine without a `zip` binary, 13 vscode-scanner tests fail
+locally. This is NOT a regression - those tests build .vsix fixtures with `zip`
+and are green in CI and in the dev container. Everything else runs fine on
+Windows; use the dev container if you want a fully green suite locally.
+
+## CI Recipes
+
+Looking to integrate the scanner into your own pipeline? See
+[`examples/`](examples/) for ready-to-copy recipes: a minimal GitHub Actions
+workflow, a Dependabot/Renovate bot PR gate, and a GitLab CI job template.
+Contributions for more CI systems are welcome.
 
 ## Questions?
 

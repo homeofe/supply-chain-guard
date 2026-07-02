@@ -1,0 +1,31 @@
+# Minimal supply-chain-guard workflow using the published GitHub Action.
+# Copy to .github/workflows/supply-chain-guard.yml in your repository.
+#
+# Inputs mirror action.yml - see the README "GitHub Action" section for
+# the full list (path, format, min-severity, exclude-rules, fail-on,
+# comment-on-pr).
+
+name: Supply Chain Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  # Required so the Action can post/update the scan report comment on PRs.
+  pull-requests: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: homeofe/supply-chain-guard@v5
+        with:
+          # Fail the check on high or critical findings.
+          fail-on: high
+          # Post the report as a PR comment (updated in place on re-runs).
+          comment-on-pr: true

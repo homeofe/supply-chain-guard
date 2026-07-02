@@ -36,6 +36,9 @@ import { scanGitSecurity } from "./git-scanner.js";
 import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
+import { scanRubyGemsFiles } from "./rubygems-scanner.js";
+import { scanComposerFiles } from "./composer-scanner.js";
+import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
 import { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
 import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 import {
@@ -321,6 +324,30 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (fs.existsSync(path.join(scanDir, "go.mod"))) {
     const goFindings = scanGoFiles(scanDir);
     findings.push(...goFindings);
+  }
+
+  // Check RubyGems files (Gemfile / Gemfile.lock)
+  if (
+    fs.existsSync(path.join(scanDir, "Gemfile")) ||
+    fs.existsSync(path.join(scanDir, "Gemfile.lock"))
+  ) {
+    const rubyFindings = scanRubyGemsFiles(scanDir);
+    findings.push(...rubyFindings);
+  }
+
+  // Check Composer/PHP files (composer.json / composer.lock)
+  if (
+    fs.existsSync(path.join(scanDir, "composer.json")) ||
+    fs.existsSync(path.join(scanDir, "composer.lock"))
+  ) {
+    const composerFindings = scanComposerFiles(scanDir);
+    findings.push(...composerFindings);
+  }
+
+  // Check NuGet/.NET files (packages.lock.json / *.csproj / nuget.config)
+  if (hasNuGetFiles(scanDir)) {
+    const nugetFindings = scanNuGetFiles(scanDir);
+    findings.push(...nugetFindings);
   }
 
   // v4.7: Workflow execution modeling
@@ -1323,6 +1350,26 @@ function generateRecommendations(findings: Finding[]): string[] {
   if (rules.has("GO_INIT_EXEC")) {
     recommendations.push(
       "Go init() functions with command execution detected. init() runs automatically on import.",
+    );
+  }
+
+  // RubyGems/Composer/NuGet recommendations
+  if (
+    rules.has("RUBY_MALICIOUS_GEM") ||
+    rules.has("COMPOSER_MALICIOUS_PACKAGE") ||
+    rules.has("NUGET_MALICIOUS_PACKAGE")
+  ) {
+    recommendations.push(
+      "CRITICAL: Dependencies match threat-intelligence package IOCs. Remove them immediately, rotate credentials exposed to installs, and audit affected systems.",
+    );
+  }
+  if (
+    rules.has("RUBY_GEM_HTTP_SOURCE") ||
+    rules.has("COMPOSER_HTTP_REPOSITORY") ||
+    rules.has("NUGET_HTTP_FEED")
+  ) {
+    recommendations.push(
+      "Package sources served over plain http detected. Switch all registries/feeds to https to prevent in-transit tampering.",
     );
   }
 

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./policy-schema.json
 # supply-chain-guard policy for this repository's own self-scan.
 #
 # Each suppression below is a reviewed, accepted by-design tradeoff - not a

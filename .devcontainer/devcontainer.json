@@ -1,0 +1,17 @@
+{
+  "name": "supply-chain-guard",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y zip && npm ci",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "vitest.explorer"
+      ],
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "files.eol": "\n"
+      }
+    }
+  }
+}

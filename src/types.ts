@@ -302,6 +302,32 @@ export interface PolicyConfig {
   baseline?: {
     file?: string;
   };
+  /** Validation problems collected while parsing (v5.3, fail-closed config validation) */
+  warnings?: PolicyWarning[];
+}
+
+/** Rule ids emitted for policy config validation problems (v5.3) */
+export type PolicyWarningRule =
+  | "POLICY_UNKNOWN_KEY"
+  | "POLICY_SUPPRESSION_NO_REASON"
+  | "POLICY_MALFORMED_RULE_ID";
+
+/**
+ * A problem found while parsing .supply-chain-guard.yml (v5.3).
+ *
+ * A security tool whose config silently ignores a typo like "supress:"
+ * fails open: the user believes a policy is active when it is not.
+ * These warnings are converted into findings by applyPolicy().
+ */
+export interface PolicyWarning {
+  /** Detection rule id this warning maps to */
+  rule: PolicyWarningRule;
+  /** What exactly is wrong, naming the offending key or value */
+  message: string;
+  /** 1-based line number in the config file (if known) */
+  line?: number;
+  /** Config file name, e.g. ".supply-chain-guard.yml" (set by loadPolicyConfig) */
+  file?: string;
 }
 
 export interface ScanSummary {
