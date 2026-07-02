@@ -1,0 +1,2 @@
+# Keep ESM scripts LF so vitest can import them on Windows checkouts
+*.mjs text eol=lf

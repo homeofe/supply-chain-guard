@@ -16,9 +16,9 @@
 
 | Property | Value | Source |
 |----------|-------|--------|
-| package.json version | 5.3.0 | package.json |
-| Source modules present | 52 | src/ file list |
-| Test files present | 57 | src/__tests__/ file list |
+| package.json version | 5.4.0 | package.json |
+| Source modules present | 56 | src/ file list |
+| Test files present | 61 | src/__tests__/ file list |
 | tsconfig `types: ["node"]` | yes | tsconfig.json (load-bearing under TS6) |
 | Runtime dependency | commander ^14.0.3 | package.json (CommonJS line; 15+ is ESM-only) |
 

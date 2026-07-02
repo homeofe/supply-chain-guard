@@ -1,5 +1,24 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.4.0 - the agentic security suite +
+> live threat feed (roadmap Bet 1). Built by 4 worktree-isolated agents, merged with
+> only trivial append-point conflicts: (1) mcp-scanner (6 MCP_ rules: malicious server
+> packages via IOC feed, C2/http endpoints, secret-to-remote env, tool-description
+> injection, unpinned servers), (2) skills-scanner (5 SKILL_/AGENT_ rules over
+> .claude/skills, hooks, .cursorrules, copilot-instructions, AGENTS.md, CLAUDE.md;
+> FP-tuned: our own repo scans clean), (3) zero-dep MCP server (JSON-RPC/stdio,
+> ioc_lookup + scan_directory + scan_npm_package; smoke-tested live: event-stream@3.3.6
+> -> malicious), (4) live feed channel (feed.json published + check:feed prebuild gate
+> + feed stats/refresh CLI wiring the previously-dormant .scg-cache/threat-feed.json
+> consumption). Two merge-time fixes: a conflict-resolution brace slip in cli.ts, and
+> the vitest-vs-shebang CRLF import failure (shebang removed, .gitattributes eol=lf for
+> .mjs). Dogfooding catch: feed.json's raw IOC values produced 169 phantom criticals -
+> fixed PROPERLY for all feed adopters via isInertThreatFeedFile() (strict structural
+> schema check, smuggling-resistant, 8 regression tests) + .scg-cache/.scg-history walk
+> exclusion. 106 new tests (1030 green), self-scan 8/100 zero findings, NEXT_ACTIONS
+> refreshed (bets 2+3 remain). 56 src modules. Post-launch: blog writeup + MCP directory
+> listings are manual maintainer steps.
+
 > Note (2026-07-02, claude-fable-5): Released v5.3.0 - ecosystem expansion, the largest
 > coverage release since v5.0. Built by 4 parallel worktree-isolated agents, merged with
 > zero conflicts: (1) pnpm/yarn-v1/yarn-Berry/bun lockfile support in lockfile-checker

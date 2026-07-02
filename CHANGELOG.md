@@ -4,6 +4,39 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.4.0 (2026-07-02)
+**The agentic security suite: MCP scanning, skills scanning, an MCP server, and a live threat feed**
+
+supply-chain-guard becomes both a scanner OF the agentic ecosystem and a tool FOR it.
+No mainstream OSS scanner covers these surfaces. 106 new tests (1030 total).
+
+- **MCP server config scanner** (mcp-scanner, 6 MCP_ rules): scans .mcp.json,
+  .cursor/mcp.json, .vscode/mcp.json, claude_desktop_config.json and
+  .gemini/settings.json for malicious server packages (matched against the bundled
+  IOC feed and known-bad versions), C2 endpoints, plain-http servers, credentials
+  forwarded to remote servers, prompt injection inside tool descriptions, and
+  unpinned npx -y servers.
+- **AI agent skills / rules-file scanner** (skills-scanner, 5 SKILL_/AGENT_ rules):
+  scans .claude/skills/**/SKILL.md, .claude/commands, .claude/settings.json hooks,
+  .cursorrules, .cursor/rules, .github/copilot-instructions.md, AGENTS.md and
+  CLAUDE.md for injected LLM control tokens, invisible-Unicode instruction channels,
+  download-and-execute and credential-harvesting instructions, and dangerous hook
+  commands. Tuned against false positives: legitimate rules files (including this
+  repo's own) produce zero findings.
+- **Built-in MCP server** (`supply-chain-guard mcp`): zero-dependency JSON-RPC 2.0
+  server over stdio exposing ioc_lookup (offline, all 5 package ecosystems),
+  scan_directory, and scan_npm_package - so AI coding agents can vet packages
+  BEFORE installing them. Client snippets for Claude Code, Claude Desktop, and
+  Cursor in docs/mcp.md.
+- **Live threat feed**: the bundled IOC feed is now published as feed.json (kept
+  release-fresh by a new check:feed prebuild gate) and `supply-chain-guard feed
+  refresh` pulls it into the local cache, where every scan merges it for 24h -
+  same-day protection between releases. `feed stats` shows the effective feed.
+- Scanner hygiene: the published feed and its cache are recognized as inert,
+  strictly schema-validated detection data (a repo committing feed.json no longer
+  drowns in phantom criticals from its own protection data); .scg-cache/ and
+  .scg-history/ excluded from walks.
+
 ### v5.3.0 (2026-07-02)
 **Ecosystem expansion: 3 new ecosystems, 4 new lockfile formats, fail-closed policy config**
 

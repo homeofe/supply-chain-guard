@@ -28,6 +28,8 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 - [Supported Ecosystems](#supported-ecosystems)
 - [How It Compares](#how-it-compares)
 - [GitHub Action](#github-action)
+- [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp)
+- [Live Threat Feed](#live-threat-feed)
 - [Adding Custom Patterns](#adding-custom-patterns)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
@@ -349,6 +351,44 @@ jobs:
 | `exclude-rules` | Comma-separated rule IDs to exclude | |
 | `fail-on` | Fail check at this severity or above | `critical` |
 | `comment-on-pr` | Post findings as PR comment | `true` |
+
+## For AI Coding Agents (MCP)
+
+supply-chain-guard is both a scanner OF the agentic ecosystem and a tool FOR it.
+
+**Scanning agentic attack surfaces** (automatic in every `scan`):
+
+- MCP server configs: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`,
+  `claude_desktop_config.json` - malicious server packages, C2 endpoints,
+  plain-http servers, secrets forwarded to remote servers, prompt injection in
+  tool descriptions (MCP_ rules)
+- Agent skills and rules files: `.claude/skills/**/SKILL.md`, `.claude/settings.json`
+  hooks, `.cursorrules`, `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md` -
+  injected control tokens, invisible Unicode instruction channels, download-and-execute
+  and credential-harvesting instructions, dangerous hook commands (SKILL_/AGENT_ rules)
+
+**Built-in MCP server** - let your AI agent vet packages BEFORE installing them:
+
+```bash
+claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp
+```
+
+Exposes three tools over stdio: `ioc_lookup` (offline IOC + known-bad-version check
+for npm/PyPI/RubyGems/Composer/NuGet), `scan_directory`, and `scan_npm_package`.
+Client config snippets for Claude Code, Claude Desktop, and Cursor: [docs/mcp.md](docs/mcp.md).
+
+## Live Threat Feed
+
+The bundled IOC feed ships with every release, and the same data is published as
+[feed.json](feed.json) on every push to main - so protection lands the day a campaign
+is ingested, not at the next release:
+
+```bash
+supply-chain-guard feed stats     # entry counts by type and severity
+supply-chain-guard feed refresh   # pull the latest published feed into the local cache
+```
+
+A refreshed feed is merged into every scan for the next 24 hours automatically.
 
 ## Adding Custom Patterns
 

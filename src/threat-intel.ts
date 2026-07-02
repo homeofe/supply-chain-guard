@@ -570,9 +570,21 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "go:github.com/Setsu548/Logistic", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
 ];
 
-const CACHE_DIR = ".scg-cache";
-const FEED_CACHE_FILE = "threat-feed.json";
+// Exported so the feed channel (feed.ts: "feed refresh") writes its download
+// to the exact location loadThreatIntel() reads from.
+export const CACHE_DIR = ".scg-cache";
+export const FEED_CACHE_FILE = "threat-feed.json";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Copy of the bundled (compiled-in) IOC feed, without any cached remote
+ * entries merged. Used by "feed stats" to distinguish bundled vs effective
+ * entry counts; scripts/generate-feed.mjs derives the publishable feed.json
+ * from the same array (parsed out of this source file, single source of truth).
+ */
+export function getBundledFeed(): FeedIOC[] {
+  return [...BUNDLED_FEED];
+}
 
 // ---------------------------------------------------------------------------
 // Feed loading
@@ -632,6 +644,56 @@ export async function updateThreatFeed(
   } catch (err) {
     throw new Error(`Failed to update threat feed: ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+// Keys permitted in a published/cached feed document and in its IOC entries.
+// Anything outside these sets means the file is NOT our inert data format and
+// must be scanned normally - an attacker cannot smuggle code past the check by
+// naming a file feed.json, because any extra key or non-scalar value fails it.
+const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp"]);
+const FEED_ENTRY_KEYS = new Set([
+  "type", "value", "severity", "confidence", "family", "campaign", "firstSeen", "note", "ecosystem",
+]);
+
+/**
+ * Structural check: is this file supply-chain-guard's own threat-feed data
+ * (the published feed.json or the .scg-cache/threat-feed.json cache)?
+ *
+ * The feed intentionally contains RAW IOC values (domains, IPs, package
+ * names) as machine-readable detection data - the same reason the scanner's
+ * own source files are IOC-excluded. Without this check, any repo that
+ * commits the published feed (or the refresh cache) drowns in phantom
+ * criticals from its own protection data (v5.4.0 dogfooding find: 169
+ * findings on this repo's feed.json).
+ *
+ * Strictness is the security property: valid JSON, top-level keys and every
+ * entry key from a fixed allowlist, entries hold only inert scalars. Any
+ * deviation -> file is scanned like everything else.
+ */
+export function isInertThreatFeedFile(filename: string, content: string): boolean {
+  const base = filename.replace(/\\/g, "/").split("/").pop() ?? "";
+  if (base !== "feed.json" && base !== FEED_CACHE_FILE) return false;
+  let doc: unknown;
+  try {
+    doc = JSON.parse(content);
+  } catch {
+    return false;
+  }
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) return false;
+  const obj = doc as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    if (!FEED_DOC_KEYS.has(key)) return false;
+  }
+  if (obj.package !== undefined && obj.package !== "supply-chain-guard") return false;
+  if (!Array.isArray(obj.entries)) return false;
+  for (const entry of obj.entries) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+    for (const [k, v] of Object.entries(entry as Record<string, unknown>)) {
+      if (!FEED_ENTRY_KEYS.has(k)) return false;
+      if (typeof v !== "string" && typeof v !== "number") return false;
+    }
+  }
+  return true;
 }
 
 /**

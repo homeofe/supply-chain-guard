@@ -54,7 +54,7 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
@@ -73,6 +73,8 @@ import {
 import { generateSbomDocument } from "./sbom-generator.js";
 import { verifySLSA, getSLSALevel } from "./slsa-verifier.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
+import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
+import { scanAgentSkillFiles } from "./skills-scanner.js";
 
 const TOOL_VERSION = "5.2.0";
 
@@ -186,6 +188,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     try {
       const content = fs.readFileSync(filePath, "utf-8");
+
+      // Skip supply-chain-guard's own published threat-feed data (feed.json /
+      // threat-feed.json): it intentionally carries raw IOC values as inert,
+      // structurally-validated detection data. Any deviation from the strict
+      // feed schema fails the check and the file is scanned normally.
+      if (isInertThreatFeedFile(relativePath, content)) continue;
 
       // Check file content patterns
       checkFilePatterns(content, relativePath, findings);
@@ -350,6 +358,17 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings.push(...nugetFindings);
   }
 
+  // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /
+  // claude_desktop_config.json / .gemini/settings.json)
+  if (hasMcpConfigFiles(scanDir)) {
+    const mcpFindings = scanMcpConfigs(scanDir);
+    findings.push(...mcpFindings);
+  }
+  // Check AI agent skill / rules files (.claude, .cursorrules, CLAUDE.md, ...)
+  // The main walk skips .claude/ - this scanner does its own targeted traversal.
+  const skillFindings = scanAgentSkillFiles(scanDir);
+  findings.push(...skillFindings);
+
   // v4.7: Workflow execution modeling
   const wfFindings = modelWorkflows(scanDir);
   findings.push(...wfFindings);
@@ -486,7 +505,11 @@ function collectFiles(dir: string, maxDepth: number, depth = 0): string[] {
         entry.name === "__pycache__" ||
         entry.name === ".venv" ||
         entry.name === "venv" ||
-        entry.name === ".claude"
+        entry.name === ".claude" ||
+        // Scanner runtime artifacts: risk history + refreshed threat-feed
+        // cache. The cache holds raw IOC values by design (detection data).
+        entry.name === ".scg-history" ||
+        entry.name === ".scg-cache"
       ) {
         continue;
       }

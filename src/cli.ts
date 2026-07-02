@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.3.0");
+  .version("5.4.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -617,5 +617,80 @@ watchlist
       }
     },
   );
+
+// -- feed command ------------------------------------------------------------
+
+const feedCmd = program
+  .command("feed")
+  .description("Inspect and refresh the threat-intel IOC feed");
+
+feedCmd
+  .command("stats")
+  .description("Show IOC entry counts by type and severity (offline)")
+  .option("-f, --format <format>", "Output format: text, json", "text")
+  .action(async (opts: { format: string }) => {
+    try {
+      const { getBundledFeed, loadThreatIntel } = await import("./threat-intel.js");
+      const { feedStats } = await import("./feed.js");
+      const bundled = getBundledFeed();
+      const effective = loadThreatIntel();
+      const stats = feedStats(effective);
+
+      if (opts.format === "json") {
+        console.log(
+          JSON.stringify({ bundledEntries: bundled.length, ...stats }, null, 2),
+        );
+        return;
+      }
+
+      console.log(`\n  Threat-intel feed statistics:\n`);
+      console.log(`  Bundled entries:   ${bundled.length}`);
+      console.log(`  Effective entries: ${stats.total} (bundled + fresh cache)`);
+      console.log(`\n  By type:`);
+      for (const [type, count] of Object.entries(stats.byType)) {
+        console.log(`    ${type.padEnd(10)} ${count}`);
+      }
+      console.log(`\n  By severity:`);
+      for (const [severity, count] of Object.entries(stats.bySeverity)) {
+        console.log(`    ${severity.padEnd(10)} ${count}`);
+      }
+      console.log("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n  Error: ${message}\n`);
+      process.exit(1);
+    }
+  });
+
+feedCmd
+  .command("refresh")
+  .description(
+    "Download the published IOC feed into the local cache for same-day protection (default source: the project's feed.json on GitHub main)",
+  )
+  .option("-u, --url <url>", "Feed URL to download instead of the default")
+  .option("-c, --cache-dir <dir>", "Cache directory to write to (default: .scg-cache)")
+  .action(async (opts: { url?: string; cacheDir?: string }) => {
+    try {
+      const { refreshFeed, DEFAULT_FEED_URL } = await import("./feed.js");
+      const result = await refreshFeed(opts.url ?? DEFAULT_FEED_URL, opts.cacheDir);
+      console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
+      console.log(`  Cache file: ${result.cachePath}`);
+      console.log(`  Scans in the next 24h automatically merge these entries.\n`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n  Error: ${message}\n`);
+      process.exit(1);
+    }
+  });
+
+// ── mcp command ─────────────────────────────────────────────────────
+
+program
+  .command("mcp")
+  .description("Start an MCP server exposing supply-chain-guard tools over stdio")
+  .action(async () => {
+    const { startMcpServer } = await import("./mcp-server.js");
+    startMcpServer();
+  });
 
 program.parse();

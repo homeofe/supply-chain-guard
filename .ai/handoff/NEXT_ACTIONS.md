@@ -10,50 +10,61 @@
 
 | Status | Count |
 |--------|-------|
-| Ready | 0 |
+| Ready (community-seeded issues) | 8 |
 | Blocked | 0 |
-| Done | 7 |
+| Roadmap bets remaining | 2 |
+
+Current version: **v5.4.0**. The 2026-07 ideation roadmap quick wins are complete
+(README adoption package, contributor funnel, lockfile + ecosystem expansion,
+fail-closed policy, live feed) and strategic Bet 1 (agentic security suite) shipped.
 
 ---
 
-## Ready - Work These Next
+## Ready - Community-Seeded Issues (good first issues, let contributors take them)
 
-_Nothing queued._ All tracked AAHP tasks (T-001 through T-007) are complete and there are
-no open GitHub issues. The package is current at **v5.2.44**, with all dependencies at
-their latest compatible versions and 0 known vulnerabilities.
+| # | Issue | Size |
+|---|-------|------|
+| [#40](https://github.com/homeofe/supply-chain-guard/issues/40) | Open VSX registry support for the VS Code scanner | S |
+| [#41](https://github.com/homeofe/supply-chain-guard/issues/41) | pre-commit framework hook | S |
+| [#42](https://github.com/homeofe/supply-chain-guard/issues/42) | Shields.io endpoint badge output (--format badge) | S |
+| [#43](https://github.com/homeofe/supply-chain-guard/issues/43) | Coverage reporting + threshold gate in CI | S |
+| [#44](https://github.com/homeofe/supply-chain-guard/issues/44) | examples/: CircleCI recipe | S |
+| [#45](https://github.com/homeofe/supply-chain-guard/issues/45) | examples/: Jenkins pipeline recipe | S |
+| [#46](https://github.com/homeofe/supply-chain-guard/issues/46) | examples/: Azure Pipelines recipe | S |
+| [#47](https://github.com/homeofe/supply-chain-guard/issues/47) | Official Docker image on GHCR (multi-arch) | M, help wanted |
 
-New work normally enters through:
+Maintainer policy: leave these open for contributors for a while before self-assigning.
 
-- **Threat-intel routine** - the recurring session that adds IOCs and cuts patch releases
-  (see the most recent entries under `## Changelog` in README.md).
-- **New GitHub issues / AAHP tasks** - added to `MANIFEST.json` `tasks` and surfaced here.
-- **Dependabot PRs** - weekly npm + github-actions updates. Note: commander is pinned to
-  the 14.x CommonJS line and 15+ is ignored (ESM-only + Node >=22.12); see
-  `.github/dependabot.yml`.
+---
 
-When you pick up a new task, add it above with a self-contained goal, context, steps,
-files, and definition-of-done (see this file's git history for the format).
+## Remaining Strategic Bets (2026-07 roadmap)
+
+### Bet 2: Install-time guard [L]
+The only install blocker whose entire blocklist is auditable in git history, offline,
+no vendor account. Preconditions now MET: multi-lockfile support (v5.3.0) and the live
+feed (v5.4.0) are shipped. Best started after the feed has produced at least one
+documented "blocked campaign X the day it broke" story to anchor the launch.
+
+### Bet 3: Docker image + GitLab native format beachhead [M+M]
+GHCR image (issue #47) is the prerequisite; gl-dependency-scanning-report.json output
+buys the GitLab security UI. Start on the first inbound GitLab demand signal.
+
+### Post-launch follow-ups for the agentic suite (v5.4.0)
+- Announce: blog writeup + MCP directory/registry listings (manual, maintainer).
+- MCP rug-pull detection (baseline tool-description hashes in .scg-cache) - documented
+  as future work in src/mcp-scanner.ts.
+- OSV-format export of the feed (same pipeline as feed.json; slow diplomatic track
+  toward ossf/malicious-packages).
 
 ---
 
 ## Recently Completed
 
-| ID | Task | Completed |
-|----|------|-----------|
-| T-007 | Rate-limit handling in Solana monitor (backoff + Retry-After + 429/-32005) | 2026-04 (v4) |
-| T-006 | Cargo/Go module scanner (cargo-scanner.ts + go-scanner.ts, wired in scanner.ts) | 2026-04 (v4) |
-| T-005 | --fail-on severity threshold flag | 2026-03-26 |
-| T-004 | SBOM export (CycloneDX JSON) | 2026-03-26 |
-| T-003 | Add CLI integration tests (22 tests) | 2026-03-26 |
-| T-002 | Add reporter unit tests (39 tests: JSON, SARIF, markdown, text, SBOM) | 2026-03-26 |
-| T-001 | Add solana-monitor unit tests (23 tests) | 2026-03-26 |
-
-### Milestones
-
 | Item | Date |
 |------|------|
-| v5.2.44 released (dependency maintenance: commander 14 + toolchain refresh) | 2026-07-01 |
-| Stale auto-created issues #30/#31 closed; T-006/T-007 marked done | 2026-07-01 |
-| Dependabot batch (8 PRs) consolidated + full dependency update to latest | 2026-07-01 |
-| v3.1.0 released (269 tests) | 2026-03-26 |
-| AAHP handoff docs created | 2026-03-26 |
+| v5.4.0: agentic suite (mcp-scanner, skills-scanner, MCP server) + live feed | 2026-07-02 |
+| v5.3.0: pnpm/yarn/bun lockfiles, RubyGems/Composer/NuGet scanners, fail-closed policy, devcontainer + examples | 2026-07-02 |
+| Contributor funnel: new-pattern label, 8 seeded good-first-issues (#40-#47) | 2026-07-02 |
+| v5.2.45: README adoption package (demo GIF, comparison table, changelog split) | 2026-07-02 |
+| Release-notes extraction fixed (was broken since day one) | 2026-07-02 |
+| T-001..T-007 (v3-v4 era backlog) | done, see MANIFEST.json |

@@ -91,6 +91,9 @@ src/
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
   nuget-scanner.ts        # NuGet/.NET (packages.lock.json/csproj/nuget.config) analysis
+  skills-scanner.ts       # AI agent skill/rules files (.claude, .cursorrules, CLAUDE.md)
+  mcp-scanner.ts          # MCP server config analysis (.mcp.json, claude_desktop_config.json)
+  mcp-server.ts           # Zero-dep MCP server (supply-chain-guard mcp)
   entropy.ts              # Shannon entropy analysis
   lockfile-checker.ts     # Lockfile integrity
   config-scanner.ts       # Package manager configs
@@ -98,6 +101,7 @@ src/
   policy-engine.ts        # Policy config, baseline, suppressions
   trust-signals.ts        # Positive trust indicators
   threat-intel.ts         # External IOC feed integration
+  feed.ts                 # Feed stats + published-feed refresh (feed.json channel)
   risk-engine.ts          # Multi-dimensional risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
   org-scanner.ts          # Organization-level scanning
