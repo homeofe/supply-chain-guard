@@ -391,6 +391,103 @@ describe("formatReport – SBOM (CycloneDX 1.6)", () => {
   });
 });
 
+// ─── Badge format (Shields.io endpoint) ───────────────────────────────────────
+
+interface BadgeOutput {
+  schemaVersion: number;
+  label: string;
+  message: string;
+  color: string;
+}
+
+describe("formatReport – Badge (Shields.io endpoint)", () => {
+  it("should produce valid JSON", () => {
+    const output = formatReport(makeReport(), "badge");
+    expect(() => JSON.parse(output)).not.toThrow();
+  });
+
+  it("should have schemaVersion 1 and the supply-chain-guard label", () => {
+    const parsed = JSON.parse(formatReport(makeReport(), "badge")) as BadgeOutput;
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.label).toBe("supply-chain-guard");
+  });
+
+  // v5.5.0 MF-2: the badge derives from the findings SUMMARY, mirroring the
+  // CLI exit-code semantics - NOT from the score-based riskLevel (a single
+  // critical scores ~25 points = riskLevel "medium", which used to render a
+  // yellow badge while the gate exited 2).
+  const summaryOf = (c: number, h: number, m: number, l: number, i = 0) => ({
+    totalFiles: 1, filesScanned: 1,
+    critical: c, high: h, medium: m, low: l, info: i,
+  });
+
+  it("renders clean/brightgreen when the summary has no findings", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ summary: summaryOf(0, 0, 0, 0) }), "badge"),
+    ) as BadgeOutput;
+    expect(parsed.message).toBe("clean");
+    expect(parsed.color).toBe("brightgreen");
+  });
+
+  it("renders low counts brightgreen", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ summary: summaryOf(0, 0, 0, 3) }), "badge"),
+    ) as BadgeOutput;
+    expect(parsed.message).toBe("3 low");
+    expect(parsed.color).toBe("brightgreen");
+  });
+
+  it("renders medium counts yellow", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ summary: summaryOf(0, 0, 2, 5) }), "badge"),
+    ) as BadgeOutput;
+    expect(parsed.message).toBe("2 medium");
+    expect(parsed.color).toBe("yellow");
+  });
+
+  it("renders high counts orange", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ summary: summaryOf(0, 4, 2, 0) }), "badge"),
+    ) as BadgeOutput;
+    expect(parsed.message).toBe("4 high");
+    expect(parsed.color).toBe("orange");
+  });
+
+  it("renders critical counts red", () => {
+    const parsed = JSON.parse(
+      formatReport(makeReport({ summary: summaryOf(1, 4, 2, 0) }), "badge"),
+    ) as BadgeOutput;
+    expect(parsed.message).toBe("1 critical");
+    expect(parsed.color).toBe("red");
+  });
+
+  it("MF-2 regression: ignores a calmer score-based riskLevel when criticals exist", () => {
+    // One critical finding scores ~25 points -> riskLevel "medium". The badge
+    // must still be red: it may never look calmer than the exit code.
+    const report = makeReport({
+      riskLevel: "medium",
+      summary: summaryOf(1, 0, 0, 0),
+    });
+    const parsed = JSON.parse(formatReport(report, "badge")) as BadgeOutput;
+    expect(parsed.message).toBe("1 critical");
+    expect(parsed.color).toBe("red");
+  });
+
+  it("falls back to unknown/lightgrey when the summary is missing entirely", () => {
+    const noSummary = makeReport({ summary: undefined as unknown as ScanReport["summary"] });
+    const parsed = JSON.parse(formatReport(noSummary, "badge")) as BadgeOutput;
+    expect(parsed.message).toBe("unknown");
+    expect(parsed.color).toBe("lightgrey");
+  });
+
+  it("should not contain a trailing newline or extra fields", () => {
+    const output = formatReport(makeReport(), "badge");
+    const parsed = JSON.parse(output) as BadgeOutput;
+    expect(output).toBe(JSON.stringify(parsed));
+    expect(Object.keys(parsed).sort()).toEqual(["color", "label", "message", "schemaVersion"]);
+  });
+});
+
 // ─── Markdown injection hardening ─────────────────────────────────────────────
 
 describe("formatReport – markdown injection hardening", () => {

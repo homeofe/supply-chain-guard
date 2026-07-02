@@ -114,6 +114,33 @@ Or use directly with npx:
 npx supply-chain-guard scan ./my-project
 ```
 
+### pre-commit
+
+Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem teams get the same gate without touching npm). Add this to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/homeofe/supply-chain-guard
+    rev: v5.5.0
+    hooks:
+      - id: supply-chain-guard
+```
+
+The scanner writes its risk history to `.scg-history/` in the scanned repo;
+add that folder to your `.gitignore`.
+
+The hook scans the repository root on every commit and fails on high or critical findings.
+
+### Docker
+
+Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
+
+```bash
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard scan /scan
+```
+
+`${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
+
 ## Quickstart
 
 ```bash
@@ -134,6 +161,9 @@ supply-chain-guard pypi suspicious-package
 
 # Scan a VS Code extension
 supply-chain-guard vscode publisher.extension-name
+
+# Scan a VS Code extension from the Open VSX registry (VSCodium etc.)
+supply-chain-guard vscode publisher.extension --registry openvsx
 
 # Detect dependency confusion
 supply-chain-guard confusion ./my-project
@@ -158,6 +188,29 @@ supply-chain-guard scan ./project --format markdown # Markdown (for PR comments)
 supply-chain-guard scan ./project --format sarif  # SARIF 2.1.0 (GitHub Code Scanning)
 supply-chain-guard scan ./project --format sbom   # CycloneDX 1.6 SBOM with real dependency inventory
 supply-chain-guard scan ./project --sbom-output sbom.json  # Write SBOM to file separately
+supply-chain-guard scan ./project --format badge   # Shields.io endpoint JSON
+```
+
+### Badge
+
+Publish the badge JSON from CI (gist or gh-pages), then point Shields at it:
+
+The scan exits non-zero when it finds high/critical issues - exactly when the
+badge MUST update to red. Neutralize the exit code on the generate step (or use
+`if: always()` on the publish step) so a bad scan never freezes the badge green:
+
+```yaml
+- name: Generate badge JSON
+  run: supply-chain-guard scan . --format badge > badge.json || true
+- name: Publish to gist
+  if: always()
+  run: gh api gists/YOUR_GIST_ID -X PATCH -F "files[badge.json][content]=@badge.json"
+  env:
+    GH_TOKEN: ${{ secrets.BADGE_GIST_TOKEN }}
+```
+
+```markdown
+![supply-chain-guard](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/YOUR_USER/YOUR_GIST_ID/raw/badge.json)
 ```
 
 ## CI Exit Code Control

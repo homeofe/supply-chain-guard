@@ -1,0 +1,30 @@
+# CircleCI config for supply-chain-guard.
+# Copy into your repository as .circleci/config.yml (or merge the job into
+# an existing config).
+#
+# The job installs the CLI, scans the repository with JSON output, fails
+# the pipeline on high or critical findings, and always stores the report
+# as a build artifact (even when the scan fails).
+
+version: 2.1
+
+jobs:
+  supply_chain_scan:
+    docker:
+      # Any image with Node >= 20 works, e.g. cimg/node:20.19 for a pinned tag.
+      - image: cimg/node:lts
+    steps:
+      - checkout
+      - run:
+          name: Install supply-chain-guard
+          command: npm install -g supply-chain-guard
+      - run:
+          name: Scan repository
+          command: supply-chain-guard scan . --format json --fail-on high > scg-report.json
+      - store_artifacts:
+          path: scg-report.json
+
+workflows:
+  security:
+    jobs:
+      - supply_chain_scan

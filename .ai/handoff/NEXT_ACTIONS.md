@@ -10,32 +10,27 @@
 
 | Status | Count |
 |--------|-------|
-| Ready (community-seeded issues) | 8 |
+| Ready (gate should-fixes) | 5 |
 | Blocked | 0 |
 | Roadmap bets remaining | 2 |
 
-Current version: **v5.4.0**. The 2026-07 ideation roadmap quick wins are complete
+Current version: **v5.5.0**. The 2026-07 ideation roadmap quick wins are complete
 (README adoption package, contributor funnel, lockfile + ecosystem expansion,
 fail-closed policy, live feed) and strategic Bet 1 (agentic security suite) shipped.
 
 ---
 
-## Ready - Community-Seeded Issues (good first issues, let contributors take them)
+## Ready - Verification-Gate Should-Fixes (small, next patch)
 
-| # | Issue | Size |
-|---|-------|------|
-| [#40](https://github.com/homeofe/supply-chain-guard/issues/40) | Open VSX registry support for the VS Code scanner | S |
-| [#41](https://github.com/homeofe/supply-chain-guard/issues/41) | pre-commit framework hook | S |
-| [#42](https://github.com/homeofe/supply-chain-guard/issues/42) | Shields.io endpoint badge output (--format badge) | S |
-| [#43](https://github.com/homeofe/supply-chain-guard/issues/43) | Coverage reporting + threshold gate in CI | S |
-| [#44](https://github.com/homeofe/supply-chain-guard/issues/44) | examples/: CircleCI recipe | S |
-| [#45](https://github.com/homeofe/supply-chain-guard/issues/45) | examples/: Jenkins pipeline recipe | S |
-| [#46](https://github.com/homeofe/supply-chain-guard/issues/46) | examples/: Azure Pipelines recipe | S |
-| [#47](https://github.com/homeofe/supply-chain-guard/issues/47) | Official Docker image on GHCR (multi-arch) | M, help wanted |
+From the v5.5.0 adversarial release gate (all evidence in the gate report):
 
-Maintainer policy: leave these open for contributors for a while before self-assigning.
-
----
+| Item | Where |
+|------|-------|
+| Jenkinsfile: replace global npm install with npx --yes pattern (PATH/EACCES in docker agents) | examples/Jenkinsfile |
+| Pin Docker base image by digest (node:20-alpine floats; inconsistent with SHA-pinned Actions) | Dockerfile |
+| OpenVSX: allowlist download/redirect hosts (open-vsx.org + CDN) | src/vscode-scanner.ts |
+| Finish /tmp -> os.tmpdir() migration | src/npm-scanner.ts, src/pypi-scanner.ts |
+| Consider gating .scg-history writes behind a flag for hook/CI use | src/scanner.ts, continuous-monitor.ts |
 
 ## Remaining Strategic Bets (2026-07 roadmap)
 
@@ -62,6 +57,7 @@ buys the GitLab security UI. Start on the first inbound GitLab demand signal.
 
 | Item | Date |
 |------|------|
+| v5.5.0: all 8 seeded issues (#40-#47) + adversarial release gate (6 must-fixes caught pre-tag) | 2026-07-02 |
 | v5.4.0: agentic suite (mcp-scanner, skills-scanner, MCP server) + live feed | 2026-07-02 |
 | v5.3.0: pnpm/yarn/bun lockfiles, RubyGems/Composer/NuGet scanners, fail-closed policy, devcontainer + examples | 2026-07-02 |
 | Contributor funnel: new-pattern label, 8 seeded good-first-issues (#40-#47) | 2026-07-02 |

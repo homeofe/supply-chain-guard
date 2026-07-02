@@ -11,10 +11,10 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.4.2 |
+| Version | 5.5.0 |
 | Node engines | >=20.0.0 |
 | Source modules | 56 under `src/` |
-| Test files | 62 under `src/__tests__/` |
+| Test files | 63 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit | verified continuously in CI - see below |
 
@@ -30,6 +30,7 @@ reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
 | Package | Range |
 |---------|-------|
 | @types/node | ^26.0.1 |
+| @vitest/coverage-v8 | ^4.1.9 |
 | commander | ^14.0.3 |
 | typescript | ^6.0.3 |
 | vitest | ^4.1.9 |

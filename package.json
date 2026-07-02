@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-guard",
-  "version": "5.4.2",
+  "version": "5.5.0",
   "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 180+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs, verifies SLSA provenance, and correlates findings into attack-chain incidents.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "check:changelog": "node scripts/check-changelog.mjs",
@@ -19,7 +20,8 @@
     "feed:generate": "node scripts/generate-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
     "prebuild": "npm run check:changelog && npm run check:version-sync && npm run check:handoff && npm run check:feed",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "tsc"
   },
   "keywords": [
     "security",
@@ -69,6 +71,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.0.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   }

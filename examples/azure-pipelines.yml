@@ -1,0 +1,33 @@
+# Azure Pipelines config for supply-chain-guard.
+# Copy into your repository as azure-pipelines.yml (or merge the steps
+# into an existing pipeline).
+#
+# The pipeline installs Node 20, installs the CLI, scans the repository
+# with JSON output, fails the run on high or critical findings, and
+# always publishes the report as a build artifact (even when the scan
+# fails).
+
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: NodeTool@0
+    displayName: Use Node 20
+    inputs:
+      versionSpec: '20.x'
+
+  - script: npm install -g supply-chain-guard
+    displayName: Install supply-chain-guard
+
+  - script: supply-chain-guard scan . --format json --fail-on high > $(Build.ArtifactStagingDirectory)/scg-report.json
+    displayName: Scan repository
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish scan report
+    condition: always()
+    inputs:
+      PathtoPublish: $(Build.ArtifactStagingDirectory)/scg-report.json
+      ArtifactName: supply-chain-guard-report

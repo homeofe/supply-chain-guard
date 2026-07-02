@@ -344,7 +344,7 @@ export interface ScanOptions {
   /** Target path, URL, or package name */
   target: string;
   /** Output format */
-  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html";
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge";
   /** Only report findings at or above this severity */
   minSeverity?: Severity;
   /** Exclude specific rules */

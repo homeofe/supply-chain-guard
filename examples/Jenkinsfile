@@ -1,0 +1,39 @@
+// Jenkins declarative pipeline for supply-chain-guard.
+// Copy the whole file as your Jenkinsfile, or lift the stage and post
+// blocks into an existing declarative pipeline.
+//
+// The stage installs the CLI, scans the repository with JSON output and
+// fails the build on high or critical findings. The report is archived
+// as a build artifact even when the scan fails.
+//
+// Requires the Docker Pipeline plugin. The npm prefix is redirected into
+// the workspace so "npm install -g" works without root inside the
+// node:20 container.
+
+pipeline {
+    agent {
+        docker {
+            image 'node:20'
+        }
+    }
+
+    environment {
+        NPM_CONFIG_PREFIX = "${WORKSPACE}/.npm-global"
+        PATH = "${WORKSPACE}/.npm-global/bin:${PATH}"
+    }
+
+    stages {
+        stage('Supply Chain Scan') {
+            steps {
+                sh 'npm install -g supply-chain-guard'
+                sh 'supply-chain-guard scan . --format json --fail-on high > scg-report.json'
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'scg-report.json', allowEmptyArchive: true
+        }
+    }
+}

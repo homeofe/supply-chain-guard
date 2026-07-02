@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.4.2");
+  .version("5.5.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ program
   .command("scan")
   .description("Scan a local directory or GitHub repo for malware indicators")
   .argument("<target>", "Local directory path or GitHub repo URL")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge", "text")
   .option(
     "-s, --min-severity <severity>",
     "Minimum severity to report: critical, high, medium, low, info",
@@ -257,16 +257,27 @@ program
     "-s, --min-severity <severity>",
     "Minimum severity to report",
   )
+  .option(
+    "--registry <registry>",
+    "Extension registry for ID targets: marketplace, openvsx",
+    "marketplace",
+  )
   .action(
     async (
       target: string,
-      opts: { format: string; minSeverity?: string },
+      opts: { format: string; minSeverity?: string; registry: string },
     ) => {
       try {
+        if (opts.registry !== "marketplace" && opts.registry !== "openvsx") {
+          throw new Error(
+            `Unknown registry "${opts.registry}". Expected "marketplace" or "openvsx".`,
+          );
+        }
         const report = await scanVscodeExtension({
           target,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
           minSeverity: opts.minSeverity as Severity | undefined,
+          registry: opts.registry as "marketplace" | "openvsx",
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
@@ -332,7 +343,7 @@ program
   .command("repo")
   .description("Analyze a GitHub repository for trust signals and malware indicators")
   .argument("<url>", "GitHub repository URL (e.g., https://github.com/owner/repo)")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge", "text")
   .action(
     async (
       url: string,

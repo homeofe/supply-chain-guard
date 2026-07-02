@@ -28,6 +28,12 @@ const required = [
     minOccurrences: 4,
     note: "text-header VERSION const + SARIF + SBOM + HTML footer",
   },
+  // The pre-commit docs pin a release tag (rev: vX.Y.Z). v5.5.0 verification
+  // gate finding MF-3: the snippet shipped pinning a tag that did not contain
+  // the hook file. Keeping these in the sync gate forces the rev bump on
+  // every release.
+  { file: "README.md", minOccurrences: 1, note: "pre-commit snippet rev: tag" },
+  { file: ".pre-commit-hooks.yaml", minOccurrences: 1, note: "example rev: tag in header comment" },
 ];
 
 const failures = [];

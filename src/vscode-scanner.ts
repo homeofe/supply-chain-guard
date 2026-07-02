@@ -2,11 +2,13 @@
  * VS Code Extension Scanner
  *
  * Scans .vsix files (VS Code extensions) for supply-chain malware indicators.
- * Accepts a local .vsix file path or a VS Code Marketplace extension ID.
+ * Accepts a local .vsix file path or an extension ID resolved against the
+ * VS Code Marketplace (default) or the Open VSX registry.
  * .vsix files are ZIP archives containing the extension code.
  */
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
 import { execSync } from "node:child_process";
@@ -18,6 +20,12 @@ const TOOL_VERSION = "1.0.0";
 
 // VS Code Marketplace API endpoint
 const MARKETPLACE_API = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
+
+// Open VSX registry REST API base (https://open-vsx.org/api/{namespace}/{name})
+const OPENVSX_API_BASE = "https://open-vsx.org/api";
+
+/** Supported extension registries for extension-ID targets. */
+export type VscodeRegistry = "marketplace" | "openvsx";
 
 // Activation events that are suspicious (run without user action)
 const SUSPICIOUS_ACTIVATION_EVENTS = [
@@ -129,6 +137,8 @@ export interface VscodeScanOptions {
   format: "text" | "json" | "markdown" | "sarif" | "sbom";
   /** Minimum severity to report */
   minSeverity?: Severity;
+  /** Registry to resolve extension IDs against (default: marketplace) */
+  registry?: VscodeRegistry;
 }
 
 /**
@@ -142,12 +152,15 @@ export async function scanVscodeExtension(
   let vsixPath = options.target;
   let tempDownload: string | null = null;
 
-  // If target looks like an extension ID (publisher.name), download from marketplace
+  const registry: VscodeRegistry = options.registry ?? "marketplace";
+
+  // If target looks like an extension ID (publisher.name), download from the registry
   if (!vsixPath.endsWith(".vsix") && vsixPath.includes(".")) {
-    console.log(`  Downloading extension ${vsixPath} from VS Code Marketplace...`);
-    const downloadDir = fs.mkdtempSync(path.join("/tmp", "scg-vscode-dl-"));
+    const registryLabel = registry === "openvsx" ? "Open VSX" : "VS Code Marketplace";
+    console.log(`  Downloading extension ${vsixPath} from ${registryLabel}...`);
+    const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-dl-"));
     tempDownload = downloadDir;
-    vsixPath = await downloadVsixFromMarketplace(vsixPath, downloadDir);
+    vsixPath = await downloadVsix(vsixPath, downloadDir, registry);
   }
 
   // Validate the .vsix file exists
@@ -156,7 +169,7 @@ export async function scanVscodeExtension(
   }
 
   // Extract and scan the vsix (it's a zip)
-  const extractDir = fs.mkdtempSync(path.join("/tmp", "scg-vscode-"));
+  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-"));
 
   try {
     // Extract using unzip (vsix is a zip file)
@@ -230,11 +243,41 @@ export async function scanVscodeExtension(
 }
 
 /**
- * Download a .vsix from the VS Code Marketplace.
+ * Download a .vsix from the configured registry.
  */
-async function downloadVsixFromMarketplace(
+async function downloadVsix(
   extensionId: string,
   destDir: string,
+  registry: VscodeRegistry,
+): Promise<string> {
+  const downloadUrl = await resolveVsixDownloadUrl(extensionId, registry);
+
+  const vsixPath = path.join(destDir, `${extensionId}.vsix`);
+  await downloadFile(downloadUrl, vsixPath);
+
+  // Verify it's a valid file (at least check size)
+  const stat = fs.statSync(vsixPath);
+  if (stat.size < 100) {
+    const registryLabel = registry === "openvsx" ? "Open VSX registry" : "marketplace";
+    throw new Error(
+      `Downloaded file is too small (${stat.size} bytes). Extension "${extensionId}" may not exist on the ${registryLabel}.`,
+    );
+  }
+
+  return vsixPath;
+}
+
+/**
+ * Resolve the .vsix download URL for an extension ID on a given registry.
+ *
+ * - marketplace: deterministic gallery.vsassets.io URL pattern (no metadata request)
+ * - openvsx: fetches https://open-vsx.org/api/{namespace}/{name} and reads files.download
+ *
+ * The .vsix analysis itself is registry-agnostic; only this URL construction branches.
+ */
+export async function resolveVsixDownloadUrl(
+  extensionId: string,
+  registry: VscodeRegistry = "marketplace",
 ): Promise<string> {
   const [publisher, name] = extensionId.split(".");
   if (!publisher || !name) {
@@ -243,21 +286,95 @@ async function downloadVsixFromMarketplace(
     );
   }
 
-  // Use the direct download URL pattern
-  const downloadUrl = `https://${publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${name}/latest/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`;
-
-  const vsixPath = path.join(destDir, `${extensionId}.vsix`);
-  await downloadFile(downloadUrl, vsixPath);
-
-  // Verify it's a valid file (at least check size)
-  const stat = fs.statSync(vsixPath);
-  if (stat.size < 100) {
-    throw new Error(
-      `Downloaded file is too small (${stat.size} bytes). Extension "${extensionId}" may not exist on the marketplace.`,
-    );
+  if (registry === "openvsx") {
+    const metadata = await fetchOpenVsxMetadata(publisher, name);
+    const files = metadata.files as Record<string, unknown> | undefined;
+    const download = files?.download;
+    if (typeof download !== "string" || download.length === 0) {
+      throw new Error(
+        `Open VSX metadata for "${extensionId}" does not contain a download URL (files.download).`,
+      );
+    }
+    return download;
   }
 
-  return vsixPath;
+  // Use the direct download URL pattern
+  return `https://${publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${name}/latest/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`;
+}
+
+/**
+ * Fetch extension metadata from the Open VSX registry REST API.
+ */
+function fetchOpenVsxMetadata(
+  namespace: string,
+  name: string,
+): Promise<Record<string, unknown>> {
+  const metadataUrl = `${OPENVSX_API_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`;
+
+  return new Promise((resolve, reject) => {
+    const doRequest = (requestUrl: string, redirects = 0): void => {
+      if (redirects > 5) {
+        reject(new Error("Too many redirects"));
+        return;
+      }
+
+      const urlObj = new URL(requestUrl);
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || 443,
+        path: urlObj.pathname + urlObj.search,
+        method: "GET",
+        headers: {
+          "User-Agent": "supply-chain-guard/1.0.0",
+          Accept: "application/json",
+        },
+      };
+
+      https
+        .get(options, (response) => {
+          if (
+            (response.statusCode === 302 || response.statusCode === 301) &&
+            response.headers.location
+          ) {
+            doRequest(response.headers.location, redirects + 1);
+            return;
+          }
+          if (response.statusCode === 404) {
+            reject(
+              new Error(
+                `Extension "${namespace}.${name}" not found on Open VSX (HTTP 404). Check the extension ID or try --registry marketplace.`,
+              ),
+            );
+            return;
+          }
+          if (response.statusCode !== 200) {
+            reject(
+              new Error(
+                `Open VSX metadata request failed with status ${response.statusCode} for ${requestUrl}`,
+              ),
+            );
+            return;
+          }
+
+          let body = "";
+          response.on("data", (chunk: Buffer) => {
+            body += chunk.toString();
+          });
+          response.on("end", () => {
+            try {
+              resolve(JSON.parse(body) as Record<string, unknown>);
+            } catch {
+              reject(new Error(`Open VSX returned invalid JSON for ${requestUrl}`));
+            }
+          });
+        })
+        .on("error", (err) => {
+          reject(err);
+        });
+    };
+
+    doRequest(metadataUrl);
+  });
 }
 
 /**

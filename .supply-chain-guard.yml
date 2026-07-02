@@ -36,3 +36,10 @@ suppress:
     reason: doc-generator template in scripts/aahp-dashboard.mjs describes this repo's npm publish pipeline; detection stays active for scanned user projects
   - rule: SHAI_HULUD_CRED_STEAL
     reason: same generator template mentions NPM_TOKEN only to document that OIDC publishing uses no token; no credential access occurs
+
+  # Our own Dockerfile intentionally installs the package globally - from the
+  # LOCALLY BUILT tarball of the tagged source (npm pack output), never from
+  # the registry. The rule targets images pulling arbitrary remote packages;
+  # a self-built artifact install is the by-design distribution path.
+  - rule: DOCKER_NPM_GLOBAL
+    reason: official image installs the locally built tarball of the tagged source (npm pack), not a remote registry package; reviewed at v5.5.0

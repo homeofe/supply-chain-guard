@@ -1,5 +1,20 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.5.0 - all 8 seeded issues (#40-#47)
+> implemented by 5 worktree agents, then gated by a NEW 4-lens adversarial verification
+> workflow (security/interaction/cross-env/functionality) that BLOCKED the first
+> candidate with 6 confirmed must-fixes, all fixed pre-tag: (1) Docker build died at
+> npm ci (prepare script vs. layer order - now --ignore-scripts), (2) badge severity
+> inversion (1 critical = yellow "medium" badge while exit code 2 - badge now derives
+> from findings summary, MF-2 regression test added), (3) "prepare": "npx tsc" could
+> fetch the NAMESQUATTED tsc registry package - now plain tsc, (4) stale rev: v5.4.2
+> pre-commit pin - now gate-enforced via check:version-sync, (5) invalid CircleCI
+> when: key, (6) README badge recipe froze green on findings (|| true + if: always()).
+> Also: DOCKER_NPM_GLOBAL suppression documented (own image installs the locally built
+> tarball), dependabot PR #48 merged (upload-artifact 7.0.1, SHA verified). 35 new
+> tests (1056 green), self-scan 0/0/0. Gate should-fixes -> NEXT_ACTIONS. The docker.yml
+> workflow fires its FIRST real GHCR build on this tag.
+
 > Note (2026-07-02, claude-fable-5): Released v5.4.2 - suppressed-finding leak fix,
 > found by the maintainer's own scan of this repo (report said "clean" AND showed a
 > 100%-confidence Shai-Hulud incident; second scan raised a phantom RISK_TREND_SPIKE
