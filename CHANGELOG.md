@@ -4,6 +4,20 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.4.1 (2026-07-02)
+**Docs: PowerShell-safe MCP install instructions**
+
+Patch release so the npm package page carries the corrected instructions.
+
+- The documented MCP one-liner (`claude mcp add ... -- npx -y ...`) fails in
+  PowerShell, which consumes the bare `--` before the claude CLI sees it
+  (`error: unknown option '-y'`). README and docs/mcp.md now lead with the
+  shell-agnostic form that also avoids npx cold-start connect timeouts:
+  `npm install -g supply-chain-guard` + `claude mcp add supply-chain-guard
+  supply-chain-guard mcp`. The npx one-liner remains documented for bash/zsh.
+- Repo hygiene: the `.scg-cache/` runtime feed cache is untracked and
+  gitignored (a live `feed refresh` test had briefly committed it).
+
 ### v5.4.0 (2026-07-02)
 **The agentic security suite: MCP scanning, skills scanning, an MCP server, and a live threat feed**
 

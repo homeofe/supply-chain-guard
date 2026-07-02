@@ -1,5 +1,10 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Released v5.4.1 - docs patch release so the npm
+> package page (the live landing funnel for launch-day traffic) carries the
+> PowerShell-safe MCP install instructions. Also untracked + gitignored the .scg-cache/
+> runtime feed cache that a live feed-refresh test had briefly committed in 95e9e7a.
+
 > Note (2026-07-02, claude-fable-5): Docs fix - the documented MCP install one-liner
 > (claude mcp add supply-chain-guard -- npx -y supply-chain-guard mcp) fails in
 > PowerShell: PowerShell consumes the bare -- itself, so the claude CLI sees -y as its
