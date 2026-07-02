@@ -93,8 +93,16 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           # Extract the section for this version from CHANGELOG.md (moved out of
-          # README.md in v5.2.45 to keep the landing page readable)
-          NOTES=$(awk "/^### v${VERSION}/,/^### v[0-9]/" CHANGELOG.md | head -n -1)
+          # README.md in v5.2.45 to keep the landing page readable).
+          # NOT an awk range pattern: /start/,/end/ terminates on the SAME line
+          # when the heading matches both expressions, which yielded one line,
+          # then head -n -1 emptied it - every release before v5.2.45 silently
+          # shipped the fallback text. Flag-based scan fixed it.
+          NOTES=$(awk -v ver="$VERSION" '
+            $0 ~ "^### v"ver"[^0-9]" {flag=1; print; next}
+            flag && /^### v[0-9]/ {exit}
+            flag {print}
+          ' CHANGELOG.md)
           # Fallback if nothing found
           if [ -z "$NOTES" ]; then
             NOTES="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full changelog."

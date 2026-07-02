@@ -1,5 +1,13 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-02, claude-fable-5): Fixed a from-day-one release-notes bug found while
+> verifying v5.2.45: the ci.yml awk range /^### vX/,/^### v[0-9]/ starts AND ends on the
+> heading line (it matches both patterns), so extraction always yielded one line, head -n -1
+> emptied it, and EVERY release ever shipped the fallback "See README/CHANGELOG" text
+> instead of real notes. Replaced with a flag-based awk scan (verified: 24-line extraction
+> for v5.2.45); retroactively updated the v5.2.45 GitHub Release body via gh release edit
+> (notes edit only - the tag was not touched).
+
 > Note (2026-07-02, claude-fable-5): Released v5.2.45 - README adoption package, part 2.
 > The CI-rendered demo GIF (240 frames, 165KB, VHS scanning the malicious fixture: risk
 > gauges + GlassWorm incident correlation + remediation plan) now sits at the top of the
