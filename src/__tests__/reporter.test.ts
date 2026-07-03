@@ -581,7 +581,10 @@ describe("formatReport – GitLab (Dependency Scanning report)", () => {
     expect(crit?.location.file).toBe("index.js");
     // EVIL_MEDIUM has no file in the fixture
     expect(med?.location.file).toBe("package.json");
-    expect(med?.location.dependency.package.name).toBe("test-package");
+    // v5.6.1: package.name mirrors the per-finding file, NOT report.target
+    // (which can leak an absolute runner path into a shared report).
+    expect(crit?.location.dependency.package.name).toBe("index.js");
+    expect(med?.location.dependency.package.name).toBe("package.json");
   });
 
   it("should carry description and recommendation as solution", () => {

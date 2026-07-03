@@ -122,7 +122,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.6.0
+    rev: v5.6.1
     hooks:
       - id: supply-chain-guard
 ```
@@ -472,6 +472,11 @@ name is passed through to it unchanged.
 All checks are offline against the bundled IOC feed (plus a `feed refresh`
 cache when present), the known-bad-version blocklist, and the typosquat
 heuristics - no network call, no telemetry.
+
+Limitation: version ranges and tags (`^1.2.3`, `latest`) are not resolved
+offline, so a version-pinned IOC only fires on an exact pin. Bare-name IOCs
+(a whole malicious package) fire on any version. Use `scan` after install for
+full-tree, behavior-level coverage.
 
 ## Adding Custom Patterns
 

@@ -7,6 +7,10 @@
 // with JSON output and fails the build on high or critical findings. The
 // report is archived as a build artifact even when the scan fails.
 //
+// For reproducible CI, pin the scanner version instead of @latest, e.g.
+// "npx --yes supply-chain-guard@5.6.1 ..." (trades same-day feed freshness
+// for a fixed toolchain; bump it on a schedule).
+//
 // Requires the Docker Pipeline plugin.
 
 pipeline {

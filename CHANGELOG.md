@@ -4,6 +4,20 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.6.1 (2026-07-03)
+**Polish: Docker base LTS, GitLab report path privacy, docs**
+
+- Docker base image bumped to node:22-alpine (digest-pinned); dependabot now
+  brings only digest/patch/minor node refreshes, not major jumps. Declined
+  dependabot #49 (node 20 -> 26-alpine): 26 is premature as the base for a
+  security tool's own published image.
+- `--format gitlab`: `location.dependency.package.name` now uses the per-finding
+  file instead of the scan target, so an absolute runner path is no longer
+  leaked into a shared GitLab Dependency Scanning report.
+- Docs: Jenkins example notes how to pin the scanner version for reproducible
+  CI; the Install Guard README documents that offline checks only resolve exact
+  version pins (bare-name IOCs still fire on any version).
+
 ### v5.6.0 (2026-07-03)
 **Install-time guard + GitLab-native output + registry hardening (both remaining roadmap bets)**
 

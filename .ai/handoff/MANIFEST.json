@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "claude-fable-5",
-    "session_id": "cli-1783030152",
-    "timestamp": "2026-07-02T22:09:12Z",
-    "commit": "6220504",
+    "session_id": "cli-1783062682",
+    "timestamp": "2026-07-03T07:11:22Z",
+    "commit": "e253ad9",
     "phase": "fix",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:1d794cf2aa92fb90b3c88577cfdc34c00ecaf71450958794a4acdebc462a2c3f",
-      "updated": "2026-07-02T22:09:11Z",
-      "lines": 290,
+      "checksum": "sha256:dfbb46a485ca0e82d151b526ca34dcf780f7969f0323254d8c3a2ed9740347cb",
+      "updated": "2026-07-03T07:11:21Z",
+      "lines": 302,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:a0eb2403f94dfc2f84379a7d4156e81c6d0e8a2bedc562de7f49d7c6de123989",
-      "updated": "2026-07-02T22:07:34Z",
+      "checksum": "sha256:514d9d4dd07564527657a6b515262b92cac0fd405bd81b5f0c658b14b8e6a733",
+      "updated": "2026-07-03T07:08:54Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:98c1eafc48f97635aa677a39f869b10322bb2277a81f729c265dabb3cd598ef8",
-      "updated": "2026-07-02T22:07:34Z",
+      "checksum": "sha256:d8bb8798b54108882f8001472f8e7e43bbcfc0c8a188eb785aa30f40229cde86",
+      "updated": "2026-07-03T07:08:54Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Release v5.6.0: install guard + GitLab format + gate fixes (Windows RCE)",
+  "quick_context": "Release v5.6.1: Docker LTS, gitlab path privacy, docs; decline PR #49",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 4408,
-    "full_read": 8224
+    "manifest_plus_core": 4574,
+    "full_read": 8390
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

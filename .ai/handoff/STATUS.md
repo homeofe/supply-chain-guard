@@ -1,5 +1,17 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-03, claude-fable-5): Released v5.6.1 - polish patch. (1) Declined
+> dependabot PR #49 (node 20->26-alpine: premature LTS for a security tool's own
+> image); bumped the Docker base to node:22-alpine (digest-pinned) and set dependabot
+> to ignore node major bumps so it only brings digest/minor refreshes. (2) --format
+> gitlab no longer leaks an absolute runner path: location.dependency.package.name
+> now mirrors the per-finding file instead of report.target; proven with an
+> absolute-path scan (package.names = evil.js/package.json, no path). Updated the
+> gitlab reporter test to the corrected semantics. (3) Docs: Jenkins version-pin note,
+> Install Guard version-range limitation. Patch-sized surface, so no separate
+> multi-agent gate - full battery + the empirical leak proof instead. 1115 tests green,
+> self-scan 0/0/0. Roadmap remains 100% shipped.
+
 > Note (2026-07-03, claude-fable-5): Released v5.6.0 - the last two roadmap bets
 > (install-time guard + GitLab-native format) plus the 5 v5.5.0 gate should-fixes, all
 > built by 4 worktree agents. Gate round 2 BLOCKED the first candidate with 5 confirmed

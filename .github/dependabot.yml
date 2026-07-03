@@ -29,3 +29,10 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    ignore:
+      # The Node base image stays on the deliberately chosen LTS major (bumped
+      # by hand). Dependabot brings digest / patch / minor refreshes only, not
+      # major jumps: PR #49 proposed node 20 -> 26-alpine (premature, barely
+      # LTS) for a security tool's own image. See CHANGELOG v5.6.1.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
