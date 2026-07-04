@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
-import { MALICIOUS_PACKAGE_PATTERNS } from "../patterns.js";
+import { MALICIOUS_PACKAGE_PATTERNS, PYPI_TYPOSQUAT_PATTERNS } from "../patterns.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -2096,6 +2096,72 @@ describe("Campaign Signatures", () => {
         new RegExp(pattern).test("public/fonts/fa-solid-400.woff2"),
       );
       expect(matches).toBe(false);
+    });
+  });
+
+  // =================================================================
+  // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK)
+  // (The Hacker News / JFrog, July 3, 2026)
+  // =================================================================
+
+  describe("Contagious Interview Rollup Polyfill (July 2026)", () => {
+    it("should match the attacker-uploaded Rollup-polyfill npm package names against the malicious-name patterns", () => {
+      for (const name of [
+        "rollup-packages-polyfill-core",
+        "rollup-runtime-polyfill-core",
+        "rollup-plugin-polyfill-connect",
+        "quirky-token",
+        "react-icon-svgs",
+        "swift-parse-stream",
+      ]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+
+    it("should detect the 216.126.236.244 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const c2 = "216.126.236.244";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // ChocoPoC RAT / fake PoC exploit repos (The Hacker News, July 2, 2026)
+  // =================================================================
+
+  describe("ChocoPoC Fake PoC Repos (July 2026)", () => {
+    it("should match the malicious ChocoPoC PyPI package names against the typosquat patterns", () => {
+      for (const name of ["frint", "skytext", "slogsec", "logcrypt.cryptography"]) {
+        const matches = PYPI_TYPOSQUAT_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+
+    it("should detect the 91.132.163.78 upload-server C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const upload = "91.132.163.78";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
     });
   });
 });

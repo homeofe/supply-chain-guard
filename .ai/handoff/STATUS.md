@@ -1,5 +1,23 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-04, claude-opus-4-8): Released v5.6.2 - daily threat-intel refresh
+> (scheduled task). Fetched arena.elvatis.com/news (JS-rendered; pulled the /api/news
+> JSON feed + the two source THN articles for indicators) and added two new July 2026
+> developer-targeted campaigns, cross-checked against the existing blocklist first:
+> (1) Contagious Interview Rollup Polyfill (Lazarus/DPRK, JFrog via THN 2026-07-03) -
+> 6 attacker-uploaded npm packages masquerading as Rollup polyfill tooling
+> (rollup-packages-polyfill-core, rollup-runtime-polyfill-core,
+> rollup-plugin-polyfill-connect, quirky-token, react-icon-svgs, swift-parse-stream)
+> + C2 IP 216.126.236.244 (same 216.126.x range as the OtterCookie/Megalodon DPRK
+> infra). (2) ChocoPoC Fake PoC Repos (THN 2026-07-02) - data-stealer in fake Python
+> PoC repos targeting researchers; PyPI packages skytext/frint (+ same actor's late-2025
+> slogsec/logcrypt.cryptography) + upload IP 91.132.163.78. Abused legit services
+> (JSONKeeper, Mapbox) deliberately NOT blocked to avoid mass false positives. 12 new
+> indicators across ioc-blocklist.ts (IPs), threat-intel.ts (BUNDLED_FEED), patterns.ts
+> (MALICIOUS_PACKAGE_PATTERNS + PYPI_TYPOSQUAT_PATTERNS); 4 new campaign tests. feed.json
+> regenerated (312 entries). Build green; 1119 tests pass (only the 13 vscode-scanner
+> zip tests fail locally for lack of a `zip` binary - green in CI).
+
 > Note (2026-07-03, claude-fable-5): Released v5.6.1 - polish patch. (1) Declined
 > dependabot PR #49 (node 20->26-alpine: premature LTS for a security tool's own
 > image); bumped the Docker base to node:22-alpine (digest-pinned) and set dependabot

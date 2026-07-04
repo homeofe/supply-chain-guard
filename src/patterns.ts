@@ -371,6 +371,12 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(html-to-gutenberg|fetch-page-assets)$",
   "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|amantsehay/a2sv-go-course|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
 
+  // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
+  // Six attacker-uploaded npm packages masquerading as Rollup polyfill tooling to facilitate
+  // remote access + developer-secret theft. Fresh DPRK Contagious Interview wave; C2 216.126.236.244
+  // (in ioc-blocklist). Each package is fully malicious with no legitimate history - bare names.
+  "^(rollup-packages-polyfill-core|rollup-runtime-polyfill-core|rollup-plugin-polyfill-connect|quirky-token|react-icon-svgs|swift-parse-stream)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -1006,6 +1012,14 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   // parsimonius: PyPI typosquat of "parsimonious" deploying a Telegram-based backdoor
   // (also published to npm; The Hacker News Weekly Recap, June 8, 2026).
   "^parsimonius$",
+
+  // ChocoPoC RAT / fake PoC exploit repos (The Hacker News, July 2, 2026)
+  // Malicious PyPI packages carrying the ChocoPoC data-stealing trojan, distributed
+  // via fake Python PoC exploit repos targeting vulnerability researchers. skytext / frint
+  // are the current wave; slogsec / logcrypt.cryptography are the same actor's late-2025
+  // packages. Compiled payloads gradient.so (Linux) / gradient.pyd (Windows); upload server
+  // 91.132.163.78 (in ioc-blocklist). Bare names - fully malicious with no legitimate history.
+  "^(frint|skytext|slogsec|logcrypt\\.cryptography)$",
 
   // Very long single-word lowercase names
   "^[a-z]{20,}$",

@@ -4,6 +4,26 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.6.2 (2026-07-04)
+**Threat intel: Contagious Interview Rollup-polyfill npm wave + ChocoPoC RAT**
+
+Daily threat-intel refresh. Two new July 2026 developer-targeted campaigns added
+to the bundled IOC feed and detection patterns (12 new indicators):
+
+- **Contagious Interview Rollup Polyfill** (Lazarus / DPRK, JFrog via THN, 2026-07-03):
+  6 attacker-uploaded npm packages masquerading as Rollup polyfill tooling to
+  facilitate remote access and developer-secret theft (rollup-packages-polyfill-core,
+  rollup-runtime-polyfill-core, rollup-plugin-polyfill-connect, quirky-token,
+  react-icon-svgs, swift-parse-stream) plus C2 IP 216.126.236[.]244 (same 216.126.x
+  range as the OtterCookie / Megalodon DPRK infrastructure). JSONKeeper, the legit
+  paste service abused as a dead-drop, is deliberately not blocked (false positives).
+- **ChocoPoC Fake PoC Repos** (THN, 2026-07-02): a data-stealing trojan hidden in
+  fake Python PoC exploit repos on GitHub that target vulnerability researchers.
+  Malicious PyPI packages skytext / frint (plus the same actor's late-2025 slogsec /
+  logcrypt.cryptography) and upload-server IP 91.132.163[.]78. Mapbox, abused as a
+  DoH dead drop, is deliberately not blocked.
+- feed.json regenerated; 4 new campaign tests (1122 total, unchanged suite pass rate).
+
 ### v5.6.1 (2026-07-03)
 **Polish: Docker base LTS, GitLab report path privacy, docs**
 

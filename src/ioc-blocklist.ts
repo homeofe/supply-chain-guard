@@ -160,6 +160,20 @@ export const KNOWN_C2_IPS: string[] = [
   // Dropper C2 on :8000 (/update/49890878); RAT C2 on :443 (/49890878). Both Hostwinds-hosted.
   "23.254.164.92",
   "23.254.164.123",
+
+  // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (July 2026)
+  // JFrog: attacker-uploaded npm packages masquerading as Rollup polyfill tooling
+  // facilitate remote access + developer-secret theft. Same 216.126.x range as the
+  // OtterCookie / Megalodon DPRK infrastructure (216.126.225.0/24). JSONKeeper (a
+  // legitimate JSON-paste service) is abused as a dead-drop resolver and is
+  // intentionally NOT listed here to avoid mass false positives.
+  "216.126.236.244",
+
+  // ChocoPoC RAT / fake PoC exploit repos targeting vulnerability researchers (July 2026)
+  // Data-stealing trojan hidden in fake Python PoC repositories on GitHub; this server
+  // receives the larger file uploads. Mapbox (a legitimate mapping API) is abused as a
+  // DNS-over-HTTPS dead drop and is intentionally NOT listed to avoid false positives.
+  "91.132.163.78",
 ];
 
 // ---------------------------------------------------------------------------

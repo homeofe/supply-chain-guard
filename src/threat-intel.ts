@@ -568,6 +568,34 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "go:github.com/rickt/slack-weather-bot", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/Barsu5489/commerce", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/Setsu548/Logistic", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+
+  // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
+  // Fresh DPRK "Contagious Interview" wave: 6 attacker-uploaded npm packages masquerade as
+  // Rollup polyfill tooling to facilitate remote access + developer-secret theft. JFrog ties
+  // the cluster to prior Lazarus / Contagious Interview activity. C2 on 216.126.236.244 (same
+  // 216.126.x range as the OtterCookie / Megalodon DPRK infra). The packages fetch second-stage
+  // code via JSONKeeper, a legitimate JSON-paste service abused as a dead-drop (NOT blocked to
+  // avoid false positives). Bare-name entries: each package is fully malicious with no legit history.
+  { type: "ip", value: "216.126.236.244", severity: "critical", confidence: 1.0, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "rollup-packages-polyfill-core", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "rollup-runtime-polyfill-core", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "rollup-plugin-polyfill-connect", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "quirky-token", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "react-icon-svgs", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+  { type: "package", value: "swift-parse-stream", severity: "critical", confidence: 0.9, family: "ContagiousInterview", campaign: "Contagious Interview Rollup Polyfill", firstSeen: "2026-07-03" },
+
+  // ChocoPoC RAT / fake PoC exploit repos targeting vulnerability researchers (The Hacker News, July 2, 2026)
+  // A data-stealing trojan ("ChocoPoC") is hidden inside fake Python proof-of-concept exploit
+  // repositories on GitHub that claim to exploit trending CVEs, targeting the researchers who
+  // hunt bugs. Malicious PyPI packages carry the payload (skytext ~2,400 downloads; frint), tied
+  // by researchers to the same actor behind the late-2025 slogsec / logcrypt.cryptography packages.
+  // Compiled payloads: gradient.so (Linux) / gradient.pyd (Windows). Upload server 91.132.163.78;
+  // Mapbox abused as a DoH dead drop (NOT blocked). Bare-name PyPI entries - fully malicious packages.
+  { type: "ip", value: "91.132.163.78", severity: "critical", confidence: 1.0, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
+  { type: "package", value: "frint", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
+  { type: "package", value: "skytext", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
+  { type: "package", value: "slogsec", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
+  { type: "package", value: "logcrypt.cryptography", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

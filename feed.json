@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.6.1",
-  "entryCount": 300,
+  "version": "5.6.2",
+  "entryCount": 312,
   "entries": [
     {
       "type": "domain",
@@ -2692,6 +2692,114 @@
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
       "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "ip",
+      "value": "216.126.236.244",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "rollup-packages-polyfill-core",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "rollup-runtime-polyfill-core",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "rollup-plugin-polyfill-connect",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "quirky-token",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "react-icon-svgs",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "package",
+      "value": "swift-parse-stream",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ContagiousInterview",
+      "campaign": "Contagious Interview Rollup Polyfill",
+      "firstSeen": "2026-07-03"
+    },
+    {
+      "type": "ip",
+      "value": "91.132.163.78",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "ChocoPoC",
+      "campaign": "ChocoPoC Fake PoC Repos",
+      "firstSeen": "2026-07-02"
+    },
+    {
+      "type": "package",
+      "value": "frint",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ChocoPoC",
+      "campaign": "ChocoPoC Fake PoC Repos",
+      "firstSeen": "2026-07-02"
+    },
+    {
+      "type": "package",
+      "value": "skytext",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ChocoPoC",
+      "campaign": "ChocoPoC Fake PoC Repos",
+      "firstSeen": "2026-07-02"
+    },
+    {
+      "type": "package",
+      "value": "slogsec",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ChocoPoC",
+      "campaign": "ChocoPoC Fake PoC Repos",
+      "firstSeen": "2025-11-01"
+    },
+    {
+      "type": "package",
+      "value": "logcrypt.cryptography",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ChocoPoC",
+      "campaign": "ChocoPoC Fake PoC Repos",
+      "firstSeen": "2025-11-01"
     }
   ]
 }
