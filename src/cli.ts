@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.8.0");
+  .version("5.9.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -63,6 +63,7 @@ program
   .option("--export-graph <format>", "Export attack graph (json or mermaid)")
   .option("--sbom-output <file>", "Write CycloneDX 1.6 SBOM to a separate file")
   .option("--no-history", "Do not write risk history to .scg-history/ in the scanned repo")
+  .option("--check-registry", "Compare the local package.json version against the npm registry 'latest' dist-tag (requires network; off by default)")
   .action(
     async (
       target: string,
@@ -80,6 +81,7 @@ program
         exportGraph?: string;
         sbomOutput?: string;
         history: boolean;
+        checkRegistry?: boolean;
       },
     ) => {
       try {
@@ -92,6 +94,7 @@ program
           baselineFile: opts.baseline,
           sinceCommit: opts.since,
           noHistory: opts.history === false,
+          checkRegistry: opts.checkRegistry === true,
         };
 
         const report = await scan(options);

@@ -64,6 +64,7 @@ import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
+import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
 import { loadRiskHistory, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { loadTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
 import { forecastRisk } from "./risk-forecast.js";
@@ -300,6 +301,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const pypiConfusion = await scanPypiDependencyConfusion(scanDir);
     findings.push(...pypiConfusion);
   } catch { /* skip if offline */ }
+
+  // v5.9: opt-in registry version-drift (source package.json vs npm 'latest').
+  // Network call, so off by default; --check-registry enables it. Offline-safe.
+  if (options.checkRegistry) {
+    try {
+      findings.push(...(await checkRegistryVersionDrift(scanDir)));
+    } catch { /* offline / registry error: skip */ }
+  }
 
   // GitHub trust signal analysis (v4.1)
   if (scanType === "github") {

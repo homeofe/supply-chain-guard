@@ -4,6 +4,25 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.9.0 (2026-07-07)
+**Opt-in registry version-drift detection (`--check-registry`)**
+
+Implements the future-work item deferred in v5.8.0. A new opt-in check compares the
+local `package.json` version against the npm registry `latest` dist-tag and flags when
+the source you are auditing is a major version behind what `npm install` actually
+delivers (e.g. TencentDB-Agent-Memory source `0.3.6` vs npm `latest 1.0.0`).
+
+- **`REGISTRY_VERSION_DRIFT_MAJOR`** (medium): source is one or more majors behind the
+  published `latest`. Signals that the published artifact may not correspond to the
+  audited source - an unauthorized publish, or review against the wrong revision.
+- **Opt-in and offline-safe**: enabled only with `scan --check-registry`. Without the
+  flag no network call is made, so the offline default is preserved. The fetch resolves
+  to null on any error/timeout/non-200 (never throws), and a same-major minor/patch lag
+  or a source-ahead dev build is intentionally not flagged (both are benign and common).
+- Lives in `publishing-anomaly-detector.ts` (`evaluateVersionDrift` pure logic +
+  injectable `fetchNpmLatest` + `checkRegistryVersionDrift`); 10 new tests, none of which
+  touch the network. Verified live against the npm registry.
+
 ### v5.8.0 (2026-07-07)
 **Agent host-runtime patch detection + OpenClaw plugin posture**
 

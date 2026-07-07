@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1783446575",
-    "timestamp": "2026-07-07T17:49:36Z",
-    "commit": "b0aa725",
+    "session_id": "cli-1783449391",
+    "timestamp": "2026-07-07T18:36:31Z",
+    "commit": "4d93f10",
     "phase": "implementation",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:6380e80f39aa427c08f18f29bb4560b237fb972988c35b9ca913f83096348dc4",
-      "updated": "2026-07-07T17:49:24Z",
-      "lines": 367,
+      "checksum": "sha256:d34798875e9db4e1b53cc8e40196f9be57ceb36370eaf952a7ce4ba35c9a63ac",
+      "updated": "2026-07-07T18:36:22Z",
+      "lines": 383,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:45874790f31488fe4a8257b577809d1a251aee5de87c1cd20a44194d1461aac3",
-      "updated": "2026-07-07T17:49:06Z",
+      "checksum": "sha256:f2fab22697942bb32982a8de1a37800babdc245b30bc2f3fafaf146e990cc549",
+      "updated": "2026-07-07T18:36:08Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:43ad9109babce9ad646b0d00c48ad213d891e2e39e4797f45556aa911b1dc39c",
-      "updated": "2026-07-07T17:49:06Z",
+      "checksum": "sha256:592cf27b0cc5fe1d6a4a7bc1294c0bef797055f1b1281b66c8c1c6f10cbb024d",
+      "updated": "2026-07-07T18:36:08Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "v5.8.0 INSTALL_HOOK_HOST_RUNTIME_PATCH + OpenClaw plugin manifest posture scanner (TencentDB-Agent-Memory review)",
+  "quick_context": "v5.9.0 opt-in --check-registry version-drift detection (REGISTRY_VERSION_DRIFT_MAJOR)",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 5441,
-    "full_read": 9261
+    "manifest_plus_core": 5688,
+    "full_read": 9508
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

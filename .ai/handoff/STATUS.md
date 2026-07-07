@@ -1,5 +1,21 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-07, claude-opus-4-8): Released v5.9.0 - opt-in registry version-drift
+> detection (--check-registry), implementing the future-work item deferred in v5.8.0.
+> Compares the local package.json version against the npm registry 'latest' dist-tag and
+> flags REGISTRY_VERSION_DRIFT_MAJOR (medium) when the audited source is a major behind
+> what npm installs (e.g. TencentDB source 0.3.6 vs npm latest 1.0.0 - the code you review
+> is not what you install). Opt-in + offline-safe: no network call without the flag; the
+> fetch resolves null on any error/timeout/non-200 (never throws); same-major minor lag and
+> source-ahead dev builds are intentionally not flagged (benign). Lives in
+> publishing-anomaly-detector.ts: evaluateVersionDrift (pure) + injectable fetchNpmLatest +
+> checkRegistryVersionDrift, wired through ScanOptions.checkRegistry / cli --check-registry /
+> scanner.ts (next to the pypi-confusion network block). 10 new tests, none touching the
+> wire; verified live against the real registry (source 1.0.0 vs npm 5.8.0 -> medium). No new
+> module (functions added to an existing one), so 60 src modules unchanged; testFiles 71.
+> Build green; 1190 tests pass (only the 13 vscode-scanner zip tests fail locally for lack of
+> a `zip` binary - green in CI).
+
 > Note (2026-07-07, claude-opus-4-8): Released v5.8.0 - agent host-runtime patch
 > detection, prompted by a maintainer review of TencentDB-Agent-Memory
 > (@tencentdb-agent-memory/memory-tencentdb), an OpenClaw agent-memory plugin whose

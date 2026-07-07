@@ -43,7 +43,7 @@ export { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
 export { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 export { analyzeInstallHooks } from "./install-hook-scanner.js";
 export { analyzeDependencyRisks, levenshtein } from "./dependency-risk-analyzer.js";
-export { analyzePublishingAnomalies } from "./publishing-anomaly-detector.js";
+export { analyzePublishingAnomalies, evaluateVersionDrift, checkRegistryVersionDrift, fetchNpmLatest } from "./publishing-anomaly-detector.js";
 export { scanReleaseArtifacts } from "./release-scanner.js";
 export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";

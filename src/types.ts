@@ -359,6 +359,8 @@ export interface ScanOptions {
   sinceCommit?: string;
   /** Skip writing risk history to .scg-history/ (--no-history) */
   noHistory?: boolean;
+  /** Compare local package.json version against the npm registry 'latest' (network, opt-in) (v5.9) */
+  checkRegistry?: boolean;
 }
 
 export interface NpmPackageInfo {
