@@ -125,4 +125,28 @@ describe("Correlation Engine", () => {
       expect(result.incidents[0].narrative.length).toBeGreaterThan(10);
     }
   });
+
+  it("should compound Cordyceps CI/CD composition symptoms into one incident (v5.7)", () => {
+    const findings = [
+      makeFinding("GHA_PWN_REQUEST_CHECKOUT", "critical"),
+      makeFinding("GHA_CROSS_WORKFLOW_ARTIFACT_TRUST", "critical"),
+    ];
+    const result = correlateFindings(findings);
+    expect(result.incidents.some((i) => i.name.includes("Cordyceps"))).toBe(true);
+    const incident = result.incidents.find((i) => i.name.includes("Cordyceps"));
+    expect(incident?.severity).toBe("critical");
+  });
+
+  it("should NOT fabricate a Cordyceps incident from two benign hygiene findings (v5.7 fix)", () => {
+    // GHA_PRIVILEGED_TRIGGER and GHA_PERMS_DEFAULT_BROAD always co-occur on an
+    // ordinary pull_request_target bot with no permissions block. Without a
+    // genuinely-independent strong signal, this must NOT escalate to a critical
+    // composition incident.
+    const findings = [
+      makeFinding("GHA_PRIVILEGED_TRIGGER", "medium"),
+      makeFinding("GHA_PERMS_DEFAULT_BROAD", "medium"),
+    ];
+    const result = correlateFindings(findings);
+    expect(result.incidents.some((i) => i.name.includes("Cordyceps"))).toBe(false);
+  });
 });

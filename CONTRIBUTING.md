@@ -112,6 +112,8 @@ src/
   attack-graph.ts         # Attack path modeling
   active-validation.ts    # Confidence tiers & validation
   workflow-modeler.ts     # GitHub Actions chain modeling
+  workflow-ast.ts         # Zero-dep workflow parser (triggers/permissions/steps)
+  workflow-graph.ts       # Cross-workflow trust-boundary analysis (Cordyceps)
   secret-simulator.ts     # Honeytoken system
   posture-engine.ts       # Org-wide risk posture
   continuous-monitor.ts   # Risk history & trend tracking

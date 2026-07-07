@@ -2,18 +2,18 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "claude-opus-4-8",
-    "session_id": "cli-1783141943",
-    "timestamp": "2026-07-04T05:12:23Z",
-    "commit": "db8a83f",
+    "agent": "cli-tool",
+    "session_id": "cli-1783438292",
+    "timestamp": "2026-07-07T15:31:33Z",
+    "commit": "a548c30",
     "phase": "implementation",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a14bee00f4e117dff7457a40953f840c4fe0dcafd85f240f3ff4afb6d0766da4",
-      "updated": "2026-07-04T05:12:19Z",
-      "lines": 320,
+      "checksum": "sha256:17d561a64a35b4c3d7f5a4cbb3e222fec10ccdb57c1bb45fb692c671d6ecc0de",
+      "updated": "2026-07-07T15:31:24Z",
+      "lines": 343,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:139f9f3520437776fab500b82ee3216acf6232b28cd6b54a65518b7446af9e83",
-      "updated": "2026-07-04T05:10:50Z",
+      "checksum": "sha256:496bf25f7be27797ca94dcce78b2e53736c9ae2ff3ede82bab42fd77d311376e",
+      "updated": "2026-07-07T15:03:58Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:55b6da456946b8075be144790efc523a4dadbc01d84a138366a50f695f452d0f",
-      "updated": "2026-07-04T05:10:50Z",
+      "checksum": "sha256:e8f30b3c40c13ac2121cc0052038606e851002b36f7bebd8190a46f019b4964b",
+      "updated": "2026-07-07T15:03:58Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Released v5.6.2: daily threat-intel refresh - Contagious Interview Rollup polyfill npm wave + ChocoPoC RAT fake PoC repos (12 IOCs)",
+  "quick_context": "v5.7.0 Cordyceps cross-workflow GHA composition detection: workflow-ast + workflow-graph + trigger-aware rules + correlation incident, hardened by adversarial review",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 4808,
-    "full_read": 8624
+    "manifest_plus_core": 5138,
+    "full_read": 8957
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

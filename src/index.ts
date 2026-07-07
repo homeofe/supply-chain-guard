@@ -61,6 +61,8 @@ export { exportIncidentBundle, exportIncidentMarkdown, exportCsvSummary } from "
 export { buildAttackGraph, exportGraphMermaid } from "./attack-graph.js";
 export { validateFindings, promoteConfidence } from "./active-validation.js";
 export { modelWorkflows } from "./workflow-modeler.js";
+export { scanWorkflowGraph } from "./workflow-graph.js";
+export { parseWorkflow } from "./workflow-ast.js";
 export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
 export { calculateOrgPosture } from "./posture-engine.js";
 export { loadRiskHistory, saveRiskHistory, analyzeRiskTrend } from "./continuous-monitor.js";

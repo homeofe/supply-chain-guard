@@ -62,6 +62,7 @@ import { generatePlaybooks } from "./playbooks.js";
 import { buildAttackGraph } from "./attack-graph.js";
 import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
+import { scanWorkflowGraph } from "./workflow-graph.js";
 import { loadRiskHistory, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { loadTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
 import { forecastRisk } from "./risk-forecast.js";
@@ -372,6 +373,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // v4.7: Workflow execution modeling
   const wfFindings = modelWorkflows(scanDir);
   findings.push(...wfFindings);
+
+  // v5.7: Cross-workflow trust-boundary analysis (Cordyceps composition attacks).
+  // Runs across ALL workflow files - catches the producer->consumer artifact
+  // escalation that the single-file GHA scanner and modeler cannot see.
+  const wfGraphFindings = scanWorkflowGraph(scanDir);
+  findings.push(...wfGraphFindings);
 
   // v4.4: Detect positive trust signals (only for GitHub repo scans)
   if (scanType === "github") {

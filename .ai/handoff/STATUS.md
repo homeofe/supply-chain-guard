@@ -1,5 +1,28 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-07, claude-opus-4-8): Released v5.7.0 - GitHub Actions "Cordyceps"
+> cross-workflow composition detection, prompted by novee.security's Cordyceps research
+> (BleepingComputer, July 2026). A multi-agent gap analysis confirmed the tool covered
+> single-file symptoms but MISSED the article's core thesis: our GHA scanner was single-file
+> line-by-line regex with no on:-trigger parsing and no producer->consumer dataflow. Added:
+> (1) workflow-ast.ts - a zero-dependency structural parser (triggers, top-level + per-job
+> permissions, jobs->steps with uses/run/with.ref/with.script/with.name, on.workflow_run.workflows);
+> no YAML dep, since a supply-chain tool should not grow its own supply-chain surface.
+> (2) workflow-graph.ts + GHA_CROSS_WORKFLOW_ARTIFACT_TRUST - the core cross-file pass:
+> a privileged workflow_run consumer that downloads (critical if it executes) an artifact
+> from an untrusted PR producer. (3) Trigger-aware single-file rules in github-actions-scanner.ts:
+> GHA_PRIVILEGED_TRIGGER, GHA_PWN_REQUEST_CHECKOUT (critical), GHA_GITHUB_SCRIPT_INJECTION,
+> GHA_PERMS_WRITE_ALL, GHA_PERMS_DEFAULT_BROAD; broadened GHA_SCRIPT_INJECTION to comment/review/
+> discussion. (4) A "Cordyceps CI/CD Composition Attack" correlation incident that compounds
+> the symptoms. An adversarial review gate BLOCKED the first candidate with 14 confirmed
+> findings, all fixed pre-tag: a correlation false-CRITICAL on ordinary pull_request_target
+> bots (now requires a strong signal), plus valid-YAML evasions (bare-dash steps, refs/pull/N
+> and matrix/step-output checkout refs, gh run download consumers, quoted "on": keys,
+> misindented comments). No IOCs (composition pattern, not malware), so nothing added to the
+> feed. 46 new tests; build green; 1165 tests pass (only the 13 vscode-scanner zip tests fail
+> locally for lack of a `zip` binary - green in CI); self-scan 0 GHA findings on our own repo.
+> 59 src modules.
+
 > Note (2026-07-04, claude-opus-4-8): Released v5.6.2 - daily threat-intel refresh
 > (scheduled task). Fetched arena.elvatis.com/news (JS-rendered; pulled the /api/news
 > JSON feed + the two source THN articles for indicators) and added two new July 2026

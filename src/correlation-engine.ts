@@ -17,6 +17,12 @@ interface CorrelationRule {
   rules: string[];
   /** Minimum number of rules that must match (default: all) */
   minMatch?: number;
+  /**
+   * If set, the incident only fires when at least one of these "strong" rule
+   * IDs is among the matches. Guards against a cluster being satisfied entirely
+   * by weak/always-co-occurring hygiene signals (v5.7).
+   */
+  requireAnyOf?: string[];
   /** Incident name when triggered */
   incident: string;
   /** Resulting severity */
@@ -126,6 +132,42 @@ const CORRELATION_RULES: CorrelationRule[] = [
     narrative: "GitHub Actions workflow downloads and executes remote code while accessing secrets. CI/CD pipeline compromise risk.",
   },
 
+  // --- Cordyceps CI/CD composition (v5.7) ---
+  // The single-file GHA symptoms are individually valid YAML; the attack lives
+  // in how they compose. Any two of these together is a strong signal that a
+  // workflow is exploitable through a trust boundary crossing.
+  {
+    rules: [
+      "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST",
+      "GHA_PWN_REQUEST_CHECKOUT",
+      "GHA_GITHUB_SCRIPT_INJECTION",
+      "GHA_PRIVILEGED_TRIGGER",
+      "GHA_SCRIPT_INJECTION",
+      "GHA_PERMS_WRITE_ALL",
+      "GHA_PERMS_DEFAULT_BROAD",
+    ],
+    minMatch: 2,
+    // The two hygiene rules (GHA_PRIVILEGED_TRIGGER, GHA_PERMS_DEFAULT_BROAD)
+    // always co-occur on an ordinary pull_request_target bot, so 2-of-7 alone
+    // would false-fire a critical incident on benign repos. Require at least one
+    // genuinely-independent strong signal to corroborate.
+    requireAnyOf: [
+      "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST",
+      "GHA_PWN_REQUEST_CHECKOUT",
+      "GHA_GITHUB_SCRIPT_INJECTION",
+      "GHA_SCRIPT_INJECTION",
+      "GHA_PERMS_WRITE_ALL",
+    ],
+    incident: "Cordyceps CI/CD Composition Attack",
+    severity: "critical",
+    confidenceBoost: 0.25,
+    narrative:
+      "Multiple GitHub Actions trust-boundary weaknesses combine into an exploitable chain: a privileged " +
+      "trigger runs attacker-influenced input or artifacts with secrets and a write token. This matches the " +
+      "Cordyceps composition pattern (novee.security, 2026) - no single line is wrong, but together they " +
+      "allow code execution or secret theft across a workflow trust boundary.",
+  },
+
   // --- Obfuscation + exfil = malware ---
   {
     rules: ["EVAL_ATOB", "HIGH_ENTROPY_STRING", "ENV_EXFILTRATION", "DEAD_DROP_TELEGRAM"],
@@ -213,8 +255,10 @@ export function correlateFindings(findings: Finding[]): CorrelationResult {
   for (const rule of CORRELATION_RULES) {
     const minMatch = rule.minMatch ?? rule.rules.length;
     const matchedRules = rule.rules.filter((r) => ruleSet.has(r));
+    const strongPresent =
+      !rule.requireAnyOf || rule.requireAnyOf.some((r) => ruleSet.has(r));
 
-    if (matchedRules.length >= minMatch) {
+    if (matchedRules.length >= minMatch && strongPresent) {
       const id = `incident-${++clusterId}`;
 
       // Collect all findings matching this correlation

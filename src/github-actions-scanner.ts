@@ -9,6 +9,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, Severity } from "./types.js";
+import { parseWorkflow } from "./workflow-ast.js";
 
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
@@ -125,11 +126,15 @@ const WORKFLOW_PATTERNS: Array<{
     severity: "critical",
     rule: "GHA_PPE_PULL_TARGET",
   },
-  // Script injection via user-controlled context (issue body, PR title, commit message)
+  // Script injection via user-controlled context (issue/PR body, PR/commit title,
+  // comment body, review body, discussion, PR head ref/label). v5.7 broadened the
+  // object list (added comment/review/discussion) and the field list (added
+  // label/ref/description) - the pre-v5.7 regex missed the issue_comment vector
+  // (github.event.comment.body) entirely.
   {
-    pattern: "\\$\\{\\{\\s*github\\.event\\.(?:issue|pull_request|head_commit|commits?)\\.[^}]*(?:body|title|message|name)\\s*\\}\\}",
+    pattern: "\\$\\{\\{\\s*github\\.event\\.(?:issue|pull_request|head_commit|commits?|comment|review|discussion)\\.[^}]*(?:body|title|message|name)\\s*\\}\\}",
     description:
-      "User-controlled GitHub event data (issue/PR body, commit message) injected directly into a run: step — GitHub Actions Script Injection risk",
+      "User-controlled GitHub event data (issue/PR body, comment body, PR title, commit message) injected directly into a run: step — GitHub Actions Script Injection risk",
     severity: "critical",
     rule: "GHA_SCRIPT_INJECTION",
   },
@@ -264,6 +269,172 @@ function scanWorkflowContent(
 
   // Check for secrets sent to external URLs across multi-line run blocks
   checkSecretsExfiltration(lines, relativePath, findings);
+
+  // v5.7: structural, trigger-aware rules (Cordyceps class) — these need to
+  // know which event fires the workflow and what its token can do, which the
+  // line-by-line passes above are blind to.
+  checkWorkflowAstRules(content, relativePath, findings);
+}
+
+// ── v5.7 Cordyceps trigger-aware rules ──────────────────────────────────────
+
+/**
+ * Triggers that run in the BASE repository context with access to secrets and
+ * a read+write GITHUB_TOKEN (unlike plain `pull_request`, which runs in the
+ * fork context with a read-only token). These are the elevated-privilege
+ * entry points the Cordyceps composition attacks abuse.
+ */
+const PRIVILEGED_TRIGGERS = [
+  "pull_request_target",
+  "workflow_run",
+  "issue_comment",
+  "pull_request_review_comment",
+];
+
+/** Triggers where checking out untrusted PR/head code executes it WITH secrets. */
+const PWN_CHECKOUT_TRIGGERS = ["pull_request_target", "workflow_run", "issue_comment"];
+
+/**
+ * A `with: ref:` value that resolves to attacker-controlled PR/head code.
+ * Covers the head ref/sha, the numeric `refs/pull/N/merge|head` form, and
+ * indirection through a matrix var / step output / needs output (all common
+ * pwn-request evasions). Deliberately excludes the base ref (github.sha /
+ * github.ref) which points at the trusted default branch.
+ */
+const PR_HEAD_REF_RE =
+  /github\.head_ref|github\.event\.pull_request\.head|github\.event\.workflow_run\.head|github\.event\.(?:pull_request\.number|number)|refs\/pull\/|\$\{\{\s*(?:matrix|steps|needs)\./;
+
+/** Untrusted context interpolated inside an actions/github-script `script:` body. */
+const UNTRUSTED_CTX_RE =
+  /\$\{\{\s*github\.(?:event\.(?:issue|pull_request|comment|review|discussion|head_commit|commits?)|head_ref|ref_name)\b/;
+
+/**
+ * Structural rules that depend on the workflow's trigger and token model.
+ * Parsed once per file via the zero-dependency workflow-ast parser.
+ */
+function checkWorkflowAstRules(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let ast;
+  try {
+    ast = parseWorkflow(content);
+  } catch {
+    return; // never let a parse hiccup break the scan
+  }
+
+  const lines = content.split("\n");
+  const findLine = (re: RegExp): number | undefined => {
+    for (let i = 0; i < lines.length; i++) {
+      if (re.test(lines[i] ?? "")) return i + 1;
+    }
+    return undefined;
+  };
+
+  const triggerSet = new Set(ast.triggers);
+  const privileged = PRIVILEGED_TRIGGERS.filter((t) => triggerSet.has(t));
+
+  // GHA_PRIVILEGED_TRIGGER — the workflow runs in an elevated context.
+  if (privileged.length > 0) {
+    findings.push({
+      rule: "GHA_PRIVILEGED_TRIGGER",
+      description:
+        `Workflow is triggered by ${privileged.join(", ")}, which runs in the base repository ` +
+        `context with access to secrets and a read/write GITHUB_TOKEN. This is the elevated entry ` +
+        `point Cordyceps-style attacks abuse; every step here is security-sensitive.`,
+      severity: "low",
+      file: relativePath,
+      line: findLine(new RegExp(`\\b(?:${privileged.join("|")})\\b`)) ?? 1,
+      match: privileged.join(", "),
+      recommendation: getWorkflowRecommendation("GHA_PRIVILEGED_TRIGGER"),
+    });
+  }
+
+  // GHA_PWN_REQUEST_CHECKOUT — privileged trigger checks out attacker PR/head code.
+  const hasPwnTrigger = ast.triggers.some((t) => PWN_CHECKOUT_TRIGGERS.includes(t));
+  if (hasPwnTrigger) {
+    for (const job of ast.jobs) {
+      for (const step of job.steps) {
+        if (
+          step.uses && /checkout/i.test(step.uses) &&
+          step.withRef && PR_HEAD_REF_RE.test(step.withRef)
+        ) {
+          findings.push({
+            rule: "GHA_PWN_REQUEST_CHECKOUT",
+            description:
+              `Privileged workflow checks out attacker-controlled PR/head code ` +
+              `(ref: ${truncateMatch(step.withRef, 60)}) and then runs it with secrets in scope. ` +
+              `This is the canonical "pwn request" - remote code execution with the maintainer token.`,
+            severity: "critical",
+            file: relativePath,
+            line: step.line,
+            match: truncateMatch(step.withRef),
+            recommendation: getWorkflowRecommendation("GHA_PWN_REQUEST_CHECKOUT"),
+          });
+        }
+      }
+    }
+  }
+
+  // GHA_GITHUB_SCRIPT_INJECTION — untrusted context eval'd as JS by github-script.
+  for (const job of ast.jobs) {
+    for (const step of job.steps) {
+      if (
+        step.uses && /github-script/i.test(step.uses) &&
+        step.withScript && UNTRUSTED_CTX_RE.test(step.withScript)
+      ) {
+        findings.push({
+          rule: "GHA_GITHUB_SCRIPT_INJECTION",
+          description:
+            `actions/github-script step evaluates untrusted GitHub event context as JavaScript at ` +
+            `runtime (code injection). An attacker who controls that context executes arbitrary code ` +
+            `with the workflow token.`,
+          severity: "high",
+          file: relativePath,
+          line: step.line,
+          recommendation: getWorkflowRecommendation("GHA_GITHUB_SCRIPT_INJECTION"),
+        });
+      }
+    }
+  }
+
+  // GHA_PERMS_WRITE_ALL — the token is granted every scope.
+  if (ast.permissions.writeAll || ast.jobs.some((j) => j.permissions.writeAll)) {
+    findings.push({
+      rule: "GHA_PERMS_WRITE_ALL",
+      description:
+        `Workflow grants "permissions: write-all", giving the GITHUB_TOKEN write access to every scope ` +
+        `(contents, packages, actions, pages, deployments...). If any step is compromised, the blast ` +
+        `radius is the whole repository.`,
+      severity: "high",
+      file: relativePath,
+      line: findLine(/permissions:\s*write-all/) ?? 1,
+      match: "write-all",
+      recommendation: getWorkflowRecommendation("GHA_PERMS_WRITE_ALL"),
+    });
+  }
+
+  // GHA_PERMS_DEFAULT_BROAD — privileged trigger with no explicit least-privilege.
+  // Fire when there is no top-level permissions block AND at least one job runs
+  // without its own block (inheriting the broad repo default). A single sibling
+  // job declaring permissions must not silence the rule for the jobs that don't.
+  const topPermsDeclared = ast.permissions.declared;
+  const someJobUnprotected =
+    ast.jobs.length === 0 || ast.jobs.some((j) => !j.permissions.declared);
+  if (privileged.length > 0 && !topPermsDeclared && someJobUnprotected) {
+    findings.push({
+      rule: "GHA_PERMS_DEFAULT_BROAD",
+      description:
+        `Privileged workflow (${privileged.join(", ")}) declares no explicit permissions, so the ` +
+        `GITHUB_TOKEN falls back to the repository default - frequently read+write across all scopes. ` +
+        `Combined with an elevated trigger, that default is loot for a Cordyceps-style compromise.`,
+      severity: "medium",
+      file: relativePath,
+      line: findLine(new RegExp(`\\b(?:${privileged.join("|")})\\b`)) ?? 1,
+      recommendation: getWorkflowRecommendation("GHA_PERMS_DEFAULT_BROAD"),
+    });
+  }
 }
 
 /**
@@ -586,6 +757,23 @@ function getWorkflowRecommendation(rule: string): string {
     GHA_KNOWN_MALICIOUS_SHA:
       "Replace this action immediately and rotate all secrets accessible during builds that used this action. " +
       "File a security incident report and review all build logs for exfiltrated data.",
+    GHA_PRIVILEGED_TRIGGER:
+      "Treat every step in this workflow as running with production privileges. Prefer 'pull_request' over " +
+      "'pull_request_target' for untrusted contributions, set an explicit least-privilege 'permissions:' block, " +
+      "and gate privileged jobs behind manual approval (environments) for first-time contributors.",
+    GHA_PWN_REQUEST_CHECKOUT:
+      "Never check out PR/head code inside a privileged (pull_request_target/workflow_run) workflow. Move build/test " +
+      "of untrusted code to a 'pull_request' workflow (read-only token, no secrets), or split into a privileged job " +
+      "that does NOT run the checked-out code. If you must, gate it behind an environment approval.",
+    GHA_GITHUB_SCRIPT_INJECTION:
+      "Do not interpolate ${{ github.event... }} directly into an actions/github-script 'script:' block - it is eval'd " +
+      "as JavaScript. Pass the value through an env var and read process.env inside the script instead.",
+    GHA_PERMS_WRITE_ALL:
+      "Remove 'permissions: write-all'. Declare the minimal scopes each job needs (e.g. 'contents: read'). Default the " +
+      "top-level permissions to read-only and grant write only where required.",
+    GHA_PERMS_DEFAULT_BROAD:
+      "Add an explicit top-level 'permissions:' block scoped to the minimum (start from 'contents: read'). Privileged " +
+      "triggers should never rely on the repository default token, which is often read+write across all scopes.",
   };
   return map[rule] ?? "Review this finding and assess whether it represents legitimate CI/CD functionality.";
 }

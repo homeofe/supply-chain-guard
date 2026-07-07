@@ -4,6 +4,46 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.7.0 (2026-07-07)
+**GitHub Actions: Cordyceps cross-workflow composition detection**
+
+Closes the gap identified in novee.security's "Cordyceps" research (BleepingComputer,
+July 2026): CI scanners that pattern-match one workflow file at a time stay green on
+attacks that live in how workflows COMPOSE, because no single line is wrong. This release
+makes the GitHub Actions analysis trigger-aware and adds a cross-file trust-boundary pass.
+
+- **New `workflow-ast.ts`**: a zero-dependency structural parser that finally lets the
+  scanner see a workflow's `on:` triggers, top-level and per-job `permissions:`, and each
+  step's `uses` / `run` / `with` (ref, script, artifact name). No YAML dependency was
+  added: a supply-chain tool should not grow its own supply-chain surface.
+- **New `workflow-graph.ts` + `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`** (the core detection):
+  models the producer to consumer graph across ALL workflow files and flags a privileged
+  `workflow_run` consumer that downloads (critical if it then executes) an artifact
+  produced by an untrusted PR-triggered workflow. This is the composition attack
+  single-file scanners miss.
+- **New trigger-aware single-file rules** in `github-actions-scanner.ts`:
+  - `GHA_PRIVILEGED_TRIGGER`: workflow runs in the base-repo context with secrets and a
+    write token (`pull_request_target`, `workflow_run`, `issue_comment`, ...).
+  - `GHA_PWN_REQUEST_CHECKOUT` (critical): privileged trigger that checks out PR/head code
+    and then runs it (the canonical "pwn request").
+  - `GHA_GITHUB_SCRIPT_INJECTION`: untrusted event context eval'd as JavaScript inside an
+    `actions/github-script` block.
+  - `GHA_PERMS_WRITE_ALL` / `GHA_PERMS_DEFAULT_BROAD`: overly broad or unscoped
+    `GITHUB_TOKEN` permissions, the loot a compromised workflow hands over.
+- **Broadened `GHA_SCRIPT_INJECTION`**: now also covers `github.event.comment.body` (the
+  `issue_comment` vector), `review.body`, `discussion.*`, and PR head ref/label: fields the
+  pre-v5.7 regex missed entirely.
+- **Correlation**: new "Cordyceps CI/CD Composition Attack" incident compounds any two of
+  the above single-file symptoms into one critical, high-confidence incident.
+- **Note**: this campaign publishes no IOCs (it is a composition pattern, not a malware
+  family), so nothing is added to the threat-intel/IOC feed: the work is detection logic.
+- **Hardened by an adversarial review gate** that BLOCKED the first candidate with 14
+  confirmed findings, all fixed pre-release: a correlation false-CRITICAL on ordinary
+  pull_request_target bots (now gated on a strong signal), plus valid-YAML evasions of the
+  new critical rules - bare-dash steps, `refs/pull/N` and matrix/step-output checkout refs,
+  `gh run download` consumers, quoted `"on":` keys, and misindented comments. Self-scan
+  0 findings, 46 new tests.
+
 ### v5.6.3 (2026-07-07)
 **Threat intel: PolinRider DPRK open-source supply-chain campaign**
 
