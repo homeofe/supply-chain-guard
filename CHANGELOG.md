@@ -4,6 +4,23 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.6.3 (2026-07-07)
+**Threat intel: PolinRider DPRK open-source supply-chain campaign**
+
+Daily threat-intel refresh. Added indicators for the PolinRider campaign (2 new indicators):
+
+- **PolinRider** (North Korea / Contagious Interview / Famous Chollima; Socket, The Hacker News,
+  SecurityWeek, 2026-07-06): a DPRK-linked cluster, active since December 2025, that poisoned 108
+  packages and extensions (162 release artifacts) across npm, Packagist, Go modules and Chrome to
+  deliver the DEV#POPPER RAT and the OmniStealer infostealer. Obfuscated JavaScript loaders hidden
+  in `config.js` files and fake `.woff2` fonts run via VS Code tasks on folder-open, decrypt a
+  second stage fetched over TRON / Aptos / BNB Smart Chain RPC using an embedded XOR key, and
+  `eval()` it. Only the concretely enumerated malicious Go module is pinned - `git2md` from the
+  compromised GitHub account `Xpos587` (`github[.]com/Xpos587/git2md`) - plus that account in the
+  GitHub-account blocklist. The npm/Composer package names and the Chrome extension ID were not
+  publicly enumerated at feed time, and the legitimate `7span`/`sevenspan` and `Artiffusion-Inc`
+  accounts are deliberately not blocked to avoid false positives on their non-weaponized repos.
+
 ### v5.6.2 (2026-07-04)
 **Threat intel: Contagious Interview Rollup-polyfill npm wave + ChocoPoC RAT**
 

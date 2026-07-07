@@ -596,6 +596,18 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "skytext", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
   { type: "package", value: "slogsec", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
   { type: "package", value: "logcrypt.cryptography", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
+
+  // PolinRider DPRK supply-chain campaign (Socket / The Hacker News / SecurityWeek, July 6, 2026)
+  // North-Korea-linked cluster (Contagious Interview / Famous Chollima), active since Dec 2025,
+  // poisoned 108 packages/extensions (162 release artifacts) across npm, Packagist, Go modules and
+  // Chrome. Obfuscated JS loaders (hidden in config.js / fake .woff2 fonts, run via VS Code tasks on
+  // folder-open) decrypt a second stage fetched over TRON / Aptos / BNB Smart Chain RPC with an
+  // embedded XOR key and eval() it, dropping the DEV#POPPER RAT + OmniStealer (credential/browser/
+  // wallet theft). Only the concretely enumerated malicious Go module is pinned here: git2md from
+  // the compromised account Xpos587 at v0.0.0-20260503100027-79bdb26ca95d. The npm/Composer package
+  // names and the Chrome extension ID were not publicly enumerated at feed time and are omitted to
+  // avoid guessing; git-history rewriting/force-pushes make the accounts' clean history untrustworthy.
+  { type: "package", value: "go:github.com/Xpos587/git2md", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

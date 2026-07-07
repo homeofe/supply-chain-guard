@@ -349,6 +349,16 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // leo-* / rstreams-* / serverless-leo / hexo-* packages with a preinstall stealer. npm
   // publisher handle tracked here for source-reference matching (github.com/czirker).
   "czirker",
+
+  // PolinRider DPRK supply-chain campaign (Socket / The Hacker News / SecurityWeek, July 2026)
+  // North-Korea-linked cluster (Contagious Interview / Famous Chollima) that poisoned 108
+  // packages/extensions (162 release artifacts) across npm, Packagist, Go modules and Chrome
+  // to deliver the DEV#POPPER RAT + OmniStealer via obfuscated JS loaders (fake .woff2 fonts
+  // run from VS Code tasks; second stages fetched over TRON/Aptos/BNB RPC + XOR-decrypted eval).
+  // "Xpos587" is the compromised GitHub account behind the malicious Go module git2md; tracked
+  // here for source-reference matching. The broader "7span"/"sevenspan" and "Artiffusion-Inc"
+  // accounts are NOT blocked to avoid false positives on their legitimate, non-weaponized repos.
+  "Xpos587",
 ];
 
 // ---------------------------------------------------------------------------

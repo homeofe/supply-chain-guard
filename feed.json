@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.6.2",
-  "entryCount": 312,
+  "version": "5.6.3",
+  "entryCount": 313,
   "entries": [
     {
       "type": "domain",
@@ -2800,6 +2800,15 @@
       "family": "ChocoPoC",
       "campaign": "ChocoPoC Fake PoC Repos",
       "firstSeen": "2025-11-01"
+    },
+    {
+      "type": "package",
+      "value": "go:github.com/Xpos587/git2md",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "OmniStealer",
+      "campaign": "PolinRider",
+      "firstSeen": "2026-07-06"
     }
   ]
 }

@@ -2164,4 +2164,24 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // PolinRider DPRK supply-chain campaign (Socket / THN, July 6, 2026)
+  // =================================================================
+
+  describe("PolinRider DPRK Supply Chain (July 2026)", () => {
+    it("should flag the compromised Xpos587 GitHub account reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.go"),
+        'package main\nimport _ "github.com/Xpos587/git2md"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });
