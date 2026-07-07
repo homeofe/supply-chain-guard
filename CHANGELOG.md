@@ -4,6 +4,29 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.8.0 (2026-07-07)
+**Agent host-runtime patch detection + OpenClaw plugin posture**
+
+- **`INSTALL_HOOK_HOST_RUNTIME_PATCH`** (high): npm install hooks that patch or
+  mutate a host agent runtime (OpenClaw, Hermes, Claude Code) during installation -
+  rewriting another installed package's code to hook into it (e.g. intercept
+  after-tool-call messages). Modelled on the TencentDB-Agent-Memory postinstall
+  (`bash scripts/openclaw-after-tool-call-messages.patch.sh 2>/dev/null || true`),
+  which patches the OpenClaw runtime's dispatch/hook files at install time. Fires
+  only on a host-runtime target combined with a code-mutation action, so ordinary
+  build hooks (`node scripts/build.js`, `npm run build`, `tsc`, `patch-package`)
+  do not match.
+- **OpenClaw plugin manifest posture** (new `openclaw-plugin-scanner.ts`, reads
+  `openclaw.plugin.json`): informational/medium context for agent-memory plugins -
+  `OPENCLAW_PLUGIN_STARTUP_ACTIVATION`, `OPENCLAW_PLUGIN_AUTOCAPTURE` (medium),
+  `OPENCLAW_PLUGIN_EXTERNAL_LLM` (medium), `OPENCLAW_PLUGIN_CLOUD_BACKEND`,
+  `OPENCLAW_PLUGIN_TELEMETRY`. Only fires when the manifest is present, so no noise
+  on ordinary packages.
+- **Future work**: registry version-drift detection (source `package.json` version
+  vs npm `latest` dist-tag, e.g. the TencentDB 0.3.6-on-GitHub vs 1.0.0-on-npm gap).
+  This needs npm registry metadata that local/offline directory scans currently
+  avoid; proposed here, not yet implemented.
+
 ### v5.7.0 (2026-07-07)
 **GitHub Actions: Cordyceps cross-workflow composition detection**
 

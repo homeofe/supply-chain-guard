@@ -63,6 +63,7 @@ import { buildAttackGraph } from "./attack-graph.js";
 import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
+import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
 import { loadRiskHistory, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { loadTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
 import { forecastRisk } from "./risk-forecast.js";
@@ -369,6 +370,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // The main walk skips .claude/ - this scanner does its own targeted traversal.
   const skillFindings = scanAgentSkillFiles(scanDir);
   findings.push(...skillFindings);
+
+  // v5.7: OpenClaw plugin manifest posture (only fires if openclaw.plugin.json present)
+  findings.push(...scanOpenClawPlugin(scanDir));
 
   // v4.7: Workflow execution modeling
   const wfFindings = modelWorkflows(scanDir);

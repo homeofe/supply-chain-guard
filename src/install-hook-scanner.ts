@@ -8,6 +8,25 @@
 
 import type { Finding } from "./types.js";
 
+// ── INSTALL_HOOK_HOST_RUNTIME_PATCH detection ───────────────────────────────
+// An install hook that patches/mutates a HOST AGENT RUNTIME (OpenClaw, Hermes,
+// Claude Code, ...) - rewriting another installed package's code so the plugin
+// can hook into it (e.g. intercept after-tool-call messages). Fires ONLY on the
+// combination of a runtime target AND a code-mutation action, so ordinary build
+// hooks (node scripts/build.js, npm run build, tsc, patch-package) never match.
+
+/** Names of agent host runtimes and their internal hook symbols. */
+const HOST_RUNTIME_RE =
+  /\b(?:openclaw|hermes|claude[-_ ]?code|claude[-_ ]?desktop|cursor|windsurf|cline|roo[-_ ]?code|aider|continue\.dev)\b|after[-_]tool[-_]call|before[-_]tool[-_]call|hook[-_ ]?event|tool[-_ ]?call[-_ ]?message|dispatch-[\w-]*\.(?:js|mjs|cjs)/i;
+
+/** A write into another agent runtime's installed code or config directory. */
+const HOST_RUNTIME_PATH_RE =
+  /node_modules[\\/][^\s'"]*(?:openclaw|hermes)|[~./][\w./-]*\.(?:openclaw|claude|cursor|windsurf|hermes)\b/i;
+
+/** A code MUTATION (not build-output generation): patch/inject/rewrite/sed -i. */
+const CODE_MUTATE_RE =
+  /\b(?:patch|inject|mutate|overwrite|rewrite|monkey[-\s]?patch|codemod)\b|\bsed\s+-i\b|\.patch(?:\.sh)?\b/i;
+
 interface InstallScripts {
   preinstall?: string;
   postinstall?: string;
@@ -59,6 +78,23 @@ export function analyzeInstallHooks(
         confidence: 0.95,
         category: "malware",
         recommendation: "Never download and execute code during npm install. This is almost certainly malicious.",
+      });
+    }
+
+    // Host agent runtime patch/mutation (e.g. OpenClaw after-tool-call patching)
+    if (
+      (HOST_RUNTIME_RE.test(script) || HOST_RUNTIME_PATH_RE.test(script)) &&
+      CODE_MUTATE_RE.test(script)
+    ) {
+      findings.push({
+        rule: "INSTALL_HOOK_HOST_RUNTIME_PATCH",
+        description: `${hook} script patches or mutates a host agent runtime (OpenClaw/Hermes/Claude Code) during installation. Rewriting another installed package's code to hook into it is a distinct supply-chain risk - it can silently intercept tool calls, conversation messages, or credentials inside the host agent.`,
+        severity: "high",
+        file: relativePath,
+        match: truncate(`${hook}: ${script}`),
+        confidence: 0.8,
+        category: "supply-chain",
+        recommendation: "Do not let a package modify the host agent runtime at install time. Review exactly what the patch changes (tool-call hooks, message capture), install with --ignore-scripts, and inspect any scripts/*.patch.sh before trusting the package. Runtime integration should be an explicit, user-invoked step, not a silent postinstall.",
       });
     }
 

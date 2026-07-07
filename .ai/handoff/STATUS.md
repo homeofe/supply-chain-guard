@@ -1,5 +1,29 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-07, claude-opus-4-8): Released v5.8.0 - agent host-runtime patch
+> detection, prompted by a maintainer review of TencentDB-Agent-Memory
+> (@tencentdb-agent-memory/memory-tencentdb), an OpenClaw agent-memory plugin whose
+> postinstall (`bash scripts/openclaw-after-tool-call-messages.patch.sh 2>/dev/null
+> || true`) locates the installed OpenClaw runtime and rewrites its dispatch/hook
+> files to inject session.messages into after_tool_call - mutating another installed
+> package's code at install time, failures silenced. The old install-hook scanner
+> emitted nothing for it (no network/exec/env tokens in the hook string). Added:
+> (1) INSTALL_HOOK_HOST_RUNTIME_PATCH (high) in install-hook-scanner.ts - fires only
+> on a host-runtime target (openclaw/hermes/claude-code/after-tool-call/hookEvent/
+> dispatch-*.js or a write into node_modules/<runtime>) COMBINED with a code-mutation
+> action (patch/inject/rewrite/sed -i/*.patch.sh); verified NOT to fire on node
+> scripts/build.js, npm run build, tsc, patch-package, husky, node-gyp rebuild.
+> (2) openclaw-plugin-scanner.ts (new module) - reads openclaw.plugin.json (rare, so
+> zero noise on ordinary packages) and surfaces the memory plugin's data posture as
+> info/medium: OPENCLAW_PLUGIN_STARTUP_ACTIVATION, OPENCLAW_PLUGIN_AUTOCAPTURE (med),
+> OPENCLAW_PLUGIN_EXTERNAL_LLM (med), OPENCLAW_PLUGIN_CLOUD_BACKEND, _TELEMETRY.
+> Confirmed end-to-end against a read-only clone (never executed the package):
+> INSTALL_HOOK_HOST_RUNTIME_PATCH high + all 5 plugin findings fire. Future work:
+> registry version-drift (source 0.3.6 vs npm latest 1.0.0) needs registry metadata
+> that local scans avoid - documented, not implemented. 15 new tests; build green;
+> 1180 tests pass (only the 13 vscode-scanner zip tests fail locally for lack of a
+> `zip` binary - green in CI). 60 src modules.
+
 > Note (2026-07-07, claude-opus-4-8): Released v5.7.0 - GitHub Actions "Cordyceps"
 > cross-workflow composition detection, prompted by novee.security's Cordyceps research
 > (BleepingComputer, July 2026). A multi-agent gap analysis confirmed the tool covered

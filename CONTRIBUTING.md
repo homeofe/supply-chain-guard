@@ -92,6 +92,7 @@ src/
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
   nuget-scanner.ts        # NuGet/.NET (packages.lock.json/csproj/nuget.config) analysis
   skills-scanner.ts       # AI agent skill/rules files (.claude, .cursorrules, CLAUDE.md)
+  openclaw-plugin-scanner.ts # OpenClaw plugin manifest posture (openclaw.plugin.json)
   mcp-scanner.ts          # MCP server config analysis (.mcp.json, claude_desktop_config.json)
   mcp-server.ts           # Zero-dep MCP server (supply-chain-guard mcp)
   entropy.ts              # Shannon entropy analysis
