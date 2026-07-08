@@ -35,6 +35,8 @@ export function calculateRiskDimensions(findings: Finding[]): RiskDimensions {
   ]);
   const ciCdRisk = calcDimension(findings, [
     "GHA_", "CI_", "DOCKER_", "IAC_", "CONFIG_",
+    // v5.10: agent-surface rules were previously counted in NO dimension.
+    "AGENTIC_WF_", "SKILL_", "MCP_",
   ]);
   const threatIntelMatches = findings.filter(
     (f) => f.rule === "THREAT_INTEL_MATCH" || f.rule.startsWith("IOC_KNOWN_"),

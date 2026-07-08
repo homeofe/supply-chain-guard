@@ -62,12 +62,15 @@ export const FILE_PATTERNS: PatternEntry[] = [
   },
 
   // Invisible Unicode characters (zero-width spaces, joiners, etc.)
+  // v5.10: the surrogate-pair alternative \uDB40[\uDC00-\uDC7F] covers the
+  // Unicode Tags block (U+E0000..U+E007F) used for ASCII smuggling - invisible
+  // instructions encoded for an LLM agent that a human reviewer cannot see.
   {
     name: "invisible-unicode",
     pattern:
-      "[\\u200B\\u200C\\u200D\\u2060\\uFEFF\\u00AD\\u034F\\u061C\\u180E\\u2028\\u2029\\u202A-\\u202E\\u2066-\\u2069]{3,}",
+      "(?:[\\u200B\\u200C\\u200D\\u2060\\uFEFF\\u00AD\\u034F\\u061C\\u180E\\u2028\\u2029\\u202A-\\u202E\\u2066-\\u2069]|\\uDB40[\\uDC00-\\uDC7F]){3,}",
     description:
-      "Suspicious invisible Unicode characters detected (potential code obfuscation)",
+      "Suspicious invisible Unicode characters detected (potential code obfuscation or ASCII smuggling)",
     severity: "high",
     rule: "INVISIBLE_UNICODE",
     notTestFile: true,
@@ -1742,7 +1745,11 @@ export const LURE_PATTERNS: PatternEntry[] = [
 // not scan general .ts/.js/.py source for them.
 // ---------------------------------------------------------------------------
 
-const DOC_FILE_PATTERN = /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i;
+// v5.10: also cover issue/PR templates. They are prefilled into the very
+// issue/PR bodies that AI agents ingest, so an LLM control token planted in a
+// template is a pre-positioned injection against downstream agents. The
+// ISSUE_TEMPLATE alternative matches files INSIDE that directory (bug_report.md).
+const DOC_FILE_PATTERN = /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes|PULL_REQUEST_TEMPLATE|SUPPORT)[^/\\]*$|[/\\]ISSUE_TEMPLATE[/\\][^/\\]+$/i;
 
 export const PROMPT_INJECTION_PATTERNS: PatternEntry[] = [
   {

@@ -219,4 +219,23 @@ describe("Prompt-injection patterns", () => {
       }
     });
   });
+
+  describe("file scoping (v5.10 template coverage)", () => {
+    const p = PROMPT_INJECTION_PATTERNS.find(
+      (x) => x.rule === "PROMPT_INJECTION_SYSTEM_REMINDER",
+    );
+
+    it("scopes to issue templates inside .github/ISSUE_TEMPLATE", () => {
+      expect(p!.onlyFilePattern!.test(".github/ISSUE_TEMPLATE/bug_report.md")).toBe(true);
+    });
+
+    it("scopes to PULL_REQUEST_TEMPLATE", () => {
+      expect(p!.onlyFilePattern!.test(".github/PULL_REQUEST_TEMPLATE.md")).toBe(true);
+    });
+
+    it("still scopes to README and still excludes arbitrary source files", () => {
+      expect(p!.onlyFilePattern!.test("README.md")).toBe(true);
+      expect(p!.onlyFilePattern!.test("src/index.ts")).toBe(false);
+    });
+  });
 });

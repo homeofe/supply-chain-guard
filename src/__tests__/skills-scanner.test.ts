@@ -392,4 +392,19 @@ describe("Skills Scanner", () => {
       expect(findings).toHaveLength(0);
     });
   });
+
+  describe("Unicode Tags ASCII smuggling (v5.10)", () => {
+    it("flags a run of Unicode Tags (U+E0000..U+E007F) in an agent rules file", () => {
+      // Build the tag run programmatically so no literal astral chars sit in source.
+      const smuggled = "Normal rule text " +
+        String.fromCodePoint(0xe0054, 0xe0045, 0xe0053, 0xe0054); // tags T,E,S,T
+      const findings = scanSkillContent(smuggled, "CLAUDE.md");
+      expect(findings.some((f) => f.rule === "SKILL_INVISIBLE_UNICODE")).toBe(true);
+    });
+
+    it("does not flag ordinary emoji (single ZWJ sequences)", () => {
+      const findings = scanSkillContent("Team: 👨‍👩‍👧 welcome!", "CLAUDE.md");
+      expect(findings.some((f) => f.rule === "SKILL_INVISIBLE_UNICODE")).toBe(false);
+    });
+  });
 });

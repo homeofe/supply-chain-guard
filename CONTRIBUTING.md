@@ -83,6 +83,7 @@ src/
   release-scanner.ts      # GitHub release analysis
   github-trust-scanner.ts # Repo trust signals
   github-actions-scanner.ts  # CI/CD attack detection
+  agentic-workflow-scanner.ts # GitHub Agentic Workflow (gh-aw) markdown posture (GitLost class)
   dockerfile-scanner.ts   # Container security
   npm-scanner.ts          # npm package analysis
   pypi-scanner.ts         # PyPI package analysis

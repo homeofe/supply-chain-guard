@@ -9,7 +9,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, Severity } from "./types.js";
-import { parseWorkflow } from "./workflow-ast.js";
+import { parseWorkflow, type WfStep, type WfJob } from "./workflow-ast.js";
 
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
@@ -274,6 +274,121 @@ function scanWorkflowContent(
   // know which event fires the workflow and what its token can do, which the
   // line-by-line passes above are blind to.
   checkWorkflowAstRules(content, relativePath, findings);
+
+  // v5.10: GitLost-class agent-workflow posture (trigger + agent step + token + public post)
+  checkAgentWorkflowRules(content, relativePath, findings);
+}
+
+/**
+ * v5.10 GitLost-class rules. An AI-agent step that ingests attacker-controllable
+ * event text, holds a cross-repo-capable token, and can post publicly is the
+ * exact "lethal trifecta" the GitLost disclosure (Noma, July 2026) exploited.
+ * We can only see the checked-in POSTURE, never the runtime injection payload,
+ * so these are pre-attack hardening warnings, not attack detections.
+ */
+function checkAgentWorkflowRules(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let ast;
+  try {
+    ast = parseWorkflow(content);
+  } catch {
+    return;
+  }
+
+  const triggerSet = new Set(ast.triggers);
+  const untrusted = AGENT_UNTRUSTED_TRIGGERS.filter((t) => triggerSet.has(t));
+  if (untrusted.length === 0) return; // no attacker-controllable input path
+
+  // Collect agent steps across all jobs.
+  const agentSteps: Array<{ step: WfStep; job: WfJob }> = [];
+  for (const job of ast.jobs) {
+    for (const step of job.steps) {
+      if (isAgentStep(step)) agentSteps.push({ step, job });
+    }
+  }
+  if (agentSteps.length === 0) return;
+
+  const canPostPublicly = (job: WfJob): boolean => {
+    const scopeWrites = (p: { scopes: Record<string, string>; writeAll: boolean }) =>
+      p.writeAll || PUBLIC_POST_SCOPES.some((s) => p.scopes[s] === "write");
+    return scopeWrites(ast.permissions) || scopeWrites(job.permissions);
+  };
+
+  for (const { step, job } of agentSteps) {
+    // GHA_AGENT_UNTRUSTED_PROMPT (critical): agent ingests untrusted event context.
+    if (UNTRUSTED_CTX_RE.test(agentStepText(step))) {
+      findings.push({
+        rule: "GHA_AGENT_UNTRUSTED_PROMPT",
+        description:
+          `AI-agent step ingests attacker-controllable GitHub event context ` +
+          `(issue/PR/comment body or title) as part of its instructions on an untrusted ` +
+          `trigger (${untrusted.join(", ")}). This is the core of the GitLost prompt-injection ` +
+          `class: the agent cannot distinguish your instructions from an attacker's issue text.`,
+        severity: "critical",
+        file: relativePath,
+        line: step.line,
+        recommendation: getWorkflowRecommendation("GHA_AGENT_UNTRUSTED_PROMPT"),
+      });
+    }
+
+    // GHA_AGENT_PUBLIC_POST (high): the same job can post the agent's output publicly.
+    if (canPostPublicly(job)) {
+      findings.push({
+        rule: "GHA_AGENT_PUBLIC_POST",
+        description:
+          `AI-agent job on an untrusted trigger (${untrusted.join(", ")}) also holds ` +
+          `issues:write / pull-requests:write, so the agent can post its output as a public ` +
+          `comment. That comment is the GitLost exfiltration channel: private data the agent ` +
+          `read becomes readable by anyone who can see the issue.`,
+        severity: "high",
+        file: relativePath,
+        line: step.line,
+        recommendation: getWorkflowRecommendation("GHA_AGENT_PUBLIC_POST"),
+      });
+    }
+
+    // GHA_AGENT_CROSS_REPO_TOKEN (high): a non-default token is fed to the agent.
+    const tokenRefs = [
+      step.withToken ?? "",
+      step.env?.GH_TOKEN ?? "",
+      step.env?.GITHUB_TOKEN ?? "",
+    ].join(" ");
+    const usesNonDefaultSecret = /\$\{\{\s*secrets\.(?!GITHUB_TOKEN\b)[A-Za-z0-9_]+\s*\}\}/.test(tokenRefs);
+    if (usesNonDefaultSecret) {
+      findings.push({
+        rule: "GHA_AGENT_CROSS_REPO_TOKEN",
+        description:
+          `AI-agent step is handed a custom token secret (not the default GITHUB_TOKEN). ` +
+          `A broadly-scoped PAT lets the agent read OTHER repositories, including private ones - ` +
+          `the cross-repo read that turns a single-repo prompt injection into an org-wide leak. ` +
+          `Verify this token is a fine-grained, single-repository token.`,
+        severity: "high",
+        file: relativePath,
+        line: step.line,
+        recommendation: getWorkflowRecommendation("GHA_AGENT_CROSS_REPO_TOKEN"),
+      });
+    }
+  }
+
+  // GHA_AGENT_NO_AUTHOR_GATE (medium): agent driven by an externally-fileable
+  // trigger with no author-trust gate anywhere in the file.
+  const externallyFileable = EXTERNALLY_FILEABLE_TRIGGERS.some((t) => triggerSet.has(t));
+  if (externallyFileable && !AUTHOR_GATE_RE.test(content)) {
+    findings.push({
+      rule: "GHA_AGENT_NO_AUTHOR_GATE",
+      description:
+        `AI-agent workflow is triggered by issues/comments (externally fileable by anyone) ` +
+        `but has no author-trust gate. An unauthenticated attacker can open an issue and drive ` +
+        `the agent - the entry point the GitLost attack used.`,
+      severity: "medium",
+      file: relativePath,
+      line: agentSteps[0]!.step.line,
+      recommendation: getWorkflowRecommendation("GHA_AGENT_NO_AUTHOR_GATE"),
+    });
+  }
 }
 
 // ── v5.7 Cordyceps trigger-aware rules ──────────────────────────────────────
@@ -307,6 +422,62 @@ const PR_HEAD_REF_RE =
 /** Untrusted context interpolated inside an actions/github-script `script:` body. */
 const UNTRUSTED_CTX_RE =
   /\$\{\{\s*github\.(?:event\.(?:issue|pull_request|comment|review|discussion|head_commit|commits?)|head_ref|ref_name)\b/;
+
+// ── v5.10 GitLost-class agent-workflow rules ────────────────────────────────
+
+/**
+ * Actions that hand control to an autonomous AI agent which then reads workflow
+ * inputs (issue/PR/comment text) as instructions. Matched owner/repo prefix,
+ * ref-agnostic. This is an allowlist that will grow as new agent actions ship.
+ */
+const AGENT_ACTION_RE =
+  /^(?:anthropics\/claude-code-action|anthropics\/claude-code-base-action|githubnext\/gh-aw|google-github-actions\/run-gemini-cli|google-gemini\/gemini-cli-action|openai\/codex-action)(?:@|$|\/)/i;
+
+/** Agent CLIs invoked from a `run:` block (the non-action form of the same thing). */
+const AGENT_CLI_RE =
+  /\b(?:claude\s+(?:-p|--print)|copilot\s+(?:-p|suggest|exec)|gemini\s+(?:-p|--prompt)|codex\s+exec|aider\s+(?:--message|-m)\b)/i;
+
+/**
+ * Triggers that feed ATTACKER-CONTROLLABLE text (issue/PR/comment/discussion
+ * bodies and titles) into the workflow, and hence into an agent step's prompt.
+ * `issues`/`issue_comment` are the verified GitLost vectors; the pull_request*
+ * and discussion* families are the same class.
+ */
+const AGENT_UNTRUSTED_TRIGGERS = [
+  "issues",
+  "issue_comment",
+  "pull_request",
+  "pull_request_target",
+  "pull_request_review",
+  "pull_request_review_comment",
+  "discussion",
+  "discussion_comment",
+];
+
+/** Token scopes that let a job post PUBLICLY (the GitLost exfiltration channel). */
+const PUBLIC_POST_SCOPES = ["issues", "pull-requests"];
+
+/** Any signal that the workflow gates on WHO triggered it (author trust). */
+const AUTHOR_GATE_RE =
+  /author_association|github\.actor\b|github\.triggering_actor\b|\.user\.login\b/;
+
+/** Issue/comment triggers where an anonymous external user drives the agent. */
+const EXTERNALLY_FILEABLE_TRIGGERS = ["issues", "issue_comment"];
+
+/** True when a step hands control to an AI agent (action form or CLI form). */
+function isAgentStep(step: { uses?: string; run?: string }): boolean {
+  if (step.uses && AGENT_ACTION_RE.test(step.uses)) return true;
+  if (step.run && AGENT_CLI_RE.test(step.run)) return true;
+  return false;
+}
+
+/** All text an agent step ingests where untrusted context could appear. */
+function agentStepText(step: {
+  withPrompt?: string; run?: string; env?: Record<string, string>;
+}): string {
+  const envVals = step.env ? Object.values(step.env).join("\n") : "";
+  return [step.withPrompt ?? "", step.run ?? "", envVals].join("\n");
+}
 
 /**
  * Structural rules that depend on the workflow's trigger and token model.
@@ -774,6 +945,22 @@ function getWorkflowRecommendation(rule: string): string {
     GHA_PERMS_DEFAULT_BROAD:
       "Add an explicit top-level 'permissions:' block scoped to the minimum (start from 'contents: read'). Privileged " +
       "triggers should never rely on the repository default token, which is often read+write across all scopes.",
+    GHA_AGENT_UNTRUSTED_PROMPT:
+      "Do not interpolate untrusted event context (github.event.issue/comment/pull_request body or title) " +
+      "into an AI-agent prompt. Pass only sanitized, structured fields, gate the job on author_association, " +
+      "and treat all issue/PR text as untrusted data the agent must never act on as instructions.",
+    GHA_AGENT_PUBLIC_POST:
+      "Remove issues:write / pull-requests:write from any job where an AI agent processes untrusted input, " +
+      "or split the agent (read-only, no public-write token) from the step that posts. An agent that can both " +
+      "read private data and post publicly is a one-step exfiltration channel.",
+    GHA_AGENT_CROSS_REPO_TOKEN:
+      "Scope the agent's token to the single repository it needs. Prefer the default GITHUB_TOKEN or a " +
+      "fine-grained PAT limited to one repo. A broad org/classic PAT lets a prompt-injected agent read every " +
+      "private repo it can reach.",
+    GHA_AGENT_NO_AUTHOR_GATE:
+      "Gate AI-agent jobs triggered by issues/comments on the author's trust level " +
+      "(if: contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.issue.author_association)) " +
+      "so anonymous external users cannot drive the agent.",
   };
   return map[rule] ?? "Review this finding and assess whether it represents legitimate CI/CD functionality.";
 }

@@ -298,4 +298,31 @@ describe("workflow-ast parser robustness (v5.7 review fixes)", () => {
     expect(ast.jobs[0].steps[0].run).toContain("bash ./artifact/build.sh");
     expect(ast.jobs[0].steps[1].uses).toBe("actions/checkout@v4");
   });
+
+  it("captures with.prompt, with.github_token and step env on an agent step (v5.10)", () => {
+    const wf = [
+      "name: triage",
+      "on:",
+      "  issues:",
+      "    types: [assigned]",
+      "jobs:",
+      "  triage:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - uses: anthropics/claude-code-action@v1",
+      "        env:",
+      "          GH_TOKEN: ${{ secrets.ORG_PAT }}",
+      "        with:",
+      "          github_token: ${{ secrets.ORG_PAT }}",
+      "          prompt: |",
+      "            Read the issue: ${{ github.event.issue.body }}",
+    ].join("\n");
+
+    const ast = parseWorkflow(wf);
+    const step = ast.jobs[0]!.steps[0]!;
+    expect(step.uses).toBe("anthropics/claude-code-action@v1");
+    expect(step.withPrompt).toContain("github.event.issue.body");
+    expect(step.withToken).toContain("secrets.ORG_PAT");
+    expect(step.env?.GH_TOKEN).toContain("secrets.ORG_PAT");
+  });
 });

@@ -64,6 +64,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 
 ### Infrastructure & CI/CD
 - GitHub Actions: unpinned actions, secrets exfiltration, encoded payloads, curl piping
+- Agentic workflows (GitLost class): AI-agent steps and gh-aw `.github/workflows/*.md` that ingest untrusted issue/PR text, hold a cross-repo token, and can post publicly - the prompt-injection data-leak posture
 - Dockerfile: curl pipe, unpinned base images, hardcoded secrets, SUID bits
 - Terraform/IaC: inline scripts, external modules, hardcoded secrets
 - Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
@@ -122,7 +123,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.9.0
+    rev: v5.10.0
     hooks:
       - id: supply-chain-guard
 ```

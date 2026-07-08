@@ -168,6 +168,40 @@ const CORRELATION_RULES: CorrelationRule[] = [
       "allow code execution or secret theft across a workflow trust boundary.",
   },
 
+  // --- GitLost-class agentic workflow exfiltration posture (v5.10) ---
+  // An AI agent that ingests untrusted issue/PR text, holds a cross-repo token,
+  // and can post publicly is the GitLost lethal trifecta (Noma, July 2026). Any
+  // two of these together is a strong static signal of the vulnerable posture.
+  {
+    rules: [
+      "GHA_AGENT_UNTRUSTED_PROMPT",
+      "GHA_AGENT_PUBLIC_POST",
+      "GHA_AGENT_CROSS_REPO_TOKEN",
+      "GHA_AGENT_NO_AUTHOR_GATE",
+      "AGENTIC_WF_UNTRUSTED_TRIGGER",
+      "AGENTIC_WF_PUBLIC_POST_TOOL",
+      "AGENTIC_WF_BROAD_ACCESS",
+    ],
+    minMatch: 2,
+    // The medium hygiene rules (NO_AUTHOR_GATE, UNTRUSTED_TRIGGER) co-occur on
+    // ordinary triage bots, so 2-of-N alone would false-fire. Require at least
+    // one rule that proves the agent actually ingests untrusted input OR can
+    // post publicly (mirrors the Cordyceps requireAnyOf guard).
+    requireAnyOf: [
+      "GHA_AGENT_UNTRUSTED_PROMPT",
+      "GHA_AGENT_PUBLIC_POST",
+      "AGENTIC_WF_PUBLIC_POST_TOOL",
+    ],
+    incident: "GitLost-class Agentic Workflow Exfiltration Posture",
+    severity: "critical",
+    confidenceBoost: 0.2,
+    narrative:
+      "An AI-agent workflow ingests attacker-controllable issue/PR text, can reach cross-repo data, " +
+      "and can post publicly - the GitLost lethal trifecta (Noma Security, July 2026). An unauthenticated " +
+      "attacker who files an issue could prompt-inject the agent into leaking private repository contents " +
+      "through a public comment. Scope the token to one repo, gate on author trust, and remove public-write.",
+  },
+
   // --- Obfuscation + exfil = malware ---
   {
     rules: ["EVAL_ATOB", "HIGH_ENTROPY_STRING", "ENV_EXFILTRATION", "DEAD_DROP_TELEGRAM"],

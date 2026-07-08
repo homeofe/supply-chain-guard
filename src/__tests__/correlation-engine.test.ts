@@ -149,4 +149,24 @@ describe("Correlation Engine", () => {
     const result = correlateFindings(findings);
     expect(result.incidents.some((i) => i.name.includes("Cordyceps"))).toBe(false);
   });
+
+  it("correlates untrusted prompt + public post into the GitLost incident", () => {
+    const findings = [
+      makeFinding("GHA_AGENT_UNTRUSTED_PROMPT", "critical"),
+      makeFinding("GHA_AGENT_PUBLIC_POST", "high"),
+    ];
+    const result = correlateFindings(findings);
+    const inc = result.incidents.find((i) => i.name.includes("GitLost"));
+    expect(inc).toBeDefined();
+    expect(inc!.severity).toBe("critical");
+  });
+
+  it("does NOT fire the GitLost incident on medium hygiene rules alone", () => {
+    const findings = [
+      makeFinding("AGENTIC_WF_UNTRUSTED_TRIGGER", "medium"),
+      makeFinding("GHA_AGENT_NO_AUTHOR_GATE", "medium"),
+    ];
+    const result = correlateFindings(findings);
+    expect(result.incidents.some((i) => i.name.includes("GitLost"))).toBe(false);
+  });
 });

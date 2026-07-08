@@ -30,6 +30,7 @@ import {
 } from "./patterns.js";
 import { checkLockfile } from "./lockfile-checker.js";
 import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
+import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
 import { scanDockerFiles, isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
 import { scanConfigFiles, isConfigFile, scanConfigFile } from "./config-scanner.js";
 import { scanGitSecurity } from "./git-scanner.js";
@@ -292,6 +293,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Check GitHub Actions workflows (#9)
   const ghaFindings = scanGitHubActionsWorkflows(scanDir);
   findings.push(...ghaFindings);
+
+  // v5.10: GitHub Agentic Workflow (gh-aw) markdown files (.github/workflows/*.md)
+  findings.push(...scanAgenticWorkflows(scanDir));
 
   // v4.9: SLSA provenance verification
   findings.push(...verifySLSA(scanDir));

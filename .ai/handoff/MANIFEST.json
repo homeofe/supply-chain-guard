@@ -3,10 +3,10 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1783449391",
-    "timestamp": "2026-07-07T18:36:31Z",
-    "commit": "4d93f10",
-    "phase": "implementation",
+    "session_id": "cli-1783527093",
+    "timestamp": "2026-07-08T16:11:33Z",
+    "commit": "9ca57a4",
+    "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:f2fab22697942bb32982a8de1a37800babdc245b30bc2f3fafaf146e990cc549",
-      "updated": "2026-07-07T18:36:08Z",
+      "checksum": "sha256:c2634f9925726e390ceeb746d3dd27ca735b0c1cd4d8f90d090ae78dd72161e0",
+      "updated": "2026-07-08T16:11:32Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:592cf27b0cc5fe1d6a4a7bc1294c0bef797055f1b1281b66c8c1c6f10cbb024d",
-      "updated": "2026-07-07T18:36:08Z",
+      "checksum": "sha256:1d08109608808c79bf4c163ce81c8ceae925198930832197c73851cab5a38db3",
+      "updated": "2026-07-08T16:11:32Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "v5.9.0 opt-in --check-registry version-drift detection (REGISTRY_VERSION_DRIFT_MAJOR)",
+  "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
     "manifest_plus_core": 5688,
-    "full_read": 9508
+    "full_read": 9509
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

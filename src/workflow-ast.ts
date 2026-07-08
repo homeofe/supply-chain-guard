@@ -35,6 +35,12 @@ export interface WfStep {
   withRef?: string;
   withScript?: string;
   withName?: string;
+  /** agent prompt text from with.prompt / direct_prompt / override_prompt / user_prompt (joined) */
+  withPrompt?: string;
+  /** token handed to the step via with.github_token / gh_token / token */
+  withToken?: string;
+  /** step-level `env:` map (raw values, expressions preserved) */
+  env?: Record<string, string>;
 }
 
 export interface WfJob {
@@ -146,6 +152,36 @@ function parseFlowList(value: string): string[] {
 }
 
 /**
+ * Parse the TOP-LEVEL keys of a flow map like `{ issues: { types: [opened] },
+ * pull_request: null }` into `["issues", "pull_request"]`. Respects nested
+ * braces/brackets so a nested config value is not mistaken for a key. Used for
+ * the compact `on: { ... }` trigger form (and gh-aw frontmatter).
+ */
+function parseFlowMapKeys(value: string): string[] {
+  const t = value.trim();
+  if (!t.startsWith("{")) return [];
+  const inner = t.slice(1, t.endsWith("}") ? -1 : undefined);
+  const segments: string[] = [];
+  let seg = "";
+  let depth = 0;
+  for (const ch of inner) {
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") depth--;
+    if (ch === "," && depth === 0) { segments.push(seg); seg = ""; }
+    else seg += ch;
+  }
+  if (seg.trim() !== "") segments.push(seg);
+
+  const keys: string[] = [];
+  for (const s of segments) {
+    const colon = s.indexOf(":");
+    const key = stripQuotes((colon === -1 ? s : s.slice(0, colon)).trim());
+    if (key) keys.push(key);
+  }
+  return keys;
+}
+
+/**
  * Collect the body line indices of a block: all lines after headerIndex whose
  * indent is greater than headerIndent, stopping at the first line (ignoring
  * blanks) whose indent is <= headerIndent.
@@ -231,6 +267,8 @@ function parseOn(
     const v = headerValue.trim();
     if (v.startsWith("[")) {
       triggers.push(...parseFlowList(v));
+    } else if (v.startsWith("{")) {
+      triggers.push(...parseFlowMapKeys(v));
     } else {
       triggers.push(v);
     }
@@ -378,6 +416,7 @@ function parseStep(
     if (key === "uses" && value) step.uses = stripQuotes(value);
     else if (key === "run") step.run = readScalarOrBlock(lines, lineIdx, keyIndent, value);
     else if (key === "with") parseWith(lines, lineIdx, keyIndent, inner, step);
+    else if (key === "env") step.env = parseEnvBlock(lines, lineIdx, keyIndent, inner);
   };
 
   // The first line is `- <key>: <value>`, or a bare `-` with the mapping keys
@@ -432,7 +471,44 @@ function parseWith(
     if (kv.key === "ref" && kv.value) step.withRef = stripQuotes(kv.value);
     else if (kv.key === "name" && kv.value) step.withName = stripQuotes(kv.value);
     else if (kv.key === "script") step.withScript = readScalarOrBlock(lines, j, withChildIndent, kv.value);
+    else if (
+      (kv.key === "prompt" || kv.key === "direct_prompt" ||
+       kv.key === "override_prompt" || kv.key === "user_prompt") && kv.value !== null
+    ) {
+      const val = readScalarOrBlock(lines, j, withChildIndent, kv.value);
+      step.withPrompt = step.withPrompt ? `${step.withPrompt}\n${val}` : val;
+    } else if (
+      (kv.key === "github_token" || kv.key === "gh_token" || kv.key === "token") && kv.value
+    ) {
+      step.withToken = stripQuotes(kv.value);
+    }
   }
+}
+
+/**
+ * Parse a step-level `env:` block into a name -> raw-value map. Expression
+ * syntax (`${{ secrets.X }}`) is preserved verbatim so downstream rules can
+ * reason about which secret a token comes from.
+ */
+function parseEnvBlock(
+  lines: string[],
+  envIndex: number,
+  envIndent: number,
+  inner: boolean[],
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  const body = blockBody(lines, envIndex, envIndent);
+  if (body.length === 0) return env;
+  const childIndent = Math.min(
+    ...body.filter((j) => !inner[j]).map((j) => indentOf(lines[j]!)),
+  );
+  for (const j of body) {
+    if (inner[j]) continue;
+    if (indentOf(lines[j]!) !== childIndent) continue;
+    const kv = parseKeyValue(stripComment(lines[j]!).trim());
+    if (kv && kv.value !== null) env[kv.key] = stripQuotes(kv.value);
+  }
+  return env;
 }
 
 /**

@@ -70,4 +70,17 @@ describe("Risk Engine", () => {
     ]);
     expect(dims.confidence).toBe(0.5);
   });
+
+  it("counts AGENTIC_WF_ findings toward the ciCd risk dimension (v5.10)", () => {
+    const withRule = calculateRiskDimensions([makeFinding("AGENTIC_WF_PUBLIC_POST_TOOL", "high")]);
+    const withoutRule = calculateRiskDimensions([]);
+    expect(withRule.ciCdRisk).toBeGreaterThan(withoutRule.ciCdRisk);
+  });
+
+  it("counts previously-uncounted SKILL_ and MCP_ findings toward the ciCd dimension (v5.10)", () => {
+    expect(calculateRiskDimensions([makeFinding("SKILL_INVISIBLE_UNICODE", "critical")]).ciCdRisk)
+      .toBeGreaterThan(0);
+    expect(calculateRiskDimensions([makeFinding("MCP_TOOL_POISONING", "high")]).ciCdRisk)
+      .toBeGreaterThan(0);
+  });
 });

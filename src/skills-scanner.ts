@@ -58,10 +58,12 @@ const OVERRIDE_PROSE_REGEX = OVERRIDE_PROSE_ENTRY
 /**
  * Invisible Unicode runs (same character class as the INVISIBLE_UNICODE
  * file pattern in patterns.ts). Requires a run of 3+ so isolated zero-width
- * joiners in emoji sequences do not fire.
+ * joiners in emoji sequences do not fire. v5.10: the surrogate-pair alternative
+ * \uDB40[\uDC00-\uDC7F] covers the Unicode Tags block (U+E0000..U+E007F) used
+ * to smuggle invisible instructions into an agent-read file (ASCII smuggling).
  */
 const INVISIBLE_RUN_REGEX =
-  /[\u200B\u200C\u200D\u2060\uFEFF\u00AD\u034F\u061C\u180E]{3,}/;
+  /(?:[\u200B\u200C\u200D\u2060\uFEFF\u00AD\u034F\u061C\u180E]|\uDB40[\uDC00-\uDC7F]){3,}/;
 
 /**
  * Bidirectional override/isolate controls (same set as the RTL_OVERRIDE
@@ -452,10 +454,17 @@ function readSmallFile(p: string): string | null {
 
 /** Render invisible/bidi characters as \uXXXX escapes for the match snippet. */
 function escapeInvisible(s: string): string {
-  return s.replace(
-    INVISIBLE_ESCAPE_REGEX,
-    (c) => "\\u" + c.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0"),
-  );
+  return s
+    .replace(
+      INVISIBLE_ESCAPE_REGEX,
+      (c) => "\\u" + c.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0"),
+    )
+    // v5.10: Unicode Tags (U+E0000..U+E007F) arrive as a surrogate pair; render
+    // both units so smuggled tag runs are visible in the match snippet.
+    .replace(/\uDB40[\uDC00-\uDC7F]/g, (m) =>
+      "\\u" + m.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") +
+      "\\u" + m.charCodeAt(1).toString(16).toUpperCase().padStart(4, "0"),
+    );
 }
 
 function truncate(s: string): string {
