@@ -123,7 +123,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.10.0
+    rev: v5.11.0
     hooks:
       - id: supply-chain-guard
 ```

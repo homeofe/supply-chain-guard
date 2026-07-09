@@ -265,6 +265,10 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
 
 /** Patterns matching known malicious or typosquatting package names */
 export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
+  // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026) - 13
+  // npm packages (v1.0.0-1.0.3) impersonating non-existent official payment
+  // SDKs; anchored so only these exact names match, never legitimate wrappers.
+  "^(paysafe-checkout|paysafe-vault|paysafe-js|paysafe-api|paysafe-node|paysafe-cards|paysafe-fraud|paysafe-kyc|paysafe-payments|skrill|skrill-sdk|skrill-payments|neteller)$",
   // Typosquatting common packages
   "^(lodas|1odash|l0dash|lodash-es-utils)$",
   "^(cros-env|cross-env-shell|crossenv)$",
@@ -995,6 +999,9 @@ export const PYTHON_EXTENSIONS = new Set([
 
 /** Known typosquatted PyPI package name patterns */
 export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
+  // Fake Paysafe payment SDKs on PyPI (Socket, July 8, 2026) - 4 packages
+  // (v1.0.0). PyPI normalizes "-" and "_", so both separators are matched.
+  "^(paysafe[-_](kyc|payments|sdk|api))$",
   // Typosquats of popular PyPI packages
   "^(reqeusts|requsets|r3quests|reequests|requets)$",
   "^(crypt0graphy|crytography|cryptograhpy)$",

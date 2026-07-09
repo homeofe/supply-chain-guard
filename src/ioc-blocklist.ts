@@ -113,6 +113,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // stages. Origin: poisoned Trivy in LiteLLM's own CI/CD.
   "models.litellm.cloud",
   "checkmarx.zone",
+
+  // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026).
+  // The 17 typosquat packages HTTPS-POST stolen KEY/SECRET/TOKEN/PASS/AUTH/API
+  // env vars to this exact ngrok tunnel (:443). A specific subdomain, not a
+  // broad ngrok-free.dev block, so no false positives on legitimate tunnels.
+  "caliber-spinner-finishing.ngrok-free.dev",
 ];
 
 // ---------------------------------------------------------------------------

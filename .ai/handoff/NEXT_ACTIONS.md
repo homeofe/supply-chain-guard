@@ -27,6 +27,7 @@ guard / GitLab format in v5.6.0), and the full seeded-issue backlog (#40-#47).
 | GitLab `location.dependency.package.name` uses the scan target path (can leak an absolute runner path); use a stable per-finding coordinate | src/reporter.ts formatGitlab | low, cosmetic |
 | Jenkinsfile pins `@latest` (non-reproducible); add a one-line "pin a version for reproducible CI" comment | examples/Jenkinsfile | doc only |
 | Install Guard: version ranges/tags (^1.2.3, latest) are not resolved offline, so pinned-version IOCs only fire on exact pins; document this limitation in the README Install Guard section | README.md | doc / known-limitation |
+| Self-scan flags 2 INVISIBLE_UNICODE in `docs/superpowers/plans/2026-07-08-gitlost-agentic-workflow-defense.md` (a v5.10.0 planning doc that quotes invisible-unicode attack examples). Decide: fence/escape the examples, exclude planning docs from scan scope, or remove the doc. Do NOT suppress the whole INVISIBLE_UNICODE rule (would blind our own self-scan). | docs/superpowers/plans/ | pre-existing, self-scan hygiene |
 
 ---
 

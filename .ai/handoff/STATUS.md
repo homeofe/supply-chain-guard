@@ -1,5 +1,34 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-09, claude-opus-4-8): Released v5.11.0 - fake Paysafe / Skrill /
+> Neteller payment-SDK campaign (Socket, 2026-07-08). 17 typosquat packages
+> published ~2026-07-07 impersonate non-existent official payment SDKs: they
+> expose the expected APIs but return fake success responses and exfiltrate every
+> env var matching KEY/SECRET/TOKEN/PASS/AUTH/API (Paysafe + AWS keys, GitHub + npm
+> tokens) via HTTPS POST to an ngrok tunnel. Added 13 npm names (paysafe-checkout/
+> -vault/-js/-api/-node/-cards/-fraud/-kyc/-payments, skrill, skrill-sdk,
+> skrill-payments, neteller) + 4 PyPI names (incl. the PyPI-only paysafe-sdk, which
+> is pattern-covered, NOT in the npm-scoped feed) to MALICIOUS_PACKAGE_PATTERNS /
+> PYPI_TYPOSQUAT_PATTERNS (anchored, exact-name) and to the bundled feed; the exact
+> exfil C2 caliber-spinner-finishing[.]ngrok-free[.]dev to KNOWN_C2_DOMAINS (a
+> specific subdomain, not a broad ngrok-free[.]dev block, so no FP on legit
+> tunnels). NEW detection surface: a directory scan now flags dependency NAMES in
+> package.json that are exact known-malicious feed IOCs (rule MALICIOUS_DEPENDENCY),
+> so scanning your own repo catches a bad dependency - previously only the
+> `npm <pkg>` and install-guard paths did (matchBareNpmIOC exported from
+> install-guard, reused in scanner.ts). A self-scan during verification CAUGHT a
+> false positive from the first cut: reusing the broad MALICIOUS_PACKAGE_PATTERNS
+> heuristics (which flag "any unknown-scope scoped package") mis-flagged our own
+> @vitest/coverage-v8; switched to exact feed-IOC matching, self-scan confirms zero
+> FP. Empirically proven end-to-end: dir-scan flags the fake deps, install-guard
+> blocks (exit 2), MCP ioc_lookup returns malicious. feed.json regenerated (327
+> entries). Build green; 1222 tests pass (only the 13 vscode-scanner zip tests fail
+> locally for lack of a `zip` binary - green in CI). Pre-existing, unrelated: the
+> self-scan surfaces 2 INVISIBLE_UNICODE findings in docs/superpowers/plans/
+> 2026-07-08-gitlost-agentic-workflow-defense.md (a committed v5.10.0 planning doc,
+> not touched here); logged in NEXT_ACTIONS. No new module, so 61 src modules
+> unchanged; testFiles 73.
+
 > Note (2026-07-07, claude-opus-4-8): Released v5.9.0 - opt-in registry version-drift
 > detection (--check-registry), implementing the future-work item deferred in v5.8.0.
 > Compares the local package.json version against the npm registry 'latest' dist-tag and

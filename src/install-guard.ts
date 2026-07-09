@@ -188,7 +188,7 @@ export interface InstallCommandAnalysis {
  * nuget:/go:/jenkins: entries do - see matchPackageIOC). Same companion
  * matcher as mcp-server.ts matchBarePackageIOC.
  */
-function matchBareNpmIOC(
+export function matchBareNpmIOC(
   name: string,
   version: string | undefined,
   feed: FeedIOC[],

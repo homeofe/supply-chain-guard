@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.10.0",
-  "entryCount": 313,
+  "version": "5.11.0",
+  "entryCount": 327,
   "entries": [
     {
       "type": "domain",
@@ -2809,6 +2809,132 @@
       "family": "OmniStealer",
       "campaign": "PolinRider",
       "firstSeen": "2026-07-06"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-checkout",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-vault",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-js",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-api",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-node",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-cards",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-fraud",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-kyc",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "paysafe-payments",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "skrill",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "skrill-sdk",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "skrill-payments",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "neteller",
+      "severity": "critical",
+      "confidence": 0.98,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "domain",
+      "value": "caliber-spinner-finishing.ngrok-free.dev",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "FakePaymentSDK",
+      "campaign": "Fake Payment SDK Typosquat",
+      "firstSeen": "2026-07-07"
     }
   ]
 }

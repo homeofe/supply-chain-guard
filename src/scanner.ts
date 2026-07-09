@@ -28,6 +28,8 @@ import {
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
 } from "./patterns.js";
+import { matchBareNpmIOC } from "./install-guard.js";
+import type { FeedIOC } from "./threat-intel.js";
 import { checkLockfile } from "./lockfile-checker.js";
 import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
 import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
@@ -250,6 +252,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         checkBinaryDownloadScripts(content, relativePath, findings);
         // Check for known-bad package versions (v4.1)
         checkKnownBadVersions(content, relativePath, findings);
+        // Flag dependency names matching a known-malicious/typosquat pattern.
+        // Closes the gap where a directory scan of your own repo did not catch
+        // a known-bad dependency (only the `npm <pkg>` path did). Patterns are
+        // anchored, so only exact malicious names match.
+        checkMaliciousDependencyNames(content, relativePath, findings, threatFeed);
 
         // Deep install hook analysis (v4.2)
         const hookScripts = extractInstallScripts(content);
@@ -1039,6 +1046,52 @@ function checkBuildToolPatterns(
 /**
  * Check root package.json for monorepo/workspace risks (v4.0).
  */
+/**
+ * Flag dependency names in a package.json that are EXACT known-malicious
+ * packages in the threat feed (matchBareNpmIOC: bare-name = any version).
+ * Runs on a directory scan so a victim scanning their own repo learns they
+ * depend on a flagged package (previously only the `npm <pkg>` path checked).
+ *
+ * Matches the feed's exact IOC names, NOT the broad MALICIOUS_PACKAGE_PATTERNS
+ * heuristics (those flag "any unknown-scope package" and would false-positive
+ * on legitimate deps like @vitest/coverage-v8 - caught during v5.10.1 review).
+ */
+function checkMaliciousDependencyNames(
+  content: string,
+  file: string,
+  findings: Finding[],
+  feed: FeedIOC[],
+): void {
+  let pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; optionalDependencies?: Record<string, string>; peerDependencies?: Record<string, string> };
+  try {
+    pkg = JSON.parse(content);
+  } catch {
+    return;
+  }
+  const names = new Set<string>([
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.devDependencies ?? {}),
+    ...Object.keys(pkg.optionalDependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+  ]);
+  for (const name of names) {
+    const ioc = matchBareNpmIOC(name, undefined, feed);
+    if (ioc) {
+      const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
+      findings.push({
+        rule: "MALICIOUS_DEPENDENCY",
+        description: `Dependency "${name}" is a known-malicious package in the threat feed${attrib}`,
+        severity: "critical",
+        confidence: ioc.confidence ?? 0.95,
+        category: "supply-chain",
+        file,
+        match: name,
+        recommendation: `Remove "${name}" immediately and rotate any secrets exposed while it was installed.`,
+      });
+    }
+  }
+}
+
 function checkMonorepoPatterns(
   content: string,
   relativePath: string,

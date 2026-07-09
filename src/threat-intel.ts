@@ -608,6 +608,30 @@ const BUNDLED_FEED: FeedIOC[] = [
   // names and the Chrome extension ID were not publicly enumerated at feed time and are omitted to
   // avoid guessing; git-history rewriting/force-pushes make the accounts' clean history untrustworthy.
   { type: "package", value: "go:github.com/Xpos587/git2md", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
+
+  // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026). 17
+  // packages published ~July 7 across npm (13, versions 1.0.0-1.0.3) and PyPI
+  // (4, version 1.0.0) impersonate non-existent official payment SDKs: they
+  // expose the expected APIs but return fake success responses and exfiltrate
+  // every env var matching KEY/SECRET/TOKEN/PASS/AUTH/API (Paysafe/AWS keys,
+  // GitHub + npm tokens) via HTTPS POST to an ngrok tunnel. Bare names: the
+  // whole package is malicious, so any version matches. These are the 13 OBSERVED
+  // npm names; the PyPI-only "paysafe-sdk" is covered by PYPI_TYPOSQUAT_PATTERNS,
+  // not this npm-scoped feed (do not re-add it here - it was not seen on npm).
+  { type: "package", value: "paysafe-checkout", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-vault", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-js", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-api", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-node", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-cards", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-fraud", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-kyc", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "paysafe-payments", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "skrill", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "skrill-sdk", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "skrill-payments", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "package", value: "neteller", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+  { type: "domain", value: "caliber-spinner-finishing.ngrok-free.dev", severity: "critical", confidence: 0.95, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

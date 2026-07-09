@@ -4,6 +4,33 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.11.0 (2026-07-09)
+**Threat intel: fake Paysafe / Skrill / Neteller payment SDKs (npm + PyPI)**
+
+Adds indicators for a coordinated typosquat campaign reported by Socket on
+July 8, 2026. 17 packages published ~July 7 impersonate non-existent official
+payment SDKs: they expose the expected APIs but return fake success responses
+and exfiltrate every environment variable matching KEY/SECRET/TOKEN/PASS/AUTH/
+API (Paysafe and AWS keys, GitHub and npm tokens) via HTTPS POST to an ngrok
+tunnel.
+
+- 13 npm packages (versions 1.0.0-1.0.3): paysafe-checkout, paysafe-vault,
+  paysafe-js, paysafe-api, paysafe-node, paysafe-cards, paysafe-fraud,
+  paysafe-kyc, paysafe-payments, skrill, skrill-sdk, skrill-payments, neteller.
+- 4 PyPI packages (1.0.0): paysafe-kyc, paysafe-payments, paysafe-sdk,
+  paysafe-api. All names were added to MALICIOUS_PACKAGE_PATTERNS /
+  PYPI_TYPOSQUAT_PATTERNS (anchored, exact-name); the 13 observed npm names plus
+  the C2 also populate the bundled threat-intel feed (the PyPI-only paysafe-sdk is
+  pattern-covered, not added to the npm-scoped feed).
+- C2: the exact exfil tunnel caliber-spinner-finishing[.]ngrok-free[.]dev
+  (:443) added to the known-C2-domain blocklist (a specific subdomain, not a
+  broad ngrok-free[.]dev block, so no false positives on legitimate tunnels).
+- New: a directory scan now flags dependency names in package.json that are
+  exact known-malicious feed IOCs (rule MALICIOUS_DEPENDENCY), so scanning your
+  own repo catches a bad dependency - previously only the `npm <pkg>` and
+  install-guard paths did. Matches exact feed IOCs, not the broad typosquat
+  heuristics, so legitimate scoped deps are not false-flagged.
+
 ### v5.10.0 (2026-07-08)
 **GitLost-class agentic-workflow posture detection**
 
