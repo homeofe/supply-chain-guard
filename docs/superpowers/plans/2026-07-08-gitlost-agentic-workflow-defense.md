@@ -1095,7 +1095,7 @@ Append to `src/__tests__/skills-scanner.test.ts`:
 ```typescript
   it("flags a Unicode Tags (ASCII smuggling) run in an agent rules file", () => {
     // U+E0000..U+E007F, encoded as surrogate pairs \uDB40\uDCxx. Three tag chars.
-    const smuggled = "Normal rule text " + "󠁔󠁅󠁓";
+    const smuggled = "Normal rule text " + "\uDB40\uDC54\uDB40\uDC45\uDB40\uDC53";
     const findings = /* call the skills-scanner entry used elsewhere in this file */
       scanAgentRulesContent(smuggled, "CLAUDE.md");
     expect(findings.some((f) => f.rule === "SKILL_INVISIBLE_UNICODE")).toBe(true);
@@ -1136,7 +1136,7 @@ In `src/skills-scanner.ts`, change `INVISIBLE_RUN_REGEX` (~line 63):
 
 ```typescript
 const INVISIBLE_RUN_REGEX =
-  /(?:[​‌‍⁠﻿­͏؜᠎]|\uDB40[\uDC00-\uDC7F]){3,}/;
+  /(?:[\u200B\u200C\u200D\u2060\uFEFF\u00AD\u034F\u061C\u180E]|\uDB40[\uDC00-\uDC7F]){3,}/;
 ```
 
 And extend `escapeInvisible` so smuggled tags render in the snippet. After the existing `INVISIBLE_ESCAPE_REGEX` replace in `escapeInvisible`, add a second pass:

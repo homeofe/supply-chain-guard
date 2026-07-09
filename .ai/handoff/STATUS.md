@@ -1,5 +1,22 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-09, claude-opus-4-8): Post-v5.11.1 repo hygiene (no release, no
+> shipped-artifact change - docs/ and Dockerfile are not in the npm tarball).
+> (1) The self-scan had flagged 2 INVISIBLE_UNICODE runs in docs/superpowers/plans/
+> 2026-07-08-gitlost-agentic-workflow-defense.md: a Unicode-Tags smuggling demo and
+> a copy of INVISIBLE_RUN_REGEX that both embedded LITERAL invisible chars. Since
+> the detector is a raw byte scan with no code-fence awareness, literal ``` fencing
+> would NOT have suppressed it; replaced the literal invisibles with their `\u`
+> escape notation (codepoint-identical, now readable and copy-pasteable, matches
+> patterns.ts:71 style). Self-scan is back to a true 0/100, 0 findings. (2) Fixed a
+> stale Dockerfile comment that still said `node:20-alpine` while both FROM stages
+> have pinned `node:22-alpine` since v5.6.1 (a maintainer following the comment's
+> `imagetools inspect node:20-alpine` would have inspected the wrong image).
+> Audit closed: the npm-12/Node-20 breakage was confined to the CI publish step
+> (fixed in v5.11.1); demo.yml, aahp-verify.yml, action.yml, the Dockerfile and the
+> devcontainer are all either on Node 22 or on Node 20 without `npm@latest`, and the
+> v5.11.1 pipeline ran green end-to-end, so nothing else was broken.
+
 > Note (2026-07-09, claude-opus-4-8): Released v5.11.1 - CI publish-job infra fix.
 > The v5.11.0 tag built + tested green but its publish job died at "Upgrade npm for
 > OIDC trusted publishing": `npm install -g npm@latest` now resolves to npm 12.0.0,

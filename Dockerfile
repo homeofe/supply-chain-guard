@@ -8,13 +8,13 @@
 # check:feed) validate repo files (CHANGELOG.md, .ai/handoff, feed.json) that
 # are intentionally not copied into the image context.
 #
-# Base image pinning: both stages pin node:20-alpine by its multi-arch LIST
+# Base image pinning: both stages pin node:22-alpine by its multi-arch LIST
 # (image index) digest so a compromised or re-pushed tag on Docker Hub cannot
 # silently change what we build and ship. The digest is refreshed DELIBERATELY,
 # not implicitly: dependabot's docker ecosystem (.github/dependabot.yml) opens
-# a weekly PR when a newer node:20-alpine digest exists, and that PR is the
+# a weekly PR when a newer node:22-alpine digest exists, and that PR is the
 # only sanctioned way to bump it. Resolve manually with:
-#   docker buildx imagetools inspect node:20-alpine
+#   docker buildx imagetools inspect node:22-alpine
 # (the top-level "Digest:" line is the list digest FROM needs).
 
 FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS builder
