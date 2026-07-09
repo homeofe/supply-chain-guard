@@ -77,8 +77,13 @@ jobs:
       # LTS bundles npm 10.x, which silently falls back to classic
       # token auth even when id-token: write is granted. Upgrade
       # explicitly so OIDC kicks in.
+      # Pin to the 11.x line: npm@latest is now npm 12, which requires
+      # Node >=22 and hard-fails EBADENGINE on this Node 20 runner (broke
+      # the v5.11.0 publish on 2026-07-09). npm 11.x is OIDC-capable AND
+      # Node-20-compatible. Bump this (and node-version) together if the
+      # publish runner ever moves to Node 22+.
       - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       # Auth happens via OIDC against the npmjs Trusted Publisher
       # configured for this package + this workflow. No NPM_TOKEN

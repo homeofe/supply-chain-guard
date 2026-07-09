@@ -1,5 +1,18 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-09, claude-opus-4-8): Released v5.11.1 - CI publish-job infra fix.
+> The v5.11.0 tag built + tested green but its publish job died at "Upgrade npm for
+> OIDC trusted publishing": `npm install -g npm@latest` now resolves to npm 12.0.0,
+> which requires Node >=22 and hard-fails EBADENGINE on the Node 20 publish runner
+> (npm 12 shipped after yesterday's v5.10.0 release and dropped Node 20). So v5.11.0
+> never reached npm and the GitHub Release + `v5` fast-forward were skipped with it.
+> Fix: pinned the OIDC npm upgrade to `npm@11` (OIDC-capable since 11.5.1 AND
+> Node-20-compatible) instead of floating `npm@latest`, with a comment to bump it
+> together with node-version if the runner ever moves to Node 22+. No application
+> code changed - v5.11.1 carries the full v5.11.0 payload (Paysafe/Skrill/Neteller
+> IOCs + the MALICIOUS_DEPENDENCY dir-scan rule) to npm. Build gates + AAHP green;
+> 1222 tests pass (13 vscode-scanner zip tests fail locally for lack of `zip`).
+
 > Note (2026-07-09, claude-opus-4-8): Released v5.11.0 - fake Paysafe / Skrill /
 > Neteller payment-SDK campaign (Socket, 2026-07-08). 17 typosquat packages
 > published ~2026-07-07 impersonate non-existent official payment SDKs: they

@@ -4,6 +4,21 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.11.1 (2026-07-09)
+**CI: fix the npm-publish job (npm 12 dropped Node 20 support)**
+
+The v5.11.0 tag built and tested green but its publish job failed at "Upgrade
+npm for OIDC trusted publishing": `npm install -g npm@latest` now resolves to
+npm 12.0.0, which requires Node >=22 and hard-fails EBADENGINE on the Node 20
+publish runner. So v5.11.0 never reached npm (GitHub Release and the `v5`
+branch fast-forward were skipped with it).
+
+- Pinned the OIDC npm upgrade to `npm@11` (OIDC-capable since 11.5.1 AND
+  Node-20-compatible) instead of the floating `npm@latest`.
+- This is a no-code-change infra patch: it carries the full v5.11.0 payload
+  (fake Paysafe / Skrill / Neteller SDK IOCs + the new MALICIOUS_DEPENDENCY
+  directory-scan rule) to npm, since v5.11.0 could not publish.
+
 ### v5.11.0 (2026-07-09)
 **Threat intel: fake Paysafe / Skrill / Neteller payment SDKs (npm + PyPI)**
 
