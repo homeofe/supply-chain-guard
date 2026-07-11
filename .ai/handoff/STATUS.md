@@ -1,4 +1,15 @@
 # supply-chain-guard - Project Status
+> Note (2026-07-11, codex): Issue #53 security hardening is ready for review.
+> All VSIX, npm, and PyPI archive extraction now goes through one argv-only
+> helper that resolves paths before invoking unzip/tar, preventing both shell
+> metacharacter execution and leading-dash option injection. IOC and protestware
+> self-scan suppression is now gated by the package's physical real path and an
+> explicit exact relative-path allowlist; arbitrary reporter/test-style target
+> paths are scanned. Added focused regressions; build, lint, self-scan (0/100,
+> 0 findings), 43 focused tests, and all 1,225 non-zip-dependent tests pass.
+> The 13 legacy VSIX integration tests remain Windows-environment-only failures
+> because this host has no zip binary; CI on Ubuntu provides zip.
+
 
 > Note (2026-07-09, claude-opus-4-8): Post-v5.11.1 repo hygiene (no release, no
 > shipped-artifact change - docs/ and Dockerfile are not in the npm tarball).

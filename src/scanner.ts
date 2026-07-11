@@ -84,13 +84,52 @@ import { scanAgentSkillFiles } from "./skills-scanner.js";
 
 const TOOL_VERSION = "5.2.0";
 
-/** Regex matching the scanner's own source files (pattern/IOC/threat-intel definitions). */
-const SCANNER_SOURCE_FILE =
-  /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation)\.(ts|js)$/;
+/**
+ * Exact files that contain this package's own inert detector definitions or
+ * regression fixtures.
+ * This allowlist is consulted only when the target is the package's physical
+ * root below. Basenames, suffixes, and test-directory patterns are never an
+ * exclusion boundary.
+ */
+const SELF_SCAN_INERT_FILES = new Set([
+  "src/active-validation.ts",
+  "src/attack-graph.ts",
+  "src/config-scanner.ts",
+  "src/correlation-engine.ts",
+  "src/dependency-confusion.ts",
+  "src/github-trust-scanner.ts",
+  "src/install-hook-scanner.ts",
+  "src/ioc-blocklist.ts",
+  "src/patterns.ts",
+  "src/playbooks.ts",
+  "src/remediation-engine.ts",
+  "src/reporter.ts",
+  "src/scanner.ts",
+  "src/secret-simulator.ts",
+  "src/threat-intel.ts",
+  "src/workflow-modeler.ts",
+  "src/__tests__/beacon-miner.test.ts",
+  "src/__tests__/campaigns.test.ts",
+  "src/__tests__/infostealer-patterns.test.ts",
+  "src/__tests__/ioc-blocklist.test.ts",
+  "src/__tests__/issue-24-ioc-evasion.test.ts",
+  "src/__tests__/mcp-scanner.test.ts",
+  "src/__tests__/threat-intel.test.ts",
+]);
 
 /** Detect test / spec / fixture / mock files. Shared constant (was duplicated inline). */
 const TEST_FILE_REGEX =
   /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i;
+
+const SCANNER_PACKAGE_ROOT = fs.realpathSync(path.resolve(__dirname, ".."));
+
+function isOwnPackageRoot(scanDir: string): boolean {
+  try {
+    return fs.realpathSync(scanDir) === SCANNER_PACKAGE_ROOT;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Scan a local directory or GitHub repo for malware indicators.
@@ -141,6 +180,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     throw new Error(`Target is not a directory: ${scanDir}`);
   }
 
+  const scanningOwnPackage = isOwnPackageRoot(scanDir);
   // Collect files (v4.5: diff mode filters to changed files only)
   let allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
   if (options.sinceCommit && fs.existsSync(path.join(scanDir, ".git"))) {
@@ -215,7 +255,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
 
       // Check beacon and miner patterns (T-008)
-      checkBeaconMinerPatterns(content, relativePath, findings);
+      checkBeaconMinerPatterns(content, relativePath, findings, scanningOwnPackage);
 
       // Entropy analysis for obfuscated payloads (v4.0)
       const entropyFindings = analyzeEntropy(content, relativePath);
@@ -223,8 +263,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
       // IOC blocklist + threat-intel checks (skip scanner source/test files — they contain IOC definitions)
       const normForIOC = relativePath.replace(/\\/g, "/");
-      const isIOCExcluded = SCANNER_SOURCE_FILE.test(normForIOC) || TEST_FILE_REGEX.test(normForIOC);
-      if (!isIOCExcluded) {
+      const isOwnDefinitionOrFixture =
+        scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normForIOC);
+      if (!isOwnDefinitionOrFixture) {
         const iocFindings = checkIOCBlocklist(content, relativePath);
         findings.push(...iocFindings);
 
@@ -839,6 +880,7 @@ function checkBeaconMinerPatterns(
   content: string,
   relativePath: string,
   findings: Finding[],
+  scanningOwnPackage: boolean,
 ): void {
   const lines = content.split("\n");
   const normalizedPath = relativePath.replace(/\\/g, "/");
@@ -871,7 +913,7 @@ function checkBeaconMinerPatterns(
   }
 
   // Multi-line protestware check: locale/timezone on one line, destructive on nearby lines
-  checkMultiLineProtestware(content, relativePath, findings);
+  checkMultiLineProtestware(content, relativePath, findings, scanningOwnPackage);
 }
 
 /**
@@ -882,10 +924,12 @@ function checkMultiLineProtestware(
   content: string,
   relativePath: string,
   findings: Finding[],
+  scanningOwnPackage: boolean,
 ): void {
-  // Skip scanner source and test files (contain protestware patterns as definitions)
+  // Only this installed package's exact source root may suppress its own
+  // definition/fixture examples. Target-controlled filenames never qualify.
   const normPath = relativePath.replace(/\\/g, "/");
-  if (SCANNER_SOURCE_FILE.test(normPath) || TEST_FILE_REGEX.test(normPath)) return;
+  if (scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normPath)) return;
 
   const lines = content.split("\n");
   const PROXIMITY = 15;

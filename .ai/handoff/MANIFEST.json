@@ -2,18 +2,18 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "cli-tool",
-    "session_id": "cli-1783618256",
-    "timestamp": "2026-07-09T17:30:56Z",
-    "commit": "aa685e9",
-    "phase": "idle",
-    "duration_minutes": 0
+    "agent": "codex",
+    "session_id": "codex-issue-53",
+    "timestamp": "2026-07-11T11:36:06Z",
+    "commit": "5ddd637",
+    "phase": "implementation",
+    "duration_minutes": 30
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:56eefccb9b019a20afad37c6b5e7fd9cf2d42240a3cd679adc5cc64aa83c3946",
-      "updated": "2026-07-09T17:30:45Z",
-      "lines": 442,
+      "checksum": "sha256:82bd331a42ba0464006e6e1bf87c19f95d2ba88d495cc4e2c65cbeb962c4ae61",
+      "updated": "2026-07-11T11:35:31Z",
+      "lines": 453,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:569ce924a7e2ef8e84474ac87ec11075afce1473963a52c66373385143964a34",
-      "updated": "2026-07-09T17:08:16Z",
+      "checksum": "sha256:3dbe5da7e1e419584eddf549ee904459cb0045ba5ef7e5ebc0b18e8e0b7e6f6c",
+      "updated": "2026-07-11T11:33:17Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:b5f62eb5b4a74136cd5c2c785523b0bdf8dedb4f9dedcc167aa8f6febe9c6908",
-      "updated": "2026-07-09T17:08:16Z",
+      "checksum": "sha256:775465386db0362585adaddc3011870f608910e501ab2f5c5658b85ff20c251b",
+      "updated": "2026-07-11T11:33:17Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -71,11 +71,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "(no summary available) (no summary available) ",
+  "quick_context": "Issue #53 shell and IOC hardening ready for review",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 6599,
-    "full_read": 10420
+    "manifest_plus_core": 6747,
+    "full_read": 10570
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

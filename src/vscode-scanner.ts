@@ -11,9 +11,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
-import { execSync } from "node:child_process";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
+import { extractZip } from "./archive-extractor.js";
 import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -217,8 +217,9 @@ export async function scanVscodeExtension(
   const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-"));
 
   try {
-    // Extract using unzip (vsix is a zip file)
-    execSync(`unzip -q -o "${vsixPath}" -d "${extractDir}"`, { stdio: "pipe" });
+    // VSIX is a zip file. The helper uses an argv array so metacharacters in a
+    // user-supplied path are never interpreted by a command shell.
+    extractZip(vsixPath, extractDir, true);
 
     // Collect all files
     const allFiles = collectFilesRecursive(extractDir);
