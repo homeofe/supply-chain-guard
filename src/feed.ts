@@ -23,7 +23,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as https from "node:https";
-import { CACHE_DIR, FEED_CACHE_FILE, type FeedIOC } from "./threat-intel.js";
+import { CACHE_DIR, FEED_CACHE_FILE, isValidFeedIOC, type FeedIOC } from "./threat-intel.js";
 
 /** Published feed location: the committed feed.json on the main branch. */
 export const DEFAULT_FEED_URL =
@@ -95,6 +95,17 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
       typeof e.severity !== "string"
     ) {
       throw new Error("invalid feed format: entry missing type/value/severity");
+    }
+    // Indicator contract (issue #54): values are LITERAL indicators, never
+    // regexes. Refresh is an explicit user action, so violations are a
+    // deterministic hard reject with a precise reason - a rejected feed is
+    // never written to the cache, and the previous cache stays in effect.
+    if (!isValidFeedIOC(e)) {
+      // Both fields are attacker-controlled remote data: bound them before
+      // interpolating into the error string.
+      throw new Error(
+        `invalid feed entry (type ${JSON.stringify(e.type).slice(0, 32)}, value ${JSON.stringify(e.value).slice(0, 80)}): type must be one of domain/ip/url/hash/package and the value must be a literal indicator matching that type's shape (max 2048 chars)`,
+      );
     }
   }
 

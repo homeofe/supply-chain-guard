@@ -673,8 +673,11 @@ export function loadThreatIntel(
         entries: FeedIOC[];
       };
       const age = Date.now() - new Date(cached.timestamp).getTime();
-      if (age < CACHE_TTL_MS) {
-        feed = mergeFeeds(feed, cached.entries);
+      if (age < CACHE_TTL_MS && Array.isArray(cached.entries)) {
+        // Quarantine invalid entries instead of trusting the cast: cached
+        // remote data reaches the per-file scan loop, so a malformed entry
+        // must never leave this function (issue #54).
+        feed = mergeFeeds(feed, cached.entries.filter(isValidFeedIOC));
       }
     } catch { /* ignore corrupt cache */ }
   }
@@ -695,8 +698,12 @@ export async function updateThreatFeed(
     const response = await fetch(feedUrl);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const entries = (await response.json()) as FeedIOC[];
-    if (!Array.isArray(entries)) throw new Error("Invalid feed format");
+    const raw = (await response.json()) as unknown;
+    if (!Array.isArray(raw)) throw new Error("Invalid feed format");
+    // Validate BEFORE caching: entries failing the indicator contract
+    // (unknown type, non-string/empty/oversized value) are quarantined so
+    // they can never reach a scan via the cache (issue #54).
+    const entries = raw.filter(isValidFeedIOC);
 
     fs.mkdirSync(cacheBase, { recursive: true });
     fs.writeFileSync(
@@ -769,6 +776,97 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
 // value. Same rationale as patterns.ts BENIGN_DOC_FILES and ioc-blocklist.ts.
 const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
 
+// ---------------------------------------------------------------------------
+// Indicator contract + hardening (v5.12.0, issue #54)
+//
+// FeedIOC.value is a LITERAL indicator (a domain, IP, URL, hash, or package
+// name), never a regular expression. Before v5.12.0 domain values were
+// compiled to RegExp with only dots escaped, so a hostile or malformed remote
+// feed value like "(" threw SyntaxError inside the per-file scan loop - the
+// per-file catch in scanner.ts swallowed it, silently disabling every check
+// that runs after checkThreatIntel for EVERY file while the scan exited
+// green. A syntactically valid pattern like "(a+)+b" would instead have been
+// .test()-ed against full file contents (ReDoS). Escaping every metacharacter
+// makes the compiled regex exactly the literal indicator, closing both paths.
+// ---------------------------------------------------------------------------
+
+/** Escape every regex metacharacter so `value` matches only itself. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// An indicator value has no business being longer than this (the longest
+// legitimate values are URLs; hashes are 64 chars, domains max 253). Entries
+// above the cap are quarantined on load, not compiled or compared.
+const MAX_IOC_VALUE_LENGTH = 2048;
+
+// Type-aware value shapes: a structurally "valid string" is not enough - a
+// domain entry of "(" would (post-escaping) literal-match every file that
+// contains a parenthesis, turning a hostile feed into a false-positive
+// generator instead of a crash. Each indicator type has a narrow charset.
+const IOC_VALUE_SHAPES: Record<string, RegExp> = {
+  // RFC-ish hostname: labels of letters/digits/hyphen/underscore joined by dots.
+  domain: /^[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)+$/i,
+  // Structural IPv4 (four dotted decimal groups) or IPv6 (>=2 colons, >=1 hex
+  // digit, >=7 chars). Charset alone is NOT enough: non-domain values are
+  // substring-matched, so a degenerate "." or "e" that passed a charset-only
+  // gate would flood every scanned file with critical matches (v5.12.0 gate
+  // finding). The IPv6 floor also rejects "::" and "a::", which would
+  // substring-match every file using a C++/Rust scope operator; realistic
+  // IPv6 blocklist entries ("fe80::1", "2001:db8::1") are 7+ chars. Octet
+  // ranges are deliberately not enforced - not security relevant here.
+  ip: /^(\d{1,3}(\.\d{1,3}){3}|(?=(?:[^:]*:){2})(?=[^a-f0-9]*[a-f0-9])[0-9a-f:.]{7,})$/i,
+  // URL-ish indicator: printable ASCII, no whitespace, and a structure floor
+  // of 8+ chars (bundled entries include host/path URLs and 42-char 0x wallet
+  // addresses; a 1-char printable like "(" must not pass - same flood risk).
+  url: /^[\x21-\x7e]{8,}$/,
+  // MD5 / SHA-1 / SHA-256 / SHA-512 hex digest.
+  hash: /^[0-9a-f]{32,128}$/i,
+  // Package coordinates incl. ecosystem prefixes (ruby:, go:github.com/x/y),
+  // scopes (@scope/name) and version pins (name@1.2.3): printable, no spaces.
+  // Loose is safe here: packages are matched by exact compare, never substring.
+  package: /^[\x21-\x7e]+$/,
+};
+
+// Severity must be one of the report's known levels: an unknown string would
+// flow raw into Finding.severity and break SEVERITY_SCORES lookups (NaN
+// score) and summary counting downstream.
+const VALID_IOC_SEVERITIES = new Set(["critical", "high", "medium", "low", "info"]);
+
+/**
+ * Validity gate for a single feed entry. Remote/cached entries are
+ * JSON.parse results cast to FeedIOC without any runtime check, so every
+ * consumer-facing load path filters through this. Invalid entries are
+ * quarantined (dropped) deterministically instead of crashing a scan or
+ * flooding it with garbage-literal matches.
+ */
+export function isValidFeedIOC(entry: unknown): entry is FeedIOC {
+  if (entry === null || typeof entry !== "object") return false;
+  const e = entry as Partial<FeedIOC>;
+  if (
+    typeof e.type !== "string" ||
+    typeof e.value !== "string" ||
+    e.value.length === 0 ||
+    e.value.length > MAX_IOC_VALUE_LENGTH ||
+    typeof e.severity !== "string" ||
+    !VALID_IOC_SEVERITIES.has(e.severity)
+  ) {
+    return false;
+  }
+  // confidence is optional in remote feeds; when present it must be a sane number.
+  if (e.confidence !== undefined && (typeof e.confidence !== "number" || !(e.confidence >= 0 && e.confidence <= 1))) {
+    return false;
+  }
+  const shape = IOC_VALUE_SHAPES[e.type];
+  return shape !== undefined && shape.test(e.value);
+}
+
+// Domain regexes are compiled once per unique value, not per scanned file
+// (checkThreatIntel runs for every file with the same feed array). A null
+// entry records a value whose compilation failed (unreachable after full
+// escaping, kept as belt and braces) - matched via substring fallback.
+const domainRegexCache = new Map<string, RegExp | null>();
+
 export function checkThreatIntel(
   content: string,
   relativePath: string,
@@ -783,10 +881,29 @@ export function checkThreatIntel(
     if (ioc.type === "package") continue; // Packages checked separately
 
     const valueLower = ioc.value.toLowerCase();
-    const matched =
-      ioc.type === "domain"
-        ? new RegExp(ioc.value.replace(/\./g, "\\."), "i").test(content)
-        : contentLower.includes(valueLower);
+    let matched: boolean;
+    if (ioc.type === "domain") {
+      let regex = domainRegexCache.get(ioc.value);
+      if (regex === undefined) {
+        // Bound the cache: a long-running process (MCP server) reloads the
+        // feed per scan, and a rotating hostile feed of ever-new values must
+        // not grow process memory monotonically (v5.12.0 gate finding).
+        if (domainRegexCache.size >= 10_000) domainRegexCache.clear();
+        try {
+          // Full metacharacter escaping: the value is a literal indicator,
+          // so the compiled regex must match exactly it and nothing else.
+          regex = new RegExp(escapeRegExp(ioc.value), "i");
+        } catch {
+          // Cannot throw after full escaping; belt and braces so a future
+          // edit can never re-introduce the scan-degrading SyntaxError.
+          regex = null;
+        }
+        domainRegexCache.set(ioc.value, regex);
+      }
+      matched = regex ? regex.test(content) : contentLower.includes(valueLower);
+    } else {
+      matched = contentLower.includes(valueLower);
+    }
 
     if (matched) {
       // Apply confidence decay (reduce by 10% per 90 days since firstSeen)

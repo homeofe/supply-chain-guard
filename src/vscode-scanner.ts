@@ -14,7 +14,7 @@ import * as https from "node:https";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { extractZip } from "./archive-extractor.js";
-import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE } from "./patterns.js";
+import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
 
@@ -238,7 +238,11 @@ export async function scanVscodeExtension(
       if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
 
       const fileStat = fs.statSync(filePath);
-      if (fileStat.size > MAX_FILE_SIZE) continue;
+      if (fileStat.size > MAX_FILE_SIZE) {
+        // Surface the skip instead of silently dropping coverage (issue #54).
+        findings.push(makeOversizedSkipFinding(relativePath, fileStat.size));
+        continue;
+      }
 
       filesScanned++;
 

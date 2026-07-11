@@ -27,7 +27,7 @@ guard / GitLab format in v5.6.0), and the full seeded-issue backlog (#40-#47).
 | GitLab `location.dependency.package.name` uses the scan target path (can leak an absolute runner path); use a stable per-finding coordinate | src/reporter.ts formatGitlab | low, cosmetic |
 | Jenkinsfile pins `@latest` (non-reproducible); add a one-line "pin a version for reproducible CI" comment | examples/Jenkinsfile | doc only |
 | Install Guard: version ranges/tags (^1.2.3, latest) are not resolved offline, so pinned-version IOCs only fire on exact pins; document this limitation in the README Install Guard section | README.md | doc / known-limitation |
-| Self-scan flags 2 INVISIBLE_UNICODE in `docs/superpowers/plans/2026-07-08-gitlost-agentic-workflow-defense.md` (a v5.10.0 planning doc that quotes invisible-unicode attack examples). Decide: fence/escape the examples, exclude planning docs from scan scope, or remove the doc. Do NOT suppress the whole INVISIBLE_UNICODE rule (would blind our own self-scan). | docs/superpowers/plans/ | pre-existing, self-scan hygiene |
+| skills-scanner's `readSmallFile()` still returns null silently for oversized agent-rules files (bonus site outside issue #54's scope of core/VSIX/npm/PyPI); consider a SKILL_FILE_TOO_LARGE_SKIPPED for parity | src/skills-scanner.ts readSmallFile | small, parity follow-up |
 
 ---
 
@@ -48,6 +48,8 @@ guard / GitLab format in v5.6.0), and the full seeded-issue backlog (#40-#47).
 
 | Item | Date |
 |------|------|
+| Issue #54: FILE_TOO_LARGE_SKIPPED across all 4 scan families + threat-intel literal-indicator contract with type-aware quarantine (v5.12.0) | 2026-07-11 |
+| Self-scan INVISIBLE_UNICODE in the gitlost plan doc: literal invisibles replaced with \u escape notation (fencing would NOT have worked - raw byte scan) | 2026-07-09 |
 | v5.6.0: install guard (Bet 2) + GitLab format (Bet 3) + registry hardening; gate caught a Windows RCE + 4 more pre-tag | 2026-07-03 |
 | v5.5.0: all 8 seeded issues (#40-#47) + adversarial release gate (6 must-fixes) | 2026-07-02 |
 | v5.4.x: agentic suite + live feed + MCP-install/PowerShell/leak fixes | 2026-07-02 |

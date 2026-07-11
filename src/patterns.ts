@@ -5,7 +5,7 @@
  * Add new patterns, wallet addresses, or domain patterns as they are discovered.
  */
 
-import type { PatternEntry, Severity } from "./types.js";
+import type { Finding, PatternEntry, Severity } from "./types.js";
 
 /** Matches the scanner's own source files — used to prevent self-scan false positives. */
 const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
@@ -1259,6 +1259,33 @@ export const SCANNABLE_EXTENSIONS = new Set([
 
 /** Maximum file size to scan (in bytes). Files larger than this are skipped. */
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Structured finding for an oversized scannable file (issue #54). Before
+ * v5.12.0 the core, VSIX, npm, and PyPI scanners silently `continue`d past
+ * files above MAX_FILE_SIZE - a coverage gap an attacker can create on
+ * purpose by padding a payload past the limit. severity "info" is a
+ * transparency signal: it never affects exit codes (only high/critical do)
+ * and can be filtered with --min-severity or --exclude FILE_TOO_LARGE_SKIPPED.
+ * The oversized body is never read; only fs.stat metadata is reported.
+ */
+export function makeOversizedSkipFinding(
+  relativePath: string,
+  sizeBytes: number,
+): Finding {
+  const sizeMb = (sizeBytes / (1024 * 1024)).toFixed(1);
+  const limitMb = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
+  return {
+    rule: "FILE_TOO_LARGE_SKIPPED",
+    description: `File exceeds the ${limitMb} MB scan limit (${sizeMb} MB) - content was NOT scanned`,
+    severity: "info",
+    confidence: 1.0,
+    category: "info",
+    file: relativePath,
+    recommendation:
+      "This file was skipped by content scanning because of its size. Inspect it manually or verify it is a legitimate large asset - oversized files can be used to smuggle payloads past size-limited scanners.",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Build tool config patterns (v4.0)

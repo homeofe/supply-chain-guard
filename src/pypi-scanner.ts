@@ -21,6 +21,7 @@ import {
   PYTHON_EXTENSIONS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
+  makeOversizedSkipFinding,
 } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -268,8 +269,9 @@ async function downloadAndScanWheel(
 
 /**
  * Scan extracted package files for malicious patterns.
+ * Exported for tests (the download paths need network; this walker does not).
  */
-function scanExtractedFiles(
+export function scanExtractedFiles(
   extractDir: string,
   findings: Finding[],
 ): void {
@@ -286,7 +288,11 @@ function scanExtractedFiles(
     if (!SCANNABLE_EXTENSIONS.has(ext) && !isPython) continue;
 
     const stat = fs.statSync(filePath);
-    if (stat.size > MAX_FILE_SIZE) continue;
+    if (stat.size > MAX_FILE_SIZE) {
+      // Surface the skip instead of silently dropping coverage (issue #54).
+      findings.push(makeOversizedSkipFinding(relativePath, stat.size));
+      continue;
+    }
 
     let content: string;
     try {

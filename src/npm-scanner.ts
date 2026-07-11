@@ -18,6 +18,7 @@ import {
   MALICIOUS_PACKAGE_PATTERNS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
+  makeOversizedSkipFinding,
 } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -256,46 +257,61 @@ async function downloadAndScanTarball(
     extractTarGz(tarballPath, extractDir);
 
     // Scan extracted files
-    const files = collectFilesRecursive(extractDir);
-
-    for (const filePath of files) {
-      const ext = path.extname(filePath).toLowerCase();
-      if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
-
-      const stat = fs.statSync(filePath);
-      if (stat.size > MAX_FILE_SIZE) continue;
-
-      try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        const relativePath = path.relative(extractDir, filePath);
-
-        for (const pattern of FILE_PATTERNS) {
-          const regex = new RegExp(pattern.pattern, "g");
-          const lines = content.split("\n");
-
-          for (let i = 0; i < lines.length; i++) {
-            const match = regex.exec(lines[i] ?? "");
-            if (match) {
-              findings.push({
-                rule: pattern.rule,
-                description: pattern.description,
-                severity: pattern.severity,
-                file: relativePath,
-                line: i + 1,
-                match: match[0].substring(0, 120),
-                recommendation: `Found in published npm tarball. ${pattern.description}`,
-              });
-              regex.lastIndex = 0;
-            }
-          }
-        }
-      } catch {
-        // Skip unreadable files
-      }
-    }
+    scanExtractedNpmFiles(extractDir, findings);
   } finally {
     // Cleanup
     fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Scan the extracted tarball contents for malicious patterns.
+ * Exported for tests (the download path needs network; this walker does not).
+ */
+export function scanExtractedNpmFiles(
+  extractDir: string,
+  findings: Finding[],
+): void {
+  const files = collectFilesRecursive(extractDir);
+
+  for (const filePath of files) {
+    const ext = path.extname(filePath).toLowerCase();
+    if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
+
+    const stat = fs.statSync(filePath);
+    if (stat.size > MAX_FILE_SIZE) {
+      // Surface the skip instead of silently dropping coverage (issue #54).
+      findings.push(makeOversizedSkipFinding(path.relative(extractDir, filePath), stat.size));
+      continue;
+    }
+
+    try {
+      const content = fs.readFileSync(filePath, "utf-8");
+      const relativePath = path.relative(extractDir, filePath);
+
+      for (const pattern of FILE_PATTERNS) {
+        const regex = new RegExp(pattern.pattern, "g");
+        const lines = content.split("\n");
+
+        for (let i = 0; i < lines.length; i++) {
+          const match = regex.exec(lines[i] ?? "");
+          if (match) {
+            findings.push({
+              rule: pattern.rule,
+              description: pattern.description,
+              severity: pattern.severity,
+              file: relativePath,
+              line: i + 1,
+              match: match[0].substring(0, 120),
+              recommendation: `Found in published npm tarball. ${pattern.description}`,
+            });
+            regex.lastIndex = 0;
+          }
+        }
+      }
+    } catch {
+      // Skip unreadable files
+    }
   }
 }
 

@@ -146,12 +146,12 @@ npm test
 The repository ships a [dev container](.devcontainer/devcontainer.json). Open the
 repo in VS Code and choose "Reopen in Container" (or use GitHub Codespaces) - it
 installs Node 20, the `zip` CLI, and runs `npm ci` automatically. In the
-container ALL tests pass, including the 13 vscode-scanner tests that need the
+container ALL tests pass, including the 14 vscode-scanner tests that need the
 `zip` binary.
 
 ### Bare Windows checkout
 
-On a bare Windows machine without a `zip` binary, 13 vscode-scanner tests fail
+On a bare Windows machine without a `zip` binary, 14 vscode-scanner tests fail
 locally. This is NOT a regression - those tests build .vsix fixtures with `zip`
 and are green in CI and in the dev container. Everything else runs fine on
 Windows; use the dev container if you want a fully green suite locally.

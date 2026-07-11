@@ -23,7 +23,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
-import { PROMPT_INJECTION_PATTERNS, MAX_FILE_SIZE } from "./patterns.js";
+import { PROMPT_INJECTION_PATTERNS, MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Target file discovery
@@ -131,13 +131,17 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
 
   for (const relPath of collectRulesFiles(dir)) {
-    const content = readSmallFile(path.join(dir, relPath));
+    const content = readSmallFile(path.join(dir, relPath), (size) =>
+      findings.push(makeOversizedSkipFinding(relPath, size)),
+    );
     if (content === null) continue;
     findings.push(...scanSkillContent(content, relPath));
   }
 
   for (const relPath of [".claude/settings.json", ".claude/settings.local.json"]) {
-    const content = readSmallFile(path.join(dir, relPath));
+    const content = readSmallFile(path.join(dir, relPath), (size) =>
+      findings.push(makeOversizedSkipFinding(relPath, size)),
+    );
     if (content === null) continue;
     findings.push(...scanAgentSettingsContent(content, relPath));
   }
@@ -442,10 +446,20 @@ function listFiles(absDir: string): string[] {
 }
 
 /** Read a file as UTF-8, skipping unreadable or oversized files. */
-function readSmallFile(p: string): string | null {
+function readSmallFile(
+  p: string,
+  onOversized?: (sizeBytes: number) => void,
+): string | null {
   try {
     const stat = fs.statSync(p);
-    if (!stat.isFile() || stat.size > MAX_FILE_SIZE) return null;
+    if (!stat.isFile()) return null;
+    if (stat.size > MAX_FILE_SIZE) {
+      // Surface the skip instead of silently dropping coverage (issue #54):
+      // an agent-rules file padded past the limit would otherwise dodge the
+      // injection scan without a trace in the report.
+      onOversized?.(stat.size);
+      return null;
+    }
     return fs.readFileSync(p, "utf-8");
   } catch {
     return null;

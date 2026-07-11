@@ -54,6 +54,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - Invisible Unicode, RTL override, SVG script injection, steganography
 - Shannon entropy analysis for encoded payloads
 - Proxy handler traps, WebAssembly from external sources
+- Scan-coverage transparency: files above the 5 MB content-scan limit are surfaced as `FILE_TOO_LARGE_SKIPPED` (info severity, never affects exit codes) instead of being silently skipped - padding a payload past the limit no longer hides it from the report
 
 ### Supply Chain Attacks
 - Install hook deep analysis (secret harvesting, download-exec chains, binary blobs)
@@ -123,7 +124,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.11.1
+    rev: v5.12.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -453,6 +454,13 @@ supply-chain-guard feed refresh   # pull the latest published feed into the loca
 ```
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
+
+**Indicator contract:** every feed value is a LITERAL indicator (a domain, IP,
+URL, hash, or package name), never a regular expression. All ingestion paths
+(`feed refresh`, the legacy update API, and the cached-feed load at scan time)
+validate each entry against its type's shape and quarantine anything invalid -
+a malformed or hostile feed entry can neither crash a scan nor flood it with
+garbage matches, and a rejected refresh never overwrites the previous cache.
 
 ## Install Guard
 

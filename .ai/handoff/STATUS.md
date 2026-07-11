@@ -1,5 +1,39 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-11, claude-fable-5): Released v5.12.0 - issue #54 hardening, the
+> follow-up GPT-5.6-Sol/codex filed after PR #55. (1) FILE_TOO_LARGE_SKIPPED
+> (info): core/VSIX/npm/PyPI scanners surface every oversized scannable file
+> instead of silently continue-ing past it (attacker can pad a payload over the
+> 5 MB limit to dodge content scanning); helper makeOversizedSkipFinding in
+> patterns.ts next to MAX_FILE_SIZE; never affects exit codes; oversized body is
+> never read. (2) Threat-intel indicator contract: values are LITERALS. The old
+> compile at threat-intel.ts (only dots escaped) meant a hostile feed value "("
+> threw SyntaxError per file, swallowed by scanner.ts's per-file catch =
+> detection silently degraded while the scan exited GREEN (worse than a crash);
+> a valid "(a+)+b" would ReDoS. Now: full metachar escaping + per-value compile
+> cache + never-throw fallback. (3) Type-aware quarantine (isValidFeedIOC,
+> IOC_VALUE_SHAPES) at ALL 3 ingestion points (parseFeedPayload hard-reject,
+> updateThreatFeed filter-before-write, loadThreatIntel filter-on-load) - found
+> via the E2E proof: a structurally-valid literal "(" would otherwise
+> literal-match every file containing a paren (FP flood). npm/pypi walkers
+> exported (scanExtractedNpmFiles/scanExtractedFiles) for network-free
+> regression tests. 16 new tests (issue-54-hardening.test.ts + 1 vsix test,
+> which raises the Windows zip-failure count 13 -> 14, CONTRIBUTING updated).
+> E2E-proven via real CLI: hostile cache entry fully quarantined, legit domain
+> still matches, big.js surfaced, eval detection intact, self-scan 0/0. A
+> 3-lens adversarial gate then BLOCKED the candidate with 6 confirmed findings,
+> all fixed pre-tag: charset-only ip/url shapes let degenerate flood values
+> (ip ".", url "(") critical-match every file (now IPv4/IPv6 structure + 8-char
+> url floor, E2E re-proven); unbounded domainRegexCache (MCP server memory
+> growth - now cleared at 10k); severity/confidence unchecked (NaN scores -
+> now enum+range gated); skills-scanner readSmallFile silent-skip (now emits
+> FILE_TOO_LARGE_SKIPPED, 5th family); unbounded attacker string in the feed
+> reject error (now sliced). New test file uses REAL bundled IOC values, so it
+> joined scanner.ts's exact-path test allowlist (the PR #55 mechanism). Also in
+> this release: PR #55 codex hardening reaches npm (landed after v5.11.1
+> published), docker/login-action 4.4.0 (#52, SHA-verified), vitest pair 4.1.10
+> (supersedes #50/#51). 1240 tests pass locally (14 zip-only fails).
+
 > Note (2026-07-11, claude-fable-5): Dependency maintenance - resolved all 3 open
 > dependabot PRs. #52 (docker/login-action 4.3.0 -> 4.4.0) squash-merged after
 > verifying the pinned SHA af1e73f918a031802d376d3c8bbc3fe56130a9b0 matches the

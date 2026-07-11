@@ -3,23 +3,23 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1783779821",
-    "timestamp": "2026-07-11T14:23:41Z",
-    "commit": "0991d56",
+    "session_id": "cli-1783782215",
+    "timestamp": "2026-07-11T15:03:35Z",
+    "commit": "e43dcef",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b237b5ad14c2234380a558e401ca3c54e6035583cbb3069a07d8544073806588",
-      "updated": "2026-07-11T14:19:26Z",
-      "lines": 464,
+      "checksum": "sha256:194a79c3446d9d68be874ea0634d7d16c82cf70aa8380bab1fc7ee9f224e5177",
+      "updated": "2026-07-11T15:03:35Z",
+      "lines": 498,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:ad4284244b8ea8531473241d536e48e78d1e9fae24a3e491eb9a1f5fb1e49f13",
-      "updated": "2026-07-09T16:48:58Z",
-      "lines": 57,
+      "checksum": "sha256:d449cbabd3fb9e0d5aa8eebd76fe3fb4d0acd49465add7ed0670f32ee944015f",
+      "updated": "2026-07-11T14:42:15Z",
+      "lines": 59,
       "summary": "(no summary available)"
     },
     "LOG.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:ab140005f157a8f7ae5fb4a47fefc414173bf008c01680ea8274eb7181fa7b61",
-      "updated": "2026-07-11T14:23:41Z",
+      "checksum": "sha256:d3bd13e361c212be3709459e9f0577ab6ff3566ebe491c3e8144a74d40f42e04",
+      "updated": "2026-07-11T15:03:01Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:775465386db0362585adaddc3011870f608910e501ab2f5c5658b85ff20c251b",
-      "updated": "2026-07-11T14:23:41Z",
+      "checksum": "sha256:2949d2bed5c555bf7dc2f110de3fdc7dc9679f69240ce3eb382be82b5d0bd7d8",
+      "updated": "2026-07-11T15:03:01Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -74,8 +74,8 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 6892,
-    "full_read": 10715
+    "manifest_plus_core": 7400,
+    "full_read": 11223
   }
   ,"next_task_id": 8
   ,"tasks": {"T-001":{"title":"Add solana-monitor unit tests","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-002":{"title":"Add reporter unit tests (SARIF, JSON, markdown)","status":"done","priority":"high","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-003":{"title":"Add CLI integration tests","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-004":{"title":"SBOM export (CycloneDX/SPDX)","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-005":{"title":"--fail-on severity threshold flag for CI","status":"done","priority":"medium","depends_on":[],"created":"2026-03-26T09:30:00Z"},"T-006":{"title":"Cargo/Go module scanner","status":"done","priority":"low","depends_on":[],"created":"2026-03-26T09:30:00Z","github_issue":30,"github_repo":"homeofe/supply-chain-guard"},"T-007":{"title":"Rate-limit handling in Solana monitor","status":"done","priority":"low","depends_on":["T-001"],"created":"2026-03-26T09:30:00Z","github_issue":31,"github_repo":"homeofe/supply-chain-guard"}}

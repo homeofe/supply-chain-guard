@@ -415,4 +415,32 @@ fetch('https://example.com');
       ),
     ).toBe(true);
   });
+
+  // issue #54 regression: oversized files inside a VSIX are surfaced, not
+  // silently skipped. Requires the zip binary like the rest of this suite.
+  it("should surface an oversized file inside the extension (FILE_TOO_LARGE_SKIPPED)", async () => {
+    const { MAX_FILE_SIZE } = await import("../patterns.js");
+    const vsixPath = createVsix(tempDir, {
+      "extension/package.json": JSON.stringify({
+        name: "big-file-ext",
+        version: "1.0.0",
+        publisher: "testpub",
+        engines: { vscode: "^1.70.0" },
+        activationEvents: ["onLanguage:javascript"],
+        main: "./extension.js",
+      }),
+      "extension/extension.js": "module.exports = { activate() {} };",
+      "extension/bundle.js": "x".repeat(MAX_FILE_SIZE + 1),
+    });
+
+    const report = await scanVscodeExtension({
+      target: vsixPath,
+      format: "text",
+    });
+
+    const skip = report.findings.find((f) => f.rule === "FILE_TOO_LARGE_SKIPPED");
+    expect(skip).toBeDefined();
+    expect(skip?.severity).toBe("info");
+    expect(skip?.file).toContain("bundle.js");
+  });
 });

@@ -17,6 +17,7 @@ import {
   SUSPICIOUS_SCRIPTS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
+  makeOversizedSkipFinding,
   BINARY_EXTENSIONS,
   BINARY_DOWNLOAD_PATTERNS,
   KNOWN_NATIVE_PACKAGES,
@@ -113,6 +114,7 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/__tests__/infostealer-patterns.test.ts",
   "src/__tests__/ioc-blocklist.test.ts",
   "src/__tests__/issue-24-ioc-evasion.test.ts",
+  "src/__tests__/issue-54-hardening.test.ts",
   "src/__tests__/mcp-scanner.test.ts",
   "src/__tests__/threat-intel.test.ts",
 ]);
@@ -226,9 +228,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Only scan content of known file types
     if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
 
-    // Skip large files
+    // Skip large files - but never silently (issue #54): an oversized
+    // scannable file is a coverage gap an attacker can create on purpose
+    // (pad a payload past the limit to dodge content scanning).
     const fileStat = fs.statSync(filePath);
-    if (fileStat.size > MAX_FILE_SIZE) continue;
+    if (fileStat.size > MAX_FILE_SIZE) {
+      findings.push(makeOversizedSkipFinding(relativePath, fileStat.size));
+      continue;
+    }
 
     filesScanned++;
 
@@ -1284,6 +1291,11 @@ function generateRecommendations(findings: Finding[]): string[] {
   if (rules.has("INVISIBLE_UNICODE")) {
     recommendations.push(
       "Review files with invisible Unicode characters. These can hide malicious code in otherwise normal-looking files.",
+    );
+  }
+  if (rules.has("FILE_TOO_LARGE_SKIPPED")) {
+    recommendations.push(
+      "One or more files exceeded the 5 MB scan limit and were NOT content-scanned. Inspect them manually - oversized files can be used to smuggle payloads past size-limited scanners.",
     );
   }
   if (rules.has("SOLANA_MAINNET") || rules.has("HELIUS_RPC")) {

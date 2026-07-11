@@ -11,10 +11,10 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.11.1 |
+| Version | 5.12.0 |
 | Node engines | >=20.0.0 |
 | Source modules | 62 under `src/` |
-| Test files | 75 under `src/__tests__/` |
+| Test files | 76 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit | verified continuously in CI - see below |
 
