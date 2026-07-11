@@ -30,10 +30,10 @@ reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
 | Package | Range |
 |---------|-------|
 | @types/node | ^26.0.1 |
-| @vitest/coverage-v8 | ^4.1.9 |
+| @vitest/coverage-v8 | ^4.1.10 |
 | commander | ^14.0.3 |
 | typescript | ^6.0.3 |
-| vitest | ^4.1.9 |
+| vitest | ^4.1.10 |
 
 Overrides: none.
 
