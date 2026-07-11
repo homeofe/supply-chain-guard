@@ -1,4 +1,15 @@
 # supply-chain-guard - Project Status
+
+> Note (2026-07-11, claude-fable-5): Dependency maintenance - resolved all 3 open
+> dependabot PRs. #52 (docker/login-action 4.3.0 -> 4.4.0) squash-merged after
+> verifying the pinned SHA af1e73f918a031802d376d3c8bbc3fe56130a9b0 matches the
+> upstream v4.4.0 tag. #50 + #51 (vitest / @vitest/coverage-v8 4.1.9 -> 4.1.10)
+> are peer-coupled and their PR checks were 5 days stale (ran against a v5.6.2-era
+> base), so instead of two sequential rebase cycles they were superseded by ONE
+> combined local bump keeping the pair consistent; both PRs closed with a comment.
+> Full suite on the new state (incl. the just-merged codex PR #55 hardening):
+> 1226 tests pass, only the 13 known Windows-only vscode-scanner zip failures.
+
 > Note (2026-07-11, codex): Issue #53 security hardening is ready for review.
 > All VSIX, npm, and PyPI archive extraction now goes through one argv-only
 > helper that resolves paths before invoking unzip/tar, preventing both shell
