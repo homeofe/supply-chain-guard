@@ -9,9 +9,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
-import { execSync } from "node:child_process";
 import type { Finding, ScanReport, ScanOptions } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
+import { extractTarGz, extractZip } from "./archive-extractor.js";
 import {
   FILE_PATTERNS,
   PYPI_FILE_PATTERNS,
@@ -232,13 +232,9 @@ async function downloadAndScanSdist(
 
     // Determine archive type and extract
     if (url.endsWith(".zip") || url.includes(".zip")) {
-      execSync(`unzip -q "${archivePath}" -d "${extractDir}"`, {
-        stdio: "pipe",
-      });
+      extractZip(archivePath, extractDir);
     } else {
-      execSync(`tar xzf "${archivePath}" -C "${extractDir}"`, {
-        stdio: "pipe",
-      });
+      extractTarGz(archivePath, extractDir);
     }
 
     scanExtractedFiles(extractDir, findings);
@@ -262,7 +258,7 @@ async function downloadAndScanWheel(
 
     const extractDir = path.join(tempDir, "extracted");
     fs.mkdirSync(extractDir, { recursive: true });
-    execSync(`unzip -q "${wheelPath}" -d "${extractDir}"`, { stdio: "pipe" });
+    extractZip(wheelPath, extractDir);
 
     scanExtractedFiles(extractDir, findings);
   } finally {

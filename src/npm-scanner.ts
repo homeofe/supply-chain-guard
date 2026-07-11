@@ -9,9 +9,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
-import { execSync } from "node:child_process";
 import type { Finding, NpmPackageInfo, ScanReport, ScanOptions } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
+import { extractTarGz } from "./archive-extractor.js";
 import {
   FILE_PATTERNS,
   SUSPICIOUS_SCRIPTS,
@@ -253,7 +253,7 @@ async function downloadAndScanTarball(
     // Extract tarball
     const extractDir = path.join(tempDir, "extracted");
     fs.mkdirSync(extractDir, { recursive: true });
-    execSync(`tar xzf "${tarballPath}" -C "${extractDir}"`, { stdio: "pipe" });
+    extractTarGz(tarballPath, extractDir);
 
     // Scan extracted files
     const files = collectFilesRecursive(extractDir);
