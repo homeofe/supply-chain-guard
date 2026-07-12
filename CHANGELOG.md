@@ -4,6 +4,15 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.12.1 (2026-07-12)
+**Threat-intel: jscrambler npm compromise (July 2026)**
+
+- Added a bundled-feed IOC for the compromised `jscrambler@8.14.0` npm release,
+  which shipped a malicious preinstall hook that drops a Rust-based infostealer
+  during install (arena.elvatis.com feed, 2026-07-11). Version-pinned only:
+  `jscrambler` is a legitimate package, so the bare name is intentionally NOT
+  blocked - only the exact compromised version matches.
+
 ### v5.12.0 (2026-07-11)
 **Issue #54 hardening: oversized-file transparency + threat-intel indicator contract**
 

@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.12.0",
-  "entryCount": 327,
+  "version": "5.12.1",
+  "entryCount": 328,
   "entries": [
     {
       "type": "domain",
@@ -2935,6 +2935,15 @@
       "family": "FakePaymentSDK",
       "campaign": "Fake Payment SDK Typosquat",
       "firstSeen": "2026-07-07"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler@8.14.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
     }
   ]
 }

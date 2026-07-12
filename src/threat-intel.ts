@@ -632,6 +632,12 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "skrill-payments", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
   { type: "package", value: "neteller", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
   { type: "domain", value: "caliber-spinner-finishing.ngrok-free.dev", severity: "critical", confidence: 0.95, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
+
+  // Compromised jscrambler npm release (July 2026)
+  // jscrambler 8.14.0 shipped a malicious preinstall hook that drops a Rust-based
+  // infostealer during install. Version-pinned: jscrambler is a legitimate package,
+  // only 8.14.0 is compromised - do NOT block the bare name.
+  { type: "package", value: "jscrambler@8.14.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download
