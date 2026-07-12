@@ -1,5 +1,7 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-12, claude-opus-4-8): synced canonical AAHP gate scripts from homeofe/improvements (adds the realpath-relative PII validator invocation that fixes the Windows/MSYS artifact; AAHP_HANDOFF_FILES preserved).
+
 > Note (2026-07-12, claude-opus-4-8): Fixed the recurring "AAHP Verify" Layer 1 failure on deploy. handoff:refresh (aahp-dashboard.mjs) now regenerates MANIFEST.json in lockstep with DASHBOARD.md + TRUST.md via aahp-manifest.sh, and check:handoff (prebuild) now also verifies the manifest checksums (CR-stripped, matching aahp_checksum), so a version bump can no longer leave the manifest stale and surface only in CI.
 
 > Note (2026-07-11, claude-fable-5): Released v5.12.0 - issue #54 hardening, the
