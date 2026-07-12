@@ -19,6 +19,8 @@
 // source) and dependabot.
 
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -155,6 +157,29 @@ const targets = [
 ];
 const norm = (s) => s.replace(/\r/g, ""); // CRLF-agnostic (Windows working tree)
 
+// MANIFEST.json stores a sha256 checksum per handoff file; "AAHP Verify"
+// Layer 1 (lint-handoff.sh) fails if any stored checksum does not match the
+// file on disk. Regenerating DASHBOARD.md/TRUST.md here (e.g. on a version
+// bump) changes those files, so the manifest MUST be regenerated in the same
+// step or CI goes red on the next push - the recurring on-deploy failure. We
+// keep both in lockstep on write, and gate on it in --check (CI parity,
+// offline). See scripts/_aahp-lib.sh -> aahp_checksum() for the hash contract.
+const manifestPath = join(handoff, "MANIFEST.json");
+// Mirror aahp_checksum() EXACTLY: strip CR, sha256 the bytes, prefix "sha256:".
+const diskChecksum = (name) => {
+  const lf = readFileSync(join(handoff, name)).toString("latin1").replace(/\r/g, "");
+  return "sha256:" + createHash("sha256").update(Buffer.from(lf, "latin1")).digest("hex");
+};
+const staleManifestFiles = () => {
+  if (!existsSync(manifestPath)) return [];
+  const m = JSON.parse(readFileSync(manifestPath, "utf8"));
+  return Object.keys(m.files || {}).filter(
+    (name) =>
+      existsSync(join(handoff, name)) &&
+      m.files[name].checksum !== diskChecksum(name),
+  );
+};
+
 if (process.argv.includes("--check")) {
   const stale = targets.filter(([name, content]) => {
     const p = join(handoff, name);
@@ -169,11 +194,50 @@ if (process.argv.includes("--check")) {
     );
     process.exit(1);
   }
-  console.log("Handoff docs up to date: DASHBOARD.md, TRUST.md.");
+  const staleManifest = staleManifestFiles();
+  if (staleManifest.length > 0) {
+    console.error(
+      `\n  MANIFEST.json checksums are stale: ${staleManifest.join(", ")}.\n` +
+        `  The handoff docs are current but the checksum manifest was not\n` +
+        `  regenerated - this is the exact cause of "AAHP Verify" Layer 1\n` +
+        `  failing in CI after a version bump / release.\n` +
+        `  Fix: run \`npm run handoff:refresh\`, then re-commit.\n`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    "Handoff docs up to date: DASHBOARD.md, TRUST.md; MANIFEST.json checksums in sync.",
+  );
 } else {
   for (const [name, content] of targets) writeFileSync(join(handoff, name), content);
+  // Regenerate MANIFEST.json so its checksums match the docs we just wrote.
+  // Delegate to the canonical writer (keeps token budget / context / last
+  // session authoritative and re-checksums every tracked file, not only these
+  // two). Override the interpreter with AAHP_BASH if `bash` is not on PATH.
+  try {
+    execFileSync(
+      process.env.AAHP_BASH || "bash",
+      [
+        join(repoRoot, "scripts", "aahp-manifest.sh"),
+        repoRoot,
+        "--agent",
+        "handoff-refresh",
+        "--phase",
+        "idle",
+        "--quiet",
+      ],
+      { stdio: "inherit", cwd: repoRoot },
+    );
+  } catch (err) {
+    console.error(
+      `\n  DASHBOARD.md + TRUST.md were written, but MANIFEST.json regen failed:\n` +
+        `  ${err.message}\n` +
+        `  Run manually: bash scripts/aahp-manifest.sh . --quiet\n`,
+    );
+    process.exit(1);
+  }
   console.log(
-    `handoff:refresh OK - DASHBOARD.md + TRUST.md regenerated ` +
+    `handoff:refresh OK - DASHBOARD.md + TRUST.md + MANIFEST.json regenerated ` +
       `(modules=${modules.length}, testFiles=${testFiles.length}, types:[node]=${typesNode}).`,
   );
 }
