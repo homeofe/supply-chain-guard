@@ -1,5 +1,30 @@
 # supply-chain-guard - Project Status
 
+> Note (2026-07-13, claude-opus-4-8): Released v5.12.2 - daily threat-intel refresh
+> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives
+> excerpts + per-item source links; pulled the linked The Hacker News article and
+> cross-checked BleepingComputer / Socket / Aikido / crypto.news for the exact
+> indicators) and added the Injective Labs SDK npm compromise (2026-07-08 to 07-10).
+> The Injective Labs SDK GitHub repo was compromised and its OIDC trusted-publisher
+> pipeline abused to publish @injectivelabs/sdk-ts@1.20.21 with "fake telemetry"
+> that captures wallet private keys + mnemonic seed phrases when SDK key
+> generation/import functions run, base64-encodes them, and HTTPS-POSTs to
+> testnet.archival.chain.grpc-web.injective[.]network. 1.20.21 was also pinned
+> across 17 dependent @injectivelabs packages (18 total; ~310 downloads before
+> deprecation); clean version is 1.20.23. Added all 18 as version-pinned
+> KNOWN_BAD_NPM_VERSIONS + BUNDLED_FEED entries (legitimate packages, so bare names
+> are NOT blocked), the full-specific exfil hostname to KNOWN_C2_DOMAINS (NOT a broad
+> injective[.]network block, so legit SDK endpoints like sentry.chain.grpc-web...
+> are not flagged), and the two SHA-256 infostealer-file hashes to
+> KNOWN_MALICIOUS_HASHES + BUNDLED_FEED. New "Injective SDK npm compromise" campaign
+> test block (5 tests, incl. a 1.20.23-clean FP guard). The compromised GitHub
+> account was a legitimate contributor (a victim), so it is deliberately NOT added to
+> the malicious-account list. Other feed items reviewed (jscrambler@8.14.0 already
+> covered in v5.12.1; Ghostcommit/HalluSquatting/Ghost-accounts are research/technique
+> writeups with no version-pinned package IOCs). feed.json regenerated (349 entries).
+> Build gates + AAHP green; 1245 tests pass (only the 14 vscode-scanner zip tests fail
+> locally for lack of a `zip` binary - green in CI).
+
 > Note (2026-07-12, claude-opus-4-8): synced canonical AAHP gate scripts from homeofe/improvements (adds the realpath-relative PII validator invocation that fixes the Windows/MSYS artifact; AAHP_HANDOFF_FILES preserved).
 
 > Note (2026-07-12, claude-opus-4-8): Fixed the recurring "AAHP Verify" Layer 1 failure on deploy. handoff:refresh (aahp-dashboard.mjs) now regenerates MANIFEST.json in lockstep with DASHBOARD.md + TRUST.md via aahp-manifest.sh, and check:handoff (prebuild) now also verifies the manifest checksums (CR-stripped, matching aahp_checksum), so a version bump can no longer leave the manifest stale and surface only in CI.

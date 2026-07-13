@@ -4,6 +4,27 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.12.2 (2026-07-13)
+**Threat-intel: Injective Labs SDK npm compromise (July 2026)**
+
+- Added IOCs for the Injective Labs SDK supply-chain attack (The Hacker News /
+  BleepingComputer / Socket / Aikido, 2026-07-08 to 07-10). The Injective Labs
+  SDK GitHub repo was compromised and its trusted-publisher (OIDC) pipeline
+  abused to publish `@injectivelabs/sdk-ts@1.20.21` carrying "fake telemetry"
+  that captures wallet private keys and mnemonic seed phrases when SDK key
+  generation/import functions run, base64-encodes them, and HTTPS-POSTs to a
+  lookalike exfil host. Version 1.20.21 was pinned across 17 dependent
+  `@injectivelabs` scoped packages (18 total; ~310 downloads before it was
+  deprecated). Clean version: 1.20.23.
+- All 18 package entries are version-pinned (only 1.20.21 matches) - these are
+  legitimate packages, so the bare names are intentionally NOT blocked.
+- Added the fake-telemetry exfil domain (the full specific hostname is matched,
+  never a broad `injective[.]network` block, so legitimate SDK endpoints are
+  not flagged) and the two SHA-256 hashes of the infostealer files to
+  `ioc-blocklist.ts` and `BUNDLED_FEED`, plus a campaign test block.
+- Source excerpts came from the arena.elvatis.com feed; the exact indicators
+  were confirmed against the linked primary reports before being added.
+
 ### v5.12.1 (2026-07-12)
 **Threat-intel: jscrambler npm compromise (July 2026)**
 

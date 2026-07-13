@@ -638,6 +638,33 @@ const BUNDLED_FEED: FeedIOC[] = [
   // infostealer during install. Version-pinned: jscrambler is a legitimate package,
   // only 8.14.0 is compromised - do NOT block the bare name.
   { type: "package", value: "jscrambler@8.14.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+
+  // Injective Labs SDK npm compromise (The Hacker News / BleepingComputer / Socket / Aikido, July 8-10, 2026)
+  // Attacker abused the Injective Labs SDK GitHub repo + its OIDC trusted-publisher pipeline to publish
+  // @injectivelabs/sdk-ts@1.20.21 with "fake telemetry" that captures wallet private keys + mnemonic seed
+  // phrases (base64) and HTTPS-POSTs them to testnet.archival.chain.grpc-web.injective.network. 1.20.21 was
+  // pinned across 17 dependent @injectivelabs scoped packages (18 total). Clean version: 1.20.23. Version-pinned.
+  { type: "domain", value: "testnet.archival.chain.grpc-web.injective.network", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "hash", value: "103c4e6181151c1bcfedc41506cd1815458c38375d08a8fcd9981dbe0b965ce0", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "hash", value: "9a59eb454f3ca3fe91214136ee5edd417cc47a80e6f169b52099d6561944baf9", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/sdk-ts@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/utils@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/networks@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/ts-types@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/exceptions@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-base@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-core@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-cosmos@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-private-key@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-evm@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-trezor@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-cosmostation@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-ledger@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-wallet-connect@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-magic@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-strategy@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-turnkey@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+  { type: "package", value: "@injectivelabs/wallet-cosmos-strategy@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

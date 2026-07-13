@@ -119,6 +119,15 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // env vars to this exact ngrok tunnel (:443). A specific subdomain, not a
   // broad ngrok-free.dev block, so no false positives on legitimate tunnels.
   "caliber-spinner-finishing.ngrok-free.dev",
+
+  // Injective Labs SDK npm compromise (The Hacker News / BleepingComputer /
+  // Socket / Aikido, July 8-10, 2026). @injectivelabs/sdk-ts@1.20.21 shipped
+  // "fake telemetry" that base64-encodes captured mnemonic seed phrases +
+  // private keys and HTTPS-POSTs them to this lookalike host (styled after
+  // Injective's real grpc-web infra naming). The full specific hostname is
+  // matched, NOT a broad injective.network block, so legitimate endpoints such
+  // as sentry.chain.grpc-web.injective.network are not flagged.
+  "testnet.archival.chain.grpc-web.injective.network",
 ];
 
 // ---------------------------------------------------------------------------
@@ -261,6 +270,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // precursor easy-day-js@1.11.21 is intentionally NOT listed to avoid false positives.
   "221c45a790dec2a296af57969e1165a16f8f49733aeab64c0bbd768d9943badf": "Mastra attack easy-day-js stage-2 Node.js crypto-stealer RAT (SHA256)",
   "4a8860240e4231c3a74c81949be655a28e096a7d72f38fbe84e5b37636b98417": "easy-day-js@1.11.22 malicious npm tarball (SHA256)",
+
+  // Injective Labs SDK npm compromise (July 8-10, 2026) - infostealer files
+  // bundled inside @injectivelabs/sdk-ts@1.20.21 that capture wallet private
+  // keys / mnemonic seed phrases and exfiltrate via fake telemetry.
+  "103c4e6181151c1bcfedc41506cd1815458c38375d08a8fcd9981dbe0b965ce0": "Injective sdk-ts@1.20.21 infostealer accounts-Cy0p4lLW.cjs (SHA256)",
+  "9a59eb454f3ca3fe91214136ee5edd417cc47a80e6f169b52099d6561944baf9": "Injective sdk-ts@1.20.21 infostealer accounts-jQ1GSgaW.js (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -670,6 +685,88 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "hexo-shoka-swiper": {
     versions: ["0.1.10"],
     description: "Miasma LeoPlatform wave (Mini Shai-Hulud variant): hexo-shoka-swiper republished with preinstall credential stealer via compromised maintainer 'czirker' (The Hacker News, June 2026)",
+  },
+  // --- Injective Labs SDK npm compromise (July 8, 2026) ---------------------------
+  // The Injective Labs SDK GitHub repo was compromised and its trusted-publisher
+  // (OIDC) pipeline abused to publish @injectivelabs/sdk-ts@1.20.21 with "fake
+  // telemetry" that captures wallet private keys + mnemonic seed phrases when SDK
+  // key-generation/import functions run, base64-encodes them, and HTTPS-POSTs to
+  // testnet.archival.chain.grpc-web.injective.network. Version 1.20.21 was also
+  // pinned across 17 dependent @injectivelabs scoped packages (18 total; ~310
+  // downloads before deprecation). Clean version: 1.20.23. All entries are
+  // version-pinned - these are legitimate packages, only 1.20.21 is malicious.
+  // Sources: The Hacker News, BleepingComputer, Socket, Aikido (July 2026).
+  "@injectivelabs/sdk-ts": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: sdk-ts@1.20.21 captures wallet private keys + mnemonic seed phrases via fake telemetry, exfiltrates to testnet.archival.chain.grpc-web.injective.network; GitHub repo + OIDC trusted-publisher abuse. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/utils": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/networks": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/ts-types": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/exceptions": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-base": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-core": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-cosmos": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-private-key": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-evm": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-trezor": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-cosmostation": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-ledger": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-wallet-connect": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-magic": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-strategy": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-turnkey": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  "@injectivelabs/wallet-cosmos-strategy": {
+    versions: ["1.20.21"],
+    description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
   },
 };
 
