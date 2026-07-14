@@ -196,7 +196,7 @@ if [ -n "$EMAIL_MATCHES" ]; then
     while IFS= read -r match; do
         address="${match##*:}"
         allowed=0
-        while IFS=$'\t' read -r value owner expires reason; do
+        while IFS=$'\t' read -r value owner expires _; do
             [ -z "$value" ] && continue
             if [ "$address" = "$value" ]; then
                 echo -e "  ${GREEN}OK Allowed PII email '$address' via pii-allowlist.json (owner: $owner, expires: $expires).${NC}"
