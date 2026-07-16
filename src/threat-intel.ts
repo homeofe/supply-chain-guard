@@ -665,6 +665,18 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "@injectivelabs/wallet-strategy@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
   { type: "package", value: "@injectivelabs/wallet-turnkey@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
   { type: "package", value: "@injectivelabs/wallet-cosmos-strategy@1.20.21", severity: "critical", confidence: 1.0, family: "WalletStealer", campaign: "Injective SDK npm compromise", firstSeen: "2026-07-08" },
+
+  // AsyncAPI npm supply-chain compromise (The Hacker News / BleepingComputer / Socket / StepSecurity, July 14-15, 2026)
+  // Five malicious versions across four @asyncapi packages published in a ~4h window on 2026-07-14
+  // (07:10-11:18 UTC) delivering a credential-stealing multi-stage botnet loader. Second stage pulled
+  // from IPFS; C2 over HTTP / Nostr relay / IPFS / BitTorrent DHT / libp2p GossipSub / Ethereum contract.
+  // All versions since unpublished. Version-pinned: legitimate packages, only these versions are malicious.
+  { type: "url", value: "ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+  { type: "package", value: "@asyncapi/generator@3.3.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+  { type: "package", value: "@asyncapi/generator-helpers@1.1.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+  { type: "package", value: "@asyncapi/generator-components@0.7.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+  { type: "package", value: "@asyncapi/specs@6.11.2", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+  { type: "package", value: "@asyncapi/specs@6.11.2-alpha.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

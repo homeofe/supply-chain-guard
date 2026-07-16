@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.12.2",
-  "entryCount": 349,
+  "version": "5.12.3",
+  "entryCount": 355,
   "entries": [
     {
       "type": "domain",
@@ -3133,6 +3133,60 @@
       "family": "WalletStealer",
       "campaign": "Injective SDK npm compromise",
       "firstSeen": "2026-07-08"
+    },
+    {
+      "type": "url",
+      "value": "ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@asyncapi/generator@3.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@asyncapi/generator-helpers@1.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@asyncapi/generator-components@0.7.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@asyncapi/specs@6.11.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@asyncapi/specs@6.11.2-alpha.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BotnetLoader",
+      "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
     }
   ]
 }

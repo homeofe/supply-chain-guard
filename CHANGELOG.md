@@ -4,6 +4,31 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.12.3 (2026-07-16)
+**Threat-intel: AsyncAPI npm supply-chain compromise (July 2026)**
+
+- Added IOCs for the AsyncAPI npm supply-chain attack (The Hacker News /
+  BleepingComputer / Socket / StepSecurity, 2026-07-14 to 07-15). Five malicious
+  versions across four packages in the `@asyncapi` namespace were published to
+  npm during a roughly 4-hour window on 2026-07-14 (07:10-11:18 UTC) and
+  delivered a credential-stealing multi-stage botnet loader. The loader pulls a
+  second stage from IPFS and supports C2 over HTTP, Nostr relays, IPFS,
+  BitTorrent DHT, libp2p GossipSub, and an Ethereum smart contract. All five
+  versions have since been unpublished from npm. Reported jointly by OX Security,
+  SafeDep, Socket, StepSecurity, Microsoft, Wiz and Aikido.
+- Version-pinned entries added to `KNOWN_BAD_NPM_VERSIONS` and `BUNDLED_FEED`:
+  `@asyncapi/generator@3.3.1`, `@asyncapi/generator-helpers@1.1.1`,
+  `@asyncapi/generator-components@0.7.1`, and `@asyncapi/specs@6.11.2` /
+  `6.11.2-alpha.1`. These are legitimate packages, so the bare names are
+  intentionally NOT blocked - only the listed versions match.
+- Added the specific IPFS second-stage CID as a dead-drop resolver. The exact
+  malicious CID path is matched, never the `ipfs[.]io` gateway host, so
+  legitimate IPFS usage is not flagged.
+- New "AsyncAPI npm compromise (July 2026)" campaign test block.
+- Source excerpts came from the arena.elvatis.com feed; the exact package
+  versions were confirmed against two independent primary reports before being
+  added.
+
 ### v5.12.2 (2026-07-13)
 **Threat-intel: Injective Labs SDK npm compromise (July 2026)**
 

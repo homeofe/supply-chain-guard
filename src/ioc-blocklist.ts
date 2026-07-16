@@ -200,6 +200,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
   "steamcommunity.com/profiles/76561198721263282",
   "telegram.me/g1n3sss",
   "t.me/g1n3sss",
+
+  // AsyncAPI npm compromise (July 2026)
+  // Second-stage loader was fetched from the IPFS peer-to-peer network. The
+  // specific malicious CID path is matched, NOT the ipfs.io gateway host, so
+  // legitimate IPFS usage is not flagged.
+  "ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9",
 ];
 
 // ---------------------------------------------------------------------------
@@ -767,6 +773,32 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@injectivelabs/wallet-cosmos-strategy": {
     versions: ["1.20.21"],
     description: "Injective Labs SDK npm compromise: republished pinning the malicious @injectivelabs/sdk-ts@1.20.21 wallet-key stealer as a dependency. Clean: 1.20.23 (July 2026)",
+  },
+  // --- AsyncAPI npm supply-chain compromise (July 14, 2026) -----------------------
+  // Five malicious versions across four packages in the @asyncapi namespace were
+  // published to npm during a ~4h window on 2026-07-14 (07:10-11:18 UTC), delivering
+  // a credential-stealing multi-stage botnet loader. The loader pulls a second stage
+  // from IPFS and supports C2 over HTTP, Nostr relays, IPFS, BitTorrent DHT, libp2p
+  // GossipSub, and an Ethereum smart contract. Reported by OX Security, SafeDep,
+  // Socket, StepSecurity, Microsoft, Wiz and Aikido; all five versions have since
+  // been unpublished. All entries are version-pinned - these are legitimate packages,
+  // only the listed versions are malicious. Do NOT block the bare names.
+  // Sources: The Hacker News, BleepingComputer (July 15, 2026).
+  "@asyncapi/generator": {
+    versions: ["3.3.1"],
+    description: "AsyncAPI npm compromise: generator@3.3.1 delivers a credential-stealing multi-stage botnet loader (second stage from IPFS; multi-channel C2). Legitimate package - only 3.3.1 is malicious (July 2026)",
+  },
+  "@asyncapi/generator-helpers": {
+    versions: ["1.1.1"],
+    description: "AsyncAPI npm compromise: generator-helpers@1.1.1 delivers a credential-stealing multi-stage botnet loader (second stage from IPFS; multi-channel C2). Legitimate package - only 1.1.1 is malicious (July 2026)",
+  },
+  "@asyncapi/generator-components": {
+    versions: ["0.7.1"],
+    description: "AsyncAPI npm compromise: generator-components@0.7.1 delivers a credential-stealing multi-stage botnet loader (second stage from IPFS; multi-channel C2). Legitimate package - only 0.7.1 is malicious (July 2026)",
+  },
+  "@asyncapi/specs": {
+    versions: ["6.11.2", "6.11.2-alpha.1"],
+    description: "AsyncAPI npm compromise: specs@6.11.2 / 6.11.2-alpha.1 deliver a credential-stealing multi-stage botnet loader (second stage from IPFS; multi-channel C2). Legitimate package - only these versions are malicious (July 2026)",
   },
 };
 

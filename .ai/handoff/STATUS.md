@@ -4,6 +4,30 @@
 
 # supply-chain-guard - Project Status
 
+> Note (2026-07-16, claude-opus-4-8): Released v5.12.3 - daily threat-intel refresh
+> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives
+> excerpts + per-item source links) and added the AsyncAPI npm supply-chain
+> compromise (2026-07-14). Five malicious versions across four @asyncapi packages
+> were published to npm during a ~4h window (07:10-11:18 UTC on 2026-07-14),
+> delivering a credential-stealing multi-stage botnet loader that pulls a second
+> stage from IPFS and speaks C2 over HTTP / Nostr / IPFS / BitTorrent DHT / libp2p
+> GossipSub / an Ethereum smart contract; all five have since been unpublished.
+> The exact package versions were confirmed against two independent primary reports
+> (The Hacker News and BleepingComputer, both citing OX Security / SafeDep / Socket /
+> StepSecurity). Added @asyncapi/generator@3.3.1, @asyncapi/generator-helpers@1.1.1,
+> @asyncapi/generator-components@0.7.1, and @asyncapi/specs@6.11.2 / 6.11.2-alpha.1 as
+> version-pinned KNOWN_BAD_NPM_VERSIONS + BUNDLED_FEED entries (legitimate packages, so
+> bare names are NOT blocked). Added the specific IPFS second-stage CID
+> (ipfs[.]io/ipfs/QmQobZSp1w...) as a KNOWN_DEAD_DROPS entry - the exact CID path only,
+> never the ipfs[.]io gateway, so legitimate IPFS usage is not flagged. No file hashes,
+> C2 domains, or IPs were disclosed in the reports, so none were invented. New "AsyncAPI
+> npm compromise (July 2026)" campaign test block (4 tests, incl. a clean-version FP
+> guard). Other feed items reviewed (Starland RAT / LabubaRAT / OkoBot / "300 fake
+> GitHub repos" carried no concrete version-pinned package IOCs or disclosed
+> domains/IPs/hashes in the feed). feed.json regenerated (355 entries). Build gates +
+> AAHP green; tests pass (only the 14 vscode-scanner zip tests fail locally for lack of
+> a `zip` binary - green in CI).
+
 > Note (2026-07-13, claude-opus-4-8): Released v5.12.2 - daily threat-intel refresh
 > (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives
 > excerpts + per-item source links; pulled the linked The Hacker News article and

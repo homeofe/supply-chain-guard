@@ -2341,4 +2341,76 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // AsyncAPI npm supply-chain compromise (July 14, 2026)
+  // =================================================================
+
+  describe("AsyncAPI npm compromise (July 2026)", () => {
+    it("flags @asyncapi/generator@3.3.1 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@asyncapi/generator": "3.3.1" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the pre-release @asyncapi/specs@6.11.2-alpha.1", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@asyncapi/specs": "6.11.2-alpha.1" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a clean @asyncapi/generator version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@asyncapi/generator": "3.3.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.some((f) => f.rule === "IOC_KNOWN_BAD_VERSION")
+      ).toBe(false);
+    });
+
+    it("detects the IPFS second-stage dead-drop CID in package code", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const url = "https://ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });
