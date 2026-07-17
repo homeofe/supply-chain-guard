@@ -128,6 +128,13 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // matched, NOT a broad injective.network block, so legitimate endpoints such
   // as sentry.chain.grpc-web.injective.network are not flagged.
   "testnet.archival.chain.grpc-web.injective.network",
+
+  // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026). Specific
+  // sub-hosts only - never the workers.dev / selcloud.ru / pepesoft.ru apex, so
+  // legitimate Cloudflare Workers / Selectel usage is not flagged.
+  "calm-voice-9797.888c888x888.workers.dev",
+  "s3.ru-3.storage.selcloud.ru",
+  "bots.pepesoft.ru",
 ];
 
 // ---------------------------------------------------------------------------
@@ -189,6 +196,10 @@ export const KNOWN_C2_IPS: string[] = [
   // receives the larger file uploads. Mapbox (a legitimate mapping API) is abused as a
   // DNS-over-HTTPS dead drop and is intentionally NOT listed to avoid false positives.
   "91.132.163.78",
+
+  // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026) - authenticated
+  // HTTP proxy the surveillance payload speaks to (port 9528 in the report; host only).
+  "196.16.3.71",
 ];
 
 // ---------------------------------------------------------------------------
@@ -206,6 +217,23 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // specific malicious CID path is matched, NOT the ipfs.io gateway host, so
   // legitimate IPFS usage is not flagged.
   "ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9",
+
+  // PhantomSync npm crypto stealer (Xygeni, July 15, 2026). Config dead-drop is a
+  // specific GitHub gist raw path; the three IPFS CIDs are config fallbacks (bare
+  // CID strings, matched by content, never the ipfs.io/pinata gateway hosts).
+  "gist.githubusercontent.com/juang55/b298754cb72942b1cdcf02ccd45cde2f/raw/cfg.txt",
+  "Qmcqz3w8j4qFQXDAXAxnrdc2oSX3nzBT4NqtpTqL8mr1ga",
+  "QmdTXoqVmTHY1i4ZWLdLkoQ9YChp5TXPh5cWXwnAYZt5iF",
+  "QmfJkLU5gdCpqbbqEjWYC2anXW9FmuEeSLLeLiHVJKYUjp",
+
+  // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026). Specific
+  // path/handle values only - never the discord.com / t.me / github.com /
+  // huggingface.co parent hosts.
+  "t.me/pepesoft777",
+  "github.com/pepegit666/123f53y45ysdf34",
+  "huggingface.co/buckets/pepegit666",
+  "discord.com/api/webhooks/1156474517871403078/zuHl6xQzdMcFjNrmm9jTiHvCzNbCiQhkYAIGWNUfj7X4KUIpEATekKlSNna6OvyCKaRw",
+  "discord.com/api/webhooks/1156474527874818088/qS5cJuxEbyIA1s3tZX_A2u6YsKtLUARVPvN77_6fK5QHGdGFHb3JSuCUSDhtouEsyJgk",
 ];
 
 // ---------------------------------------------------------------------------
@@ -282,6 +310,40 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // keys / mnemonic seed phrases and exfiltrate via fake telemetry.
   "103c4e6181151c1bcfedc41506cd1815458c38375d08a8fcd9981dbe0b965ce0": "Injective sdk-ts@1.20.21 infostealer accounts-Cy0p4lLW.cjs (SHA256)",
   "9a59eb454f3ca3fe91214136ee5edd417cc47a80e6f169b52099d6561944baf9": "Injective sdk-ts@1.20.21 infostealer accounts-jQ1GSgaW.js (SHA256)",
+
+  // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026) - 31 SHA-256
+  // payload hashes (11 downloader assemblies + 20 second-stage native/pyc/PyArmor).
+  "d5385526f2f3e52c7d96087611c6cd4e479bf61828400efdb3ca09406d981609": "Pepesoft albion.dll (SHA256)",
+  "9a2091e6625fc11cfd8f39c17aa271604e66322ee045028946274b988103e35b": "Pepesoft amazingrp.dll (SHA256)",
+  "900ddb81d27e03967209fee4d17d13deb68eef0e1f10936eb520ca10575cb49e": "Pepesoft calculator.dll (SHA256)",
+  "ab58a90eb3682c6dc3389cd700a64f68a19c0dac3d0fa8e3df97ae041f96d4e1": "Pepesoft grandrp.dll (SHA256)",
+  "e6e1049158ceb1971c61388349c81fa6047a7aecb4ff2089ef54a50dcc35dbc0": "Pepesoft gta5rp.dll (SHA256)",
+  "d9f7ca9f93a7d188d51db308877b15d0beae932ca0bf4705384fbedf54b454c1": "Pepesoft lineage2.dll (SHA256)",
+  "4d13f1136b13c871c65141b77ec7208488334ac4be511800196adcd328666305": "Pepesoft majestic.dll (SHA256)",
+  "011926de3d0cc2b970627b9bf0de003e731f8576602dff756d2ab54a9de61972": "Pepesoft rmrp.dll (SHA256)",
+  "79c09e1ffb4804c14ff27d41ec08d4390455c92d65717be0aeeec2697297d76a": "Pepesoft rusfish4.dll (SHA256)",
+  "5f3a9ebf7039097b3cdbca8609b5b68af07eeb1dbf716ba2817a97fc7c543854": "Pepesoft setup.dll (throne) (SHA256)",
+  "23808e7638f7a00b1ef9b9f4ca524f8a46cf63be6f6b79fec8e4a3fd1cc82a1e": "Pepesoft trigger.dll (SHA256)",
+  "e8c2618565aa31d7ffe909ebc99040bafcc0ea8df7f5d92fa673bb7ffacb14c9": "Pepesoft Amazing RP native (SHA256)",
+  "6eefe9d5f030d403c72bd4e4caf5bbb9dbc2bd5e15ebb07de153494f458e5eb9": "Pepesoft GrandRP native (SHA256)",
+  "8ab256dd839aec6638cd46374f4a6664e534b9341bbcdfd9b763e5a27c51ddb7": "Pepesoft GTA5RP native (SHA256)",
+  "6c1f828e4d8395dde8293868c65ba8d86b3b9672ebbbb16e932624706d37d832": "Pepesoft Lineage 2 native (SHA256)",
+  "6cbd4bc491deb11040e2b2f91b0b4e129af551a802fc78cb42e0e985297ef44c": "Pepesoft Majestic native (SHA256)",
+  "5d9843126db4223dc2a8a9cd4a627286fe1a6345e33b28e9c98b5fe56fe89da6": "Pepesoft RMRP native (SHA256)",
+  "c9f3e7766dbe728d84a1243447faa5f5eba0645bf13089074d128ea7663e7f5b": "Pepesoft Russian Fishing 4 native (SHA256)",
+  "a2a5e473dba85959b21b7e8a184bc255d5f2dacdf7411b91d212fb1217d2518b": "Pepesoft Trigger native (SHA256)",
+  "ba7fc544994f126cb7485ce52d265d2f32e93c4f1ea1fcd6fcdee3918f271979": "Pepesoft charset_normalizer mypyc (SHA256)",
+  "567952daf0ab7b36b017aac9963791188dea0fbf2e99c7cc6f6652ee540f4840": "Pepesoft gtaobus.pyc (Albion) (SHA256)",
+  "cc853b3e4504c890d275ac2327f18acd7e4c5b99ca056181f3f5694781f2cf45": "Pepesoft gtaobus.pyc (Calculator) (SHA256)",
+  "476c6f36a22156e53548a87291989a21d6c905dcbd9e1bf68ff5bc12e5c8bb07": "Pepesoft gtaobus.pyc (Throne) (SHA256)",
+  "774e40046f353e3f916f39e3d13d6499da35705a479cfb89288c21017aaf5461": "Pepesoft PyArmor Amazing RP (SHA256)",
+  "23e4d8af5425dae022793450190c8d30809b2986dd879eb4bff557cdacf49c86": "Pepesoft PyArmor GrandRP (SHA256)",
+  "95577498d23fe750221a5badfc25b5e9f020dcf4d80c79a019b090e3c3b0a32a": "Pepesoft PyArmor GTA5RP (SHA256)",
+  "2a4fed04d792b9c2fdf9c1456a08ca23eda5fef50c0b409ab294ad489e12d801": "Pepesoft PyArmor Lineage 2 (SHA256)",
+  "7e42d25e707d29d5d185a4c5dc71019f744e88a30b66bbf06949194ff32dbc48": "Pepesoft PyArmor Majestic (SHA256)",
+  "d59e1914d76499fa51bf861f418c84bda0b48913dc39bd2e73756e326e4ccbb0": "Pepesoft PyArmor RMRP (SHA256)",
+  "17b1d836c2f15a97be0350879943b04e14bc076cf09e31df0d73258ee10f7e7c": "Pepesoft PyArmor Russian Fishing 4 (SHA256)",
+  "01d2afea0f2201a3b59765a1a60ba324ff4b8fdd25f23a0e05824b97f195b27c": "Pepesoft PyArmor Trigger (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -799,6 +861,45 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@asyncapi/specs": {
     versions: ["6.11.2", "6.11.2-alpha.1"],
     description: "AsyncAPI npm compromise: specs@6.11.2 / 6.11.2-alpha.1 deliver a credential-stealing multi-stage botnet loader (second stage from IPFS; multi-channel C2). Legitimate package - only these versions are malicious (July 2026)",
+  },
+
+  // --- PhantomSync npm crypto-wallet stealer (Xygeni, July 15, 2026) -----------
+  // SINGLE-SOURCE (Xygeni only). Generic blockchain-util names published by
+  // solbuilder_io, each malicious at specific versions only (name-squat takeover
+  // risk), so version-pinned. Steals ETH/BTC/Solana keys + BIP-39 seeds, exfil to
+  // IPFS via Pinata, persists via cron/schtasks/launchd. IMPORTANT: base58-utils
+  // 1.0.2 is NOT malicious - only 1.0.0/1.0.1/1.0.3 are.
+  "base58-utils": {
+    versions: ["1.0.0", "1.0.1", "1.0.3"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata. Malicious versions 1.0.0/1.0.1/1.0.3 (NOT 1.0.2)",
+  },
+  "abi-encode": {
+    versions: ["1.0.0", "1.0.1", "1.0.2"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "eth-dev": {
+    versions: ["1.0.0", "1.0.1", "1.0.2"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "arb-kit": {
+    versions: ["1.0.0", "1.0.1"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "layer2-sdk": {
+    versions: ["1.0.0", "1.0.1"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "solana-key-utils": {
+    versions: ["1.0.0"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "eth-wallet-helpers": {
+    versions: ["1.0.0"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  "crypto-validate-lib": {
+    versions: ["1.0.0"],
+    description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
   },
 };
 

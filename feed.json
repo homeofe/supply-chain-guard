@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.12.3",
-  "entryCount": 355,
+  "version": "5.12.4",
+  "entryCount": 376,
   "entries": [
     {
       "type": "domain",
@@ -3186,6 +3186,195 @@
       "confidence": 1,
       "family": "BotnetLoader",
       "campaign": "AsyncAPI npm compromise",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "base58-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "base58-utils@1.0.1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "base58-utils@1.0.3",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "abi-encode@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "abi-encode@1.0.1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "abi-encode@1.0.2",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "eth-dev@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "eth-dev@1.0.1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "eth-dev@1.0.2",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "arb-kit@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "arb-kit@1.0.1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "layer2-sdk@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "layer2-sdk@1.0.1",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "solana-key-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "eth-wallet-helpers@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "package",
+      "value": "crypto-validate-lib@1.0.0",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "url",
+      "value": "gist.githubusercontent.com/juang55/b298754cb72942b1cdcf02ccd45cde2f/raw/cfg.txt",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WalletStealer",
+      "campaign": "PhantomSync npm crypto stealer",
+      "firstSeen": "2026-07-15"
+    },
+    {
+      "type": "domain",
+      "value": "calm-voice-9797.888c888x888.workers.dev",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "GameCheatSpyware",
+      "campaign": "Pepesoft NuGet surveillance",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "domain",
+      "value": "s3.ru-3.storage.selcloud.ru",
+      "severity": "high",
+      "confidence": 0.9,
+      "family": "GameCheatSpyware",
+      "campaign": "Pepesoft NuGet surveillance",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "domain",
+      "value": "bots.pepesoft.ru",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "GameCheatSpyware",
+      "campaign": "Pepesoft NuGet surveillance",
+      "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "ip",
+      "value": "196.16.3.71",
+      "severity": "high",
+      "confidence": 0.9,
+      "family": "GameCheatSpyware",
+      "campaign": "Pepesoft NuGet surveillance",
       "firstSeen": "2026-07-14"
     }
   ]

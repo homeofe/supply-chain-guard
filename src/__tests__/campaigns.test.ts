@@ -2413,4 +2413,75 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  describe("PhantomSync npm crypto stealer (July 2026)", () => {
+    it("flags base58-utils@1.0.0 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "consumer", version: "1.0.0", dependencies: { "base58-utils": "1.0.0" } })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag base58-utils@1.0.2 (only 1.0.0/1.0.1/1.0.3 are malicious)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "consumer", version: "1.0.0", dependencies: { "base58-utils": "1.0.2" } })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_BAD_VERSION")).toBe(false);
+    });
+
+    it("detects a PhantomSync IPFS config-fallback CID in package code", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "sync.js"),
+        'const cid = "Qmcqz3w8j4qFQXDAXAxnrdc2oSX3nzBT4NqtpTqL8mr1ga";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_DEAD_DROP")).toBe(true);
+    });
+  });
+
+  describe("Pepesoft NuGet surveillance (July 2026)", () => {
+    it("detects a Pepesoft payload SHA-256 referenced in content", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest.json"),
+        JSON.stringify({ hash: "d5385526f2f3e52c7d96087611c6cd4e479bf61828400efdb3ca09406d981609" })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the Pepesoft Cloudflare-Worker C2 sub-host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "cfg.js"),
+        'fetch("https://calm-voice-9797.888c888x888.workers.dev/activate");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(true);
+    });
+
+    it("does NOT block the redacted-placeholder NuGet id (albion-x-x is not an installable id)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "packages.config"),
+        '<packages><package id="albion-x-x" version="1.0.0" /></packages>'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_BAD_VERSION")).toBe(false);
+    });
+
+    it("does NOT flag the legitimate workers.dev / selcloud.ru apex (specific sub-host only)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ok.js"),
+        'fetch("https://my-app.workers.dev/x"); fetch("https://storage.selcloud.ru/y");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(false);
+    });
+  });
 });

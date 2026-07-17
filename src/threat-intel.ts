@@ -677,6 +677,42 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "@asyncapi/generator-components@0.7.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
   { type: "package", value: "@asyncapi/specs@6.11.2", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
   { type: "package", value: "@asyncapi/specs@6.11.2-alpha.1", severity: "critical", confidence: 1.0, family: "BotnetLoader", campaign: "AsyncAPI npm compromise", firstSeen: "2026-07-14" },
+
+  // PhantomSync npm crypto-wallet stealer (Xygeni, July 15, 2026). SINGLE-SOURCE
+  // (Xygeni only; no independent corroboration found) - hence confidence 0.85, not
+  // 1.0. Publisher solbuilder_io. 8 generic blockchain-util package names, each
+  // malicious at SPECIFIC versions only (name-squat takeover risk), so version-pinned
+  // NEVER bare-name. NOTE base58-utils is malicious at 1.0.0/1.0.1/1.0.3 but NOT
+  // 1.0.2. Steals ETH/BTC/Solana keys + BIP-39 seeds, exfil to IPFS via Pinata.
+  { type: "package", value: "base58-utils@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "base58-utils@1.0.1", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "base58-utils@1.0.3", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "abi-encode@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "abi-encode@1.0.1", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "abi-encode@1.0.2", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "eth-dev@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "eth-dev@1.0.1", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "eth-dev@1.0.2", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "arb-kit@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "arb-kit@1.0.1", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "layer2-sdk@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "layer2-sdk@1.0.1", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "solana-key-utils@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "eth-wallet-helpers@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "package", value: "crypto-validate-lib@1.0.0", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+  { type: "url", value: "gist.githubusercontent.com/juang55/b298754cb72942b1cdcf02ccd45cde2f/raw/cfg.txt", severity: "critical", confidence: 0.85, family: "WalletStealer", campaign: "PhantomSync npm crypto stealer", firstSeen: "2026-07-15" },
+
+  // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026). Publisher
+  // pepegit666. The 11 package IDs in the writeup carry a uniform "-x-x" suffix
+  // that is a source-side redaction placeholder (absent from a full mirror), NOT
+  // an installable id - so NO package entries are ingested (a redacted id blocks
+  // nothing; a guessed real id risks false positives). Detection rides on the 32
+  // SHA-256 payload hashes (ioc-blocklist KNOWN_MALICIOUS_HASHES) + this network
+  // infra. Specific sub-hosts only, never the workers.dev/selcloud.ru apex.
+  { type: "domain", value: "calm-voice-9797.888c888x888.workers.dev", severity: "critical", confidence: 0.95, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
+  { type: "domain", value: "s3.ru-3.storage.selcloud.ru", severity: "high", confidence: 0.9, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
+  { type: "domain", value: "bots.pepesoft.ru", severity: "critical", confidence: 0.95, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
+  { type: "ip", value: "196.16.3.71", severity: "high", confidence: 0.9, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

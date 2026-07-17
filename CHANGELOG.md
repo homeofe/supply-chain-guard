@@ -4,6 +4,37 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.12.4 (2026-07-17)
+**Threat intel: PhantomSync (npm crypto stealer) + Pepesoft (NuGet surveillance)**
+
+Two campaigns disclosed 2026-07-14/15, ingested with primary-source
+verification. Both were confirmed genuinely new against the existing feed.
+
+- **PhantomSync** (npm, Xygeni, 2026-07-15): a crypto-wallet stealer that
+  exfiltrates ETH/BTC/Solana keys and BIP-39 seeds to IPFS via Pinata and
+  persists via cron/schtasks/launchd. SINGLE-SOURCE (Xygeni only), so ingested
+  at confidence 0.85. Eight generic blockchain-util package names published by
+  solbuilder_io, each malicious at specific versions only, so version-pinned in
+  KNOWN_BAD_NPM_VERSIONS + the bundled feed - never bare-name. Note base58-utils
+  is malicious at 1.0.0 / 1.0.1 / 1.0.3 but NOT 1.0.2. The config dead-drop
+  (a GitHub gist raw path) and three IPFS config-fallback CIDs added to
+  KNOWN_DEAD_DROPS; the Pinata/IPFS gateway hosts are deliberately not blocked.
+- **Pepesoft** (NuGet, Socket, 2026-07-14): a game-cheat surveillance suite
+  (Telegram-controlled screenshots, host remote control). The 11 package IDs in
+  the writeup carry a uniform "-x-x" suffix that is a source-side redaction
+  placeholder, NOT an installable ID (a full mirror omits them), so NO package
+  blocklist entries were ingested - a redacted ID blocks nothing and a guessed
+  real ID risks false positives. Detection instead rides on the 31 primary-source
+  SHA-256 payload hashes (KNOWN_MALICIOUS_HASHES) plus network infra: C2 sub-hosts
+  calm-voice-9797[.]888c888x888[.]workers[.]dev, s3[.]ru-3[.]storage[.]selcloud[.]ru,
+  bots[.]pepesoft[.]ru (KNOWN_C2_DOMAINS), proxy 196[.]16[.]3[.]71 (KNOWN_C2_IPS),
+  and the Telegram/GitHub/HuggingFace/Discord-webhook paths (KNOWN_DEAD_DROPS).
+  Specific sub-hosts/paths only - never the workers[.]dev / selcloud[.]ru /
+  discord[.]com / huggingface[.]co apex.
+- 7 new campaign tests incl. FP guards (clean base58-utils@1.0.2, the redacted
+  NuGet ID is not blocked, legitimate workers[.]dev apex not flagged). feed.json
+  regenerated (376 entries).
+
 ### v5.12.3 (2026-07-16)
 **Threat-intel: AsyncAPI npm supply-chain compromise (July 2026)**
 

@@ -1,3 +1,22 @@
+> Note (2026-07-17, claude-fable-5): Released v5.12.4 - threat-intel (part of a
+> larger gap-analysis-driven push). Two primary-source-verified campaigns.
+> PhantomSync (npm crypto stealer, Xygeni, 2026-07-15): SINGLE-SOURCE so confidence
+> 0.85; 8 generic blockchain-util names version-pinned (base58-utils malicious at
+> 1.0.0/1.0.1/1.0.3 but NOT 1.0.2) in KNOWN_BAD_NPM_VERSIONS + feed; gist config
+> dead-drop + 3 IPFS CIDs in KNOWN_DEAD_DROPS (gateway hosts NOT blocked).
+> Pepesoft (NuGet game-cheat surveillance, Socket, 2026-07-14): the 11 package IDs
+> are a source-side "-x-x" REDACTION placeholder (absent from a full mirror), NOT
+> installable IDs - so NO package blocklist entries (a redacted ID blocks nothing;
+> a guessed one false-positives). Detection rides on 31 primary-source SHA-256
+> payload hashes (KNOWN_MALICIOUS_HASHES) + network infra (3 C2 sub-hosts, proxy IP,
+> Telegram/GitHub/HuggingFace/Discord-webhook paths) - specific sub-hosts/paths only,
+> never the workers.dev/selcloud.ru/discord.com/huggingface.co apex. A dedicated IOC
+> verification agent caught both the redaction placeholder and the base58-utils-1.0.2
+> exception before ingest. 7 campaign tests incl. FP guards; feed.json 376 entries;
+> self-scan 0/0. Digest-78 cluster (wagni_bot/FauxUV/mcp-server-pg) deferred to a
+> follow-up refresh (needs the same primary-source verification). This is R1 of a
+> 4-track build (R2 detection gaps, R3 product/DX, R4 differentiators still to ship).
+
 > Note (2026-07-17, claude-fable-5): Dependency maintenance - resolved all 3 open
 > dependabot PRs. #62 (actions/setup-node 6 -> 7) squash-merged after verifying
 > the pinned SHA 820762786026740c76f36085b0efc47a31fe5020 matches the upstream
