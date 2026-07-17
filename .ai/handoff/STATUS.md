@@ -1,3 +1,23 @@
+> Note (2026-07-17, claude-fable-5): Released v5.15.0 - honest SLSA provenance
+> validation (R4 provenance half of the 4-track gap-analysis push; built directly,
+> the crypto being too subtle to hand off). The verifier previously treated a file
+> merely NAMED provenance.json as proof (empty {} scored L3; README claimed "verifies
+> SLSA provenance"). New parseAttestation reads + structurally validates the
+> attestation (in-toto Statement / DSSE base64 payload / Sigstore bundle -> requires a
+> SLSA predicateType + >=1 digested subject); getSLSALevel now uses .valid not mere
+> existence; cosign.pub (a public key) no longer counts. New rule SLSA_PROVENANCE_INVALID
+> (medium) for a present-but-malformed provenance file; a valid NON-SLSA in-toto
+> attestation (SBOM/SPDX predicate) is legit and NOT flagged. README overclaim fixed
+> to "grades SLSA provenance (in-toto/DSSE structural validation)"; full crypto
+> signature/Rekor/Fulcio verification documented as follow-up. A focused adversarial
+> review confirmed 3 (2 should-fix + 1 nit), all fixed pre-tag: no MAX_FILE_SIZE bound
+> on the attestation read (now statSync-guarded like every other scanner; oversized
+> skipped, E2E), false positive flagging legit non-SLSA attestations as malformed
+> (now kind-aware: slsa/non-slsa-attestation/malformed), doubled phrase in the message.
+> extractInTotoStatement recursion depth-bounded against crafted nesting. 27 slsa
+> tests; self-scan 0/0, our repo still L3 (npm-native path). REMAINING from the 4-track
+> push: R4-B tarball-vs-repo starjacking diff (its own focused release next).
+
 > Note (2026-07-17, claude-fable-5): Released v5.14.0 - product/DX (R3 of the
 > 4-track gap-analysis push; worktree agent, integrated + gated + fixed here).
 > Path-scoped policy: ignore: globs prune the walk, per-path suppress (rule +

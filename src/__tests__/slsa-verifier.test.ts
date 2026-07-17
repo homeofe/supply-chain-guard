@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { getSLSALevel, verifySLSA } from "../slsa-verifier.js";
+import { getSLSALevel, verifySLSA, parseAttestation } from "../slsa-verifier.js";
 
 let tmpDir: string;
 
@@ -88,14 +88,34 @@ jobs:
     expect(getSLSALevel(tmpDir)).toBe(3);
   });
 
-  it("should return 3 when slsa-github-generator SHA + attestation file", () => {
+  it("should return 3 when slsa-github-generator SHA + a VALID provenance statement", () => {
+    mkWorkflow(tmpDir, "release.yml", `
+jobs:
+  slsa:
+    uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
+`);
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        _type: "https://in-toto.io/Statement/v1",
+        subject: [{ name: "pkg-1.0.0.tgz", digest: { sha256: "a".repeat(64) } }],
+        predicateType: "https://slsa.dev/provenance/v1",
+        predicate: { buildDefinition: {}, runDetails: { builder: { id: "https://github.com/actions/runner" } } },
+      }),
+    );
+    expect(getSLSALevel(tmpDir)).toBe(3);
+  });
+
+  it("should NOT return 3 for an empty/placeholder provenance.json (v5.15.0 honesty fix)", () => {
     mkWorkflow(tmpDir, "release.yml", `
 jobs:
   slsa:
     uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
 `);
     fs.writeFileSync(path.join(tmpDir, "provenance.json"), "{}");
-    expect(getSLSALevel(tmpDir)).toBe(3);
+    // hermetic pattern present but no valid attestation and no workflow_call
+    // reusable-workflow signal -> drops to Level 2, not a false Level 3.
+    expect(getSLSALevel(tmpDir)).toBe(2);
   });
 
   it("should return 1 for Makefile without workflow", () => {
@@ -224,6 +244,88 @@ jobs:
     const findings = verifySLSA(tmpDir);
     const finding = findings.find((f) => f.rule === "SLSA_LEVEL_0");
     expect(finding?.recommendation).toContain("slsa-framework");
+  });
+
+  it("should emit SLSA_PROVENANCE_INVALID for a present-but-empty provenance file", () => {
+    fs.writeFileSync(path.join(tmpDir, "provenance.json"), "{}");
+    const findings = verifySLSA(tmpDir);
+    const f = findings.find((x) => x.rule === "SLSA_PROVENANCE_INVALID");
+    expect(f).toBeDefined();
+    expect(f?.severity).toBe("medium");
+  });
+
+  it("should NOT emit SLSA_PROVENANCE_INVALID for a valid provenance statement", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        _type: "https://in-toto.io/Statement/v1",
+        subject: [{ name: "pkg", digest: { sha256: "b".repeat(64) } }],
+        predicateType: "https://slsa.dev/provenance/v1",
+        predicate: {},
+      }),
+    );
+    const findings = verifySLSA(tmpDir);
+    expect(findings.some((x) => x.rule === "SLSA_PROVENANCE_INVALID")).toBe(false);
+  });
+
+  it("should NOT flag a valid non-SLSA in-toto attestation (SBOM/SPDX predicate)", () => {
+    // A legitimate SBOM attestation is a valid in-toto statement with a non-SLSA
+    // predicate - it must not be reported as malformed provenance.
+    fs.writeFileSync(
+      path.join(tmpDir, "attestation.json"),
+      JSON.stringify({
+        _type: "https://in-toto.io/Statement/v1",
+        subject: [{ name: "pkg", digest: { sha256: "d".repeat(64) } }],
+        predicateType: "https://cyclonedx.org/bom/v1.5",
+        predicate: {},
+      }),
+    );
+    const findings = verifySLSA(tmpDir);
+    expect(findings.some((x) => x.rule === "SLSA_PROVENANCE_INVALID")).toBe(false);
+    const res = parseAttestation(tmpDir);
+    expect(res.kind).toBe("non-slsa-attestation");
+    expect(res.valid).toBe(false);
+  });
+
+  it("should flag a SLSA statement with no digested subject as malformed", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        _type: "https://in-toto.io/Statement/v1",
+        subject: [],
+        predicateType: "https://slsa.dev/provenance/v1",
+        predicate: {},
+      }),
+    );
+    const findings = verifySLSA(tmpDir);
+    expect(findings.some((x) => x.rule === "SLSA_PROVENANCE_INVALID")).toBe(true);
+  });
+
+  it("should skip an oversized provenance file rather than read it (no memory DoS)", () => {
+    // A pathological multi-MB provenance file is skipped, not read into memory.
+    const big = path.join(tmpDir, "provenance.json");
+    fs.writeFileSync(big, Buffer.alloc(6 * 1024 * 1024)); // > MAX_FILE_SIZE (5MB)
+    const res = parseAttestation(tmpDir);
+    expect(res.present).toBe(false); // skipped, not treated as a statement
+  });
+
+  it("parseAttestation validates a DSSE-wrapped statement", () => {
+    const stmt = {
+      _type: "https://in-toto.io/Statement/v1",
+      subject: [{ name: "pkg", digest: { sha256: "c".repeat(64) } }],
+      predicateType: "https://slsa.dev/provenance/v1",
+      predicate: {},
+    };
+    const dsse = {
+      payloadType: "application/vnd.in-toto+json",
+      payload: Buffer.from(JSON.stringify(stmt)).toString("base64"),
+      signatures: [{ sig: "x" }],
+    };
+    fs.writeFileSync(path.join(tmpDir, "attestation.json"), JSON.stringify(dsse));
+    const res = parseAttestation(tmpDir);
+    expect(res.valid).toBe(true);
+    expect(res.predicateType).toBe("https://slsa.dev/provenance/v1");
+    expect(res.subjectCount).toBe(1);
   });
 
   it("should emit no findings for L3 npm-native path (--provenance + id-token: write)", () => {

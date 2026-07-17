@@ -8,12 +8,20 @@
  *   0 — No evidence of any build process
  *   1 — Build script present (Dockerfile, CI workflow)
  *   2 — Signed build or slsa-github-generator action used
- *   3 — Hermetic build + provenance attestation file present
+ *   3 — Hermetic build + a VALID parsed provenance statement
+ *
+ * Scope (v5.15.0): provenance files are now PARSED and structurally validated
+ * (in-toto Statement / DSSE envelope / Sigstore bundle -> SLSA predicate type +
+ * digested subjects), not merely detected by filename - a present-but-empty or
+ * malformed provenance file no longer counts. This validates STRUCTURE and
+ * binding fields, not the cryptographic signature / Fulcio certificate chain /
+ * Rekor inclusion proof; full offline signature verification is a follow-up.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
+import { MAX_FILE_SIZE } from "./patterns.js";
 
 /** Workflow patterns that indicate SLSA Level 2 (signed/generated provenance) */
 const SLSA_LEVEL2_PATTERNS = [
@@ -61,14 +69,202 @@ const SLSA_LEVEL3_PATTERNS = [
 const NPM_PROVENANCE_PATTERN = /npm\s+publish[^\n]*--provenance/i;
 const OIDC_TOKEN_WRITE_PATTERN = /id-token:\s*write/i;
 
-/** Attestation file names that indicate provenance is present */
-const ATTESTATION_FILES = [
+/**
+ * Attestation STATEMENT files (an in-toto/DSSE/sigstore provenance document).
+ * cosign.pub is a public key, not a statement, so it is handled separately -
+ * it must never on its own be treated as "provenance is present".
+ */
+const ATTESTATION_STATEMENT_FILES = [
   "provenance.json",
   "attestation.json",
   "provenance.intoto.jsonl",
   ".sigstore",
-  "cosign.pub",
 ];
+
+/** Recognised in-toto Statement type URIs. */
+const INTOTO_STATEMENT_TYPES = new Set([
+  "https://in-toto.io/Statement/v1",
+  "https://in-toto.io/Statement/v0.1",
+]);
+
+/** SLSA provenance predicate type prefixes (v0.1, v0.2, v1). */
+const SLSA_PREDICATE_PREFIX = "https://slsa.dev/provenance/";
+
+export interface AttestationResult {
+  /** An attestation STATEMENT file exists (in dir / dist / .github). */
+  present: boolean;
+  /** The file parses as a real in-toto/DSSE/sigstore SLSA provenance statement. */
+  valid: boolean;
+  /**
+   * What the present file is:
+   *  - "slsa": a valid SLSA provenance statement (valid=true)
+   *  - "non-slsa-attestation": a valid in-toto attestation with a non-SLSA
+   *     predicate (e.g. an SBOM/SPDX attestation) - legitimate, NOT flagged
+   *  - "malformed": present but not a usable statement (placeholder/garbage,
+   *     or a SLSA statement missing digested subjects) - this is the problem case
+   */
+  kind?: "slsa" | "non-slsa-attestation" | "malformed";
+  /** Path of the file that was inspected, if any. */
+  file?: string;
+  /** in-toto statement predicateType, when extractable. */
+  predicateType?: string;
+  /** Number of attested subjects (artifacts), when extractable. */
+  subjectCount?: number;
+  /** Builder identity from the SLSA predicate, when extractable. */
+  builderId?: string;
+  /** Why an existing file was judged not-valid-SLSA (for the finding message). */
+  reason?: string;
+}
+
+/**
+ * Extract and structurally validate an in-toto statement from a parsed value
+ * that may be the statement itself, a DSSE envelope (base64 payload), or a
+ * Sigstore bundle wrapping a DSSE envelope. Returns the statement or null.
+ *
+ * NOTE: this validates STRUCTURE and binding fields (statement type, SLSA
+ * predicate type, subject digests), NOT the cryptographic signature / Fulcio
+ * certificate chain / Rekor inclusion proof. Full signature verification is a
+ * separate, heavier step (see verifySLSA doc). We never claim more than we do.
+ */
+function extractInTotoStatement(parsed: unknown, depth = 0): Record<string, unknown> | null {
+  // Bound the unwrap chain: the input is an untrusted attestation file, and a
+  // crafted bundle/DSSE that nests another envelope in its payload must not
+  // recurse without limit. A real statement is at most bundle -> DSSE -> stmt.
+  if (depth > 4) return null;
+  if (!parsed || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+
+  // Sigstore bundle -> unwrap its dsseEnvelope.
+  if (typeof obj.mediaType === "string" && obj.mediaType.includes("sigstore.bundle")) {
+    const env = obj.dsseEnvelope ?? (obj.content as Record<string, unknown> | undefined)?.dsseEnvelope;
+    if (env) return extractInTotoStatement(env, depth + 1);
+  }
+
+  // DSSE envelope -> decode the base64 payload to the statement.
+  if (typeof obj.payload === "string" && obj.payloadType !== undefined) {
+    try {
+      const decoded = Buffer.from(obj.payload, "base64").toString("utf-8");
+      return extractInTotoStatement(JSON.parse(decoded), depth + 1);
+    } catch {
+      return null;
+    }
+  }
+
+  // Bare in-toto statement.
+  if (typeof obj._type === "string" && INTOTO_STATEMENT_TYPES.has(obj._type)) {
+    return obj;
+  }
+  return null;
+}
+
+/**
+ * Classify a well-formed in-toto statement: valid SLSA provenance, a valid but
+ * non-SLSA attestation (SBOM/SPDX/other predicate), or a malformed SLSA
+ * statement (SLSA predicate but no digested subject). Never throws.
+ */
+function classifyStatement(stmt: Record<string, unknown>): AttestationResult {
+  const predicateType = typeof stmt.predicateType === "string" ? stmt.predicateType : undefined;
+
+  // A valid in-toto statement whose predicate is NOT SLSA provenance (e.g. an
+  // SBOM/SPDX attestation) is legitimate - it just is not SLSA provenance.
+  if (!predicateType || !predicateType.startsWith(SLSA_PREDICATE_PREFIX)) {
+    return {
+      present: true,
+      valid: false,
+      kind: "non-slsa-attestation",
+      predicateType,
+      reason: `in-toto attestation with a non-SLSA predicate${predicateType ? ` (${predicateType})` : ""}`,
+    };
+  }
+
+  const subject = Array.isArray(stmt.subject) ? stmt.subject : [];
+  const digestedSubjects = subject.filter(
+    (s) => s && typeof s === "object" && (s as { digest?: unknown }).digest &&
+      typeof (s as { digest?: unknown }).digest === "object",
+  );
+  if (digestedSubjects.length === 0) {
+    return {
+      present: true,
+      valid: false,
+      kind: "malformed",
+      predicateType,
+      reason: "SLSA provenance statement has no digested subject",
+    };
+  }
+
+  const predicate = (stmt.predicate ?? {}) as Record<string, unknown>;
+  const builder = (predicate.builder ?? (predicate.runDetails as Record<string, unknown> | undefined)?.builder) as
+    | { id?: unknown }
+    | undefined;
+  const builderId = builder && typeof builder.id === "string" ? builder.id : undefined;
+
+  return {
+    present: true,
+    valid: true,
+    kind: "slsa",
+    predicateType,
+    subjectCount: digestedSubjects.length,
+    builderId,
+  };
+}
+
+/**
+ * Parse and structurally validate the project's attestation statement, if any.
+ * Replaces the old "a file named provenance.json exists" heuristic: a present
+ * but empty / malformed / non-provenance file is reported as NOT valid, so it
+ * can no longer inflate the SLSA level or masquerade as real provenance.
+ */
+export function parseAttestation(dir: string): AttestationResult {
+  const searchDirs = [dir, path.join(dir, "dist"), path.join(dir, ".github")];
+  for (const filename of ATTESTATION_STATEMENT_FILES) {
+    for (const base of searchDirs) {
+      const filePath = path.join(base, filename);
+      if (!fs.existsSync(filePath)) continue;
+
+      // Bound the read like every other scanner: a real provenance file is a few
+      // KB, so an oversized one is skipped rather than read into memory (a
+      // committed multi-hundred-MB file must not become a memory DoS).
+      let content: string;
+      try {
+        if (fs.statSync(filePath).size > MAX_FILE_SIZE) continue;
+        content = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        return { present: true, valid: false, kind: "malformed", file: filePath, reason: "unreadable" };
+      }
+
+      // .intoto.jsonl is one DSSE envelope per line; try each line and prefer a
+      // valid SLSA line, falling back to the first classifiable statement.
+      const candidates = filename.endsWith(".jsonl")
+        ? content.split(/\r?\n/).filter((l) => l.trim().length > 0)
+        : [content];
+
+      let firstClassified: AttestationResult | null = null;
+      for (const candidate of candidates) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(candidate);
+        } catch {
+          continue;
+        }
+        const stmt = extractInTotoStatement(parsed);
+        if (!stmt) continue;
+        const cls = { ...classifyStatement(stmt), file: filePath };
+        if (cls.valid) return cls;
+        firstClassified ??= cls;
+      }
+      return (
+        firstClassified ?? {
+          present: true,
+          valid: false,
+          kind: "malformed",
+          file: filePath,
+          reason: "not a valid in-toto/DSSE statement",
+        }
+      );
+    }
+  }
+  return { present: false, valid: false };
+}
 
 /** Known hermetic build indicators in workflow content */
 const HERMETIC_BUILD_PATTERNS = [
@@ -106,18 +302,6 @@ function readWorkflows(workflowFiles: string[]): string {
       }
     })
     .join("\n");
-}
-
-/**
- * Check if the project root or dist directory contains attestation files.
- */
-function hasAttestationFile(dir: string): boolean {
-  for (const filename of ATTESTATION_FILES) {
-    if (fs.existsSync(path.join(dir, filename))) return true;
-    if (fs.existsSync(path.join(dir, "dist", filename))) return true;
-    if (fs.existsSync(path.join(dir, ".github", filename))) return true;
-  }
-  return false;
 }
 
 /**
@@ -163,7 +347,9 @@ export function getSLSALevel(dir: string): number {
   const hasHermeticBuild = HERMETIC_BUILD_PATTERNS.some((p) =>
     p.test(allWorkflowContent),
   );
-  const attestation = hasAttestationFile(dir);
+  // A VALID parsed provenance statement, not merely a file named provenance.json
+  // (an empty/garbage file no longer inflates the level - v5.15.0).
+  const attestation = parseAttestation(dir).valid;
 
   if (hasHermeticPattern && (hasHermeticBuild || attestation)) return 3;
 
@@ -191,6 +377,28 @@ export function getSLSALevel(dir: string): number {
 export function verifySLSA(dir: string): Finding[] {
   const findings: Finding[] = [];
   const level = getSLSALevel(dir);
+
+  // A provenance file that is present but MALFORMED (a placeholder/garbage file,
+  // or a SLSA statement with no digested subject) is worse than none: it looks
+  // like verifiable provenance but attests nothing. A valid non-SLSA in-toto
+  // attestation (e.g. an SBOM/SPDX attestation) is legitimate and NOT flagged.
+  const att = parseAttestation(dir);
+  if (att.present && att.kind === "malformed") {
+    findings.push({
+      rule: "SLSA_PROVENANCE_INVALID",
+      description:
+        `A provenance file (${att.file ? path.basename(att.file) : "provenance"}) is present but is ` +
+        `not usable SLSA provenance: ${att.reason ?? "unparseable"}. It does not actually attest the build.`,
+      severity: "medium",
+      confidence: 0.9,
+      category: "supply-chain",
+      recommendation:
+        "Regenerate provenance with a real tool (npm publish --provenance, " +
+        "actions/attest-build-provenance, or slsa-github-generator). A placeholder or malformed " +
+        "provenance file gives a false sense of verifiability - verify the artifact digest in the " +
+        "statement subject matches the published artifact.",
+    });
+  }
 
   if (level === 0) {
     findings.push({

@@ -3,23 +3,23 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1784272600",
-    "timestamp": "2026-07-17T07:16:40Z",
-    "commit": "89ce172",
+    "session_id": "cli-1784273672",
+    "timestamp": "2026-07-17T07:34:33Z",
+    "commit": "8fdd859",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9e79d9dc046335f7179bad4bb72ee056712b2a5b337fbd7e1f1504ea702485aa",
-      "updated": "2026-07-17T07:16:31Z",
-      "lines": 620,
+      "checksum": "sha256:67968258040515128bd64b3ed82bc1687cd358484cae77130a878d08ab9128c6",
+      "updated": "2026-07-17T07:34:23Z",
+      "lines": 640,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:d449cbabd3fb9e0d5aa8eebd76fe3fb4d0acd49465add7ed0670f32ee944015f",
-      "updated": "2026-07-11T14:42:15Z",
-      "lines": 59,
+      "checksum": "sha256:930f6df77c9a737812f975c5451adaa17b96830def5974f01a5e799c8078ecfe",
+      "updated": "2026-07-17T07:34:23Z",
+      "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:f488c69e8445083ae863cfee5cd9a71de76355795949633859af65fd921303b4",
-      "updated": "2026-07-17T07:16:32Z",
+      "checksum": "sha256:080d6eb9b51920ab36f27da94f476b38c5ac962262468f06952ea731f1a8b4ce",
+      "updated": "2026-07-17T07:34:24Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:e38160d35a28f651d7feb8988860c09a4a1e8ed1ed935dd1282713b8ba26e9b2",
-      "updated": "2026-07-17T07:16:32Z",
+      "checksum": "sha256:ebfd32c92b210204f4345c2e3a105cb964e929e48e6dc7d206227740e0571789",
+      "updated": "2026-07-17T07:34:24Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -74,7 +74,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 9182,
-    "full_read": 13006
+    "manifest_plus_core": 9619,
+    "full_read": 13443
   }
 }

@@ -4,6 +4,34 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.15.0 (2026-07-17)
+**Honest SLSA provenance validation (fixes an overclaim)**
+
+The SLSA verifier previously treated a file merely NAMED provenance.json as
+proof of provenance - a present-but-empty `{}` scored Level 3, and the README
+claimed it "verifies SLSA provenance". It now actually parses and structurally
+validates the attestation (R4 of the gap-analysis push, provenance half).
+
+- `parseAttestation` reads the attestation and validates it as an in-toto
+  Statement / DSSE envelope (base64 payload) / Sigstore bundle, requiring a real
+  SLSA predicate type and at least one digested subject. A present-but-empty or
+  malformed provenance file no longer inflates the SLSA level, and a public key
+  (cosign.pub) no longer counts as a provenance statement.
+- New rule `SLSA_PROVENANCE_INVALID` (medium): a provenance file that is present
+  but is not usable SLSA provenance (placeholder/garbage, or a SLSA statement
+  with no digested subject) - it gives a false sense of verifiability. A valid
+  NON-SLSA in-toto attestation (e.g. an SBOM/SPDX attestation) is recognized as
+  legitimate and is NOT flagged.
+- The attestation read is now bounded by the same 5 MB limit as every other
+  scanner (a pathological multi-hundred-MB provenance file is skipped, not read
+  into memory), and the unwrap chain is depth-bounded against crafted nesting.
+- README updated to reflect what is actually verified: SLSA provenance GRADING
+  via in-toto/DSSE structural validation (not full cryptographic
+  signature/Rekor/Fulcio verification, which remains a documented follow-up).
+- An adversarial review over the diff caught and this release fixes: the missing
+  size bound, a false positive that flagged legitimate non-SLSA attestations as
+  malformed, and a doubled phrase in the finding message.
+
 ### v5.14.0 (2026-07-17)
 **Product/DX: path-scoped policy, JUnit output, MCP v2**
 

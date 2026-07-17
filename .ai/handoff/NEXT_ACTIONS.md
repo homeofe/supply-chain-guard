@@ -27,6 +27,9 @@ guard / GitLab format in v5.6.0), and the full seeded-issue backlog (#40-#47).
 | GitLab `location.dependency.package.name` uses the scan target path (can leak an absolute runner path); use a stable per-finding coordinate | src/reporter.ts formatGitlab | low, cosmetic |
 | Jenkinsfile pins `@latest` (non-reproducible); add a one-line "pin a version for reproducible CI" comment | examples/Jenkinsfile | doc only |
 | Install Guard: version ranges/tags (^1.2.3, latest) are not resolved offline, so pinned-version IOCs only fire on exact pins; document this limitation in the README Install Guard section | README.md | doc / known-limitation |
+| R4-B: tarball-vs-repo starjacking diff in `npm <pkg>` mode - verify the package's claimed `repository` actually corresponds to it (fetch the repo, check its package.json name / that it references the package); flag repos borrowed for trust. FP-sensitive (monorepos, forks) - needs its own gate. | src/npm-scanner.ts + github-trust-scanner.ts | medium; the differentiators-track remainder |
+| Full offline sigstore signature verification (DSSE signature vs Fulcio cert chain + Rekor inclusion proof) on top of v5.15.0's structural validation | src/slsa-verifier.ts | large; documented follow-up |
+| Digest-78 threat cluster (wagni_bot ~30 npm crypto-SDK impersonations, FauxUV PyPI RCE, mcp-server-pg) - needs the same primary-source verification as v5.12.4 before ingest | threat-intel | small-medium; own refresh |
 | skills-scanner's `readSmallFile()` still returns null silently for oversized agent-rules files (bonus site outside issue #54's scope of core/VSIX/npm/PyPI); consider a SKILL_FILE_TOO_LARGE_SKIPPED for parity | src/skills-scanner.ts readSmallFile | small, parity follow-up |
 
 ---

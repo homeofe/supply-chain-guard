@@ -4,7 +4,7 @@
 #
 #   repos:
 #     - repo: https://github.com/homeofe/supply-chain-guard
-#       rev: v5.14.0
+#       rev: v5.15.0
 #       hooks:
 #         - id: supply-chain-guard
 #
