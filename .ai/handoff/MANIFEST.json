@@ -2,10 +2,10 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "handoff-refresh",
-    "session_id": "cli-1784199015",
-    "timestamp": "2026-07-16T10:50:15Z",
-    "commit": "dda17d7",
+    "agent": "cli-tool",
+    "session_id": "cli-1784269036",
+    "timestamp": "2026-07-17T06:17:17Z",
+    "commit": "77fadf4",
     "phase": "idle",
     "duration_minutes": 0
   },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:e3b6494c4b706e3dbf00bcb32e859c32e1ff016acc8ea6c41d9d7c8f16f6693b",
-      "updated": "2026-07-16T10:50:15Z",
+      "checksum": "sha256:ace782e1b482a70e91f1ff2a2de429a6fce491a0a5cac8c6db398f2aba9d85d6",
+      "updated": "2026-07-17T06:17:09Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
       "checksum": "sha256:9badaba3057cf540171eeee68f2c54138fbedf2170b53eaff423a6efb63d5216",
-      "updated": "2026-07-16T10:50:15Z",
+      "updated": "2026-07-17T06:17:09Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
