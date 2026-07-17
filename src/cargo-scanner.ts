@@ -8,6 +8,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
+import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { checkBadVersion } from "./ioc-blocklist.js";
 
 // ---------------------------------------------------------------------------
 // Cargo/Rust patterns
@@ -105,6 +107,7 @@ export const CARGO_PATTERNS: PatternEntry[] = [
 /** Cargo-related file names */
 const CARGO_FILES = new Set(["Cargo.toml", "Cargo.lock"]);
 const BUILD_RS = "build.rs";
+const CARGO_LOCK = "Cargo.lock";
 
 /**
  * Check if a file is a Cargo-related file.
@@ -137,10 +140,123 @@ export function scanCargoFiles(dir: string): Finding[] {
     } catch { /* skip */ }
   }
 
+  // Scan Cargo.lock (resolved crate inventory) for malicious crates
+  const cargoLock = path.join(dir, CARGO_LOCK);
+  if (fs.existsSync(cargoLock)) {
+    try {
+      const content = fs.readFileSync(cargoLock, "utf-8");
+      findings.push(...scanCargoLockContent(content, CARGO_LOCK));
+    } catch { /* skip */ }
+  }
+
   // Scan proc-macro crates (look in src/ for files with proc_macro attribute)
   scanProcMacros(dir, findings);
 
   return findings;
+}
+
+/**
+ * Scan Cargo.lock for crates matching curated threat-intel IOCs (cargo:
+ * prefixed feed entries) or known-compromised versions (ioc-blocklist).
+ * Cargo.lock is TOML with flat [[package]] blocks (name = "x", version =
+ * "y"); a hand-rolled line-state parser extracts name+version pairs without
+ * adding a TOML dependency (same approach as the JS lockfile parsers).
+ */
+export function scanCargoLockContent(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+
+  for (const { name, version } of parseCargoLock(content)) {
+    // Threat-intel IOC match (bundled cargo: package entries)
+    const ioc = matchPackageIOC("cargo", name, version, iocFeed);
+    if (ioc) {
+      findings.push(maliciousCrateFinding(name, version, ioc, relativePath));
+    }
+
+    // Known-compromised version (ioc-blocklist; cargo has no pinned entries
+    // yet, but the check is wired so future entries match without a code change)
+    if (version) {
+      const bad = checkBadVersion(name, version, "cargo");
+      if (bad) findings.push({ ...bad, file: relativePath });
+    }
+  }
+
+  return findings;
+}
+
+interface CargoLockPackage {
+  name: string;
+  version?: string;
+}
+
+/**
+ * Line-state parser for Cargo.lock [[package]] blocks. A new [[package]]
+ * header (or any other table header) flushes the current block.
+ */
+function parseCargoLock(content: string): CargoLockPackage[] {
+  const packages: CargoLockPackage[] = [];
+  let current: CargoLockPackage | null = null;
+
+  const flush = (): void => {
+    if (current && current.name) packages.push(current);
+    current = null;
+  };
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+
+    if (line === "[[package]]") {
+      flush();
+      current = { name: "" };
+      continue;
+    }
+    // Any other table header ends the current package block (e.g. [metadata]).
+    if (line.startsWith("[")) {
+      flush();
+      continue;
+    }
+    if (current === null) continue;
+
+    const nameMatch = /^name\s*=\s*"([^"]+)"/.exec(line);
+    if (nameMatch) {
+      current.name = nameMatch[1]!;
+      continue;
+    }
+    const versionMatch = /^version\s*=\s*"([^"]+)"/.exec(line);
+    if (versionMatch) {
+      current.version = versionMatch[1]!;
+      continue;
+    }
+  }
+  flush();
+  return packages;
+}
+
+function maliciousCrateFinding(
+  name: string,
+  version: string | undefined,
+  ioc: FeedIOC,
+  relativePath: string,
+): Finding {
+  return {
+    rule: "CARGO_MALICIOUS_CRATE",
+    description: `Known malicious crate: ${name}${version ? `@${version}` : ""}${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` - ${ioc.campaign}` : ""}`,
+    severity: ioc.severity,
+    file: relativePath,
+    match: truncate(version ? `${name}@${version}` : name),
+    confidence: ioc.confidence,
+    category: "malware",
+    recommendation: `Remove ${name} immediately, rotate any credentials available to `
+      + "`cargo build`, and audit systems that built it. This crate is listed in threat intelligence feeds.",
+  };
+}
+
+function truncate(value: string): string {
+  return value.length > 120 ? value.substring(0, 120) + "..." : value;
 }
 
 /**

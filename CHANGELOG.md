@@ -4,6 +4,31 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.13.0 (2026-07-17)
+**Detection coverage: Rust/Go/Python lockfiles + agent-memory files**
+
+Closes the sharpest gap surfaced by a repo-wide gap analysis: several ecosystems'
+IOCs already shipped in the feed but could never match because the resolved
+dependency tree was never read.
+
+- **Cargo.lock + go.sum** are now parsed and matched against the threat feed
+  (new rules CARGO_MALICIOUS_CRATE, GO_MALICIOUS_MODULE) and checkBadVersion.
+  Both files were already recognized but their resolved dependency trees were
+  never opened - so the bundled crates.io / Go IOCs (e.g. the TrapDoor crates,
+  BufferZoneCorp Go modules) could not fire. Proven end-to-end: a Cargo.lock or
+  go.sum listing a known-bad crate/module now flags it.
+- **Python lockfiles** poetry.lock, uv.lock, and Pipfile.lock are now scanned
+  (new module python-lockfile-scanner.ts) - resolved packages run through the
+  same KNOWN_BAD_PYPI_VERSIONS + feed matching as the other ecosystems. Pipenv
+  custom category groups (docs/tests/ci, not just default/develop) are covered.
+- **Agent-memory files** MEMORY.md, AGENTS_MEMORY.md, memory/*.md,
+  .claude/memory/*.md and .specstory/**/*.md now flow through the skills-scanner
+  prompt-injection / invisible-unicode pipeline. A poisoned memory file
+  re-injects instructions on every agent session; it was previously unscanned.
+- An adversarial gate over the diff caught (and this release fixes) a Pipfile.lock
+  false negative: custom pipenv category groups were skipped, so a malicious
+  package pinned under a custom category escaped detection.
+
 ### v5.12.4 (2026-07-17)
 **Threat intel: PhantomSync (npm crypto stealer) + Pepesoft (NuGet surveillance)**
 

@@ -1,3 +1,19 @@
+> Note (2026-07-17, claude-fable-5): Released v5.13.0 - detection-coverage gaps
+> (R2 of the 4-track gap-analysis push; built by a worktree agent, integrated +
+> gated + fixed here). (1) Cargo.lock + go.sum are now parsed and matched against
+> the feed (CARGO_MALICIOUS_CRATE / GO_MALICIOUS_MODULE + checkBadVersion, which
+> gained a "cargo" ecosystem) - both files were recognized but never opened, so
+> the bundled crates.io/Go IOCs could NEVER match; proven E2E (move-analyzer-build
+> crate + BufferZoneCorp go module both fire via the real CLI). (2) New module
+> python-lockfile-scanner.ts: poetry.lock/uv.lock/Pipfile.lock -> KNOWN_BAD_PYPI +
+> feed. (3) skills-scanner now covers MEMORY.md/AGENTS_MEMORY.md/memory/*.md/
+> .claude/memory/*.md/.specstory/**. Adversarial gate confirmed 1 should-fix, fixed
+> pre-tag: scanPipfileLockContent only scanned default/develop, missing pipenv
+> custom category groups (docs/tests/ci) - a bad pkg pinned there escaped; now
+> iterates all top-level package maps except _meta (E2E re-proven). go-scanner.test
+> added to SELF_SCAN_INERT_FILES (its go.sum fixture uses the real BufferZoneCorp
+> IOC). 63 src modules (was 62), testFiles 77. feed.json 376; self-scan 0/0.
+
 > Note (2026-07-17, claude-fable-5): Released v5.12.4 - threat-intel (part of a
 > larger gap-analysis-driven push). Two primary-source-verified campaigns.
 > PhantomSync (npm crypto stealer, Xygeni, 2026-07-15): SINGLE-SOURCE so confidence

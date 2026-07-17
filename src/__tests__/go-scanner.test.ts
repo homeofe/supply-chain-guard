@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scanGoContent, isGoFile, GO_PATTERNS } from "../go-scanner.js";
+import { scanGoContent, scanGoSumContent, isGoFile, GO_PATTERNS } from "../go-scanner.js";
 
 describe("Go Module Scanner", () => {
   it("should identify Go-related files", () => {
@@ -81,6 +81,40 @@ describe("Go Module Scanner", () => {
       ].join("\n");
       const findings = scanGoContent(content, "main.go", "source");
       expect(findings).toHaveLength(0);
+    });
+  });
+
+  describe("go.sum scanning", () => {
+    // Real bundled IOC (BufferZoneCorp sleeper Go modules, go: bare-name entry)
+    const MALICIOUS_MODULE = "github.com/BufferZoneCorp/go-metrics-sdk";
+
+    it("should flag a go.sum module matching a go: IOC (reported once)", () => {
+      const content = [
+        `${MALICIOUS_MODULE} v1.0.0 h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`,
+        `${MALICIOUS_MODULE} v1.0.0/go.mod h1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=`,
+        "github.com/gin-gonic/gin v1.9.1 h1:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=",
+      ].join("\n");
+      const findings = scanGoSumContent(content, "go.sum");
+      const hits = findings.filter((f) => f.rule === "GO_MALICIOUS_MODULE");
+      // Two hash lines for the same module, but reported once.
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.severity).toBe("critical");
+      expect(hits[0]?.category).toBe("malware");
+      expect(hits[0]?.description).toContain(MALICIOUS_MODULE);
+    });
+
+    it("should not flag a clean go.sum (FP-safety)", () => {
+      const content = [
+        "github.com/gin-gonic/gin v1.9.1 h1:xxxx=",
+        "github.com/gin-gonic/gin v1.9.1/go.mod h1:yyyy=",
+        "golang.org/x/sys v0.20.0 h1:zzzz=",
+      ].join("\n");
+      expect(scanGoSumContent(content, "go.sum")).toHaveLength(0);
+    });
+
+    it("should not crash on blank or malformed lines", () => {
+      expect(() => scanGoSumContent("\n   \nbadline\n", "go.sum")).not.toThrow();
+      expect(scanGoSumContent("", "go.sum")).toHaveLength(0);
     });
   });
 

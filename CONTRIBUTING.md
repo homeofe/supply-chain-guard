@@ -87,8 +87,9 @@ src/
   dockerfile-scanner.ts   # Container security
   npm-scanner.ts          # npm package analysis
   pypi-scanner.ts         # PyPI package analysis
-  cargo-scanner.ts        # Rust/Cargo analysis
-  go-scanner.ts           # Go module analysis
+  cargo-scanner.ts        # Rust/Cargo analysis (Cargo.toml/Cargo.lock/build.rs)
+  go-scanner.ts           # Go module analysis (go.mod/go.sum)
+  python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
   nuget-scanner.ts        # NuGet/.NET (packages.lock.json/csproj/nuget.config) analysis

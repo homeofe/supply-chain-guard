@@ -43,6 +43,7 @@ import { scanGoFiles } from "./go-scanner.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
+import { scanPythonLockfiles } from "./python-lockfile-scanner.js";
 import { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
 import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 import {
@@ -111,6 +112,8 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/workflow-modeler.ts",
   "src/__tests__/beacon-miner.test.ts",
   "src/__tests__/campaigns.test.ts",
+  // Real go: IOC (github.com/BufferZoneCorp/...) used as a go.sum fixture.
+  "src/__tests__/go-scanner.test.ts",
   "src/__tests__/infostealer-patterns.test.ts",
   "src/__tests__/ioc-blocklist.test.ts",
   "src/__tests__/issue-24-ioc-evasion.test.ts",
@@ -392,14 +395,20 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings.push(...gitSecFindings);
   }
 
-  // Check Cargo/Rust files (v4.0)
-  if (fs.existsSync(path.join(scanDir, "Cargo.toml"))) {
+  // Check Cargo/Rust files (v4.0; Cargo.lock IOC matching added later)
+  if (
+    fs.existsSync(path.join(scanDir, "Cargo.toml")) ||
+    fs.existsSync(path.join(scanDir, "Cargo.lock"))
+  ) {
     const cargoFindings = scanCargoFiles(scanDir);
     findings.push(...cargoFindings);
   }
 
-  // Check Go module files (v4.0)
-  if (fs.existsSync(path.join(scanDir, "go.mod"))) {
+  // Check Go module files (v4.0; go.sum IOC matching added later)
+  if (
+    fs.existsSync(path.join(scanDir, "go.mod")) ||
+    fs.existsSync(path.join(scanDir, "go.sum"))
+  ) {
     const goFindings = scanGoFiles(scanDir);
     findings.push(...goFindings);
   }
@@ -426,6 +435,15 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (hasNuGetFiles(scanDir)) {
     const nugetFindings = scanNuGetFiles(scanDir);
     findings.push(...nugetFindings);
+  }
+
+  // Check Python lockfiles (poetry.lock / uv.lock / Pipfile.lock)
+  if (
+    fs.existsSync(path.join(scanDir, "poetry.lock")) ||
+    fs.existsSync(path.join(scanDir, "uv.lock")) ||
+    fs.existsSync(path.join(scanDir, "Pipfile.lock"))
+  ) {
+    findings.push(...scanPythonLockfiles(scanDir));
   }
 
   // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /

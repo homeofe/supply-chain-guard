@@ -29,8 +29,17 @@ import { PROMPT_INJECTION_PATTERNS, MAX_FILE_SIZE, makeOversizedSkipFinding } fr
 // Target file discovery
 // ---------------------------------------------------------------------------
 
-/** Rules files that live directly in the scan root. */
-const ROOT_RULES_FILES = ["CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules"];
+/** Rules / memory files that live directly in the scan root. */
+const ROOT_RULES_FILES = [
+  "CLAUDE.md",
+  "AGENTS.md",
+  "GEMINI.md",
+  ".cursorrules",
+  // Agent long-term memory files - read verbatim by AI agents just like rules
+  // files, so the same injection / invisible-unicode pipeline applies.
+  "MEMORY.md",
+  "AGENTS_MEMORY.md",
+];
 
 /** Maximum recursion depth when walking .claude/skills. */
 const MAX_SKILL_DEPTH = 8;
@@ -375,7 +384,73 @@ function collectRulesFiles(dir: string): string[] {
   // .claude/skills/**/SKILL.md (recursive)
   collectSkillManifests(path.join(dir, ".claude", "skills"), ".claude/skills", files, 0);
 
+  // Agent memory directories. Agents read these verbatim, so they run through
+  // the same scanSkillContent pipeline as CLAUDE.md / AGENTS.md.
+  // memory/*.md plus one level of subdirectories (memory/<sub>/*.md).
+  collectMemoryDir(path.join(dir, "memory"), "memory", files);
+  // .claude/memory/*.md (non-recursive)
+  for (const name of listFiles(path.join(dir, ".claude", "memory"))) {
+    if (name.toLowerCase().endsWith(".md")) files.push(`.claude/memory/${name}`);
+  }
+  // .specstory/**/*.md (recursive; skips node_modules)
+  collectMarkdownTree(path.join(dir, ".specstory"), ".specstory", files, 0);
+
   return files;
+}
+
+/**
+ * Collect memory/*.md plus one level of subdirectories (memory/<sub>/*.md).
+ * node_modules is never scanned.
+ */
+function collectMemoryDir(absDir: string, relDir: string, out: string[]): void {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(absDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+      out.push(`${relDir}/${entry.name}`);
+    } else if (entry.isDirectory() && entry.name !== "node_modules") {
+      // Recurse exactly one level.
+      for (const sub of listFiles(path.join(absDir, entry.name))) {
+        if (sub.toLowerCase().endsWith(".md")) out.push(`${relDir}/${entry.name}/${sub}`);
+      }
+    }
+  }
+}
+
+/** Recursively collect *.md files under a directory, skipping node_modules/.git. */
+function collectMarkdownTree(
+  absDir: string,
+  relDir: string,
+  out: string[],
+  depth: number,
+): void {
+  if (depth > MAX_SKILL_DEPTH) return;
+
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(absDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      collectMarkdownTree(
+        path.join(absDir, entry.name),
+        `${relDir}/${entry.name}`,
+        out,
+        depth + 1,
+      );
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+      out.push(`${relDir}/${entry.name}`);
+    }
+  }
 }
 
 /** Recursively find SKILL.md manifests under .claude/skills. */

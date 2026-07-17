@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
+import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 
 // ---------------------------------------------------------------------------
 // Go-specific patterns
@@ -128,6 +129,15 @@ export function scanGoFiles(dir: string): Finding[] {
     } catch { /* skip */ }
   }
 
+  // Scan go.sum (resolved module inventory) for malicious modules
+  const goSum = path.join(dir, GO_SUM);
+  if (fs.existsSync(goSum)) {
+    try {
+      const content = fs.readFileSync(goSum, "utf-8");
+      findings.push(...scanGoSumContent(content, GO_SUM));
+    } catch { /* skip */ }
+  }
+
   // Scan .go files in root and common source dirs
   scanGoSourceDir(dir, findings);
   const cmdDir = path.join(dir, "cmd");
@@ -184,6 +194,68 @@ export function scanGoContent(
   }
 
   return findings;
+}
+
+/**
+ * Scan go.sum for modules matching curated threat-intel IOCs (go: prefixed
+ * feed entries). go.sum lines are "module version hash" or
+ * "module version/go.mod hash"; both carry the same module@version, so each
+ * module is reported once regardless of how many hash lines it has.
+ */
+export function scanGoSumContent(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+  const seen = new Set<string>();
+  const lines = content.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    const parts = (lines[i] ?? "").trim().split(/\s+/);
+    if (parts.length < 2) continue;
+    const module = parts[0] ?? "";
+    // The second field is "v1.2.3" or "v1.2.3/go.mod"; keep only the version.
+    const version = (parts[1] ?? "").replace(/\/go\.mod$/, "");
+    if (!module || !version) continue;
+
+    const key = `${module}@${version}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const ioc = matchPackageIOC("go", module, version, iocFeed);
+    if (ioc) {
+      findings.push(maliciousModuleFinding(module, version, ioc, relativePath, i + 1));
+    }
+  }
+
+  return findings;
+}
+
+function maliciousModuleFinding(
+  module: string,
+  version: string,
+  ioc: FeedIOC,
+  relativePath: string,
+  line: number,
+): Finding {
+  return {
+    rule: "GO_MALICIOUS_MODULE",
+    description: `Known malicious Go module: ${module}@${version}${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` - ${ioc.campaign}` : ""}`,
+    severity: ioc.severity,
+    file: relativePath,
+    line,
+    match: goTruncate(`${module}@${version}`),
+    confidence: ioc.confidence,
+    category: "malware",
+    recommendation: `Remove ${module} immediately, rotate any credentials available to `
+      + "`go build`, and audit systems that built it. This module is listed in threat intelligence feeds.",
+  };
+}
+
+function goTruncate(value: string): string {
+  return value.length > 120 ? value.substring(0, 120) + "..." : value;
 }
 
 /**
