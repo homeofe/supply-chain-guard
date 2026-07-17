@@ -60,6 +60,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - Install hook deep analysis (secret harvesting, download-exec chains, binary blobs)
 - Levenshtein-based typosquatting detection against top 100 npm packages with known-safe whitelist
 - Dependency confusion and namespace squatting
+- Starjacking: in `npm <pkg>` mode, corroborates a package's claimed `repository` against the repo's own `package.json` and flags a repo borrowed from an unrelated popular project to inherit its stars/trust (conservative: monorepos, forks, related names, and unfetchable repos are not flagged)
 - Known-bad version blocklist (axios, ua-parser-js, coa, rc, event-stream, node-ipc, colors, faker)
 - Publishing anomaly detection (maintainer changes, version gaps, script additions)
 
@@ -124,7 +125,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.15.0
+    rev: v5.16.0
     hooks:
       - id: supply-chain-guard
 ```

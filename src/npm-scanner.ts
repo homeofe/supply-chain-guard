@@ -20,6 +20,7 @@ import {
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
 } from "./patterns.js";
+import { parseGitHubUrl } from "./github-trust-scanner.js";
 
 const TOOL_VERSION = "1.0.0";
 const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -34,6 +35,7 @@ interface NpmVersionData {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   dist?: { tarball?: string };
+  repository?: unknown;
   [key: string]: unknown;
 }
 
@@ -67,6 +69,11 @@ export async function scanNpmPackage(
 
   // Check dependencies against known malicious packages
   checkDependencies(versionData as NpmVersionData, findings);
+
+  // Corroborate the claimed source repository (starjacking): a package that
+  // points its `repository` at a popular project it does not own inherits that
+  // project's trust/stars. Network-requiring, so best-effort; never throws.
+  await checkRepositoryClaim(packageName, versionData as NpmVersionData, findings);
 
   // Download and scan tarball
   const tarballUrl = (versionData as NpmVersionData).dist?.tarball;
@@ -195,6 +202,189 @@ function checkDependencies(
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Repository-claim corroboration (starjacking) - v5.16.0
+// ---------------------------------------------------------------------------
+
+/** Tokens too generic to prove two package names refer to the same project. */
+const GENERIC_NAME_TOKENS = new Set([
+  "js", "ts", "lib", "libs", "core", "sdk", "api", "utils", "util", "common",
+  "node", "cli", "app", "client", "server", "plugin", "tool", "tools", "kit",
+  "pkg", "package", "module", "src", "www", "web", "main", "index", "project",
+]);
+
+/** Split a package name into significant lowercase tokens (scope stripped). */
+function significantTokens(name: string): Set<string> {
+  const unscoped = name.replace(/^@[^/]+\//, "");
+  return new Set(
+    unscoped
+      .toLowerCase()
+      .split(/[-_./@]+/)
+      .filter((t) => t.length >= 3 && !GENERIC_NAME_TOKENS.has(t)),
+  );
+}
+
+/**
+ * Two package names are "related" (likely the same project) if they share any
+ * significant token, so `cool-lib` published from the `cool-project` repo is
+ * not flagged. Purely a false-positive guard.
+ */
+function namesAreRelated(a: string, b: string): boolean {
+  const ta = significantTokens(a);
+  for (const t of significantTokens(b)) if (ta.has(t)) return true;
+  return false;
+}
+
+/**
+ * Normalize the many shapes of a package.json `repository` field to a GitHub
+ * owner/repo (+ monorepo subdirectory), or null when it is not a GitHub repo.
+ */
+export function parseRepositoryField(
+  repository: unknown,
+): { owner: string; repo: string; directory?: string } | null {
+  let url: string | undefined;
+  let directory: string | undefined;
+  if (typeof repository === "string") {
+    url = repository;
+  } else if (repository && typeof repository === "object") {
+    const r = repository as { url?: unknown; directory?: unknown };
+    if (typeof r.url === "string") url = r.url;
+    if (typeof r.directory === "string") directory = r.directory;
+  }
+  if (!url) return null;
+
+  // Shorthand forms: "github:owner/repo", "owner/repo".
+  const shorthand = url.match(/^(?:github:)?([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
+  if (shorthand && !url.includes("://") && !url.includes("github.com")) {
+    const parsed = parseGitHubUrl(`github.com/${shorthand[1]}/${shorthand[2]}`);
+    return parsed ? { ...parsed, directory } : null;
+  }
+
+  const parsed = parseGitHubUrl(url);
+  return parsed ? { ...parsed, directory } : null;
+}
+
+/** GET a URL over HTTPS, resolving null on any non-200 / error (never throws). */
+function httpsGetTextOrNull(url: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (v: string | null): void => {
+      if (!settled) { settled = true; resolve(v); }
+    };
+    try {
+      const req = https.get(url, { headers: { Accept: "application/json", "User-Agent": "supply-chain-guard" } }, (res) => {
+        if (res.statusCode !== 200) {
+          res.resume?.();
+          done(null);
+          return;
+        }
+        let data = "";
+        let size = 0;
+        res.on("data", (chunk: Buffer) => {
+          size += chunk.length;
+          if (size > MAX_FILE_SIZE) { done(null); req.destroy?.(); return; }
+          data += chunk.toString();
+        });
+        res.on("end", () => done(data));
+        res.on("error", () => done(null));
+      });
+      // Bound the wait so a hung/slow host cannot stall the whole npm scan.
+      req.setTimeout?.(10_000, () => { done(null); req.destroy?.(); });
+      req.on("error", () => done(null));
+    } catch {
+      done(null);
+    }
+  });
+}
+
+/**
+ * Corroborate a package's claimed source repository (starjacking detection).
+ *
+ * A malicious package can set `repository` to a popular project's URL to inherit
+ * its trust score and stars. We fetch the claimed repo's root package.json and
+ * flag ONLY the high-confidence borrowed-trust case: the repo publishes a
+ * DIFFERENT, unrelated package and is not a monorepo containing this one.
+ *
+ * Deliberately conservative (best-effort, medium severity) - every ambiguous or
+ * benign case is left unflagged:
+ *   - no repository field, or a non-GitHub host           -> skip
+ *   - repository.directory set (a monorepo subdirectory)  -> skip (legit)
+ *   - the repo declares `workspaces` (a monorepo)         -> skip (legit)
+ *   - the repo could not be fetched (404/private/network) -> skip
+ *   - the repo's package.json name equals this package    -> skip (corroborated)
+ *   - the names share a significant token (same project)  -> skip
+ */
+export async function checkRepositoryClaim(
+  packageName: string,
+  versionData: { repository?: unknown },
+  findings: Finding[],
+): Promise<void> {
+  const claim = parseRepositoryField(versionData.repository);
+  if (!claim) return;
+  // A monorepo subdirectory legitimately means the root name differs.
+  if (claim.directory) return;
+
+  // The package's scope matching the repo owner is a strong ownership signal: an
+  // org publishing @acme/* from github.com/acme/<mono> is the common legit case
+  // (and the dominant pnpm/lerna monorepo layout). Cheap, no fetch. Skip.
+  const scope = packageName.match(/^@([^/]+)\//)?.[1];
+  if (scope && scope.toLowerCase() === claim.owner.toLowerCase()) return;
+
+  // If either name reduces to no SIGNIFICANT token (e.g. "core"/"cli"/"@x/api"),
+  // relatedness cannot be judged, so unrelatedness cannot be proven - skip
+  // rather than emit a maximally-FP-prone flag (v5.16.0 gate finding).
+  if (significantTokens(packageName).size === 0) return;
+
+  const body = await httpsGetTextOrNull(
+    `https://raw.githubusercontent.com/${claim.owner}/${claim.repo}/HEAD/package.json`,
+  );
+  if (body === null) return; // unfetchable: too benign to flag
+
+  let repoPkg: { name?: unknown; workspaces?: unknown; private?: unknown };
+  try {
+    repoPkg = JSON.parse(body) as { name?: unknown; workspaces?: unknown; private?: unknown };
+  } catch {
+    return;
+  }
+  // Monorepo / workspace-root signals: a root that declares `workspaces`, or is
+  // marked private (the near-universal marker of an unpublished monorepo root
+  // that legitimately publishes many differently-named member packages).
+  if (repoPkg.workspaces !== undefined) return;
+  if (repoPkg.private === true) return;
+
+  const repoName = typeof repoPkg.name === "string" ? repoPkg.name : undefined;
+  if (!repoName) return; // no name to compare
+  if (repoName === packageName) return; // corroborated
+  if (significantTokens(repoName).size === 0) return; // repo name too generic to judge
+  if (namesAreRelated(packageName, repoName)) return; // likely the same project
+
+  // Last-resort monorepo check (only on the would-flag path, so no latency on
+  // the common case): pnpm/lerna monorepos leave the package.json workspaces key
+  // empty. If a workspace manifest exists in the repo, treat it as a monorepo.
+  for (const manifest of ["pnpm-workspace.yaml", "lerna.json"]) {
+    const m = await httpsGetTextOrNull(
+      `https://raw.githubusercontent.com/${claim.owner}/${claim.repo}/HEAD/${manifest}`,
+    );
+    if (m !== null) return;
+  }
+
+  findings.push({
+    rule: "STARJACKING_SUSPECTED",
+    description:
+      `Package "${packageName}" claims repository github.com/${claim.owner}/${claim.repo}, but that ` +
+      `repository publishes a different, unrelated package ("${repoName}") and is not a monorepo ` +
+      "containing this one - the repository may be borrowed to inherit its stars/trust.",
+    severity: "medium",
+    confidence: 0.7,
+    category: "supply-chain",
+    file: "package.json",
+    recommendation:
+      `Verify that github.com/${claim.owner}/${claim.repo} is really the source of "${packageName}". ` +
+      "Starjacking points a malicious package at a popular project's repo to inflate trust scores; " +
+      "confirm the repo actually builds and publishes this package before trusting it.",
+  });
 }
 
 /**

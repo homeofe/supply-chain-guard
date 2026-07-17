@@ -4,6 +4,30 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.16.0 (2026-07-17)
+**Starjacking detection (repository-claim corroboration)**
+
+Completes the differentiators track: in `npm <pkg>` mode the scanner now
+corroborates a package's claimed source repository, catching the borrowed-trust
+pattern where a malicious package points `repository` at a popular project it
+does not own to inherit that project's stars and trust scores.
+
+- New rule `STARJACKING_SUSPECTED` (medium): fetches the claimed GitHub repo's
+  root package.json and flags ONLY the high-confidence case - the repo publishes
+  a different, unrelated package and is not a monorepo containing this one.
+- Deliberately conservative (this is a false-positive-sensitive check, so every
+  ambiguous or benign case is skipped, never flagged): non-GitHub hosts, a
+  `repository.directory` subdir, a package scope matching the repo owner, a repo
+  that declares `workspaces` / is marked `private` / has a pnpm-workspace.yaml or
+  lerna.json (all monorepo signals), an unfetchable/private repo, matching or
+  token-related names, and names too generic to judge. The repo fetch is bounded
+  by a 10s timeout and the 5 MB size limit and never throws.
+- An adversarial gate over the diff caught (and this release fixes) the dominant
+  false-positive path: monorepo detection originally read only the package.json
+  `workspaces` key, so pnpm/lerna/nx monorepos (and all-generic package names
+  like `@x/core`) were mis-flagged. Hardened with scope-owner ownership, private-
+  root, generic-name, and workspace-manifest guards.
+
 ### v5.15.0 (2026-07-17)
 **Honest SLSA provenance validation (fixes an overclaim)**
 

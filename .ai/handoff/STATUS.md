@@ -1,3 +1,22 @@
+> Note (2026-07-17, claude-fable-5): Released v5.16.0 - starjacking detection,
+> completing the differentiators track (R4-B) and all four tracks of the gap-analysis
+> push. In `npm <pkg>` mode, checkRepositoryClaim corroborates a package's claimed
+> `repository`: fetches the repo's root package.json (raw.githubusercontent HEAD,
+> 10s timeout + 5MB bound, never throws) and emits STARJACKING_SUSPECTED (medium)
+> ONLY for the borrowed-trust case - the repo publishes a different, unrelated
+> package and is not a monorepo containing this one. Deliberately FP-conservative:
+> skips non-GitHub hosts, repository.directory, scope==owner, workspaces/private
+> roots, pnpm-workspace.yaml/lerna.json manifests, unfetchable/related/generic-name
+> cases. A 3-lens adversarial gate (dominant lens: false positives) confirmed 1
+> should-fix, fixed pre-tag: monorepo detection originally read ONLY package.json
+> `workspaces`, so pnpm/lerna/nx monorepos (and all-generic names like @x/core) were
+> mis-flagged - hardened with scope-owner + private-root + generic-name + workspace-
+> manifest guards (the gate's exact @acme/core -> acme/platform FP now skipped;
+> evil-wallet -> expressjs/express true positive still fires). My proactive socket-
+> timeout fix was implicitly validated (not flagged). 15 tests; full suite green,
+> self-scan 0/0. All 4 tracks now shipped: v5.12.4 (threat-intel), v5.13.0 (detection
+> gaps), v5.14.0 (product/DX), v5.15.0 + v5.16.0 (differentiators).
+
 > Note (2026-07-17, claude-fable-5): Released v5.15.0 - honest SLSA provenance
 > validation (R4 provenance half of the 4-track gap-analysis push; built directly,
 > the crypto being too subtle to hand off). The verifier previously treated a file
