@@ -1,3 +1,23 @@
+> Note (2026-07-17, claude-fable-5): Released v5.17.2 - FALSE-POSITIVE fix
+> (user-reported). A user ran `npm install -g supply-chain-guard` then
+> `scan .` on a checkout of THIS repo and got ~597 THREAT_INTEL/IOC matches.
+> Not a compromise: the scan was matching the tool's OWN threat database
+> (threat-intel.ts/ioc-blocklist.ts/test fixtures carry malicious IOCs by
+> design). Root cause: self-scan suppression keyed ONLY on isOwnPackageRoot
+> (scanned path == the RUNNING binary's package root) - true for node dist/cli.js
+> from the repo (self-scan 0/0) but false for a global install scanning a
+> separate checkout, so the guard no-opped and flagged its own signatures. Fix:
+> added isOwnSourceCheckout(scanDir) - recognizes the checkout by package.json
+> identity (name "supply-chain-guard" AND repository homeofe/supply-chain-guard),
+> OR'd into scanningOwnPackage. Spoof-gated: the recognition unlocks only the
+> narrow IOC-string suppression for the exact SELF_SCAN_INERT_FILES paths;
+> checkFilePatterns (malware/obfuscation) still runs on every file, so no payload
+> hides by forging the name. Empirically: a full repo copy (incl.
+> .supply-chain-guard.yml) now scans 0/0 like the real self-scan; a third-party
+> project embedding the same IOC still flags; a name-only spoof still flags. 3
+> regression tests (self-scan-recognition.test.ts, added to SELF_SCAN_INERT_FILES).
+> Full suite green.
+
 > Note (2026-07-17, claude-fable-5): Released v5.17.1 - MCP registry metadata +
 > honest npm description (growth: highest-leverage listing prep). Added mcpName
 > ("io.github.homeofe/supply-chain-guard") to package.json and a repo-root server.json

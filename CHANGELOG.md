@@ -4,6 +4,31 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.17.2 (2026-07-17)
+**Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives)**
+
+Reported by a user who ran `npm install -g supply-chain-guard` and then
+`supply-chain-guard scan .` on a checkout of this repository, and got ~597
+THREAT_INTEL / IOC matches. This was a FALSE POSITIVE, not a compromise: the
+scan was matching the tool's own threat database (the malicious domains, IPs,
+hashes and package names that src/threat-intel.ts, src/ioc-blocklist.ts and the
+test fixtures carry by design).
+
+Root cause: the self-scan suppression that stops the tool from flagging its own
+IOC-definition files keyed ONLY on the scanned path equalling the running
+binary's installed package root (isOwnPackageRoot). That is true for
+`node dist/cli.js` run from the repo (self-scan 0/0), but NOT for a globally
+installed binary scanning a separate checkout - so the guard silently no-opped
+and the scanner flagged its own signatures.
+
+Fix: the checkout is now ALSO recognized by its package.json identity (name
+"supply-chain-guard" AND repository pointing at homeofe/supply-chain-guard), so
+a checkout scans clean no matter how the tool was installed. Gated against
+spoofing: the recognition unlocks only the narrow IOC-string suppression for the
+exact files in the known self-source allowlist; the malware/obfuscation pattern
+checks still run on every file, so a hostile project cannot hide a payload by
+forging the name. 3 regression tests including the spoof case.
+
 ### v5.17.1 (2026-07-17)
 **MCP registry metadata + honest package description**
 

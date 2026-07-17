@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1784276571",
-    "timestamp": "2026-07-17T08:22:52Z",
-    "commit": "3e148d8",
+    "session_id": "cli-1784277945",
+    "timestamp": "2026-07-17T08:45:45Z",
+    "commit": "25a4952",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:01567757682b2819ab08dbd82606641151e711ec960b2e07d1741b4d8c287fcd",
-      "updated": "2026-07-17T08:22:42Z",
-      "lines": 690,
+      "checksum": "sha256:efaf68309203c9845eceba80e6253538ff0d289d0d8359e45fb479ae4e6aeb60",
+      "updated": "2026-07-17T08:45:35Z",
+      "lines": 710,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:d4a24e7327c2f909b3d0f3f49007a34e0494b7ff706be50619192296b90bb0b0",
-      "updated": "2026-07-17T08:22:42Z",
+      "checksum": "sha256:2e7e5671d5a2731bdc77ed1aad08741d58584bcc95aaca26739e9bc1d4853f0f",
+      "updated": "2026-07-17T08:45:35Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:08e97b03c902ef3b3fb4abf1effbde49ba90e531e0a13f1cd5497b6c7771b042",
-      "updated": "2026-07-17T08:22:42Z",
+      "checksum": "sha256:7354f620a30fb26df535651834a86cb21eaa24f0c1997c7c969676990a78fe6d",
+      "updated": "2026-07-17T08:45:35Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -74,7 +74,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 10233,
-    "full_read": 14058
+    "manifest_plus_core": 10491,
+    "full_read": 14316
   }
 }

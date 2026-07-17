@@ -123,6 +123,8 @@ const SELF_SCAN_INERT_FILES = new Set([
   // policy domain-allowlist suppression tests (they need a genuine feed IOC).
   "src/__tests__/mcp-server.test.ts",
   "src/__tests__/policy-engine.test.ts",
+  // Uses a real bundled C2 domain as a fixture to test own-source recognition.
+  "src/__tests__/self-scan-recognition.test.ts",
   "src/__tests__/threat-intel.test.ts",
 ]);
 
@@ -135,6 +137,44 @@ const SCANNER_PACKAGE_ROOT = fs.realpathSync(path.resolve(__dirname, ".."));
 function isOwnPackageRoot(scanDir: string): boolean {
   try {
     return fs.realpathSync(scanDir) === SCANNER_PACKAGE_ROOT;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Recognize a checkout of supply-chain-guard's OWN source tree by its
+ * package.json identity, independent of where the running binary is installed.
+ *
+ * The self-scan IOC suppression previously keyed only on isOwnPackageRoot (the
+ * scanned dir's realpath equalling the running binary's package root). That
+ * holds for `node dist/cli.js` run from the repo, but NOT for a globally
+ * installed binary (`npm install -g`) scanning a separate checkout - so the
+ * scanner flagged its own threat database (600+ THREAT_INTEL / IOC matches on
+ * threat-intel.ts, ioc-blocklist.ts and test fixtures). This makes the
+ * recognition content-based so any checkout is handled the same way.
+ *
+ * Gated against spoofing: it matches only when the scanned package.json is BOTH
+ * named "supply-chain-guard" (an npm name we own) AND points its repository at
+ * homeofe/supply-chain-guard. Even if a hostile project forged both, the
+ * suppression it unlocks is narrow - it only skips IOC-string matching for the
+ * exact files in SELF_SCAN_INERT_FILES; the malware/obfuscation pattern checks
+ * (checkFilePatterns) still run on every file, so no payload can hide here.
+ */
+function isOwnSourceCheckout(scanDir: string): boolean {
+  try {
+    const pkgPath = path.join(scanDir, "package.json");
+    if (!fs.existsSync(pkgPath)) return false;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
+      name?: unknown;
+      repository?: unknown;
+    };
+    if (pkg.name !== "supply-chain-guard") return false;
+    const repoUrl =
+      typeof pkg.repository === "string"
+        ? pkg.repository
+        : (pkg.repository as { url?: unknown } | undefined)?.url;
+    return typeof repoUrl === "string" && repoUrl.includes("homeofe/supply-chain-guard");
   } catch {
     return false;
   }
@@ -189,7 +229,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     throw new Error(`Target is not a directory: ${scanDir}`);
   }
 
-  const scanningOwnPackage = isOwnPackageRoot(scanDir);
+  const scanningOwnPackage = isOwnPackageRoot(scanDir) || isOwnSourceCheckout(scanDir);
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
