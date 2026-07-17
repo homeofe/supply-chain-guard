@@ -1,3 +1,19 @@
+> Note (2026-07-17, claude-fable-5): Released v5.17.0 - reachability/ecosystem
+> interop (code-side growth items). (1) `feed osv` CLI + new module src/osv-export.ts
+> (toOsvRecords/parsePackageValue, exported from the library API): exports the feed's
+> malicious-package IOCs as OSV-schema records (npm/Go/RubyGems/Packagist/crates.io/
+> NuGet; domain/ip/url/hash + non-OSV ecosystems like jenkins skipped), so the feed is
+> consumable by osv-scanner and shaped toward ossf/malicious-packages. Deterministic
+> (ids + timestamps derive only from the entry, SHA-256-suffixed ids, sorted). Bare
+> name -> all-versions ECOSYSTEM range; name@version -> pinned version. 282 records
+> from the current bundled feed, all OSV-required fields present (empirically verified
+> via the CLI). 6 tests. (2) "scanned by supply-chain-guard" adopter badge in the
+> README (viral loop). Small additive output code (not the scan pipeline), so shipped
+> on the full battery + empirical CLI proof rather than a multi-agent gate; self-scan
+> 0/0. A background research agent is producing the external LISTING PLAYBOOK
+> (awesome-lists, MCP directories, ossf contribution format) for the awesome-list PRs +
+> web-form submissions - those are handled separately from this code release.
+
 > Note (2026-07-17, claude-fable-5): Released v5.16.0 - starjacking detection,
 > completing the differentiators track (R4-B) and all four tracks of the gap-analysis
 > push. In `npm <pkg>` mode, checkRepositoryClaim corroborates a package's claimed

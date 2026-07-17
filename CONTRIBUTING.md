@@ -125,6 +125,7 @@ src/
   risk-forecast.ts        # Risk trajectory prediction
   metrics.ts              # Security KPIs & metrics
   reporter.ts             # Output formatting
+  osv-export.ts           # OSV-schema export of malicious-package IOCs
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces
   __tests__/              # Test files

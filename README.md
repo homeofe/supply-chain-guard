@@ -125,7 +125,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.16.0
+    rev: v5.17.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -469,9 +469,18 @@ is ingested, not at the next release:
 ```bash
 supply-chain-guard feed stats     # entry counts by type and severity
 supply-chain-guard feed refresh   # pull the latest published feed into the local cache
+supply-chain-guard feed osv       # export malicious-package IOCs as OSV records
 ```
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
+
+**OSV export:** `feed osv` emits the feed's malicious-package indicators (npm,
+PyPI-adjacent, Go, RubyGems, Packagist, crates.io, NuGet) as [OSV-schema](https://ossf.github.io/osv-schema/)
+records, so the feed is consumable by `osv-scanner` and other OSV-native tooling:
+
+```bash
+supply-chain-guard feed osv --out malicious.osv.json
+```
 
 **Indicator contract:** every feed value is a LITERAL indicator (a domain, IP,
 URL, hash, or package name), never a regular expression. All ingestion paths
@@ -535,6 +544,16 @@ scan() -> collectFiles() -> per-file analysis
   -> Correlation engine (links findings into incidents)
   -> Trust breakdown (4-dimension scoring)
   -> Report generation (text/json/html/markdown/sarif/sbom)
+```
+
+## Show that you scan
+
+If supply-chain-guard runs in your CI, add the badge to your README:
+
+[![scanned by supply-chain-guard](https://img.shields.io/badge/scanned%20by-supply--chain--guard-2ea44f?logo=npm&logoColor=white)](https://github.com/homeofe/supply-chain-guard)
+
+```markdown
+[![scanned by supply-chain-guard](https://img.shields.io/badge/scanned%20by-supply--chain--guard-2ea44f?logo=npm&logoColor=white)](https://github.com/homeofe/supply-chain-guard)
 ```
 
 ## Contributing

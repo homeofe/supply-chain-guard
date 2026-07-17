@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.16.0");
+  .version("5.17.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -704,6 +704,32 @@ feedCmd
       console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
       console.log(`  Cache file: ${result.cachePath}`);
       console.log(`  Scans in the next 24h automatically merge these entries.\n`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n  Error: ${message}\n`);
+      process.exit(1);
+    }
+  });
+
+feedCmd
+  .command("osv")
+  .description(
+    "Export the feed's malicious-package IOCs as OSV records (osv.dev schema) for osv-scanner / ossf-malicious-packages consumption (offline)",
+  )
+  .option("-o, --out <file>", "Write the OSV JSON to a file instead of stdout")
+  .action(async (opts: { out?: string }) => {
+    try {
+      const { getBundledFeed } = await import("./threat-intel.js");
+      const { toOsvRecords } = await import("./osv-export.js");
+      const records = toOsvRecords(getBundledFeed());
+      const json = JSON.stringify(records, null, 2);
+      if (opts.out) {
+        const { writeFileSync } = await import("node:fs");
+        writeFileSync(opts.out, json, "utf-8");
+        console.error(`\n  Wrote ${records.length} OSV records to ${opts.out}\n`);
+      } else {
+        console.log(json);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`\n  Error: ${message}\n`);

@@ -11,10 +11,10 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.16.0 |
+| Version | 5.17.0 |
 | Node engines | >=20.0.0 |
-| Source modules | 63 under `src/` |
-| Test files | 78 under `src/__tests__/` |
+| Source modules | 64 under `src/` |
+| Test files | 79 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit | verified continuously in CI - see below |
 
@@ -39,9 +39,9 @@ Overrides: none.
 
 ---
 
-## Source Modules (63)
+## Source Modules (64)
 
-`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `cargo-scanner.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `continuous-monitor.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `dockerfile-scanner.ts`, `entropy.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `ioc-blocklist.ts`, `lockfile-checker.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `release-scanner.ts`, `remediation-engine.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `threat-intel.ts`, `triage-engine.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`
+`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `cargo-scanner.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `continuous-monitor.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `dockerfile-scanner.ts`, `entropy.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `ioc-blocklist.ts`, `lockfile-checker.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `osv-export.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `release-scanner.ts`, `remediation-engine.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `threat-intel.ts`, `triage-engine.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`
 
 ---
 

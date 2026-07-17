@@ -4,6 +4,21 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.17.0 (2026-07-17)
+**OSV-format feed export + adopter badge (ecosystem reach)**
+
+- `supply-chain-guard feed osv` exports the feed's malicious-package indicators
+  as [OSV-schema](https://ossf.github.io/osv-schema/) records (npm, Go, RubyGems,
+  Packagist, crates.io, NuGet), so the feed is consumable by osv-scanner and
+  other OSV-native tooling and is shaped toward ossf/malicious-packages. Bare
+  names export as an all-versions range; pinned name@version as a specific
+  version; domain/IP/URL/hash IOCs and non-OSV ecosystems (e.g. Jenkins) are
+  skipped. Deterministic output (ids + timestamps derive only from the entry).
+  `--out <file>` writes to a file; new module src/osv-export.ts (toOsvRecords /
+  parsePackageValue, both exported from the library API).
+- A "scanned by supply-chain-guard" adopter badge in the README that projects
+  running the scanner in CI can add to their own README.
+
 ### v5.16.0 (2026-07-17)
 **Starjacking detection (repository-claim corroboration)**
 
