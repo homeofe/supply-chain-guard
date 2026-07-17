@@ -34,6 +34,10 @@ const required = [
   // every release.
   { file: "README.md", minOccurrences: 1, note: "pre-commit snippet rev: tag" },
   { file: ".pre-commit-hooks.yaml", minOccurrences: 1, note: "example rev: tag in header comment" },
+  // The MCP registry server.json pins the version twice (top-level + the npm
+  // package entry). It must track releases or the published registry listing
+  // points at a stale package version.
+  { file: "server.json", minOccurrences: 2, note: "MCP registry version + npm package version" },
 ];
 
 const failures = [];

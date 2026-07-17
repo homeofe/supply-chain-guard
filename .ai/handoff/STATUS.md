@@ -1,3 +1,18 @@
+> Note (2026-07-17, claude-fable-5): Released v5.17.1 - MCP registry metadata +
+> honest npm description (growth: highest-leverage listing prep). Added mcpName
+> ("io.github.homeofe/supply-chain-guard") to package.json and a repo-root server.json
+> (schema 2025-12-11, verified live) so the MCP server can be published to the official
+> registry (registry.modelcontextprotocol.io) - PulseMCP/Glama/mcp.so auto-ingest from
+> it. The npm package must carry mcpName for the registry's npm-ownership check, hence
+> a release rather than an uncommitted file. server.json pins the version twice and is
+> now covered by check:version-sync so it cannot drift from the published package on
+> future releases. Also fixed the package.json description overclaim ("verifies SLSA
+> provenance" -> "grades SLSA provenance (in-toto/DSSE structural validation)") - the
+> README was corrected in v5.15.0 but the npm description still carried the stale
+> wording. To publish: `mcp-publisher login github` + `mcp-publisher publish` (needs a
+> homeofe org member; server.json + published mcpName are now in place). Full suite
+> green; self-scan 0/0.
+
 > Note (2026-07-17, claude-fable-5): Released v5.17.0 - reachability/ecosystem
 > interop (code-side growth items). (1) `feed osv` CLI + new module src/osv-export.ts
 > (toOsvRecords/parsePackageValue, exported from the library API): exports the feed's

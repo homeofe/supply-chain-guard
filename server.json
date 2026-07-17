@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.homeofe/supply-chain-guard",
+  "description": "Supply-chain security scanner and MCP server: vets npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, VS Code and GitHub Actions packages for malware, typosquats and malicious install hooks before install, with an offline IOC feed, SLSA provenance grading and CycloneDX SBOM output.",
+  "repository": {
+    "url": "https://github.com/homeofe/supply-chain-guard",
+    "source": "github"
+  },
+  "version": "5.17.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "supply-chain-guard",
+      "version": "5.17.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,19 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.17.1 (2026-07-17)
+**MCP registry metadata + honest package description**
+
+- Added `mcpName` to package.json and a `server.json` so the MCP server can be
+  published to the official MCP registry (registry.modelcontextprotocol.io),
+  from which PulseMCP / Glama / mcp.so ingest automatically. server.json's
+  version is now covered by the check:version-sync gate so it cannot drift out
+  of sync with the published package.
+- Corrected the package.json description to match the README: "grades SLSA
+  provenance (in-toto/DSSE structural validation)" instead of the old "verifies
+  SLSA provenance" (the overclaim fixed in v5.15.0 - the npm description still
+  carried the stale wording).
+
 ### v5.17.0 (2026-07-17)
 **OSV-format feed export + adopter badge (ecosystem reach)**
 
