@@ -16,7 +16,7 @@
 
 | Property | Value | Source |
 |----------|-------|--------|
-| package.json version | 5.13.0 | package.json |
+| package.json version | 5.14.0 | package.json |
 | Source modules present | 63 | src/ file list |
 | Test files present | 77 | src/__tests__/ file list |
 | tsconfig `types: ["node"]` | yes | tsconfig.json (load-bearing under TS6) |

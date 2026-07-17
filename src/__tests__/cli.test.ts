@@ -159,6 +159,35 @@ describe("CLI scan – malicious fixture", () => {
   });
 });
 
+// ─── --output flag ──────────────────────────────────────────────────────────
+
+describe("CLI scan --output", () => {
+  it("writes the formatted report to a file instead of stdout", () => {
+    const outFile = path.join(workdir, "clean-report.json");
+    const { stdout, stderr, status } = cli([
+      "scan", CLEAN_FIXTURE, "--format", "json", "--output", outFile,
+    ]);
+    expect(status).toBe(0);
+    // The report went to the file, so stdout stays empty...
+    expect(stdout.trim()).toBe("");
+    // ...and the status line goes to stderr.
+    expect(stderr).toContain(outFile);
+    expect(fs.existsSync(outFile)).toBe(true);
+    const parsed = JSON.parse(fs.readFileSync(outFile, "utf-8")) as { findings: unknown[] };
+    expect(Array.isArray(parsed.findings)).toBe(true);
+  });
+
+  it("writes a JUnit XML report to a file", () => {
+    const outFile = path.join(workdir, "report.xml");
+    cli(["scan", MALICIOUS_FIXTURE, "--format", "junit", "--output", outFile]);
+    expect(fs.existsSync(outFile)).toBe(true);
+    const xml = fs.readFileSync(outFile, "utf-8");
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(xml).toContain("<testsuite");
+    expect(xml).toContain("</testsuite>");
+  });
+});
+
 // ─── --fail-on flag ───────────────────────────────────────────────────────────
 
 describe("CLI --fail-on flag", () => {

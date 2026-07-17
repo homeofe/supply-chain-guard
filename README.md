@@ -124,7 +124,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.13.0
+    rev: v5.14.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -249,17 +249,34 @@ allowlist:
   packages:
     - internal-utils
   domains:
+    # Suppresses THREAT_INTEL_MATCH / IOC_KNOWN_C2_DOMAIN findings whose matched
+    # host is this domain or a subdomain of it.
     - company.internal
   githubOrgs:
+    # Parsed but not yet enforced: repo-trust findings do not currently carry
+    # the owning org. Use rules.disable or a suppress entry for REPO_* rules.
     - my-org
+
+# Skip files matched by these path globs (** / * / ?) during the scan.
+ignore:
+  - vendor/**
+  - "**/*.min.js"
 
 suppress:
   - rule: RELEASE_EXE_ARTIFACT
     reason: Legitimate Windows installer
+  # Optional path glob: suppress a rule only under a matching path.
+  - rule: EVAL_ATOB
+    reason: Vendored third-party bundle, reviewed
+    path: vendor/**
 
 baseline:
   file: .scg-baseline.json
 ```
+
+Findings can also be suppressed inline with a comment on the line directly
+above them: `// scg-ignore-next-line RULE reason` (JS/TS) or
+`# scg-ignore-next-line RULE` (Python/YAML/shell).
 
 ## Baseline Diffing (v4.4)
 

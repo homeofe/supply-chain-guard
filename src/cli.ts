@@ -33,7 +33,7 @@ program
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.13.0");
+  .version("5.14.0");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -41,7 +41,8 @@ program
   .command("scan")
   .description("Scan a local directory or GitHub repo for malware indicators")
   .argument("<target>", "Local directory path or GitHub repo URL")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab, junit", "text")
+  .option("-o, --output <file>", "Write the formatted report to a file instead of stdout")
   .option(
     "-s, --min-severity <severity>",
     "Minimum severity to report: critical, high, medium, low, info",
@@ -69,6 +70,7 @@ program
       target: string,
       opts: {
         format: string;
+        output?: string;
         minSeverity?: string;
         exclude?: string;
         depth: string;
@@ -111,7 +113,16 @@ program
           const { exportIncidentMarkdown } = await import("./soc-exporter.js");
           console.log(exportIncidentMarkdown(report));
         } else {
-          console.log(formatReport(report, options.format));
+          const formatted = formatReport(report, options.format);
+          // --output writes the report to a file (mirrors --sbom-output); status
+          // messages still go to stderr so the file stays pure report content.
+          if (opts.output) {
+            const { writeFileSync } = await import("node:fs");
+            writeFileSync(opts.output, formatted, "utf-8");
+            console.error(`Report written to ${opts.output} (${options.format})`);
+          } else {
+            console.log(formatted);
+          }
         }
 
         // Export attack graph if requested
@@ -349,7 +360,7 @@ program
   .command("repo")
   .description("Analyze a GitHub repository for trust signals and malware indicators")
   .argument("<url>", "GitHub repository URL (e.g., https://github.com/owner/repo)")
-  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab", "text")
+  .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab, junit", "text")
   .action(
     async (
       url: string,

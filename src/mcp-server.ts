@@ -92,6 +92,12 @@ interface ToolInputSchema {
   type: "object";
   properties: Record<string, JsonSchemaProperty>;
   required: readonly string[];
+  /**
+   * At least one of these argument groups must be fully present (each group is
+   * an AND of its keys; the groups are OR-ed). Lets a tool accept alternative
+   * argument shapes, e.g. ioc_lookup by (ecosystem+name) OR (indicator).
+   */
+  requiredAnyOf?: readonly (readonly string[])[];
   additionalProperties: boolean;
 }
 
@@ -108,30 +114,37 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "ioc_lookup",
     description:
-      "Offline lookup of a package against supply-chain-guard's bundled threat " +
-      "intelligence feed and known-bad version blocklist. No network access. " +
-      "Call this BEFORE installing, importing, or recommending a package. " +
-      "Returns a malicious/clean verdict with matched campaign and malware " +
-      "family details.",
+      "Offline lookup against supply-chain-guard's bundled threat intelligence " +
+      "feed and known-bad version blocklist. No network access. Two modes: pass " +
+      "{ecosystem, name} to check a PACKAGE before installing/importing/recommending " +
+      "it, or pass {indicator} to check a single domain/url/ip/hash observed in " +
+      "code or logs. Returns a malicious/clean verdict with matched campaign and " +
+      "malware family details.",
     inputSchema: {
       type: "object",
       properties: {
         ecosystem: {
           type: "string",
-          description: "Package ecosystem the name belongs to",
+          description: "Package ecosystem the name belongs to (package-mode)",
           enum: ECOSYSTEM_VALUES,
         },
         name: {
           type: "string",
-          description: "Package name, e.g. 'event-stream' or '@scope/pkg'",
+          description: "Package name, e.g. 'event-stream' or '@scope/pkg' (package-mode)",
         },
         version: {
           type: "string",
           description:
-            "Exact version to check (optional). Without it only version-independent IOCs match.",
+            "Exact version to check (optional, package-mode). Without it only version-independent IOCs match.",
+        },
+        indicator: {
+          type: "string",
+          description:
+            "A single domain, url, ip, or hash to look up against the feed (indicator-mode). Use INSTEAD of ecosystem/name.",
         },
       },
-      required: ["ecosystem", "name"],
+      required: [],
+      requiredAnyOf: [["ecosystem", "name"], ["indicator"]],
       additionalProperties: false,
     },
   },
@@ -154,6 +167,11 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: "string",
           description: "Only report findings at or above this severity (optional)",
           enum: SEVERITY_VALUES,
+        },
+        since: {
+          type: "string",
+          description:
+            "Only scan files changed since this git commit/ref (optional diff scan, e.g. 'HEAD~1' or a SHA).",
         },
       },
       required: ["path"],
@@ -296,6 +314,57 @@ function runIocLookup(
   };
 }
 
+interface IndicatorMatch {
+  source: "threat-intel-feed";
+  type: FeedIOC["type"];
+  value: string;
+  severity: Severity;
+  confidence: number;
+  family?: string;
+  campaign?: string;
+  firstSeen?: string;
+}
+
+interface IndicatorLookupResult {
+  indicator: string;
+  verdict: "malicious" | "clean";
+  matches: IndicatorMatch[];
+  checkedAgainst: { feedEntries: number; offline: true };
+}
+
+/**
+ * Look a raw indicator (domain / url / ip / hash) up against the loaded feed.
+ * Package IOCs are skipped here - those belong to the ecosystem/name path.
+ * Matching is exact (case-insensitive) on the feed value.
+ */
+function runIndicatorLookup(indicator: string): IndicatorLookupResult {
+  const feed = loadThreatIntel();
+  const needle = indicator.trim().toLowerCase();
+  const matches: IndicatorMatch[] = [];
+
+  for (const ioc of feed) {
+    if (ioc.type === "package") continue;
+    if (ioc.value.toLowerCase() !== needle) continue;
+    matches.push({
+      source: "threat-intel-feed",
+      type: ioc.type,
+      value: ioc.value,
+      severity: ioc.severity,
+      confidence: ioc.confidence,
+      family: ioc.family,
+      campaign: ioc.campaign,
+      firstSeen: ioc.firstSeen,
+    });
+  }
+
+  return {
+    indicator,
+    verdict: matches.length > 0 ? "malicious" : "clean",
+    matches,
+    checkedAgainst: { feedEntries: feed.length, offline: true },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Compact scan report (agents want small, structured results)
 // ---------------------------------------------------------------------------
@@ -308,16 +377,26 @@ const SEVERITY_RANK: Record<Severity, number> = {
   info: 0,
 };
 
-function compactReport(report: ScanReport): object {
+function compactReport(report: ScanReport, maxFindings = 20): object {
   const topFindings = [...report.findings]
     .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
-    .slice(0, 20)
-    .map((f) => ({
-      rule: f.rule,
-      severity: f.severity,
-      file: f.file ?? null,
-      description: f.description,
-    }));
+    .slice(0, maxFindings)
+    .map((f) => {
+      const compact: Record<string, unknown> = {
+        rule: f.rule,
+        severity: f.severity,
+        file: f.file ?? null,
+        line: f.line ?? null,
+        description: f.description,
+        recommendation: f.recommendation,
+      };
+      // Include the matched snippet, but omit it when large so a big obfuscated
+      // blob cannot bloat the agent-facing response.
+      if (f.match !== undefined && f.match.length <= 200) {
+        compact.match = f.match;
+      }
+      return compact;
+    });
 
   return {
     target: report.target,
@@ -347,17 +426,22 @@ async function runTool(
 ): Promise<object> {
   switch (toolName) {
     case "ioc_lookup":
-      return runIocLookup(
-        args.ecosystem as (typeof ECOSYSTEM_VALUES)[number],
-        args.name as string,
-        args.version as string | undefined,
-      );
+      // Indicator-mode when {indicator} is supplied; otherwise package-mode
+      // (ecosystem+name are guaranteed present by the requiredAnyOf validation).
+      return args.indicator !== undefined
+        ? runIndicatorLookup(args.indicator as string)
+        : runIocLookup(
+            args.ecosystem as (typeof ECOSYSTEM_VALUES)[number],
+            args.name as string,
+            args.version as string | undefined,
+          );
 
     case "scan_directory": {
       const report = await scan({
         target: args.path as string,
         format: "json",
         minSeverity: args.minSeverity as Severity | undefined,
+        sinceCommit: args.since as string | undefined,
       });
       return compactReport(report);
     }
@@ -398,6 +482,17 @@ function validateToolArguments(
   for (const key of schema.required) {
     if (args[key] === undefined) {
       return `Missing required argument "${key}"`;
+    }
+  }
+  if (schema.requiredAnyOf) {
+    const satisfied = schema.requiredAnyOf.some((group) =>
+      group.every((key) => args[key] !== undefined),
+    );
+    if (!satisfied) {
+      const groups = schema.requiredAnyOf
+        .map((group) => group.map((k) => `"${k}"`).join(" + "))
+        .join(" or ");
+      return `Provide one of: ${groups}`;
     }
   }
   for (const [key, value] of Object.entries(args)) {

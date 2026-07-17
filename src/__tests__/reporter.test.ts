@@ -609,6 +609,88 @@ describe("formatReport – GitLab (Dependency Scanning report)", () => {
   });
 });
 
+// ─── JUnit XML format ─────────────────────────────────────────────────────────
+
+describe("formatReport – JUnit XML", () => {
+  it("should start with an XML declaration and a single testsuite", () => {
+    const output = formatReport(makeReport(), "junit");
+    expect(output.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect((output.match(/<testsuite\b/g) ?? []).length).toBe(1);
+    expect(output).toContain("</testsuite>");
+    // Balanced testcase tags: every opened testcase is closed (self-closing or paired).
+    const opens = (output.match(/<testcase\b/g) ?? []).length;
+    const closes =
+      (output.match(/<\/testcase>/g) ?? []).length +
+      (output.match(/\/>/g) ?? []).length;
+    expect(opens).toBe(5);
+    expect(closes).toBeGreaterThanOrEqual(opens);
+  });
+
+  it("should emit one testcase per finding with the right tests/failures counts", () => {
+    const output = formatReport(makeReport(), "junit");
+    // 5 findings total, 2 of them failures (critical + high).
+    expect(output).toContain('tests="5"');
+    expect(output).toContain('failures="2"');
+    expect((output.match(/<testcase\b/g) ?? []).length).toBe(5);
+  });
+
+  it("should render a <failure> for a critical finding, type=severity, escaped", () => {
+    const output = formatReport(
+      makeReport({
+        findings: [
+          {
+            rule: "XSS<RULE>",
+            description: 'evil & "quoted" <tag>',
+            severity: "critical",
+            file: "a.js",
+            line: 2,
+            recommendation: "remove <it>",
+          },
+        ],
+        summary: { totalFiles: 1, filesScanned: 1, critical: 1, high: 0, medium: 0, low: 0, info: 0 },
+      }),
+      "junit",
+    );
+    expect(output).toContain('<failure type="critical"');
+    // XML metacharacters are escaped, never emitted raw inside the report.
+    expect(output).not.toContain("<tag>");
+    expect(output).toContain("&lt;tag&gt;");
+    expect(output).toContain("&amp;");
+    expect(output).toContain("&quot;");
+    expect(output).toContain("XSS&lt;RULE&gt;");
+  });
+
+  it("should emit a passing (self-closing) testcase for low/info findings", () => {
+    const output = formatReport(
+      makeReport({
+        findings: [
+          { rule: "INFO_ONLY", description: "fyi", severity: "info", recommendation: "none" },
+        ],
+        summary: { totalFiles: 1, filesScanned: 1, critical: 0, high: 0, medium: 0, low: 0, info: 1 },
+      }),
+      "junit",
+    );
+    expect(output).toContain('failures="0"');
+    expect(output).not.toContain("<failure");
+    expect(output).toMatch(/<testcase[^>]*\/>/);
+  });
+
+  it("should exclude suppressed findings from the JUnit report", () => {
+    const output = formatReport(
+      makeReport({
+        findings: [
+          { rule: "ACTIVE_RULE", description: "active", severity: "high", recommendation: "fix", file: "a.js" },
+          { rule: "SUPPRESSED_RULE", description: "suppressed", severity: "high", recommendation: "fix", file: "b.js", suppressed: true },
+        ],
+      }),
+      "junit",
+    );
+    expect(output).toContain("ACTIVE_RULE");
+    expect(output).not.toContain("SUPPRESSED_RULE");
+    expect(output).toContain('tests="1"');
+  });
+});
+
 // ─── Markdown injection hardening ─────────────────────────────────────────────
 
 describe("formatReport – markdown injection hardening", () => {

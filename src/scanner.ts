@@ -57,7 +57,7 @@ import { analyzeInstallHooks, extractInstallScripts } from "./install-hook-scann
 import { analyzeDependencyRisks } from "./dependency-risk-analyzer.js";
 import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
-import { loadPolicyConfig, applyPolicy, applyBaseline } from "./policy-engine.js";
+import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
 import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
@@ -119,6 +119,10 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/__tests__/issue-24-ioc-evasion.test.ts",
   "src/__tests__/issue-54-hardening.test.ts",
   "src/__tests__/mcp-scanner.test.ts",
+  // Real C2 domain IOC used as a fixture for the MCP indicator lookup and the
+  // policy domain-allowlist suppression tests (they need a genuine feed IOC).
+  "src/__tests__/mcp-server.test.ts",
+  "src/__tests__/policy-engine.test.ts",
   "src/__tests__/threat-intel.test.ts",
 ]);
 
@@ -186,8 +190,32 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   }
 
   const scanningOwnPackage = isOwnPackageRoot(scanDir);
+
+  // Load policy up front: its `ignore:` globs prune the scanner walk, and the
+  // same object is reused for the suppression passes further down.
+  const policy = loadPolicyConfig(scanDir);
+  if (policy?.allowlist?.githubOrgs?.length) {
+    // allowlist.githubOrgs is parsed but not yet enforced: repo-trust findings
+    // (REPO_* / trust-signals) do not currently carry the owning org, so there
+    // is nothing to attribute them to. Surface it loudly rather than letting a
+    // configured key silently do nothing (v5.3 fail-closed philosophy).
+    console.error(
+      `supply-chain-guard: policy note: allowlist.githubOrgs (${policy.allowlist.githubOrgs.length} org(s)) is parsed but not yet enforced - repo-trust findings carry no org attribution. Use rules.disable or a suppress entry for REPO_* rules if you need to silence them.`,
+    );
+  }
+
   // Collect files (v4.5: diff mode filters to changed files only)
   let allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
+
+  // Config `ignore:` path globs: drop matching files from the scan (v5.13).
+  if (policy?.ignore?.length) {
+    const globs = policy.ignore;
+    allFiles = allFiles.filter((f) => {
+      const rel = path.relative(scanDir, f).replace(/\\/g, "/");
+      return !globs.some((g) => matchGlob(g, rel));
+    });
+  }
+
   if (options.sinceCommit && fs.existsSync(path.join(scanDir, ".git"))) {
     const changedFiles = new Set(getChangedFiles(scanDir, options.sinceCommit));
     if (changedFiles.size > 0) {
@@ -487,7 +515,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // history (guaranteed phantom RISK_TREND_SPIKE on the second scan of any
   // repo with suppressions). Same bug class as the v5.2.40 SARIF/SBOM leak.
   let suppressedCount = 0;
-  const policy = loadPolicyConfig(scanDir);
+
+  // Inline // scg-ignore-next-line RULE / # scg-ignore-next-line RULE comments:
+  // drop a finding when the source line directly above it carries the directive.
+  const inlineResult = applyInlineSuppressions(findings, scanDir);
+  findings = inlineResult.findings;
+  suppressedCount += inlineResult.suppressedCount;
+
   if (policy) {
     const policyResult = applyPolicy(findings, policy);
     findings = policyResult.findings;

@@ -298,10 +298,14 @@ export interface PolicyConfig {
   suppress?: Array<{
     rule: string;
     reason: string;
+    /** Optional file glob: suppress the rule only under this path (v5.13). */
+    path?: string;
   }>;
   baseline?: {
     file?: string;
   };
+  /** Path globs whose matching files are skipped by the scanner walk (v5.13). */
+  ignore?: string[];
   /** Validation problems collected while parsing (v5.3, fail-closed config validation) */
   warnings?: PolicyWarning[];
 }
@@ -344,7 +348,7 @@ export interface ScanOptions {
   /** Target path, URL, or package name */
   target: string;
   /** Output format */
-  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab";
+  format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab" | "junit";
   /** Only report findings at or above this severity */
   minSeverity?: Severity;
   /** Exclude specific rules */

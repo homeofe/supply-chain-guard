@@ -194,6 +194,35 @@ describe("MCP Server", () => {
       const result = response.result as unknown as ToolCallResult;
       expect(result.isError).toBeUndefined();
     });
+
+    // ── indicator mode (domain / url / ip / hash) ─────────────────────────────
+    it("should flag a bundled C2 domain via the indicator lookup", async () => {
+      const response = await callTool("ioc_lookup", {
+        indicator: "rti.cargomanbd.com",
+      });
+
+      const verdict = parseToolText(response);
+      expect(verdict.indicator).toBe("rti.cargomanbd.com");
+      expect(verdict.verdict).toBe("malicious");
+      const matches = verdict.matches as Array<Record<string, unknown>>;
+      expect(matches[0]?.type).toBe("domain");
+      expect(matches[0]?.value).toBe("rti.cargomanbd.com");
+    });
+
+    it("should return clean for an unknown indicator", async () => {
+      const response = await callTool("ioc_lookup", {
+        indicator: "not-in-the-feed.example.test",
+      });
+      const verdict = parseToolText(response);
+      expect(verdict.verdict).toBe("clean");
+      expect(verdict.matches).toEqual([]);
+    });
+
+    it("should reject a call with neither package nor indicator with -32602", async () => {
+      const response = await callTool("ioc_lookup", {});
+      expect(response.error?.code).toBe(-32602);
+      expect(response.error?.message).toContain("indicator");
+    });
   });
 
   describe("scan_directory tool", () => {
@@ -220,9 +249,30 @@ describe("MCP Server", () => {
       expect(summary.totalFindings as number).toBeGreaterThan(0);
       const bySeverity = summary.findingsBySeverity as Record<string, number>;
       expect(bySeverity.critical).toBeGreaterThan(0);
-      const top = summary.topFindings as Array<{ rule: string; severity: string }>;
+      const top = summary.topFindings as Array<{ rule: string; severity: string; line: number | null; recommendation: string }>;
       expect(top.length).toBeLessThanOrEqual(20);
       expect(top.some((f) => f.rule === "GLASSWORM_MARKER")).toBe(true);
+      // v2 compact report exposes line + recommendation for each top finding.
+      const marker = top.find((f) => f.rule === "GLASSWORM_MARKER")!;
+      expect(marker).toHaveProperty("line");
+      expect(typeof marker.recommendation).toBe("string");
+      expect(marker.recommendation.length).toBeGreaterThan(0);
+    });
+
+    it("should accept the optional `since` diff-scan argument", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        "module.exports = 1;\n",
+      );
+      // Not a git repo, so `since` is a no-op, but it must be a valid argument
+      // (no -32602) and the scan must still return a compact report.
+      const response = await callTool("scan_directory", {
+        path: tempDir,
+        since: "HEAD~1",
+      });
+      expect(response.error).toBeUndefined();
+      const summary = parseToolText(response);
+      expect(summary).toHaveProperty("topFindings");
     });
 
     it("should return isError for a nonexistent path instead of a protocol error", async () => {

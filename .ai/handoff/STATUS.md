@@ -1,3 +1,22 @@
+> Note (2026-07-17, claude-fable-5): Released v5.14.0 - product/DX (R3 of the
+> 4-track gap-analysis push; worktree agent, integrated + gated + fixed here).
+> Path-scoped policy: ignore: globs prune the walk, per-path suppress (rule +
+> optional path: glob), inline // scg-ignore-next-line RULE (+ # form) suppress the
+> next source line; minimal built-in glob matcher (commander stays only runtime
+> dep). Fixed the DEAD allowlist.domains key (parsed + documented but applyPolicy
+> only used allowlist.packages) - now suppresses THREAT_INTEL_MATCH/IOC_KNOWN_C2
+> for an allowlisted domain/subdomain; githubOrgs honestly documented as
+> parsed-but-not-enforced (stderr note) rather than left silently dead. JUnit XML
+> (--format junit) + -o/--output. MCP v2: compact report carries line+recommendation
+> (maxFindings param), scan_directory takes since, ioc_lookup gained indicator mode
+> (domain/url/ip/hash). action.yml no longer double-scans. Adversarial gate confirmed
+> 1 should-fix, fixed pre-tag: matchGlob compiled "**/" to bare ".*", so
+> ignore:["**/vendor.js"] silently dropped notvendor.js from scanning and per-path
+> suppress over-suppressed lookalikes - now "**/" requires the segment boundary
+> ((?:.*/)?), 12 boundary cases proven. Also fixed on integration: two R3 test files
+> use the real Vidar C2 domain as fixtures -> added to SELF_SCAN_INERT_FILES.
+> testFiles 77; self-scan 0/0. R4 (sigstore provenance + starjacking) still to ship.
+
 > Note (2026-07-17, claude-fable-5): Released v5.13.0 - detection-coverage gaps
 > (R2 of the 4-track gap-analysis push; built by a worktree agent, integrated +
 > gated + fixed here). (1) Cargo.lock + go.sum are now parsed and matched against

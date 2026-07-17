@@ -12,7 +12,7 @@ inputs:
     required: false
     default: "."
   format:
-    description: "Output format: text, json, markdown"
+    description: "Output format for the report/PR comment: text, json, markdown, sarif, sbom, html, badge, gitlab, junit"
     required: false
     default: "markdown"
   min-severity:
@@ -67,24 +67,32 @@ runs:
         set +e
 
         # Inputs arrive via env (set by the runner), never interpolated into this
-        # script at template-render time. Build the argument list as an array so
-        # values cannot word-split or be parsed by the shell.
-        ARGS=(scan "$SCG_PATH" --format "$SCG_FORMAT")
-
+        # script at template-render time. Build the filter flags as an array so
+        # values cannot word-split or be parsed by the shell. The SAME filters
+        # feed both the human report and the JSON metrics so they describe one
+        # finding set.
+        FILTER_ARGS=()
         if [ -n "$SCG_MIN_SEVERITY" ]; then
-          ARGS+=(--min-severity "$SCG_MIN_SEVERITY")
+          FILTER_ARGS+=(--min-severity "$SCG_MIN_SEVERITY")
         fi
-
         if [ -n "$SCG_EXCLUDE_RULES" ]; then
-          ARGS+=(--exclude "$SCG_EXCLUDE_RULES")
+          FILTER_ARGS+=(--exclude "$SCG_EXCLUDE_RULES")
         fi
 
-        # Run scan and capture output
-        REPORT=$(supply-chain-guard "${ARGS[@]}" 2>&1)
-        EXIT_CODE=$?
-
-        # Also get JSON for parsing
-        JSON_REPORT=$(supply-chain-guard scan "$SCG_PATH" --format json 2>/dev/null)
+        # JSON drives the machine-readable outputs (score / risk-level /
+        # findings-count) and the fail-on gate below, so it is the canonical
+        # single scan. Only run a SECOND scan when the requested human format is
+        # not already JSON (previously json was ALWAYS re-scanned, doubling CI
+        # time even when the requested format WAS json).
+        JSON_FILE="$RUNNER_TEMP/scg-report.json"
+        if [ "$SCG_FORMAT" = "json" ]; then
+          supply-chain-guard scan "$SCG_PATH" --format json "${FILTER_ARGS[@]}" > "$JSON_FILE" 2>/dev/null
+          REPORT=$(cat "$JSON_FILE")
+        else
+          REPORT=$(supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" "${FILTER_ARGS[@]}" 2>&1)
+          supply-chain-guard scan "$SCG_PATH" --format json "${FILTER_ARGS[@]}" > "$JSON_FILE" 2>/dev/null
+        fi
+        JSON_REPORT=$(cat "$JSON_FILE")
 
         # Extract values from JSON
         SCORE=$(echo "$JSON_REPORT" | jq -r '.score // 0')

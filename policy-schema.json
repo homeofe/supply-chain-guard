@@ -71,9 +71,19 @@
             "description": "Why this finding is an accepted tradeoff (audit trail).",
             "type": "string",
             "minLength": 1
+          },
+          "path": {
+            "description": "Optional file glob (** / * / ?). When set, the rule is suppressed only for findings whose file matches this glob; a bare entry suppresses the rule everywhere.",
+            "type": "string",
+            "minLength": 1
           }
         }
       }
+    },
+    "ignore": {
+      "description": "Path globs (** / * / ?) whose matching files are skipped entirely by the scanner walk.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
     },
     "baseline": {
       "description": "Baseline diffing: only findings not present in the baseline file are reported.",

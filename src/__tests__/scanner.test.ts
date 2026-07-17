@@ -272,4 +272,38 @@ describe("Core Scanner", () => {
       report.recommendations.some((r) => r.includes("GlassWorm")),
     ).toBe(true);
   });
+
+  it("should skip files matched by an ignore: glob in the policy config", async () => {
+    fs.writeFileSync(
+      path.join(tempDir, ".supply-chain-guard.yml"),
+      ["ignore:", "  - vendor/**"].join("\n"),
+    );
+    const vendorDir = path.join(tempDir, "vendor");
+    fs.mkdirSync(vendorDir, { recursive: true });
+    fs.writeFileSync(path.join(vendorDir, "evil.js"), 'eval(atob("dGVzdA=="));');
+    fs.writeFileSync(path.join(tempDir, "keep.js"), 'eval(atob("dGVzdA=="));');
+
+    const report = await scan({ target: tempDir, format: "text" });
+
+    const evalFindings = report.findings.filter((f) => f.rule === "EVAL_ATOB");
+    expect(evalFindings.some((f) => f.file === "keep.js")).toBe(true);
+    expect(evalFindings.some((f) => (f.file ?? "").startsWith("vendor/"))).toBe(false);
+  });
+
+  it("should honor an inline scg-ignore-next-line directive during a scan", async () => {
+    fs.writeFileSync(
+      path.join(tempDir, "inline.js"),
+      [
+        "// scg-ignore-next-line EVAL_ATOB reviewed",
+        'eval(atob("dGVzdA=="));', // line 2 - suppressed by the directive above
+        'eval(atob("dGVzdA=="));', // line 3 - still reported
+      ].join("\n"),
+    );
+
+    const report = await scan({ target: tempDir, format: "text" });
+
+    const evalFindings = report.findings.filter((f) => f.rule === "EVAL_ATOB");
+    expect(evalFindings).toHaveLength(1);
+    expect(evalFindings[0].line).toBe(3);
+  });
 });

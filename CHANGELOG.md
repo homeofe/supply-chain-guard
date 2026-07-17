@@ -4,6 +4,39 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.14.0 (2026-07-17)
+**Product/DX: path-scoped policy, JUnit output, MCP v2**
+
+Closes the top product/DX gaps from the repo-wide gap analysis (R3 of the
+4-track push).
+
+- **Path-scoped policy + inline suppressions**: `.supply-chain-guard.yml` now
+  supports `ignore:` path globs (pruned from the scan), per-path `suppress`
+  entries (`rule` + optional `path:` glob; bare entries stay global), and inline
+  `// scg-ignore-next-line RULE` / `# scg-ignore-next-line RULE` comments that
+  suppress the finding on the next source line. A minimal built-in glob matcher
+  keeps commander the only runtime dependency.
+- **Fixed the dead `allowlist.domains` key**: it was parsed and documented but
+  never read (`applyPolicy` only used `allowlist.packages`) - the exact silent
+  no-op the v5.3 fail-closed philosophy exists to prevent. It now suppresses
+  THREAT_INTEL_MATCH / IOC_KNOWN_C2_DOMAIN findings for an allowlisted domain or
+  its subdomains. (`allowlist.githubOrgs` is honestly documented as parsed-but-
+  not-yet-enforced with a startup note, rather than left silently dead.)
+- **JUnit XML output** (`--format junit`) for native test-tab rendering in
+  Jenkins/Azure DevOps/GitLab/CircleCI/Bitbucket, plus a general `-o, --output
+  <file>` flag on `scan`.
+- **MCP v2**: the compact report now carries `line` + `recommendation` (with a
+  `maxFindings` param); `scan_directory` accepts a `since` commit for diff scans;
+  `ioc_lookup` gained an `indicator` mode (look up a domain/url/ip/hash against
+  the feed, not just a package name).
+- **action.yml** no longer scans twice: JSON is only re-produced when the
+  requested format is not already JSON.
+- An adversarial gate over the diff caught (and this release fixes) a real
+  false-negative: the glob matcher compiled `**/` to a bare `.*`, so
+  `ignore: ["**/vendor.js"]` silently dropped lookalike files like
+  `notvendor.js` from scanning (and per-path suppress over-suppressed them).
+  `**/` now requires the path-segment boundary.
+
 ### v5.13.0 (2026-07-17)
 **Detection coverage: Rust/Go/Python lockfiles + agent-memory files**
 

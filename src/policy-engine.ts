@@ -11,6 +11,52 @@ import * as path from "node:path";
 import type { Finding, PolicyConfig, PolicyWarning, Severity } from "./types.js";
 
 // ---------------------------------------------------------------------------
+// Minimal glob matcher (no dependency; commander stays the only runtime dep)
+// ---------------------------------------------------------------------------
+
+/**
+ * Match a forward-slash path against a minimal glob supporting `**` (any chars
+ * including `/`), `*` (any chars within a path segment) and `?` (one non-`/`
+ * char). Used for `ignore:` path globs and per-path `suppress` entries.
+ * Anchored: the whole path must match.
+ */
+export function matchGlob(glob: string, filePath: string): boolean {
+  const g = glob.replace(/\\/g, "/");
+  const p = filePath.replace(/\\/g, "/");
+  let re = "";
+  for (let i = 0; i < g.length; i++) {
+    const c = g[i];
+    if (c === "*") {
+      if (g[i + 1] === "*") {
+        i++; // consume the second "*"
+        if (g[i + 1] === "/") {
+          // "**/" matches zero or more leading path segments, each ending in a
+          // "/". So "**/x" matches "x" at the root and "a/b/x", but NOT "ax":
+          // the segment boundary is required (was ".*" which over-matched
+          // lookalike basenames like "notx" - v5.14.0 gate finding).
+          re += "(?:.*/)?";
+          i++; // consume the "/"
+        } else {
+          // bare "**" (end of glob or "**foo"): match across separators.
+          re += ".*";
+        }
+      } else {
+        re += "[^/]*";
+      }
+    } else if (c === "?") {
+      re += "[^/]";
+    } else {
+      re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+    }
+  }
+  try {
+    return new RegExp(`^${re}$`).test(p);
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Config loading
 // ---------------------------------------------------------------------------
 
@@ -61,13 +107,24 @@ const KNOWN_SECTIONS: Record<string, string[]> = {
   allowlist: ["packages", "domains", "githubOrgs"],
   suppress: [],
   baseline: ["file"],
+  ignore: [],
 };
 
 /** Keys allowed inside a suppress entry */
-const SUPPRESS_ENTRY_KEYS = new Set(["rule", "reason"]);
+const SUPPRESS_ENTRY_KEYS = new Set(["rule", "reason", "path"]);
 
 /** Rule ids are SCREAMING_SNAKE_CASE (e.g. EVAL_ATOB, GHA_UNPINNED_ACTION) */
 const RULE_ID_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * Strip a single pair of surrounding quotes. Glob values that start with a
+ * star must be quoted to be valid YAML (a leading star is an alias reference),
+ * so a user quotes them; the naive parser would otherwise keep the quotes.
+ */
+function stripQuotes(value: string): string {
+  const m = value.match(/^"(.*)"$/) ?? value.match(/^'(.*)'$/);
+  return m ? m[1] : value;
+}
 
 /**
  * Simple YAML-like config parser (no dependency needed).
@@ -177,6 +234,10 @@ function parseYamlConfig(content: string): PolicyConfig {
         config.allowlist ??= {};
         config.allowlist.githubOrgs ??= [];
         config.allowlist.githubOrgs.push(value);
+      } else if (currentSection === "ignore") {
+        // Path globs whose matching files are skipped by the scanner walk.
+        config.ignore ??= [];
+        config.ignore.push(stripQuotes(value));
       } else if (currentSection === "suppress") {
         // Suppress entries need rule + reason on subsequent lines
         config.suppress ??= [];
@@ -223,11 +284,14 @@ function parseYamlConfig(content: string): PolicyConfig {
         config.baseline ??= {};
         config.baseline.file = val;
       } else if (currentSection === "suppress" && SUPPRESS_ENTRY_KEYS.has(k)) {
-        // Handle suppress reason on inline entries. ("rule:" continuation
+        // Handle suppress reason/path on inline entries. ("rule:" continuation
         // lines are tolerated; entries are created by the "- rule:" item.)
         if (k === "reason" && config.suppress?.length) {
           config.suppress[config.suppress.length - 1].reason = val;
           if (val !== "") reasonProvided[config.suppress.length - 1] = true;
+        } else if (k === "path" && config.suppress?.length && val !== "") {
+          // Optional file glob: the rule is suppressed only under this path.
+          config.suppress[config.suppress.length - 1].path = stripQuotes(val);
         }
       } else if (sectionKnown) {
         // Fail-closed: a key the parser silently drops means the intended
@@ -320,10 +384,9 @@ export function applyPolicy(
   let suppressedCount = 0;
   const disabledRules = new Set(policy.rules?.disable ?? []);
   const severityOverrides = policy.rules?.severityOverrides ?? {};
-  const suppressedRules = new Set(
-    (policy.suppress ?? []).map((s) => s.rule),
-  );
+  const suppressEntries = policy.suppress ?? [];
   const allowedPackages = new Set(policy.allowlist?.packages ?? []);
+  const allowedDomains = policy.allowlist?.domains ?? [];
 
   const result: Finding[] = [];
 
@@ -334,8 +397,16 @@ export function applyPolicy(
       continue;
     }
 
-    // Suppressed rules: mark as suppressed info
-    if (suppressedRules.has(finding.rule)) {
+    // Suppressed rules: mark as suppressed info. A bare "- rule:" entry
+    // suppresses globally; an entry that also carries a "path:" glob only
+    // suppresses findings whose file matches that glob (backward compatible).
+    const suppressMatch = suppressEntries.find(
+      (s) =>
+        s.rule === finding.rule &&
+        (s.path === undefined ||
+          matchGlob(s.path, (finding.file ?? "").replace(/\\/g, "/"))),
+    );
+    if (suppressMatch) {
       suppressedCount++;
       finding.suppressed = true;
       finding.severity = "info";
@@ -347,6 +418,20 @@ export function applyPolicy(
     if (finding.rule === "TYPOSQUAT_LEVENSHTEIN" || finding.rule === "DEP_INTERNAL_NAME_PUBLIC") {
       const pkgMatch = finding.description.match(/"([^"]+)"/);
       if (pkgMatch && allowedPackages.has(pkgMatch[1])) {
+        suppressedCount++;
+        continue;
+      }
+    }
+
+    // Allowlisted domains: drop threat-intel / known-C2-domain findings whose
+    // matched value is a trusted domain (exact host or subdomain-of). These
+    // findings carry the value in `match` or in the description text.
+    if (
+      allowedDomains.length > 0 &&
+      (finding.rule === "THREAT_INTEL_MATCH" || finding.rule === "IOC_KNOWN_C2_DOMAIN")
+    ) {
+      const value = extractFindingDomain(finding);
+      if (value && isDomainAllowlisted(value, allowedDomains)) {
         suppressedCount++;
         continue;
       }
@@ -365,6 +450,89 @@ export function applyPolicy(
   // file must not be able to silence its own diagnosis.
   for (const warning of policy.warnings ?? []) {
     result.push(policyWarningToFinding(warning));
+  }
+
+  return { findings: result, suppressedCount };
+}
+
+/**
+ * Extract the matched host/indicator value from a domain-bearing finding.
+ * Prefers the structured `match` field, falling back to the value embedded in
+ * the description (THREAT_INTEL_MATCH quotes it; IOC_KNOWN_C2_DOMAIN puts it
+ * after the colon).
+ */
+function extractFindingDomain(finding: Finding): string | undefined {
+  if (finding.match) return finding.match.trim();
+  if (finding.rule === "THREAT_INTEL_MATCH") {
+    return finding.description.match(/"([^"]+)"/)?.[1];
+  }
+  if (finding.rule === "IOC_KNOWN_C2_DOMAIN") {
+    return finding.description.match(/detected:\s*(\S+)/)?.[1];
+  }
+  return undefined;
+}
+
+/**
+ * True when `value` is an allowlisted domain: an exact host match or a
+ * subdomain of one of the allowlisted domains (e.g. "rti.example.com" is
+ * covered by an allowlist entry of "example.com").
+ */
+function isDomainAllowlisted(value: string, allowed: string[]): boolean {
+  const host = value.toLowerCase().replace(/\.$/, "");
+  return allowed.some((d) => {
+    const dl = d.toLowerCase().trim().replace(/\.$/, "");
+    return dl !== "" && (host === dl || host.endsWith("." + dl));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Inline suppressions
+// ---------------------------------------------------------------------------
+
+/**
+ * Drop findings marked with an inline suppression comment on the line directly
+ * above them: `// scg-ignore-next-line RULE [reason]` (JS/TS) or
+ * `# scg-ignore-next-line RULE` (Python/YAML/shell). Only a finding whose
+ * file+line sits exactly one line below a matching directive is suppressed.
+ *
+ * Reads each referenced file at most once from `rootDir`. Findings without a
+ * file+line, or whose source can no longer be read, pass through unchanged.
+ */
+export function applyInlineSuppressions(
+  findings: Finding[],
+  rootDir: string,
+): { findings: Finding[]; suppressedCount: number } {
+  const INLINE_RE = /(?:\/\/|#)\s*scg-ignore-next-line\s+([A-Za-z][A-Za-z0-9_]*)/;
+  const fileCache = new Map<string, string[] | null>();
+
+  const readLines = (rel: string): string[] | null => {
+    if (fileCache.has(rel)) return fileCache.get(rel)!;
+    let lines: string[] | null = null;
+    try {
+      lines = fs.readFileSync(path.join(rootDir, rel), "utf-8").split("\n");
+    } catch {
+      lines = null;
+    }
+    fileCache.set(rel, lines);
+    return lines;
+  };
+
+  let suppressedCount = 0;
+  const result: Finding[] = [];
+
+  for (const finding of findings) {
+    if (finding.file && finding.line && finding.line > 1) {
+      const lines = readLines(finding.file.replace(/\\/g, "/"));
+      // The finding is on line `finding.line` (1-based); the directive must be
+      // on the line directly above it (0-based index finding.line - 2).
+      const above = lines?.[finding.line - 2] ?? "";
+      const m = INLINE_RE.exec(above);
+      if (m && m[1] === finding.rule) {
+        suppressedCount++;
+        continue;
+      }
+    }
+    result.push(finding);
   }
 
   return { findings: result, suppressedCount };
