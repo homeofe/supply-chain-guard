@@ -1,3 +1,14 @@
+> Note (2026-07-17, claude-fable-5): Dependency maintenance - resolved all 3 open
+> dependabot PRs. #62 (actions/setup-node 6 -> 7) squash-merged after verifying
+> the pinned SHA 820762786026740c76f36085b0efc47a31fe5020 matches the upstream
+> v7.0.0 tag. #59 (typescript 6.0.3 -> 7.0.2, MAJOR) + #58 (@types/node 26.1.1)
+> superseded by one combined local bump: TS7 compiles this codebase with ZERO
+> changes, full suite 1249 pass (14 zip-only Windows fails), self-scan 0/0.
+> Systemic finding: EVERY dependabot npm PR now fails the check:handoff CI gate
+> (dependabot bumps package.json but cannot run handoff:refresh, and DASHBOARD.md
+> derives from package.json) - npm-dep PRs need the local combined-bump route
+> until the gate is made dependabot-tolerant.
+
 > Note (2026-07-14, claude-opus-4-8): Synced the canonical AAHP gate scripts from homeofe/improvements (v3.5.0 fixes: aahp-manifest.sh --phase documentation + cross_repo_ref preservation, lint-handoff.sh SC2034), AAHP_HANDOFF_FILES preserved, and refreshed the local hook tooling (scripts/hooks/, install-hooks.sh, verify-hooks.sh). Fleet re-sync.
 
 > Note (2026-07-14, claude-opus-4-8): Synced the canonical Layer 3 tolerance fix from homeofe/improvements. verify-handoff.sh now downgrades a non-ancestor MANIFEST.last_session.commit from FAIL to WARN so a squash-merge or rebase-merge no longer trips AAHP Verify Layer 3 on main; Layers 1-2 still gate real staleness.
