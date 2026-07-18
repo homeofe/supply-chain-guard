@@ -69,9 +69,9 @@ chore/<short-name>           → build, deps, tooling
 
 The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary:
 
-1. CHANGELOG.md entry: a new `## [X.Y.Z] - date` block below `## [Unreleased]` in Keep a Changelog format (no `v` in brackets, `### Added/Changed/Fixed` sections, reference-link footer), gated by `check:changelog-format`
+1. CHANGELOG.md entry: a new `## [X.Y.Z] - date` block below `## [Unreleased]` in Keep a Changelog format (no `v` in brackets, `### Added/Changed/Fixed` sections, reference-link footer), gated by `check:aahp` (the pinned AAHP CLI's changelog-format gate)
 2. Version bumped everywhere (see Versioning above)
-3. `npm run build` green (six prebuild gates: `check:changelog` + `check:changelog-format` + `check:version-sync` + `check:handoff` + `check:feed` + `check:claims`)
+3. `npm run build` green (prebuild: `check:aahp` = `npx --no-install aahp check .` [changelog + format + version-sync + claims + forbidden-patterns + schema-doc-sync + doc-links] + `check:feed` + `check:handoff`; CI also runs `aahp doctor` for conformance)
 4. `npm test` green
 5. One commit (code + docs + handoff), then `git tag vX.Y.Z` **after** the commit
 6. `git push origin main && git push origin vX.Y.Z`

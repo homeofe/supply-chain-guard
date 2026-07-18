@@ -1,3 +1,20 @@
+> Note (2026-07-18, claude-opus-4-8): Step 2 Stages 2+3 - rewired prebuild to the AAHP package
+> gates and retired the redundant local copies. prebuild is now `check:aahp` (`npx --no-install
+> aahp check .` = changelog + changelog-format + version-sync + claims + forbidden-patterns +
+> schema-doc-sync + doc-links, all config-driven from aahp.config.json) + `check:feed` (SCG
+> product) + `check:handoff` (SCG's DASHBOARD/TRUST/MANIFEST/LOG generator - the package generate
+> only does LOG+freshness). DELETED the 4 now-redundant local scripts: check-changelog.mjs,
+> check-version-sync.mjs, check-claims.mjs, check-changelog-format.mjs. CI build job now runs
+> `npx --no-install aahp doctor . --json` (conformance: handoff set, MANIFEST schema, grounding,
+> exact-version pin). README got an "AAHP conformant" badge (versionless on purpose - a static
+> version badge would be the ungated-version drift this session fought; the CI doctor check keeps
+> the claim true). Verified: new prebuild green (aahp check 7/7 + feed + handoff); adversarially
+> confirmed the package version-sync still guards src/scanner.ts (break it -> aahp check fails ->
+> release pipeline still protected); doctor 6/6; tests green. Build tooling only, no version bump.
+> STILL SCG-local: aahp-dashboard.mjs (DASHBOARD/TRUST/MANIFEST/LOG generation) + check:feed + the
+> vendored handoff gate (verify-handoff.sh/_aahp-lib.sh/aahp-manifest.sh/lint-handoff.sh). A later
+> cleanup could switch the handoff gate to `npx aahp verify` and de-vendor those too.
+
 > Note (2026-07-18, claude-opus-4-8): Step 2 Stage 1 - supply-chain-guard now CONSUMES AAHP
 > as a pinned dependency (@elvatis_com/aahp@3.8.0, exact devDependency, zero transitive deps).
 > Added aahp.config.json mapping SCG onto the v3.8 config schema: 6 versionSites (incl.

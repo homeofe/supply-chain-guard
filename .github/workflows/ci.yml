@@ -36,6 +36,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      # AAHP conformance (v3.6+): the pinned @elvatis_com/aahp CLI self-checks handoff
+      # set, MANIFEST schema, grounding, the exact-version dep pin, changelog format and
+      # version sync. --no-install forces the pinned node_modules copy, not a fetched one.
+      - name: AAHP conformance
+        run: npx --no-install aahp doctor . --json
+
       - name: Test
         run: npm run test:coverage
 

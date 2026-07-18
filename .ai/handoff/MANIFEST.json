@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1784398830",
-    "timestamp": "2026-07-18T18:20:30Z",
-    "commit": "7cdb98b",
+    "session_id": "cli-1784399456",
+    "timestamp": "2026-07-18T18:30:56Z",
+    "commit": "7274e31",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:c987de0f10edc3c7374d7ef481d362c791e6d5ffb6634561f74240daba17eeea",
-      "updated": "2026-07-18T18:20:19Z",
-      "lines": 851,
+      "checksum": "sha256:9211b30f0606aa8eddb21cadae232eac4e16276f9d65a1b1b7ac6d8bc419ae53",
+      "updated": "2026-07-18T18:30:44Z",
+      "lines": 868,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:a5638dc38ada4c85c3bbdfd45ba4473f9ec590c9eb2675c884147b6ac9d157e6",
-      "updated": "2026-07-18T18:20:29Z",
+      "updated": "2026-07-18T18:30:56Z",
       "lines": 108,
       "summary": "(no summary available)"
     },
@@ -42,19 +42,19 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:e7b9df418823af2c708e11b93475309517e22a28ebba03639b16412f63042c8e",
-      "updated": "2026-07-18T18:20:29Z",
+      "updated": "2026-07-18T18:30:56Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
       "checksum": "sha256:5806394ec16cafc970635b071cbf98e82ff8113de5efef465f93f7d4d97250e0",
-      "updated": "2026-07-18T18:20:29Z",
+      "updated": "2026-07-18T18:30:56Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
-      "checksum": "sha256:d5bf9527e95bb8d8ad3f3f935930b8c52abbbb17c0d6d1495005690188f1db89",
-      "updated": "2026-07-18T08:55:31Z",
+      "checksum": "sha256:3260c91bb9b609eafcd1597268e233694f20c8e53c7fba439c4da1cea65aeedc",
+      "updated": "2026-07-18T18:29:50Z",
       "lines": 108,
       "summary": "(no summary available)"
     },
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 12562,
-    "full_read": 20749
+    "manifest_plus_core": 12833,
+    "full_read": 21051
   }
 }
