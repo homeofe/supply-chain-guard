@@ -1,3 +1,20 @@
+> Note (2026-07-18, claude-opus-4-8): Step 2 Stage 1 - supply-chain-guard now CONSUMES AAHP
+> as a pinned dependency (@elvatis_com/aahp@3.8.0, exact devDependency, zero transitive deps).
+> Added aahp.config.json mapping SCG onto the v3.8 config schema: 6 versionSites (incl.
+> src/scanner.ts), 3 claims (rules 350+/correlation 15+/categories 12) with new floorCmd
+> helpers scripts/count-rules.mjs + scripts/count-correlation.mjs (ground-truth counts, run
+> by the package's check-claims with no shell), a doc-scoped em-dash forbiddenPattern, a
+> severity-enum docSync, docLinks, check.skip:["handoff"] (SCG keeps its own handoff
+> generation), and a pinnedDep assertion. Verified: `npx aahp check .` = 7/7 governance gates
+> PASS (full parity with SCG's local gates); `npx aahp doctor` = all 6 conformance gates PASS.
+> Closed the two doctor gaps found: moved ARCHITECTURE.md out of .ai/handoff/ -> docs/ (it was
+> a stray not in AAHP's canonical file set -> handoff-set gate), and added a Provenance COLUMN
+> to the generated TRUST.md (the grounding gate needs a table column, not the prose section
+> SCG had). Stage 1 is ADDITIVE: prebuild STILL runs SCG's local gates unchanged - the package
+> gates run in parallel as proven parity. Stage 2 rewires prebuild/CI to `aahp check` (one
+> command replaces the four local gate scripts); Stage 3 retires the redundant locals. DASHBOARD/
+> TRUST/MANIFEST generation + check:feed stay SCG-local (the package generate only does LOG+freshness).
+
 > Note (2026-07-18, claude-opus-4-8): Release v5.17.4 - fix a stale tool-version drift a
 > user reported. src/scanner.ts hardcoded TOOL_VERSION="5.2.0" (many releases stale), which
 > the JSON reporter emits verbatim as ScanReport.tool and persists into .scg-history/, so

@@ -1,0 +1,95 @@
+{
+  "$schema": "./node_modules/@elvatis_com/aahp/schema/aahp-config.schema.json",
+  "versionSites": [
+    { "file": "src/cli.ts", "minOccurrences": 1, "note": "CLI --version output" },
+    { "file": "src/reporter.ts", "minOccurrences": 5, "note": "text-header VERSION const + SARIF + SBOM + HTML footer + GitLab scanner version" },
+    { "file": "src/scanner.ts", "minOccurrences": 1, "note": "TOOL_VERSION const (ScanReport.tool + risk-history)" },
+    { "file": "README.md", "minOccurrences": 1, "note": "pre-commit snippet rev: tag" },
+    { "file": ".pre-commit-hooks.yaml", "minOccurrences": 1, "note": "example rev: tag in header comment" },
+    { "file": "server.json", "minOccurrences": 2, "note": "MCP registry version + npm package version" }
+  ],
+  "claims": [
+    {
+      "id": "rule/indicator count",
+      "canonical": "350+",
+      "advertised": 350,
+      "phrase": "(\\d+)\\+\\s*(?:threat indicators|static heuristics|detection rules|detection|rules)\\b",
+      "flags": "gi",
+      "joinTsConcat": true,
+      "floorCmd": "scripts/count-rules.mjs",
+      "surfaces": [
+        { "file": "package.json", "note": "npm description" },
+        { "file": "README.md", "note": "intro + heuristics cell + architecture block" },
+        { "file": "docs/mcp.md", "note": "scan_directory description" },
+        { "file": "src/mcp-server.ts", "note": "scan_directory MCP tool description (phrase split across concatenated literals)" },
+        { "file": ".github/repo-about.txt", "note": "GitHub About/description source (CI syncs it on release)" }
+      ]
+    },
+    {
+      "id": "correlation-rule count",
+      "canonical": "15+",
+      "advertised": 15,
+      "phrase": "(\\d+)\\+\\s*correlation rules\\b",
+      "flags": "gi",
+      "floorCmd": "scripts/count-correlation.mjs",
+      "surfaces": [
+        { "file": "README.md", "note": "correlation rules bullet" }
+      ]
+    },
+    {
+      "id": "category count",
+      "canonical": "12",
+      "advertised": 12,
+      "phrase": "(\\d+)\\s*categories\\b",
+      "flags": "gi",
+      "surfaces": [
+        { "file": "README.md", "note": "architecture: rules across N categories (editorial - no category constant in src, so no floorCmd)" }
+      ]
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "id": "em-dash",
+      "pattern": "\\u2014",
+      "flags": "g",
+      "message": "em dash (U+2014) is banned in docs; use a hyphen '-' or colon ':' (SCG hard rule)",
+      "include": [
+        "README.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "docs/**/*.md",
+        ".ai/handoff/**/*.md"
+      ],
+      "exclude": [
+        "CHANGELOG.md",
+        ".ai/handoff/LOG-ARCHIVE.md"
+      ]
+    }
+  ],
+  "docSync": [
+    {
+      "id": "severity-enum",
+      "sources": [
+        { "file": "policy-schema.json", "pattern": "\"(critical|high|medium|low|info)\"" },
+        { "file": ".ai/handoff/CONVENTIONS.md", "pattern": "`(critical|high|medium|low|info)`" }
+      ]
+    }
+  ],
+  "docLinks": {
+    "include": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "docs/*.md",
+      ".ai/handoff/*.md"
+    ]
+  },
+  "check": {
+    "skip": ["handoff"]
+  },
+  "pinnedDep": {
+    "name": "@elvatis_com/aahp",
+    "location": "devDependencies",
+    "allowRange": false
+  }
+}

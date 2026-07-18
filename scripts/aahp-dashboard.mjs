@@ -142,13 +142,13 @@ for the two-axis (status x provenance) model and the task-type anchor matrix.
 
 ## Structural facts (derived from committed files, gate-enforced fresh)
 
-| Property | Value | Source |
-|----------|-------|--------|
-| package.json version | ${pkg.version} | package.json |
-| Source modules present | ${modules.length} | src/ file list |
-| Test files present | ${testFiles.length} | src/__tests__/ file list |
-| tsconfig \`types: ["node"]\` | ${typesNode} | tsconfig.json (load-bearing under TS6) |
-| Runtime dependency | commander ${deps.commander ?? "?"} | package.json (CommonJS line; 15+ is ESM-only) |
+| Property | Value | Provenance | Source |
+|----------|-------|------------|--------|
+| package.json version | ${pkg.version} | tool_verified | package.json |
+| Source modules present | ${modules.length} | tool_verified | src/ file list |
+| Test files present | ${testFiles.length} | tool_verified | src/__tests__/ file list |
+| tsconfig \`types: ["node"]\` | ${typesNode} | tool_verified | tsconfig.json (load-bearing under TS6) |
+| Runtime dependency | commander ${deps.commander ?? "?"} | tool_verified | package.json (CommonJS line; 15+ is ESM-only) |
 
 ---
 
