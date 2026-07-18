@@ -45,17 +45,20 @@ Does:    Implements the task (code + tests)
 ### Phase 3: Update Handoff
 
 ```
-Updates: STATUS.md   (a top-of-file note; the hand-maintained living state doc)
-         LOG.md      (append-only: what was done, decisions made)
-         NEXT_ACTIONS.md (backlog, only if it changed)
+Updates: STATUS.md   (a top-of-file note; the hand-maintained state doc + decision log)
+         NEXT_ACTIONS.md (backlog, only if it changed; keep its version header current)
 
-Runs:    npm run handoff:refresh                  (regenerates DASHBOARD.md + TRUST.md
-                                                    from live data; do NOT hand-edit them)
+Runs:    npm run handoff:refresh                  (regenerates DASHBOARD.md + TRUST.md +
+                                                    LOG.md; never hand-edit those - LOG.md
+                                                    is the release journal, from CHANGELOG.md)
          bash scripts/aahp-manifest.sh . \
            --agent <id> --phase <phase>           (regenerates MANIFEST.json)
 ```
 
-The AAHP gate (aahp-verify.yml) enforces STATUS.md + MANIFEST.json on any code change.
+The AAHP gate (aahp-verify.yml) enforces STATUS.md + MANIFEST.json on any code change;
+`check:handoff` (prebuild) regenerates and diffs DASHBOARD/TRUST/LOG and fails if
+NEXT_ACTIONS.md's version header falls behind package.json. LOG.md is generated, not
+hand-appended (the old append convention drifted across v5.3.0-v5.17.3).
 
 ### Phase 4: Release (on version bump tasks only)
 

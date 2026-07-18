@@ -1,4 +1,11 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "archivedOn": "2026-07-18",
+      "reason": "LOG.md converted to a generated release journal (derived from CHANGELOG.md, gated by check:handoff)",
+      "source": "LOG.md",
+      "coversThrough": "2026-07-01"
+    }
+  ]
 }

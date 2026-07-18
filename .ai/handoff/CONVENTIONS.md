@@ -86,14 +86,23 @@ The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary
 
 ## Handoff Protocol
 
-Doc roles: **STATUS.md** is the hand-maintained living state doc (append a note).
-**DASHBOARD.md + TRUST.md are GENERATED** from live repo data - never hand-edit them.
-**NEXT_ACTIONS.md** is the one hand-curated backlog. The AAHP gate enforces steps 1 + 5.
+Doc roles: **STATUS.md** is the hand-maintained living state doc + decision log
+(append a note). **DASHBOARD.md, TRUST.md and LOG.md are GENERATED** and must never be
+hand-edited - DASHBOARD/TRUST from package.json + tsconfig + the src/ file list, LOG.md
+(the release journal) from CHANGELOG.md. **NEXT_ACTIONS.md** is the one hand-curated
+backlog; its "Current version" header must equal package.json.
+
+Enforcement (nothing here relies on remembering): the AAHP content-drift gate forces
+STATUS.md + MANIFEST.json on every code change, and `check:handoff` (prebuild) regenerates
+and diffs DASHBOARD/TRUST/LOG **and** fails if NEXT_ACTIONS.md's version header is behind.
 
 After completing any task:
 
-1. Add a note to `STATUS.md` (what changed, why)
-2. Regenerate the derived docs: `npm run handoff:refresh` (DASHBOARD.md + TRUST.md)
-3. Append an entry to `LOG.md` (append-only: what was done, decisions made)
-4. Update `NEXT_ACTIONS.md` only if the backlog changed
-5. Regenerate `MANIFEST.json`: `bash scripts/aahp-manifest.sh . --agent <id> --phase <phase>`
+1. Add a note to `STATUS.md` (what changed, why) - this is the decision log
+2. `npm run handoff:refresh` - regenerates DASHBOARD.md + TRUST.md + LOG.md + MANIFEST.json
+3. Update `NEXT_ACTIONS.md` only if the backlog changed (keep its version header current)
+
+LOG.md is NO LONGER hand-appended. It is a generated release journal derived from
+CHANGELOG.md, so it cannot silently drift - the old "append every session" convention
+lapsed unnoticed across v5.3.0-v5.17.3; the pre-generation hand-authored entries are
+preserved in LOG-ARCHIVE.md.

@@ -1,3 +1,18 @@
+> Note (2026-07-18, claude-opus-4-8): AAHP handoff hardening - closed the drift class in
+> the handoff docs themselves. LOG.md had silently lapsed across v5.3.0-v5.17.3 (the
+> "append every session" convention was never gated, only STATUS + MANIFEST were). Fixes:
+> (1) LOG.md is now GENERATED from CHANGELOG.md by scripts/aahp-dashboard.mjs (a release
+> journal, all 92 releases), gated by check:handoff exactly like DASHBOARD/TRUST, so it
+> cannot drift; the pre-generation hand entries were moved to LOG-ARCHIVE.md (+ index).
+> (2) Added a FRESHNESS gate to check:handoff: NEXT_ACTIONS.md's "Current version" header
+> must equal package.json (the drift that let it sit on v5.6.0). (3) ARCHITECTURE.md was
+> not just stale but WRONG (described a src/detectors/ layout that was refactored to flat
+> src/*-scanner.ts long ago); rewritten to stable prose + a pointer to the generated
+> DASHBOARD for the live module list, so it can't re-rot. (4) CONVENTIONS.md + WORKFLOW.md
+> updated so they no longer document the retired hand-append duty. Net: every handoff doc
+> is now either generated-and-gated or (STATUS/NEXT_ACTIONS) gated for freshness - nothing
+> hand-maintained-but-unchecked remains.
+
 > Note (2026-07-18, claude-opus-4-8): The GitHub repo About/description field (was stale
 > "180+" + "SLSA verification") is GitHub metadata, not a repo file, so no check:* can
 > reach it. Canonical About text now lives in `.github/repo-about.txt`, an in-repo file
