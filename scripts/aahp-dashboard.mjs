@@ -103,7 +103,7 @@ ${moduleList}
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (\`ci.yml\`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, \`v5\` branch fast-forward |
 | AAHP Verify (\`aahp-verify.yml\`) | handoff gate; dependabot exempt |
-| Prebuild gates | \`check:changelog\` + \`check:version-sync\` + \`check:handoff\` + \`check:feed\` + \`check:claims\` |
+| Prebuild gates | \`check:changelog\` + \`check:changelog-format\` + \`check:version-sync\` + \`check:handoff\` + \`check:feed\` + \`check:claims\` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; \`uses: homeofe/supply-chain-guard@v5\` (floating branch) |
 | Dependabot | weekly npm + github-actions; commander >=15 ignored |
@@ -175,7 +175,7 @@ for the two-axis (status x provenance) model and the task-type anchor matrix.
 // no date. Headline = first bold span in the block, else the first bullet/line.
 const changelog = rd("CHANGELOG.md");
 const clLines = changelog.split("\n");
-const headRe = /^### v(\d+\.\d+\.\d+)(?: \((\d{4}-\d{2}-\d{2})\))?\s*$/;
+const headRe = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})\s*$/;
 const heads = [];
 clLines.forEach((l, i) => {
   const m = l.match(headRe);
@@ -188,8 +188,8 @@ const releaseRows = heads
     // markdown emphasis/code markers. For current "**headline**" blocks this is
     // the headline; for older bullet-first blocks it is the first bullet's text.
     let headline = (clLines.slice(i + 1, end).find((l) => l.trim()) || "")
-      .replace(/^[-*]\s*/, "")
-      .replace(/\*\*/g, "")
+      .replace(/\*\*/g, "") // strip bold markers FIRST so a "**headline**" prefix
+      .replace(/^[-*]\s*/, "") // isn't mistaken for a leading bullet by this strip
       .replace(/`/g, "");
     // Collapse whitespace, drop any non-ASCII mojibake, escape table pipes, cap length.
     headline = headline.replace(/\s+/g, " ").replace(/[^\x20-\x7E]/g, "").replace(/\|/g, "\\|").trim();

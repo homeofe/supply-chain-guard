@@ -16,19 +16,20 @@ const pkg = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
 const changelog = readFileSync(join(repoRoot, "CHANGELOG.md"), "utf8");
 
 const version = pkg.version;
-const heading = new RegExp(`^###\\s+v${version.replace(/\./g, "\\.")}\\s*\\(`, "m");
+// Keep a Changelog heading (no 'v' inside the brackets). Full grammar is enforced
+// by check:changelog-format; this gate just guarantees the current release exists.
+const heading = new RegExp(`^## \\[${version.replace(/\./g, "\\.")}\\] - `, "m");
 
 if (!heading.test(changelog)) {
   console.error(
-    `\n  CHANGELOG.md is missing an entry for v${version}.\n` +
-      `  Add a section at the top in the form:\n\n` +
-      `    ### v${version} (YYYY-MM-DD)\n` +
-      `    **Short title**\n\n` +
-      `    - bullet 1\n` +
-      `    - bullet 2\n\n` +
-      `  Release cannot ship without this entry.\n`,
+    `\n  CHANGELOG.md is missing an entry for ${version}.\n` +
+      `  Add a section below "## [Unreleased]" in Keep a Changelog form:\n\n` +
+      `    ## [${version}] - YYYY-MM-DD\n` +
+      `    ### Added\n` +
+      `    - what changed\n\n` +
+      `  and a reference-link line at the file foot. Release cannot ship without this.\n`,
   );
   process.exit(1);
 }
 
-console.log(`CHANGELOG.md contains entry for v${version}.`);
+console.log(`CHANGELOG.md contains entry for ${version}.`);

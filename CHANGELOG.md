@@ -1,10 +1,13 @@
 # Changelog
 
-All notable changes to supply-chain-guard. The latest release is always at the top.
-Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
+All notable changes to supply-chain-guard are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html). The latest release is at the
+top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch).
 
+## [Unreleased]
 
-### v5.17.3 (2026-07-18)
+## [5.17.3] - 2026-07-18
 **Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2**
 
 Added detection for the ViteVenom campaign (Checkmarx, reported by The Hacker
@@ -29,7 +32,7 @@ control spanning Tron, Aptos and BNB Smart Chain.
 - No wallet/contract addresses were published in extractable form, so none were
   ingested (a guessed address protects nobody and risks false positives).
 
-### v5.17.2 (2026-07-17)
+## [5.17.2] - 2026-07-17
 **Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives)**
 
 Reported by a user who ran `npm install -g supply-chain-guard` and then
@@ -54,7 +57,7 @@ exact files in the known self-source allowlist; the malware/obfuscation pattern
 checks still run on every file, so a hostile project cannot hide a payload by
 forging the name. 3 regression tests including the spoof case.
 
-### v5.17.1 (2026-07-17)
+## [5.17.1] - 2026-07-17
 **MCP registry metadata + honest package description**
 
 - Added `mcpName` to package.json and a `server.json` so the MCP server can be
@@ -67,7 +70,7 @@ forging the name. 3 regression tests including the spoof case.
   SLSA provenance" (the overclaim fixed in v5.15.0 - the npm description still
   carried the stale wording).
 
-### v5.17.0 (2026-07-17)
+## [5.17.0] - 2026-07-17
 **OSV-format feed export + adopter badge (ecosystem reach)**
 
 - `supply-chain-guard feed osv` exports the feed's malicious-package indicators
@@ -82,7 +85,7 @@ forging the name. 3 regression tests including the spoof case.
 - A "scanned by supply-chain-guard" adopter badge in the README that projects
   running the scanner in CI can add to their own README.
 
-### v5.16.0 (2026-07-17)
+## [5.16.0] - 2026-07-17
 **Starjacking detection (repository-claim corroboration)**
 
 Completes the differentiators track: in `npm <pkg>` mode the scanner now
@@ -106,7 +109,7 @@ does not own to inherit that project's stars and trust scores.
   like `@x/core`) were mis-flagged. Hardened with scope-owner ownership, private-
   root, generic-name, and workspace-manifest guards.
 
-### v5.15.0 (2026-07-17)
+## [5.15.0] - 2026-07-17
 **Honest SLSA provenance validation (fixes an overclaim)**
 
 The SLSA verifier previously treated a file merely NAMED provenance.json as
@@ -134,7 +137,7 @@ validates the attestation (R4 of the gap-analysis push, provenance half).
   size bound, a false positive that flagged legitimate non-SLSA attestations as
   malformed, and a doubled phrase in the finding message.
 
-### v5.14.0 (2026-07-17)
+## [5.14.0] - 2026-07-17
 **Product/DX: path-scoped policy, JUnit output, MCP v2**
 
 Closes the top product/DX gaps from the repo-wide gap analysis (R3 of the
@@ -167,7 +170,7 @@ Closes the top product/DX gaps from the repo-wide gap analysis (R3 of the
   `notvendor.js` from scanning (and per-path suppress over-suppressed them).
   `**/` now requires the path-segment boundary.
 
-### v5.13.0 (2026-07-17)
+## [5.13.0] - 2026-07-17
 **Detection coverage: Rust/Go/Python lockfiles + agent-memory files**
 
 Closes the sharpest gap surfaced by a repo-wide gap analysis: several ecosystems'
@@ -192,7 +195,7 @@ dependency tree was never read.
   false negative: custom pipenv category groups were skipped, so a malicious
   package pinned under a custom category escaped detection.
 
-### v5.12.4 (2026-07-17)
+## [5.12.4] - 2026-07-17
 **Threat intel: PhantomSync (npm crypto stealer) + Pepesoft (NuGet surveillance)**
 
 Two campaigns disclosed 2026-07-14/15, ingested with primary-source
@@ -223,7 +226,7 @@ verification. Both were confirmed genuinely new against the existing feed.
   NuGet ID is not blocked, legitimate workers[.]dev apex not flagged). feed.json
   regenerated (376 entries).
 
-### v5.12.3 (2026-07-16)
+## [5.12.3] - 2026-07-16
 **Threat-intel: AsyncAPI npm supply-chain compromise (July 2026)**
 
 - Added IOCs for the AsyncAPI npm supply-chain attack (The Hacker News /
@@ -248,7 +251,7 @@ verification. Both were confirmed genuinely new against the existing feed.
   versions were confirmed against two independent primary reports before being
   added.
 
-### v5.12.2 (2026-07-13)
+## [5.12.2] - 2026-07-13
 **Threat-intel: Injective Labs SDK npm compromise (July 2026)**
 
 - Added IOCs for the Injective Labs SDK supply-chain attack (The Hacker News /
@@ -269,7 +272,7 @@ verification. Both were confirmed genuinely new against the existing feed.
 - Source excerpts came from the arena.elvatis.com feed; the exact indicators
   were confirmed against the linked primary reports before being added.
 
-### v5.12.1 (2026-07-12)
+## [5.12.1] - 2026-07-12
 **Threat-intel: jscrambler npm compromise (July 2026)**
 
 - Added a bundled-feed IOC for the compromised `jscrambler@8.14.0` npm release,
@@ -278,7 +281,7 @@ verification. Both were confirmed genuinely new against the existing feed.
   `jscrambler` is a legitimate package, so the bare name is intentionally NOT
   blocked - only the exact compromised version matches.
 
-### v5.12.0 (2026-07-11)
+## [5.12.0] - 2026-07-11
 **Issue #54 hardening: oversized-file transparency + threat-intel indicator contract**
 
 Implements both hardening gaps tracked in issue #54 (follow-up to the merged
@@ -325,7 +328,7 @@ to npm (it landed after v5.11.1 was published).
   (fifth family, full DoD parity); (6) the feed-reject error message bounds
   the attacker-controlled type field, not just the value.
 
-### v5.11.1 (2026-07-09)
+## [5.11.1] - 2026-07-09
 **CI: fix the npm-publish job (npm 12 dropped Node 20 support)**
 
 The v5.11.0 tag built and tested green but its publish job failed at "Upgrade
@@ -340,7 +343,7 @@ branch fast-forward were skipped with it).
   (fake Paysafe / Skrill / Neteller SDK IOCs + the new MALICIOUS_DEPENDENCY
   directory-scan rule) to npm, since v5.11.0 could not publish.
 
-### v5.11.0 (2026-07-09)
+## [5.11.0] - 2026-07-09
 **Threat intel: fake Paysafe / Skrill / Neteller payment SDKs (npm + PyPI)**
 
 Adds indicators for a coordinated typosquat campaign reported by Socket on
@@ -367,7 +370,7 @@ tunnel.
   install-guard paths did. Matches exact feed IOCs, not the broad typosquat
   heuristics, so legitimate scoped deps are not false-flagged.
 
-### v5.10.0 (2026-07-08)
+## [5.10.0] - 2026-07-08
 **GitLost-class agentic-workflow posture detection**
 
 Closes the gap surfaced by Noma Security's "GitLost" disclosure (July 2026): an
@@ -403,7 +406,7 @@ that is now scannable before an attacker files the issue.
 - No IOC feed changes: GitLost has no attacker infrastructure (the disclosure PoC
   repos are researcher infra and are intentionally NOT blocklisted).
 
-### v5.9.0 (2026-07-07)
+## [5.9.0] - 2026-07-07
 **Opt-in registry version-drift detection (`--check-registry`)**
 
 Implements the future-work item deferred in v5.8.0. A new opt-in check compares the
@@ -422,7 +425,7 @@ delivers (e.g. TencentDB-Agent-Memory source `0.3.6` vs npm `latest 1.0.0`).
   injectable `fetchNpmLatest` + `checkRegistryVersionDrift`); 10 new tests, none of which
   touch the network. Verified live against the npm registry.
 
-### v5.8.0 (2026-07-07)
+## [5.8.0] - 2026-07-07
 **Agent host-runtime patch detection + OpenClaw plugin posture**
 
 - **`INSTALL_HOOK_HOST_RUNTIME_PATCH`** (high): npm install hooks that patch or
@@ -445,7 +448,7 @@ delivers (e.g. TencentDB-Agent-Memory source `0.3.6` vs npm `latest 1.0.0`).
   This needs npm registry metadata that local/offline directory scans currently
   avoid; proposed here, not yet implemented.
 
-### v5.7.0 (2026-07-07)
+## [5.7.0] - 2026-07-07
 **GitHub Actions: Cordyceps cross-workflow composition detection**
 
 Closes the gap identified in novee.security's "Cordyceps" research (BleepingComputer,
@@ -485,7 +488,7 @@ makes the GitHub Actions analysis trigger-aware and adds a cross-file trust-boun
   `gh run download` consumers, quoted `"on":` keys, and misindented comments. Self-scan
   0 findings, 46 new tests.
 
-### v5.6.3 (2026-07-07)
+## [5.6.3] - 2026-07-07
 **Threat intel: PolinRider DPRK open-source supply-chain campaign**
 
 Daily threat-intel refresh. Added indicators for the PolinRider campaign (2 new indicators):
@@ -502,7 +505,7 @@ Daily threat-intel refresh. Added indicators for the PolinRider campaign (2 new 
   publicly enumerated at feed time, and the legitimate `7span`/`sevenspan` and `Artiffusion-Inc`
   accounts are deliberately not blocked to avoid false positives on their non-weaponized repos.
 
-### v5.6.2 (2026-07-04)
+## [5.6.2] - 2026-07-04
 **Threat intel: Contagious Interview Rollup-polyfill npm wave + ChocoPoC RAT**
 
 Daily threat-intel refresh. Two new July 2026 developer-targeted campaigns added
@@ -522,7 +525,7 @@ to the bundled IOC feed and detection patterns (12 new indicators):
   DoH dead drop, is deliberately not blocked.
 - feed.json regenerated; 4 new campaign tests (1122 total, unchanged suite pass rate).
 
-### v5.6.1 (2026-07-03)
+## [5.6.1] - 2026-07-03
 **Polish: Docker base LTS, GitLab report path privacy, docs**
 
 - Docker base image bumped to node:22-alpine (digest-pinned); dependabot now
@@ -536,7 +539,7 @@ to the bundled IOC feed and detection patterns (12 new indicators):
   CI; the Install Guard README documents that offline checks only resolve exact
   version pins (bare-name IOCs still fire on any version).
 
-### v5.6.0 (2026-07-03)
+## [5.6.0] - 2026-07-03
 **Install-time guard + GitLab-native output + registry hardening (both remaining roadmap bets)**
 
 Ships the last two strategic bets from the 2026-07 roadmap. A second 4-lens
@@ -576,7 +579,7 @@ Fixed by the verification gate before release:
 - `--format gitlab` could emit a >255-char vulnerability name that fails the
   GitLab schema, making GitLab discard the whole report; names are now capped.
 
-### v5.5.0 (2026-07-02)
+## [5.5.0] - 2026-07-02
 **Community batch: all 8 seeded issues shipped, hardened by an adversarial release gate**
 
 Implements every open issue (#40-#47) in one release. Before tagging, a
@@ -619,7 +622,7 @@ Fixed by the verification gate before release (would have shipped broken):
   appeared (scan exits non-zero, publish step skipped) - now || true +
   if: always().
 
-### v5.4.2 (2026-07-02)
+## [5.4.2] - 2026-07-02
 **Fix: policy-suppressed findings leaked into incidents and the trend check**
 
 Found by a real user scan of this repository: the report said "No findings -
@@ -641,7 +644,7 @@ v5.2.40 SARIF/SBOM suppressed-finding leaks.
 - 5 regression tests (bugfix-v5_4_2.test.ts) covering the incident leak, the
   score-boost leak, the phantom spike, and trend-rule suppressibility.
 
-### v5.4.1 (2026-07-02)
+## [5.4.1] - 2026-07-02
 **Docs: PowerShell-safe MCP install instructions**
 
 Patch release so the npm package page carries the corrected instructions.
@@ -655,7 +658,7 @@ Patch release so the npm package page carries the corrected instructions.
 - Repo hygiene: the `.scg-cache/` runtime feed cache is untracked and
   gitignored (a live `feed refresh` test had briefly committed it).
 
-### v5.4.0 (2026-07-02)
+## [5.4.0] - 2026-07-02
 **The agentic security suite: MCP scanning, skills scanning, an MCP server, and a live threat feed**
 
 supply-chain-guard becomes both a scanner OF the agentic ecosystem and a tool FOR it.
@@ -688,7 +691,7 @@ No mainstream OSS scanner covers these surfaces. 106 new tests (1030 total).
   drowns in phantom criticals from its own protection data); .scg-cache/ and
   .scg-history/ excluded from walks.
 
-### v5.3.0 (2026-07-02)
+## [5.3.0] - 2026-07-02
 **Ecosystem expansion: 3 new ecosystems, 4 new lockfile formats, fail-closed policy config**
 
 The largest coverage release since v5.0: three new package ecosystems, full modern
@@ -720,7 +723,7 @@ JavaScript lockfile coverage, strict policy validation, and community infrastruc
   Renovate/Dependabot bot-PR gate, GitLab CI), CONTRIBUTING refresh, new-pattern
   label, and 8 seeded good-first-issues (#40-#47).
 
-### v5.2.45 (2026-07-02)
+## [5.2.45] - 2026-07-02
 **README adoption package: demo GIF, comparison table, changelog split**
 
 Documentation and discoverability release. No detection-logic changes.
@@ -744,7 +747,7 @@ Documentation and discoverability release. No detection-logic changes.
   vhs from the Charm apt repo, so the repo is back to zero third-party
   GitHub Actions.
 
-### v5.2.44 (2026-07-01)
+## [5.2.44] - 2026-07-01
 **Dependency maintenance: latest toolchain + commander 14**
 
 Routine dependency refresh. All dependencies are now at their latest versions with zero known
@@ -759,7 +762,7 @@ vulnerabilities. No detection-logic or output-format changes: this is a maintena
 - CI: pinned GitHub Actions bumped to current releases (checkout v7, setup-node v6, github-script
   v9, setup-python v6); SHA pins verified against the upstream tags.
 
-### v5.2.43 (2026-06-30)
+## [5.2.43] - 2026-06-30
 **Threat intel: Contagious Interview "Fake Font" npm + Go wave (June 29, 2026)**
 
 Adds indicators for a DPRK Contagious Interview operation reported by The Hacker News on
@@ -778,7 +781,7 @@ is exfiltrated as ZIP archives to a C2 server or a runtime-supplied Telegram bot
   guard that the disguised FontAwesome filename is deliberately NOT used as a signature.
 - No file hashes, C2 domains, IPs, or wallet addresses were disclosed in the report.
 
-### v5.2.42 (2026-06-29)
+## [5.2.42] - 2026-06-29
 **Threat intel: Miasma LeoPlatform / GitHub Actions wave (June 26, 2026)**
 
 Adds indicators for the latest evolution of the Mini Shai-Hulud / Miasma / Hades npm
@@ -799,7 +802,7 @@ ecosystem and abused the `codfish/semantic-release-action` GitHub Action.
 - Compromised maintainer handle `czirker` added to the malicious-account blocklist.
 - 24 new bundled-feed IOC entries and a `campaigns.test.ts` regression suite.
 
-### v5.2.41 (2026-06-28)
+## [5.2.41] - 2026-06-28
 **Security: command injection in the GitHub trust scanner**
 
 Remediates a finding from the continuous AAHP Swarm review (elvatis/ideabase#24).
@@ -814,7 +817,7 @@ values could reach shell command execution. No rule or scan-engine change.
   rejects values that fail the same allowlists.
 - Added regression tests.
 
-### v5.2.40 (2026-06-28)
+## [5.2.40] - 2026-06-28
 **Security: org-scanner command injection and suppressed findings in SARIF/SBOM**
 
 Remediates findings from the continuous AAHP Swarm review (elvatis/ideabase#24).
@@ -829,7 +832,7 @@ No rule or scan-engine behavior changed.
   the primary SBOM path.
 - Added regression tests for the rejected-org path and suppressed-finding output.
 
-### v5.2.39 (2026-06-28)
+## [5.2.39] - 2026-06-28
 **Security: harden the GitHub Action and PR-comment report against injection**
 
 Remediates findings from an internal AAHP Swarm review of this tool. The composite
@@ -848,7 +851,7 @@ scan-engine behavior changed.
 - `scanner.ts` uses `os.tmpdir()` instead of a hardcoded `/tmp` for the clone.
 - Added a markdown-injection regression test.
 
-### v5.2.38 (2026-06-28)
+## [5.2.38] - 2026-06-28
 **Security: command injection in GitHub clone and diff scanning**
 
 The GitHub clone path and the diff scanner ran git through a shell with the target
@@ -864,7 +867,7 @@ check moved off the shell too. Found by an internal AAHP Swarm review.
   a `sinceCommit` that is not a clean git ref.
 - Added a regression test for the rejected-ref path.
 
-### v5.2.37 (2026-06-27)
+## [5.2.37] - 2026-06-27
 **Fix: PR-comment step crash on findings containing backticks**
 
 The Comment on PR step built a JavaScript template literal from the scan
@@ -879,7 +882,7 @@ in this release.
   instead of interpolating the report into an inline template literal (#27).
 - Added `continue-on-error: true` so PR-comment failures are non-fatal.
 
-### v5.2.36 (2026-06-25)
+## [5.2.36] - 2026-06-25
 **Threat-intel update: PostCSS Tools Windows RAT npm campaign**
 
 One confirmed campaign ingested from the daily threat-intel sweep (source: The Hacker News, June 23, 2026):
@@ -888,7 +891,7 @@ One confirmed campaign ingested from the daily threat-intel sweep (source: The H
 
 Deliberately not ingested this sweep: the Operation Endgame Amadey/StealC takedown, the Cisco SD-WAN (CVE-2026-20245) and Ubiquiti/Lantronix CVEs, Edgecution, Mistic RAT, and FortiBleed - none are package-ecosystem compromises with extractable, version-pinned or named-package IOCs.
 
-### v5.2.35 (2026-06-21)
+## [5.2.35] - 2026-06-21
 **Security: fix vite devDependency vulnerabilities**
 
 Two new advisories in the transitive vite dependency (via vitest), both `devDependencies` that do not ship in the published npm tarball (`files[]` is `dist`, `action.yml`, `README.md`, `LICENSE`, `socket.yml`), so package consumers were never exposed.
@@ -898,7 +901,7 @@ Two new advisories in the transitive vite dependency (via vitest), both `devDepe
 
 Also documents the GitHub Action distribution model in `CLAUDE.md`: `uses: homeofe/supply-chain-guard@v5` now resolves to a floating `v5` branch (kept current by a new `update-major-branch` CI job via fast-forward push), and the GitHub Marketplace publishing limitation (web-UI only, not automatable).
 
-### v5.2.34 (2026-06-21)
+## [5.2.34] - 2026-06-21
 **Threat-intel update: Mastra npm scope takeover (Sapphire Sleet) + NastyC2 + crypto-javascript worm**
 
 Three supply-chain threats ingested from the daily threat-intel sweep:
@@ -909,7 +912,7 @@ Three supply-chain threats ingested from the daily threat-intel sweep:
 
 Deliberately not ingested this sweep: the Klue OAuth breach (Icarus), FortiBleed, the NGINX/Splunk CVEs, and the SocGholish takedown - none are package-ecosystem compromises with extractable, version-pinned IOCs. Two new `campaigns.test.ts` describe blocks cover the Mastra and NastyC2 signatures.
 
-### v5.2.33 (2026-06-14)
+## [5.2.33] - 2026-06-14
 **Security: fix devDependency vulnerabilities (vitest, esbuild)**
 
 Dependabot flagged three advisories in the dev/test toolchain. All are `devDependencies` and none ship in the published npm tarball (`files[]` is limited to `dist`, `action.yml`, `README.md`, `LICENSE`, `socket.yml`), so consumers of the package were never exposed - but a security tool should not carry known-vulnerable dev deps.
@@ -920,7 +923,7 @@ Dependabot flagged three advisories in the dev/test toolchain. All are `devDepen
 
 Also adds `.supply-chain-guard.yml` (committed separately) with documented accepted-risk suppressions for the project's own self-scan: `GHA_OIDC_WRITE_PERM` and `WORKFLOW_SECRET_TO_UPLOAD_PATH` are by-design tradeoffs for npm Trusted Publishing, `LOCKFILE_ORPHANED_DEPENDENCY` is informational. Self-scan result: 0/100 clean.
 
-### v5.2.32 (2026-06-13)
+## [5.2.32] - 2026-06-13
 **Threat-intel update: Arch Linux AUR mass-hijack npm dropper (atomic-lockfile)**
 
 One confirmed, cross-verified indicator ingested from the daily threat-intel sweep (sources: The Hacker News + BleepingComputer, June 12, 2026):
@@ -936,7 +939,7 @@ Deliberately not ingested this sweep:
 
 1 new describe block in `campaigns.test.ts` covers the `atomic-lockfile` package-name pattern.
 
-### v5.2.31 (2026-06-11)
+## [5.2.31] - 2026-06-11
 **Threat-intel update: ThreatsDay Bulletin npm cluster (SStar Agent lure + ambar-src)**
 
 Two fully-malicious npm packages and two malicious GitHub accounts ingested from the daily threat-intel sweep (source: The Hacker News ThreatsDay Bulletin, June 11, 2026):
@@ -951,7 +954,7 @@ Not ingested this sweep: the Shai-Hulud "Hades" Python variant against PyPI is t
 
 1 new describe block in `campaigns.test.ts` covers the two package-name patterns and the two malicious-account references.
 
-### v5.2.30 (2026-06-09)
+## [5.2.30] - 2026-06-09
 **Threat-intel update: THN Weekly Recap npm/PyPI infostealer cluster**
 
 Four fully-malicious throwaway packages ingested from the daily threat-intel sweep (source: The Hacker News Weekly Recap, June 8, 2026):
@@ -966,7 +969,7 @@ Not ingested this sweep: the new Shai-Hulud "Hades" wave against 19 science-focu
 
 1 new describe block in `campaigns.test.ts` covers the four package-name patterns.
 
-### v5.2.29 (2026-06-02)
+## [5.2.29] - 2026-06-02
 **Threat-intel update: Miasma / @redhat-cloud-services Mini Shai-Hulud variant**
 
 One new campaign ingested from the daily threat-intel sweep (sources: BleepingComputer, Socket.dev, June 1, 2026):
@@ -977,7 +980,7 @@ Not ingested this sweep: DriveSurge ClickFix/FakeUpdates is web-traffic malverti
 
 1 new describe block in `campaigns.test.ts` covers the campaign-marker detection.
 
-### v5.2.28 (2026-06-01)
+## [5.2.28] - 2026-06-01
 **Threat-intel update: codexui-android Codex stealer, LiteLLM PyPI backdoor, vpmdhaj Sicoob/cloud-secret cluster**
 
 Three new campaigns ingested from the daily threat-intel sweep (sources: Aikido, The Hacker News, Trail of Bits, Socket.dev, May 22 - June 1, 2026):
@@ -988,7 +991,7 @@ Three new campaigns ingested from the daily threat-intel sweep (sources: Aikido,
 
 3 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domains + package-name patterns + attacker accounts).
 
-### v5.2.27 (2026-05-28)
+## [5.2.27] - 2026-05-28
 **Threat-intel update: ACR Stealer fake-Claude page, Malware-Slop npm infostealer**
 
 Two new campaigns ingested from the daily threat-intel sweep (sources: SANS ISC, The Hacker News / OX Security, May 26-27, 2026):
@@ -1000,7 +1003,7 @@ Not ingested this sweep: the GlassWorm C2 takedown (CrowdStrike/Google/Shadowser
 
 2 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domain + component hash + attacker account + malicious package name).
 
-### v5.2.26 (2026-05-25)
+## [5.2.26] - 2026-05-25
 **SLSA verifier recognises `npm publish --provenance` + OIDC as Level 3**
 
 The SLSA verifier's L3 patterns required the literal string `slsa-framework/slsa-github-generator` in a workflow. That predated npm's `--provenance` flag (added in npm 9.5, mandatory under Trusted Publishing since npm 11.5), which produces Sigstore-signed, Rekor-logged provenance bound to the GitHub Actions OIDC identity - cryptographically the same L3 guarantees the slsa-github-generator reusable workflow produces, just specialised for npm artifacts.
@@ -1017,7 +1020,7 @@ The `SLSA_UNSIGNED_ARTIFACTS` recommendation now describes both L3 paths (npm-na
 
 Expected impact on the self-scan: the `SLSA_UNSIGNED_ARTIFACTS` INFO finding drops because our own `ci.yml` already has the L3 npm-native combination since v5.2.20.
 
-### v5.2.25 (2026-05-25)
+## [5.2.25] - 2026-05-25
 **Threat-intel update: TrapDoor, Polymarket typosquats, durabletask, Megalodon throwaways**
 
 Five new campaigns ingested from the daily threat-intel sweep (sources: The Hacker News, SANS ISC, BleepingComputer, May 22-25, 2026):
@@ -1029,7 +1032,7 @@ Five new campaigns ingested from the daily threat-intel sweep (sources: The Hack
 
 3 new describe blocks in `campaigns.test.ts` cover the surface-level detections (C2 domain + attacker GitHub account).
 
-### v5.2.24 (2026-05-24)
+## [5.2.24] - 2026-05-24
 **`RISK_TRAJECTORY_UNSTABLE` no longer flags monotone improvement as instability**
 
 The risk-forecast engine used `Math.abs(slope) > 5` to detect "volatile risk", which conflated two opposite situations:
@@ -1054,7 +1057,7 @@ The detection is now split into orthogonal concerns:
 
 Expected impact on the self-scan: drops the spurious `RISK_TRAJECTORY_UNSTABLE` finding. Score should fall from 17/MEDIUM to roughly 5-10/LOW.
 
-### v5.2.23 (2026-05-24)
+## [5.2.23] - 2026-05-24
 **Fix `WORKFLOW_UNTRUSTED_ACTION_IN_RELEASE_PATH` false positive on `npm@latest`**
 
 The unpinned-action detector in `workflow-modeler.ts` was firing on any `@latest` / `@main` / `@master` / `@dev` substring anywhere in a workflow file - including the `npm install -g npm@latest` step that v5.2.20 introduced as part of the OIDC trusted-publishing setup. That's a Node toolchain install, not a GitHub Action reference.
@@ -1072,7 +1075,7 @@ The regex is now scoped to actual `uses: <action>@<branch>` declarations using a
 
 Expected impact on the self-scan: the last false-positive CRITICAL is gone. Remaining 2 mediums (`GHA_OIDC_WRITE_PERM` for Trusted Publishing, `WORKFLOW_SECRET_TO_UPLOAD_PATH` for `secrets.GITHUB_TOKEN` access in the GitHub Release step) are honest by-design tradeoffs.
 
-### v5.2.22 (2026-05-24)
+## [5.2.22] - 2026-05-24
 **Self-scan polish: comment-aware GHA scan, pinned actions, fix changelog self-trigger**
 
 Three follow-up fixes to the v5.2.21 self-scan:
@@ -1083,7 +1086,7 @@ Three follow-up fixes to the v5.2.21 self-scan:
 
 Expected impact on supply-chain-guard's own self-scan: from 3 critical + 3 medium down to 0 critical + 1-2 medium. Remaining: 1x `GHA_OIDC_WRITE_PERM` (the real one in the publish job - by design for Trusted Publishing) and `WORKFLOW_SECRET_TO_UPLOAD_PATH` (legitimate `secrets.GITHUB_TOKEN` access for `gh release create`). Both are honest acceptable-risk findings.
 
-### v5.2.21 (2026-05-24)
+## [5.2.21] - 2026-05-24
 **Architectural fix: source-marker patterns no longer fire on documentation files**
 
 The v5.2.20 self-scan still scored 100/100 CRITICAL despite all previous fixes, with 28 critical + 10 high findings - **all** triggered by the project's own README documenting the patterns and IOC strings that the scanner detects. Same problem applies to every threat-intel blog post or security research write-up scanned by supply-chain-guard.
@@ -1105,7 +1108,7 @@ README cosmetic defang for the residual self-flags:
 
 Expected impact on supply-chain-guard's own self-scan: drops from 28 critical + 10 high to roughly 0 critical + 0 high. Remaining findings are by-design GitHub Actions choices (`GHA_OIDC_WRITE_PERM` and `WORKFLOW_SECRET_TO_UPLOAD_PATH` for Trusted Publishing) and project handoff notes legitimately referencing Solana - addressable via project policy file if desired, but not bugs.
 
-### v5.2.20 (2026-05-24)
+## [5.2.20] - 2026-05-24
 **Pattern bug fixes uncovered by the v5.2.19 self-scan**
 
 Running supply-chain-guard against its own repository surfaced five structural false-positives and detection gaps. Each is now fixed at the source:
@@ -1117,7 +1120,7 @@ Running supply-chain-guard against its own repository surfaced five structural f
 - **`LOCKFILE_ORPHANED_DEPENDENCY` recommendation was wrong for npm v7+** - the message told users to run `npm prune`, which does not remove transitive dependencies from npm v7+ flat lockfiles (they are present by design). Recommendation rewritten to explain npm v7+ behaviour and direct users to verify publishers / inspect `npm ls <name>` instead.
 - 15 new regression tests in `src/__tests__/bugfix-v5_2_20.test.ts` plus updated `triage-engine.test.ts` cover all five fixes. Total test count: 739 passing.
 
-### v5.2.19 (2026-05-24)
+## [5.2.19] - 2026-05-24
 **New detection: prompt injection against downstream AI coding agents**
 
 Adds five new patterns under `PROMPT_INJECTION_PATTERNS` (`src/patterns.ts`) that flag LLM-control tokens and role markers embedded in package documentation (README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release notes). These tokens target the AI coding agent that reads the README on the human developer's behalf, not the human - a growing supply-chain attack vector as LLM coding tools become standard.
@@ -1130,7 +1133,7 @@ Adds five new patterns under `PROMPT_INJECTION_PATTERNS` (`src/patterns.ts`) tha
 - All five are severity HIGH, scoped to README-style files only (`onlyFilePattern`), exclude scanner source (`notFilePattern: SCANNER_SRC`) and test files. 39 new tests in `src/__tests__/prompt-injection-patterns.test.ts`.
 - Motivated by a real WebFetch tag-leakage incident in the daily threat-intel routine on 2026-05-24: an internal Claude Code summarisation helper accidentally surfaced its own harness tag inside a fetched-content summary, demonstrating exactly the failure mode a hostile package could weaponise.
 
-### v5.2.18 (2026-05-24)
+## [5.2.18] - 2026-05-24
 **Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026)**
 
 Two coordinated Composer / Packagist supply-chain attacks disclosed within hours of each other on 2026-05-23.
@@ -1138,7 +1141,7 @@ Two coordinated Composer / Packagist supply-chain attacks disclosed within hours
 - **Laravel-Lang DebugElevator** (The Hacker News and BleepingComputer, 2026-05-23): four Composer packages in the `laravel-lang` namespace (`laravel-lang/lang`, `laravel-lang/http-statuses`, `laravel-lang/attributes`, `laravel-lang/actions`) had their GitHub version tags abused to republish roughly 700 historical versions, each carrying a malicious `src/helpers.php` containing a ~5,900-line PHP credential-stealing framework that exfiltrates to `flipboxstudio[.]info/exfil`. PDB-style references in the artifacts mention developer handles `Mero` and `claude`. Added the C2 domain plus two payload SHA-256 hashes (`f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053`, `23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2`) and four `composer:` package IOCs to the bundled feed, plus a new campaign test block.
 - **Packagist `parikhpreyash4` binary attack** (The Hacker News, 2026-05-23): coordinated hit on eight Composer packages (`moritz-sauer-13/silverstripe-cms-theme`, `crosiersource/crosierlib-base`, `devdojo/wave`, `devdojo/genesis`, `katanaui/katana`, `elitedevsquad/sidecar-laravel`, `r2luna/brain`, `baskarcm/tzi-chat-ui`) whose dev branches had `package.json` postinstall hooks added that pull a Linux ELF (`gvfsd-network`) from `github[.]com/parikhpreyash4/systemd-network-helper-aa5c751f` and execute it from `/tmp/.sshd`. Mixing JS toolchain hooks into PHP projects let the payload sidestep Composer-side review. Added the attacker GitHub account to the malicious-accounts list, the eight `composer:` package IOCs to the bundled feed, and a campaign test block.
 
-### v5.2.17 (2026-05-23)
+## [5.2.17] - 2026-05-23
 **Threat intel: Megalodon GitHub workflow injection + DPRK OtterCookie Node.js stealer (May 22, 2026)**
 
 Two May 22 disclosures, both pivoting on adjacent IPs in `216[.]126[.]225[.]0/24` (likely shared DPRK-adjacent infrastructure).
@@ -1146,7 +1149,7 @@ Two May 22 disclosures, both pivoting on adjacent IPs in `216[.]126[.]225[.]0/24
 - **Megalodon GitHub Actions workflow injection** (The Hacker News, 2026-05-22): an automated campaign pushed 5,718 malicious commits to 5,561 GitHub repositories in a six-hour window. The attacker forged author identities as `build-bot`, `auto-ci`, `ci-bot`, and `pipeline-bot`, then injected GitHub Actions workflows that ran base64-encoded bash to exfiltrate CI env vars, AWS / GCP credentials, SSH private keys, OIDC tokens, and Docker / Kubernetes / Terraform configs to `216[.]126[.]225[.]129:8443`. Added the C2 IP plus a new `MEGALODON_C2_ENDPOINT` rule that catches the endpoint with or without the port.
 - **DPRK OtterCookie Node.js stealer** (SANS ISC diary 33006, 2026-05-22): sample uploaded to VirusTotal as `extracted-decoded.js`; obfuscator.io-style obfuscation; targets 41 crypto-wallet Chrome extension IDs (MetaMask, Phantom, Coinbase, Ledger) plus 200+ sensitive file patterns (`.env`, `.pem`, `.p12`, `.jks`, SSH keys, seed phrases) across Windows-via-WSL, macOS, and Linux. C2 over three ports on `216[.]126[.]225[.]243`: 8085 (browser creds), 8086 (file uploads), and 8087 with WebSocket reverse shell at `/api/notify`. Sample SHA-256 `049300aa5dd774d6c984779a0570f59610399c71864b5d5c2605906db46ddeb9`; highly specific hardcoded HMAC-SHA256 key `SuperStr0ngSecret@)@^`. Added two new rules (`OTTERCOOKIE_HMAC_KEY`, `OTTERCOOKIE_C2_ENDPOINT`) plus IP, URL, and hash IOCs, and a campaign test block.
 
-### v5.2.16 (2026-05-22)
+## [5.2.16] - 2026-05-22
 **Threat intel: Checkmarx Jenkins plugin version correction + postmark-mcp hostile MCP server**
 
 Two updates driven by independent disclosures aggregated through 2026-05-22.
@@ -1154,7 +1157,7 @@ Two updates driven by independent disclosures aggregated through 2026-05-22.
 - **Checkmarx Jenkins AST plugin (correction)**: SANS ISC diary 32994 (2026-05-18) and the official Checkmarx confirmation from 2026-05-11 establish that the tampered build was Marketplace version `2026.5.09`, exposed 2026-05-09 01:25 UTC to 2026-05-10 08:47 UTC. The last known-good build was `2.0.13-829.vc72453fa_1c16` (2025-12-17), and the remediated builds are `2.0.13-848.v76e89de8a_053` and `2.0.13-847.v08c0072b_2fd5`. The bundled threat-intel entry has been corrected from the prior placeholder version label, which was the last known-good build rather than the rogue version.
 - **postmark-mcp hostile MCP server**: First documented in-the-wild malicious MCP server (Sep 2025), re-disclosed via Bishop Fox's "Otto-Support - Supply Chain Risks in MCP Servers" post on 2026-05-13. Version `1.0.16` introduces a hidden BCC of every outbound email to an attacker-controlled address while preserving the published tool name, schema, and behavior; versions through `1.0.15` are clean. Added to `KNOWN_BAD_NPM_VERSIONS` and the bundled threat-intel feed, plus a new campaign test.
 
-### v5.2.15 (2026-05-20)
+## [5.2.15] - 2026-05-20
 **Threat intel: Mini Shai-Hulud @antv + Nx Console + actions-cool triple wave (May 18-19, 2026)**
 
 TeamPCP launched a coordinated triple supply-chain wave over 18-19 May 2026, all converging on the same exfiltration endpoint `t[.]m-kosche[.]com` (masquerading as an OpenTelemetry traces collector).
@@ -1164,7 +1167,7 @@ TeamPCP launched a coordinated triple supply-chain wave over 18-19 May 2026, all
 - **actions-cool GitHub Actions**: all tags of `actions-cool/issues-helper` (53 imposter commits) and `actions-cool/maintain-one-comment` (15 imposter commits) redirected to malicious payloads that read `Runner.Worker` process memory to harvest in-flight CI/CD secrets, then exfil over HTTPS to the same `t[.]m-kosche[.]com` C2.
 - New `ANTV_WAVE_KITTY_PERSISTENCE`, `ANTV_WAVE_FIREDALAZER`, `ANTV_WAVE_OTEL_C2` rules in `src/patterns.ts`; new campaign tests in `src/__tests__/campaigns.test.ts`.
 
-### v5.2.14 (2026-05-19)
+## [5.2.14] - 2026-05-19
 **Threat intel: Phantom Bot DDoS npm infostealer + Mini Shai-Hulud TanStack follow-up (May 2026)**
 
 Leaked Shai-Hulud worm source code was re-weaponized over the weekend of 2026-05-17 by npm publisher `deadcode09284814`. Four packages (`chalk-tempalte`, `@deadcode09284814/axios-util`, `axois-utils`, `color-style-utils`) shipped an infostealer plus a Golang Phantom Bot DDoS module (HTTP / TCP / UDP flood and TCP reset). Combined 2,678 downloads before takedown.
@@ -1174,7 +1177,7 @@ Leaked Shai-Hulud worm source code was re-weaponized over the weekend of 2026-05
 - Follow-up IOCs from SANS ISC diary 32994 for the TanStack wave: `seed1[.]getsession[.]org` (second Session messenger exfil node), `router_init.js` payload SHA-256 `ab4fcadaec49c03278063dd269ea5eef82d24f2124a8e15d7b90f2fa8601266c`, staging forks `github[.]com/voicproducoes` and `github[.]com/zblgg`
 - New campaign tests for both clusters in `src/__tests__/campaigns.test.ts`
 
-### v5.2.13 (2026-05-16)
+## [5.2.13] - 2026-05-16
 **Threat intel: node-ipc credential stealer (May 2026)**
 
 Maintainer email hijack of `atlantis-software[.]net` (re-registered 2026-05-07) led to malicious `node-ipc` releases `9.1.6`, `9.2.3`, and `12.0.1`.
@@ -1183,7 +1186,7 @@ Maintainer email hijack of `atlantis-software[.]net` (re-registered 2026-05-07) 
 - `12.0.1` uses hash-targeted activation and harvests 90+ credential categories
 - Domains, IP, hash, and npm package IOCs added to bundled threat-intel feed
 
-### v5.2.12 (2026-05-14)
+## [5.2.12] - 2026-05-14
 **Threat intel: Mini Shai-Hulud TanStack / UiPath / Mistral compromise (May 2026)**
 
 Continuation of the Mini Shai-Hulud worm via the TanStack ecosystem (CVE-2026-45321, CVSS 9.6).
@@ -1192,20 +1195,20 @@ Continuation of the Mini Shai-Hulud worm via the TanStack ecosystem (CVE-2026-45
 - 9 compromised npm package families: OpenSearch (4 versions), Squawk (3), TallyUI (2)
 - 2 compromised PyPI packages: `guardrails-ai@0.10.1`, `mistralai@2.4.6`
 
-### v5.2.11 (2026-05-12)
+## [5.2.11] - 2026-05-12
 **Threat intel: Checkmarx Jenkins AST plugin + MacSync Claude variant (May 2026)**
 
 - Checkmarx Jenkins AST Plugin compromise by TeamPCP / Mr_Rot13 (malicious version `2.0.13-829.vc72453fa_1c16`). `Mr_Rot13` and `TeamPCP` added to known malicious GitHub accounts.
 - MacSync Stealer Claude.ai / Google Ads variant: 3 new C2 domains (`customroofingcontractors[.]com`, `bernasibutuwqu2[.]com`, `briskinternet[.]com`) plus loader SHA-256 `ed5ed79a...` and payload SHA-256 `a833ad98...`
 - New campaign tests for both clusters in `src/__tests__/campaigns.test.ts`
 
-### v5.2.10 (2026-05-10)
+## [5.2.10] - 2026-05-10
 **Threat intel: JDownloader compromise + fake OpenAI HF repo (May 2026)**
 
 - JDownloader site compromise (2026-05-06 to 2026-05-07): Python RAT installers via `parkspringshotel[.]com`, `auraguest[.]lk`, `checkinnhotels[.]com`; bogus "Zipline LLC" and "The Water Team" signers; Linux ELF package plus systemd-exec
 - Fake OpenAI Privacy Filter on Hugging Face: `Open-OSS/privacy-filter` trended; `loader.py` plus `start.bat` fetch sefirah infostealer (C2 `recargapopular[.]com`)
 
-### v5.2.9 (2026-05-09)
+## [5.2.9] - 2026-05-09
 **Threat intel: TCLBANKER Brazilian banking trojan (May 2026)**
 
 REF3076 actor distributes trojanized `LogiAiPromptBuilder.exe` MSI; sideloads `screen_retriever_plugin.dll`; self-spreads via WhatsApp / Outlook worm modules; targets 59 banks, fintech platforms, and crypto exchanges.
@@ -1215,7 +1218,7 @@ REF3076 actor distributes trojanized `LogiAiPromptBuilder.exe` MSI; sideloads `s
 - 4 new SHA-256 hashes added to bundled threat-intel feed
 - 4 new campaign tests in `src/__tests__/campaigns.test.ts`
 
-### v5.2.8 (2026-05-08)
+## [5.2.8] - 2026-05-08
 **Threat intel: ZiChatBot PyPI + Beagle backdoor (May 2026)**
 
 Two fresh May 2026 supply-chain campaigns are now signatured.
@@ -1224,7 +1227,7 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 - **Beagle backdoor / fake Claude AI site** - Drive-by from `claude-pro[.]com` delivers a 505MB ZIP with DonutLoader plus DLL sideloading via `NOVupdate.exe` + `avk.dll`, calling out to `license[.]claude-pro[.]com` (`8[.]217[.]190[.]58`). Domains and IP added to `KNOWN_C2_DOMAINS` / `KNOWN_C2_IPS` plus bundled threat-intel feed.
 - 6 new tests in `src/__tests__/campaigns.test.ts`.
 
-### v5.2.7 (2026-05-08)
+## [5.2.7] - 2026-05-08
 **Threat intel: DAEMON Tools QUIC RAT supply-chain attack (May 2026)**
 
 - Trojanized DAEMON Tools installers (versions 12.5.0.2421-12.5.0.2434) distributed via official website since 2026-04-08
@@ -1232,7 +1235,7 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 - C2 domain `env-check[.]daemontools[.]cc` added to `KNOWN_C2_DOMAINS` + threat-intel feed
 - Suspected Chinese-speaking adversary; patched in version 12.6.0.2445
 
-### v5.2.6 (2026-05-08)
+## [5.2.6] - 2026-05-08
 **Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026)**
 
 - **CanisterSprawl** - TeamPCP Update 008 with ICP canister-based C2 (`whereisitat[.]lucyatemysuperbox[.]space`)
@@ -1241,7 +1244,7 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 - **MacSync Stealer** - Homebrew malvertising via `glowmedaesthetics[.]com`
 - **EtherRAT** - GitHub facade repos with Ethereum smart contract C2, fallback IP `135[.]125[.]255[.]55`
 
-### v5.2.5 (2026-05-01)
+## [5.2.5] - 2026-05-01
 **Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026)**
 
 - SAP CAP npm hijacks: `@cap-js/sqlite@2.2.2`, `@cap-js/postgres@2.2.2`, `@cap-js/db-service@2.10.1`, `mbt@1.2.48`
@@ -1249,7 +1252,7 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 - PyTorch Lightning PyPI hijack: `lightning@2.6.2/2.6.3`
 - Worm marker "A Mini Shai-Hulud has Appeared", Bun-based preinstall hook fingerprint
 
-### v5.2.4 (2026-04-30)
+## [5.2.4] - 2026-04-30
 **Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026)**
 
 Two fresh April 2026 supply-chain campaigns are now signatured.
@@ -1258,10 +1261,10 @@ Two fresh April 2026 supply-chain campaigns are now signatured.
 - **LofyGang / LofyStealer (aka GrabBot)** — Brazilian crew resurfaces after three years targeting Minecraft players with a new infostealer disguised as Minecraft hacks. New rules `LOFYSTEALER_MARKER` and `LOFYGANG_MINECRAFT_LURE` in `src/patterns.ts`, plus threat-intel `package` IOCs for the family aliases.
 - 5 new tests in `src/__tests__/campaigns.test.ts`.
 
-### v5.2.3 (2026-04-26)
+## [5.2.3] - 2026-04-26
 **Documentation catch-up** — bumps version strings in `src/cli.ts`, `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) that were stuck at `5.2.0` / `5.1.0` since the v5.2.1 and v5.2.2 releases. No behavior change.
 
-### v5.2.2 (2026-04-26)
+## [5.2.2] - 2026-04-26
 **Solana monitor: rate-limit-aware RPC client** — closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21).
 
 The public Solana RPC (`api[.]mainnet-beta[.]solana[.]com`) returns HTTP 429 and JSON-RPC error `-32005` when its per-IP quota is exceeded. Previously the monitor surfaced these as fatal poll errors and skipped the interval. Now `solanaRpc()` retries with exponential backoff and recovers automatically.
@@ -1272,7 +1275,7 @@ The public Solana RPC (`api[.]mainnet-beta[.]solana[.]com`) returns HTTP 429 and
 - **Test seam**: `__setSleepForTesting()` lets tests run instantly without real timers
 - 6 new tests in `src/__tests__/solana-monitor.test.ts` cover 429 retry, `-32005` retry, Retry-After honoring, max-retry exhaustion, non-rate-limit pass-through, and message-based detection
 
-### v5.2.1 (2026-04-26)
+## [5.2.1] - 2026-04-26
 **Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026)**
 
 A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS Docker images / VSCode-OpenVSX extensions and the `@bitwarden/cli` npm package on April 22, 2026, using a shared `audit[.]checkmarx[.]cx/v1/telemetry` exfiltration endpoint. Targets GitHub tokens, AWS/Azure/GCP credentials, npm tokens, SSH keys, and Claude configs. Marked as a successor to the Shai-Hulud npm worm.
@@ -1286,7 +1289,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
   - `BITWARDEN_CLI_LOADER` — matches `bw_setup.js` / `bw1.js` loader/payload pair
 - 4 new tests in `src/__tests__/campaigns.test.ts`
 
-### v5.2.0 (2026-04-08)
+## [5.2.0] - 2026-04-08
 **Self-Scan Clean + Text Wrapping** — the scanner no longer flags its own source code. Scanning `supply-chain-guard` itself drops from 100/critical (243 critical + 137 high) to clean.
 
 **Scanner source exclusion** (`src/scanner.ts`):
@@ -1303,12 +1306,12 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - New `wrapText()` helper replaces `trunc()` for description, match, and fix fields in findings output
 - Long text now word-wraps across multiple lines within box borders instead of being cut off with `…`
 
-### v5.1.1 (2026-04-07)
+## [5.1.1] - 2026-04-07
 **CI and test fixes**
 - CI workflow: add GitHub Release creation step — after npm publish, automatically creates a GitHub Release with changelog notes extracted from README.md
 - `reporter.test.ts`: fix 3 text-format assertions that checked old output patterns (`"scan report"`, `"52/100"`, `"None"`) broken by the v5.1.0 ASCII output redesign
 
-### v5.1.0 (2026-04-07)
+## [5.1.0] - 2026-04-07
 **Comprehensive ASCII CLI output** — complete redesign of the default text reporter.
 - Double-line banner header (`╔╗`) with tool name and version
 - Risk score with 36-char visual gauge bar, color-coded by severity level
@@ -1318,7 +1321,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - All sections framed in `┌─┐ / └─┘` box-drawing borders at 80-char terminal width
 - Fixed stale hardcoded `4.8.0`/`4.9.0` version strings in SARIF, SBOM metadata, and HTML footer
 
-### v5.0.1 (2026-04-07)
+## [5.0.1] - 2026-04-07
 **False positive fixes — second pass** after live workspace testing revealed additional FPs.
 - `PROXY_HANDLER_TRAP`: `notFilePattern` extended to cover non-minified vendor files in `/static/js/`, `/vendor/`, `/public/js/`, `/assets/js/` directories (e.g. `tailwindcss.js`)
 - `SHAI_HULUD_WORM` / `SHAI_HULUD_CRED_STEAL`: switched from `notFilePattern(yml)` to `onlyExtensions` for source code only — eliminates FPs on `.md`, `.json`, and other doc/config files
@@ -1326,7 +1329,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - `DROPPER_TEMP_EXEC`: pattern tightened from `save.*\.exe` to `saveFile\(` to avoid matching variable names
 - `PROTESTWARE_PROXIMITY`: destructive token detection now requires actual function calls (`fs.rm*\s*\(`) rather than any line containing `child_process`
 
-### v5.0.0 (2026-04-07)
+## [5.0.0] - 2026-04-07
 **Context-Aware False Positive Elimination** — workspace-wide scan of 100k+ LOC across 15 projects identified 14 systematic FP categories. v5.0.0 eliminates all of them without weakening real detection.
 
 **New PatternEntry context fields** (`src/types.ts`):
@@ -1358,7 +1361,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - 22 new context-aware tests (629 total)
 - Expected score reduction: projects scoring 100/critical due to FPs → ≤20/low with no actual malware
 
-### v4.9.0 (2026-04-07)
+## [4.9.0] - 2026-04-07
 - **New: SBOM Generator** — reads `package-lock.json` (v2+) to generate CycloneDX 1.6 SBOMs with real `components[]` (name, version, PURL, hashes, licenses). Falls back to `package.json` direct deps. VEX statements for suppressed findings. Use `--sbom-output <file>` to write separately.
 - **New: SLSA Verifier** — detects SLSA provenance level (0–3) per project. Checks for sigstore/cosign signing, `slsa-github-generator` usage, hermetic build evidence, provenance attestation files. New rules: `SLSA_LEVEL_0`, `SLSA_NO_PROVENANCE`, `SLSA_UNSIGNED_ARTIFACTS`.
 - **New: GitHub Actions PPE Patterns** — `GHA_PPE_PULL_TARGET` (critical), `GHA_SCRIPT_INJECTION` (critical), `GHA_OIDC_WRITE_PERM`, `GHA_CACHE_POISONING`, `GHA_ARTIFACT_DOWNLOAD`, `GHA_SELF_MODIFY`. Known malicious SHA blocklist (tj-actions Sep 2025, reviewdog).
@@ -1376,7 +1379,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **Score Calculation**: per-rule deduplication (each unique rule contributes once to score) + weights medium 8→5, low 3→2
 - 45 new tests (607 total)
 
-### v4.8.0 (2026-04-04)
+## [4.8.0] - 2026-04-04
 - **New: Continuous Risk Monitor** -- persistent risk history, trend detection (spikes, stagnation, increasing)
 - **New: Triage Engine** -- finding ownership, status tracking, governance checks (unowned critical, expired acceptances)
 - **New: SLA Engine** -- remediation deadline tracking with breach and at-risk detection
@@ -1384,7 +1387,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New: Security Metrics** -- open critical/high, SLA compliance rate, risk trend, top contributors
 - 18 new tests (562 total)
 
-### v4.7.0 (2026-04-04)
+## [4.7.0] - 2026-04-04
 - **New: Attack Graph Engine** -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs with exploitable attack paths
 - **New: Active Validation Framework** -- confidence tiers (heuristic/correlated/validated/confirmed), rationale and evidence per finding
 - **New: Workflow Modeler** -- models GitHub Actions as executable chains, detects secret-to-egress and untrusted-action-in-release paths
@@ -1394,7 +1397,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New:** Mermaid diagram export for attack paths
 - 19 new tests (544 total)
 
-### v4.6.0 (2026-04-04)
+## [4.6.0] - 2026-04-04
 - **New: Remediation Engine** -- concrete, prioritized fix steps for every finding
 - **New: Fix Suggestions** -- machine-readable patches (pin actions, fix registries)
 - **New: Incident Playbooks** -- full response playbooks for GlassWorm, Vidar, npm takeover, fake repos, CI/CD poisoning
@@ -1405,7 +1408,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New:** Remediation plan section in text/HTML reports
 - 24 new tests (525 total)
 
-### v4.5.0 (2026-04-04)
+## [4.5.0] - 2026-04-04
 - **New: Threat Intelligence** -- real-time IOC feed integration with confidence scoring and decay
 - **New: Adaptive Risk Engine** -- multi-dimensional scoring (code/deps/repo/CI + confidence)
 - **New: Diff-Based Scanning** -- `--since <commit>` scans only changed files
@@ -1414,7 +1417,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New:** Risk dimensions in text/JSON output (code risk, dep risk, CI/CD risk, threat intel)
 - 19 new tests (501 total)
 
-### v4.4.0 (2026-04-04)
+## [4.4.0] - 2026-04-04
 - **New: Policy Engine** -- `.supply-chain-guard.yml` config for rule disable, severity overrides, allowlists, suppressions
 - **New: Baseline System** -- `--save-baseline` / `--baseline` for diff-only CI scanning (only new findings)
 - **New: Trust Signals** -- positive indicators (SECURITY.md, CODEOWNERS, LICENSE, lockfile, repository link)
@@ -1422,11 +1425,11 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New:** Suppression count in reports
 - 18 new tests (482 total)
 
-### v4.3.0 (2026-04-04)
+## [4.3.0] - 2026-04-04
 - Documentation overhaul: complete README rewrite covering all features through v4.2
 - Updated all version references, examples, and detection rule tables
 
-### v4.2.0 (2026-04-04)
+## [4.2.0] - 2026-04-04
 - **New: Correlation Engine** -- links findings into incident-level attack chains (15+ rules)
 - **New: Trust Breakdown** -- 4-dimension scoring (publisher/code/dependency/release)
 - **New: Install Hook Scanner** -- deep analysis (secret harvesting, download-exec, binary blobs)
@@ -1437,29 +1440,122 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **New:** Secrets detection (AWS, GitHub, SSH, npm tokens, private keys)
 - 59 new tests (464 total), ~174 detection rules
 
-### v4.1.0 (2026-04-04)
+## [4.1.0] - 2026-04-04
 - **New: GitHub Trust Scanner** -- repo metadata, star-farming, release artifacts, README lures
 - **New: IOC Blocklist** -- known C2 domains/IPs, malware hashes, bad npm versions, malicious accounts
 - **New:** Vidar/GhostSocks/dropper patterns, dead-drop resolver detection
 - **New:** Claude Code leak campaign signatures, fake AI tool lure detection
 - 42 new tests (405 total), ~143 detection rules
 
-### v4.0.0 (2026-04-04)
+## [4.0.0] - 2026-04-04
 - **New:** Dockerfile, package config, git security, Cargo/Rust, Go module, entropy scanners
 - **New:** Build-tool, monorepo, IaC/Terraform patterns
 - **New:** HTML report format with severity filtering
 - **New:** Shai-Hulud worm, advanced obfuscation, campaign signatures
 - 94 new tests (363 total), 110+ detection rules
 
-### v3.1.0 (2026-03-26)
+## [3.1.0] - 2026-03-26
 - SBOM export (CycloneDX 1.5), `--fail-on` flag, full test coverage (269 tests)
 
-### v3.0.0 (2026-03-26)
+## [3.0.0] - 2026-03-26
 - PyPI scanner, GitHub Actions scanner, SARIF output, Solana watchlist
 
-### v2.0.0
+## [2.0.0] - 2026-03-19
 - Multi-platform scanner (npm, PyPI, VS Code), dependency confusion, lockfile checks
 
-### v1.0.0
+## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.3...HEAD
+[5.17.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.3
+[5.17.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.2
+[5.17.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.1
+[5.17.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.0
+[5.16.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.16.0
+[5.15.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.15.0
+[5.14.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.14.0
+[5.13.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.13.0
+[5.12.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.12.4
+[5.12.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.12.3
+[5.12.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.12.2
+[5.12.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.12.1
+[5.12.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.12.0
+[5.11.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.11.1
+[5.11.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.11.0
+[5.10.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.10.0
+[5.9.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.9.0
+[5.8.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.8.0
+[5.7.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.7.0
+[5.6.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.6.3
+[5.6.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.6.2
+[5.6.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.6.1
+[5.6.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.6.0
+[5.5.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.5.0
+[5.4.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.4.2
+[5.4.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.4.1
+[5.4.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.4.0
+[5.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.3.0
+[5.2.45]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.45
+[5.2.44]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.44
+[5.2.43]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.43
+[5.2.42]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.42
+[5.2.41]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.41
+[5.2.40]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.40
+[5.2.39]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.39
+[5.2.38]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.38
+[5.2.37]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.37
+[5.2.36]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.36
+[5.2.35]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.35
+[5.2.34]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.34
+[5.2.33]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.33
+[5.2.32]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.32
+[5.2.31]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.31
+[5.2.30]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.30
+[5.2.29]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.29
+[5.2.28]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.28
+[5.2.27]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.27
+[5.2.26]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.26
+[5.2.25]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.25
+[5.2.24]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.24
+[5.2.23]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.23
+[5.2.22]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.22
+[5.2.21]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.21
+[5.2.20]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.20
+[5.2.19]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.19
+[5.2.18]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.18
+[5.2.17]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.17
+[5.2.16]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.16
+[5.2.15]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.15
+[5.2.14]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.14
+[5.2.13]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.13
+[5.2.12]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.12
+[5.2.11]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.11
+[5.2.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.10
+[5.2.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.9
+[5.2.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.8
+[5.2.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.7
+[5.2.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.6
+[5.2.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.5
+[5.2.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.4
+[5.2.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.3
+[5.2.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.2
+[5.2.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.1
+[5.2.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.2.0
+[5.1.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.1.1
+[5.1.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.1.0
+[5.0.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.0.1
+[5.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.0.0
+[4.9.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.9.0
+[4.8.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.8.0
+[4.7.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.7.0
+[4.6.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.6.0
+[4.5.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.5.0
+[4.4.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.4.0
+[4.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.3.0
+[4.2.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.2.0
+[4.1.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.1.0
+[4.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v4.0.0
+[3.1.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v3.1.0
+[3.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v3.0.0
+[2.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v2.0.0
+[1.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v1.0.0

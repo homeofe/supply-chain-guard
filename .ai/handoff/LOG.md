@@ -13,84 +13,84 @@
 
 | Version | Date | Headline |
 |---------|------|----------|
-| v5.17.3 | 2026-07-18 | *Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2 |
-| v5.17.2 | 2026-07-17 | *Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives) |
-| v5.17.1 | 2026-07-17 | *MCP registry metadata + honest package description |
-| v5.17.0 | 2026-07-17 | *OSV-format feed export + adopter badge (ecosystem reach) |
-| v5.16.0 | 2026-07-17 | *Starjacking detection (repository-claim corroboration) |
-| v5.15.0 | 2026-07-17 | *Honest SLSA provenance validation (fixes an overclaim) |
-| v5.14.0 | 2026-07-17 | *Product/DX: path-scoped policy, JUnit output, MCP v2 |
-| v5.13.0 | 2026-07-17 | *Detection coverage: Rust/Go/Python lockfiles + agent-memory files |
-| v5.12.4 | 2026-07-17 | *Threat intel: PhantomSync (npm crypto stealer) + Pepesoft (NuGet surveillance) |
-| v5.12.3 | 2026-07-16 | *Threat-intel: AsyncAPI npm supply-chain compromise (July 2026) |
-| v5.12.2 | 2026-07-13 | *Threat-intel: Injective Labs SDK npm compromise (July 2026) |
-| v5.12.1 | 2026-07-12 | *Threat-intel: jscrambler npm compromise (July 2026) |
-| v5.12.0 | 2026-07-11 | *Issue #54 hardening: oversized-file transparency + threat-intel indicator contract |
-| v5.11.1 | 2026-07-09 | *CI: fix the npm-publish job (npm 12 dropped Node 20 support) |
-| v5.11.0 | 2026-07-09 | *Threat intel: fake Paysafe / Skrill / Neteller payment SDKs (npm + PyPI) |
-| v5.10.0 | 2026-07-08 | *GitLost-class agentic-workflow posture detection |
-| v5.9.0 | 2026-07-07 | *Opt-in registry version-drift detection (--check-registry) |
-| v5.8.0 | 2026-07-07 | *Agent host-runtime patch detection + OpenClaw plugin posture |
-| v5.7.0 | 2026-07-07 | *GitHub Actions: Cordyceps cross-workflow composition detection |
-| v5.6.3 | 2026-07-07 | *Threat intel: PolinRider DPRK open-source supply-chain campaign |
-| v5.6.2 | 2026-07-04 | *Threat intel: Contagious Interview Rollup-polyfill npm wave + ChocoPoC RAT |
-| v5.6.1 | 2026-07-03 | *Polish: Docker base LTS, GitLab report path privacy, docs |
-| v5.6.0 | 2026-07-03 | *Install-time guard + GitLab-native output + registry hardening (both remaining roadmap bets) |
-| v5.5.0 | 2026-07-02 | *Community batch: all 8 seeded issues shipped, hardened by an adversarial release gate |
-| v5.4.2 | 2026-07-02 | *Fix: policy-suppressed findings leaked into incidents and the trend check |
-| v5.4.1 | 2026-07-02 | *Docs: PowerShell-safe MCP install instructions |
-| v5.4.0 | 2026-07-02 | *The agentic security suite: MCP scanning, skills scanning, an MCP server, and a live threat feed |
-| v5.3.0 | 2026-07-02 | *Ecosystem expansion: 3 new ecosystems, 4 new lockfile formats, fail-closed policy config |
-| v5.2.45 | 2026-07-02 | *README adoption package: demo GIF, comparison table, changelog split |
-| v5.2.44 | 2026-07-01 | *Dependency maintenance: latest toolchain + commander 14 |
-| v5.2.43 | 2026-06-30 | *Threat intel: Contagious Interview "Fake Font" npm + Go wave (June 29, 2026) |
-| v5.2.42 | 2026-06-29 | *Threat intel: Miasma LeoPlatform / GitHub Actions wave (June 26, 2026) |
-| v5.2.41 | 2026-06-28 | *Security: command injection in the GitHub trust scanner |
-| v5.2.40 | 2026-06-28 | *Security: org-scanner command injection and suppressed findings in SARIF/SBOM |
-| v5.2.39 | 2026-06-28 | *Security: harden the GitHub Action and PR-comment report against injection |
-| v5.2.38 | 2026-06-28 | *Security: command injection in GitHub clone and diff scanning |
-| v5.2.37 | 2026-06-27 | *Fix: PR-comment step crash on findings containing backticks |
-| v5.2.36 | 2026-06-25 | *Threat-intel update: PostCSS Tools Windows RAT npm campaign |
-| v5.2.35 | 2026-06-21 | *Security: fix vite devDependency vulnerabilities |
-| v5.2.34 | 2026-06-21 | *Threat-intel update: Mastra npm scope takeover (Sapphire Sleet) + NastyC2 + crypto-javascript worm |
-| v5.2.33 | 2026-06-14 | *Security: fix devDependency vulnerabilities (vitest, esbuild) |
-| v5.2.32 | 2026-06-13 | *Threat-intel update: Arch Linux AUR mass-hijack npm dropper (atomic-lockfile) |
-| v5.2.31 | 2026-06-11 | *Threat-intel update: ThreatsDay Bulletin npm cluster (SStar Agent lure + ambar-src) |
-| v5.2.30 | 2026-06-09 | *Threat-intel update: THN Weekly Recap npm/PyPI infostealer cluster |
-| v5.2.29 | 2026-06-02 | *Threat-intel update: Miasma / @redhat-cloud-services Mini Shai-Hulud variant |
-| v5.2.28 | 2026-06-01 | *Threat-intel update: codexui-android Codex stealer, LiteLLM PyPI backdoor, vpmdhaj Sicoob/cloud-secret cluster |
-| v5.2.27 | 2026-05-28 | *Threat-intel update: ACR Stealer fake-Claude page, Malware-Slop npm infostealer |
-| v5.2.26 | 2026-05-25 | *SLSA verifier recognises npm publish --provenance + OIDC as Level 3 |
-| v5.2.25 | 2026-05-25 | *Threat-intel update: TrapDoor, Polymarket typosquats, durabletask, Megalodon throwaways |
-| v5.2.24 | 2026-05-24 | *RISK_TRAJECTORY_UNSTABLE no longer flags monotone improvement as instability |
-| v5.2.23 | 2026-05-24 | *Fix WORKFLOW_UNTRUSTED_ACTION_IN_RELEASE_PATH false positive on npm@latest |
-| v5.2.22 | 2026-05-24 | *Self-scan polish: comment-aware GHA scan, pinned actions, fix changelog self-trigger |
-| v5.2.21 | 2026-05-24 | *Architectural fix: source-marker patterns no longer fire on documentation files |
-| v5.2.20 | 2026-05-24 | *Pattern bug fixes uncovered by the v5.2.19 self-scan |
-| v5.2.19 | 2026-05-24 | *New detection: prompt injection against downstream AI coding agents |
-| v5.2.18 | 2026-05-24 | *Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026) |
-| v5.2.17 | 2026-05-23 | *Threat intel: Megalodon GitHub workflow injection + DPRK OtterCookie Node.js stealer (May 22, 2026) |
-| v5.2.16 | 2026-05-22 | *Threat intel: Checkmarx Jenkins plugin version correction + postmark-mcp hostile MCP server |
-| v5.2.15 | 2026-05-20 | *Threat intel: Mini Shai-Hulud @antv + Nx Console + actions-cool triple wave (May 18-19, 2026) |
-| v5.2.14 | 2026-05-19 | *Threat intel: Phantom Bot DDoS npm infostealer + Mini Shai-Hulud TanStack follow-up (May 2026) |
-| v5.2.13 | 2026-05-16 | *Threat intel: node-ipc credential stealer (May 2026) |
-| v5.2.12 | 2026-05-14 | *Threat intel: Mini Shai-Hulud TanStack / UiPath / Mistral compromise (May 2026) |
-| v5.2.11 | 2026-05-12 | *Threat intel: Checkmarx Jenkins AST plugin + MacSync Claude variant (May 2026) |
-| v5.2.10 | 2026-05-10 | *Threat intel: JDownloader compromise + fake OpenAI HF repo (May 2026) |
-| v5.2.9 | 2026-05-09 | *Threat intel: TCLBANKER Brazilian banking trojan (May 2026) |
-| v5.2.8 | 2026-05-08 | *Threat intel: ZiChatBot PyPI + Beagle backdoor (May 2026) |
-| v5.2.7 | 2026-05-08 | *Threat intel: DAEMON Tools QUIC RAT supply-chain attack (May 2026) |
-| v5.2.6 | 2026-05-08 | *Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026) |
-| v5.2.5 | 2026-05-01 | *Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) |
-| v5.2.4 | 2026-04-30 | *Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026) |
-| v5.2.3 | 2026-04-26 | *Documentation catch-up  bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
-| v5.2.2 | 2026-04-26 | *Solana monitor: rate-limit-aware RPC client  closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
-| v5.2.1 | 2026-04-26 | *Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) |
-| v5.2.0 | 2026-04-08 | *Self-Scan Clean + Text Wrapping  the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
-| v5.1.1 | 2026-04-07 | *CI and test fixes |
-| v5.1.0 | 2026-04-07 | *Comprehensive ASCII CLI output  complete redesign of the default text reporter. |
-| v5.0.1 | 2026-04-07 | *False positive fixes  second pass after live workspace testing revealed additional FPs. |
-| v5.0.0 | 2026-04-07 | *Context-Aware False Positive Elimination  workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemat... |
+| v5.17.3 | 2026-07-18 | Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2 |
+| v5.17.2 | 2026-07-17 | Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives) |
+| v5.17.1 | 2026-07-17 | MCP registry metadata + honest package description |
+| v5.17.0 | 2026-07-17 | OSV-format feed export + adopter badge (ecosystem reach) |
+| v5.16.0 | 2026-07-17 | Starjacking detection (repository-claim corroboration) |
+| v5.15.0 | 2026-07-17 | Honest SLSA provenance validation (fixes an overclaim) |
+| v5.14.0 | 2026-07-17 | Product/DX: path-scoped policy, JUnit output, MCP v2 |
+| v5.13.0 | 2026-07-17 | Detection coverage: Rust/Go/Python lockfiles + agent-memory files |
+| v5.12.4 | 2026-07-17 | Threat intel: PhantomSync (npm crypto stealer) + Pepesoft (NuGet surveillance) |
+| v5.12.3 | 2026-07-16 | Threat-intel: AsyncAPI npm supply-chain compromise (July 2026) |
+| v5.12.2 | 2026-07-13 | Threat-intel: Injective Labs SDK npm compromise (July 2026) |
+| v5.12.1 | 2026-07-12 | Threat-intel: jscrambler npm compromise (July 2026) |
+| v5.12.0 | 2026-07-11 | Issue #54 hardening: oversized-file transparency + threat-intel indicator contract |
+| v5.11.1 | 2026-07-09 | CI: fix the npm-publish job (npm 12 dropped Node 20 support) |
+| v5.11.0 | 2026-07-09 | Threat intel: fake Paysafe / Skrill / Neteller payment SDKs (npm + PyPI) |
+| v5.10.0 | 2026-07-08 | GitLost-class agentic-workflow posture detection |
+| v5.9.0 | 2026-07-07 | Opt-in registry version-drift detection (--check-registry) |
+| v5.8.0 | 2026-07-07 | Agent host-runtime patch detection + OpenClaw plugin posture |
+| v5.7.0 | 2026-07-07 | GitHub Actions: Cordyceps cross-workflow composition detection |
+| v5.6.3 | 2026-07-07 | Threat intel: PolinRider DPRK open-source supply-chain campaign |
+| v5.6.2 | 2026-07-04 | Threat intel: Contagious Interview Rollup-polyfill npm wave + ChocoPoC RAT |
+| v5.6.1 | 2026-07-03 | Polish: Docker base LTS, GitLab report path privacy, docs |
+| v5.6.0 | 2026-07-03 | Install-time guard + GitLab-native output + registry hardening (both remaining roadmap bets) |
+| v5.5.0 | 2026-07-02 | Community batch: all 8 seeded issues shipped, hardened by an adversarial release gate |
+| v5.4.2 | 2026-07-02 | Fix: policy-suppressed findings leaked into incidents and the trend check |
+| v5.4.1 | 2026-07-02 | Docs: PowerShell-safe MCP install instructions |
+| v5.4.0 | 2026-07-02 | The agentic security suite: MCP scanning, skills scanning, an MCP server, and a live threat feed |
+| v5.3.0 | 2026-07-02 | Ecosystem expansion: 3 new ecosystems, 4 new lockfile formats, fail-closed policy config |
+| v5.2.45 | 2026-07-02 | README adoption package: demo GIF, comparison table, changelog split |
+| v5.2.44 | 2026-07-01 | Dependency maintenance: latest toolchain + commander 14 |
+| v5.2.43 | 2026-06-30 | Threat intel: Contagious Interview "Fake Font" npm + Go wave (June 29, 2026) |
+| v5.2.42 | 2026-06-29 | Threat intel: Miasma LeoPlatform / GitHub Actions wave (June 26, 2026) |
+| v5.2.41 | 2026-06-28 | Security: command injection in the GitHub trust scanner |
+| v5.2.40 | 2026-06-28 | Security: org-scanner command injection and suppressed findings in SARIF/SBOM |
+| v5.2.39 | 2026-06-28 | Security: harden the GitHub Action and PR-comment report against injection |
+| v5.2.38 | 2026-06-28 | Security: command injection in GitHub clone and diff scanning |
+| v5.2.37 | 2026-06-27 | Fix: PR-comment step crash on findings containing backticks |
+| v5.2.36 | 2026-06-25 | Threat-intel update: PostCSS Tools Windows RAT npm campaign |
+| v5.2.35 | 2026-06-21 | Security: fix vite devDependency vulnerabilities |
+| v5.2.34 | 2026-06-21 | Threat-intel update: Mastra npm scope takeover (Sapphire Sleet) + NastyC2 + crypto-javascript worm |
+| v5.2.33 | 2026-06-14 | Security: fix devDependency vulnerabilities (vitest, esbuild) |
+| v5.2.32 | 2026-06-13 | Threat-intel update: Arch Linux AUR mass-hijack npm dropper (atomic-lockfile) |
+| v5.2.31 | 2026-06-11 | Threat-intel update: ThreatsDay Bulletin npm cluster (SStar Agent lure + ambar-src) |
+| v5.2.30 | 2026-06-09 | Threat-intel update: THN Weekly Recap npm/PyPI infostealer cluster |
+| v5.2.29 | 2026-06-02 | Threat-intel update: Miasma / @redhat-cloud-services Mini Shai-Hulud variant |
+| v5.2.28 | 2026-06-01 | Threat-intel update: codexui-android Codex stealer, LiteLLM PyPI backdoor, vpmdhaj Sicoob/cloud-secret cluster |
+| v5.2.27 | 2026-05-28 | Threat-intel update: ACR Stealer fake-Claude page, Malware-Slop npm infostealer |
+| v5.2.26 | 2026-05-25 | SLSA verifier recognises npm publish --provenance + OIDC as Level 3 |
+| v5.2.25 | 2026-05-25 | Threat-intel update: TrapDoor, Polymarket typosquats, durabletask, Megalodon throwaways |
+| v5.2.24 | 2026-05-24 | RISK_TRAJECTORY_UNSTABLE no longer flags monotone improvement as instability |
+| v5.2.23 | 2026-05-24 | Fix WORKFLOW_UNTRUSTED_ACTION_IN_RELEASE_PATH false positive on npm@latest |
+| v5.2.22 | 2026-05-24 | Self-scan polish: comment-aware GHA scan, pinned actions, fix changelog self-trigger |
+| v5.2.21 | 2026-05-24 | Architectural fix: source-marker patterns no longer fire on documentation files |
+| v5.2.20 | 2026-05-24 | Pattern bug fixes uncovered by the v5.2.19 self-scan |
+| v5.2.19 | 2026-05-24 | New detection: prompt injection against downstream AI coding agents |
+| v5.2.18 | 2026-05-24 | Threat intel: Laravel-Lang DebugElevator + Packagist 8-package GitHub-binary attack (May 23, 2026) |
+| v5.2.17 | 2026-05-23 | Threat intel: Megalodon GitHub workflow injection + DPRK OtterCookie Node.js stealer (May 22, 2026) |
+| v5.2.16 | 2026-05-22 | Threat intel: Checkmarx Jenkins plugin version correction + postmark-mcp hostile MCP server |
+| v5.2.15 | 2026-05-20 | Threat intel: Mini Shai-Hulud @antv + Nx Console + actions-cool triple wave (May 18-19, 2026) |
+| v5.2.14 | 2026-05-19 | Threat intel: Phantom Bot DDoS npm infostealer + Mini Shai-Hulud TanStack follow-up (May 2026) |
+| v5.2.13 | 2026-05-16 | Threat intel: node-ipc credential stealer (May 2026) |
+| v5.2.12 | 2026-05-14 | Threat intel: Mini Shai-Hulud TanStack / UiPath / Mistral compromise (May 2026) |
+| v5.2.11 | 2026-05-12 | Threat intel: Checkmarx Jenkins AST plugin + MacSync Claude variant (May 2026) |
+| v5.2.10 | 2026-05-10 | Threat intel: JDownloader compromise + fake OpenAI HF repo (May 2026) |
+| v5.2.9 | 2026-05-09 | Threat intel: TCLBANKER Brazilian banking trojan (May 2026) |
+| v5.2.8 | 2026-05-08 | Threat intel: ZiChatBot PyPI + Beagle backdoor (May 2026) |
+| v5.2.7 | 2026-05-08 | Threat intel: DAEMON Tools QUIC RAT supply-chain attack (May 2026) |
+| v5.2.6 | 2026-05-08 | Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026) |
+| v5.2.5 | 2026-05-01 | Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) |
+| v5.2.4 | 2026-04-30 | Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026) |
+| v5.2.3 | 2026-04-26 | Documentation catch-up  bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
+| v5.2.2 | 2026-04-26 | Solana monitor: rate-limit-aware RPC client  closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
+| v5.2.1 | 2026-04-26 | Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) |
+| v5.2.0 | 2026-04-08 | Self-Scan Clean + Text Wrapping  the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
+| v5.1.1 | 2026-04-07 | CI and test fixes |
+| v5.1.0 | 2026-04-07 | Comprehensive ASCII CLI output  complete redesign of the default text reporter. |
+| v5.0.1 | 2026-04-07 | False positive fixes  second pass after live workspace testing revealed additional FPs. |
+| v5.0.0 | 2026-04-07 | Context-Aware False Positive Elimination  workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemati... |
 | v4.9.0 | 2026-04-07 | New: SBOM Generator  reads package-lock.json (v2+) to generate CycloneDX 1.6 SBOMs with real components[] (name, vers... |
 | v4.8.0 | 2026-04-04 | New: Continuous Risk Monitor -- persistent risk history, trend detection (spikes, stagnation, increasing) |
 | v4.7.0 | 2026-04-04 | New: Attack Graph Engine -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs... |
@@ -103,5 +103,5 @@
 | v4.0.0 | 2026-04-04 | New: Dockerfile, package config, git security, Cargo/Rust, Go module, entropy scanners |
 | v3.1.0 | 2026-03-26 | SBOM export (CycloneDX 1.5), --fail-on flag, full test coverage (269 tests) |
 | v3.0.0 | 2026-03-26 | PyPI scanner, GitHub Actions scanner, SARIF output, Solana watchlist |
-| v2.0.0 | - | Multi-platform scanner (npm, PyPI, VS Code), dependency confusion, lockfile checks |
-| v1.0.0 | - | Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring |
+| v2.0.0 | 2026-03-19 | Multi-platform scanner (npm, PyPI, VS Code), dependency confusion, lockfile checks |
+| v1.0.0 | 2026-03-19 | Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring |

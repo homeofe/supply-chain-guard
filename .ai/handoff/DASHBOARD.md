@@ -52,7 +52,7 @@ Overrides: none.
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (`ci.yml`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, `v5` branch fast-forward |
 | AAHP Verify (`aahp-verify.yml`) | handoff gate; dependabot exempt |
-| Prebuild gates | `check:changelog` + `check:version-sync` + `check:handoff` + `check:feed` + `check:claims` |
+| Prebuild gates | `check:changelog` + `check:changelog-format` + `check:version-sync` + `check:handoff` + `check:feed` + `check:claims` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; `uses: homeofe/supply-chain-guard@v5` (floating branch) |
 | Dependabot | weekly npm + github-actions; commander >=15 ignored |

@@ -1,3 +1,18 @@
+> Note (2026-07-18, claude-opus-4-8): Migrated CHANGELOG.md to Keep a Changelog + SemVer
+> (the fleet standard) and added a `check:changelog-format` prebuild gate (reference-consumer
+> step 2). All 92 release headings converted `### vX.Y.Z (date)` -> `## [X.Y.Z] - date`
+> (no `v` in brackets), added `## [Unreleased]` + a 93-line reference-link footer; historical
+> prose bodies preserved verbatim (not force-fit into sections - that would rewrite shipped
+> notes). The gate enforces R1-R9 (heading grammar shared with the LOG generator, ISO dates
+> not-in-future, strict SemVer descent, top==package.json, reference links, no BOM, section
+> vocab where used). Retargeted the three CHANGELOG consumers to the new heading: ci.yml
+> release-notes awk (now index()-based - gawk mangled the `\[` string-regex), check-changelog.mjs,
+> and the LOG generator. Also fixed a live bug the migration exposed: the LOG generator stripped
+> one `*` off `**headline**` prefixes (headlines rendered as `*Threat intel...`); strip bold
+> before the bullet-strip. Verified: awk extracts the full v5.17.3 block, LOG shows all 92 clean,
+> gate catches a future-dated entry. Release process docs (CONVENTIONS.md + local CLAUDE.md)
+> updated to the new format.
+
 > Note (2026-07-18, claude-opus-4-8): Adopted AAHP's Grounded Reflection Layer (v3.3.0),
 > which this repo had been missing entirely - making supply-chain-guard the reference
 > consumer for it. Added .ai/handoff/GROUNDING.md (the two-axis status x provenance model +

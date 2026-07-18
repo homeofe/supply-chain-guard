@@ -111,9 +111,11 @@ jobs:
           # when the heading matches both expressions, which yielded one line,
           # then head -n -1 emptied it - every release before v5.2.45 silently
           # shipped the fallback text. Flag-based scan fixed it.
+          # Literal prefix match via index() - avoids awk-variant differences in how
+          # "\\[" inside a string-regex is handled (gawk collapses it to a char class).
           NOTES=$(awk -v ver="$VERSION" '
-            $0 ~ "^### v"ver"[^0-9]" {flag=1; print; next}
-            flag && /^### v[0-9]/ {exit}
+            index($0, "## [" ver "]") == 1 {flag=1; print; next}
+            flag && index($0, "## [") == 1 {exit}
             flag {print}
           ' CHANGELOG.md)
           # Fallback if nothing found
