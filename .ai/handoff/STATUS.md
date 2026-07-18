@@ -1,3 +1,20 @@
+> Note (2026-07-18, claude-fable-5): Trust hardening (no release). (1) Added the
+> "scanned by supply-chain-guard" self-badge to the README badge row (dogfood trust
+> signal). (2) Set up SSH commit signing on the dev machine so every commit gets the
+> GitHub "Verified" badge going forward: reused the existing passphrase-free
+> ~/.ssh/id_ed25519 key (automation-safe - the daily OpenClaw routine's unattended
+> commits sign too), configured globally (gpg.format ssh, user.signingkey,
+> commit.gpgsign, tag.gpgsign) + a gpg.ssh.allowedSignersFile for local verification.
+> Verified locally: "Good git signature". THIS commit is the first signed one. It (and
+> all future commits) show Verified on GitHub only AFTER the pubkey is registered as a
+> SIGNING key on the homeofe account - the gh token lacks write:ssh_signing_key scope so
+> that one-time step is the maintainer's (web UI or `gh auth refresh -s
+> write:ssh_signing_key` then POST /user/ssh_signing_keys). Enforcement (branch
+> protection requiring signed commits) is deliberately NOT enabled yet - it would reject
+> the automation's pushes until the key is registered. Prior commits stay unsigned (SSH
+> signatures verify retroactively once the key is added; unsigned ones cannot be
+> back-signed without history rewrite, which we do not do).
+
 > Note (2026-07-17, claude-fable-5): Released v5.17.2 - FALSE-POSITIVE fix
 > (user-reported). A user ran `npm install -g supply-chain-guard` then
 > `scan .` on a checkout of THIS repo and got ~597 THREAT_INTEL/IOC matches.

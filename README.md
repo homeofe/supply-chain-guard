@@ -9,6 +9,7 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 [![CI](https://img.shields.io/github/actions/workflow/status/homeofe/supply-chain-guard/ci.yml?branch=main&label=CI&logo=github)](https://github.com/homeofe/supply-chain-guard/actions/workflows/ci.yml)
 [![AAHP Verify](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml/badge.svg)](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml)
 [![Last commit](https://img.shields.io/github/last-commit/homeofe/supply-chain-guard?logo=github)](https://github.com/homeofe/supply-chain-guard/commits/main)
+[![scanned by supply-chain-guard](https://img.shields.io/badge/scanned%20by-supply--chain--guard-2ea44f?logo=npm&logoColor=white)](https://github.com/homeofe/supply-chain-guard)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ![supply-chain-guard scanning a malicious npm package: risk gauges, GlassWorm incident correlation, and a remediation plan](assets/demo.gif)
