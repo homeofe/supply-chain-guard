@@ -38,6 +38,7 @@ The Action is used via `uses: homeofe/supply-chain-guard@v5` (README). Important
 - **Never move tags.** For fixes always create a new patch version (e.g. 5.2.13 -> 5.2.14). No `git tag -f`, no `git push --force` on tags.
 - **No em-dashes** (`—`) in docs or commits. Always use a normal hyphen (`-`) or colon (`:`). Also applies to new changelog entries - older entries in the README still have em-dashes, do not perpetuate them.
 - **Never bypass hooks or signatures** (`--no-verify`, `--no-gpg-sign`) without explicit permission. If `prebuild` is red, that is the task, not the obstacle.
+- **Commit attribution.** Do NOT append a `Co-Authored-By` trailer to commits. AI-assisted development is disclosed once in CONTRIBUTING.md ("Development and review"), not per-commit. Commits are SSH-signed by the maintainer and must stay Verified.
 
 ## Historical Drift (why this file exists)
 

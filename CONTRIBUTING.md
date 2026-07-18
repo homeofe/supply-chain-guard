@@ -2,6 +2,10 @@
 
 Thanks for your interest in contributing! This project aims to make supply-chain security accessible to everyone.
 
+## Development and review
+
+supply-chain-guard is developed with AI assistance under maintainer review. Every change is reviewed and tested before it ships, detection changes go through an adversarial review pass, and every release commit is cryptographically signed by the maintainer (GitHub "Verified"). The maintainer is accountable for what lands in a release.
+
 ## How to Contribute
 
 ### Reporting New Malware Patterns

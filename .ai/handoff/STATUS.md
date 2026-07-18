@@ -1,3 +1,15 @@
+> Note (2026-07-18, claude-fable-5): Trust/authorship housekeeping (no release).
+> Added a "Development and review" disclosure to CONTRIBUTING.md (AI-assisted under
+> maintainer review; every change reviewed + tested, detection changes adversarially
+> reviewed, every release commit SSH-signed/Verified, maintainer accountable). Set the
+> repo commit-attribution policy in CLAUDE.md Hard Rules: do NOT append a Co-Authored-By
+> trailer to commits - AI assistance is disclosed once in CONTRIBUTING rather than
+> per-commit (the per-commit "and claude committed" read as noise). Signing stays
+> mandatory. Note for scope: the trailer is commit-message text, not a git config -
+> the daily OpenClaw routine already omits it; this CLAUDE.md rule stops Claude Code
+> sessions from re-adding it in THIS repo. Enforcement ruleset (require signed commits
+> on main) remains offered-but-not-enabled pending the maintainer's go.
+
 > Note (2026-07-18, claude-fable-5): Trust hardening (no release). (1) Added the
 > "scanned by supply-chain-guard" self-badge to the README badge row (dogfood trust
 > signal). (2) Set up SSH commit signing on the dev machine so every commit gets the
