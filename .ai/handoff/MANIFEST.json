@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1784362135",
-    "timestamp": "2026-07-18T08:08:55Z",
-    "commit": "5ea7ff4",
+    "session_id": "cli-1784364437",
+    "timestamp": "2026-07-18T08:47:17Z",
+    "commit": "42b14f1",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:eccadf151da7d5f98ab97d19c962f9c74749b0d4cbce6200e75a4cb7d2d25fb5",
-      "updated": "2026-07-18T08:08:45Z",
-      "lines": 794,
+      "checksum": "sha256:613ecbbfb04db2a39c41536b75c3796158d66964a5575957a6c9b7a78fcc6e74",
+      "updated": "2026-07-18T08:47:06Z",
+      "lines": 806,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:d422d216078d9168c909adf9af0e12ca8921c195d5b36071393c30a9b23fcbe6",
-      "updated": "2026-07-18T08:08:55Z",
+      "updated": "2026-07-18T08:47:17Z",
       "lines": 107,
       "summary": "(no summary available)"
     },
@@ -42,14 +42,14 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:8fc70638bf7a98e21d4f9ddd17747c6a54a012b980325cbd129d7b8e170cd8a0",
-      "updated": "2026-07-18T08:08:55Z",
+      "updated": "2026-07-18T08:47:17Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:71bd2db77b2b446e88ed20704b25e50eb1c88f6bb6fc0c4f18e8ba5f2f439514",
-      "updated": "2026-07-18T08:08:55Z",
-      "lines": 35,
+      "checksum": "sha256:ed2f7d27984145d723673b2f41f1cbfac4c29b425d64664c9cebc166370bcd18",
+      "updated": "2026-07-18T08:47:17Z",
+      "lines": 49,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
@@ -64,6 +64,12 @@
       "lines": 133,
       "summary": "(no summary available)"
     },
+    "GROUNDING.md": {
+      "checksum": "sha256:7ef8cece585dc5defb4285175b9ba560d5469675df553d4ce28ec9e7aec24343",
+      "updated": "2026-07-18T08:46:03Z",
+      "lines": 209,
+      "summary": "(no summary available)"
+    },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
       "updated": "2026-06-28T09:06:54Z",
@@ -74,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 11650,
-    "full_read": 17651
+    "manifest_plus_core": 11840,
+    "full_read": 19940
   }
 }

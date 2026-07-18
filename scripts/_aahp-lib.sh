@@ -14,7 +14,7 @@
 # overwrites a repo's tracked-file set. aahp-manifest.sh only indexes files that
 # actually exist, so listing a file a repo does not have is harmless.
 # shellcheck disable=SC2034
-AAHP_HANDOFF_FILES=(STATUS.md NEXT_ACTIONS.md LOG.md LOG-ARCHIVE.md LOG-ARCHIVE.index.json DASHBOARD.md TRUST.md CONVENTIONS.md WORKFLOW.md pii-allowlist.json)
+AAHP_HANDOFF_FILES=(STATUS.md NEXT_ACTIONS.md LOG.md LOG-ARCHIVE.md LOG-ARCHIVE.index.json DASHBOARD.md TRUST.md CONVENTIONS.md WORKFLOW.md GROUNDING.md pii-allowlist.json)
 
 # Colors (safe to re-source -same variable names used across scripts)
 # shellcheck disable=SC2034

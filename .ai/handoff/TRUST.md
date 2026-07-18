@@ -12,6 +12,20 @@
 
 ---
 
+## Provenance (Grounded Reflection Layer)
+
+Every structural fact below is produced by a deterministic gate or verified continuously
+in CI, so its provenance is `tool_verified` / `test_verified` - the strongest non-human
+anchors in the AAHP provenance scale (`model_claim` < `self_reviewed` <
+`cross_model_reviewed` < `source_verified` < `tool_verified` < `test_verified` <
+`runtime_observed` < `human_confirmed`). `cross_model_reviewed` maps to status
+`assumed`, never `verified` - consensus is not grounding. Only an external anchor
+(passing tests/build/lint, schema validation, a verified source, runtime observation, a
+deterministic calculation, or human confirmation) supports `verified`. See GROUNDING.md
+for the two-axis (status x provenance) model and the task-type anchor matrix.
+
+---
+
 ## Structural facts (derived from committed files, gate-enforced fresh)
 
 | Property | Value | Source |

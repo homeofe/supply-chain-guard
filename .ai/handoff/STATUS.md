@@ -1,3 +1,15 @@
+> Note (2026-07-18, claude-opus-4-8): Adopted AAHP's Grounded Reflection Layer (v3.3.0),
+> which this repo had been missing entirely - making supply-chain-guard the reference
+> consumer for it. Added .ai/handoff/GROUNDING.md (the two-axis status x provenance model +
+> task-type anchor matrix, canonical AAHP doctrine) and .ai/handoff/.aiignore (firewall
+> config). Added GROUNDING.md to AAHP_HANDOFF_FILES in _aahp-lib.sh so it is checksummed in
+> MANIFEST like the other handoff files. Added a Provenance section to the generated TRUST.md
+> (via aahp-dashboard.mjs) recording that every structural fact is tool_verified/test_verified
+> by the deterministic gates. Context: this is part of the fleet-consistency plan - the org's
+> drift comes from repos running frozen copies of AAHP; the fix (decided this session) is to
+> consume AAHP as a pinned dependency, standardize on Keep a Changelog, and prove conformance
+> here first. Grounding layer is step 1; changelog migration + schema validation follow.
+
 > Note (2026-07-18, claude-opus-4-8): AAHP handoff hardening - closed the drift class in
 > the handoff docs themselves. LOG.md had silently lapsed across v5.3.0-v5.17.3 (the
 > "append every session" convention was never gated, only STATUS + MANIFEST were). Fixes:
