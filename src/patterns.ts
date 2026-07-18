@@ -384,6 +384,14 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // (in ioc-blocklist). Each package is fully malicious with no legitimate history - bare names.
   "^(rollup-packages-polyfill-core|rollup-runtime-polyfill-core|rollup-plugin-polyfill-connect|quirky-token|react-icon-svgs|swift-parse-stream)$",
 
+  // ViteVenom - malicious Vite npm packages w/ blockchain C2 (Checkmarx via The Hacker News, July 18, 2026)
+  // Threat actor "SuccessKey"; expansion of ChainVeil. Seven scoped packages impersonating the
+  // "@vitejs/*" namespace (published June 29-July 3, 2026) whose payload runs at IMPORT time and
+  // delivers a RAT via a Tron/Aptos/BNB Smart Chain blockchain C2. Fully malicious, no legitimate
+  // history - anchored to these exact names (the broad scoped catch-all below would also match, but
+  // the directory-scan MALICIOUS_DEPENDENCY path uses the exact feed names, so pin them explicitly).
+  "^(@uw010010\\/vite-tree|@vite-tab\\/tab|@vite-ln\\/build-ts|@vite-mcp\\/vite-type|@vite-pro\\/vite-ui|@vitets\\/vite-ts|@vite-ts\\/vite-ui)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

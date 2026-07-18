@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.17.2",
-  "entryCount": 376,
+  "version": "5.17.3",
+  "entryCount": 383,
   "entries": [
     {
       "type": "domain",
@@ -3376,6 +3376,69 @@
       "family": "GameCheatSpyware",
       "campaign": "Pepesoft NuGet surveillance",
       "firstSeen": "2026-07-14"
+    },
+    {
+      "type": "package",
+      "value": "@uw010010/vite-tree",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vite-tab/tab",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vite-ln/build-ts",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vite-mcp/vite-type",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vite-pro/vite-ui",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vitets/vite-ts",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "package",
+      "value": "@vite-ts/vite-ui",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "ChainVeil RAT",
+      "campaign": "ViteVenom",
+      "firstSeen": "2026-06-29"
     }
   ]
 }

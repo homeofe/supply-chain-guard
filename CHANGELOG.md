@@ -4,6 +4,31 @@ All notable changes to supply-chain-guard. The latest release is always at the t
 Release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch update).
 
 
+### v5.17.3 (2026-07-18)
+**Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2**
+
+Added detection for the ViteVenom campaign (Checkmarx, reported by The Hacker
+News on 2026-07-18). Threat actor "SuccessKey" - an expansion of the earlier
+ChainVeil campaign - published seven scoped npm packages (2026-06-29 to
+2026-07-03) that impersonate the "@vitejs/*" namespace to look legitimate. The
+malicious code executes at IMPORT time rather than install time to limit
+endpoint detection, and delivers a RAT (reverse shell, credential harvesting,
+file exfiltration, persistent backdoor) via a four-tier blockchain command-and-
+control spanning Tron, Aptos and BNB Smart Chain.
+
+- Added the seven fully-malicious package names as bare-name package IOCs to
+  BUNDLED_FEED (src/threat-intel.ts): @uw010010/vite-tree, @vite-tab/tab,
+  @vite-ln/build-ts, @vite-mcp/vite-type, @vite-pro/vite-ui, @vitets/vite-ts,
+  @vite-ts/vite-ui. These drive both the directory-scan MALICIOUS_DEPENDENCY
+  finding and the install-guard block, on any version.
+- Pinned the same seven names explicitly in MALICIOUS_PACKAGE_PATTERNS
+  (src/patterns.ts) for traceable name-based signatures.
+- Added a "ViteVenom Vite npm packages (July 2026)" describe block to
+  campaigns.test.ts (name-match, @vitejs false-positive guard, directory-scan,
+  and install-guard coverage).
+- No wallet/contract addresses were published in extractable form, so none were
+  ingested (a guessed address protects nobody and risks false positives).
+
 ### v5.17.2 (2026-07-17)
 **Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives)**
 

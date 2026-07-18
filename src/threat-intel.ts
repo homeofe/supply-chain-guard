@@ -713,6 +713,22 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "domain", value: "s3.ru-3.storage.selcloud.ru", severity: "high", confidence: 0.9, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
   { type: "domain", value: "bots.pepesoft.ru", severity: "critical", confidence: 0.95, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
   { type: "ip", value: "196.16.3.71", severity: "high", confidence: 0.9, family: "GameCheatSpyware", campaign: "Pepesoft NuGet surveillance", firstSeen: "2026-07-14" },
+
+  // ViteVenom - malicious Vite npm packages w/ blockchain C2 (Checkmarx via The Hacker News, July 18, 2026)
+  // Threat actor "SuccessKey"; expansion of the ChainVeil campaign. Seven scoped packages
+  // impersonating the "@vitejs/*" namespace, published June 29-July 3, 2026. Payload runs at
+  // IMPORT time (not install time) to evade endpoint detection, and delivers a RAT (reverse
+  // shell + credential harvesting + file exfiltration + persistent backdoor) via a four-tier
+  // blockchain C2 spanning Tron/Aptos/BNB Smart Chain. All seven are fully malicious with no
+  // legitimate history - bare-name IOCs (any version). Specific wallet/contract addresses were
+  // not published in extractable form, so none are ingested (a guessed address helps nobody).
+  { type: "package", value: "@uw010010/vite-tree", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vite-tab/tab", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vite-ln/build-ts", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vite-mcp/vite-type", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vite-pro/vite-ui", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vitets/vite-ts", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+  { type: "package", value: "@vite-ts/vite-ui", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

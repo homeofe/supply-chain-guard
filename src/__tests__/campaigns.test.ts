@@ -2484,4 +2484,57 @@ describe("Campaign Signatures", () => {
       expect(report.findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(false);
     });
   });
+
+  // =================================================================
+  // ViteVenom - malicious Vite npm packages (Checkmarx, July 2026)
+  // =================================================================
+
+  describe("ViteVenom Vite npm packages (July 2026)", () => {
+    const NAMES = [
+      "@uw010010/vite-tree",
+      "@vite-tab/tab",
+      "@vite-ln/build-ts",
+      "@vite-mcp/vite-type",
+      "@vite-pro/vite-ui",
+      "@vitets/vite-ts",
+      "@vite-ts/vite-ui",
+    ];
+
+    it("matches every ViteVenom package name against the malicious-name patterns", () => {
+      for (const name of NAMES) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT match the legitimate @vitejs namespace it impersonates", () => {
+      const legit = ["@vitejs/plugin-react", "@vitejs/plugin-vue", "vite", "vite-plugin-svgr"];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    it("flags a directory scan that depends on a ViteVenom package (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { "@vitets/vite-ts": "1.0.0" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeDefined();
+      expect(dep?.match).toBe("@vitets/vite-ts");
+      expect(dep?.severity).toBe("critical");
+    });
+
+    it("the install guard blocks a ViteVenom package before npm runs", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      expect(analyzeInstallCommand("npm", ["install", "@uw010010/vite-tree"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "@vite-pro/vite-ui@2.3.4"]).blocked).toBe(true);
+    });
+  });
 });
