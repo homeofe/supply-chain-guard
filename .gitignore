@@ -10,3 +10,6 @@ coverage/
 .scg-history/
 .scg-cache/
 .claude/
+
+# Local Claude Code / agent instructions - not project content, kept out of the repo
+CLAUDE.md

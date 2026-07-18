@@ -1,3 +1,14 @@
+> Note (2026-07-18, claude-fable-5): Untracked CLAUDE.md from the repo and added it
+> to .gitignore. It is local Claude Code / agent instructions (release-process
+> reminders + hard rules), NOT public project content, and should never be committed
+> again; the working-tree file is kept locally (untracked) so local sessions still read
+> it. The commit-attribution rule (no Co-Authored-By trailer) now lives ONLY in the
+> global ~/.claude/CLAUDE.md, not in this repo. History was deliberately NOT rewritten:
+> purging CLAUDE.md from all history would rewrite every commit SHA, orphan every
+> release tag, and break the npm/SLSA build provenance that attests to specific commit
+> SHAs (a force-push of public main), while not un-publishing an already-public file -
+> left as the maintainer's informed decision.
+
 > Note (2026-07-18, claude-fable-5): Trust/authorship housekeeping (no release).
 > Added a "Development and review" disclosure to CONTRIBUTING.md (AI-assisted under
 > maintainer review; every change reviewed + tested, detection changes adversarially
