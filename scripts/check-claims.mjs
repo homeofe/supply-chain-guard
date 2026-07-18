@@ -66,6 +66,7 @@ const CLAIMS = [
       { file: "README.md", note: "intro + heuristics cell + architecture block" },
       { file: "docs/mcp.md", note: "scan_directory description" },
       { file: "src/mcp-server.ts", note: "scan_directory MCP tool description" },
+      { file: ".github/repo-about.txt", note: "GitHub About/description source (CI syncs it on release)" },
     ],
   },
   {

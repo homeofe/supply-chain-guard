@@ -1,0 +1,1 @@
+Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud and 350+ threat indicators. CycloneDX SBOMs, SLSA provenance grading, attack-chain correlation.

@@ -1,3 +1,14 @@
+> Note (2026-07-18, claude-opus-4-8): Closed the last drift surface - the GitHub
+> repo About/description field (was stale "180+" + "SLSA verification"). It is GitHub
+> metadata, not a repo file, so no check:* can reach it. Fix: the canonical About text
+> now lives in `.github/repo-about.txt` (an in-repo file whose "350+" is pinned by
+> check:claims), and the ci.yml `release` job pushes it to GitHub on every tag via
+> `gh repo edit --description` (added `administration: write` to that job; the step is
+> continue-on-error so a metadata-permission hiccup can never fail a release). About is
+> now a DERIVED, gated surface. The field itself was also corrected to "350+ / SLSA
+> provenance grading" out-of-band this session. npm/Marketplace descriptions self-heal
+> on the next publish (snapshot of the last published package.json) - no action needed.
+
 > Note (2026-07-18, claude-opus-4-8): Added a `check:claims` prebuild gate
 > (scripts/check-claims.mjs) that pins the hand-authored capability numbers to ONE
 > canonical value across every LIVE surface, the way check:version-sync pins the version.
