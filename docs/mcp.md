@@ -13,7 +13,7 @@ supply-chain-guard mcp
 | Tool | Network | Purpose |
 | --- | --- | --- |
 | `ioc_lookup` | none (offline) | Check a package name (+ optional exact version) against the bundled threat-intel feed and known-bad version blocklist. Ecosystems: npm, pypi, ruby, composer, nuget. Returns verdict + matched campaign/family. |
-| `scan_directory` | none (local FS) | Full static scan (200+ rules) of a local directory. Returns risk score, findings by severity, top 20 findings. |
+| `scan_directory` | none (local FS) | Full static scan (350+ rules) of a local directory. Returns risk score, findings by severity, top 20 findings. |
 | `scan_npm_package` | downloads from the npm registry | Scans the latest published version of an npm package without installing it, plus the offline IOC lookup for the requested name/version. |
 
 Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.

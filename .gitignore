@@ -13,3 +13,6 @@ coverage/
 
 # Local Claude Code / agent instructions - not project content, kept out of the repo
 CLAUDE.md
+
+# Superpowers skill planning docs - AI scratch, not project content
+docs/superpowers/

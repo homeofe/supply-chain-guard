@@ -3,23 +3,23 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1784355951",
-    "timestamp": "2026-07-18T06:25:51Z",
-    "commit": "7032102",
+    "session_id": "cli-1784357267",
+    "timestamp": "2026-07-18T06:47:47Z",
+    "commit": "3914a81",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9d766591159a12941babe3b10ebc26c46078426d9b41b01775c236ebb0a8d7af",
-      "updated": "2026-07-18T06:25:42Z",
+      "checksum": "sha256:b4f1b048c48b08244ac904f78b4fe5909382c0edb9b157e068dc199ae59d28b6",
+      "updated": "2026-07-18T06:44:10Z",
       "lines": 750,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:d0a0f4ac94bef4b776b984ae84f15dca08033ae884290f2066df6ff9f185d764",
-      "updated": "2026-07-17T07:58:29Z",
-      "lines": 61,
+      "checksum": "sha256:a5848ffa014f7e6de9bbbde318251a014f60db6fe6b62fb963388a8ddf3a69a4",
+      "updated": "2026-07-18T06:44:10Z",
+      "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:8049c145af81ea404ebc296373d3480305b5becf73715e4b8e97ed05cc46d63f",
-      "updated": "2026-07-18T06:25:42Z",
+      "updated": "2026-07-18T06:47:39Z",
       "lines": 65,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
       "checksum": "sha256:71bd2db77b2b446e88ed20704b25e50eb1c88f6bb6fc0c4f18e8ba5f2f439514",
-      "updated": "2026-07-18T06:25:42Z",
+      "updated": "2026-07-18T06:47:39Z",
       "lines": 35,
       "summary": "(no summary available)"
     },
@@ -74,7 +74,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 11077,
-    "full_read": 14902
+    "manifest_plus_core": 10974,
+    "full_read": 14799
   }
 }

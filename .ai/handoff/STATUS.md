@@ -708,10 +708,10 @@
 > 2026-03-26 v3.1.0 session; this refresh brings the manifest commit-pointer and
 > file index current. No application code changed in this onboarding.
 
-## Current Version: 5.2.38
+## Current Version: 5.17.3
 
 ### Published
-- npm: supply-chain-guard@5.2.38 (unscoped, public)
+- npm: supply-chain-guard@5.17.3 (unscoped, public)
 - GitHub: homeofe/supply-chain-guard (Apache-2.0)
 - GitHub Marketplace: supply-chain-guard (GitHub Action)
 - ClawHub: not published (CLI tool, not an OpenClaw skill)
@@ -740,7 +740,7 @@
 - GitHub Action: action.yml + src/action.ts
 
 ### Open Issues
-- dependabot: picomatch 4.0.3 -> 4.0.4 (low priority)
+- None currently (track via GitHub issues)
 
 ### Known Limitations
 - PyPI scanning requires local package download (no remote API)
