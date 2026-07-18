@@ -20,7 +20,8 @@
     "handoff:refresh": "node scripts/aahp-dashboard.mjs",
     "feed:generate": "node scripts/generate-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
-    "prebuild": "npm run check:changelog && npm run check:version-sync && npm run check:handoff && npm run check:feed",
+    "check:claims": "node scripts/check-claims.mjs",
+    "prebuild": "npm run check:changelog && npm run check:version-sync && npm run check:handoff && npm run check:feed && npm run check:claims",
     "prepublishOnly": "npm run build",
     "prepare": "tsc"
   },

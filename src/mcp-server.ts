@@ -151,7 +151,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "scan_directory",
     description:
-      "Run supply-chain-guard's full static malware scan (200+ detection " +
+      "Run supply-chain-guard's full static malware scan (350+ detection " +
       "rules: obfuscation, install hooks, C2 indicators, lockfile tampering, " +
       "CI/CD abuse) over a local directory. Local filesystem only. Returns a " +
       "compact JSON summary with risk score, findings count by severity, and " +

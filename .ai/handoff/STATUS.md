@@ -1,3 +1,17 @@
+> Note (2026-07-18, claude-opus-4-8): Added a `check:claims` prebuild gate
+> (scripts/check-claims.mjs) that pins the hand-authored capability numbers to ONE
+> canonical value across every LIVE surface, the way check:version-sync pins the version.
+> Canonicals: rules/indicators "350+", correlation rules "15+", categories "12"; the
+> first two are honesty-checked against ground truth computed from src (373 distinct
+> rule-IDs, 19 CORRELATION_RULES) so an advertised floor can never overstate the code.
+> This closes the drift class behind the "180+ vs 350+" report: the same fact was copy-
+> pasted across README/package.json/docs/mcp.md/src/mcp-server.ts with nothing comparing
+> them, so the earlier "350+" rollout silently left src/mcp-server.ts on "200+" (now
+> fixed to "350+"). Historical files (CHANGELOG.md, this STATUS footer's v3.0.0 snapshot)
+> are excluded by design - they are checksummed history, not accuracy-gated. External
+> surfaces (GitHub About, npm/Marketplace) cannot be gated by any check:* (not repo
+> files); About sync-on-release + publish-lag self-heal are the plan, pending maintainer OK.
+
 > Note (2026-07-18, claude-fable-5): Untracked CLAUDE.md from the repo and added it
 > to .gitignore. It is local Claude Code / agent instructions (release-process
 > reminders + hard rules), NOT public project content, and should never be committed
