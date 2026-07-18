@@ -98,10 +98,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
     permissions:
       contents: write
-      # administration: write lets `gh repo edit --description` update the repo
-      # About/description field, which is GitHub metadata (not a repo file) and
-      # therefore unreachable by any prebuild check:* gate. See the About sync step.
-      administration: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
@@ -132,20 +128,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "supply-chain-guard $GITHUB_REF_NAME" \
             --notes-file release_notes.md
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sync repo About/description from .github/repo-about.txt
-        # The About/description is GitHub metadata, not a repo file, so no prebuild
-        # gate can reach it - which is exactly how it drifted to a stale "180+"
-        # while the repo files said "350+". Push the canonical in-repo text on every
-        # release so it can never silently diverge again. The "350+" inside that file
-        # is itself pinned by check:claims. Cosmetic, so continue-on-error: a
-        # metadata-permission hiccup must never fail an otherwise-good release.
-        continue-on-error: true
-        run: |
-          gh repo edit "${{ github.repository }}" \
-            --description "$(cat .github/repo-about.txt)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

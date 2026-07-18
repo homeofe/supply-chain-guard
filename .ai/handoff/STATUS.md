@@ -1,13 +1,17 @@
-> Note (2026-07-18, claude-opus-4-8): Closed the last drift surface - the GitHub
-> repo About/description field (was stale "180+" + "SLSA verification"). It is GitHub
-> metadata, not a repo file, so no check:* can reach it. Fix: the canonical About text
-> now lives in `.github/repo-about.txt` (an in-repo file whose "350+" is pinned by
-> check:claims), and the ci.yml `release` job pushes it to GitHub on every tag via
-> `gh repo edit --description` (added `administration: write` to that job; the step is
-> continue-on-error so a metadata-permission hiccup can never fail a release). About is
-> now a DERIVED, gated surface. The field itself was also corrected to "350+ / SLSA
-> provenance grading" out-of-band this session. npm/Marketplace descriptions self-heal
-> on the next publish (snapshot of the last published package.json) - no action needed.
+> Note (2026-07-18, claude-opus-4-8): The GitHub repo About/description field (was stale
+> "180+" + "SLSA verification") is GitHub metadata, not a repo file, so no check:* can
+> reach it. Canonical About text now lives in `.github/repo-about.txt`, an in-repo file
+> whose "350+" IS pinned by check:claims; the field itself was corrected out-of-band to
+> "350+ / SLSA provenance grading". CI AUTO-SYNC IS NOT POSSIBLE with the default
+> GITHUB_TOKEN: there is no `administration` permission key for it (repo settings/admin is
+> not a grantable GITHUB_TOKEN scope), so `gh repo edit --description` cannot authorize.
+> My first attempt added `administration: write` to the ci.yml release job, which made the
+> WHOLE workflow file invalid and briefly red-lined main CI (commit ed92584); reverted in
+> the next commit (ci.yml restored byte-identical to 15314b9). To automate this, a PAT
+> secret with repo-admin / fine-grained "Administration: write" is required - left as a
+> maintainer decision. Until then: manual one-liner `gh repo edit homeofe/supply-chain-guard
+> --description "$(cat .github/repo-about.txt)"` (source is gated, so the number is safe).
+> npm/Marketplace descriptions self-heal on the next publish - no action needed.
 
 > Note (2026-07-18, claude-opus-4-8): Added a `check:claims` prebuild gate
 > (scripts/check-claims.mjs) that pins the hand-authored capability numbers to ONE
