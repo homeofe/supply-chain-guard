@@ -9,10 +9,11 @@
 
 ---
 
-## Releases (92, newest first)
+## Releases (93, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.17.4 | 2026-07-18 | Fix: scan --format json and risk-history reported a stale tool version (v5.2.0) |
 | v5.17.3 | 2026-07-18 | Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2 |
 | v5.17.2 | 2026-07-17 | Fix: a globally-installed binary flagged supply-chain-guard's OWN repo (~600 false positives) |
 | v5.17.1 | 2026-07-17 | MCP registry metadata + honest package description |

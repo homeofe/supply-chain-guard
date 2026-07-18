@@ -28,6 +28,10 @@ const required = [
     minOccurrences: 5,
     note: "text-header VERSION const + SARIF + SBOM + HTML footer + GitLab scanner version",
   },
+  // scanner.ts's TOOL_VERSION feeds ScanReport.tool (emitted verbatim by the JSON
+  // reporter) and the persisted .scg-history/ entries. It drifted to 5.2.0 undetected
+  // for many releases precisely because it was NOT gated here (fixed in v5.17.4).
+  { file: "src/scanner.ts", minOccurrences: 1, note: "TOOL_VERSION const (ScanReport.tool + risk-history)" },
   // The pre-commit docs pin a release tag (rev: vX.Y.Z). v5.5.0 verification
   // gate finding MF-3: the snippet shipped pinning a tag that did not contain
   // the hook file. Keeping these in the sync gate forces the rev bump on

@@ -1,3 +1,16 @@
+> Note (2026-07-18, claude-opus-4-8): Release v5.17.4 - fix a stale tool-version drift a
+> user reported. src/scanner.ts hardcoded TOOL_VERSION="5.2.0" (many releases stale), which
+> the JSON reporter emits verbatim as ScanReport.tool and persists into .scg-history/, so
+> `scan --format json` reported v5.2.0 while text/SARIF/SBOM/HTML/GitLab were correct. Root
+> cause: check:version-sync did not include scanner.ts. Fix (option b, matching the repo's
+> gate-against-drift pattern): bumped TOOL_VERSION to the release version AND added
+> src/scanner.ts to check-version-sync.mjs's required list so it can never drift undetected
+> again. Chose (b) over "import from package.json" because tsconfig rootDir:"src" makes a
+> ../package.json import break the build, and reporter.ts already establishes hardcoded+gated
+> as the repo pattern. This is also the first REAL release on the new Keep a Changelog pipeline
+> (validated end-to-end in simulation last session). Full ceremony: all version sites -> 5.17.4,
+> KaC CHANGELOG entry + reference link, feed + handoff regenerated.
+
 > Note (2026-07-18, claude-opus-4-8): Migrated CHANGELOG.md to Keep a Changelog + SemVer
 > (the fleet standard) and added a `check:changelog-format` prebuild gate (reference-consumer
 > step 2). All 92 release headings converted `### vX.Y.Z (date)` -> `## [X.Y.Z] - date`

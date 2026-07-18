@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.17.4] - 2026-07-18
+**Fix: `scan --format json` and risk-history reported a stale tool version (v5.2.0)**
+
+### Fixed
+- `src/scanner.ts` hardcoded `TOOL_VERSION = "5.2.0"`, so `ScanReport.tool` (emitted
+  verbatim by the JSON reporter) and the persisted `.scg-history/` risk entries reported
+  `supply-chain-guard v5.2.0`, while every other surface (text header, SARIF, SBOM, HTML
+  footer, GitLab) correctly used reporter.ts's own version. Corrected to the release version.
+
+### Changed
+- `check:version-sync` now also covers `src/scanner.ts`, so `TOOL_VERSION` can never drift
+  undetected again - the root cause was that the gate did not include scanner.ts.
+
 ## [5.17.3] - 2026-07-18
 **Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2**
 
@@ -1466,7 +1479,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.3...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.4...HEAD
+[5.17.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.4
 [5.17.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.3
 [5.17.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.2
 [5.17.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.1
