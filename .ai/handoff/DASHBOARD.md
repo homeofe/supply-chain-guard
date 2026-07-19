@@ -29,7 +29,7 @@ reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
 
 | Package | Range |
 |---------|-------|
-| @elvatis_com/aahp | 3.8.0 |
+| @elvatis_com/aahp | 3.8.1 |
 | @types/node | ^26.1.1 |
 | @vitest/coverage-v8 | ^4.1.10 |
 | commander | ^14.0.3 |
