@@ -2537,4 +2537,53 @@ describe("Campaign Signatures", () => {
       expect(analyzeInstallCommand("npm", ["install", "@vite-pro/vite-ui@2.3.4"]).blocked).toBe(true);
     });
   });
+
+  // =================================================================
+  // NadMesh botnet - Go-based botnet hunting exposed AI services
+  // (XLab via The Hacker News, July 2026)
+  // =================================================================
+
+  describe("NadMesh botnet (July 2026)", () => {
+    it("should detect the cdnorigin.net C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "agent.go"),
+        'const c2 = "https://cdnorigin.net/nad"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the 209.99.186.235 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "host.go"),
+        'const ip = "209.99.186.235"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the NadMesh agent-sample SHA1 hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "31c69b3e12936abca770d430066f379ec1d997ec";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

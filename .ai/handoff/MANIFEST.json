@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "cli-tool",
-    "session_id": "cli-1784444144",
-    "timestamp": "2026-07-19T06:55:45Z",
-    "commit": "b65793c",
+    "session_id": "cli-1784444740",
+    "timestamp": "2026-07-19T07:05:40Z",
+    "commit": "0c0fc0f",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:0fdaa0859dfba7890f91496394150e04d4891ee7164983a8858e2d9dcc991b8e",
-      "updated": "2026-07-19T06:55:33Z",
-      "lines": 894,
+      "checksum": "sha256:765587573c068f88435f822a626f31c6664f465612301d6ce6c9da052321d022",
+      "updated": "2026-07-19T07:05:35Z",
+      "lines": 912,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:f1b77ee7a4c062944e1e74cdd9d297bb3152baf088096deac36ae68b3ef89cb1",
-      "updated": "2026-07-19T06:52:41Z",
+      "checksum": "sha256:aee07eac05e6d3e9f5a56af64932108567e3bbe81d4fb7f0840d272126183151",
+      "updated": "2026-07-19T07:05:00Z",
       "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
-      "checksum": "sha256:a5638dc38ada4c85c3bbdfd45ba4473f9ec590c9eb2675c884147b6ac9d157e6",
-      "updated": "2026-07-19T06:52:41Z",
-      "lines": 108,
+      "checksum": "sha256:873c1ecf5cbbe4eba0a21f2fe8a4d8f82f7da49e16bc59a2616bfabf3f21abd6",
+      "updated": "2026-07-19T07:05:00Z",
+      "lines": 109,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 132,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:e7b9df418823af2c708e11b93475309517e22a28ebba03639b16412f63042c8e",
-      "updated": "2026-07-19T06:52:41Z",
+      "checksum": "sha256:8b0368c64aeba83e856915756cee905f98579627e95f3a85a1639520f26b9702",
+      "updated": "2026-07-19T07:05:00Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:5806394ec16cafc970635b071cbf98e82ff8113de5efef465f93f7d4d97250e0",
-      "updated": "2026-07-19T06:52:41Z",
+      "checksum": "sha256:e4cf65f0a5657e28d2c87a02e05549309f3924fba8a0bd4cb9c7a6a4cd0766de",
+      "updated": "2026-07-19T07:05:00Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:3260c91bb9b609eafcd1597268e233694f20c8e53c7fba439c4da1cea65aeedc",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 108,
       "summary": "(no summary available)"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:94ceab2bc0623734e0c0f0a2b0140d2e1a07cac25d903c12282327c415ae94e7",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 133,
       "summary": "(no summary available)"
     },
     "GROUNDING.md": {
       "checksum": "sha256:7ef8cece585dc5defb4285175b9ba560d5469675df553d4ce28ec9e7aec24343",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 209,
       "summary": "(no summary available)"
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-07-19T06:52:18Z",
+      "updated": "2026-07-19T07:04:59Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 13214,
-    "full_read": 21432
+    "manifest_plus_core": 13524,
+    "full_read": 21764
   }
 }

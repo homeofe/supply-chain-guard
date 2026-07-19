@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.17.4",
-  "entryCount": 383,
+  "version": "5.17.5",
+  "entryCount": 386,
   "entries": [
     {
       "type": "domain",
@@ -3439,6 +3439,33 @@
       "family": "ChainVeil RAT",
       "campaign": "ViteVenom",
       "firstSeen": "2026-06-29"
+    },
+    {
+      "type": "domain",
+      "value": "cdnorigin.net",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "NadMesh",
+      "campaign": "NadMesh botnet",
+      "firstSeen": "2026-07-17"
+    },
+    {
+      "type": "ip",
+      "value": "209.99.186.235",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "NadMesh",
+      "campaign": "NadMesh botnet",
+      "firstSeen": "2026-07-17"
+    },
+    {
+      "type": "hash",
+      "value": "31c69b3e12936abca770d430066f379ec1d997ec",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "NadMesh",
+      "campaign": "NadMesh botnet",
+      "firstSeen": "2026-07-17"
     }
   ]
 }

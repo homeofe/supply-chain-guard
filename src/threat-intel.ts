@@ -729,6 +729,15 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "@vite-pro/vite-ui", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
   { type: "package", value: "@vitets/vite-ts", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
   { type: "package", value: "@vite-ts/vite-ui", severity: "critical", confidence: 0.95, family: "ChainVeil RAT", campaign: "ViteVenom", firstSeen: "2026-06-29" },
+
+  // NadMesh botnet (XLab via The Hacker News, July 2026). Go-based botnet that scans
+  // for exposed AI services (Ollama / vLLM / etc.) and CI/CD hosts, harvesting AWS
+  // keys and Kubernetes tokens (operator claimed 3,811 unique AWS keys). Network
+  // infra + agent-sample hash per XLab's published indicators; no package IOCs
+  // (this is a scanning botnet, not a poisoned registry package).
+  { type: "domain", value: "cdnorigin.net", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
+  { type: "ip", value: "209.99.186.235", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
+  { type: "hash", value: "31c69b3e12936abca770d430066f379ec1d997ec", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

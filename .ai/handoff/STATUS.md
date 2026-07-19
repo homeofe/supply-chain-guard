@@ -23,6 +23,24 @@
 > "project" name on regen, which the stock 3.8.0 copy does not). Verified: aahp verify
 > --level full + aahp doctor both green (6/6 gates); check:handoff + check:aahp + check:feed
 > still pass. Build tooling only, no version bump.
+> Note (2026-07-19, claude-opus-4-8): Released v5.17.5 - daily threat-intel refresh
+> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
+> per-item source links; pulled the linked The Hacker News articles for indicators) and
+> added the NadMesh botnet (XLab, 2026-07-17). NadMesh is a Go-based botnet that scans for
+> exposed AI services (Ollama/vLLM/etc.) and CI/CD hosts, harvesting AWS keys and Kubernetes
+> tokens (operator claimed 3,811 unique AWS keys). Added XLab's three published indicators:
+> C2 domain cdnorigin[.]net -> KNOWN_C2_DOMAINS, C2 IP 209[.]99[.]186[.]235 -> KNOWN_C2_IPS,
+> and the agent-sample SHA1 31c69b3e12936abca770d430066f379ec1d997ec -> KNOWN_MALICIOUS_HASHES
+> (XLab published a SHA1, not MD5/SHA256; stored as a content-reference indicator, matched by
+> the same substring check as the existing Nx Console Git-SHA entry). All three also added as
+> domain/ip/hash FeedIOC entries in BUNDLED_FEED. No package IOCs - this is a scanning botnet,
+> not a poisoned registry package. New "NadMesh botnet (July 2026)" campaign test block (3
+> tests: domain, IP, hash each -> critical). Other feed items reviewed: ViteVenom was already
+> added in yesterday's v5.17.3; ACR Stealer (ClickFix lures) and the Contagious Interview SVG-
+> steganography item carried no concrete blocklist-actionable IOCs in their source articles (a
+> Slack username only), so nothing was invented. feed.json regenerated (386 entries). Build
+> gates + AAHP green; tests pass (only the 14 vscode-scanner zip tests fail locally on Windows
+> for lack of a `zip` binary - green in CI).
 
 > Note (2026-07-18, claude-opus-4-8): Step 2 Stages 2+3 - rewired prebuild to the AAHP package
 > gates and retired the redundant local copies. prebuild is now `check:aahp` (`npx --no-install
