@@ -1,5 +1,15 @@
+> Note (2026-07-19, claude-opus-4-8): Review alignment for PR #63 (chore/aahp-conformance).
+> Applied the reviewer's grammar fix in the AAHP-cleanup note below ("the follow-up that the
+> previous note flagged"). Corrected a stale claim in the PR description: homeofe GitHub Actions
+> is ON. The org-wide Actions cost sweep applied to elvatis private repos, not homeofe public
+> repos, so the "Actions is OFF org-wide" line in the maintainer follow-up was wrong and is
+> removed. No canonical AAHP v3.8.0 template wording (GROUNDING.md, WORKFLOW.md, TRUST.md
+> structure) and no TRUST.md provenance placeholders were changed: those are the source of truth
+> and provenance was not established in this mechanical conformance PR. MANIFEST checksums
+> refreshed via the pinned CLI. Build tooling only, no version bump.
+
 > Note (2026-07-18, claude-opus-4-8): AAHP conformance cleanup (CLI-based) - completed the
-> follow-up the previous note flagged: switched the CI handoff gate to the pinned CLI and
+> follow-up that the previous note flagged: switched the CI handoff gate to the pinned CLI and
 > de-vendored the redundant gate scripts. .github/workflows/aahp-verify.yml now runs
 > `npx --no-install aahp verify . --level ci` + `npx --no-install aahp doctor . --json`
 > (npm ci --ignore-scripts; Python kept for the Layer 1 pii-allowlist check) instead of
