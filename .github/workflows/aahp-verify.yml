@@ -1,12 +1,17 @@
 # AAHP Verify - the intended REQUIRED status check for the handoff gate.
 #
-# Runs `aahp verify --level ci`, which executes all 4 layers with NO escape
-# hatch (AAHP_SKIP_VERIFY is ignored at --level ci). This is the off-machine,
-# non-bypassable backstop behind the local pre-commit / pre-push hooks:
+# Runs the pinned @elvatis_com/aahp CLI (`aahp verify --level ci`), which
+# executes all 4 handoff layers with NO escape hatch (AAHP_SKIP_VERIFY is
+# ignored at --level ci). This is the off-machine, non-bypassable backstop
+# behind the local pre-commit / pre-push hooks:
 #   Layer 1: MANIFEST checksum integrity
 #   Layer 2: content-drift gate (code changed => STATUS.md + MANIFEST.json must change)
-#   Layer 3: commit-pointer freshness
+#   Layer 3: commit-pointer freshness (advisory)
 #   Layer 4: TRUST-TTL expiry (advisory)
+#
+# The CLI is self-contained: it runs its own bundled gate scripts, so this
+# workflow no longer shells out to a vendored copy under scripts/. --no-install
+# forces the pinned node_modules copy of the CLI, never a fetched one.
 #
 # NOTE: GitHub Actions is currently OFF org-wide (cost sweep). This workflow is
 # committed anyway so it activates automatically when Actions is re-enabled.
@@ -48,11 +53,20 @@ jobs:
           node-version: '20'
 
       - name: Set up Python 3
+        # Layer 1 (lint-handoff) validates .ai/handoff/pii-allowlist.json with Python.
         if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
+      - name: Install dependencies (pinned AAHP CLI)
+        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
+        run: npm ci --ignore-scripts
+
       - name: Run aahp verify (CI level, no escape hatch)
         if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
-        run: bash scripts/verify-handoff.sh . --level ci
+        run: npx --no-install aahp verify . --level ci
+
+      - name: Run aahp doctor (conformance gates)
+        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
+        run: npx --no-install aahp doctor . --json

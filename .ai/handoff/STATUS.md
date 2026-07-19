@@ -1,3 +1,28 @@
+> Note (2026-07-19, claude-opus-4-8): Review alignment for PR #63 (chore/aahp-conformance).
+> Applied the reviewer's grammar fix in the AAHP-cleanup note below ("the follow-up that the
+> previous note flagged"). Corrected a stale claim in the PR description: homeofe GitHub Actions
+> is ON. The org-wide Actions cost sweep applied to elvatis private repos, not homeofe public
+> repos, so the "Actions is OFF org-wide" line in the maintainer follow-up was wrong and is
+> removed. No canonical AAHP v3.8.0 template wording (GROUNDING.md, WORKFLOW.md, TRUST.md
+> structure) and no TRUST.md provenance placeholders were changed: those are the source of truth
+> and provenance was not established in this mechanical conformance PR. MANIFEST checksums
+> refreshed via the pinned CLI. Build tooling only, no version bump.
+
+> Note (2026-07-18, claude-opus-4-8): AAHP conformance cleanup (CLI-based) - completed the
+> follow-up that the previous note flagged: switched the CI handoff gate to the pinned CLI and
+> de-vendored the redundant gate scripts. .github/workflows/aahp-verify.yml now runs
+> `npx --no-install aahp verify . --level ci` + `npx --no-install aahp doctor . --json`
+> (npm ci --ignore-scripts; Python kept for the Layer 1 pii-allowlist check) instead of
+> `bash scripts/verify-handoff.sh`. The CLI is self-contained (it runs its own bundled
+> scripts from the installed package root, not the repo copy), so the local copies were
+> redundant: DELETED scripts/verify-handoff.sh, scripts/lint-handoff.sh,
+> scripts/install-hooks.sh, scripts/verify-hooks.sh, scripts/hooks/pre-commit,
+> scripts/hooks/pre-push. KEPT scripts/aahp-manifest.sh + scripts/_aahp-lib.sh: the
+> SCG-local aahp-dashboard.mjs (still the SCG-owned DASHBOARD/TRUST/MANIFEST/LOG generator)
+> spawns aahp-manifest.sh, and the repo copy is customized (preserves the MANIFEST
+> "project" name on regen, which the stock 3.8.0 copy does not). Verified: aahp verify
+> --level full + aahp doctor both green (6/6 gates); check:handoff + check:aahp + check:feed
+> still pass. Build tooling only, no version bump.
 > Note (2026-07-19, claude-opus-4-8): Released v5.17.5 - daily threat-intel refresh
 > (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
 > per-item source links; pulled the linked The Hacker News articles for indicators) and
