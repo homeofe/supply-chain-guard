@@ -135,6 +135,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "calm-voice-9797.888c888x888.workers.dev",
   "s3.ru-3.storage.selcloud.ru",
   "bots.pepesoft.ru",
+
+  // NadMesh botnet (XLab via The Hacker News, July 2026). Go-based botnet that
+  // hunts exposed AI services (Ollama / vLLM / etc.) and CI/CD hosts, harvesting
+  // AWS keys and Kubernetes tokens. Single confirmed C2 domain per XLab's IOCs.
+  "cdnorigin.net",
 ];
 
 // ---------------------------------------------------------------------------
@@ -200,6 +205,11 @@ export const KNOWN_C2_IPS: string[] = [
   // Pepesoft NuGet game-cheat surveillance (Socket, July 14, 2026) - authenticated
   // HTTP proxy the surveillance payload speaks to (port 9528 in the report; host only).
   "196.16.3.71",
+
+  // NadMesh botnet (XLab via The Hacker News, July 2026). Go-based botnet hunting
+  // exposed AI services + CI/CD hosts for AWS keys / Kubernetes tokens. Confirmed
+  // command-and-control IP per XLab's published indicators.
+  "209.99.186.235",
 ];
 
 // ---------------------------------------------------------------------------
@@ -344,6 +354,12 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "d59e1914d76499fa51bf861f418c84bda0b48913dc39bd2e73756e326e4ccbb0": "Pepesoft PyArmor RMRP (SHA256)",
   "17b1d836c2f15a97be0350879943b04e14bc076cf09e31df0d73258ee10f7e7c": "Pepesoft PyArmor Russian Fishing 4 (SHA256)",
   "01d2afea0f2201a3b59765a1a60ba324ff4b8fdd25f23a0e05824b97f195b27c": "Pepesoft PyArmor Trigger (SHA256)",
+
+  // NadMesh botnet (XLab via The Hacker News, July 2026) - Go-based botnet agent
+  // sample. XLab published a SHA1 (not MD5/SHA256) for the sample; stored as a
+  // content-reference indicator (the hash matcher is a substring check, so the
+  // digest length is irrelevant to matching, same as the Nx Console Git-SHA entry).
+  "31c69b3e12936abca770d430066f379ec1d997ec": "NadMesh botnet Go agent sample (SHA1)",
 };
 
 // ---------------------------------------------------------------------------

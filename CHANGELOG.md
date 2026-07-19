@@ -7,6 +7,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.17.5] - 2026-07-19
+**Threat intel: NadMesh botnet - Go-based botnet hunting exposed AI services**
+
+Added detection for the NadMesh botnet (XLab, reported by The Hacker News on
+2026-07-17). NadMesh is a Go-based botnet that scans for exposed AI services
+(Ollama, vLLM and similar) and CI/CD hosts, harvesting AWS keys and Kubernetes
+tokens; its operator claimed 3,811 unique AWS keys. Detection rides on XLab's
+published network infrastructure plus the agent-sample hash - there are no
+package IOCs because this is a scanning botnet rather than a poisoned registry
+package.
+
+### Added
+- Command-and-control domain `cdnorigin[.]net` to `KNOWN_C2_DOMAINS` and as a
+  `domain` FeedIOC in `BUNDLED_FEED` (src/threat-intel.ts).
+- Command-and-control IP `209[.]99[.]186[.]235` to `KNOWN_C2_IPS` and as an `ip`
+  FeedIOC.
+- Agent-sample SHA1 `31c69b3e12936abca770d430066f379ec1d997ec` to
+  `KNOWN_MALICIOUS_HASHES` and as a `hash` FeedIOC. XLab published a SHA1 (not
+  MD5/SHA256); it is stored as a content-reference indicator, matched by the
+  same substring check as the existing Git-SHA entry.
+- `NadMesh botnet (July 2026)` describe block to `src/__tests__/campaigns.test.ts`
+  asserting the domain, IP and hash each produce a critical finding.
+
 ## [5.17.4] - 2026-07-18
 **Fix: `scan --format json` and risk-history reported a stale tool version (v5.2.0)**
 
@@ -1479,7 +1502,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.4...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.5...HEAD
+[5.17.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.5
 [5.17.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.4
 [5.17.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.3
 [5.17.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.2
