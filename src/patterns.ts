@@ -392,6 +392,13 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // the directory-scan MALICIOUS_DEPENDENCY path uses the exact feed names, so pin them explicitly).
   "^(@uw010010\\/vite-tree|@vite-tab\\/tab|@vite-ln\\/build-ts|@vite-mcp\\/vite-type|@vite-pro\\/vite-ui|@vitets\\/vite-ts|@vite-ts\\/vite-ui)$",
 
+  // SleeperGem - malicious RubyGems releases (StepSecurity via The Hacker News, July 20, 2026)
+  // Only the pure impersonation gem is anchored here. It carries no legitimate history in any
+  // registry, so a bare name is safe. The campaign's other two gems (Dendreo,
+  // fastlane-plugin-run_tests_firebase_testlab) are hijacked REAL gems - they are version-pinned
+  // in the feed instead, because a bare name here would flag every clean install of them.
+  "^git_credential_manager$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
@@ -694,6 +701,34 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Reference to 216.126.225.243:8085/8086/8087 detected. DPRK OtterCookie stealer C2 endpoints (browser creds / file uploads / WebSocket reverse shell at /api/notify).",
     severity: "critical",
     rule: "OTTERCOOKIE_C2_ENDPOINT",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
+
+  // --- SleeperGem malicious RubyGems releases (July 20, 2026) ---
+  // StepSecurity / Aikido via The Hacker News. The gem loader pulls deploy.sh plus a native
+  // binary from an attacker account on git.disroot.org (a legitimate public Forgejo instance -
+  // only the attacker's path is a signature, never the bare host), then plants a setuid root
+  // copy of the system shell at a path that mimics a networking utility. The dropped daemon
+  // dir (~/.local/share/gcm) is deliberately NOT a signature: the real Git Credential Manager
+  // uses it too.
+  {
+    name: "sleepergem-payload-host",
+    pattern: "git\\.disroot\\.org/git-ecosystem",
+    description:
+      "Reference to the git.disroot.org/git-ecosystem Forgejo account detected. SleeperGem second-stage payload host (deploy.sh + native daemon) impersonating an official ecosystem account (July 2026).",
+    severity: "critical",
+    rule: "SLEEPERGEM_PAYLOAD_HOST",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
+  {
+    name: "sleepergem-setuid-ping6",
+    pattern: "/usr/local/sbin/ping6",
+    description:
+      "Reference to /usr/local/sbin/ping6 detected. SleeperGem plants a setuid root copy of the system shell at this path to mimic a networking utility; the real ping6 ships in /bin or /usr/bin, never /usr/local/sbin.",
+    severity: "high",
+    rule: "SLEEPERGEM_SETUID_SHELL",
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },

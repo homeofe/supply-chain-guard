@@ -1,3 +1,36 @@
+> Note (2026-07-20, claude-opus-4-8): Released v5.17.6 - daily threat-intel refresh
+> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
+> per-item source links; pulled the linked The Hacker News article and cross-checked the
+> StepSecurity writeup for indicators) and added SleeperGem (StepSecurity + Aikido,
+> 2026-07-20). Three gem releases published to RubyGems.org on 2026-07-18/19 act as
+> loaders: each fetches a second stage (deploy.sh + a native binary) from an attacker
+> account on a public Forgejo instance, checks ~30 CI env vars (GITHUB_ACTIONS, GITLAB_CI,
+> CIRCLECI, ...) and exits if any is set so it only detonates on developer laptops, then
+> drops a native daemon, cron + systemd-user persistence and - with passwordless sudo - a
+> setuid root shell. Added 7 version-pinned ruby: FeedIOCs: git_credential_manager
+> 2.8.0/2.8.1/2.8.2/2.8.3, Dendreo 1.1.3/1.1.4, fastlane-plugin-run_tests_firebase_testlab
+> 0.3.2. Dendreo and the fastlane plugin are REAL long-lived gems that lay dormant for
+> years before the malicious update, so they are version-pinned on purpose - a bare-name
+> IOC would flag every clean install (a negative test asserts this). Only
+> git_credential_manager (a pure impersonation of Microsoft's Git Credential Manager, no
+> legitimate history) is also anchored by name in MALICIOUS_PACKAGE_PATTERNS. Payload host
+> ingested as the URL PATH git[.]disroot[.]org/git-ecosystem only: the bare host is a
+> legitimate public Forgejo instance and deliberately stays OUT of KNOWN_C2_DOMAINS. Two
+> campaign patterns: SLEEPERGEM_PAYLOAD_HOST + SLEEPERGEM_SETUID_SHELL
+> (/usr/local/sbin/ping6 - the real ping6 never lives there). The daemon dir
+> ~/.local/share/gcm is deliberately NOT a signature: the real Git Credential Manager uses
+> it too. No hashes, IPs or wallet addresses were disclosed by either source, so none were
+> invented. Other feed items reviewed: ViteVenom (v5.17.3) and NadMesh (v5.17.5) were
+> already covered; the 7-Zip / ServiceNow / wp2shell / NGINX items are CVEs with no
+> package-registry IOCs. Known gap surfaced while writing the tests: `.rb` is not in
+> SCANNABLE_EXTENSIONS, so Ruby source files are never content-scanned - the two new
+> campaign patterns only fire on other extensions (tests use .js/.sh, following the
+> existing .php/.c precedent). Logged as a follow-up, not fixed here (changing scan scope
+> is out of band for a threat-intel refresh). feed.json regenerated (394 entries). Rebased
+> onto PR #63/#64 (aahp 3.8.1 re-pin) before pushing; MANIFEST regenerated after the
+> rebase. Build gates + aahp check 7/7 + doctor 6/6 green; tests pass (only the 14
+> vscode-scanner zip tests fail locally on Windows for lack of a `zip` binary - green in CI).
+
 > Note (2026-07-19, claude-opus-4-8): Review alignment for PR #63 (chore/aahp-conformance).
 > Applied the reviewer's grammar fix in the AAHP-cleanup note below ("the follow-up that the
 > previous note flagged"). Corrected a stale claim in the PR description: homeofe GitHub Actions

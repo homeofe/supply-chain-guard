@@ -738,6 +738,29 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "domain", value: "cdnorigin.net", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
   { type: "ip", value: "209.99.186.235", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
   { type: "hash", value: "31c69b3e12936abca770d430066f379ec1d997ec", severity: "critical", confidence: 0.9, family: "NadMesh", campaign: "NadMesh botnet", firstSeen: "2026-07-17" },
+
+  // SleeperGem - three malicious RubyGems releases (StepSecurity / Aikido via The Hacker
+  // News, July 20, 2026). A loader gem fetches a second stage from an attacker-controlled
+  // Forgejo account, skips execution when ~30 CI env vars (GITHUB_ACTIONS, GITLAB_CI,
+  // CIRCLECI, ...) are present so it only detonates on developer laptops, then drops a
+  // native daemon plus cron / systemd-user persistence and, with passwordless sudo, a
+  // setuid root shell.
+  //   - git_credential_manager impersonates Microsoft's Git Credential Manager and has no
+  //     legitimate history, but is still pinned per version (2.8.0-2.8.3, July 18, 2026).
+  //   - Dendreo and fastlane-plugin-run_tests_firebase_testlab are REAL gems that lay
+  //     dormant for years; only the sleeper releases below are malicious, so these must
+  //     stay version-pinned - a bare-name IOC would flag every legitimate install.
+  { type: "package", value: "ruby:git_credential_manager@2.8.0", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:git_credential_manager@2.8.1", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:git_credential_manager@2.8.2", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:git_credential_manager@2.8.3", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:Dendreo@1.1.3", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:Dendreo@1.1.4", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  { type: "package", value: "ruby:fastlane-plugin-run_tests_firebase_testlab@0.3.2", severity: "critical", confidence: 0.95, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+  // Payload host. git.disroot.org itself is a legitimate public Forgejo instance, so only
+  // the attacker's account path is ingested - the bare domain is deliberately NOT added to
+  // KNOWN_C2_DOMAINS (it would flag every project that legitimately hosts code there).
+  { type: "url", value: "git.disroot.org/git-ecosystem", severity: "critical", confidence: 0.9, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download

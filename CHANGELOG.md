@@ -7,6 +7,44 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.17.6] - 2026-07-20
+**Threat intel: SleeperGem - three malicious RubyGems releases backdoor developer machines**
+
+Added detection for SleeperGem (StepSecurity and Aikido, reported by The Hacker
+News on 2026-07-20). Malicious releases of three gems were published to
+RubyGems.org between 2026-07-18 and 2026-07-19. Each release is a loader: it
+pulls a second stage (`deploy.sh` plus a native binary) from an attacker account
+on a public Forgejo instance, checks roughly thirty CI environment variables
+(`GITHUB_ACTIONS`, `GITLAB_CI`, `CIRCLECI` and similar) and exits if any is set,
+so it only detonates on developer laptops. On a developer machine it drops a
+native daemon, installs cron and systemd-user persistence, and - where
+passwordless sudo is available - plants a setuid root copy of the system shell
+disguised as a networking utility.
+
+Two of the three gems are long-lived legitimate packages that lay dormant for
+years before receiving the malicious update, so their indicators are pinned per
+version: a bare-name indicator would flag every clean install. Only
+`git_credential_manager`, which impersonates Microsoft's Git Credential Manager
+and has no legitimate history, is anchored by name.
+
+### Added
+- Version-pinned `ruby:` package FeedIOCs in `BUNDLED_FEED` (src/threat-intel.ts)
+  for `git_credential_manager` 2.8.0-2.8.3, `Dendreo` 1.1.3-1.1.4 and
+  `fastlane-plugin-run_tests_firebase_testlab` 0.3.2. The RubyGems scanner
+  resolves these against `Gemfile` and `Gemfile.lock`.
+- `url` FeedIOC for the second-stage payload path
+  `git[.]disroot[.]org/git-ecosystem`. The bare host is deliberately NOT added to
+  `KNOWN_C2_DOMAINS`: it is a legitimate public Forgejo instance and blocking it
+  wholesale would flag every project that legitimately hosts code there.
+- `^git_credential_manager$` to `MALICIOUS_PACKAGE_PATTERNS` (src/patterns.ts).
+- `SLEEPERGEM_PAYLOAD_HOST` and `SLEEPERGEM_SETUID_SHELL` campaign patterns
+  covering the attacker Forgejo path and the `/usr/local/sbin/ping6` setuid drop.
+  The daemon directory `~/.local/share/gcm` is intentionally not a signature: the
+  real Git Credential Manager uses it too.
+- `SleeperGem RubyGems releases (July 2026)` describe block to
+  `src/__tests__/campaigns.test.ts`, including a negative test asserting that
+  clean versions of the two hijacked real gems are not flagged.
+
 ## [5.17.5] - 2026-07-19
 **Threat intel: NadMesh botnet - Go-based botnet hunting exposed AI services**
 
@@ -1503,6 +1541,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
 [Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.5...HEAD
+[5.17.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.6
 [5.17.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.5
 [5.17.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.4
 [5.17.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.3

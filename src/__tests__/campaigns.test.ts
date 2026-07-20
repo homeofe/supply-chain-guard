@@ -2586,4 +2586,89 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // SleeperGem - malicious RubyGems releases
+  // (StepSecurity / Aikido via The Hacker News, July 2026)
+  // =================================================================
+
+  describe("SleeperGem RubyGems releases (July 2026)", () => {
+    it("flags the impersonation gem in a Gemfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "Gemfile"),
+        'source "https://rubygems.org"\ngem "git_credential_manager", "2.8.1"\n'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "RUBY_MALICIOUS_GEM");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.description).toContain("SleeperGem");
+    });
+
+    it("flags the hijacked sleeper releases in a Gemfile.lock", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "Gemfile.lock"),
+        [
+          "GEM",
+          "  remote: https://rubygems.org/",
+          "  specs:",
+          "    Dendreo (1.1.4)",
+          "    fastlane-plugin-run_tests_firebase_testlab (0.3.2)",
+          "",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const gems = report.findings.filter((f) => f.rule === "RUBY_MALICIOUS_GEM");
+      expect(gems).toHaveLength(2);
+      expect(gems.every((f) => f.severity === "critical")).toBe(true);
+    });
+
+    it("does NOT flag clean versions of the two hijacked real gems", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "Gemfile.lock"),
+        [
+          "GEM",
+          "  remote: https://rubygems.org/",
+          "  specs:",
+          "    Dendreo (1.2.0)",
+          "    fastlane-plugin-run_tests_firebase_testlab (0.4.0)",
+          "",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "RUBY_MALICIOUS_GEM")).toHaveLength(0);
+    });
+
+    it("should detect the git.disroot.org/git-ecosystem payload host", async () => {
+      // .rb is not in SCANNABLE_EXTENSIONS; use .js to exercise the signature
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const STAGE2 = "https://git.disroot.org/git-ecosystem/gcm/raw/branch/main/deploy.sh";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "SLEEPERGEM_PAYLOAD_HOST"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the setuid root shell path", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deploy.sh"),
+        'cp /bin/sh /usr/local/sbin/ping6 && chmod u+s /usr/local/sbin/ping6\n'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "SLEEPERGEM_SETUID_SHELL"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("high");
+    });
+  });
 });

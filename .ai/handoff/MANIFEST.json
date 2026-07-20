@@ -2,77 +2,77 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "cli-tool",
-    "session_id": "cli-1784449940",
-    "timestamp": "2026-07-19T08:32:20Z",
-    "commit": "674597a",
+    "agent": "handoff-refresh",
+    "session_id": "cli-1784545714",
+    "timestamp": "2026-07-20T11:08:35Z",
+    "commit": "fb80a79",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:adb28300bc224793eac4b682083e30105271240d12dcf8719e503a8f71bbdf74",
-      "updated": "2026-07-19T08:32:02Z",
-      "lines": 914,
+      "checksum": "sha256:ef94527e952e9c1854bec83e7502dac95918aa595aa200842d7ea03a78edeb10",
+      "updated": "2026-07-20T11:08:28Z",
+      "lines": 947,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:aee07eac05e6d3e9f5a56af64932108567e3bbe81d4fb7f0840d272126183151",
-      "updated": "2026-07-19T08:32:02Z",
+      "checksum": "sha256:1be8f59b04febab311a1c074ef1bd27b82f6b4d29326253f15ca6e588735dd45",
+      "updated": "2026-07-20T11:06:59Z",
       "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
-      "checksum": "sha256:873c1ecf5cbbe4eba0a21f2fe8a4d8f82f7da49e16bc59a2616bfabf3f21abd6",
-      "updated": "2026-07-19T08:32:02Z",
-      "lines": 109,
+      "checksum": "sha256:7c78be1f0baa37704301b83e23762579f26dbadd770696d69c4f43ddcb5935cf",
+      "updated": "2026-07-20T11:06:59Z",
+      "lines": 110,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 132,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:83c8da89321207a8a1485be13f1d1d6d49613df86f33facb5a8f27eabf80bda9",
-      "updated": "2026-07-19T08:32:02Z",
+      "checksum": "sha256:b94d2e1a78df7f1c412c2b11f504b6465b01ae6ea234af458834d7baacb42933",
+      "updated": "2026-07-20T11:06:59Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:e4cf65f0a5657e28d2c87a02e05549309f3924fba8a0bd4cb9c7a6a4cd0766de",
-      "updated": "2026-07-19T08:32:02Z",
+      "checksum": "sha256:993844d47ea3de2a8c7bbdd5158597d1ec6b3e820bcc13522d1820b60f8b66cc",
+      "updated": "2026-07-20T11:06:59Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:3260c91bb9b609eafcd1597268e233694f20c8e53c7fba439c4da1cea65aeedc",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-07-18T18:29:50Z",
       "lines": 108,
       "summary": "(no summary available)"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:94ceab2bc0623734e0c0f0a2b0140d2e1a07cac25d903c12282327c415ae94e7",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-07-18T08:07:40Z",
       "lines": 133,
       "summary": "(no summary available)"
     },
     "GROUNDING.md": {
       "checksum": "sha256:7ef8cece585dc5defb4285175b9ba560d5469675df553d4ce28ec9e7aec24343",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-07-18T08:46:03Z",
       "lines": 209,
       "summary": "(no summary available)"
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-07-19T08:32:02Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 13571,
-    "full_read": 21811
+    "manifest_plus_core": 14115,
+    "full_read": 22377
   }
 }
