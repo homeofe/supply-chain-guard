@@ -3,7 +3,8 @@
 > and the CLI self-terminates instead of hanging. On Node <=22 free keepAlive sockets stay
 > referenced, which stalled shared CI runners for hours on clean/low scans; the critical,
 > high and --fail-on exit paths are unchanged. Added src/__tests__/scan-self-exit.test.ts.
-> Needs a patch release to move @v5.
+> Version bumped to 5.17.7 across the 6 version-sync sites plus CHANGELOG; tag v5.17.7 to
+> publish (npm via OIDC) and move the @v5 branch.
 
 > Note (2026-07-20, claude-opus-4-8): Released v5.17.6 - daily threat-intel refresh
 > (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
