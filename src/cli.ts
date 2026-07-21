@@ -8,6 +8,8 @@
  */
 
 import { Command } from "commander";
+import { globalAgent as httpGlobalAgent } from "node:http";
+import { globalAgent as httpsGlobalAgent } from "node:https";
 import { scan } from "./scanner.js";
 import { scanNpmPackage } from "./npm-scanner.js";
 import { scanPypiPackage } from "./pypi-scanner.js";
@@ -174,6 +176,21 @@ program
             process.exit(1);
           }
         }
+
+        // The scanners reach the npm and PyPI registries over Node's global
+        // HTTP(S) agents (dependency-confusion PyPI lookups run on every scan;
+        // --check-registry adds an npm lookup). Since Node 19 those agents pool
+        // sockets with keepAlive, and an idle pooled socket can keep the event
+        // loop alive. On a clean or medium/low-only scan none of the exit-code
+        // branches above fire, so without this teardown the CLI finishes its
+        // work and then never terminates. Destroying the global agents closes
+        // the pooled sockets so the loop drains and the command self-exits.
+        // The critical/high and --fail-on paths already process.exit(), so this
+        // only runs on the clean-return path and leaves those unchanged. Letting
+        // the loop drain naturally (rather than a forced process.exit) means any
+        // buffered stdout is flushed before the process ends.
+        httpGlobalAgent.destroy();
+        httpsGlobalAgent.destroy();
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);

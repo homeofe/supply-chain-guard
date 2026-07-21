@@ -14,7 +14,7 @@
 | Version | 5.17.6 |
 | Node engines | >=20.0.0 |
 | Source modules | 64 under `src/` |
-| Test files | 80 under `src/__tests__/` |
+| Test files | 81 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit | verified continuously in CI - see below |
 
