@@ -9,10 +9,11 @@
 
 ---
 
-## Releases (95, newest first)
+## Releases (96, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.17.7 | 2026-07-21 | ### Fixed |
 | v5.17.6 | 2026-07-20 | Threat intel: SleeperGem - three malicious RubyGems releases backdoor developer machines |
 | v5.17.5 | 2026-07-19 | Threat intel: NadMesh botnet - Go-based botnet hunting exposed AI services |
 | v5.17.4 | 2026-07-18 | Fix: scan --format json and risk-history reported a stale tool version (v5.2.0) |

@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.17.7] - 2026-07-21
+### Fixed
+- `scan` now self-terminates after a clean or low-only scan instead of hanging.
+  The scan command tears down Node's global HTTP and HTTPS keep-alive agents on
+  the clean-return path, so pooled npm and PyPI registry sockets close and the
+  event loop drains. On Node 22 and earlier, free keep-alive sockets stay
+  referenced, so a scan with no critical or high findings could keep the process
+  (and a CI runner) alive for hours. The critical, high, and `--fail-on` exit
+  paths are unchanged. Added a spawn-based regression test that asserts the CLI
+  self-exits on a clean scan.
+
 ## [5.17.6] - 2026-07-20
 **Threat intel: SleeperGem - three malicious RubyGems releases backdoor developer machines**
 
@@ -1540,7 +1551,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.5...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.7...HEAD
+[5.17.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.7
 [5.17.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.6
 [5.17.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.5
 [5.17.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.4
