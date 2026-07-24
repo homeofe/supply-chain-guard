@@ -399,6 +399,16 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // in the feed instead, because a bare name here would flag every clean install of them.
   "^git_credential_manager$",
 
+  // Apex macOS infostealer npm packages (safedep / The Hacker News, July 22, 2026)
+  // Postinstall dropper delivering an AMOS-family macOS infostealer while installing a
+  // working forked coding agent as cover. npm removed @apexfdn/apex; the operator
+  // re-published the identical payload as @copilot-mcp/apex ~11h later (the scope borrows
+  // GitHub Copilot's credibility without belonging to GitHub) and churned 20+ versions in
+  // 8h - so block by name, not version. Both are fully malicious with no legitimate history.
+  // Anchored explicitly: although the scoped catch-all below would also match, the directory
+  // scan's exact-name path relies on pinned names (same rationale as the ViteVenom block).
+  "^(@apexfdn\\/apex|@copilot-mcp\\/apex)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];

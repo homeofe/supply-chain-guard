@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.17.7",
-  "entryCount": 394,
+  "version": "5.17.8",
+  "entryCount": 412,
   "entries": [
     {
       "type": "domain",
@@ -2946,6 +2946,123 @@
       "firstSeen": "2026-07-11"
     },
     {
+      "type": "package",
+      "value": "jscrambler@8.16.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler@8.17.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler@8.18.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler@8.20.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler-webpack-plugin@8.6.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "gulp-jscrambler@8.6.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "grunt-jscrambler@8.5.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "package",
+      "value": "jscrambler-metro-plugin@9.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "hash",
+      "value": "a742de963f14a92d24ebcbc7b44ac867e23a20d31d1b0094a13a4f83287f4e60",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "hash",
+      "value": "a41a523ef9517aab37ed6eea0ec881821bdcb7aefcb5c5f603adc7907f868c86",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "hash",
+      "value": "fbbcf4d8f98168f78f5c0c47a9ae56d59ec8ac84a7c9ca6b797fedfb8d62d2bd",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "hash",
+      "value": "b7ca95d1b23c8e67416a25cedf741de0917c2096bbc9d24649eea7853d054903",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
+      "type": "hash",
+      "value": "c8fd47d36bdf7c825378593ab82ed8c24d1dc52e26b507812393e24e1d5201fd",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Rust Infostealer",
+      "campaign": "jscrambler npm compromise",
+      "firstSeen": "2026-07-11"
+    },
+    {
       "type": "domain",
       "value": "testnet.archival.chain.grpc-web.injective.network",
       "severity": "critical",
@@ -3538,6 +3655,51 @@
       "family": "SleeperGem",
       "campaign": "SleeperGem",
       "firstSeen": "2026-07-18"
+    },
+    {
+      "type": "ip",
+      "value": "43.228.157.68",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "CPanelScanner",
+      "campaign": "cPanel/WHM GitHub Actions abuse",
+      "firstSeen": "2026-07-23"
+    },
+    {
+      "type": "domain",
+      "value": "f5b0b742-240a-4811-8a5b-b0ba6060685d.dnshook.site",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CPanelScanner",
+      "campaign": "cPanel/WHM GitHub Actions abuse",
+      "firstSeen": "2026-07-23"
+    },
+    {
+      "type": "hash",
+      "value": "22f721fd3a81d2e27cbf90a122bb977f630c50b79daa98350f0e57b04dfa81f1",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "CPanelScanner",
+      "campaign": "cPanel/WHM GitHub Actions abuse",
+      "firstSeen": "2026-07-23"
+    },
+    {
+      "type": "package",
+      "value": "@apexfdn/apex",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "AMOS Stealer",
+      "campaign": "Apex macOS infostealer",
+      "firstSeen": "2026-07-22"
+    },
+    {
+      "type": "package",
+      "value": "@copilot-mcp/apex",
+      "severity": "critical",
+      "confidence": 0.95,
+      "family": "AMOS Stealer",
+      "campaign": "Apex macOS infostealer",
+      "firstSeen": "2026-07-22"
     }
   ]
 }

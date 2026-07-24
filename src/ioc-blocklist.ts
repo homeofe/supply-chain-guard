@@ -140,6 +140,15 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // hunts exposed AI services (Ollama / vLLM / etc.) and CI/CD hosts, harvesting
   // AWS keys and Kubernetes tokens. Single confirmed C2 domain per XLab's IOCs.
   "cdnorigin.net",
+
+  // cPanel/WHM GitHub Actions abuse campaign (Socket, July 23, 2026). Malicious
+  // dev-main versions of a legitimate developer's 10 Packagist packages injected
+  // 55-62 GitHub Actions workflow files that spin up runners, pull an architecture-
+  // specific Linux payload from C2 43[.]228[.]157[.]68, and scan for cPanel/WHM
+  // servers vulnerable to CVE-2026-41940. This is the DNS-callback host used for
+  // out-of-band beaconing - a specific UUID subdomain, NOT the dnshook.site apex
+  // (a legitimate DNS-logging service), so no false positives on the parent host.
+  "f5b0b742-240a-4811-8a5b-b0ba6060685d.dnshook.site",
 ];
 
 // ---------------------------------------------------------------------------
@@ -210,6 +219,14 @@ export const KNOWN_C2_IPS: string[] = [
   // exposed AI services + CI/CD hosts for AWS keys / Kubernetes tokens. Confirmed
   // command-and-control IP per XLab's published indicators.
   "209.99.186.235",
+
+  // cPanel/WHM GitHub Actions abuse campaign (Socket, July 23, 2026). C2 that
+  // serves the arch-specific Linux exploitation payload (/api/dl/amd64|arm|arm64|386)
+  // and receives base64-encoded harvested credentials on /api/github-results, with
+  // /api/github-heartbeat beaconing. Reached over port 80. CVE-2026-41940 (cPanel/WHM
+  // auth bypass) is the exploited flaw; the compromised maintainer account is a
+  // legitimate victim and is intentionally NOT added to the malicious-accounts list.
+  "43.228.157.68",
 ];
 
 // ---------------------------------------------------------------------------
@@ -360,6 +377,22 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // content-reference indicator (the hash matcher is a substring check, so the
   // digest length is irrelevant to matching, same as the Nx Console Git-SHA entry).
   "31c69b3e12936abca770d430066f379ec1d997ec": "NadMesh botnet Go agent sample (SHA1)",
+
+  // cPanel/WHM GitHub Actions abuse campaign (Socket, July 23, 2026) - the Linux
+  // scanner/exploitation payload downloaded by the injected workflows from
+  // 43.228.157.68 and run on ephemeral GitHub-hosted runners.
+  "22f721fd3a81d2e27cbf90a122bb977f630c50b79daa98350f0e57b04dfa81f1": "cPanel/WHM GitHub Actions campaign Linux exploit payload (SHA256)",
+
+  // jscrambler npm supply-chain compromise (Socket / The Hacker News / OX / StepSecurity,
+  // July 11, 2026) - native Rust infostealer dropped by the malicious preinstall hook
+  // (8.14.0-8.17.0) and self-executing dropper (8.18.0+) across Windows/macOS/Linux;
+  // targets AWS/GCP/Azure creds, crypto wallets, browser data, AI tool configs. Hashes
+  // per Rescana's IOC set.
+  "a742de963f14a92d24ebcbc7b44ac867e23a20d31d1b0094a13a4f83287f4e60": "jscrambler compromise infostealer payload (SHA256)",
+  "a41a523ef9517aab37ed6eea0ec881821bdcb7aefcb5c5f603adc7907f868c86": "jscrambler compromise infostealer payload (SHA256)",
+  "fbbcf4d8f98168f78f5c0c47a9ae56d59ec8ac84a7c9ca6b797fedfb8d62d2bd": "jscrambler compromise infostealer payload (SHA256)",
+  "b7ca95d1b23c8e67416a25cedf741de0917c2096bbc9d24649eea7853d054903": "jscrambler compromise infostealer payload (SHA256)",
+  "c8fd47d36bdf7c825378593ab82ed8c24d1dc52e26b507812393e24e1d5201fd": "jscrambler compromise infostealer payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -916,6 +949,36 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "crypto-validate-lib": {
     versions: ["1.0.0"],
     description: "PhantomSync npm crypto-wallet stealer (single-source: Xygeni, July 2026): steals wallet keys + BIP-39 seeds, exfil to IPFS/Pinata",
+  },
+  // --- jscrambler npm supply-chain compromise (July 11, 2026) ---------------------
+  // The jscrambler npm package (~15,800 weekly downloads) and four companion build
+  // plugins were hijacked and republished with a native Rust infostealer. Versions
+  // 8.14.0/8.16.0/8.17.0 carry a malicious preinstall hook; from 8.18.0 the attackers
+  // dropped the hook and embedded a self-executing dropper in dist/index.js and
+  // dist/bin/jscrambler.js. Payload runs on Windows/macOS/Linux, harvesting AWS/GCP/
+  // Azure creds, crypto wallets, browser data and AI-tool configs, with persistence on
+  // Windows/macOS. Socket flagged 8.14.0 within 6 minutes of publish; corroborated by
+  // The Hacker News, OX Security and StepSecurity. All entries are version-pinned -
+  // these are legitimate packages; last clean release is 8.13.0, fixed in 8.22.0.
+  "jscrambler": {
+    versions: ["8.14.0", "8.16.0", "8.17.0", "8.18.0", "8.20.0"],
+    description: "jscrambler npm compromise: hijacked releases drop a native Rust infostealer via preinstall hook (8.14.0-8.17.0) or self-executing dropper in dist/ (8.18.0+); steals AWS/GCP/Azure creds, wallets, browser data, AI configs. Clean: 8.13.0 / 8.22.0 (Socket + The Hacker News, July 2026)",
+  },
+  "jscrambler-webpack-plugin": {
+    versions: ["8.6.2"],
+    description: "jscrambler npm compromise: companion build plugin republished with the same native infostealer chain as jscrambler@8.14.0+. Legitimate package - only 8.6.2 is malicious (July 2026)",
+  },
+  "gulp-jscrambler": {
+    versions: ["8.6.2"],
+    description: "jscrambler npm compromise: companion build plugin republished with the same native infostealer chain as jscrambler@8.14.0+. Legitimate package - only 8.6.2 is malicious (July 2026)",
+  },
+  "grunt-jscrambler": {
+    versions: ["8.5.2"],
+    description: "jscrambler npm compromise: companion build plugin republished with the same native infostealer chain as jscrambler@8.14.0+. Legitimate package - only 8.5.2 is malicious (July 2026)",
+  },
+  "jscrambler-metro-plugin": {
+    versions: ["9.0.2"],
+    description: "jscrambler npm compromise: companion build plugin republished with the same native infostealer chain as jscrambler@8.14.0+. Legitimate package - only 9.0.2 is malicious (July 2026)",
   },
 };
 

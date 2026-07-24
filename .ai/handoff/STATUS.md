@@ -1,3 +1,26 @@
+> Note (2026-07-24, claude-opus-4-8): Released v5.17.8 - daily threat-intel refresh
+> (scheduled task, run interactively). arena.elvatis.com/api/news carried only named
+> campaigns with no atomic IOCs this cycle, so - at the user's direction - widened the
+> net to the linked primary vendor write-ups (Socket, The Hacker News, OX, StepSecurity,
+> safedep, Rescana) and extracted concrete indicators for three developer-targeted
+> supply-chain campaigns. (1) jscrambler npm compromise (2026-07-11): extended the prior
+> partial 8.14.0-only entry to the full malicious set - jscrambler 8.14.0/8.16.0/8.17.0/
+> 8.18.0/8.20.0 (preinstall hook -> dist dropper), plus jscrambler-webpack-plugin 8.6.2,
+> gulp-jscrambler 8.6.2, grunt-jscrambler 8.5.2, jscrambler-metro-plugin 9.0.2, and 5
+> SHA-256 payload hashes; clean 8.13.0, fixed 8.22.0. (2) cPanel/WHM GitHub Actions abuse
+> (Socket, 2026-07-23): C2 IP 43[.]228[.]157[.]68, the UUID DNS-callback subdomain on
+> dnshook[.]site, and the Linux exploit payload SHA-256. The compromised Packagist
+> maintainer (dinushchathurya) is a VICTIM, so neither the account nor the bare package
+> names are ingested; only network + file IOCs. (3) Apex macOS infostealer (safedep/THN,
+> 2026-07-22): @apexfdn/apex + its re-publish @copilot-mcp/apex, blocked by name (20+
+> versions in 8h, no legitimate history). NOTE: this work was first cut as 5.17.7 but that
+> version released out-of-band (#65, scan self-exit fix) mid-task, so it was rebased onto
+> that release and re-cut as 5.17.8. Added to ioc-blocklist.ts + threat-intel.ts +
+> patterns.ts with 10 new campaign tests (incl. a clean-8.13.0 negative). feed.json
+> regenerated. Build gates + aahp check 7/7 green; tests pass (only the 14 vscode-scanner
+> zip tests fail locally on Windows for lack of a `zip` binary - green in CI). Also widened
+> the daily routine SKILL.md to make primary-source enrichment a standing step.
+
 > Note (2026-07-21): fix(scan) - the scan command now tears down Node's global HTTP/HTTPS
 > keepAlive agents on the clean-scan return path, so pooled npm/PyPI registry sockets close
 > and the CLI self-terminates instead of hanging. On Node <=22 free keepAlive sockets stay

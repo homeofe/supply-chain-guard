@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1784646924",
-    "timestamp": "2026-07-21T15:15:24Z",
-    "commit": "fac9406",
+    "session_id": "cli-1784911228",
+    "timestamp": "2026-07-24T16:40:28Z",
+    "commit": "0c7cd61",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:82762b983c2de988752b120f2073fe1903ce534e732052e6c3402431073e6a0e",
-      "updated": "2026-07-21T15:13:27Z",
-      "lines": 955,
+      "checksum": "sha256:dc951a332fa30806daa3cbfc8328d7a1aa3c91093356f412a424a70d0ecd513f",
+      "updated": "2026-07-24T16:40:20Z",
+      "lines": 978,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:80ff0194d720e6b2580f28b5372fbd36ff2dd73b81e5018901235a643499ad34",
-      "updated": "2026-07-21T15:15:08Z",
+      "checksum": "sha256:338e920ea9787556fd5df4f0dce6b2e575e28c686fdf2a197d47645ed781a4c5",
+      "updated": "2026-07-24T16:40:08Z",
       "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
-      "checksum": "sha256:60849203d67a339ef12b2768b082f12bb91c1286518e0c53925547456504884b",
-      "updated": "2026-07-21T15:15:24Z",
-      "lines": 111,
+      "checksum": "sha256:bda63116d97929ed26698b23baca593378acfb0c30976ad179d3758cfc1fe689",
+      "updated": "2026-07-24T16:40:28Z",
+      "lines": 112,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 132,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:9c16e6ed9511c6319dbeeb6bae11594b33fa0b6d9d474d41a4287e6baf1078b9",
-      "updated": "2026-07-21T15:15:24Z",
+      "checksum": "sha256:2670bed0e68f63c27eb78ad2cc49e65905ee02c0539e3a4bf21cdede92fae3e2",
+      "updated": "2026-07-24T16:40:28Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:e5cfeaf7c7b52b98508735a9f5f410f8b8a8db492a1cad0f0a6a328a08800d44",
-      "updated": "2026-07-21T15:15:24Z",
+      "checksum": "sha256:ddf382fa1ef5c2daa1b31ad19b1cb378cf05ec79572f82f436f157bda5278394",
+      "updated": "2026-07-24T16:40:28Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:3260c91bb9b609eafcd1597268e233694f20c8e53c7fba439c4da1cea65aeedc",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-07-18T18:29:50Z",
       "lines": 108,
       "summary": "(no summary available)"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:94ceab2bc0623734e0c0f0a2b0140d2e1a07cac25d903c12282327c415ae94e7",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-07-18T08:07:40Z",
       "lines": 133,
       "summary": "(no summary available)"
     },
     "GROUNDING.md": {
       "checksum": "sha256:7ef8cece585dc5defb4285175b9ba560d5469675df553d4ce28ec9e7aec24343",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-07-18T08:46:03Z",
       "lines": 209,
       "summary": "(no summary available)"
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-07-21T14:56:32Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 14234,
-    "full_read": 22507
+    "manifest_plus_core": 14596,
+    "full_read": 22895
   }
 }

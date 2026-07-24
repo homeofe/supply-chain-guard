@@ -30,7 +30,7 @@ for the two-axis (status x provenance) model and the task-type anchor matrix.
 
 | Property | Value | Provenance | Source |
 |----------|-------|------------|--------|
-| package.json version | 5.17.7 | tool_verified | package.json |
+| package.json version | 5.17.8 | tool_verified | package.json |
 | Source modules present | 64 | tool_verified | src/ file list |
 | Test files present | 81 | tool_verified | src/__tests__/ file list |
 | tsconfig `types: ["node"]` | yes | tool_verified | tsconfig.json (load-bearing under TS6) |

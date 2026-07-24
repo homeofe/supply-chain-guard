@@ -9,10 +9,11 @@
 
 ---
 
-## Releases (96, newest first)
+## Releases (97, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.17.8 | 2026-07-24 | Threat intel: jscrambler npm compromise, cPanel/WHM GitHub Actions abuse, and the Apex macOS infostealer |
 | v5.17.7 | 2026-07-21 | ### Fixed |
 | v5.17.6 | 2026-07-20 | Threat intel: SleeperGem - three malicious RubyGems releases backdoor developer machines |
 | v5.17.5 | 2026-07-19 | Threat intel: NadMesh botnet - Go-based botnet hunting exposed AI services |

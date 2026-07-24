@@ -2671,4 +2671,177 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("high");
     });
   });
+
+  // =================================================================
+  // jscrambler npm supply-chain compromise
+  // (Socket / The Hacker News / OX / StepSecurity, July 11, 2026)
+  // =================================================================
+
+  describe("jscrambler npm compromise (July 2026)", () => {
+    it("should flag jscrambler@8.14.0 (preinstall-hook wave) as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { jscrambler: "8.14.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag jscrambler@8.20.0 (dist-dropper wave) as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { jscrambler: "8.20.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag the grunt-jscrambler companion plugin known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          devDependencies: { "grunt-jscrambler": "8.5.2" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag the last clean jscrambler release (8.13.0)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { jscrambler: "8.13.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.filter((f) => f.rule === "IOC_KNOWN_BAD_VERSION")
+      ).toHaveLength(0);
+    });
+
+    it("should detect a jscrambler infostealer payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "a742de963f14a92d24ebcbc7b44ac867e23a20d31d1b0094a13a4f83287f4e60";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // cPanel/WHM GitHub Actions abuse campaign (Socket, July 23, 2026)
+  // =================================================================
+
+  describe("cPanel/WHM GitHub Actions abuse (July 2026)", () => {
+    it("should detect the 43.228.157.68 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "workflow-payload.js"),
+        'const dl = "http://43.228.157.68:80/api/dl/amd64";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the dnshook.site DNS-callback subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const cb = "f5b0b742-240a-4811-8a5b-b0ba6060685d.dnshook.site";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the Linux exploit payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "22f721fd3a81d2e27cbf90a122bb977f630c50b79daa98350f0e57b04dfa81f1";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  // =================================================================
+  // Apex macOS infostealer npm packages
+  // (safedep / The Hacker News, July 22, 2026)
+  // =================================================================
+
+  describe("Apex macOS infostealer npm packages (July 2026)", () => {
+    it("should match both apex package names against the malicious-name patterns", () => {
+      for (const name of ["@apexfdn/apex", "@copilot-mcp/apex"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches).toBe(true);
+      }
+    });
+
+    it("should flag @copilot-mcp/apex listed in a package.json (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@copilot-mcp/apex": "1.0.7" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });

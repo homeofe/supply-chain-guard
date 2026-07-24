@@ -633,11 +633,26 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "neteller", severity: "critical", confidence: 0.98, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
   { type: "domain", value: "caliber-spinner-finishing.ngrok-free.dev", severity: "critical", confidence: 0.95, family: "FakePaymentSDK", campaign: "Fake Payment SDK Typosquat", firstSeen: "2026-07-07" },
 
-  // Compromised jscrambler npm release (July 2026)
-  // jscrambler 8.14.0 shipped a malicious preinstall hook that drops a Rust-based
-  // infostealer during install. Version-pinned: jscrambler is a legitimate package,
-  // only 8.14.0 is compromised - do NOT block the bare name.
+  // Compromised jscrambler npm release (Socket / The Hacker News / OX / StepSecurity, July 11, 2026)
+  // jscrambler (~15,800 weekly downloads) + four companion build plugins were hijacked and
+  // republished with a native Rust infostealer: a malicious preinstall hook in 8.14.0-8.17.0,
+  // then a self-executing dropper in dist/index.js + dist/bin/jscrambler.js from 8.18.0.
+  // Payload harvests AWS/GCP/Azure creds, crypto wallets, browser data and AI-tool configs on
+  // Windows/macOS/Linux. Version-pinned: legitimate packages; clean 8.13.0, fixed 8.22.0.
   { type: "package", value: "jscrambler@8.14.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler@8.16.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler@8.17.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler@8.18.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler@8.20.0", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler-webpack-plugin@8.6.2", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "gulp-jscrambler@8.6.2", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "grunt-jscrambler@8.5.2", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "package", value: "jscrambler-metro-plugin@9.0.2", severity: "critical", confidence: 1.0, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "hash", value: "a742de963f14a92d24ebcbc7b44ac867e23a20d31d1b0094a13a4f83287f4e60", severity: "critical", confidence: 0.85, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "hash", value: "a41a523ef9517aab37ed6eea0ec881821bdcb7aefcb5c5f603adc7907f868c86", severity: "critical", confidence: 0.85, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "hash", value: "fbbcf4d8f98168f78f5c0c47a9ae56d59ec8ac84a7c9ca6b797fedfb8d62d2bd", severity: "critical", confidence: 0.85, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "hash", value: "b7ca95d1b23c8e67416a25cedf741de0917c2096bbc9d24649eea7853d054903", severity: "critical", confidence: 0.85, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
+  { type: "hash", value: "c8fd47d36bdf7c825378593ab82ed8c24d1dc52e26b507812393e24e1d5201fd", severity: "critical", confidence: 0.85, family: "Rust Infostealer", campaign: "jscrambler npm compromise", firstSeen: "2026-07-11" },
 
   // Injective Labs SDK npm compromise (The Hacker News / BleepingComputer / Socket / Aikido, July 8-10, 2026)
   // Attacker abused the Injective Labs SDK GitHub repo + its OIDC trusted-publisher pipeline to publish
@@ -761,6 +776,28 @@ const BUNDLED_FEED: FeedIOC[] = [
   // the attacker's account path is ingested - the bare domain is deliberately NOT added to
   // KNOWN_C2_DOMAINS (it would flag every project that legitimately hosts code there).
   { type: "url", value: "git.disroot.org/git-ecosystem", severity: "critical", confidence: 0.9, family: "SleeperGem", campaign: "SleeperGem", firstSeen: "2026-07-18" },
+
+  // cPanel/WHM GitHub Actions abuse campaign (Socket, July 23, 2026). A legitimate
+  // developer's 10 Packagist packages had malicious dev-main versions injected with
+  // 55-62 GitHub Actions workflow files each; the workflows spin up GitHub-hosted
+  // runners, download an arch-specific Linux payload from the C2, and scan for
+  // cPanel/WHM servers vulnerable to CVE-2026-41940, harvesting credentials/SSH/Git
+  // tokens/cloud keys. Network + hash IOCs only - the maintainer is a victim, so the
+  // account and the bare package names are intentionally NOT ingested. The dnshook.site
+  // entry is a specific UUID subdomain used for DNS-callback beaconing, not the apex.
+  { type: "ip", value: "43.228.157.68", severity: "critical", confidence: 0.95, family: "CPanelScanner", campaign: "cPanel/WHM GitHub Actions abuse", firstSeen: "2026-07-23" },
+  { type: "domain", value: "f5b0b742-240a-4811-8a5b-b0ba6060685d.dnshook.site", severity: "critical", confidence: 0.9, family: "CPanelScanner", campaign: "cPanel/WHM GitHub Actions abuse", firstSeen: "2026-07-23" },
+  { type: "hash", value: "22f721fd3a81d2e27cbf90a122bb977f630c50b79daa98350f0e57b04dfa81f1", severity: "critical", confidence: 0.95, family: "CPanelScanner", campaign: "cPanel/WHM GitHub Actions abuse", firstSeen: "2026-07-23" },
+
+  // Apex macOS infostealer npm packages (safedep / The Hacker News, July 22, 2026).
+  // A postinstall dropper installs an AMOS-family macOS infostealer (AppleScript via
+  // osascript; harvests browser creds, 20+ crypto wallets, SSH keys, AWS/Kubernetes
+  // creds) while installing a working forked coding agent as cover. npm removed
+  // @apexfdn/apex; the operator re-published the same payload as @copilot-mcp/apex
+  // ~11h later and churned 20+ versions in 8h. Both are fully malicious with no
+  // legitimate history - bare-name IOCs (any version); block the name, not a range.
+  { type: "package", value: "@apexfdn/apex", severity: "critical", confidence: 0.95, family: "AMOS Stealer", campaign: "Apex macOS infostealer", firstSeen: "2026-07-22" },
+  { type: "package", value: "@copilot-mcp/apex", severity: "critical", confidence: 0.95, family: "AMOS Stealer", campaign: "Apex macOS infostealer", firstSeen: "2026-07-22" },
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download
