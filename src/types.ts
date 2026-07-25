@@ -415,6 +415,16 @@ export interface PatternEntry {
   notFilePattern?: RegExp;
   /** If true, skip files that look like test/spec/mock/fixture files */
   notTestFile?: boolean;
+  /**
+   * Optional VALUE-level guard (v5.18). The regex decides the SHAPE of a match
+   * (`token = "..."`); this decides whether the captured VALUE is actually
+   * dangerous. Return false to drop the match. Without it a rule can only ever
+   * assert "something of this shape exists here", which is how
+   * IAC_HARDCODED_SECRET came to flag `password = "${REDIS_PASSWORD}"`.
+   */
+  valueFilter?: (value: string) => boolean;
+  /** Capture group handed to valueFilter (default 1). */
+  valueGroup?: number;
 }
 
 export interface WatchlistEntry {

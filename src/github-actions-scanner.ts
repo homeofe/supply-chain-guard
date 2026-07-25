@@ -9,7 +9,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, Severity } from "./types.js";
-import { parseWorkflow, type WfStep, type WfJob } from "./workflow-ast.js";
+import {
+  parseWorkflow,
+  classifyWorkflowLines,
+  type WfStep,
+  type WfJob,
+} from "./workflow-ast.js";
 
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
@@ -116,28 +121,15 @@ const WORKFLOW_PATTERNS: Array<{
   },
 
   // ── 2025 attack patterns (PPE, OIDC theft, cache/artifact poisoning) ──
-
-  // Poisoned Pipeline Execution: pull_request_target + unsanitized PR context in run:
-  {
-    pattern: "\\$\\{\\{\\s*github\\.event\\.pull_request\\.",
-    description:
-      "Unsanitized pull_request event context used in workflow step — potential Poisoned Pipeline Execution (PPE). " +
-      "An attacker-controlled PR can inject arbitrary commands.",
-    severity: "critical",
-    rule: "GHA_PPE_PULL_TARGET",
-  },
-  // Script injection via user-controlled context (issue/PR body, PR/commit title,
-  // comment body, review body, discussion, PR head ref/label). v5.7 broadened the
-  // object list (added comment/review/discussion) and the field list (added
-  // label/ref/description) - the pre-v5.7 regex missed the issue_comment vector
-  // (github.event.comment.body) entirely.
-  {
-    pattern: "\\$\\{\\{\\s*github\\.event\\.(?:issue|pull_request|head_commit|commits?|comment|review|discussion)\\.[^}]*(?:body|title|message|name)\\s*\\}\\}",
-    description:
-      "User-controlled GitHub event data (issue/PR body, comment body, PR title, commit message) injected directly into a run: step — GitHub Actions Script Injection risk",
-    severity: "critical",
-    rule: "GHA_SCRIPT_INJECTION",
-  },
+  //
+  // GHA_PPE_PULL_TARGET and GHA_SCRIPT_INJECTION used to live here as bare
+  // line regexes. They are now context-aware rules in
+  // checkInterpolationSinkRules() below: a plain regex over the whole file
+  // cannot tell an interpolation that lands in a `run:` body (the attack) from
+  // one that lands in an `env:` value (GitHub's official mitigation for that
+  // very attack), and PPE additionally depends on which trigger fires the
+  // workflow.
+  //
   // OIDC token theft: id-token:write permission combined with outbound network call
   {
     pattern: "id-token:\\s*write",
@@ -267,8 +259,12 @@ function scanWorkflowContent(
   // Check action references (uses: directives)
   checkActionReferences(lines, relativePath, findings);
 
-  // Check for secrets sent to external URLs across multi-line run blocks
-  checkSecretsExfiltration(lines, relativePath, findings);
+  // Check for secrets sent to external URLs from within a single step
+  checkSecretsExfiltration(content, relativePath, findings);
+
+  // v5.18: PPE / script-injection, scoped to lines that are actually executed
+  // and (for PPE) to workflows whose trigger grants the elevated context.
+  checkInterpolationSinkRules(content, relativePath, findings);
 
   // v5.7: structural, trigger-aware rules (Cordyceps class) — these need to
   // know which event fires the workflow and what its token can do, which the
@@ -608,6 +604,154 @@ function checkWorkflowAstRules(
   }
 }
 
+// ── v5.18 context-aware interpolation-sink rules ────────────────────────────
+
+/** Any `github.event.pull_request.*` expression (the PPE source). */
+const PPE_CTX_RE = /\$\{\{\s*github\.event\.pull_request\./;
+
+/**
+ * User-controlled event text: issue/PR body or title, comment/review body,
+ * commit message, discussion title. This is the script-injection SOURCE - the
+ * value an attacker writes and GitHub pastes verbatim into the program text.
+ */
+const SCRIPT_INJECTION_CTX_RE =
+  /\$\{\{\s*github\.event\.(?:issue|pull_request|head_commit|commits?|comment|review|discussion)\.[^}]*(?:body|title|message|name)\s*\}\}/;
+
+/** `${{ env.NAME }}` - the env context is ALSO template-interpolated. */
+const ENV_CTX_RE = /\$\{\{\s*env\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g;
+
+/** `KEY: <value>` inside an `env:` mapping. */
+const ENV_ASSIGN_RE = /^\s*(?:-\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/;
+
+/**
+ * Triggers whose caller context is unknowable from this file alone. A reusable
+ * workflow is invoked BY another workflow, so its effective privilege is the
+ * caller's - possibly pull_request_target. Treated as privileged (fail closed).
+ */
+const CALLER_CONTEXT_TRIGGERS = ["workflow_call"];
+
+/**
+ * PPE (GHA_PPE_PULL_TARGET) and script injection (GHA_SCRIPT_INJECTION).
+ *
+ * Both rules ask the same question - "does attacker-controlled event data reach
+ * a place where it becomes code?" - and both were previously answered by a bare
+ * regex over the entire file. That over-matched in two independent ways:
+ *
+ *   1. It fired on `env: PR_TITLE: ${{ github.event.pull_request.title }}`,
+ *      which is the mitigation GitHub documents (and that this scanner's own
+ *      GHA_SCRIPT_INJECTION recommendation tells users to apply).
+ *   2. PPE fired regardless of trigger. Interpolating PR context in a plain
+ *      `pull_request` workflow runs in the FORK's context with a read-only
+ *      token and no secrets - the attacker gains nothing they did not already
+ *      have. PPE is about the ELEVATED context (pull_request_target /
+ *      workflow_run / issue_comment), where the same expression executes with
+ *      the base repository's secrets.
+ *
+ * Both rules now only consider `exec` lines (a `run:` shell body or a
+ * github-script `script:` body), and PPE additionally requires an elevated
+ * trigger. Indirection through `env:` is still caught: a value moved into an
+ * env var and then read back with `${{ env.NAME }}` (rather than the shell's
+ * `$NAME`) is interpolated into the program text just the same, and is
+ * reported at the line that reads it back.
+ */
+function checkInterpolationSinkRules(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  const lines = content.replace(/\r/g, "").split("\n");
+
+  let regions;
+  try {
+    regions = classifyWorkflowLines(content);
+  } catch {
+    return;
+  }
+
+  // Env vars whose value carries untrusted event data. Reading one back with
+  // ${{ env.X }} re-introduces the injection the env: hop was meant to stop.
+  const taintedEnv = { ppe: new Set<string>(), injection: new Set<string>() };
+  for (let i = 0; i < lines.length; i++) {
+    if (regions[i] !== "env") continue;
+    const m = ENV_ASSIGN_RE.exec(stripYamlComment(lines[i] ?? ""));
+    if (!m) continue;
+    if (PPE_CTX_RE.test(m[2]!)) taintedEnv.ppe.add(m[1]!);
+    if (SCRIPT_INJECTION_CTX_RE.test(m[2]!)) taintedEnv.injection.add(m[1]!);
+  }
+
+  const readsTaintedEnv = (line: string, tainted: Set<string>): boolean => {
+    if (tainted.size === 0) return false;
+    ENV_CTX_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = ENV_CTX_RE.exec(line)) !== null) {
+      if (tainted.has(m[1]!)) return true;
+    }
+    return false;
+  };
+
+  // Trigger model: which context does this workflow's token run in?
+  let triggers: string[] = [];
+  let triggersKnown = false;
+  try {
+    triggers = parseWorkflow(content).triggers;
+    triggersKnown = triggers.length > 0;
+  } catch {
+    triggersKnown = false;
+  }
+  const triggerSet = new Set(triggers);
+  const privileged = PRIVILEGED_TRIGGERS.filter((t) => triggerSet.has(t));
+  const callerContext = CALLER_CONTEXT_TRIGGERS.filter((t) => triggerSet.has(t));
+  // Fail closed: if the triggers cannot be read at all, keep reporting.
+  const ppeApplies = privileged.length > 0 || callerContext.length > 0 || !triggersKnown;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (regions[i] !== "exec") continue;
+    const line = stripYamlComment(lines[i] ?? "");
+    if (!line.trim()) continue;
+
+    if (ppeApplies && (PPE_CTX_RE.test(line) || readsTaintedEnv(line, taintedEnv.ppe))) {
+      const context =
+        privileged.length > 0
+          ? `a ${privileged.join("/")} trigger`
+          : callerContext.length > 0
+            ? `a reusable (${callerContext.join("/")}) workflow whose caller may be privileged`
+            : "a workflow whose triggers could not be determined";
+      findings.push({
+        rule: "GHA_PPE_PULL_TARGET",
+        description:
+          `Unsanitized pull_request event context is interpolated into an executed step of ` +
+          `${context}, which runs in the base repository context with access to secrets and a ` +
+          `read/write GITHUB_TOKEN. An attacker-controlled PR can inject arbitrary commands that ` +
+          `execute with those privileges (Poisoned Pipeline Execution).`,
+        severity: "critical",
+        file: relativePath,
+        line: i + 1,
+        match: truncateMatch(line.trim()),
+        recommendation: getWorkflowRecommendation("GHA_PPE_PULL_TARGET"),
+      });
+    }
+
+    if (
+      SCRIPT_INJECTION_CTX_RE.test(line) ||
+      readsTaintedEnv(line, taintedEnv.injection)
+    ) {
+      findings.push({
+        rule: "GHA_SCRIPT_INJECTION",
+        description:
+          "User-controlled GitHub event data (issue/PR body, comment body, PR title, commit message) " +
+          "is interpolated directly into an executed step (run: shell body or github-script script: body). " +
+          "GitHub substitutes the value into the program text before it runs, so an attacker who writes " +
+          "that text executes commands in your runner (GitHub Actions Script Injection).",
+        severity: "critical",
+        file: relativePath,
+        line: i + 1,
+        match: truncateMatch(line.trim()),
+        recommendation: getWorkflowRecommendation("GHA_SCRIPT_INJECTION"),
+      });
+    }
+  }
+}
+
 /**
  * Check workflow content against known dangerous patterns.
  */
@@ -763,119 +907,122 @@ function checkActionReferences(
   }
 }
 
+/** A secret expression: `${{ secrets.NAME }}`. */
+const SECRET_EXPR_RE = /\$\{\{\s*secrets\.\w+\s*\}\}/;
+
 /**
- * Check for secrets being sent to external URLs in run blocks.
- * Looks for multi-line run: blocks that contain both secret references
- * and outbound network calls.
+ * Commands that move data off the runner. `git fetch` is excluded: it pulls
+ * source INTO the runner and carries no secret out, and matching the bare word
+ * made the rule point at a repository sync instead of at the actual outbound
+ * call further down the same step.
+ */
+const NETWORK_CMD_RE = /\b(?:curl|wget|nc|ncat|netcat)\b|(?<!git\s)\bfetch\b/;
+
+/**
+ * Check for secrets reaching a network command inside ONE step (v5.18).
+ *
+ * The previous implementation walked the file line by line with a
+ * `envSecretsExported` flag that was file-level and STICKY: once any step
+ * anywhere in the file put a secret in its `env:`, every later run block that
+ * merely mentioned `curl` was treated as holding that secret. Worse, its
+ * run-block exit test (`lineIndent <= runBlockIndent && !/^\s+/`) could only be
+ * satisfied by a column-0 line, so blocks never ended: the whole file collapsed
+ * into one rolling "block" whose start pointer had moved on to the LAST `run:`
+ * seen. The finding therefore named a step that contained neither the secret
+ * nor, in general, the network call.
+ *
+ * The rule is now evaluated per step, using the workflow AST:
+ *   - a secret is in scope for a step if it is referenced in the step's own
+ *     `run`, in the step's `env:`, in the job's `env:`, or in the workflow-level
+ *     `env:` (all three really are in that step's environment), and
+ *   - the network command must appear in THAT step's `run:` body.
+ * The finding points at the line of the network command inside the step.
  */
 function checkSecretsExfiltration(
-  lines: string[],
+  content: string,
   relativePath: string,
   findings: Finding[],
 ): void {
-  const secretPattern = /\$\{\{\s*secrets\.\w+\s*\}\}/;
-  const networkPattern = /\b(?:curl|wget|fetch|nc|ncat|netcat)\b/;
-  const envExportPattern = /^\s*\w+:\s*\$\{\{\s*secrets\.\w+/;
+  const lines = content.replace(/\r/g, "").split("\n");
 
-  // Track env: blocks that export secrets and subsequent run: blocks
-  let inRunBlock = false;
-  let runBlockStart = -1;
-  let runBlockHasSecrets = false;
-  let runBlockHasNetwork = false;
-  let runBlockIndent = 0;
-
-  // Also track env-exported secrets at step/job level
-  let envSecretsExported = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-
-    // Check env: blocks for secret exports
-    if (envExportPattern.test(line)) {
-      envSecretsExported = true;
-    }
-
-    // Detect start of run: block
-    const runMatch = /^(\s*)(?:-\s+)?run:\s*[|>]?\s*$/.exec(line);
-    const inlineRunMatch = /^(\s*)(?:-\s+)?run:\s+(.+)$/.exec(line);
-
-    if (runMatch) {
-      inRunBlock = true;
-      runBlockStart = i;
-      runBlockIndent = (runMatch[1] ?? "").length;
-      runBlockHasSecrets = false;
-      runBlockHasNetwork = false;
-      continue;
-    }
-
-    if (inlineRunMatch) {
-      // Single-line run: - already caught by WORKFLOW_PATTERNS
-      inRunBlock = false;
-      continue;
-    }
-
-    if (inRunBlock) {
-      // Check if we've left the block (dedented or empty non-continuation)
-      const lineIndent = line.length - line.trimStart().length;
-      if (line.trim().length > 0 && lineIndent <= runBlockIndent && !/^\s+/.test(line)) {
-        // Exited run block
-        if (runBlockHasSecrets && runBlockHasNetwork) {
-          // Already caught by line-level patterns if on same line;
-          // this catches split across lines
-          const alreadyFound = findings.some(
-            (f) =>
-              (f.rule === "GHA_SECRET_CURL" || f.rule === "GHA_SECRET_WGET") &&
-              f.file === relativePath &&
-              f.line !== undefined &&
-              f.line >= runBlockStart + 1 &&
-              f.line <= i,
-          );
-          if (!alreadyFound) {
-            findings.push({
-              rule: "GHA_SECRET_EXFIL_MULTILINE",
-              description: "Secrets and network commands found in the same run block (potential exfiltration across multiple lines)",
-              severity: "high",
-              file: relativePath,
-              line: runBlockStart + 1,
-              recommendation:
-                "Review this run block. Secrets combined with network commands in the same step can indicate credential exfiltration.",
-            });
-          }
-        }
-        inRunBlock = false;
-      }
-
-      if (inRunBlock) {
-        if (secretPattern.test(line)) runBlockHasSecrets = true;
-        if (networkPattern.test(line)) runBlockHasNetwork = true;
-
-        // Also check if env-exported secrets are used with network
-        if (envSecretsExported && networkPattern.test(line)) {
-          runBlockHasSecrets = true;
-        }
-      }
-    }
+  let ast;
+  try {
+    ast = parseWorkflow(content);
+  } catch {
+    ast = undefined;
   }
 
-  // Handle case where run block extends to end of file
-  if (inRunBlock && runBlockHasSecrets && runBlockHasNetwork) {
+  const envHasSecret = (env?: Record<string, string>): boolean =>
+    env !== undefined && Object.values(env).some((v) => SECRET_EXPR_RE.test(v));
+
+  // Fail closed: a file this parser cannot break into steps still gets the old
+  // coarse file-level check (reported at line 1), so nothing goes undetected.
+  const steps = ast?.jobs.flatMap((job) => job.steps.map((step) => ({ step, job })));
+  if (!steps || steps.length === 0) {
+    if (SECRET_EXPR_RE.test(content) && NETWORK_CMD_RE.test(content)) {
+      pushExfilFinding(findings, relativePath, 1, true);
+    }
+    return;
+  }
+
+  const workflowEnvSecret = envHasSecret(ast?.env);
+  const stepStartLines = steps.map(({ step }) => step.line);
+
+  for (let s = 0; s < steps.length; s++) {
+    const { step, job } = steps[s]!;
+    if (!step.run || !NETWORK_CMD_RE.test(step.run)) continue;
+
+    const secretInScope =
+      SECRET_EXPR_RE.test(step.run) ||
+      envHasSecret(step.env) ||
+      envHasSecret(job.env) ||
+      workflowEnvSecret;
+    if (!secretInScope) continue;
+
+    // Point at the network command inside this step, not at the step header.
+    const stepEnd = stepStartLines[s + 1] ?? lines.length + 1;
+    let line = step.line;
+    for (let i = step.line - 1; i < stepEnd - 1 && i < lines.length; i++) {
+      if (NETWORK_CMD_RE.test(stripYamlComment(lines[i] ?? ""))) {
+        line = i + 1;
+        break;
+      }
+    }
+
+    // Skip when a line-level rule already reported this exact step.
     const alreadyFound = findings.some(
       (f) =>
         (f.rule === "GHA_SECRET_CURL" || f.rule === "GHA_SECRET_WGET") &&
-        f.file === relativePath,
+        f.file === relativePath &&
+        f.line !== undefined &&
+        f.line >= step.line &&
+        f.line < stepEnd,
     );
-    if (!alreadyFound) {
-      findings.push({
-        rule: "GHA_SECRET_EXFIL_MULTILINE",
-        description: "Secrets and network commands found in the same run block (potential exfiltration across multiple lines)",
-        severity: "high",
-        file: relativePath,
-        line: runBlockStart + 1,
-        recommendation:
-          "Review this run block. Secrets combined with network commands in the same step can indicate credential exfiltration.",
-      });
-    }
+    if (alreadyFound) continue;
+
+    pushExfilFinding(findings, relativePath, line, false);
   }
+}
+
+/** Emit a GHA_SECRET_EXFIL_MULTILINE finding. */
+function pushExfilFinding(
+  findings: Finding[],
+  relativePath: string,
+  line: number,
+  fileLevel: boolean,
+): void {
+  findings.push({
+    rule: "GHA_SECRET_EXFIL_MULTILINE",
+    description: fileLevel
+      ? "Secrets and network commands found in a workflow whose steps could not be parsed (potential exfiltration)"
+      : "A secret is in scope for the same step that runs a network command (potential exfiltration across multiple lines)",
+    severity: "high",
+    file: relativePath,
+    line,
+    recommendation:
+      "Review this step. A secret that is in scope for a step which also makes outbound network calls can be exfiltrated. " +
+      "Scope the secret to the step that needs it and keep network calls in a step without secrets.",
+  });
 }
 
 /**

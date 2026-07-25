@@ -11,10 +11,10 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
-import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
+import type { Finding, PatternEntry, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { extractZip } from "./archive-extractor.js";
-import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
+import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding, isPatternMatchAccepted } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
 
@@ -80,12 +80,7 @@ const SUSPICIOUS_ACTIVATION_EVENTS = [
 ];
 
 // Suspicious node APIs frequently abused in malicious extensions
-const EXTENSION_DANGER_PATTERNS: Array<{
-  pattern: string;
-  description: string;
-  severity: Severity;
-  rule: string;
-}> = [
+const EXTENSION_DANGER_PATTERNS: Array<Omit<PatternEntry, "name">> = [
   {
     pattern: "\\beval\\s*\\(",
     description: "eval() call detected in extension code",
@@ -143,12 +138,7 @@ const EXTENSION_DANGER_PATTERNS: Array<{
 ];
 
 // Patterns indicating obfuscated code
-const OBFUSCATION_PATTERNS: Array<{
-  pattern: string;
-  description: string;
-  severity: Severity;
-  rule: string;
-}> = [
+const OBFUSCATION_PATTERNS: Array<Omit<PatternEntry, "name">> = [
   {
     pattern: "(?:_0x[0-9a-fA-F]{4,}\\s*[=\\[,]\\s*){3,}",
     description: "JavaScript obfuscator variable naming pattern detected",
@@ -553,6 +543,9 @@ function checkVscodePatterns(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -580,6 +573,9 @@ function checkObfuscationPatterns(
     const regex = new RegExp(pattern.pattern, "g");
     const match = regex.exec(content);
     if (match) {
+      regex.lastIndex = 0;
+      // v5.18: value-level guard (see PatternEntry.valueFilter)
+      if (!isPatternMatchAccepted(pattern, match)) continue;
       // Find the line number
       const beforeMatch = content.substring(0, match.index);
       const lineNumber = beforeMatch.split("\n").length;
@@ -614,6 +610,9 @@ function checkGeneralPatterns(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,

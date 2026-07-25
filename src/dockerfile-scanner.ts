@@ -8,6 +8,66 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
+import { isPatternMatchAccepted } from "./patterns.js";
+
+// ---------------------------------------------------------------------------
+// Global npm install: pinned or not?
+// ---------------------------------------------------------------------------
+
+/** npm flags that carry no package name. */
+const NPM_FLAG_RE = /^-/;
+
+/** Shell operators that end the npm command (`&& npm cache clean --force`). */
+const SHELL_SEPARATOR_RE = /^(?:&&|\|\||;|\||&|\\)$/;
+
+/**
+ * A local artifact rather than a registry package: a path, a packed tarball, or
+ * an explicit `file:` specifier. Installing your own build output globally is
+ * not the mutable-registry-dependency this rule is about.
+ */
+const LOCAL_ARTIFACT_RE = /^(?:file:|\.{0,2}[\\/]|[A-Za-z]:[\\/])|\.(?:tgz|tar\.gz)$/;
+
+/**
+ * An EXACT version selector: `9`, `11.18.0`, `1.2.3-rc.1`, or a `@scope/name`
+ * spec ending in one. Range operators (`^`, `~`, `>`, `*`, `x`) and dist-tags
+ * (`latest`, `next`, `beta`) are NOT exact - both can resolve to a different
+ * package on the next build, which is exactly what this rule warns about.
+ */
+function isPinnedSpec(spec: string): boolean {
+  if (LOCAL_ARTIFACT_RE.test(spec)) return true;
+  // Ignore a leading scope "@" so @scope/name@1.2.3 splits on the right "@".
+  const at = spec.lastIndexOf("@");
+  if (at <= 0) return false; // no version at all: `npm i -g pnpm`
+  const version = spec.slice(at + 1);
+  return /^\d+(?:\.\d+)*(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
+}
+
+/**
+ * True when a global npm install leaves at least one package UNPINNED.
+ *
+ * The rule's own recommendation has always been "pin the global package
+ * version", yet the pattern fired on `RUN npm install -g pnpm@9` and
+ * `RUN npm install -g npm@11.18.0` - installs that already do exactly what the
+ * recommendation asks (27 such findings in one Elvatis repo alone). Matching
+ * the command shape says nothing about the risk; the package SPECS do.
+ */
+export function isUnpinnedGlobalInstall(specs: string): boolean {
+  const tokens = specs
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t !== "");
+
+  const packages: string[] = [];
+  for (const token of tokens) {
+    if (SHELL_SEPARATOR_RE.test(token)) break; // rest belongs to another command
+    if (NPM_FLAG_RE.test(token)) continue;
+    packages.push(token);
+  }
+
+  // No parseable package spec (e.g. a shell variable): keep reporting.
+  if (packages.length === 0) return true;
+  return packages.some((p) => !isPinnedSpec(p));
+}
 
 // ---------------------------------------------------------------------------
 // Dockerfile patterns
@@ -61,12 +121,17 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
   },
   {
     name: "docker-npm-global",
+    // Group 1 is everything after the global flag; isUnpinnedGlobalInstall()
+    // decides whether those package specs are actually unpinned (v5.18).
     pattern:
-      "RUN\\s+npm\\s+install\\s+(?:-g|--global)\\s+",
+      "RUN\\s+npm\\s+(?:install|i|add)\\s+(?:-g|--global|--location=global)\\s+(.+)$",
     description:
-      "Global npm install in Dockerfile. Packages installed globally may bypass lockfile integrity.",
+      "Unpinned global npm install in Dockerfile. Without a version the image installs " +
+      "whatever the registry serves at build time, so the same Dockerfile can produce a " +
+      "different (or compromised) package on the next build.",
     severity: "medium",
     rule: "DOCKER_NPM_GLOBAL",
+    valueFilter: isUnpinnedGlobalInstall,
   },
   {
     name: "docker-untrusted-registry",
@@ -130,6 +195,9 @@ export function scanDockerFile(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -188,7 +256,9 @@ function getDockerRecommendation(rule: string): string {
     DOCKER_SECRETS_BUILD:
       "Use Docker BuildKit secrets (--mount=type=secret) or runtime environment variables instead of hardcoding secrets.",
     DOCKER_NPM_GLOBAL:
-      "Use local installs with npx, or pin the global package version and verify its integrity.",
+      "Pin every globally installed package to an exact version (npm install -g pnpm@9.15.0), " +
+      "or install locally with npx. A bare name, a dist-tag (@latest) and a range (@^9) all resolve " +
+      "at build time, so the image is not reproducible and a hijacked release lands silently.",
     DOCKER_UNTRUSTED_REGISTRY:
       "Use images from trusted registries (Docker Hub, GHCR, GCR, ECR) or verify the registry's authenticity.",
     DOCKER_SUID:

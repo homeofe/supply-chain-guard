@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
+import { isPatternMatchAccepted } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Config patterns
@@ -111,6 +112,9 @@ export function scanConfigFile(
         continue; // skip comments
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,

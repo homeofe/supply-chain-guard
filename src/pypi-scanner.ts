@@ -22,6 +22,7 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
+  isPatternMatchAccepted,
 } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -309,6 +310,9 @@ export function scanExtractedFiles(
       for (let i = 0; i < lines.length; i++) {
         const match = regex.exec(lines[i] ?? "");
         if (match) {
+          regex.lastIndex = 0;
+          // v5.18: value-level guard (see PatternEntry.valueFilter)
+          if (!isPatternMatchAccepted(pattern, match)) continue;
           findings.push({
             rule: pattern.rule,
             description: pattern.description,
@@ -330,6 +334,9 @@ export function scanExtractedFiles(
         for (let i = 0; i < lines.length; i++) {
           const match = regex.exec(lines[i] ?? "");
           if (match) {
+            regex.lastIndex = 0;
+            // v5.18: value-level guard (see PatternEntry.valueFilter)
+            if (!isPatternMatchAccepted(pattern, match)) continue;
             // Boost severity if found in setup.py
             const severity =
               isSetupFile && pattern.severity === "medium"
@@ -360,6 +367,9 @@ export function scanExtractedFiles(
           for (let i = 0; i < lines.length; i++) {
             const match = regex.exec(lines[i] ?? "");
             if (match) {
+              regex.lastIndex = 0;
+              // v5.18: value-level guard (see PatternEntry.valueFilter)
+              if (!isPatternMatchAccepted(pattern, match)) continue;
               findings.push({
                 rule: pattern.rule,
                 description: pattern.description,

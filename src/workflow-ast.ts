@@ -48,6 +48,8 @@ export interface WfJob {
   line: number;
   permissions: WfPermissions;
   steps: WfStep[];
+  /** job-level `env:` map (in scope for EVERY step of this job) */
+  env?: Record<string, string>;
 }
 
 export interface WorkflowAst {
@@ -60,6 +62,8 @@ export interface WorkflowAst {
   /** top-level token permissions */
   permissions: WfPermissions;
   jobs: WfJob[];
+  /** workflow-level `env:` map (in scope for every step of every job) */
+  env?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -369,6 +373,8 @@ function parseJob(
       job.permissions = parsePermissions(lines, j, jobChildIndent, kv.value);
     } else if (kv.key === "steps") {
       job.steps = parseSteps(lines, j, jobChildIndent, inner);
+    } else if (kv.key === "env") {
+      job.env = parseEnvBlock(lines, j, jobChildIndent, inner);
     }
   }
   return job;
@@ -571,8 +577,103 @@ export function parseWorkflow(content: string): WorkflowAst {
       case "jobs":
         ast.jobs = parseJobs(lines, i, inner);
         break;
+      case "env":
+        ast.env = parseEnvBlock(lines, i, 0, inner);
+        break;
     }
   }
 
   return ast;
+}
+
+// ---------------------------------------------------------------------------
+// Line region classification (v5.18)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a workflow line is, for rules that care about WHERE a value lands:
+ *
+ * - `exec`  - the line is part of a `run:` body (shell) or a `script:` body
+ *             (JavaScript, actions/github-script). An expression interpolated
+ *             here is substituted into the program text BEFORE it runs, so
+ *             attacker-controlled text becomes code.
+ * - `env`   - the line is part of an `env:` mapping. GitHub sets these as
+ *             process environment variables, so the value is data, never code.
+ *             This is the official mitigation for script injection.
+ * - `other` - structural YAML: `uses:`, `if:`, `with:` inputs, keys, lists.
+ */
+export type WfRegion = "exec" | "env" | "other";
+
+/** Keys whose value is EXECUTED: shell for `run:`, JavaScript for `script:`. */
+const EXEC_KEYS = new Set(["run", "script"]);
+
+/**
+ * Classify every line of a workflow file into an `exec` / `env` / `other`
+ * region (v5.18).
+ *
+ * Rules that used to match a bare regex over the whole file cannot tell the
+ * difference between the ATTACK
+ *
+ *     run: echo "${{ github.event.issue.body }}"      # injected into the shell
+ *
+ * and GitHub's own documented MITIGATION for that exact attack
+ *
+ *     env:
+ *       BODY: ${{ github.event.issue.body }}         # passed as data
+ *     run: echo "$BODY"
+ *
+ * so they flagged both. This classifier is what lets them tell the two apart
+ * while keeping exact line numbers (a full AST walk loses them).
+ *
+ * A block scalar body is treated as opaque: shell text that happens to look
+ * like YAML (`env:`, `- foo:`) never re-opens a structural region.
+ */
+export function classifyWorkflowLines(content: string): WfRegion[] {
+  const lines = content.replace(/\r/g, "").split("\n");
+  const regions: WfRegion[] = new Array<WfRegion>(lines.length).fill("other");
+  // Open block regions, innermost last. A line belongs to the innermost region
+  // whose header indent is strictly smaller than the line's own indent.
+  const stack: Array<{ region: WfRegion; indent: number }> = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]!;
+    if (raw.trim() === "") continue; // blank lines: no region, no dedent
+    const indent = indentOf(raw);
+
+    while (stack.length > 0 && indent <= stack[stack.length - 1]!.indent) stack.pop();
+    const open = stack[stack.length - 1];
+
+    if (open?.region === "exec") {
+      // Inside a run:/script: block scalar - opaque, all of it is executed.
+      regions[i] = "exec";
+      continue;
+    }
+    regions[i] = open?.region ?? "other";
+
+    const text = stripComment(raw);
+    const rest = text.slice(indent);
+    const m = /^(-\s+)?([^\s:][^:]*):(?:\s+(.*))?$/.exec(rest);
+    if (!m) continue;
+
+    // A leading "- " shifts the key's own column (`- run: |` opens at +2).
+    const keyIndent = indent + (m[1]?.length ?? 0);
+    const key = stripQuotes(m[2]!.trim());
+    const value = (m[3] ?? "").trim();
+
+    if (EXEC_KEYS.has(key)) {
+      // Block scalar header, or an inline command (whose plain-scalar
+      // continuation lines are executed too).
+      if (value !== "" && !/^[|>][0-9+-]*$/.test(value)) regions[i] = "exec";
+      stack.push({ region: "exec", indent: keyIndent });
+    } else if (key === "env") {
+      if (value === "") stack.push({ region: "env", indent: keyIndent });
+      else regions[i] = "env"; // inline flow map: env: { A: "..." }
+    } else if (value === "") {
+      // Any other block key (with:, jobs:, steps:, permissions:, ...) opens a
+      // plain region so an enclosing env: does not leak into its children.
+      stack.push({ region: "other", indent: keyIndent });
+    }
+  }
+
+  return regions;
 }

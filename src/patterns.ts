@@ -26,6 +26,83 @@ const SCANNER_SRC_OR_DOCS = new RegExp(
 );
 
 // ---------------------------------------------------------------------------
+// Value inspection (v5.18)
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply a pattern's optional VALUE-level guard to a regex match.
+ * Returns true when the match should be reported.
+ *
+ * Every loop that iterates PatternEntry[] calls this, so a pattern's
+ * `valueFilter` can never be silently skipped by one scanner while being
+ * honoured by another.
+ */
+export function isPatternMatchAccepted(
+  pattern: Pick<PatternEntry, "valueFilter" | "valueGroup">,
+  match: RegExpMatchArray,
+): boolean {
+  if (!pattern.valueFilter) return true;
+  return pattern.valueFilter(match[pattern.valueGroup ?? 1] ?? "");
+}
+
+/**
+ * Values that are references to a secret rather than a secret: shell and
+ * make variables (`$FOO`, `${FOO}`), command substitution (`$(...)`, backticks),
+ * template expressions (`${{ ... }}`, `{{ ... }}`, `<%= ... %>`, `#{...}`),
+ * and Windows-style `%FOO%`.
+ */
+const VALUE_IS_REFERENCE =
+  /\$\{|\$\(|\$[A-Za-z_]|`|\{\{|<%|#\{|%[A-Za-z_][A-Za-z0-9_]*%/;
+
+/**
+ * A namespace/prefix template rather than a complete credential:
+ * `trust_pat_`, `sk_live_`, `ghp_`. A real credential never ends on its
+ * separator - the random part is missing because it is added at runtime.
+ */
+const VALUE_IS_PREFIX_TEMPLATE = /[_\-:./]$/;
+
+/** A filesystem path (e.g. `private_key = "/etc/ssl/private/server.key"`). */
+const VALUE_IS_PATH =
+  /^(?:\.{1,2}[\\/]|~[\\/]|[A-Za-z]:[\\/])|^\/(?:[\w.@+-]+\/)+[\w.@+-]+$/;
+
+/**
+ * Documentation placeholders. Matched as a whole word or as a prefix, never as
+ * a bare substring: `AKIAIOSFODNN7EXAMPLE` has the right shape for a real AWS
+ * key and stays reported.
+ */
+const VALUE_IS_PLACEHOLDER =
+  /^(?:test|example|dummy|sample|placeholder|changeme|change_me|your_|your-|my_|my-|todo|replace|insert|redacted|fake|notreal|mock|xxx|<)|\b(?:example|placeholder|changeme|redacted|dummy|your[_-]\w+|todo|fixme)\b/i;
+
+/** Literals that carry no secret at all. */
+const VALUE_IS_EMPTY_LITERAL = /^(?:null|none|nil|undefined|false|true|0|-)$/i;
+
+/**
+ * True when a quoted value assigned to a secret-looking key is a real embedded
+ * credential rather than a reference, a placeholder or a prefix constant.
+ *
+ * IAC_HARDCODED_SECRET used to match the assignment SHAPE alone
+ * (`token\s*=\s*"<8+ chars>"`) and never looked at the value, so it reported
+ * every one of these as a CRITICAL hardcoded secret:
+ *
+ *     password = "${REDIS_PASSWORD}"          # a shell variable
+ *     password = "$(openssl rand -base64 32)" # a freshly GENERATED password
+ *     const token = "trust_pat_"              # a namespace prefix constant
+ *
+ * The checks below are deliberately structural: each one identifies a value
+ * that CANNOT be a credential, so nothing that could be one is dropped.
+ */
+export function isLikelyRealSecretValue(value: string): boolean {
+  const v = value.trim();
+  if (v.length < 8) return false;
+  if (VALUE_IS_REFERENCE.test(v)) return false;
+  if (VALUE_IS_PREFIX_TEMPLATE.test(v)) return false;
+  if (VALUE_IS_PATH.test(v)) return false;
+  if (VALUE_IS_PLACEHOLDER.test(v)) return false;
+  if (VALUE_IS_EMPTY_LITERAL.test(v)) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // GlassWorm-specific IOCs
 // ---------------------------------------------------------------------------
 
@@ -1587,13 +1664,17 @@ export const IAC_PATTERNS: PatternEntry[] = [
   },
   {
     name: "iac-hardcoded-secret",
+    // The regex finds the assignment SHAPE; isLikelyRealSecretValue() decides
+    // whether the captured VALUE can be a credential at all (v5.18). Group 1 is
+    // the value.
     pattern:
-      '(?:password|secret_key|access_key|api_key|private_key|token)\\s*=\\s*"(?!(?:test|example|dummy|placeholder|your_|TODO|REPLACE|<|changeme|secret_here|xxx|none|null|false|true)[^"]*")[^"]{8,}"',
+      '(?:password|secret_key|access_key|api_key|private_key|token)\\s*=\\s*"(?!(?:test|example|dummy|placeholder|your_|TODO|REPLACE|<|changeme|secret_here|xxx|none|null|false|true)[^"]*")([^"]{8,})"',
     description:
       "Hardcoded secret in IaC configuration file. Secrets should use variables or secret managers.",
     severity: "critical",
     rule: "IAC_HARDCODED_SECRET",
     notTestFile: true,
+    valueFilter: isLikelyRealSecretValue,
   },
   {
     name: "iac-remote-exec",

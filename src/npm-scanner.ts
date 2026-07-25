@@ -19,6 +19,7 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
+  isPatternMatchAccepted,
 } from "./patterns.js";
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 
@@ -486,6 +487,9 @@ export function scanExtractedNpmFiles(
         for (let i = 0; i < lines.length; i++) {
           const match = regex.exec(lines[i] ?? "");
           if (match) {
+            regex.lastIndex = 0;
+            // v5.18: value-level guard (see PatternEntry.valueFilter)
+            if (!isPatternMatchAccepted(pattern, match)) continue;
             findings.push({
               rule: pattern.rule,
               description: pattern.description,

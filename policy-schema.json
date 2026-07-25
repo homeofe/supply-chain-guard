@@ -48,7 +48,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "githubOrgs": {
-          "description": "Trusted GitHub organizations.",
+          "description": "Trusted GitHub action publishers. Suppresses ownership-trust findings (GHA_THIRD_PARTY_ACTION, GHA_TAG_NOT_SHA) for actions owned by these orgs; pinning and known-malicious-SHA rules stay armed.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         }

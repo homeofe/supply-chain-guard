@@ -387,6 +387,11 @@ export function applyPolicy(
   const suppressEntries = policy.suppress ?? [];
   const allowedPackages = new Set(policy.allowlist?.packages ?? []);
   const allowedDomains = policy.allowlist?.domains ?? [];
+  const allowedOrgs = new Set(
+    (policy.allowlist?.githubOrgs ?? [])
+      .map((o) => o.trim().toLowerCase())
+      .filter((o) => o !== ""),
+  );
 
   const result: Finding[] = [];
 
@@ -437,6 +442,20 @@ export function applyPolicy(
       }
     }
 
+    // Allowlisted GitHub orgs: drop OWNERSHIP-trust findings whose action is
+    // owned by a trusted org. Only these two rules are attributable to an
+    // owner, and both already carry the `owner/repo@ref` reference in `match`.
+    // Pinning hygiene and known-malicious-SHA rules are deliberately NOT
+    // covered: trusting an org says who publishes the code, not that any
+    // version of it is safe.
+    if (allowedOrgs.size > 0 && ORG_ATTRIBUTED_RULES.has(finding.rule)) {
+      const owner = extractFindingActionOwner(finding);
+      if (owner && allowedOrgs.has(owner.toLowerCase())) {
+        suppressedCount++;
+        continue;
+      }
+    }
+
     // Severity overrides
     if (severityOverrides[finding.rule]) {
       finding.severity = severityOverrides[finding.rule];
@@ -453,6 +472,26 @@ export function applyPolicy(
   }
 
   return { findings: result, suppressedCount };
+}
+
+/**
+ * Findings that name a GitHub owner and are about TRUST IN THAT OWNER, so an
+ * `allowlist.githubOrgs` entry can legitimately answer them (v5.18). Before
+ * this, the key was parsed, documented and schema-validated but never read by
+ * applyPolicy() - the same silent no-op that v5.3's fail-closed philosophy
+ * exists to prevent (and that `allowlist.domains` was fixed for in v5.13).
+ */
+const ORG_ATTRIBUTED_RULES = new Set(["GHA_THIRD_PARTY_ACTION", "GHA_TAG_NOT_SHA"]);
+
+/**
+ * Extract the GitHub owner from an action-reference finding. Both rules put the
+ * full `owner/repo@ref` in `match`; the description is the fallback.
+ */
+function extractFindingActionOwner(finding: Finding): string | undefined {
+  const ref = finding.match?.trim() ?? finding.description.match(/"([^"]+\/[^"]+)"/)?.[1];
+  if (!ref) return undefined;
+  const owner = ref.split("/")[0]?.trim();
+  return owner && /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(owner) ? owner : undefined;
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   CAMPAIGN_PATTERNS_V2,
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
+  isPatternMatchAccepted,
 } from "./patterns.js";
 import { matchBareNpmIOC } from "./install-guard.js";
 import type { FeedIOC } from "./threat-intel.js";
@@ -234,15 +235,6 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
   const policy = loadPolicyConfig(scanDir);
-  if (policy?.allowlist?.githubOrgs?.length) {
-    // allowlist.githubOrgs is parsed but not yet enforced: repo-trust findings
-    // (REPO_* / trust-signals) do not currently carry the owning org, so there
-    // is nothing to attribute them to. Surface it loudly rather than letting a
-    // configured key silently do nothing (v5.3 fail-closed philosophy).
-    console.error(
-      `supply-chain-guard: policy note: allowlist.githubOrgs (${policy.allowlist.githubOrgs.length} org(s)) is parsed but not yet enforced - repo-trust findings carry no org attribution. Use rules.disable or a suppress entry for REPO_* rules if you need to silence them.`,
-    );
-  }
 
   // Collect files (v4.5: diff mode filters to changed files only)
   let allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
@@ -783,6 +775,9 @@ function checkFilePatterns(
       const line = lines[i];
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -997,6 +992,9 @@ function checkBeaconMinerPatterns(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -1171,6 +1169,9 @@ function checkBuildToolPatterns(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -1259,6 +1260,9 @@ function checkMonorepoPatterns(
       const line = lines[i] ?? "";
       const match = regex.exec(line);
       if (match) {
+        regex.lastIndex = 0;
+        // v5.18: value-level guard (see PatternEntry.valueFilter)
+        if (!isPatternMatchAccepted(pattern, match)) continue;
         findings.push({
           rule: pattern.rule,
           description: pattern.description,

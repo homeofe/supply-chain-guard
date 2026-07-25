@@ -1,3 +1,44 @@
+> Note (2026-07-25, claude-opus-5): Rule-precision pass after a fleet audit showed that
+> most of the reported risk across 13 scanned repositories came from rules matching a
+> SHAPE without context or value. Fixed five, each with a true-positive AND a
+> false-positive test (src/__tests__/rule-precision.test.ts, 34 tests):
+> (1) GHA_SECRET_EXFIL_MULTILINE had a file-level sticky `envSecretsExported` flag and a
+> run-block exit test that only a column-0 line could satisfy, so one step's env secret
+> made every later curl look like exfiltration and the finding named the wrong block. Now
+> per step via the AST (step env + job env + workflow env + the step's own run), reporting
+> the line of the network command; `git fetch` no longer counts as egress. Files the
+> parser cannot split into steps keep the old file-level check (fail closed).
+> (2)+(3) GHA_PPE_PULL_TARGET and GHA_SCRIPT_INJECTION were bare file regexes that fired
+> on `env: PR_TITLE: ${{ github.event.pull_request.title }}`, the mitigation GitHub
+> documents and our own recommendation text prescribes. New classifyWorkflowLines() in
+> workflow-ast.ts labels each line exec / env / structural; both rules consider exec lines
+> only, and PPE additionally requires an elevated trigger (pull_request_target,
+> workflow_run, issue_comment, pull_request_review_comment), a workflow_call whose caller
+> may be privileged, or an unreadable trigger block. The env hop is not a bypass: a value
+> read back with ${{ env.NAME }} inside run: is still reported.
+> (4) IAC_HARDCODED_SECRET never looked at the value, so `password = "${REDIS_PASSWORD}"`,
+> `password = "$(openssl rand -base64 32)"` and `const token = "trust_pat_"` were all
+> CRITICAL. PatternEntry gained an optional `valueFilter` (honoured by every pattern loop);
+> isLikelyRealSecretValue() rejects references, substitutions, prefix templates, paths and
+> placeholders, all structural checks, so a real credential is untouched.
+> (5) DOCKER_NPM_GLOBAL contradicted its own recommendation by firing on `npm install -g
+> pnpm@9` / `npm@11.18.0`; it now parses the specs and reports only unversioned, dist-tag
+> or range installs (and covers `npm i` / `npm add` / `--location=global`). Our own
+> DOCKER_NPM_GLOBAL suppression is therefore deleted from .supply-chain-guard.yml.
+> (6) allowlist.githubOrgs was parsed, documented and schema-validated but never read by
+> applyPolicy(); it now suppresses GHA_THIRD_PARTY_ACTION / GHA_TAG_NOT_SHA for an
+> allowlisted owner, while pinning and known-malicious-SHA rules stay armed.
+> Measured on 7 real Elvatis repos (baseline v5.17.9 binary vs this branch): 128 -> 92
+> findings, 10 -> 1 criticals, with NO finding lost that was not one of the confirmed
+> false-positive classes (the 4 deploy-workflow exfil findings stayed, only moved to the
+> correct line). Self-scan 0 findings / risk 0 with the suppression removed. Full suite
+> 1402 pass; the 14 vscode-scanner "zip" tests still fail locally on Windows (known env
+> gap, green in CI). NOT fixed, reported for a decision: WORKFLOW_SECRET_TO_UPLOAD_PATH
+> (three bare .test(content) regexes, `https?://` anywhere counts as egress),
+> VIDAR_WALLET_THEFT (unbounded `.*` matched "phantom" to "seed" across a 20KB JSON line
+> in a handoff MANIFEST), TYPOSQUAT_LEVENSHTEIN ("pino" vs "sinon", 14x in one repo) and
+> SECRETS_PRIVATE_KEY (PEM header only, fired on a MOCK-KEY-REPLACE-IN-PRODUCTION literal).
+>
 > Note (2026-07-25, claude-opus-4-8): Released v5.17.9 - daily threat-intel refresh
 > (scheduled task). arena.elvatis.com/api/news again carried mostly named campaigns with
 > no atomic IOCs, so - per the task's STEP 1b - enriched from primary vendor write-ups.

@@ -256,8 +256,10 @@ allowlist:
     # host is this domain or a subdomain of it.
     - company.internal
   githubOrgs:
-    # Parsed but not yet enforced: repo-trust findings do not currently carry
-    # the owning org. Use rules.disable or a suppress entry for REPO_* rules.
+    # Trusted action publishers. Suppresses the ownership-trust findings
+    # (GHA_THIRD_PARTY_ACTION, GHA_TAG_NOT_SHA) for actions owned by these
+    # orgs. Pinning and known-malicious-SHA rules stay armed: trusting an org
+    # says who publishes the code, not that every version of it is safe.
     - my-org
 
 # Skip files matched by these path globs (** / * / ?) during the scan.

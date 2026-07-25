@@ -7,6 +7,66 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+**Rule precision: five rules narrowed with context, none weakened**
+
+A fleet audit found that a large share of the reported risk across 13 scanned
+repositories came from rules that matched a SHAPE without ever looking at the
+context or the value. Each fix below narrows a rule by teaching it something it
+did not know before; every rule keeps a true-positive test proving the attack it
+exists for is still detected.
+
+- **`GHA_SECRET_EXFIL_MULTILINE` is now per step.** The old implementation kept
+  a file-level `envSecretsExported` flag that was sticky: once any step put a
+  secret in its `env:`, every later run block that merely mentioned `curl` was
+  reported. Its run-block exit test could only be satisfied by a column-0 line,
+  so blocks never ended and the finding named whichever `run:` came last, not
+  the one holding the secret. Secrets in scope are now resolved per step
+  (step `env:` + job `env:` + workflow `env:` + the step's own `run` body) and
+  the finding points at the network command inside that step. Workflows the
+  parser cannot break into steps still get the old file-level check, so nothing
+  goes undetected.
+- **`GHA_PPE_PULL_TARGET` and `GHA_SCRIPT_INJECTION` are context-aware.** Both
+  were bare regexes over the whole file, so both fired on
+  `env: PR_TITLE: ${{ github.event.pull_request.title }}` - the mitigation
+  GitHub documents and that this scanner's own recommendation text tells users
+  to apply. A new `classifyWorkflowLines()` pass in `workflow-ast.ts` labels
+  every line `exec` (a `run:` or github-script `script:` body), `env:` or
+  structural, and both rules now only consider `exec` lines. PPE additionally
+  requires the elevated context it is named for (`pull_request_target`,
+  `workflow_run`, `issue_comment`, `pull_request_review_comment`), a reusable
+  `workflow_call` whose caller may be privileged, or an unreadable trigger
+  block. Interpolating PR context in a plain `pull_request` job gains an
+  attacker nothing: that job already runs their code with a read-only token and
+  no secrets. The `env:` hop is not a loophole: a value moved into `env:` and
+  read back with `${{ env.NAME }}` (rather than the shell's `$NAME`) is still
+  template-interpolated and is still reported, at the line that reads it back.
+- **`IAC_HARDCODED_SECRET` inspects the value.** It matched
+  `token = "<8+ chars>"` and never asked what the value was, so
+  `password = "${REDIS_PASSWORD}"` (a variable), `password = "$(openssl rand
+  -base64 32)"` (a password being GENERATED) and `const token = "trust_pat_"`
+  (a namespace prefix) were all CRITICAL hardcoded secrets. Patterns can now
+  carry a `valueFilter`, and this rule uses one that rejects variable
+  references, command substitutions, template expressions, prefix templates,
+  filesystem paths and documentation placeholders. The checks are structural:
+  each identifies a value that cannot be a credential, so a real embedded
+  credential is untouched.
+- **`DOCKER_NPM_GLOBAL` fires on unpinned installs only.** Its recommendation
+  said "pin the global package version" while the rule flagged
+  `RUN npm install -g pnpm@9` and `RUN npm install -g npm@11.18.0`, which are
+  pinned (27 such findings in one repository). It now parses the package specs
+  and reports only when one is unversioned, a dist-tag (`@latest`), or a range
+  (`@^9`). The `npm i` / `npm add` / `--location=global` spellings are covered
+  too, and a locally built tarball is not treated as a registry dependency.
+- **`allowlist.githubOrgs` is enforced.** It was parsed, documented and
+  schema-validated but never read by `applyPolicy()` - a security config that
+  silently did nothing. It now suppresses the ownership-trust findings
+  (`GHA_THIRD_PARTY_ACTION`, `GHA_TAG_NOT_SHA`) for actions owned by an
+  allowlisted org. Pinning and known-malicious-SHA rules stay armed: trusting a
+  publisher says who ships the code, not that every version of it is safe.
+- The scanner's own `.supply-chain-guard.yml` drops its `DOCKER_NPM_GLOBAL`
+  suppression. The rule no longer fires on the image's pinned local-tarball
+  install, so the suppression is no longer needed.
+
 ## [5.17.9] - 2026-07-25
 **Threat intel: FakeAgent / SectopRAT fake Claude Desktop malvertising**
 
