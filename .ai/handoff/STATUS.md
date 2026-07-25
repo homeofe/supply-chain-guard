@@ -1,3 +1,14 @@
+> Note (2026-07-25): Released v5.17.10 - rule precision. Five rules that matched a
+> SHAPE without inspecting context or value are now context-aware, and one silently
+> dead config key is implemented. GHA_SECRET_EXFIL_MULTILINE is per-step instead of a
+> sticky file-level flag; GHA_PPE_PULL_TARGET and GHA_SCRIPT_INJECTION consider exec
+> lines only and PPE requires an elevated trigger; IAC_HARDCODED_SECRET inspects the
+> matched value; DOCKER_NPM_GLOBAL reports only unpinned specs; allowlist.githubOrgs is
+> applied to ownership-trust findings (never to known-malicious SHAs). Two pre-existing
+> false negatives were closed as well (the env-hop script-injection evasion, and
+> `npm i -g` / `npm add --global`). Measured across 7 Elvatis repos: 128 -> 92 findings,
+> 10 -> 1 criticals, with nothing lost outside the confirmed false-positive classes.
+
 > Note (2026-07-25, claude-opus-5): Rule-precision pass after a fleet audit showed that
 > most of the reported risk across 13 scanned repositories came from rules matching a
 > SHAPE without context or value. Fixed five, each with a true-positive AND a
