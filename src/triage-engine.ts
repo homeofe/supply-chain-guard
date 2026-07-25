@@ -8,8 +8,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, TriageDecision, FindingStatus } from "./types.js";
+import { STATE_DIR, ensureStateDir } from "./state-dir.js";
 
-const TRIAGE_DIR = ".scg-history";
+const TRIAGE_DIR = STATE_DIR;
 const TRIAGE_FILE = "triage-decisions.json";
 
 /**
@@ -33,8 +34,7 @@ export function saveTriageDecisions(
   dir: string,
   decisions: TriageDecision[],
 ): void {
-  const triageDir = path.join(dir, TRIAGE_DIR);
-  fs.mkdirSync(triageDir, { recursive: true });
+  const triageDir = ensureStateDir(dir);
   fs.writeFileSync(
     path.join(triageDir, TRIAGE_FILE),
     JSON.stringify(decisions, null, 2),

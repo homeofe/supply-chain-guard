@@ -7,7 +7,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
-## [5.18.0] - 2026-07-25
+## [5.18.1] - 2026-07-25
+
+### Fixed
+
+- **The scanner's state directory now ignores itself.** `.scg-history/` holds
+  scanner state (risk history, triage decisions), not project content, but a
+  scan created it inside the repository being scanned and left it for the
+  consumer to notice. It usually appears before anyone has thought about
+  `.gitignore`, so a later `git add -A` sweeps it into an unrelated commit.
+  Creating the directory now also writes a `.gitignore` containing `*`, which
+  git honours for everything beneath it including that file itself. Nothing is
+  required of the consumer and it cannot be forgotten. The file is restored if
+  it is deleted, and a filesystem that refuses the write does not fail the
+  scan. `--no-history` already existed and still works, but it only helped the
+  people who knew to pass it; a plain `supply-chain-guard scan .` wrote state
+  regardless.
 
 ### Added
 
@@ -1845,6 +1860,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
 [Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.10...HEAD
+[5.18.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.18.1
 [5.18.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.18.0
 [5.17.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.10
 [5.17.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.9

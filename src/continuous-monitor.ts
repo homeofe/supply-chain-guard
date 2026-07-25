@@ -8,8 +8,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, RiskHistoryEntry, ScanReport } from "./types.js";
+import { STATE_DIR, ensureStateDir } from "./state-dir.js";
 
-const HISTORY_DIR = ".scg-history";
+const HISTORY_DIR = STATE_DIR;
 const HISTORY_FILE = "risk-history.json";
 const MAX_HISTORY_ENTRIES = 100;
 
@@ -34,8 +35,7 @@ export function saveRiskHistory(
   dir: string,
   report: ScanReport,
 ): void {
-  const historyDir = path.join(dir, HISTORY_DIR);
-  fs.mkdirSync(historyDir, { recursive: true });
+  const historyDir = ensureStateDir(dir);
 
   const history = loadRiskHistory(dir);
   history.push({
