@@ -24,6 +24,7 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 - [Output Formats](#output-formats)
 - [CI Exit Code Control](#ci-exit-code-control)
 - [Filtering](#filtering)
+- [Internal Disclosure](#internal-disclosure)
 - [Policy Configuration](#policy-configuration-v44)
 - [Baseline Diffing](#baseline-diffing-v44)
 - [Example Output](#example-output)
@@ -90,6 +91,9 @@ Detects LLM-control tokens embedded in package READMEs that target downstream AI
 ### Credential Detection
 - AWS access keys (AKIA/ASIA), GitHub tokens (ghp_/gho_), npm tokens
 - SSH private keys, generic API keys, PEM private keys
+
+### Internal Topology Disclosure
+Not credentials: the map of your network that a public repository hands out for free. Private and non-routable addresses (RFC1918, CGNAT, link-local, IPv6 ULA), internal-only hostnames (`.internal`, `.local`, `.lan`, `.corp`, `.home`, `.intranet`), clone URLs pointing at a forge that is not a known public one, developer home-directory paths, and internal service endpoints. Reported at `medium` (reconnaissance value, not compromise), with an optional deny-list for the names only your project knows. See [Internal Disclosure](#internal-disclosure).
 
 ### Dead-Drop Resolver / C2 Detection
 - Steam Community profiles, Telegram channels, Pastebin, GitHub Gists
@@ -234,6 +238,128 @@ supply-chain-guard scan ./project --fail-on info       # Fail on any finding
 ```bash
 supply-chain-guard scan ./project --min-severity high
 supply-chain-guard scan ./project --exclude SOLANA_MAINNET,HEX_ARRAY
+```
+
+## Internal Disclosure
+
+Secret scanners answer one question: *did a credential get committed?* This family answers a different one: **did our internal topology get committed?**
+
+Internal hostnames, private LAN addresses, self-hosted forge URLs, developer home directories and private repository names are not credentials, so no secret scanner reports them. Together they are the reconnaissance map an attacker draws before touching anything: what exists, what it is called, where it listens, and who works on it. It leaks through the same boring channels every time. A copied clone command in a README. A `.env.example` that kept the real staging host. A comment with the path the author built from. A lockfile pointing at an internal registry. None of it is a secret, all of it is intelligence, and it stays in git history long after the file is fixed.
+
+The rules are **shape-based**, so they work on a repository whose owner has configured nothing at all. You never have to write down what your infrastructure is called in order to be protected from publishing it.
+
+### What it catches
+
+| Rule | Severity | Shape |
+|---|---|---|
+| `INTERNAL_PRIVATE_IP` | medium | RFC1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), CGNAT (`100.64.0.0/10`), link-local (`169.254.0.0/16`) |
+| `INTERNAL_PRIVATE_IPV6` | medium | IPv6 Unique Local Addresses (`fc00::/7`) |
+| `INTERNAL_HOSTNAME` | medium | Hostnames in an internal-only TLD: `.internal`, `.local`, `.lan`, `.corp`, `.home`, `.intranet` |
+| `INTERNAL_SERVICE_ENDPOINT` | medium | `http(s)://HOST:PORT` where HOST is private or internal |
+| `INTERNAL_GIT_REMOTE` | medium | `ssh://git@<host>:<port>/<path>` and scp-style `git@<host>:<path>` where the host is not a known public forge |
+| `INTERNAL_DEV_PATH` | medium | `C:\Users\<name>\`, `/home/<name>/`, `/Users/<name>/` in committed code or docs |
+| `INTERNAL_SINGLE_LABEL_URL` | low | A URL whose host has no domain at all, so it only resolves through internal DNS or a hosts file |
+| `INTERNAL_DENYLIST_MATCH` | medium | A term your project configured (see below). Off unless configured |
+
+`INTERNAL_GIT_REMOTE` is the one worth pointing at: it finds a self-hosted forge **without anyone having to name it**. Any clone URL that is not github.com, gitlab.com, bitbucket.org, codeberg.org, git.sr.ht and the other well-known public hosts is, by shape alone, a forge somebody runs privately.
+
+### Severity is deliberately not inflated
+
+Topology is reconnaissance value, not compromise, so the family reports `medium` and `low`. `high` and `critical` stay reserved for credential-shaped findings, which the existing rules already own.
+
+Practically: the default gate exits non-zero on `critical` and `high` only, so **upgrading cannot turn a passing build red**. `--fail-on high` and `--fail-on critical` are equally unaffected. Two things do change: the risk **score** rises (each medium adds points), and a pipeline that runs `--fail-on medium` or lower will see the new findings. If you would rather not see them at all, they respect every existing control:
+
+```yaml
+rules:
+  disable: [INTERNAL_PRIVATE_IP, INTERNAL_HOSTNAME, INTERNAL_SERVICE_ENDPOINT,
+            INTERNAL_GIT_REMOTE, INTERNAL_DEV_PATH, INTERNAL_SINGLE_LABEL_URL]
+```
+
+### False-positive controls
+
+A rule that screams on every README gets switched off, and a switched-off rule protects nothing. Two independent layers keep this quiet.
+
+**1. The reserved documentation space never fires.** Anything written the way the RFCs intend is invisible to these rules:
+
+- addresses from RFC5737: `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`
+- names from RFC2606: `example.com`, `example.org`, `example.net`, the `.example` TLD, `.invalid`, `.test`
+- loopback and the unspecified address, `localhost` URLs
+- placeholder and CI account names in paths: `runner`, `vscode`, `ubuntu`, `jenkins`, `you`, `dev`, `user`, `Public` and more
+- container and compose service aliases in single-label URLs: `db`, `redis`, `api`, `minio`, `nginx` and more
+- a CIDR range such as `10.0.0.0/16` is a subnet layout, not a host, so it is not reported (a `/32` host route is)
+
+**2. Context decides which rules stay armed.** Documentation genuinely teaches with addresses and paths:
+
+| Context | Rules that still fire |
+|---|---|
+| Source files (`.ts`, `.py`, `.tf`, `.yml`, Dockerfile, `.npmrc`, lockfiles) | all of them |
+| Prose in `.md` / `.rst` / `.txt`, anything under `docs/` or `examples/`, `*.example.*` / `*.sample.*` / `*.template.*` files | hostname, endpoint, clone URL |
+| Markdown fenced code blocks and inline code spans | clone URL only |
+| Test, spec, mock and fixture files, minified bundles | none |
+
+The reasoning: a README that names an internal host or a staging endpoint is a real leak (and the reserved namespace above is right there for teaching), while the example IPs and `C:\Users\you\` paths that documentation is full of are not. A fenced block is a literal example, with one exception: the copy-and-paste clone command is exactly where a self-hosted forge URL ends up in the real world.
+
+Two more precision rules for hostnames specifically. An internal-only TLD has to be the **last** label of the name, so `config.internal.timeout`, `com.acme.internal.util` and `settings.local.json` are never hosts. And in programming-language sources a bare dotted name is only reported inside a string literal, a comment or a URL, because `config.internal` and `state.local` are property accesses, not machines. Data and config files (`.yml`, `.json`, `.toml`, `.env`, Dockerfile, lockfiles) carry unquoted values, so no quotes are required there.
+
+Two things are reported on purpose even though they can be examples. Kubernetes in-cluster names (`<service>.<namespace>.svc.cluster.local`) name your service inventory. And an address or path inside a **code comment** (a JSDoc `@example` block, say) is reported, because a comment is the single most common place a real host gets written down and nothing distinguishes an illustrative address from a real one there. Use RFC5737 addresses in code examples, or suppress by path.
+
+On top of that, everything else already in this tool applies: `suppress` with a `path:` glob, `ignore:` globs, `--exclude`, `--min-severity`, and inline `// scg-ignore-next-line INTERNAL_HOSTNAME reason`.
+
+### The deny-list, and its paradox
+
+Shape rules cannot know that `sample-service` is one of your private repositories. A deny-list can. But **a list of your internal hostnames committed to a public repository is exactly the leak you were trying to prevent**, so there are three ways to configure one and only one of them puts plaintext in the repo.
+
+```yaml
+# yaml-language-server: $schema=./node_modules/supply-chain-guard/policy-schema.json
+
+internalDisclosure:
+  # (a) HASHED. Safe to commit: a digest reveals nothing.
+  #     Generate with: supply-chain-guard internal-hash forge.internal.example
+  hashedTerms:
+    # sha256("forge.internal.example") and sha256("acme/sample-service"),
+    # so you can verify the recipe below against these two lines.
+    - 113fbef8cb1afd8d755cfa3c5b954244973c1b4182824c64755235de60a3d106
+    - 479ec322598b9047aaac200d2c1c2d5ab9658ce50ef7e60dc1081741f037d7d3
+
+  # (b) EXTERNAL. Full regex/plaintext patterns that must never be published.
+  #     Gitignore this file, or provision it on the runner. Matches are
+  #     reported REDACTED, so the report cannot leak it either.
+  externalFile: .scg-internal-terms.local
+
+  # (c) PLAINTEXT. For a private repository scanning itself, or terms that
+  #     are not sensitive. Literals, or /regex/flags.
+  patterns:
+    - sample-service
+    - /build-\d{2}\.corp/
+```
+
+**Hashing recipe.** Normalisation is `trim`, then `lowercase`. Then sha256, lowercase hex. That is the whole rule, so any tool can reproduce it:
+
+```bash
+# Bundled helper (prints only the digest, so nothing sensitive rides along)
+supply-chain-guard internal-hash forge.internal.example
+
+# The same digest, without this tool
+printf '%s' "forge.internal.example" | tr 'A-Z' 'a-z' | sha256sum
+```
+
+**Be honest about what hashing can do:** it is exact-token matching, nothing more. A token is a maximal run of letters, digits, `.`, `_` and `-` (so `https://forge.internal.example/x` yields `forge.internal.example`), plus an `org/repo` pair and a `.git` suffix stripped, all lowercased. A hashed entry for `forge.internal.example` therefore matches that host but not `sub.forge.internal.example`, and there is no way around it: a scanner that could match substrings of a hash would be a scanner that could recover the term. When you need substring or regex power, use `externalFile` (b).
+
+**An environment variable** does the same thing as `externalFile` without touching the committed config at all:
+
+```bash
+SCG_INTERNAL_DISCLOSURE_FILE=~/.config/scg/internal-terms supply-chain-guard scan .
+```
+
+The external file is one entry per line, `#` for comments, `sha256:<digest>` for a hashed entry, `/pattern/flags` for a regex, anything else is a case-insensitive literal. If the file is configured but absent (a shared CI runner that never received it), you get an `INTERNAL_DENYLIST_UNAVAILABLE` finding at `info` severity rather than silence: a deny-list that quietly stopped running looks exactly like a repository that is clean. An entry that cannot be compiled is reported the same way (`INTERNAL_DENYLIST_INVALID_ENTRY`, medium). Neither finding ever prints the entry, and the environment variable is named but its value is not, because a path can itself contain an account name.
+
+**One more note on the paradox.** `allowlist.domains` also answers `INTERNAL_HOSTNAME`, `INTERNAL_SERVICE_ENDPOINT` and `INTERNAL_GIT_REMOTE` for a given host, which is convenient and publishes the host name. If that is not acceptable, suppress by path instead, which names nothing:
+
+```yaml
+suppress:
+  - rule: INTERNAL_HOSTNAME
+    reason: vendored upstream config, reviewed
+    path: vendor/**
 ```
 
 ## Policy Configuration (v4.4)
@@ -387,6 +513,8 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 ## How It Compares
 
 supply-chain-guard is the malware / behavior / campaign-IOC layer: it statically scans what you actually install (node_modules, packages, Docker images, VS Code extensions, Actions workflows, IaC) for malicious behavior and known campaign indicators, entirely locally. It does NOT do CVE lookups: pair it with osv-scanner or npm audit for known vulnerabilities. Most tools below measure a different axis and are complementary, not competitors.
+
+There is one axis where it goes somewhere the others do not go at all. Credential scanners such as gitleaks and trufflehog hunt secrets, and they are good at it; nothing in that category hunts what a repository gives away *about the network it came from*. That is what [Internal Disclosure](#internal-disclosure) covers: internal hostnames, private addresses, self-hosted forge URLs and developer paths, reported as reconnaissance risk rather than as a leaked credential.
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
@@ -565,6 +693,8 @@ scan() -> collectFiles() -> per-file analysis
   -> Pattern matching (350+ rules across 12 categories)
   -> Entropy analysis (Shannon entropy for encoded payloads)
   -> IOC blocklist check (known C2 domains, IPs, hashes)
+  -> Internal-disclosure family (private addresses, internal hostnames,
+     non-public forge URLs, developer paths, configured deny-list)
   -> Install hook deep analysis (secret harvesting, download-exec)
   -> Dependency risk analysis (Levenshtein typosquatting)
   -> Sub-scanners (lockfile, GitHub Actions, Docker, Cargo, Go, IaC)

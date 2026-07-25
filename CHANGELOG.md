@@ -9,6 +9,53 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- **Internal-disclosure rule family (`INTERNAL_*`), a new detection axis.**
+  Existing scanners (this one included) hunt CREDENTIALS. Nothing in that
+  category hunts internal TOPOLOGY leaking into a public repository: internal
+  hostnames, private LAN addresses, non-public forge URLs, developer
+  filesystem paths and private repository inventories. None of it is a secret,
+  all of it is reconnaissance material, and it stays in git history long after
+  the file is fixed. New module `src/internal-disclosure.ts` with eight rules:
+  `INTERNAL_PRIVATE_IP` (RFC1918, CGNAT 100.64/10, link-local 169.254/16),
+  `INTERNAL_PRIVATE_IPV6` (ULA fc00::/7), `INTERNAL_HOSTNAME` (.internal,
+  .local, .lan, .corp, .home, .intranet), `INTERNAL_SERVICE_ENDPOINT`
+  (host plus port on a private or internal host), `INTERNAL_GIT_REMOTE`
+  (ssh:// and scp-style remotes on a host that is not a known public forge,
+  which finds a self-hosted forge without anyone having to name it),
+  `INTERNAL_DEV_PATH` (home-directory paths), `INTERNAL_SINGLE_LABEL_URL`
+  (dotless hosts) and `INTERNAL_DENYLIST_MATCH` (configured terms, off by
+  default). Every rule is shape-based, so it protects a repository whose owner
+  configured nothing.
+- **Configurable deny-list that solves its own paradox.** A list of internal
+  hostnames committed to a public repository IS the leak, so
+  `internalDisclosure` in `.supply-chain-guard.yml` supports three modes:
+  `hashedTerms` (sha256 of a term normalised as trim plus lowercase;
+  publishable, reveals nothing, exact-token matching only),
+  `externalFile` plus the `SCG_INTERNAL_DISCLOSURE_FILE` environment variable
+  (full regex and literal patterns kept out of the repository, matches
+  reported REDACTED so the report cannot leak them either), and `patterns`
+  (plaintext, for repositories that are private anyway). New CLI command
+  `supply-chain-guard internal-hash <term...>` prints digests and nothing else.
+  A configured `externalFile` that is absent is reported as
+  `INTERNAL_DENYLIST_UNAVAILABLE` (info) and an entry that cannot be compiled
+  as `INTERNAL_DENYLIST_INVALID_ENTRY` (medium): a deny-list that quietly
+  stopped running otherwise looks exactly like a clean repository. Neither
+  diagnostic prints the entry, and the environment variable is named without
+  its value, because a path can itself contain an account name.
+- **False-positive controls, because a rule that screams on every README gets
+  disabled.** Two layers: reserved documentation values never fire (RFC5737
+  addresses, RFC2606 names and the `.example` TLD, loopback, placeholder and
+  CI account names such as `runner` or `vscode`, container service aliases,
+  and CIDR ranges as opposed to host addresses), and file context narrows the
+  family (documentation files, `docs/` and `examples/` trees and `*.example.*`
+  artifacts keep only the hostname, endpoint and clone-URL rules; markdown
+  fenced blocks and inline code spans keep only the clone-URL rule; test
+  fixtures and minified bundles keep none). Hostnames get two extra precision
+  rules: an internal-only TLD must be the LAST label (so `config.internal.timeout`,
+  `com.acme.internal.util` and `settings.local.json` are not hosts), and in
+  programming-language sources a bare dotted name is only reported inside a
+  string literal, a comment or a URL, because `config.internal` is a property
+  access. The README documents the full matrix.
 - **Upstream threat-feed import (`npm run feed:import`).** Malicious-package
   IOCs are now imported from public advisory databases instead of being read
   out of a general security-news aggregator by hand. Primary source: the
@@ -39,6 +86,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **Scores will move, exit codes will not.** The internal-disclosure family
+  reports `medium` (weakest rule: `low`), never `high` or `critical`, which
+  stay reserved for credential-shaped findings. The default gate exits
+  non-zero on critical and high only, so upgrading cannot turn a passing build
+  red, and `--fail-on high` / `--fail-on critical` are unaffected. Two things
+  do change: the risk score rises where internal topology is present (each
+  medium adds points, which can move a `clean` report to `low` or `medium`),
+  and a pipeline running `--fail-on medium` or lower will see the new
+  findings. The family respects `rules.disable`, `rules.severityOverrides`,
+  `suppress` (including `path:` globs), `ignore`, `--exclude`,
+  `--min-severity` and inline `scg-ignore-next-line`.
+- `allowlist.domains` now also answers `INTERNAL_HOSTNAME`,
+  `INTERNAL_SERVICE_ENDPOINT` and `INTERNAL_GIT_REMOTE` for the allowlisted
+  host, alongside the threat-intel rules it already covered. The README notes
+  the tradeoff: naming a domain there publishes it, so a path-scoped
+  `suppress` entry is the leak-free alternative.
+- `Finding.category` gained `"disclosure"`, and the `INTERNAL_` prefix is
+  counted in the `repoTrust` risk dimension, so the family is not invisible to
+  `riskDimensions` (the trap the agent-surface rules fell into before v5.10).
+- Policy config validation learned `POLICY_INVALID_INTERNAL_TERM`: a
+  `hashedTerms` entry that is not a sha256 digest, or a `patterns` entry that
+  is not a valid regex, is reported instead of being silently dropped. Same
+  fail-closed reasoning as v5.3.
 - The import refuses to invent indicators. Only an exact upstream pin
   (`= 1.2.3` -> `name@1.2.3`) or an all-versions range (`>= 0` -> bare name) is
   mapped; a bounded range is reported as unmappable rather than collapsed into

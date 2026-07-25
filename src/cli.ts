@@ -803,4 +803,22 @@ program
     },
   );
 
+// ── internal-hash command ───────────────────────────────────────────────
+
+program
+  .command("internal-hash")
+  .description(
+    "Print the sha256 digest of one or more internal terms for internalDisclosure.hashedTerms (the digest is safe to commit, the term is not)",
+  )
+  .argument("<terms...>", "Terms to hash: a hostname, an org/repo name, a path fragment")
+  .action(async (terms: string[]) => {
+    const { hashInternalTerm } = await import("./internal-disclosure.js");
+    // One digest per line, nothing else. The plaintext term is deliberately
+    // NOT echoed: the output of this command is meant to be pasted into a
+    // committed config file, and an echoed term would travel with it.
+    for (const term of terms) {
+      console.log(hashInternalTerm(term));
+    }
+  });
+
 program.parse();

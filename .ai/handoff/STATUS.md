@@ -1,3 +1,47 @@
+> Note (2026-07-25, claude-opus-5): Added the internal-disclosure rule family
+> (src/internal-disclosure.ts, 8 rules, INTERNAL_*). New detection axis: existing
+> scanners including this one hunt CREDENTIALS, nothing hunts internal TOPOLOGY
+> leaking into a public repo (internal hostnames, private LAN addresses,
+> non-public forge URLs, developer paths, private repo inventories). All rules
+> are shape-based so they work with zero configuration, and INTERNAL_GIT_REMOTE
+> in particular finds a self-hosted forge WITHOUT anyone naming it: any ssh://
+> or scp-style clone URL whose host is not one of the known public forges.
+> Severity is deliberately medium (low for the single-label URL rule):
+> topology is reconnaissance value, not compromise, and the default gate plus
+> --fail-on high/critical stay unaffected, so nobody upgrades into a red build.
+> Scores DO move (documented in the CHANGELOG Changed section).
+> Deny-list solves its own paradox three ways: hashedTerms (sha256 of a term
+> normalised trim+lowercase, publishable, exact-token matching only, generated
+> with the new internal-hash CLI command), externalFile plus
+> SCG_INTERNAL_DISCLOSURE_FILE (never committed, matches reported REDACTED so
+> the report cannot leak what the config kept out), and plaintext patterns for
+> repos that are private anyway. A configured externalFile that is absent is
+> reported at info (INTERNAL_DENYLIST_UNAVAILABLE) instead of silently doing
+> nothing - same fail-closed reasoning as the v5.3 policy validation, and info
+> keeps a CI runner that legitimately has no copy of the file quiet.
+> False positives were treated as the adoption question they are: two layers,
+> a VALUE layer (RFC5737 addresses, RFC2606 names and the .example TLD,
+> loopback, CI/placeholder account names like runner and vscode, container
+> service aliases, CIDR ranges vs host addresses) and a CONTEXT layer (doc
+> files, docs/ and examples/ trees, *.example.* artifacts keep only the
+> hostname/endpoint/clone-URL rules; markdown fenced blocks and inline code
+> spans keep only the clone-URL rule, because the copy-paste clone command is
+> exactly where a self-hosted forge URL really leaks; test fixtures and
+> minified bundles keep none). Extended existing plumbing rather than a
+> parallel system: PatternEntry + valueFilter/valueGroup, allowlist.domains now
+> also answers the host-shaped INTERNAL rules, new POLICY_INVALID_INTERNAL_TERM
+> warning, Finding.category gained "disclosure", INTERNAL_ counts in the
+> repoTrust risk dimension. 43 tests (src/__tests__/internal-disclosure.test.ts)
+> cover a true positive per rule, the false-positive classes, all three
+> deny-list modes and a test that the hashed path never stores or reports
+> plaintext. Self-scan stays clean: the first draft flagged its OWN doc
+> comments, where the endpoint and clone-URL examples were written as plausible
+> internal names, and those were rewritten into the reserved documentation
+> namespace, which is the feature working. Same discipline applies to this
+> file. NOT DONE
+> HERE: no version bump and no dated CHANGELOG heading, the release is cut
+> separately.
+
 > Note (2026-07-25, claude-opus-5): Cut the feed's dependency on the internal
 > security-news aggregator and wired real upstream sources instead. That
 > aggregator was 17 general security RSS feeds, none of them package-malware or

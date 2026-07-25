@@ -108,7 +108,11 @@ const KNOWN_SECTIONS: Record<string, string[]> = {
   suppress: [],
   baseline: ["file"],
   ignore: [],
+  internalDisclosure: ["hashedTerms", "patterns", "externalFile"],
 };
+
+/** A committed `hashedTerms` entry: sha256 hex, with an optional `sha256:` prefix. */
+const HASHED_TERM_PATTERN = /^(?:sha256:)?[0-9a-f]{64}$/i;
 
 /** Keys allowed inside a suppress entry */
 const SUPPRESS_ENTRY_KEYS = new Set(["rule", "reason", "path"]);
@@ -238,6 +242,49 @@ function parseYamlConfig(content: string): PolicyConfig {
         // Path globs whose matching files are skipped by the scanner walk.
         config.ignore ??= [];
         config.ignore.push(stripQuotes(value));
+      } else if (
+        currentSection === "internalDisclosure" &&
+        currentSubSection === "hashedTerms"
+      ) {
+        // sha256 digests of internal terms. A malformed digest can never match
+        // anything, so the deny-list would silently do nothing: report it.
+        const term = stripQuotes(value);
+        config.internalDisclosure ??= {};
+        config.internalDisclosure.hashedTerms ??= [];
+        config.internalDisclosure.hashedTerms.push(term);
+        if (!HASHED_TERM_PATTERN.test(term)) {
+          warnings.push({
+            rule: "POLICY_INVALID_INTERNAL_TERM",
+            message: `hashedTerms entry "${term.slice(0, 24)}" is not a sha256 digest (64 hex characters, optionally prefixed with "sha256:"); it can never match, so the deny-list entry does nothing`,
+            line: lineNo,
+          });
+        }
+      } else if (
+        currentSection === "internalDisclosure" &&
+        currentSubSection === "patterns"
+      ) {
+        const entry = stripQuotes(value);
+        config.internalDisclosure ??= {};
+        config.internalDisclosure.patterns ??= [];
+        config.internalDisclosure.patterns.push(entry);
+        const asRegex = /^\/(.+)\/([gimsuy]*)$/.exec(entry);
+        if (asRegex) {
+          try {
+            new RegExp(asRegex[1], asRegex[2].replace(/g/g, ""));
+          } catch {
+            warnings.push({
+              rule: "POLICY_INVALID_INTERNAL_TERM",
+              message: `patterns entry "${entry.slice(0, 40)}" is not a valid regular expression; it is ignored, so the deny-list entry does nothing`,
+              line: lineNo,
+            });
+          }
+        } else if (entry.length < 3) {
+          warnings.push({
+            rule: "POLICY_INVALID_INTERNAL_TERM",
+            message: `patterns entry "${entry}" is shorter than 3 characters; it is ignored because a literal that short matches almost every file`,
+            line: lineNo,
+          });
+        }
       } else if (currentSection === "suppress") {
         // Suppress entries need rule + reason on subsequent lines
         config.suppress ??= [];
@@ -283,6 +330,11 @@ function parseYamlConfig(content: string): PolicyConfig {
       } else if (currentSection === "baseline" && k === "file") {
         config.baseline ??= {};
         config.baseline.file = val;
+      } else if (currentSection === "internalDisclosure" && k === "externalFile") {
+        // Path to the UNPUBLISHED pattern file. The path itself is harmless;
+        // its contents are what must never be committed.
+        config.internalDisclosure ??= {};
+        config.internalDisclosure.externalFile = stripQuotes(val);
       } else if (currentSection === "suppress" && SUPPRESS_ENTRY_KEYS.has(k)) {
         // Handle suppress reason/path on inline entries. ("rule:" continuation
         // lines are tolerated; entries are created by the "- rule:" item.)
@@ -353,6 +405,14 @@ const POLICY_WARNING_META: Record<
       "Policy references a rule id that is not SCREAMING_SNAKE_CASE. The reference can never match a real rule, so the intended suppression is NOT applied - the config fails open.",
     recommendation:
       "Use the exact rule id as reported by the scanner (e.g. EVAL_ATOB) in .supply-chain-guard.yml.",
+  },
+  POLICY_INVALID_INTERNAL_TERM: {
+    severity: "medium",
+    confidence: 1.0,
+    description:
+      "An internalDisclosure deny-list entry cannot be compiled. The entry is ignored, so a term the project marked as internal is NOT being looked for - the config fails open in the one place where silence looks exactly like safety.",
+    recommendation:
+      "Generate hashed entries with \"supply-chain-guard internal-hash <term>\" and keep regex entries in the /pattern/flags form. See the Internal Disclosure section of the README.",
   },
 };
 
@@ -428,6 +488,20 @@ export function applyPolicy(
       }
     }
 
+    // Allowlisted domains also answer the host-shaped internal-disclosure
+    // rules: a project that has decided a given domain may appear in its
+    // repository has answered INTERNAL_HOSTNAME / INTERNAL_SERVICE_ENDPOINT /
+    // INTERNAL_GIT_REMOTE for that host. Note the tradeoff, which the README
+    // spells out: naming the domain here publishes it. The leak-free
+    // alternative is a path-scoped `suppress` entry, which names no host.
+    if (allowedDomains.length > 0 && HOST_ATTRIBUTED_INTERNAL_RULES.has(finding.rule)) {
+      const host = extractFindingHost(finding);
+      if (host && isDomainAllowlisted(host, allowedDomains)) {
+        suppressedCount++;
+        continue;
+      }
+    }
+
     // Allowlisted domains: drop threat-intel / known-C2-domain findings whose
     // matched value is a trusted domain (exact host or subdomain-of). These
     // findings carry the value in `match` or in the description text.
@@ -482,6 +556,39 @@ export function applyPolicy(
  * exists to prevent (and that `allowlist.domains` was fixed for in v5.13).
  */
 const ORG_ATTRIBUTED_RULES = new Set(["GHA_THIRD_PARTY_ACTION", "GHA_TAG_NOT_SHA"]);
+
+/**
+ * Internal-disclosure findings whose match names a HOST, so an
+ * `allowlist.domains` entry can legitimately answer them. The address and
+ * developer-path rules are deliberately absent: an allowlist of domains says
+ * nothing about whether a private address or a home directory belongs in a
+ * published repository.
+ */
+const HOST_ATTRIBUTED_INTERNAL_RULES = new Set([
+  "INTERNAL_HOSTNAME",
+  "INTERNAL_SERVICE_ENDPOINT",
+  "INTERNAL_GIT_REMOTE",
+]);
+
+/**
+ * Extract the host from an internal-disclosure finding. The `match` holds the
+ * raw matched text: a bare hostname, a URL, or an scp-style git remote.
+ */
+function extractFindingHost(finding: Finding): string | undefined {
+  const raw = finding.match?.trim();
+  if (!raw) return undefined;
+
+  // scp-style remote: a user, an "@", the host, a colon, then the path
+  const scp = /^[\w.%+-]+@([A-Za-z0-9.-]+):/.exec(raw);
+  if (scp) return scp[1];
+
+  // URL (any scheme), with optional userinfo and port
+  const url = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/(?:[^@/\s]+@)?([A-Za-z0-9.-]+)/.exec(raw);
+  if (url) return url[1];
+
+  // Bare hostname
+  return /^[A-Za-z0-9.-]+$/.test(raw) ? raw : undefined;
+}
 
 /**
  * Extract the GitHub owner from an action-reference finding. Both rules put the

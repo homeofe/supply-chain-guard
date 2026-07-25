@@ -22,6 +22,11 @@ const SEVERITY_WEIGHTS: Record<Severity, number> = {
 export function calculateRiskDimensions(findings: Finding[]): RiskDimensions {
   const repoTrust = calcDimension(findings, [
     "REPO_", "README_LURE_", "RELEASE_", "CAMPAIGN_", "TRUST_",
+    // Internal-disclosure findings describe what the repository publishes
+    // about its owner's infrastructure, so they belong to the repo dimension.
+    // Listing them keeps the family out of the "counted in NO dimension" trap
+    // that the agent-surface rules fell into before v5.10.
+    "INTERNAL_",
   ]);
   const codeRisk = calcDimension(findings, [
     "EVAL_", "FUNCTION_ATOB", "INVISIBLE_UNICODE", "HIGH_ENTROPY",

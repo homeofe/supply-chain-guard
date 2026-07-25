@@ -85,6 +85,31 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
+    "internalDisclosure": {
+      "description": "Deny-list for the internal-disclosure rule family (INTERNAL_*). The built-in shape rules need none of this; this section is for names only your project knows. A list of internal hostnames committed to a public repository is itself the leak, so prefer hashedTerms (publishable) or externalFile (never published) over patterns.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hashedTerms": {
+          "description": "sha256 digests (64 lowercase hex characters, optionally prefixed with 'sha256:') of internal terms normalised as trim + lowercase. Safe to commit. Matches whole tokens only. Generate with: supply-chain-guard internal-hash <term>.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:sha256:)?[0-9a-fA-F]{64}$"
+          }
+        },
+        "patterns": {
+          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "externalFile": {
+          "description": "Path to an UNPUBLISHED file (gitignored, or provisioned by CI) with one entry per line: '#' comments, 'sha256:<digest>', '/regex/flags', or a plain literal. Matches are reported redacted. The SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same without touching this file. A configured path that is absent is reported as INTERNAL_DENYLIST_UNAVAILABLE (info).",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "baseline": {
       "description": "Baseline diffing: only findings not present in the baseline file are reported.",
       "type": "object",

@@ -37,6 +37,10 @@ import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
 import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
 import { scanDockerFiles, isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
 import { scanConfigFiles, isConfigFile, scanConfigFile } from "./config-scanner.js";
+import {
+  loadInternalDisclosureConfig,
+  scanInternalDisclosure,
+} from "./internal-disclosure.js";
 import { scanGitSecurity } from "./git-scanner.js";
 import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
@@ -258,7 +262,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // v4.5: Load threat intelligence feed
   const threatFeed = loadThreatIntel();
 
-  let findings: Finding[] = [];
+  // Internal-disclosure deny-list. Loaded once: the hashed terms come from the
+  // committed policy file, the plaintext patterns from an unpublished file or
+  // the SCG_INTERNAL_DISCLOSURE_FILE environment variable. With nothing
+  // configured this is inert and only the built-in shape rules run.
+  const internalDisclosure = loadInternalDisclosureConfig(scanDir, policy);
+
+  let findings: Finding[] = [...internalDisclosure.loadFindings];
 
   // Scan each file
   let filesScanned = 0;
@@ -275,6 +285,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       checkBinaryFile(relativePath, findings);
     }
 
+    // Tracks whether the internal-disclosure pass already ran for this file.
+    // Dockerfiles and package-manager configs are read in the block below and
+    // some of them (.yarnrc.yml) also carry a scannable extension, so without
+    // this guard those files would be reported twice.
+    let internalDisclosureScanned = false;
+
     // Scan Docker/Config files inline (v4.0)
     if (isDockerFile(basename) || isConfigFile(basename)) {
       try {
@@ -285,6 +301,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         if (isConfigFile(basename)) {
           findings.push(...scanConfigFile(content, relativePath));
         }
+        // A Dockerfile FROM line and an .npmrc registry line are two of the
+        // most common places an internal host name reaches a public repo, and
+        // neither file carries a scannable extension.
+        findings.push(
+          ...scanInternalDisclosure(content, relativePath, internalDisclosure),
+        );
+        internalDisclosureScanned = true;
       } catch { /* skip */ }
     }
 
@@ -313,6 +336,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
       // Check file content patterns
       checkFilePatterns(content, relativePath, findings);
+
+      // Internal topology disclosure: private addresses, internal-only
+      // hostnames, non-public forge URLs, developer paths, plus the
+      // configured deny-list. Reported at medium/low, so the family cannot
+      // change the exit code of an existing --fail-on high pipeline.
+      if (!internalDisclosureScanned) {
+        findings.push(
+          ...scanInternalDisclosure(content, relativePath, internalDisclosure),
+        );
+      }
 
       // Check build tool configs for plugin risks (v4.0)
       if (BUILD_CONFIG_FILES.has(basename)) {

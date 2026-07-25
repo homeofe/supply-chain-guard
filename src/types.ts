@@ -21,8 +21,12 @@ export interface Finding {
   recommendation: string;
   /** Confidence score 0.0-1.0 (v4.2) */
   confidence?: number;
-  /** Finding category (v4.2) */
-  category?: "malware" | "supply-chain" | "config" | "trust" | "info";
+  /**
+   * Finding category (v4.2). "disclosure" covers internal topology leaking
+   * into a published repository (hostnames, private addresses, non-public
+   * forge URLs, developer paths) as opposed to a credential or a payload.
+   */
+  category?: "malware" | "supply-chain" | "config" | "trust" | "info" | "disclosure";
   /** Correlation cluster ID (v4.2) */
   correlationId?: string;
   /** Why this was flagged (v4.4) */
@@ -306,15 +310,49 @@ export interface PolicyConfig {
   };
   /** Path globs whose matching files are skipped by the scanner walk (v5.13). */
   ignore?: string[];
+  /** Internal-disclosure deny-list (see InternalDisclosurePolicy). */
+  internalDisclosure?: InternalDisclosurePolicy;
   /** Validation problems collected while parsing (v5.3, fail-closed config validation) */
   warnings?: PolicyWarning[];
+}
+
+/**
+ * Deny-list configuration for the internal-disclosure rule family.
+ *
+ * The built-in shape rules (INTERNAL_PRIVATE_IP, INTERNAL_HOSTNAME,
+ * INTERNAL_GIT_REMOTE, ...) need none of this. This section exists for the
+ * names that only the project itself knows, and it solves the paradox that a
+ * list of internal hostnames committed to a public repository IS the leak:
+ * `hashedTerms` is publishable, `externalFile` is never published, and
+ * `patterns` is for repositories that are private anyway.
+ */
+export interface InternalDisclosurePolicy {
+  /**
+   * sha256 digests (lowercase hex) of internal terms, normalised as
+   * `term.trim().toLowerCase()` before hashing. Safe to commit: a digest
+   * reveals nothing. Matches whole tokens only.
+   */
+  hashedTerms?: string[];
+  /**
+   * Plaintext literals or `/regex/flags` entries kept in the committed config.
+   * Only for repositories that are private, or terms that are not sensitive.
+   */
+  patterns?: string[];
+  /**
+   * Path to an UNPUBLISHED file (gitignored, or provisioned by CI) holding one
+   * entry per line. Matches from it are reported redacted. The
+   * SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same thing
+   * without touching the config file at all.
+   */
+  externalFile?: string;
 }
 
 /** Rule ids emitted for policy config validation problems (v5.3) */
 export type PolicyWarningRule =
   | "POLICY_UNKNOWN_KEY"
   | "POLICY_SUPPRESSION_NO_REASON"
-  | "POLICY_MALFORMED_RULE_ID";
+  | "POLICY_MALFORMED_RULE_ID"
+  | "POLICY_INVALID_INTERNAL_TERM";
 
 /**
  * A problem found while parsing .supply-chain-guard.yml (v5.3).
