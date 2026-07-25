@@ -1,7 +1,7 @@
 > Note (2026-07-25, claude-opus-5): Rule-precision pass after a fleet audit showed that
 > most of the reported risk across 13 scanned repositories came from rules matching a
 > SHAPE without context or value. Fixed five, each with a true-positive AND a
-> false-positive test (src/__tests__/rule-precision.test.ts, 34 tests):
+> false-positive test (src/__tests__/rule-precision.test.ts, 35 tests):
 > (1) GHA_SECRET_EXFIL_MULTILINE had a file-level sticky `envSecretsExported` flag and a
 > run-block exit test that only a column-0 line could satisfy, so one step's env secret
 > made every later curl look like exfiltration and the finding named the wrong block. Now
@@ -32,7 +32,7 @@
 > findings, 10 -> 1 criticals, with NO finding lost that was not one of the confirmed
 > false-positive classes (the 4 deploy-workflow exfil findings stayed, only moved to the
 > correct line). Self-scan 0 findings / risk 0 with the suppression removed. Full suite
-> 1402 pass; the 14 vscode-scanner "zip" tests still fail locally on Windows (known env
+> 1403 pass; the 14 vscode-scanner "zip" tests still fail locally on Windows (known env
 > gap, green in CI). NOT fixed, reported for a decision: WORKFLOW_SECRET_TO_UPLOAD_PATH
 > (three bare .test(content) regexes, `https?://` anywhere counts as egress),
 > VIDAR_WALLET_THEFT (unbounded `.*` matched "phantom" to "seed" across a 20KB JSON line
