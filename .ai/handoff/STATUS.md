@@ -1,3 +1,5 @@
+> Note (2026-07-25, claude-opus-4-8): Released v5.18.0 with the internal-disclosure rule family. Post-review follow-ups in this commit: `spec/` is scanned again (it is the OpenAPI and AsyncAPI convention as often as an RSpec one, and a server URL in an API spec is the shape the family most wants to catch), the deny-list pass now reports its own 400-token per-line budget as INTERNAL_DISCLOSURE_TRUNCATED instead of going quiet, and the per-file cap emits exactly 100 findings while keeping the most severe ones. 75 tests in the family, 1522 in the suite; the 14 vscode-scanner failures are `zip` missing on the Windows dev box and reproduce identically on main.
+
 > Note (2026-07-25, claude-opus-5): Adversarial review of the
 > internal-disclosure family came back FAIL with measured numbers; this is the
 > remediation, measured the same way (axios, express, got, awesome-compose =

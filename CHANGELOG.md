@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.18.0] - 2026-07-25
+
 ### Added
 
 - **Internal-disclosure rule family (`INTERNAL_*`), a new detection axis.**
@@ -154,6 +156,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   re-parsed in memory, and a rewrite that does not re-parse to the expected
   entry count is rolled back. A network error leaves `src/threat-intel.ts` and
   `feed.json` byte-identical and exits non-zero.
+
+### Fixed
+
+- `spec/` is scanned rather than skipped. It is the conventional OpenAPI and
+  AsyncAPI directory as often as it is an RSpec one, and a `servers[].url` in
+  an API spec is precisely the endpoint-plus-port shape this family exists to
+  catch. RSpec files are still excluded by the `_spec.` suffix, which is the
+  part that actually identifies a test.
+- The deny-list pass reports its own per-line token budget. A line short enough
+  to clear the length guard could still exceed 400 candidate tokens, and the
+  pass went quiet past that point without a word. It now emits
+  `INTERNAL_DISCLOSURE_TRUNCATED` naming the line, so the one way a CONFIGURED
+  term could be missed in silence is closed.
+- A file that hits the per-file cap reports exactly 100 findings rather than
+  101, and the cap now keeps the most severe findings instead of whichever
+  rules happen to be declared first.
 
 ## [5.17.10] - 2026-07-25
 
@@ -1827,6 +1845,7 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
 [Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.17.10...HEAD
+[5.18.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.18.0
 [5.17.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.10
 [5.17.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.9
 [5.17.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.17.8

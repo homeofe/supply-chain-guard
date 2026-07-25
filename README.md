@@ -131,7 +131,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.17.10
+    rev: v5.18.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -321,7 +321,10 @@ A generated bundle is one 800 KB line, and a rule family that takes minutes on i
 
 - line offsets are computed **once per file** and binary-searched, and each line's quoting and comment structure is computed **once per line** rather than once per match
 - a line longer than **2000 characters** is skipped, the way an oversized file is skipped by `FILE_TOO_LARGE_SKIPPED`
-- at most **25 findings per rule** and **100 per file**
+- at most **25 findings per pattern** and **100 per file**. Two rules
+  (`INTERNAL_DEV_PATH` and `INTERNAL_GIT_REMOTE`) are each written as two
+  patterns, so those can reach 50 from a single file. When the per-file cap
+  drops findings it keeps the most severe ones.
 - at most **20000 candidate matches per rule per file**, which bounds the case where nearly everything is filtered out and so produces no findings to count
 
 Whenever a limit is reached, the file gets one `INTERNAL_DISCLOSURE_TRUNCATED` finding at `info` severity naming the limit. A scanner that quietly stopped looking is indistinguishable from a repository with nothing to find, and that is not a trade this tool makes.

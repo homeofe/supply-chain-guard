@@ -371,7 +371,6 @@ describe("internal-disclosure: documentation context", () => {
       "test/req.ip.js",
       "tests/req.ip.js",
       "spec/req_spec.rb",
-      "specs/req.js",
       "e2e/checkout.ts",
       "fixtures/response.json",
       "testdata/golden.json",
@@ -390,6 +389,20 @@ describe("internal-disclosure: documentation context", () => {
     // Not a test directory just because the word appears in a name.
     expect(rules(shapeScan("src/latest/config.ts", leak))).toContain("INTERNAL_PRIVATE_IP");
     expect(rules(shapeScan("src/protest.ts", leak))).toContain("INTERNAL_PRIVATE_IP");
+  });
+
+  it("still scans a spec directory, which is as often OpenAPI as it is RSpec", () => {
+    // `spec/` is the conventional OpenAPI and AsyncAPI location, and a server
+    // URL in an API spec is the endpoint-plus-port shape this family most wants
+    // to catch. Excluding the directory wholesale would have hidden it.
+    expect(rules(shapeScan("spec/openapi.yaml", "  url: http://payments.acme.internal:8443"))).toContain(
+      "INTERNAL_SERVICE_ENDPOINT",
+    );
+    expect(rules(shapeScan("specs/asyncapi.yaml", 'const ip = "10.20.30.40";'))).toContain(
+      "INTERNAL_PRIVATE_IP",
+    );
+    // The suffix form is what actually identifies an RSpec file, and it still wins.
+    expect(shapeScan("spec/req_spec.rb", 'const ip = "10.20.30.40";')).toHaveLength(0);
   });
 });
 
@@ -603,8 +616,34 @@ describe("internal-disclosure: bounded cost on generated files", () => {
     for (const f of found) perRule.set(f.rule, (perRule.get(f.rule) ?? 0) + 1);
     expect(perRule.get("INTERNAL_PRIVATE_IP")).toBe(MAX_FINDINGS_PER_RULE);
     expect(perRule.get("INTERNAL_HOSTNAME")).toBe(MAX_FINDINGS_PER_RULE);
-    expect(found.length).toBeLessThanOrEqual(MAX_FINDINGS_PER_FILE + 1);
+    expect(found.length).toBeLessThanOrEqual(MAX_FINDINGS_PER_FILE);
     expect(rules(found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+  });
+
+  it("fills the per-file cap exactly and keeps the most severe findings", () => {
+    // Enough DISTINCT shapes that the per-rule caps sum past the file cap,
+    // which is the only way the file cap is reached at all. Low-severity
+    // single-label URLs are emitted first so that dropping by declaration
+    // order rather than by severity would be visible.
+    const lines: string[] = [];
+    for (let i = 0; i < 60; i++) lines.push(`  const u${i} = "http://svc${i}:8080/health";`);
+    for (let i = 0; i < 60; i++) lines.push(`  const a${i} = "10.1.${i % 250}.${(i % 253) + 1}";`);
+    for (let i = 0; i < 60; i++) lines.push(`  const h${i} = "box${i}.corp";`);
+    for (let i = 0; i < 60; i++) lines.push(`  const p${i} = "/home/asmith/work/p${i}/main.js";`);
+    for (let i = 0; i < 60; i++) lines.push(`  const w${i} = "C:\\\\Users\\\\asmith\\\\p${i}\\\\main.js";`);
+    const found = scanInternalDisclosure(lines.join("\n"), "src/generated.ts");
+
+    // The notice occupies one of the slots rather than pushing the file one
+    // over its own documented limit.
+    expect(found.length).toBe(MAX_FINDINGS_PER_FILE);
+    expect(rules(found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+
+    // Every surviving finding outranks every dropped one, so the low-severity
+    // rule declared first does not crowd out the medium-severity ones.
+    const kept = found.filter((f) => f.rule !== "INTERNAL_DISCLOSURE_TRUNCATED");
+    expect(kept).toHaveLength(MAX_FINDINGS_PER_FILE - 1);
+    expect(kept.every((f) => f.severity === "medium")).toBe(true);
+    expect(rules(found)).not.toContain("INTERNAL_SINGLE_LABEL_URL");
   });
 
   it("does not report a coverage gap for a long line with nothing plausible on it", () => {
@@ -702,6 +741,31 @@ describe("internal-disclosure: configurable deny-list", () => {
     expect(JSON.stringify(hit)).not.toContain(SECRET_TERM);
     expect(hit?.match).toContain("redacted");
     expect(hit?.match).toContain(digest.slice(0, 12));
+  });
+
+  it("says so when a line has too many tokens for the deny-list pass to read", () => {
+    // A line under MAX_LINE_LENGTH can still exceed the per-line token budget.
+    // Going quiet there would be the one way a CONFIGURED term is missed
+    // without a word, so it has to surface as a truncation notice.
+    const digest = hashInternalTerm(SECRET_TERM);
+    writePolicy("internalDisclosure:", "  hashedTerms:", `    - ${digest}`);
+    const runtime = loadInternalDisclosureConfig(tempDir, loadPolicyConfig(tempDir));
+
+    const filler = Array.from({ length: 410 }, (_, i) => `t${i}`).join(" ");
+    const found = scanInternalDisclosure(`${filler} ${SECRET_TERM}`, "src/config.ts", runtime);
+
+    expect(rules(found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+    expect(JSON.stringify(found)).not.toContain(SECRET_TERM);
+  });
+
+  it("reports no truncation for a line that fits the token budget exactly", () => {
+    const digest = hashInternalTerm(SECRET_TERM);
+    writePolicy("internalDisclosure:", "  hashedTerms:", `    - ${digest}`);
+    const runtime = loadInternalDisclosureConfig(tempDir, loadPolicyConfig(tempDir));
+
+    const found = scanInternalDisclosure(`host = ${SECRET_TERM}`, "src/config.ts", runtime);
+    expect(rules(found)).not.toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+    expect(rules(found)).toContain("INTERNAL_DENYLIST_MATCH");
   });
 
   it("mode a: hashing normalises with trim plus lowercase, and matches whole tokens only", () => {

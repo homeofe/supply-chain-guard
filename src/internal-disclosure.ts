@@ -730,9 +730,15 @@ const C_FAMILY_FILE = /\.(?:[cm]?[jt]sx?|java|kt|cs|swift|scala|dart|go|rs|c|h|c
  * `test/` or `tests/` directory - the dominant JavaScript layout - never
  * matched, and 28 of 35 findings on a four-repository sample came from test
  * directories that were supposed to be excluded.
+ *
+ * `spec/` is deliberately NOT in the directory list. It is the conventional
+ * OpenAPI and AsyncAPI location as often as it is an RSpec one, and a
+ * `servers[].url` in an API spec is exactly the endpoint-plus-port shape this
+ * family exists to catch. RSpec files are still excluded by the `_spec.` suffix
+ * alternative below, which is the part that actually identifies a test.
  */
 const TEST_FILE =
-  /(?:^|\/)(?:tests?|__tests__|__fixtures__|__mocks__|__snapshots__|specs?|e2e|integration-tests?|fixtures?|testdata|test-data)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
+  /(?:^|\/)(?:tests?|__tests__|__fixtures__|__mocks__|__snapshots__|e2e|integration-tests?|fixtures?|testdata|test-data)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
 
 /** What kind of surface a file is, which decides which rules stay armed. */
 export type FileSurface = "source" | "prose" | "example";
@@ -843,6 +849,15 @@ const MAX_DENYLIST_LINE = MAX_LINE_LENGTH;
 
 /** Upper bound on tokens hashed per line. */
 const MAX_TOKENS_PER_LINE = 400;
+
+/** Severity ordering used when the per-file cap has to drop findings. */
+const INTERNAL_SEVERITY_RANK: Record<Severity, number> = {
+  critical: 5,
+  high: 4,
+  medium: 3,
+  low: 2,
+  info: 1,
+};
 
 /**
  * Byte offset of the first character of every line, so a match index found by
@@ -1328,14 +1343,25 @@ export function loadInternalDisclosureConfig(
  * suffix, and two tokens separated by a single slash are offered joined, so an
  * `org/repo` inventory entry can be matched.
  */
-export function candidateTokens(line: string): string[] {
+export function candidateTokens(line: string, meta?: { truncated: boolean }): string[] {
   const tokens = new Set<string>();
   const found: Array<{ text: string; start: number; end: number }> = [];
 
   const re = /[A-Za-z0-9][A-Za-z0-9._-]*/g;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(line)) !== null && found.length < MAX_TOKENS_PER_LINE) {
+  // The cap is tested FIRST so that hitting it leaves `re.lastIndex` parked
+  // after the last token read. A failed `exec` resets `lastIndex` to 0, so
+  // probing after a null-terminated loop would rediscover the first token and
+  // report a truncation that never happened.
+  while (found.length < MAX_TOKENS_PER_LINE && (match = re.exec(line)) !== null) {
     found.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+  }
+  // Signal a cut-off line so the caller can report it. Without this the
+  // deny-list pass would go quiet past token 400 on a line short enough to
+  // clear MAX_LINE_LENGTH, which is the one way this family can miss a
+  // configured term without saying so.
+  if (meta && found.length === MAX_TOKENS_PER_LINE && re.exec(line) !== null) {
+    meta.truncated = true;
   }
 
   const add = (value: string): void => {
@@ -1585,7 +1611,19 @@ export function scanInternalDisclosure(
     truncationReasons.add(
       `the file produced more than ${MAX_FINDINGS_PER_FILE} findings`,
     );
-    result = result.slice(0, MAX_FINDINGS_PER_FILE);
+    // Keep the most severe findings rather than whichever rules happen to sit
+    // early in INTERNAL_DISCLOSURE_PATTERNS, and reserve the last slot for the
+    // notice below so a capped file reports exactly MAX_FINDINGS_PER_FILE.
+    result = result
+      .map((finding, index) => ({ finding, index }))
+      .sort(
+        (a, b) =>
+          INTERNAL_SEVERITY_RANK[b.finding.severity] -
+            INTERNAL_SEVERITY_RANK[a.finding.severity] || a.index - b.index,
+      )
+      .slice(0, MAX_FINDINGS_PER_FILE - 1)
+      .sort((a, b) => a.index - b.index)
+      .map((entry) => entry.finding);
   }
 
   if (truncationReasons.size > 0) {
@@ -1637,11 +1675,17 @@ function scanDenyList(
     const lineNo = i + 1;
 
     if (runtime.hashes.size > 0) {
-      for (const token of candidateTokens(line)) {
+      const tokenMeta = { truncated: false };
+      for (const token of candidateTokens(line, tokenMeta)) {
         const digest = hashInternalTerm(token, runtime.salt);
         if (runtime.hashes.has(digest)) {
           push(lineNo, `sha256:${digest.slice(0, 12)}`, "", true);
         }
+      }
+      if (tokenMeta.truncated) {
+        truncationReasons.add(
+          `line ${lineNo} holds more than ${MAX_TOKENS_PER_LINE} deny-list candidate tokens`,
+        );
       }
     }
 
