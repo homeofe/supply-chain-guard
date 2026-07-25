@@ -18,6 +18,7 @@
     "check:handoff": "node scripts/aahp-dashboard.mjs --check",
     "handoff:refresh": "node scripts/aahp-dashboard.mjs",
     "feed:generate": "node scripts/generate-feed.mjs",
+    "feed:import": "node scripts/import-threat-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
     "prebuild": "npm run check:aahp && npm run check:feed && npm run check:handoff",
     "prepublishOnly": "npm run build",

@@ -1,0 +1,759 @@
+/**
+ * Upstream threat-feed import (scripts/import-threat-feed.mjs).
+ *
+ * Every test here is OFFLINE: the upstream responses are fixtures and the
+ * network layer is injected as `fetchImpl`. The three behaviours that matter
+ * are the mapping (upstream advisory -> FeedIOC), the deduplication against
+ * the feed that is already committed, and the failure mode (a network error
+ * must leave src/threat-intel.ts and feed.json byte-identical and surface as
+ * a rejected promise, which the CLI turns into a non-zero exit).
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { isValidFeedIOC, type FeedIOC } from "../threat-intel.js";
+
+const IMPORT_SCRIPT_URL = new URL("../../scripts/import-threat-feed.mjs", import.meta.url).href;
+const load = () => import(/* @vite-ignore */ IMPORT_SCRIPT_URL);
+
+// ---------------------------------------------------------------------------
+// Fixtures - shaped exactly like GET /advisories?type=malware responses.
+// Package names are synthetic (never real packages) so a fixture can never
+// become a live indicator by accident.
+// ---------------------------------------------------------------------------
+
+interface AdvisoryFixture {
+  ghsa_id: string;
+  type?: string;
+  severity?: string;
+  published_at?: string;
+  withdrawn_at?: string | null;
+  vulnerabilities: Array<{
+    package: { ecosystem: string; name: string };
+    vulnerable_version_range: string | null;
+  }>;
+}
+
+function advisory(over: Partial<AdvisoryFixture> = {}): AdvisoryFixture {
+  return {
+    ghsa_id: "GHSA-aaaa-bbbb-cccc",
+    type: "malware",
+    severity: "critical",
+    published_at: "2026-07-24T17:20:25Z",
+    withdrawn_at: null,
+    vulnerabilities: [
+      {
+        package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+        vulnerable_version_range: ">= 0",
+      },
+    ],
+    ...over,
+  };
+}
+
+/** A fetchImpl that answers one page and then stops. */
+function singlePage(body: unknown, status = 200) {
+  return async () => ({
+    ok: status === 200,
+    status,
+    headers: { get: () => null },
+    json: async () => body,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Version-range mapping
+// ---------------------------------------------------------------------------
+
+describe("parseVersionRange", () => {
+  it("maps an exact pin", async () => {
+    const { parseVersionRange } = await load();
+    expect(parseVersionRange("= 1.2.3")).toEqual({ kind: "exact", version: "1.2.3" });
+    expect(parseVersionRange("=1.2.3")).toEqual({ kind: "exact", version: "1.2.3" });
+  });
+
+  it("maps an all-versions range", async () => {
+    const { parseVersionRange } = await load();
+    expect(parseVersionRange(">= 0")).toEqual({ kind: "all" });
+    expect(parseVersionRange("> 0")).toEqual({ kind: "all" });
+    expect(parseVersionRange(">= 0.0.0")).toEqual({ kind: "all" });
+  });
+
+  it("refuses to collapse a bounded range into a bare-name block", async () => {
+    const { parseVersionRange } = await load();
+    // Collapsing this to a bare name would block versions upstream never
+    // called malicious - the over-blocking the curated feed avoids by hand.
+    expect(parseVersionRange(">= 1.0.0, <= 1.2.0")).toEqual({ kind: "unmappable" });
+    expect(parseVersionRange("< 2.0.0")).toEqual({ kind: "unmappable" });
+    expect(parseVersionRange("")).toEqual({ kind: "unmappable" });
+    expect(parseVersionRange(null)).toEqual({ kind: "unmappable" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Advisory -> FeedIOC mapping
+// ---------------------------------------------------------------------------
+
+describe("mapAdvisory", () => {
+  it("maps an all-versions npm advisory to a bare-name IOC", async () => {
+    const { mapAdvisory, publicEntry } = await load();
+    const { entries, skipped } = mapAdvisory(advisory());
+    expect(skipped).toEqual([]);
+    expect(publicEntry(entries[0])).toEqual({
+      type: "package",
+      value: "scg-fixture-pkg",
+      severity: "critical",
+      confidence: 0.9,
+      source: "GHSA-aaaa-bbbb-cccc",
+      firstSeen: "2026-07-24",
+    });
+  });
+
+  it("maps an exact pin to name@version", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+            vulnerable_version_range: "= 4.5.6",
+          },
+        ],
+      }),
+    );
+    expect(entries[0].value).toBe("scg-fixture-pkg@4.5.6");
+  });
+
+  it("prefixes every non-npm ecosystem the scanner can match", async () => {
+    const { mapAdvisory } = await load();
+    const cases: Array<[string, string]> = [
+      ["pip", "pypi:scg-fixture-pkg"],
+      ["composer", "composer:scg-fixture-pkg"],
+      ["go", "go:scg-fixture-pkg"],
+      ["rubygems", "ruby:scg-fixture-pkg"],
+      ["rust", "cargo:scg-fixture-pkg"],
+      ["nuget", "nuget:scg-fixture-pkg"],
+      ["npm", "scg-fixture-pkg"],
+    ];
+    for (const [ecosystem, expected] of cases) {
+      const { entries } = mapAdvisory(
+        advisory({
+          vulnerabilities: [
+            {
+              package: { ecosystem, name: "scg-fixture-pkg" },
+              vulnerable_version_range: ">= 0",
+            },
+          ],
+        }),
+      );
+      expect(entries[0].value).toBe(expected);
+    }
+  });
+
+  it("keeps a scoped npm name and a Go module path intact", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          {
+            package: { ecosystem: "npm", name: "@scg-fixture/scoped" },
+            vulnerable_version_range: "= 1.0.0",
+          },
+          {
+            package: { ecosystem: "go", name: "github.com/scg-fixture/mod" },
+            vulnerable_version_range: ">= 0",
+          },
+        ],
+      }),
+    );
+    expect(entries.map((e: FeedIOC) => e.value)).toEqual([
+      "@scg-fixture/scoped@1.0.0",
+      "go:github.com/scg-fixture/mod",
+    ]);
+  });
+
+  it("maps severity down to the three levels the feed schema has", async () => {
+    const { mapAdvisory } = await load();
+    const sev = (s: string) => mapAdvisory(advisory({ severity: s })).entries[0].severity;
+    expect(sev("critical")).toBe("critical");
+    expect(sev("high")).toBe("high");
+    expect(sev("moderate")).toBe("medium");
+    expect(sev("medium")).toBe("medium");
+    // Never promoted above what upstream claimed.
+    expect(sev("low")).toBe("medium");
+    expect(sev("unknown")).toBe("medium");
+  });
+
+  it("records provenance in the source field", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(advisory({ ghsa_id: "GHSA-1234-5678-9abc" }));
+    expect(entries[0].source).toBe("GHSA-1234-5678-9abc");
+  });
+
+  it("skips withdrawn advisories", async () => {
+    const { mapAdvisory } = await load();
+    const result = mapAdvisory(advisory({ withdrawn_at: "2026-07-25T00:00:00Z" }));
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("withdrawn");
+  });
+
+  it("skips ecosystems the scanner has no matcher for", async () => {
+    const { mapAdvisory } = await load();
+    const result = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          {
+            package: { ecosystem: "maven", name: "org.example:thing" },
+            vulnerable_version_range: ">= 0",
+          },
+        ],
+      }),
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unsupported-ecosystem");
+  });
+
+  it("skips a package name that could break out of the TypeScript literal", async () => {
+    const { mapAdvisory } = await load();
+    const hostile = advisory({
+      vulnerabilities: [
+        {
+          package: { ecosystem: "npm", name: 'x", severity: "critical" }, { type: "domain", value: "evil' },
+          vulnerable_version_range: ">= 0",
+        },
+      ],
+    });
+    const result = mapAdvisory(hostile);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unsafe-package-name");
+  });
+
+  it("reports an unmappable range instead of guessing", async () => {
+    const { mapAdvisory } = await load();
+    const result = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+            vulnerable_version_range: ">= 1.0.0, <= 1.2.0",
+          },
+        ],
+      }),
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unmappable-version-range");
+  });
+
+  it("emits entries that pass the feed's own validity gate", async () => {
+    const { mapAdvisory, publicEntry } = await load();
+    const { entries } = mapAdvisory(
+      advisory({
+        vulnerabilities: [
+          { package: { ecosystem: "npm", name: "scg-fixture-pkg" }, vulnerable_version_range: "= 1.0.0" },
+          { package: { ecosystem: "pip", name: "scg-fixture-py" }, vulnerable_version_range: ">= 0" },
+        ],
+      }),
+    );
+    expect(entries).toHaveLength(2);
+    for (const entry of entries) {
+      expect(isValidFeedIOC(publicEntry(entry))).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Deduplication
+// ---------------------------------------------------------------------------
+
+describe("dedupe", () => {
+  const existing: FeedIOC[] = [
+    { type: "package", value: "already-there@1.0.0", severity: "critical", confidence: 1 },
+    { type: "package", value: "whole-package-bad", severity: "critical", confidence: 1 },
+    { type: "package", value: "ruby:gem-bad", severity: "critical", confidence: 1 },
+    { type: "domain", value: "c2.example", severity: "critical", confidence: 1 },
+  ];
+
+  it("drops an exact duplicate", async () => {
+    const { dedupe } = await load();
+    const result = dedupe(existing, [
+      { type: "package", value: "already-there@1.0.0", severity: "critical", confidence: 0.9 },
+    ]);
+    expect(result.added).toEqual([]);
+    expect(result.duplicates).toBe(1);
+  });
+
+  it("drops a version pin already covered by a bare-name IOC", async () => {
+    const { dedupe } = await load();
+    const result = dedupe(existing, [
+      { type: "package", value: "whole-package-bad@9.9.9", severity: "critical", confidence: 0.9 },
+      { type: "package", value: "ruby:gem-bad@2.0.0", severity: "critical", confidence: 0.9 },
+    ]);
+    expect(result.added).toEqual([]);
+    expect(result.covered).toBe(2);
+  });
+
+  it("does not confuse ecosystems that share a package name", async () => {
+    const { dedupe } = await load();
+    const result = dedupe(existing, [
+      { type: "package", value: "pypi:whole-package-bad@1.0.0", severity: "critical", confidence: 0.9 },
+    ]);
+    expect(result.added).toHaveLength(1);
+    expect(result.covered).toBe(0);
+  });
+
+  it("deduplicates within the incoming batch too", async () => {
+    const { dedupe } = await load();
+    const incoming = [
+      { type: "package", value: "brand-new@1.0.0", severity: "critical", confidence: 0.9 },
+      { type: "package", value: "brand-new@1.0.0", severity: "critical", confidence: 0.9 },
+    ];
+    const result = dedupe(existing, incoming);
+    expect(result.added).toHaveLength(1);
+    expect(result.duplicates).toBe(1);
+  });
+
+  it("adds genuinely new indicators", async () => {
+    const { dedupe } = await load();
+    const result = dedupe(existing, [
+      { type: "package", value: "brand-new", severity: "critical", confidence: 0.9 },
+    ]);
+    expect(result.added).toHaveLength(1);
+    expect(result.duplicates).toBe(0);
+    expect(result.covered).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fetch layer (bounded, optional token) - injected fetchImpl, no network
+// ---------------------------------------------------------------------------
+
+describe("fetchMalwareAdvisories", () => {
+  it("follows Link rel=next and stops at the page cap", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls++;
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h === "link" ? '<https://next.example/page>; rel="next"' : null) },
+        json: async () => [advisory({ ghsa_id: `GHSA-page-${calls}-cccc` })],
+      };
+    };
+    const result = await fetchMalwareAdvisories({ maxPages: 3, fetchImpl });
+    expect(calls).toBe(3);
+    expect(result.pages).toBe(3);
+    expect(result.truncated).toBe(true);
+    expect(result.advisories).toHaveLength(3);
+  });
+
+  it("sends no Authorization header when no token is configured", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    let seen: Record<string, string> = {};
+    const fetchImpl = async (_url: string, init: { headers: Record<string, string> }) => {
+      seen = init.headers;
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => [] };
+    };
+    await fetchMalwareAdvisories({ fetchImpl });
+    expect(seen.Authorization).toBeUndefined();
+    expect(seen.Accept).toBe("application/vnd.github+json");
+  });
+
+  it("uses the token when one is supplied (rate limit only, never required)", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    let seen: Record<string, string> = {};
+    const fetchImpl = async (_url: string, init: { headers: Record<string, string> }) => {
+      seen = init.headers;
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => [] };
+    };
+    await fetchMalwareAdvisories({ fetchImpl, token: "t0ken" });
+    expect(seen.Authorization).toBe("Bearer t0ken");
+  });
+
+  it("passes an abort signal so a hung upstream cannot stall the run", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    let signal: unknown;
+    const fetchImpl = async (_url: string, init: { signal: unknown }) => {
+      signal = init.signal;
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => [] };
+    };
+    await fetchMalwareAdvisories({ fetchImpl, timeoutMs: 1234 });
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("rejects on a non-200 and names the rate limit when it is the cause", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    const fetchImpl = async () => ({
+      ok: false,
+      status: 403,
+      headers: { get: (h: string) => (h === "x-ratelimit-remaining" ? "0" : null) },
+      json: async () => ({}),
+    });
+    await expect(fetchMalwareAdvisories({ fetchImpl })).rejects.toThrow(/HTTP 403.*GITHUB_TOKEN/s);
+  });
+
+  it("rejects on a transport error", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    const fetchImpl = async () => {
+      throw new Error("getaddrinfo ENOTFOUND");
+    };
+    await expect(fetchMalwareAdvisories({ fetchImpl })).rejects.toThrow(/request failed/);
+  });
+
+  it("rejects a payload that is not an array of advisories", async () => {
+    const { fetchMalwareAdvisories } = await load();
+    await expect(
+      fetchMalwareAdvisories({ fetchImpl: singlePage({ message: "nope" }) }),
+    ).rejects.toThrow(/unexpected payload/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OSV corroboration - enrichment, never a gate
+// ---------------------------------------------------------------------------
+
+describe("crossReferenceOsv", () => {
+  it("records a MAL- id per package and lifts nothing else", async () => {
+    const { crossReferenceOsv } = await load();
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        results: [
+          { vulns: [{ id: "MAL-2026-11054" }] },
+          { vulns: [{ id: "GHSA-not-a-mal-id" }] },
+          {},
+        ],
+      }),
+    });
+    const result = await crossReferenceOsv(
+      [
+        { prefix: "", name: "a" },
+        { prefix: "pypi:", name: "b" },
+        { prefix: "go:", name: "c" },
+      ],
+      { fetchImpl },
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ids.get("a")).toBe("MAL-2026-11054");
+    expect(result.ids.has("pypi:b")).toBe(false);
+    expect(result.ids.has("go:c")).toBe(false);
+  });
+
+  it("degrades gracefully when OSV is unavailable", async () => {
+    const { crossReferenceOsv } = await load();
+    const fetchImpl = async () => {
+      throw new Error("ECONNRESET");
+    };
+    const result = await crossReferenceOsv([{ prefix: "", name: "a" }], { fetchImpl });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("ECONNRESET");
+    expect(result.ids.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Serialization into the BUNDLED_FEED array literal
+// ---------------------------------------------------------------------------
+
+describe("applyEntries", () => {
+  const SOURCE = [
+    "const BUNDLED_FEED: FeedIOC[] = [",
+    '  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },',
+    "];",
+    "",
+    "export const CACHE_DIR = \".scg-cache\";",
+    "",
+  ].join("\n");
+
+  it("appends inside the array, before the terminator", async () => {
+    const { applyEntries } = await load();
+    const out = applyEntries(
+      SOURCE,
+      [
+        {
+          type: "package",
+          value: "scg-fixture-pkg@1.0.0",
+          severity: "critical",
+          confidence: 0.9,
+          source: "GHSA-aaaa-bbbb-cccc",
+          firstSeen: "2026-07-24",
+        },
+      ],
+      { date: "2026-07-24" },
+    );
+    const arrayBody = out.slice(0, out.indexOf("\n];"));
+    expect(arrayBody).toContain('value: "scg-fixture-pkg@1.0.0"');
+    expect(arrayBody).toContain('source: "GHSA-aaaa-bbbb-cccc"');
+    expect(arrayBody).toContain("// Imported from GitHub Advisory Database (2026-07-24)");
+    expect(out).toContain('export const CACHE_DIR = ".scg-cache";');
+  });
+
+  it("produces a literal that evaluates back to the same entry", async () => {
+    const { applyEntries } = await load();
+    const { runInNewContext } = await import("node:vm");
+    const entry = {
+      type: "package",
+      value: "pypi:scg-fixture-py",
+      severity: "high",
+      confidence: 1.0,
+      source: "GHSA-aaaa-bbbb-cccc, MAL-2026-11054",
+    };
+    const out = applyEntries(SOURCE, [entry], { date: "2026-07-24" });
+    const marker = "const BUNDLED_FEED: FeedIOC[] = [";
+    const body = out.slice(out.indexOf(marker) + marker.length, out.indexOf("\n];"));
+    const parsed = runInNewContext(`[${body}\n]`, {}) as FeedIOC[];
+    expect(parsed[parsed.length - 1]).toEqual(entry);
+  });
+
+  it("preserves CRLF working trees without splitting a CRLF pair", async () => {
+    const { applyEntries } = await load();
+    const crlf = SOURCE.replace(/\n/g, "\r\n");
+    const out = applyEntries(crlf, [
+      { type: "package", value: "x", severity: "critical", confidence: 0.9, source: "GHSA-aaaa-bbbb-cccc" },
+    ], { date: "2026-07-24" });
+    expect(out).toContain('value: "x"');
+    // A stray "\r" or a lone "\n" makes git treat the whole file as rewritten,
+    // turning a 25-line append into a several-thousand-line diff.
+    expect(out.match(/\r\r/g)).toBeNull();
+    expect(out.match(/[^\r]\n/g)).toBeNull();
+    // Every line ends CRLF and the array still terminates correctly.
+    expect(out.split("\r\n").length).toBe(crlf.split("\r\n").length + 3);
+    expect(out).toContain("\r\n];");
+  });
+
+  it("keeps LF working trees on LF", async () => {
+    const { applyEntries } = await load();
+    const out = applyEntries(SOURCE, [
+      { type: "package", value: "x", severity: "critical", confidence: 0.9, source: "GHSA-aaaa-bbbb-cccc" },
+    ], { date: "2026-07-24" });
+    expect(out.includes("\r")).toBe(false);
+    expect(out).toContain("\n];");
+  });
+
+  it("writes confidence in the file's existing 1.0 style", async () => {
+    const { formatEntry } = await load();
+    expect(formatEntry({ type: "package", value: "x", severity: "critical", confidence: 1.0, source: "GHSA-aaaa-bbbb-cccc" })).toContain(
+      "confidence: 1.0",
+    );
+    expect(formatEntry({ type: "package", value: "x", severity: "critical", confidence: 0.9, source: "GHSA-aaaa-bbbb-cccc" })).toContain(
+      "confidence: 0.9",
+    );
+  });
+
+  it("refuses a source file without the expected array", async () => {
+    const { applyEntries } = await load();
+    expect(() => applyEntries("const OTHER = [];", [], { date: "2026-07-24" })).toThrow(
+      /marker not found/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Failure mode - the feed must survive a broken upstream untouched
+// ---------------------------------------------------------------------------
+
+describe("importUpstreamFeed failure mode", () => {
+  let tmpRoot: string;
+  let threatIntelPath: string;
+  let feedPath: string;
+
+  const FAKE_THREAT_INTEL = [
+    "export interface FeedIOC { type: string }",
+    "const BUNDLED_FEED: FeedIOC[] = [",
+    '  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },',
+    "];",
+    "",
+  ].join("\n");
+
+  beforeEach(() => {
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scg-import-"));
+    fs.mkdirSync(path.join(tmpRoot, "src"));
+    threatIntelPath = path.join(tmpRoot, "src", "threat-intel.ts");
+    feedPath = path.join(tmpRoot, "feed.json");
+    fs.writeFileSync(threatIntelPath, FAKE_THREAT_INTEL);
+    fs.writeFileSync(path.join(tmpRoot, "package.json"), JSON.stringify({ version: "9.9.9" }));
+    fs.writeFileSync(feedPath, '{"schema":1,"entries":[{"type":"domain","value":"existing.example"}]}\n');
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("leaves both files byte-identical and rejects when the upstream fetch fails", async () => {
+    const { importUpstreamFeed } = await load();
+    const before = {
+      ts: fs.readFileSync(threatIntelPath),
+      feed: fs.readFileSync(feedPath),
+    };
+    const fetchImpl = async () => {
+      throw new Error("getaddrinfo ENOTFOUND api.github.com");
+    };
+
+    await expect(importUpstreamFeed({ root: tmpRoot, fetchImpl })).rejects.toThrow(
+      /GitHub Advisory Database request failed/,
+    );
+
+    expect(fs.readFileSync(threatIntelPath).equals(before.ts)).toBe(true);
+    expect(fs.readFileSync(feedPath).equals(before.feed)).toBe(true);
+  });
+
+  it("leaves both files untouched on an HTTP error", async () => {
+    const { importUpstreamFeed } = await load();
+    const before = fs.readFileSync(threatIntelPath);
+    const fetchImpl = async () => ({
+      ok: false,
+      status: 503,
+      headers: { get: () => null },
+      json: async () => ({}),
+    });
+    await expect(importUpstreamFeed({ root: tmpRoot, fetchImpl })).rejects.toThrow(/HTTP 503/);
+    expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
+  });
+
+  it("writes nothing in --dry-run but still reports what it would add", async () => {
+    const { importUpstreamFeed } = await load();
+    const before = fs.readFileSync(threatIntelPath);
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.added).toBe(1);
+    expect(report.written).toBe(false);
+    expect(report.entries[0].value).toBe("scg-fixture-pkg");
+    expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
+  });
+
+  it("writes nothing when everything upstream is already covered", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      threatIntelPath,
+      FAKE_THREAT_INTEL.replace(
+        "];",
+        '  { type: "package", value: "scg-fixture-pkg", severity: "critical", confidence: 1.0 },\n];',
+      ),
+    );
+    const before = fs.readFileSync(threatIntelPath);
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.added).toBe(0);
+    expect(report.duplicates).toBe(1);
+    expect(report.written).toBe(false);
+    expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
+  });
+
+  it("applies new entries and regenerates feed.json from the updated source", async () => {
+    const { importUpstreamFeed } = await load();
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      fetchImpl: singlePage([
+        advisory({
+          ghsa_id: "GHSA-1111-2222-3333",
+          vulnerabilities: [
+            { package: { ecosystem: "pip", name: "scg-fixture-py" }, vulnerable_version_range: "= 2.0.0" },
+          ],
+        }),
+      ]),
+    });
+    expect(report.written).toBe(true);
+    expect(report.added).toBe(1);
+
+    const source = fs.readFileSync(threatIntelPath, "utf8");
+    expect(source).toContain('value: "pypi:scg-fixture-py@2.0.0"');
+    expect(source).toContain('source: "GHSA-1111-2222-3333"');
+
+    const feed = JSON.parse(fs.readFileSync(feedPath, "utf8"));
+    expect(feed.schema).toBe(1);
+    expect(feed.entryCount).toBe(2);
+    expect(feed.entries[1].value).toBe("pypi:scg-fixture-py@2.0.0");
+    // Provenance survives into the published artifact.
+    expect(feed.entries[1].source).toBe("GHSA-1111-2222-3333");
+  });
+
+  it("still imports (at single-source confidence) when OSV is down", async () => {
+    const { importUpstreamFeed, CONFIDENCE_SINGLE_SOURCE } = await load();
+    const fetchImpl = async (url: string) => {
+      if (String(url).includes("osv.dev")) throw new Error("ECONNRESET");
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => [advisory()],
+      };
+    };
+    const report = await importUpstreamFeed({ root: tmpRoot, fetchImpl });
+    expect(report.osvAvailable).toBe(false);
+    expect(report.written).toBe(true);
+    expect(report.entries[0].confidence).toBe(CONFIDENCE_SINGLE_SOURCE);
+  });
+
+  it("raises confidence to 1.0 when OSV corroborates the package", async () => {
+    const { importUpstreamFeed, CONFIDENCE_CORROBORATED } = await load();
+    const fetchImpl = async (url: string) => {
+      if (String(url).includes("osv.dev")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          json: async () => ({ results: [{ vulns: [{ id: "MAL-2026-11054" }] }] }),
+        };
+      }
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => [advisory()] };
+    };
+    const report = await importUpstreamFeed({ root: tmpRoot, fetchImpl });
+    expect(report.entries[0].confidence).toBe(CONFIDENCE_CORROBORATED);
+    expect(report.entries[0].source).toBe("GHSA-aaaa-bbbb-cccc, MAL-2026-11054");
+    expect(report.corroboratedByOsv).toBe(1);
+  });
+
+  it("caps how many entries a single run may add", async () => {
+    const { importUpstreamFeed } = await load();
+    const many = Array.from({ length: 5 }, (_, i) =>
+      advisory({
+        ghsa_id: `GHSA-cap${i}-bbbb-cccc`,
+        vulnerabilities: [
+          { package: { ecosystem: "npm", name: `scg-fixture-cap-${i}` }, vulnerable_version_range: ">= 0" },
+        ],
+      }),
+    );
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      limit: 2,
+      useOsv: false,
+      fetchImpl: singlePage(many),
+    });
+    expect(report.added).toBe(2);
+    expect(report.capped).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CLI argument parsing
+// ---------------------------------------------------------------------------
+
+describe("parseArgs", () => {
+  it("parses the documented options", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--days", "30", "--limit", "10", "--dry-run", "--no-osv", "--json"])).toEqual({
+      days: 30,
+      limit: 10,
+      dryRun: true,
+      useOsv: false,
+      json: true,
+    });
+  });
+
+  it("rejects an unknown option instead of ignoring it", async () => {
+    const { parseArgs } = await load();
+    expect(() => parseArgs(["--wat"])).toThrow(/unknown option/);
+  });
+});

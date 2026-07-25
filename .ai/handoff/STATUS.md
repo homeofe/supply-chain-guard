@@ -1,3 +1,39 @@
+> Note (2026-07-25, claude-opus-5): Cut the feed's dependency on the internal
+> security-news aggregator and wired real upstream sources instead. That
+> aggregator was 17 general security RSS feeds, none of them package-malware or
+> supply-chain specific, so every run needed a human to chase primary vendor
+> write-ups for atomic indicators; the app is also unmaintained (its repo was
+> deleted during the Forgejo migration). Replacement: scripts/import-threat-feed.mjs
+> imports malicious-package IOCs from the GitHub Advisory Database malware
+> advisories (public REST API, no key; GITHUB_TOKEN optional, rate limit only) and
+> corroborates each hit against OSV.dev querybatch (MAL- records from
+> ossf/malicious-packages). OSV is corroboration ONLY - it can lift confidence
+> 0.9 -> 1.0 but never discovers a package, so a MAL- record covering one version
+> of a legitimate package can never become a whole-package block. Discipline
+> carried over from the manual process: only an exact pin (= 1.2.3 -> name@1.2.3)
+> or an all-versions range (>= 0 -> bare name) is mapped, bounded ranges are
+> reported as unmappable instead of collapsed, ecosystems with no matcher are
+> skipped, family/campaign stay unset because upstream publishes neither, and
+> package names are re-validated against a charset with no quotes or backslashes
+> before being written into TypeScript. Provenance is the FeedIOC.source field
+> (0 of 430 existing entries used it); that also required adding "source" and
+> "lastSeen" to FEED_ENTRY_KEYS, otherwise our own feed.json stops passing
+> isInertThreatFeedFile() and gets scanned as ordinary content (the v5.4.0
+> phantom-findings bug). Failure mode is inert: the fetch is the only fatal step,
+> nothing is written until the batch re-parses in memory, and a rewrite that does
+> not re-parse is rolled back - a network error leaves src/threat-intel.ts and
+> feed.json byte-identical and exits non-zero. 42 offline tests
+> (src/__tests__/feed-import.test.ts) cover the mapping, dedup and that failure
+> mode with fixtures; no test touches the network. Docs in
+> docs/threat-feed-sources.md carry the required attribution (GitHub Advisory
+> Database CC BY 4.0, ossf/malicious-packages Apache-2.0). Historical arena
+> references to that host in CHANGELOG.md and this file were reworded to "news-aggregator
+> feed" so nothing points at a dead host. No IOCs were imported in this change -
+> it ships the mechanism only. NOT DONE HERE: the daily refresh still runs from a
+> local scheduled task on Emre's machine that fetches the retired aggregator URL; it
+> needs to be repointed at `npm run feed:import` (or replaced by a scheduled
+> workflow) or the dead source stays in the loop.
+
 > Note (2026-07-25): Released v5.17.10 - rule precision. Five rules that matched a
 > SHAPE without inspecting context or value are now context-aware, and one silently
 > dead config key is implemented. GHA_SECRET_EXFIL_MULTILINE is per-step instead of a
@@ -51,7 +87,7 @@
 > SECRETS_PRIVATE_KEY (PEM header only, fired on a MOCK-KEY-REPLACE-IN-PRODUCTION literal).
 >
 > Note (2026-07-25, claude-opus-4-8): Released v5.17.9 - daily threat-intel refresh
-> (scheduled task). arena.elvatis.com/api/news again carried mostly named campaigns with
+> (scheduled task). The news-aggregator feed again carried mostly named campaigns with
 > no atomic IOCs, so - per the task's STEP 1b - enriched from primary vendor write-ups.
 > Added ONE new campaign: FakeAgent / SectopRAT fake Claude Desktop malvertising (Huntress
 > + BleepingComputer + Help Net Security + cyberpress, 2026-07-21 to 07-22). Bing "Claude
@@ -76,7 +112,7 @@
 > vscode-scanner "zip" tests fail locally on Windows - known env gap, green in CI).
 >
 > Note (2026-07-24, claude-opus-4-8): Released v5.17.8 - daily threat-intel refresh
-> (scheduled task, run interactively). arena.elvatis.com/api/news carried only named
+> (scheduled task, run interactively). The news-aggregator feed carried only named
 > campaigns with no atomic IOCs this cycle, so - at the user's direction - widened the
 > net to the linked primary vendor write-ups (Socket, The Hacker News, OX, StepSecurity,
 > safedep, Rescana) and extracted concrete indicators for three developer-targeted
@@ -107,7 +143,7 @@
 > publish (npm via OIDC) and move the @v5 branch.
 
 > Note (2026-07-20, claude-opus-4-8): Released v5.17.6 - daily threat-intel refresh
-> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
+> (scheduled task). Fetched the news-aggregator feed (JSON gives excerpts +
 > per-item source links; pulled the linked The Hacker News article and cross-checked the
 > StepSecurity writeup for indicators) and added SleeperGem (StepSecurity + Aikido,
 > 2026-07-20). Three gem releases published to RubyGems.org on 2026-07-18/19 act as
@@ -165,7 +201,7 @@
 > --level full + aahp doctor both green (6/6 gates); check:handoff + check:aahp + check:feed
 > still pass. Build tooling only, no version bump.
 > Note (2026-07-19, claude-opus-4-8): Released v5.17.5 - daily threat-intel refresh
-> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives excerpts +
+> (scheduled task). Fetched the news-aggregator feed (JSON gives excerpts +
 > per-item source links; pulled the linked The Hacker News articles for indicators) and
 > added the NadMesh botnet (XLab, 2026-07-17). NadMesh is a Go-based botnet that scans for
 > exposed AI services (Ollama/vLLM/etc.) and CI/CD hosts, harvesting AWS keys and Kubernetes
@@ -503,7 +539,7 @@
 # supply-chain-guard - Project Status
 
 > Note (2026-07-16, claude-opus-4-8): Released v5.12.3 - daily threat-intel refresh
-> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives
+> (scheduled task). Fetched the news-aggregator feed (JSON gives
 > excerpts + per-item source links) and added the AsyncAPI npm supply-chain
 > compromise (2026-07-14). Five malicious versions across four @asyncapi packages
 > were published to npm during a ~4h window (07:10-11:18 UTC on 2026-07-14),
@@ -527,7 +563,7 @@
 > a `zip` binary - green in CI).
 
 > Note (2026-07-13, claude-opus-4-8): Released v5.12.2 - daily threat-intel refresh
-> (scheduled task). Fetched arena.elvatis.com/news (/api/news JSON feed gives
+> (scheduled task). Fetched the news-aggregator feed (JSON gives
 > excerpts + per-item source links; pulled the linked The Hacker News article and
 > cross-checked BleepingComputer / Socket / Aikido / crypto.news for the exact
 > indicators) and added the Injective Labs SDK npm compromise (2026-07-08 to 07-10).
@@ -734,7 +770,7 @@
 > 59 src modules.
 
 > Note (2026-07-04, claude-opus-4-8): Released v5.6.2 - daily threat-intel refresh
-> (scheduled task). Fetched arena.elvatis.com/news (JS-rendered; pulled the /api/news
+> (scheduled task). Fetched the news-aggregator feed (JS-rendered; pulled the
 > JSON feed + the two source THN articles for indicators) and added two new July 2026
 > developer-targeted campaigns, cross-checked against the existing blocklist first:
 > (1) Contagious Interview Rollup Polyfill (Lazarus/DPRK, JFrog via THN 2026-07-03) -

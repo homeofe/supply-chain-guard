@@ -7,6 +7,51 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **Upstream threat-feed import (`npm run feed:import`).** Malicious-package
+  IOCs are now imported from public advisory databases instead of being read
+  out of a general security-news aggregator by hand. Primary source: the
+  [GitHub Advisory Database](https://github.com/advisories?query=type%3Amalware)
+  malware advisories (CWE-506), fetched over the public REST API with no
+  account and no API key; `GITHUB_TOKEN` is strictly optional and only raises
+  the rate limit from 60 to 5000 requests/hour. Secondary source:
+  [OSV.dev](https://osv.dev/) `querybatch`, used only to corroborate a package
+  GitHub already flagged (a `MAL-` record from `ossf/malicious-packages`) - it
+  can raise confidence from 0.9 to 1.0 but can never discover a package on its
+  own, and an OSV outage degrades gracefully instead of failing the run.
+- **Per-entry provenance.** Imported entries populate the previously unused
+  `FeedIOC.source` field with the advisory id they came from (`GHSA-...`, plus
+  `MAL-...` when corroborated), so every machine-added indicator is traceable
+  to a public advisory page. `source` and `lastSeen` were also added to the
+  inert-feed key allowlist in `isInertThreatFeedFile()`; without that, the
+  project's own `feed.json` would stop being recognised as its own data and
+  would be scanned as ordinary content.
+- **`docs/threat-feed-sources.md`** documents the sources, their licences and
+  attribution (GitHub Advisory Database CC BY 4.0; `ossf/malicious-packages`
+  Apache-2.0), the full upstream-to-`FeedIOC` field mapping including the
+  fields that deliberately stay unset (`family`, `campaign`, `lastSeen`) and
+  the two project constants that upstream does not publish (confidence 0.9
+  single-source / 1.0 corroborated), the ecosystem prefix table, the
+  version-range rules, and the failure mode.
+- `pypi:` is now a recognised OSV export ecosystem, so PyPI package IOCs are
+  no longer dropped from `supply-chain-guard feed osv`.
+
+### Changed
+
+- The import refuses to invent indicators. Only an exact upstream pin
+  (`= 1.2.3` -> `name@1.2.3`) or an all-versions range (`>= 0` -> bare name) is
+  mapped; a bounded range is reported as unmappable rather than collapsed into
+  a whole-package block that would cover versions upstream never called
+  malicious. Ecosystems with no matcher in this scanner are reported, not
+  imported. Package names are re-validated against a charset narrower than the
+  feed's own package shape before being serialized into TypeScript.
+- A failed import is inert: the upstream fetch is the only fatal step, nothing
+  is written until the batch has been fetched, mapped, deduplicated and
+  re-parsed in memory, and a rewrite that does not re-parse to the expected
+  entry count is rolled back. A network error leaves `src/threat-intel.ts` and
+  `feed.json` byte-identical and exits non-zero.
+
 ## [5.17.10] - 2026-07-25
 
 **Rule precision: five rules narrowed with context, none weakened**
@@ -459,7 +504,7 @@ verification. Both were confirmed genuinely new against the existing feed.
   malicious CID path is matched, never the `ipfs[.]io` gateway host, so
   legitimate IPFS usage is not flagged.
 - New "AsyncAPI npm compromise (July 2026)" campaign test block.
-- Source excerpts came from the arena.elvatis.com feed; the exact package
+- Source excerpts came from the daily news-aggregator feed; the exact package
   versions were confirmed against two independent primary reports before being
   added.
 
@@ -481,7 +526,7 @@ verification. Both were confirmed genuinely new against the existing feed.
   never a broad `injective[.]network` block, so legitimate SDK endpoints are
   not flagged) and the two SHA-256 hashes of the infostealer files to
   `ioc-blocklist.ts` and `BUNDLED_FEED`, plus a campaign test block.
-- Source excerpts came from the arena.elvatis.com feed; the exact indicators
+- Source excerpts came from the daily news-aggregator feed; the exact indicators
   were confirmed against the linked primary reports before being added.
 
 ## [5.12.1] - 2026-07-12
@@ -489,7 +534,7 @@ verification. Both were confirmed genuinely new against the existing feed.
 
 - Added a bundled-feed IOC for the compromised `jscrambler@8.14.0` npm release,
   which shipped a malicious preinstall hook that drops a Rust-based infostealer
-  during install (arena.elvatis.com feed, 2026-07-11). Version-pinned only:
+  during install (daily news-aggregator feed, 2026-07-11). Version-pinned only:
   `jscrambler` is a legitimate package, so the bare name is intentionally NOT
   blocked - only the exact compromised version matches.
 

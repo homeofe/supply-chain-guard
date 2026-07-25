@@ -18,6 +18,7 @@ import type { FeedIOC } from "./threat-intel.js";
 /** Ecosystem-prefix (feed) -> OSV ecosystem name. Unlisted prefixes are skipped. */
 const OSV_ECOSYSTEMS: Record<string, string> = {
   npm: "npm", // bare (unprefixed) feed package entries are npm
+  pypi: "PyPI", // pypi: entries (python-lockfile-scanner resolves these)
   go: "Go",
   ruby: "RubyGems",
   composer: "Packagist",

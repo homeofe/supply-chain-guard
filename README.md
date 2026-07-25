@@ -493,6 +493,32 @@ validate each entry against its type's shape and quarantine anything invalid -
 a malformed or hostile feed entry can neither crash a scan nor flood it with
 garbage matches, and a rejected refresh never overwrites the previous cache.
 
+### Where the feed comes from
+
+Curated entries are hand-added from vendor write-ups. Malicious-package entries
+are additionally imported from two public upstream databases, with no account
+and no API key:
+
+- **[GitHub Advisory Database](https://github.com/advisories?query=type%3Amalware)** - malware
+  advisories (CWE-506), the primary source. Licensed
+  [CC BY 4.0](https://github.com/github/advisory-database); every imported entry
+  carries its `GHSA-...` id in its `source` field.
+- **[OSV.dev](https://osv.dev/)** - corroboration only, never discovery. A package
+  that OSV also lists as malicious (a `MAL-` record from
+  [ossf/malicious-packages](https://github.com/ossf/malicious-packages),
+  Apache-2.0) is imported at confidence 1.0 instead of 0.9.
+
+```bash
+npm run feed:import -- --dry-run   # what the next refresh would add
+npm run feed:import                # import, then regenerate feed.json
+```
+
+Every imported entry is auditable: the `source` field names the public advisory
+it came from. A failed import writes nothing at all - the previous feed stays in
+effect and the process exits non-zero. The full mapping (ecosystem prefixes,
+version-range rules, which upstream fields deliberately stay unset) is in
+[docs/threat-feed-sources.md](docs/threat-feed-sources.md).
+
 ## Install Guard
 
 Block known-bad packages BEFORE the package manager runs their lifecycle scripts -

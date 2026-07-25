@@ -913,8 +913,15 @@ export async function updateThreatFeed(
 // must be scanned normally - an attacker cannot smuggle code past the check by
 // naming a file feed.json, because any extra key or non-scalar value fails it.
 const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp"]);
+// Mirrors the FeedIOC interface (plus the legacy "note"/"ecosystem" keys). It
+// MUST list every field the feed can carry: "source" and "lastSeen" are part of
+// FeedIOC, and entries imported from upstream advisory databases populate
+// "source" with their provenance (see scripts/import-threat-feed.mjs). Leaving
+// a real field out here would make the project's own feed.json fail this check
+// and get scanned as ordinary content - the v5.4.0 phantom-findings bug.
 const FEED_ENTRY_KEYS = new Set([
-  "type", "value", "severity", "confidence", "family", "campaign", "firstSeen", "note", "ecosystem",
+  "type", "value", "severity", "confidence", "family", "campaign", "source",
+  "firstSeen", "lastSeen", "note", "ecosystem",
 ]);
 
 /**
