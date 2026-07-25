@@ -17,37 +17,58 @@
  *    protected by them, and nothing in this file has to be kept secret.
  *
  * 2. HONEST SEVERITY. Topology is reconnaissance value, not compromise. The
- *    family reports `medium` (weakest signal: `low`). `high` and `critical`
+ *    family reports `medium` (weak signals: `low`). `high` and `critical`
  *    stay reserved for credential-shaped findings, which the existing rules
  *    already own. The default CLI gate only fails on high/critical, so
  *    upgrading to a release that carries these rules cannot turn a build red.
+ *    Severity follows the VALUE, not the rule that happened to match it: a
+ *    single-label host stays `low` whether the single-label-URL rule or the
+ *    service-endpoint rule reported it.
  *
- * 3. FALSE POSITIVES DECIDE ADOPTION. Documentation legitimately teaches with
- *    addresses and paths. Two independent layers keep it quiet:
+ * 3. FALSE POSITIVES DECIDE ADOPTION. Three layers keep it quiet:
  *      - VALUE layer: the reserved documentation space never fires. RFC5737
  *        addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24), RFC2606
  *        names (example.com and friends, the `.example` TLD, `.invalid`,
- *        `.test`), loopback, and placeholder or CI account names are all
- *        rejected by `valueFilter` before a finding exists.
- *      - CONTEXT layer: see DOC_SURVIVING_RULES / FENCE_SURVIVING_RULES below.
- *        Documentation files, `docs/` and `examples/` trees, `*.example.*`
- *        artifacts, markdown fenced code blocks and inline code spans each
- *        narrow the family down to the rules that stay meaningful there.
+ *        `.test`), loopback, placeholder or CI account names, and the
+ *        WELL_KNOWN_INFRA constants below (cloud metadata, Kubernetes and
+ *        Docker defaults) are all rejected before a finding exists.
+ *      - LEXICAL layer: a match has to sit somewhere its rule can plausibly
+ *        mean what it claims. A dotted name in program source has to be in a
+ *        string, a comment or a URL; a `.local` name preceded by a path
+ *        separator is a module specifier, not a host; `/Users/` is a macOS
+ *        home directory and `/users/` is a REST route.
+ *      - SURFACE layer: see PROSE_SILENT_RULES / EXAMPLE_SURVIVING_RULES.
+ *        Files that exist to BE examples (`examples/`, `*.example.*`) narrow
+ *        to the rules that stay meaningful there. Documentation prose does
+ *        NOT: a private address or a developer path in a README is the exact
+ *        leak this family exists to catch.
  *
- * 4. THE DENY-LIST PARADOX. A list of your internal hostnames committed to a
+ * 4. BOUNDED COST. A generated bundle is one 800 KB line, and a rule family
+ *    that takes three minutes on it is a rule family that gets switched off.
+ *    Line offsets are computed once per file and binary-searched, per-line
+ *    lexical context is computed once per line rather than once per match,
+ *    over-long lines are skipped the way the size limit skips over-large
+ *    files, and match counts are capped per rule and per file. Every one of
+ *    those limits reports INTERNAL_DISCLOSURE_TRUNCATED rather than going
+ *    quiet, because a scanner that silently stopped looking is indistinguishable
+ *    from a repository with nothing to find.
+ *
+ * 5. THE DENY-LIST PARADOX. A list of your internal hostnames committed to a
  *    public repository IS the leak it was meant to prevent. `hashedTerms`
- *    therefore stores only sha256 digests of normalised terms: publishable,
- *    reveals nothing, and (honestly) only ever matches whole tokens.
- *    `externalFile` keeps full regex/plaintext patterns outside the repository,
- *    and `patterns` exists for repositories that are private anyway. Matches
- *    from the two unpublished sources are reported REDACTED, so a finding can
- *    never expose more than the user already published.
+ *    therefore stores only sha256 digests of normalised terms. That is worth
+ *    exactly what it is worth: it stops casual reading and grep, and with
+ *    SCG_INTERNAL_HASH_SALT (a salt held outside the repository) it also
+ *    stops the dictionary attack that an unsalted digest of a low-entropy
+ *    value invites. `externalFile` keeps full regex/plaintext patterns
+ *    outside the repository, and `patterns` exists for repositories that are
+ *    private anyway. Matches from the two unpublished sources are reported
+ *    REDACTED.
  */
 
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Finding, PatternEntry, PolicyConfig } from "./types.js";
+import type { Finding, PatternEntry, PolicyConfig, Severity } from "./types.js";
 import { isPatternMatchAccepted } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
@@ -73,6 +94,79 @@ const RESERVED_DOC_SUFFIXES = [
 /** Loopback / unspecified hosts. Never a topology leak. */
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0", "[::1]"]);
 
+/**
+ * Addresses that are the same everywhere, documented by the vendor, and
+ * therefore describe nobody's topology. Reporting one of these is how the
+ * family loses its credibility on the first Kubernetes or cloud repository it
+ * meets. Each entry names what it is; nothing goes in here without one.
+ */
+const WELL_KNOWN_INFRA_ADDRESSES = new Set([
+  // Cloud instance metadata service (IMDS). Identical on AWS, Azure, GCP,
+  // OpenStack, Oracle and DigitalOcean; appears in every SSRF test and every
+  // credential-provider implementation.
+  "169.254.169.254",
+  // AWS ECS task metadata / task IAM credentials endpoint.
+  "169.254.170.2",
+  // AWS ECS task metadata v4 (Fargate) alternate endpoint.
+  "169.254.170.23",
+  // Amazon Time Sync Service (NTP on link-local).
+  "169.254.169.123",
+  // Alibaba Cloud instance metadata service.
+  "100.100.100.200",
+  // Kubernetes: first address of the 10.96.0.0/12 default service CIDR, which
+  // kubeadm assigns to the `kubernetes.default.svc` API service.
+  "10.96.0.1",
+  // Kubernetes: the kubeadm default cluster DNS (CoreDNS / kube-dns) ClusterIP.
+  "10.96.0.10",
+  // k3s: first address and cluster DNS of its 10.43.0.0/16 default service CIDR.
+  "10.43.0.1",
+  "10.43.0.10",
+  // Docker: default gateway of the built-in `docker0` bridge network.
+  "172.17.0.1",
+  // Docker Desktop: the gateway the VM presents to containers on macOS.
+  "192.168.65.1",
+  "192.168.65.2",
+]);
+
+/**
+ * Networks written in CIDR form that are documented defaults rather than
+ * anybody's addressing plan. A network address already fails
+ * isPrivateAddressLeak (its host octet is 0), so these exist for the
+ * host-shaped rules and for readability of the intent.
+ *
+ *   10.96.0.0/12   kubeadm default service CIDR
+ *   10.244.0.0/16  kubeadm / Flannel default pod CIDR
+ *   10.42.0.0/16   k3s default pod CIDR
+ *   10.43.0.0/16   k3s default service CIDR
+ *   172.17.0.0/16  Docker default bridge network
+ *   10.1.0.0/16    Docker Desktop Kubernetes default pod CIDR
+ */
+const WELL_KNOWN_INFRA_CIDRS = new Set([
+  "10.96.0.0/12",
+  "10.244.0.0/16",
+  "10.42.0.0/16",
+  "10.43.0.0/16",
+  "172.17.0.0/16",
+  "10.1.0.0/16",
+]);
+
+/**
+ * Hostnames in an internal-only TLD that every Docker Desktop installation
+ * has. They resolve on the developer's machine, they are in the vendor's
+ * documentation, and they name nothing that belongs to the project.
+ */
+const WELL_KNOWN_INFRA_HOSTS = new Set([
+  "host.docker.internal",
+  "gateway.docker.internal",
+  "kubernetes.docker.internal",
+  "vm.docker.internal",
+  "host.containers.internal",
+  "docker.for.mac.host.internal",
+  "docker.for.mac.localhost",
+  "docker.for.win.host.internal",
+  "docker.for.win.localhost",
+]);
+
 /** True when a host sits in the reserved documentation namespace. */
 export function isReservedDocHost(host: string): boolean {
   const h = host.trim().toLowerCase().replace(/\.$/, "");
@@ -86,6 +180,22 @@ export function isLoopbackHost(host: string): boolean {
   if (LOOPBACK_HOSTS.has(h) || LOOPBACK_HOSTS.has(host.trim().toLowerCase())) return true;
   const octets = parseIPv4(h);
   return octets !== null && octets[0] === 127;
+}
+
+/**
+ * True when the value is a documented, vendor-fixed constant: a cloud metadata
+ * endpoint, a Kubernetes or Docker default. Accepts an address, an address
+ * with a CIDR suffix, or a hostname.
+ */
+export function isWellKnownInfraValue(value: string): boolean {
+  const v = value.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (WELL_KNOWN_INFRA_ADDRESSES.has(v)) return true;
+  if (WELL_KNOWN_INFRA_CIDRS.has(v)) return true;
+  if (WELL_KNOWN_INFRA_HOSTS.has(v)) return true;
+  // `169.254.169.254/32` and friends: the suffix does not make it somebody's host.
+  const slash = v.indexOf("/");
+  if (slash > 0 && WELL_KNOWN_INFRA_ADDRESSES.has(v.slice(0, slash))) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,14 +256,18 @@ export function classifyIPv4(value: string): IPv4Class {
 /**
  * Value guard for INTERNAL_PRIVATE_IP. The match may carry a CIDR suffix.
  *
- * Two shapes are deliberately NOT reported:
+ * Three shapes are deliberately NOT reported:
  *   - a network range (`/8`, `/16`, `/24`): that describes a subnet layout and
  *     is boilerplate in every IaC file. A `/32` is a single host and stays.
  *   - an address whose host octet is 0: that is how a range is written in
  *     prose and in configuration defaults, not a machine anybody can reach.
+ *   - a documented vendor constant (WELL_KNOWN_INFRA_ADDRESSES): the cloud
+ *     metadata endpoint and the Kubernetes cluster DNS are the same address in
+ *     every cluster on earth and describe nobody's topology.
  */
 export function isPrivateAddressLeak(value: string): boolean {
   const [addr, suffix] = value.trim().split("/");
+  if (isWellKnownInfraValue(value)) return false;
   if (suffix !== undefined) {
     if (!/^\d{1,2}$/.test(suffix)) return false;
     if (Number(suffix) !== 32) return false;
@@ -204,6 +318,10 @@ const SERVICE_ALIAS_HOSTS = new Set([
   "mailpit", "smtp", "mail", "grafana", "prometheus", "loki", "jaeger", "otel",
   "selenium", "chrome", "firefox", "test", "tests", "e2e", "mock", "mockserver",
   "wiremock", "localstack", "jenkins", "sonarqube", "runner", "node", "python",
+  // `http://unix/...` and `http+unix://...` are the conventional pseudo-hosts
+  // for a request over a UNIX domain socket (got, axios, dockerode, the Docker
+  // Engine API). No DNS is involved and no machine is named.
+  "unix", "socket", "npipe",
 ]);
 
 /**
@@ -262,6 +380,7 @@ export function isInternalHost(host: string): boolean {
   const h = host.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (h === "") return false;
   if (isLoopbackHost(h) || isReservedDocHost(h)) return false;
+  if (isWellKnownInfraValue(h)) return false;
   if (parseIPv4(h) !== null) return classifyIPv4(h) === "private";
   if (h.includes(":")) return isUniqueLocalIPv6(h);
   if (hasInternalTld(h)) return !h.split(".").includes("example");
@@ -269,11 +388,34 @@ export function isInternalHost(host: string): boolean {
   return false;
 }
 
+/**
+ * True when a host has no domain part at all: a container alias, a compose or
+ * Kubernetes service name, or a machine reachable only through internal DNS.
+ * This is the WEAKEST reading in the family and drives severity (see
+ * severityForHost): whichever rule reports it, a dotless host stays `low`.
+ */
+export function isSingleLabelHost(host: string): boolean {
+  const h = host.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (h === "" || h.includes(".") || h.includes(":")) return false;
+  return parseIPv4(h) === null;
+}
+
+/**
+ * Severity for a host-shaped finding. It follows the SHAPE OF THE HOST, never
+ * the rule that happened to match first: a dotless `payments` host with a
+ * port is the same weak signal as one without, and before this the endpoint rule
+ * quietly promoted every compose and Kubernetes service name to medium.
+ */
+export function severityForHost(host: string, ruleDefault: Severity): Severity {
+  return isSingleLabelHost(host) ? "low" : ruleDefault;
+}
+
 /** Value guard for INTERNAL_HOSTNAME. */
 export function isInternalHostname(value: string): boolean {
   const h = value.trim().toLowerCase().replace(/\.$/, "");
   if (!hasInternalTld(h)) return false;
   if (isReservedDocHost(h)) return false;
+  if (isWellKnownInfraValue(h)) return false;
   // A label of "example" marks a teaching name (`svc.example.corp`).
   return !h.split(".").includes("example");
 }
@@ -301,6 +443,7 @@ export function isNonPublicForgeHost(value: string): boolean {
   const h = value.trim().toLowerCase().replace(/\.$/, "");
   if (h === "") return false;
   if (isLoopbackHost(h) || isReservedDocHost(h)) return false;
+  if (isWellKnownInfraValue(h)) return false;
   if (isPublicForgeHost(h)) return false;
   if (parseIPv4(h) !== null) return classifyIPv4(h) === "private";
   return true;
@@ -319,17 +462,99 @@ export function isPersonalAccountName(value: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Lexical guards (the second false-positive layer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Characters that introduce a route or template PARAMETER rather than a path
+ * segment: `:id` (Express, Rails), `{id}` (OpenAPI, Spring), `<id>` (Flask,
+ * Django), `${user}`, `%USERNAME%`, `*` (glob).
+ */
+const PARAMETER_LEAD = /[:{<$%*]/;
+
+/**
+ * Decide whether a `/home/<name>/` or `C:\Users\<name>\` match is really a
+ * filesystem path.
+ *
+ * The dominant false positive was a REST route: `/users/:id`, `/users/{id}`
+ * and `app.get("/users/profile/edit")` all used to be read as macOS home
+ * directories, because the rule was compiled case-insensitively. The macOS
+ * directory is `/Users` with a capital U and a route is `/users`, so the
+ * regex is now case-sensitive, which removes the whole class. This guard is
+ * the second half: whatever follows the account segment must look like the
+ * next path component and not like a route or template parameter.
+ */
+export function isDevPathContextOk(content: string, matchEnd: number): boolean {
+  const next = content.slice(matchEnd, matchEnd + 1);
+  if (next !== "" && PARAMETER_LEAD.test(next)) return false;
+  return true;
+}
+
+/**
+ * Decide whether a bare hostname match is in a position where a HOST can be.
+ *
+ * A name ending in an internal-only TLD is a host when it is written as one
+ * and a FILE when it is written as a path: `./config.local`, `src/config.local`
+ * and `../lib/settings.local` are module specifiers, not machines. The
+ * discriminator is the character in front of the name: a path separator means
+ * a file, unless the separator is part of `://` (a URL) or follows `@` (a user
+ * prefix), in which case it is exactly a host.
+ *
+ * A following file extension is already excluded by the pattern itself (the
+ * trailing `(?!\.[a-z0-9])`), which is why `settings.local.json` and
+ * `vite.config.local.ts` never reach this function.
+ *
+ * A following `(` is a method call, not a host. That one matters outside
+ * program sources, where the string/comment discipline of isHostnameContextOk
+ * does not apply: a changelog line reading "Added `res.local(name, val)`" was
+ * being reported as a machine on a private network.
+ */
+export function isHostnameLexicalContextOk(
+  content: string,
+  matchStart: number,
+  matchEnd?: number,
+): boolean {
+  if (matchEnd !== undefined && content[matchEnd] === "(") return false;
+  if (matchStart === 0) return true;
+  const prev = content[matchStart - 1];
+  if (prev !== "/" && prev !== "\\") return true;
+  // `https://db.example.corp/`, `git@forge.internal.example:...`, `//forge.example.corp/x`.
+  const before = content.slice(Math.max(0, matchStart - 3), matchStart);
+  return before.endsWith("://") || before.endsWith("//") || before.endsWith("@/");
+}
+
+// ---------------------------------------------------------------------------
 // Built-in shape rules
 // ---------------------------------------------------------------------------
 
-/** Minified bundles and source maps are machine output, not authored content. */
-const MINIFIED_OR_MAP = /\.(?:min\.(?:js|css)|map)$/i;
+/**
+ * Machine output rather than authored content: minified bundles, source maps
+ * and the single-line bundles a build step emits. The content-based guard
+ * (MAX_LINE_LENGTH) catches the rest, whatever the file happens to be called.
+ */
+const MINIFIED_OR_MAP = /(?:\.min\.(?:js|mjs|cjs|css)|[.-]bundle\.(?:js|mjs|cjs)|\.map)$/i;
+
+/**
+ * A built-in rule. Extends the shared PatternEntry with the three things this
+ * family needs and no other pattern list does.
+ */
+export interface InternalPatternEntry extends PatternEntry {
+  /**
+   * Compile the pattern case-SENSITIVELY. Only `/Users/` needs it, and it
+   * needs it badly: `/users/` is a REST route.
+   */
+  caseSensitive?: boolean;
+  /** Severity derived from the matched value (see severityForHost). */
+  severityFor?: (match: RegExpExecArray) => Severity;
+  /** Guard on the text AROUND the match, not the match itself. */
+  contextFilter?: (content: string, match: RegExpExecArray) => boolean;
+}
 
 /**
  * The built-in rule family. Every entry is pure shape plus a value guard, so
  * it is useful on a repository whose owner has configured nothing at all.
  */
-export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
+export const INTERNAL_DISCLOSURE_PATTERNS: InternalPatternEntry[] = [
   {
     name: "internal-private-ipv4",
     pattern: "(?<![\\w.-])(?:\\d{1,3}\\.){3}\\d{1,3}(?:/\\d{1,2})?(?![\\w.-])",
@@ -369,6 +594,8 @@ export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
     rule: "INTERNAL_HOSTNAME",
     valueGroup: 0,
     valueFilter: isInternalHostname,
+    contextFilter: (content, match) =>
+      isHostnameLexicalContextOk(content, match.index, match.index + match[0].length),
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
@@ -395,6 +622,10 @@ export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
     rule: "INTERNAL_SERVICE_ENDPOINT",
     valueGroup: 1,
     valueFilter: isInternalEndpointHost,
+    // A compose or Kubernetes service name with a port is still just a service
+    // name: the port does not make a dotless `payments` host a stronger
+    // signal than the same host without one.
+    severityFor: (match) => severityForHost(match[1] ?? "", "medium"),
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
@@ -407,6 +638,7 @@ export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
     rule: "INTERNAL_GIT_REMOTE",
     valueGroup: 1,
     valueFilter: isNonPublicForgeHost,
+    severityFor: (match) => severityForHost(match[1] ?? "", "medium"),
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
@@ -419,23 +651,34 @@ export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
     rule: "INTERNAL_GIT_REMOTE",
     valueGroup: 1,
     valueFilter: isNonPublicForgeHost,
+    severityFor: (match) => severityForHost(match[1] ?? "", "medium"),
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
   {
     name: "internal-dev-path-windows",
-    pattern: "[A-Za-z]:[\\\\/]{1,2}Users[\\\\/]{1,2}([A-Za-z0-9 ._-]{2,64})[\\\\/]",
+    // `[Uu]sers` rather than a case-insensitive compile: a Windows path is
+    // unambiguous because of the drive letter, so both spellings are accepted,
+    // but the ACCOUNT name keeps its case so the value guard sees what was
+    // actually written.
+    pattern: "[A-Za-z]:[\\\\/]{1,2}[Uu]sers[\\\\/]{1,2}([A-Za-z0-9 ._-]{2,64})[\\\\/]",
     description:
       "Developer filesystem path committed to the repository. A home-directory path discloses an account name and the local layout of a workstation, and usually means a machine-specific value was committed by accident.",
     severity: "medium",
     rule: "INTERNAL_DEV_PATH",
     valueGroup: 1,
     valueFilter: isPersonalAccountName,
+    contextFilter: (content, match) => isDevPathContextOk(content, match.index + match[0].length),
+    caseSensitive: true,
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
   {
     name: "internal-dev-path-unix",
+    // CASE-SENSITIVE, and that is the whole point. `/Users/` is the macOS home
+    // directory; `/users/` is a REST route, and matching it case-insensitively
+    // produced the most embarrassing false positive this family had
+    // (`app.get("/users/profile/edit")` reported as a developer path).
     pattern: "(?<![\\w.-])/(?:home|Users)/([A-Za-z0-9._-]{2,64})/",
     description:
       "Developer filesystem path committed to the repository. A home-directory path discloses an account name and the local layout of a workstation, and usually means a machine-specific value was committed by accident.",
@@ -443,51 +686,31 @@ export const INTERNAL_DISCLOSURE_PATTERNS: PatternEntry[] = [
     rule: "INTERNAL_DEV_PATH",
     valueGroup: 1,
     valueFilter: isPersonalAccountName,
+    contextFilter: (content, match) => isDevPathContextOk(content, match.index + match[0].length),
+    caseSensitive: true,
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
 ];
 
 // ---------------------------------------------------------------------------
-// Context layer
+// Surface layer (which rules stay armed in which kind of file)
 // ---------------------------------------------------------------------------
 
-/** Prose files. Documentation teaches with addresses and paths. */
+/** Prose files. Documentation describes systems, and sometimes names them. */
 const DOC_FILE = /\.(?:md|markdown|mdx|rst|txt|adoc)$/i;
 
-/** Trees whose whole purpose is to show examples. */
-const DOC_DIR = /(?:^|\/)(?:docs?|examples?|samples?|fixtures?|man)\//i;
+/** Trees that hold documentation about the project. */
+const DOC_DIR = /(?:^|\/)(?:docs?|documentation|man|manual)\//i;
+
+/** Trees whose whole purpose is to show a shape rather than a system. */
+const EXAMPLE_DIR = /(?:^|\/)(?:examples?|samples?|fixtures?|testdata|test-data)\//i;
 
 /** Template artifacts: `config.example.yml`, `.env.example`, `values.sample.yaml`. */
-const EXAMPLE_ARTIFACT = /(?:^|[./])(?:example|sample|template|dist|tpl)(?:\.[^/]*)?$/i;
+const EXAMPLE_ARTIFACT = /(?:^|[./])(?:example|sample|template|tpl)(?:\.[^/]*)?$/i;
 
-/** Markdown-family files, where fenced blocks and inline code exist. */
+/** Markdown-family files, where fenced blocks exist. */
 const MARKDOWN_FILE = /\.(?:md|markdown|mdx)$/i;
-
-/**
- * Rules that keep firing inside a documentation FILE.
- *
- * An internal-only hostname, a non-public clone URL and an internal service
- * endpoint are exactly what a README leaks in the real world ("clone it from
- * here", "the staging box is over there"), and the reserved documentation
- * namespace is excluded by value, so a writer following RFC2606 and RFC5737
- * is never interrupted. The example-prone rules (private addresses, developer
- * paths, single-label URLs) are the ones documentation genuinely uses, so they
- * stay silent there.
- */
-const DOC_SURVIVING_RULES = new Set([
-  "INTERNAL_HOSTNAME",
-  "INTERNAL_GIT_REMOTE",
-  "INTERNAL_SERVICE_ENDPOINT",
-]);
-
-/**
- * Rules that keep firing inside a markdown fenced code block or an inline code
- * span. A fenced block is a literal example, with one exception worth keeping:
- * the copy-and-paste clone command is where a self-hosted forge URL actually
- * ends up, and its public form (github.com and friends) is already excluded.
- */
-const FENCE_SURVIVING_RULES = new Set(["INTERNAL_GIT_REMOTE"]);
 
 /**
  * Programming-language sources, where a dotted name is far more likely to be a
@@ -496,23 +719,181 @@ const FENCE_SURVIVING_RULES = new Set(["INTERNAL_GIT_REMOTE"]);
  */
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|py|rb|rs|go|java|kt|php|cs|swift|scala|dart|c|h|cpp|hpp)$/i;
 
-/** Test / spec / fixture files. Mirrors TEST_FILE_REGEX in scanner.ts. */
-const TEST_FILE = /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i;
+/** C-family sources, where `#` is not a comment. */
+const C_FAMILY_FILE = /\.(?:[cm]?[jt]sx?|java|kt|cs|swift|scala|dart|go|rs|c|h|cpp|hpp|php)$/i;
 
-/** True when the file itself is a documentation or example surface. */
-export function isDocumentationFile(relativePath: string): boolean {
+/**
+ * Test / spec / fixture files.
+ *
+ * The leading `(?:^|/)` alternative is load-bearing and its absence was a real
+ * bug: the previous `/tests?/` required a LEADING SLASH, so a top-level
+ * `test/` or `tests/` directory - the dominant JavaScript layout - never
+ * matched, and 28 of 35 findings on a four-repository sample came from test
+ * directories that were supposed to be excluded.
+ */
+const TEST_FILE =
+  /(?:^|\/)(?:tests?|__tests__|__fixtures__|__mocks__|__snapshots__|specs?|e2e|integration-tests?|fixtures?|testdata|test-data)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
+
+/** What kind of surface a file is, which decides which rules stay armed. */
+export type FileSurface = "source" | "prose" | "example";
+
+/**
+ * Rules that go quiet in documentation PROSE.
+ *
+ * Only the weakest one. Everything else stays armed, and that is a deliberate
+ * reversal: excluding private addresses and developer paths from markdown
+ * silenced precisely the case this family exists for (a README that names the
+ * staging box and the path it was built from). The reserved documentation
+ * space - RFC5737, RFC2606, loopback - is what keeps a writer following the
+ * RFCs from ever seeing a finding, and it works on any surface. A single-label
+ * URL is the one rule with no such backstop: a bare `myapp` host in a quickstart is
+ * noise, not a leak.
+ */
+const PROSE_SILENT_RULES = new Set(["INTERNAL_SINGLE_LABEL_URL"]);
+
+/**
+ * Rules that keep firing in a file that exists to BE an example: `examples/`,
+ * `fixtures/`, `config.example.yml`. An address or a path there is a shape
+ * being demonstrated. A hostname, a clone URL and a service endpoint are not:
+ * an `.env.example` that kept the real staging host is one of the most common
+ * ways this leaks.
+ */
+const EXAMPLE_SURVIVING_RULES = new Set([
+  "INTERNAL_HOSTNAME",
+  "INTERNAL_GIT_REMOTE",
+  "INTERNAL_SERVICE_ENDPOINT",
+]);
+
+/**
+ * The example-prone rules, and the two markdown constructs where they stay
+ * silent because measurement says they are noise there:
+ *
+ *   - an INLINE CODE SPAN. A span is a short literal quoted inside a sentence
+ *     ("`app.set('trust proxy', '192.0.2.10')` trusts a single IP"). On the
+ *     four-repository sample used to tune this family, inline spans produced
+ *     eight findings and every one of them was an API signature or a
+ *     documented example - no leak at all.
+ *   - a fenced block tagged as placeholder text (```text, ```plaintext).
+ *
+ * Everything else in a markdown file reports, fenced blocks included, and that
+ * is where the leaks actually are: the same sample turned up a real developer
+ * home directory inside a ```js block holding a pasted stack trace, which the
+ * previous wholesale exclusion of documentation never saw.
+ */
+const ILLUSTRATIVE_FENCE_LANGS = new Set(["text", "plaintext", "plain", "txt", "placeholder"]);
+const MARKDOWN_LITERAL_SILENT_RULES = new Set([
+  "INTERNAL_PRIVATE_IP",
+  "INTERNAL_PRIVATE_IPV6",
+  "INTERNAL_DEV_PATH",
+]);
+
+/** Classify a file into the surface that decides its rule set. */
+export function classifyFileSurface(relativePath: string): FileSurface {
   const p = relativePath.replace(/\\/g, "/");
   const base = p.slice(p.lastIndexOf("/") + 1);
-  return DOC_FILE.test(base) || DOC_DIR.test(p) || EXAMPLE_ARTIFACT.test(base);
+  // An example wins over prose: `docs/config.example.yml` is an example.
+  if (EXAMPLE_DIR.test(p) || EXAMPLE_ARTIFACT.test(base)) return "example";
+  if (DOC_FILE.test(base) || DOC_DIR.test(p)) return "prose";
+  return "source";
 }
 
 /**
- * Per-line markdown code state: which lines sit inside a fenced block, and
- * which column ranges of a line are inline code spans.
+ * True when the file is a documentation or example surface of any kind.
+ * Retained for callers that only need the coarse answer.
  */
-interface MarkdownCodeMap {
-  fenced: boolean[];
-  inline: Array<Array<[number, number]>>;
+export function isDocumentationFile(relativePath: string): boolean {
+  return classifyFileSurface(relativePath) !== "source";
+}
+
+/** True when `rule` is allowed to report on `surface`. */
+export function isRuleArmedOnSurface(rule: string, surface: FileSurface): boolean {
+  if (surface === "example") return EXAMPLE_SURVIVING_RULES.has(rule);
+  if (surface === "prose") return !PROSE_SILENT_RULES.has(rule);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Line index and per-line lexical context (the bounded-cost layer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Longest line the scan inspects. Beyond this a line is generated: a minified
+ * bundle, an embedded data blob, a base64 asset. The existing scanners skip an
+ * over-large FILE the same way (MAX_FILE_SIZE / FILE_TOO_LARGE_SKIPPED) and,
+ * like them, this never goes silent: INTERNAL_DISCLOSURE_TRUNCATED records the
+ * gap.
+ */
+export const MAX_LINE_LENGTH = 2000;
+
+/** Upper bound on findings from one rule in one file. */
+export const MAX_FINDINGS_PER_RULE = 25;
+
+/** Upper bound on findings from the whole family in one file. */
+export const MAX_FINDINGS_PER_FILE = 100;
+
+/**
+ * Upper bound on regex matches one rule inspects in one file. Guards the case
+ * where nearly every match is rejected by a value guard, which produces no
+ * findings at all and so is not bounded by the two limits above.
+ */
+export const MAX_MATCH_ATTEMPTS_PER_RULE = 20000;
+
+/** Longest line the deny-list pass inspects. */
+const MAX_DENYLIST_LINE = MAX_LINE_LENGTH;
+
+/** Upper bound on tokens hashed per line. */
+const MAX_TOKENS_PER_LINE = 400;
+
+/**
+ * Byte offset of the first character of every line, so a match index found by
+ * a single whole-file regex pass can be turned into a line number by binary
+ * search instead of by rescanning the file. Built once per file.
+ */
+interface LineIndex {
+  /** Line texts, index 0 = line 1. */
+  lines: string[];
+  /** Absolute offset of the first character of each line. */
+  starts: number[];
+}
+
+/** Split a file into lines and record where each one begins. */
+export function buildLineIndex(content: string): LineIndex {
+  const lines = content.split("\n");
+  const starts = new Array<number>(lines.length);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    starts[i] = offset;
+    offset += lines[i].length + 1; // + the "\n" that split() removed
+  }
+  return { lines, starts };
+}
+
+/** Zero-based line number containing `offset`. Binary search, O(log n). */
+export function lineAtOffset(index: LineIndex, offset: number): number {
+  const { starts } = index;
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (starts[mid] <= offset) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+
+/**
+ * Everything about a line that a match on it needs to know, computed ONCE for
+ * the line rather than once per match. Recomputing this per match is what made
+ * an 810 KB single-line bundle take three quarters of a minute per rule: every
+ * match rescanned the whole line for quotes and comment markers.
+ */
+interface LineContext {
+  /** Column ranges of quoted string literals, ascending and non-overlapping. */
+  quoted: Array<[number, number]>;
+  /** Column where a line comment starts, or -1. */
+  commentAt: number;
+  /** True when the line is a block-comment continuation (" * text"). */
+  blockComment: boolean;
 }
 
 /**
@@ -537,6 +918,52 @@ export function quotedRanges(line: string): Array<[number, number]> {
   return ranges;
 }
 
+/** True when `column` falls inside one of the (sorted) ranges. Binary search. */
+export function rangesContain(ranges: Array<[number, number]>, column: number): boolean {
+  let lo = 0;
+  let hi = ranges.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (column < ranges[mid][0]) hi = mid - 1;
+    else if (column >= ranges[mid][1]) lo = mid + 1;
+    else return true;
+  }
+  return false;
+}
+
+/**
+ * Column where a line comment begins, or -1.
+ *
+ * `//` is only a comment when it is not the `//` of a URL scheme, which the
+ * previous version missed: any line containing `https://` treated everything
+ * after it as a comment, so every dotted property access to the right of a URL
+ * on that line was accepted as a hostname.
+ */
+export function lineCommentStart(line: string, hashIsComment: boolean): number {
+  let best = -1;
+  const consider = (at: number): void => {
+    if (at >= 0 && (best === -1 || at < best)) best = at;
+  };
+
+  for (let i = line.indexOf("//"); i >= 0; i = line.indexOf("//", i + 1)) {
+    if (i > 0 && line[i - 1] === ":") continue; // "https://"
+    consider(i);
+    break;
+  }
+  consider(line.indexOf("/*"));
+  if (hashIsComment) consider(line.indexOf("#"));
+  return best;
+}
+
+/** Build the lexical context of one line. */
+function buildLineContext(line: string, hashIsComment: boolean): LineContext {
+  return {
+    quoted: quotedRanges(line),
+    commentAt: lineCommentStart(line, hashIsComment),
+    blockComment: /^\s*\*/.test(line),
+  };
+}
+
 /**
  * Decide whether a bare hostname match sits somewhere a HOST can plausibly be.
  *
@@ -551,21 +978,21 @@ export function isHostnameContextOk(
   line: string,
   index: number,
   isCodeFile: boolean,
+  hashIsComment = true,
 ): boolean {
   if (!isCodeFile) return true;
-  if (quotedRanges(line).some(([a, b]) => index >= a && index < b)) return true;
+  return isHostnameContextOkCached(line, index, buildLineContext(line, hashIsComment));
+}
+
+/** isHostnameContextOk against a context that was computed once for the line. */
+function isHostnameContextOkCached(line: string, index: number, ctx: LineContext): boolean {
+  if (rangesContain(ctx.quoted, index)) return true;
 
   const before = line.slice(Math.max(0, index - 3), index);
   if (before.endsWith("://") || before.endsWith("@")) return true;
 
-  const commentAt = [line.indexOf("//"), line.indexOf("#"), line.indexOf("/*")]
-    .filter((p) => p >= 0)
-    .sort((a, b) => a - b)[0];
-  if (commentAt !== undefined && index > commentAt) return true;
-  // A continuation line of a block comment (" * text").
-  if (/^\s*\*/.test(line)) return true;
-
-  return false;
+  if (ctx.commentAt >= 0 && index > ctx.commentAt) return true;
+  return ctx.blockComment;
 }
 
 /** Backtick-run pairing, good enough for `code` spans and ``code with ` `` spans. */
@@ -596,31 +1023,50 @@ function inlineCodeRanges(line: string): Array<[number, number]> {
   return ranges;
 }
 
-/** Build the fenced/inline code map for a markdown document. */
+/** Per-line markdown code state: illustrative fences and inline code spans. */
+interface MarkdownCodeMap {
+  /** True when the line is inside (or is) a fenced code block. */
+  fenced: boolean[];
+  /** True when that fence is tagged as placeholder text (```text, ```plaintext). */
+  illustrative: boolean[];
+  /** Column ranges of inline code spans, for lines outside a fence. */
+  inline: Array<Array<[number, number]>>;
+}
+
+/** Build the fenced-block and inline-span map for a markdown document. */
 export function buildMarkdownCodeMap(lines: string[]): MarkdownCodeMap {
   const fenced: boolean[] = [];
+  const illustrative: boolean[] = [];
   const inline: Array<Array<[number, number]>> = [];
   let openFence: string | null = null;
+  let openIllustrative = false;
 
   for (const line of lines) {
-    const fenceMatch = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
+    const fenceMatch = /^\s{0,3}(`{3,}|~{3,})\s*([A-Za-z0-9_+-]*)/.exec(line);
     if (openFence === null && fenceMatch) {
       openFence = fenceMatch[1][0];
+      openIllustrative = ILLUSTRATIVE_FENCE_LANGS.has((fenceMatch[2] ?? "").toLowerCase());
       fenced.push(true); // the fence line itself counts as code
+      illustrative.push(openIllustrative);
       inline.push([]);
       continue;
     }
     if (openFence !== null) {
       fenced.push(true);
+      illustrative.push(openIllustrative);
       inline.push([]);
-      if (fenceMatch && fenceMatch[1][0] === openFence) openFence = null;
+      if (fenceMatch && fenceMatch[1][0] === openFence) {
+        openFence = null;
+        openIllustrative = false;
+      }
       continue;
     }
     fenced.push(false);
-    inline.push(inlineCodeRanges(line));
+    illustrative.push(false);
+    inline.push(line.includes("`") ? inlineCodeRanges(line) : []);
   }
 
-  return { fenced, inline };
+  return { fenced, illustrative, inline };
 }
 
 // ---------------------------------------------------------------------------
@@ -636,9 +1082,23 @@ export function normalizeInternalTerm(term: string): string {
   return term.trim().toLowerCase();
 }
 
-/** sha256 of the normalised term, lowercase hex. The publishable form. */
-export function hashInternalTerm(term: string): string {
-  return crypto.createHash("sha256").update(normalizeInternalTerm(term), "utf8").digest("hex");
+/** Environment variable holding an optional salt for the hashed deny-list. */
+export const INTERNAL_HASH_SALT_ENV = "SCG_INTERNAL_HASH_SALT";
+
+/**
+ * sha256 of the normalised term, lowercase hex. The publishable form.
+ *
+ * With a salt the input is `<salt>\n<normalised term>`. The salt lives OUTSIDE
+ * the repository (SCG_INTERNAL_HASH_SALT), which is the only thing that makes
+ * a digest of a low-entropy value such as a hostname resistant to being
+ * guessed: an unsalted digest can simply be recomputed for every candidate
+ * name a reader can think of. A salt stored next to the digests would buy
+ * nothing, so this deliberately has no config-file form.
+ */
+export function hashInternalTerm(term: string, salt?: string | null): string {
+  const normalized = normalizeInternalTerm(term);
+  const input = salt ? `${salt}\n${normalized}` : normalized;
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
 }
 
 /** A compiled deny-list entry. */
@@ -666,6 +1126,8 @@ export interface InternalDisclosureRuntime {
   loadFindings: Finding[];
   /** True when any deny-list source produced at least one usable entry. */
   enabled: boolean;
+  /** Salt applied to hashed terms, or null when the digests are unsalted. */
+  salt: string | null;
 }
 
 /** Environment variable holding the path to the unpublished deny-list file. */
@@ -673,7 +1135,7 @@ export const INTERNAL_DISCLOSURE_ENV = "SCG_INTERNAL_DISCLOSURE_FILE";
 
 /** An empty runtime: the built-in shape rules still run against it. */
 export function emptyInternalDisclosureRuntime(): InternalDisclosureRuntime {
-  return { hashes: new Set(), matchers: [], loadFindings: [], enabled: false };
+  return { hashes: new Set(), matchers: [], loadFindings: [], enabled: false, salt: null };
 }
 
 /**
@@ -778,10 +1240,27 @@ export function loadInternalDisclosureConfig(
   const runtime = emptyInternalDisclosureRuntime();
   const section = policy?.internalDisclosure;
 
+  const salt = env[INTERNAL_HASH_SALT_ENV];
+  runtime.salt = salt ? salt : null;
+
   for (const term of section?.hashedTerms ?? []) {
     const digest = term.trim().replace(/^sha256:/i, "").toLowerCase();
     if (/^[0-9a-f]{64}$/.test(digest)) runtime.hashes.add(digest);
     // Malformed digests are reported by the policy parser (POLICY_INVALID_INTERNAL_TERM).
+  }
+
+  // Fail visible, never silent: digests generated with a salt match nothing
+  // without it, and "nothing matched" is exactly what a clean repository looks
+  // like. `hashSalted: true` is the project stating that its digests are
+  // salted, so the missing salt can be reported instead of assumed.
+  if (section?.hashSalted && runtime.salt === null) {
+    runtime.loadFindings.push(
+      unavailableFinding(
+        `$${INTERNAL_HASH_SALT_ENV}`,
+        "hashSalted is set but the environment variable is not, so no hashed term can match",
+      ),
+    );
+    runtime.hashes.clear();
   }
 
   (section?.patterns ?? []).forEach((raw, index) => {
@@ -838,12 +1317,6 @@ export function loadInternalDisclosureConfig(
 // ---------------------------------------------------------------------------
 // Hashed matching
 // ---------------------------------------------------------------------------
-
-/** Longest line the deny-list pass inspects. Beyond this a line is generated. */
-const MAX_DENYLIST_LINE = 2000;
-
-/** Upper bound on tokens hashed per line. */
-const MAX_TOKENS_PER_LINE = 400;
 
 /**
  * Candidate tokens for hashed matching.
@@ -915,6 +1388,11 @@ const RULE_SPECIFICITY: Record<string, number> = {
  * endpoint, a hostname and a single-label URL, and an ssh:// clone URL must not
  * also be reported as the scp-style remote hiding inside it.
  *
+ * Findings are grouped by line first. The comparison is quadratic within a
+ * group and the previous version ran it across the whole file, which on a
+ * generated bundle - where every finding shares line 1 - is the difference
+ * between a scan and a hang.
+ *
  * (The examples in this comment use the reserved documentation namespace on
  * purpose. An earlier draft wrote them as plausible internal names and this
  * scanner reported its own source file, which is the feature working.)
@@ -926,22 +1404,45 @@ function dedupeOverlaps(findings: Finding[]): Finding[] {
   // column, and the baseline keys on rule|file|line, so repeats are not even
   // distinguishable downstream.)
   const seen = new Set<string>();
-  findings = findings.filter((f) => {
+  const unique = findings.filter((f) => {
     const key = `${f.rule}|${f.line}|${f.match}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  return findings.filter((f, i) =>
-    !findings.some((other, j) => {
-      if (j === i || other.line !== f.line) return false;
+  const byLine = new Map<number, Finding[]>();
+  for (const f of unique) {
+    const line = f.line ?? -1;
+    const bucket = byLine.get(line);
+    if (bucket) bucket.push(f);
+    else byLine.set(line, [f]);
+  }
+
+  return unique.filter((f) => {
+    const group = byLine.get(f.line ?? -1) ?? [];
+    return !group.some((other) => {
+      if (other === f) return false;
       const outer = other.match ?? "";
       const inner = f.match ?? " ";
       if (!outer.includes(inner)) return false;
       return outer.length > inner.length || specificity(other.rule) > specificity(f.rule);
-    }),
-  );
+    });
+  });
+}
+
+/** Transparency finding: a limit stopped the scan of this file short. */
+function truncatedFinding(relativePath: string, reasons: string[]): Finding {
+  return {
+    rule: "INTERNAL_DISCLOSURE_TRUNCATED",
+    description: `Internal-disclosure scanning of this file was cut short (${reasons.join("; ")}). Some of the file was NOT examined by the INTERNAL_* rules.`,
+    severity: "info",
+    confidence: 1.0,
+    category: "info",
+    file: relativePath,
+    recommendation:
+      "Generated output (a bundle, a source map, an embedded data blob) is the usual cause and needs no action. If this is authored content, review it manually or split the over-long lines; the limits exist so one machine-generated file cannot dominate a scan.",
+  };
 }
 
 /**
@@ -958,11 +1459,27 @@ export function scanInternalDisclosure(
   const findings: Finding[] = [];
   const normalizedPath = relativePath.replace(/\\/g, "/");
   const isTestFile = TEST_FILE.test(normalizedPath);
-  const isDocFile = isDocumentationFile(normalizedPath);
+  const surface = classifyFileSurface(normalizedPath);
   const isMarkdown = MARKDOWN_FILE.test(normalizedPath);
   const isCodeFile = CODE_FILE.test(normalizedPath);
-  const lines = content.split("\n");
+  const hashIsComment = !C_FAMILY_FILE.test(normalizedPath);
+
+  const index = buildLineIndex(content);
+  const { lines, starts } = index;
   const codeMap = isMarkdown ? buildMarkdownCodeMap(lines) : null;
+
+  // Computed on demand, once per line, and reused by every match on it.
+  const contexts = new Array<LineContext | undefined>(lines.length);
+  const contextFor = (lineNo: number): LineContext => {
+    let ctx = contexts[lineNo];
+    if (!ctx) {
+      ctx = buildLineContext(lines[lineNo], hashIsComment);
+      contexts[lineNo] = ctx;
+    }
+    return ctx;
+  };
+
+  const truncationReasons = new Set<string>();
 
   // Extension of the basename, or "" for extension-less files such as a
   // Dockerfile (lastIndexOf on the whole path would slice from a directory dot).
@@ -977,54 +1494,105 @@ export function scanInternalDisclosure(
     if (pattern.onlyFilePattern && !pattern.onlyFilePattern.test(normalizedPath)) continue;
     if (pattern.notFilePattern && pattern.notFilePattern.test(normalizedPath)) continue;
     if (pattern.notTestFile && isTestFile) continue;
-    if (isDocFile && !DOC_SURVIVING_RULES.has(pattern.rule)) continue;
+    if (!isRuleArmedOnSurface(pattern.rule, surface)) continue;
 
-    const regex = new RegExp(pattern.pattern, "gi");
+    const regex = new RegExp(pattern.pattern, pattern.caseSensitive ? "g" : "gi");
+    let attempts = 0;
+    let kept = 0;
+    let match: RegExpExecArray | null;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      regex.lastIndex = 0;
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(line)) !== null) {
-        if (match[0] === "") {
-          regex.lastIndex++;
-          continue;
-        }
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        if (
-          pattern.rule === "INTERNAL_HOSTNAME" &&
-          !isHostnameContextOk(line, match.index, isCodeFile)
-        ) {
-          continue;
-        }
-        if (codeMap && !FENCE_SURVIVING_RULES.has(pattern.rule)) {
-          if (codeMap.fenced[i]) continue;
-          const start = match.index;
-          const end = match.index + match[0].length;
-          if (codeMap.inline[i].some(([a, b]) => start >= a && end <= b)) continue;
-        }
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncate(match[0]),
-          confidence: 0.7,
-          category: "disclosure",
-          recommendation: getInternalDisclosureRecommendation(pattern.rule),
-        });
+    // ONE pass over the whole file per rule. No built-in pattern can match
+    // across a newline (none of the character classes admit one), so this is
+    // equivalent to the per-line loop it replaces and avoids restarting the
+    // regex engine once per line.
+    while ((match = regex.exec(content)) !== null) {
+      if (match[0] === "") {
+        regex.lastIndex++;
+        continue;
       }
+      if (++attempts > MAX_MATCH_ATTEMPTS_PER_RULE) {
+        truncationReasons.add(
+          `${pattern.rule} stopped after ${MAX_MATCH_ATTEMPTS_PER_RULE} candidate matches`,
+        );
+        break;
+      }
+
+      // The VALUE guard runs first because it is O(1) and settles most
+      // candidates: an SVG path coordinate (`1.16.68.344`) has the shape of an
+      // address and is not one, and a file full of those should not be
+      // reported as a coverage gap below.
+      if (!isPatternMatchAccepted(pattern, match)) continue;
+
+      const lineNo = lineAtOffset(index, match.index);
+      const line = lines[lineNo];
+
+      // Over-long line: generated content. Skip the REST OF THE LINE in one
+      // step rather than walking every match on it, which is what makes an
+      // 800 KB single-line bundle cost one regex probe instead of minutes.
+      if (line.length > MAX_LINE_LENGTH) {
+        truncationReasons.add(
+          `line ${lineNo + 1} is longer than ${MAX_LINE_LENGTH} characters`,
+        );
+        regex.lastIndex = starts[lineNo] + line.length;
+        continue;
+      }
+
+      if (pattern.contextFilter && !pattern.contextFilter(content, match)) continue;
+
+      const column = match.index - starts[lineNo];
+      if (
+        pattern.rule === "INTERNAL_HOSTNAME" &&
+        isCodeFile &&
+        !isHostnameContextOkCached(line, column, contextFor(lineNo))
+      ) {
+        continue;
+      }
+      if (codeMap && MARKDOWN_LITERAL_SILENT_RULES.has(pattern.rule)) {
+        if (codeMap.illustrative[lineNo]) continue;
+        const end = column + match[0].length;
+        if (codeMap.inline[lineNo].some(([a, b]) => column >= a && end <= b)) continue;
+      }
+
+      if (kept >= MAX_FINDINGS_PER_RULE) {
+        truncationReasons.add(
+          `${pattern.rule} reached the ${MAX_FINDINGS_PER_RULE}-finding limit for one file`,
+        );
+        break;
+      }
+      kept++;
+
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severityFor?.(match) ?? pattern.severity,
+        file: relativePath,
+        line: lineNo + 1,
+        match: truncate(match[0]),
+        confidence: 0.7,
+        category: "disclosure",
+        recommendation: getInternalDisclosureRecommendation(pattern.rule),
+      });
     }
   }
 
-  const deduped = dedupeOverlaps(findings);
+  let result = dedupeOverlaps(findings);
 
   if (runtime.enabled) {
-    deduped.push(...scanDenyList(lines, relativePath, runtime));
+    result.push(...scanDenyList(lines, relativePath, runtime, truncationReasons));
   }
 
-  return deduped;
+  if (result.length > MAX_FINDINGS_PER_FILE) {
+    truncationReasons.add(
+      `the file produced more than ${MAX_FINDINGS_PER_FILE} findings`,
+    );
+    result = result.slice(0, MAX_FINDINGS_PER_FILE);
+  }
+
+  if (truncationReasons.size > 0) {
+    result.push(truncatedFinding(relativePath, [...truncationReasons].slice(0, 3)));
+  }
+
+  return result;
 }
 
 /** Deny-list pass: hashed tokens first, then literal and regex matchers. */
@@ -1032,6 +1600,7 @@ function scanDenyList(
   lines: string[],
   relativePath: string,
   runtime: InternalDisclosureRuntime,
+  truncationReasons: Set<string>,
 ): Finding[] {
   const findings: Finding[] = [];
   const seen = new Set<string>();
@@ -1054,13 +1623,22 @@ function scanDenyList(
   };
 
   for (let i = 0; i < lines.length; i++) {
+    if (findings.length >= MAX_FINDINGS_PER_RULE) {
+      truncationReasons.add(
+        `INTERNAL_DENYLIST_MATCH reached the ${MAX_FINDINGS_PER_RULE}-finding limit for one file`,
+      );
+      break;
+    }
     const line = lines[i];
-    if (line.length > MAX_DENYLIST_LINE) continue;
+    if (line.length > MAX_DENYLIST_LINE) {
+      truncationReasons.add(`line ${i + 1} is longer than ${MAX_DENYLIST_LINE} characters`);
+      continue;
+    }
     const lineNo = i + 1;
 
     if (runtime.hashes.size > 0) {
       for (const token of candidateTokens(line)) {
-        const digest = crypto.createHash("sha256").update(token, "utf8").digest("hex");
+        const digest = hashInternalTerm(token, runtime.salt);
         if (runtime.hashes.has(digest)) {
           push(lineNo, `sha256:${digest.slice(0, 12)}`, "", true);
         }
@@ -1107,6 +1685,8 @@ export function getInternalDisclosureRecommendation(rule: string): string {
       "Provide the unpublished pattern file wherever the deny-list should be enforced, or remove the setting if it is no longer used.",
     INTERNAL_DENYLIST_INVALID_ENTRY:
       "Fix the entry in the unpublished pattern file. An entry that cannot be compiled is silently doing nothing, which looks exactly like a repository with no leaks.",
+    INTERNAL_DISCLOSURE_TRUNCATED:
+      "Generated output is the usual cause and needs no action. If this is authored content, review it manually: the INTERNAL_* rules did not examine all of it.",
   };
   return map[rule] ?? "Review whether this value describes internal infrastructure that should not be published.";
 }

@@ -30,7 +30,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   hostnames committed to a public repository IS the leak, so
   `internalDisclosure` in `.supply-chain-guard.yml` supports three modes:
   `hashedTerms` (sha256 of a term normalised as trim plus lowercase;
-  publishable, reveals nothing, exact-token matching only),
+  publishable and exact-token matching only - it keeps the term out of the
+  file, out of grep and out of reports, and with the optional
+  `SCG_INTERNAL_HASH_SALT` plus `hashSalted: true` it also resists the
+  dictionary attack that an unsalted digest of a hostname invites),
   `externalFile` plus the `SCG_INTERNAL_DISCLOSURE_FILE` environment variable
   (full regex and literal patterns kept out of the repository, matches
   reported REDACTED so the report cannot leak them either), and `patterns`
@@ -43,19 +46,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   diagnostic prints the entry, and the environment variable is named without
   its value, because a path can itself contain an account name.
 - **False-positive controls, because a rule that screams on every README gets
-  disabled.** Two layers: reserved documentation values never fire (RFC5737
-  addresses, RFC2606 names and the `.example` TLD, loopback, placeholder and
-  CI account names such as `runner` or `vscode`, container service aliases,
-  and CIDR ranges as opposed to host addresses), and file context narrows the
-  family (documentation files, `docs/` and `examples/` trees and `*.example.*`
-  artifacts keep only the hostname, endpoint and clone-URL rules; markdown
-  fenced blocks and inline code spans keep only the clone-URL rule; test
-  fixtures and minified bundles keep none). Hostnames get two extra precision
-  rules: an internal-only TLD must be the LAST label (so `config.internal.timeout`,
-  `com.acme.internal.util` and `settings.local.json` are not hosts), and in
-  programming-language sources a bare dotted name is only reported inside a
-  string literal, a comment or a URL, because `config.internal` is a property
-  access. The README documents the full matrix.
+  disabled.** Three layers, tuned against axios, express, got and
+  awesome-compose (992 files): 3.5 findings per 100 files before, 1.1 after.
+  1. Reserved VALUES never fire: RFC5737 addresses, RFC2606 names and the
+     `.example` TLD, loopback, placeholder and CI account names such as
+     `runner` or `vscode`, container service aliases and the `unix` / `npipe`
+     socket pseudo-hosts, CIDR ranges as opposed to host addresses, and the
+     universal infrastructure constants that are identical in every
+     installation (cloud metadata `169.254.169.254`, ECS `169.254.170.2`,
+     Amazon Time Sync `169.254.169.123`, Alibaba `100.100.100.200`, the
+     Kubernetes `10.96.0.1` / `10.96.0.10` and k3s `10.43.0.1` / `10.43.0.10`,
+     the default service and pod CIDRs, the Docker bridge gateway
+     `172.17.0.1`, and `host.docker.internal` and its siblings).
+  2. LEXICAL position has to fit the claim: an internal-only TLD must be the
+     LAST label (`config.internal.timeout`, `settings.local.json`), a name
+     preceded by a path separator is a module specifier and not a host
+     (`./config.local`), a name followed by `(` is a method call
+     (`res.local(name, val)`), a URL scheme is no longer mistaken for the start
+     of a comment, and in programming-language sources a bare dotted name is
+     only reported inside a string literal, a comment or a URL.
+  3. The SURFACE decides which rules stay armed: test and fixture directories
+     and minified or bundled output report nothing, files that exist to BE an
+     example (`examples/`, `fixtures/`, `*.example.*`) keep the hostname,
+     endpoint and clone-URL rules, and documentation prose and fenced blocks
+     keep everything except the single-label URL.
+  The README documents the full matrix.
+- **An optional per-project salt for the hashed deny-list.**
+  `SCG_INTERNAL_HASH_SALT` (held outside the repository, so a reader of the
+  repository cannot use it) is mixed into every digest, and
+  `internalDisclosure.hashSalted: true` declares that the committed digests are
+  salted so a scan that runs without the salt is reported as
+  `INTERNAL_DENYLIST_UNAVAILABLE` rather than matching nothing and looking
+  clean.
 - **Upstream threat-feed import (`npm run feed:import`).** Malicious-package
   IOCs are now imported from public advisory databases instead of being read
   out of a general security-news aggregator by hand. Primary source: the
@@ -81,6 +103,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   the two project constants that upstream does not publish (confidence 0.9
   single-source / 1.0 corroborated), the ecosystem prefix table, the
   version-range rules, and the failure mode.
+- **Bounded cost on generated files, and a new `INTERNAL_DISCLOSURE_TRUNCATED`
+  (info) rule so a limit is never silent.** The internal-disclosure scan is now
+  flat in the size of a file rather than quadratic in the number of matches on
+  a line: line offsets are computed once per file and binary-searched, each
+  line's quoting and comment structure is computed once per line instead of
+  once per match, an over-long line is skipped in one step, and findings are
+  capped at 25 per rule and 100 per file with a 20000-candidate ceiling per
+  rule. Measured on an 810 KB single-line bundle: 49 s and a 26 MB report
+  before, 0.01 s and under 1 KB after. Every limit that fires adds one
+  `INTERNAL_DISCLOSURE_TRUNCATED` finding naming it, on the same principle as
+  `FILE_TOO_LARGE_SKIPPED`.
 - `pypi:` is now a recognised OSV export ecosystem, so PyPI package IOCs are
   no longer dropped from `supply-chain-guard feed osv`.
 

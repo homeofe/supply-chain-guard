@@ -329,10 +329,21 @@ export interface PolicyConfig {
 export interface InternalDisclosurePolicy {
   /**
    * sha256 digests (lowercase hex) of internal terms, normalised as
-   * `term.trim().toLowerCase()` before hashing. Safe to commit: a digest
-   * reveals nothing. Matches whole tokens only.
+   * `term.trim().toLowerCase()` before hashing. Publishable: the digest hides
+   * the term from casual reading and from grep. It is NOT proof against
+   * somebody who guesses candidate values and hashes them, which a hostname
+   * invites - set `hashSalted` and SCG_INTERNAL_HASH_SALT for that. Matches
+   * whole tokens only.
    */
   hashedTerms?: string[];
+  /**
+   * Declares that `hashedTerms` were generated with the salt held in the
+   * SCG_INTERNAL_HASH_SALT environment variable. Without the declaration a
+   * missing salt would simply match nothing, which looks exactly like a clean
+   * repository; with it, the missing salt is reported as
+   * INTERNAL_DENYLIST_UNAVAILABLE.
+   */
+  hashSalted?: boolean;
   /**
    * Plaintext literals or `/regex/flags` entries kept in the committed config.
    * Only for repositories that are private, or terms that are not sensitive.

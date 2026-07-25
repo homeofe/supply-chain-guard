@@ -812,12 +812,24 @@ program
   )
   .argument("<terms...>", "Terms to hash: a hostname, an org/repo name, a path fragment")
   .action(async (terms: string[]) => {
-    const { hashInternalTerm } = await import("./internal-disclosure.js");
+    const { hashInternalTerm, INTERNAL_HASH_SALT_ENV } = await import(
+      "./internal-disclosure.js"
+    );
+    // An optional salt, read from the environment rather than an argument so
+    // it never reaches the shell history or the process list. It has to live
+    // outside the repository to be worth anything: a salt stored next to the
+    // digests is hashed by the same attacker who reads them.
+    const salt = process.env[INTERNAL_HASH_SALT_ENV] ?? null;
+    if (salt) {
+      console.error(
+        `  Salted with $${INTERNAL_HASH_SALT_ENV}. Set internalDisclosure.hashSalted: true so a scan without the salt is reported instead of silently matching nothing.`,
+      );
+    }
     // One digest per line, nothing else. The plaintext term is deliberately
     // NOT echoed: the output of this command is meant to be pasted into a
     // committed config file, and an echoed term would travel with it.
     for (const term of terms) {
-      console.log(hashInternalTerm(term));
+      console.log(hashInternalTerm(term, salt));
     }
   });
 

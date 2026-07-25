@@ -91,12 +91,16 @@
       "additionalProperties": false,
       "properties": {
         "hashedTerms": {
-          "description": "sha256 digests (64 lowercase hex characters, optionally prefixed with 'sha256:') of internal terms normalised as trim + lowercase. Safe to commit. Matches whole tokens only. Generate with: supply-chain-guard internal-hash <term>.",
+          "description": "sha256 digests (64 lowercase hex characters, optionally prefixed with 'sha256:') of internal terms normalised as trim + lowercase. Publishable: the digest hides the term from casual reading and from grep, but an unsalted digest of a low-entropy value such as a hostname can be recovered by hashing candidate names, so set hashSalted and SCG_INTERNAL_HASH_SALT when that matters. Matches whole tokens only. Generate with: supply-chain-guard internal-hash <term>.",
           "type": "array",
           "items": {
             "type": "string",
             "pattern": "^(?:sha256:)?[0-9a-fA-F]{64}$"
           }
+        },
+        "hashSalted": {
+          "description": "Declares that hashedTerms were generated with the salt in the SCG_INTERNAL_HASH_SALT environment variable. Without this declaration a missing salt would match nothing and look exactly like a clean repository; with it, the missing salt is reported as INTERNAL_DENYLIST_UNAVAILABLE.",
+          "type": "boolean"
         },
         "patterns": {
           "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive.",

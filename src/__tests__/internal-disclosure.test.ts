@@ -12,8 +12,21 @@ import {
   candidateTokens,
   classifyIPv4,
   isDocumentationFile,
+  classifyFileSurface,
+  isWellKnownInfraValue,
+  isSingleLabelHost,
+  severityForHost,
+  isDevPathContextOk,
+  isHostnameLexicalContextOk,
+  lineCommentStart,
+  buildLineIndex,
+  lineAtOffset,
   INTERNAL_DISCLOSURE_PATTERNS,
   INTERNAL_DISCLOSURE_ENV,
+  INTERNAL_HASH_SALT_ENV,
+  MAX_LINE_LENGTH,
+  MAX_FINDINGS_PER_RULE,
+  MAX_FINDINGS_PER_FILE,
 } from "../internal-disclosure.js";
 import { loadPolicyConfig, applyPolicy } from "../policy-engine.js";
 import { scan } from "../scanner.js";
@@ -263,39 +276,79 @@ describe("internal-disclosure: documentation context", () => {
     "The staging box is api.svc.internal and the address is `192.168.7.12`.",
   ];
 
-  it("keeps documentation-prone rules quiet in a markdown file", () => {
+  it("reports a private address and a developer path written in a README", () => {
+    // The rebalance that matters. Excluding documentation wholesale silenced
+    // exactly the case this family exists for: a README naming the staging box
+    // and the path it was built from. Only the reserved namespace stays quiet.
     const found = shapeScan("README.md", ...docLeak);
-    expect(rules(found)).not.toContain("INTERNAL_PRIVATE_IP");
-    expect(rules(found)).not.toContain("INTERNAL_DEV_PATH");
+    expect(rules(found)).toContain("INTERNAL_PRIVATE_IP");
+    expect(rules(found)).toContain("INTERNAL_DEV_PATH");
+    expect(rules(found)).toContain("INTERNAL_HOSTNAME");
   });
 
-  it("suppresses matches inside a fenced code block, except the clone URL", () => {
+  it("reports inside a fenced code block, where a pasted stack trace leaks a path", () => {
     const found = shapeScan("README.md", ...docLeak);
     const fenced = found.filter((f) => f.line !== undefined && f.line >= 5 && f.line <= 9);
-    expect(rules(fenced)).toEqual(["INTERNAL_GIT_REMOTE"]);
+    expect(rules(fenced)).toContain("INTERNAL_GIT_REMOTE");
+    expect(rules(fenced)).toContain("INTERNAL_DEV_PATH");
+    expect(rules(fenced)).toContain("INTERNAL_SERVICE_ENDPOINT");
   });
 
-  it("suppresses matches inside an inline code span", () => {
-    const found = shapeScan("README.md", "The address is `192.168.7.12` in the lab.");
-    expect(found).toHaveLength(0);
+  it("keeps the reserved documentation space quiet on every markdown surface", () => {
+    expect(shapeScan("README.md", "Use 192.0.2.10 and 203.0.113.7 in your examples.")).toHaveLength(0);
+    expect(shapeScan("README.md", "Open http://127.0.0.1:3000 in the browser.")).toHaveLength(0);
+    expect(shapeScan("README.md", "```sh", "curl http://192.0.2.10:8080/health", "```")).toHaveLength(0);
+    expect(shapeScan("README.md", "Clone it from ssh://git@forge.internal.example/acme/x.git")).toHaveLength(0);
   });
 
-  it("still reports an internal hostname written in documentation prose", () => {
-    const found = shapeScan("README.md", "The staging box is api.svc.internal today.");
-    expect(rules(found)).toEqual(["INTERNAL_HOSTNAME"]);
+  it("stays quiet in an inline code span and in a placeholder fence", () => {
+    // Measured on axios, express, got and awesome-compose: inline spans
+    // produced eight findings and every one was an API signature or a
+    // documented example, so the example-prone rules stay off there.
+    expect(shapeScan("README.md", "The address is `192.168.7.12` in the lab.")).toHaveLength(0);
+    expect(shapeScan("README.md", "Set `HOME=/home/alex/` before building.")).toHaveLength(0);
+    expect(shapeScan("README.md", "```text", "host 10.20.30.40", "```")).toHaveLength(0);
+    // A hostname in a span is still a hostname: a name is not an example shape.
+    expect(rules(shapeScan("README.md", "The box is `api.svc.internal` today."))).toContain(
+      "INTERNAL_HOSTNAME",
+    );
   });
 
-  it("treats docs/, examples/ and *.example.* files as documentation", () => {
+  it("never reads a method call in prose as a hostname", () => {
+    // A changelog line: "Added `res.local(name, val)`". A host is never
+    // followed by an opening parenthesis.
+    expect(shapeScan("History.md", "  * Added `res.local(name, val)` for view locals")).toHaveLength(0);
+    expect(shapeScan("src/app.ts", "return cache.local(key);")).toHaveLength(0);
+  });
+
+  it("keeps the single-label URL rule off in prose, where it is noise", () => {
+    expect(shapeScan("README.md", "Then open http://myapp/ in your browser.")).toHaveLength(0);
+    expect(rules(shapeScan("src/config.ts", 'const u = "http://myapp/";'))).toContain(
+      "INTERNAL_SINGLE_LABEL_URL",
+    );
+  });
+
+  it("separates prose from files that exist to BE an example", () => {
+    expect(classifyFileSurface("docs/setup.md")).toBe("prose");
+    expect(classifyFileSurface("docs/deploy.yml")).toBe("prose");
+    expect(classifyFileSurface("README.md")).toBe("prose");
+    expect(classifyFileSurface("examples/compose.yml")).toBe("example");
+    expect(classifyFileSurface("config.example.yml")).toBe("example");
+    expect(classifyFileSurface(".env.example")).toBe("example");
+    expect(classifyFileSurface("docs/config.example.yml")).toBe("example");
+    expect(classifyFileSurface("src/config.ts")).toBe("source");
+    expect(classifyFileSurface("src/sample-service.ts")).toBe("source");
+
     expect(isDocumentationFile("docs/setup.md")).toBe(true);
-    expect(isDocumentationFile("docs/deploy.yml")).toBe(true);
-    expect(isDocumentationFile("examples/compose.yml")).toBe(true);
-    expect(isDocumentationFile("config.example.yml")).toBe(true);
-    expect(isDocumentationFile(".env.example")).toBe(true);
     expect(isDocumentationFile("src/config.ts")).toBe(false);
-    expect(isDocumentationFile("src/sample-service.ts")).toBe(false);
 
-    expect(shapeScan("docs/deploy.yml", 'host: "10.20.30.40"')).toHaveLength(0);
+    // Documentation about the project reports the address; a file whose whole
+    // purpose is to show a shape does not.
+    expect(rules(shapeScan("docs/deploy.yml", 'host: "10.20.30.40"'))).toContain(
+      "INTERNAL_PRIVATE_IP",
+    );
     expect(shapeScan("config.example.yml", 'host: "10.20.30.40"')).toHaveLength(0);
+    expect(shapeScan("examples/compose.yml", 'host: "10.20.30.40"')).toHaveLength(0);
     // A hostname keeps its meaning even in an example file.
     expect(rules(shapeScan("config.example.yml", 'host: "vault.corp"'))).toContain(
       "INTERNAL_HOSTNAME",
@@ -305,6 +358,271 @@ describe("internal-disclosure: documentation context", () => {
   it("skips test fixtures and minified bundles", () => {
     expect(shapeScan("src/__tests__/proxy.test.ts", 'const ip = "10.20.30.40";')).toHaveLength(0);
     expect(shapeScan("assets/vendor.min.js", 'var h="10.20.30.40"')).toHaveLength(0);
+    expect(shapeScan("assets/app.bundle.js", 'var h="10.20.30.40"')).toHaveLength(0);
+  });
+
+  it("excludes a TOP-LEVEL test directory, not only a nested one", () => {
+    // The bug this replaces: the previous pattern required a LEADING slash
+    // (`/tests?/`), so `test/` at the repository root - the dominant
+    // JavaScript layout - never matched. 28 of 35 findings on a four-repository
+    // sample came from directories that were supposed to be excluded.
+    const leak = 'const ip = "10.20.30.40";';
+    for (const file of [
+      "test/req.ip.js",
+      "tests/req.ip.js",
+      "spec/req_spec.rb",
+      "specs/req.js",
+      "e2e/checkout.ts",
+      "fixtures/response.json",
+      "testdata/golden.json",
+      "test-data/golden.json",
+      "__tests__/proxy.ts",
+      "__fixtures__/response.ts",
+      "__mocks__/http.ts",
+      "__snapshots__/app.snap",
+      "packages/core/test/unit.js",
+      "src/app.test.ts",
+      "conftest.py",
+    ]) {
+      expect(shapeScan(file, leak), file).toHaveLength(0);
+    }
+
+    // Not a test directory just because the word appears in a name.
+    expect(rules(shapeScan("src/latest/config.ts", leak))).toContain("INTERNAL_PRIVATE_IP");
+    expect(rules(shapeScan("src/protest.ts", leak))).toContain("INTERNAL_PRIVATE_IP");
+  });
+});
+
+describe("internal-disclosure: universal infrastructure constants", () => {
+  it("never reports a cloud metadata endpoint", () => {
+    for (const line of [
+      'const META = "http://169.254.169.254/latest/meta-data/";',
+      "metadata_host: 169.254.169.254",
+      'const ecs = "http://169.254.170.2/v2/credentials";',
+      "ntp_server: 169.254.169.123",
+      "aliyun_meta: 100.100.100.200",
+    ]) {
+      expect(shapeScan("src/config.ts", line), line).toHaveLength(0);
+    }
+  });
+
+  it("never reports Kubernetes and Docker documented defaults", () => {
+    for (const line of [
+      "clusterDNS: 10.96.0.10",
+      "kubernetesService: 10.96.0.1",
+      "serviceSubnet: 10.96.0.0/12",
+      "podSubnet: 10.244.0.0/16",
+      "k3sClusterDNS: 10.43.0.10",
+      "dockerBridgeGateway: 172.17.0.1",
+      'const h = "host.docker.internal";',
+      'const u = "http://host.docker.internal:5432/";',
+    ]) {
+      expect(shapeScan("compose.yaml", line), line).toHaveLength(0);
+    }
+  });
+
+  it("still reports a real address inside the same private ranges", () => {
+    expect(rules(shapeScan("compose.yaml", "clusterDNS: 10.96.4.11"))).toContain(
+      "INTERNAL_PRIVATE_IP",
+    );
+    expect(rules(shapeScan("compose.yaml", "gateway: 172.17.4.9"))).toContain(
+      "INTERNAL_PRIVATE_IP",
+    );
+    expect(isWellKnownInfraValue("169.254.169.254")).toBe(true);
+    expect(isWellKnownInfraValue("10.96.0.10")).toBe(true);
+    expect(isWellKnownInfraValue("10.96.4.11")).toBe(false);
+  });
+});
+
+describe("internal-disclosure: severity follows the host, not the rule", () => {
+  it("keeps a single-label host at low even when the endpoint rule reports it", () => {
+    // A compose or Kubernetes service name with a port is the same weak signal
+    // as one without. INTERNAL_SERVICE_ENDPOINT used to promote it to medium
+    // purely because its reading of the line won the overlap dedupe.
+    for (const line of [
+      'const u = "http://payments:8080/health";',
+      'const u = "http://orders-svc:9000/";',
+    ]) {
+      const found = shapeScan("src/config.ts", line);
+      expect(found, line).toHaveLength(1);
+      expect(found[0].severity, line).toBe("low");
+    }
+  });
+
+  it("keeps a dotted internal host at medium", () => {
+    const found = shapeScan("src/config.ts", 'const u = "https://vault.corp:8443/v1";');
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe("INTERNAL_SERVICE_ENDPOINT");
+    expect(found[0].severity).toBe("medium");
+  });
+
+  it("keeps a private address endpoint at medium", () => {
+    const found = shapeScan("src/config.ts", 'const u = "http://10.20.30.40:8086/write";');
+    expect(found[0].severity).toBe("medium");
+  });
+
+  it("severityForHost is the single decision point", () => {
+    expect(isSingleLabelHost("payments")).toBe(true);
+    expect(isSingleLabelHost("vault.corp")).toBe(false);
+    expect(isSingleLabelHost("10.20.30.40")).toBe(false);
+    expect(severityForHost("payments", "medium")).toBe("low");
+    expect(severityForHost("vault.corp", "medium")).toBe("medium");
+  });
+});
+
+describe("internal-disclosure: developer paths versus REST routes", () => {
+  it("never reads a lowercase /users/ route as a macOS home directory", () => {
+    // `/Users` is the macOS home directory; `/users` is a route. Compiling the
+    // rule case-insensitively made every REST API in the world a finding.
+    for (const line of [
+      'app.get("/users/:id", handler);',
+      'router.get("/users/{id}", handler);',
+      'app.get("/users", handler);',
+      'app.get("/users/profile/edit", handler);',
+      'fetch("/api/users/alex/orders");',
+      'const p = "/users/alex/";',
+    ]) {
+      expect(shapeScan("src/routes.js", line), line).toHaveLength(0);
+    }
+  });
+
+  it("still reports the capitalised macOS path and the Linux one", () => {
+    expect(rules(shapeScan("src/config.ts", 'const c = "/Users/alex/Library/Caches";'))).toContain(
+      "INTERNAL_DEV_PATH",
+    );
+    expect(rules(shapeScan("scripts/build.sh", "cp dist/* /home/alex/work/"))).toContain(
+      "INTERNAL_DEV_PATH",
+    );
+    // A Windows path is unambiguous because of the drive letter, so both
+    // spellings of the directory stay accepted.
+    expect(rules(shapeScan("scripts/build.ps1", "Copy-Item C:\\users\\alex\\work"))).toContain(
+      "INTERNAL_DEV_PATH",
+    );
+  });
+
+  it("rejects a route or template parameter after the account segment", () => {
+    expect(isDevPathContextOk("/home/alex/work", "/home/alex/".length)).toBe(true);
+    for (const following of [":", "{", "<", "$", "%", "*"]) {
+      expect(isDevPathContextOk(`/home/alex/${following}x`, "/home/alex/".length), following).toBe(
+        false,
+      );
+    }
+  });
+});
+
+describe("internal-disclosure: hostname shape versus file path", () => {
+  it("never reads a module specifier ending in .local as a hostname", () => {
+    for (const line of [
+      'import cfg from "./config.local";',
+      'const p = "src/config.local";',
+      'require("../lib/settings.local");',
+      'readFile("settings.local.json")',
+      'import cfg from "./vite.config.local.ts";',
+      "const p = 'dist\\\\assets\\\\bundle.local'",
+    ]) {
+      expect(shapeScan("src/app.ts", line), line).toHaveLength(0);
+    }
+  });
+
+  it("still reads a URL host and a user-prefixed host as hostnames", () => {
+    expect(rules(shapeScan("src/app.ts", 'const u = "https://vault.corp/v1";'))).toContain(
+      "INTERNAL_HOSTNAME",
+    );
+    expect(rules(shapeScan("src/app.ts", 'const u = "//registry.svc.corp/npm/";'))).toContain(
+      "INTERNAL_HOSTNAME",
+    );
+    expect(isHostnameLexicalContextOk("x = vault.corp", 4)).toBe(true);
+    expect(isHostnameLexicalContextOk("./config.local", 2)).toBe(false);
+  });
+
+  it("does not treat a URL scheme as the start of a comment", () => {
+    // `line.indexOf("//")` found the "//" of "https://", so every dotted name
+    // to the right of a URL was accepted as being inside a comment.
+    expect(
+      shapeScan("src/app.ts", 'fetch("https://api.example.com"); return config.internal;'),
+    ).toHaveLength(0);
+    expect(lineCommentStart('fetch("https://x");', true)).toBe(-1);
+    expect(lineCommentStart("const a = 1; // note", true)).toBe(13);
+    expect(lineCommentStart("value = 1  # note", true)).toBe(11);
+    // `#` is not a comment in the C family (`#private`, `${...}` templates).
+    expect(lineCommentStart("this.#count = 1;", false)).toBe(-1);
+  });
+
+  it("never reports the unix-socket pseudo-host", () => {
+    // `http://unix/...` is the convention for a request over a UNIX domain
+    // socket (got, axios, dockerode). No DNS and no machine is involved, and
+    // it accounted for 14 of 35 findings on the tuning sample.
+    for (const line of [
+      'await got("http://unix:/var/run/docker.sock:/containers/json");',
+      'const u = "http://npipe//./pipe/docker_engine";',
+    ]) {
+      expect(shapeScan("src/client.ts", line), line).toHaveLength(0);
+    }
+  });
+});
+
+describe("internal-disclosure: bounded cost on generated files", () => {
+  /** An 810 KB single-line bundle: the shape every build step emits. */
+  function minifiedBundle(): string {
+    let s = "";
+    let a = 0;
+    while (s.length < 810 * 1024) {
+      s += `var c${a}={h:t.storage.local.get(x${a}),p:"10.${a % 250}.${(a * 7) % 250}.${(a % 253) + 1}",u:"http://svchost${a}/api"};`;
+      a++;
+    }
+    return s.slice(0, 810 * 1024);
+  }
+
+  it("scans an 810 KB single-line bundle in well under a second", () => {
+    const content = minifiedBundle();
+    expect(content.split("\n")).toHaveLength(1);
+
+    const started = Date.now();
+    const found = scanInternalDisclosure(content, "assets/app.js");
+    const elapsed = Date.now() - started;
+
+    // Before the line index, the per-line context cache and the line-length
+    // guard, this same file took roughly 40 seconds and produced a 26 MB
+    // report, because every match rescanned the whole line for quotes and
+    // comment markers and the overlap dedupe was quadratic across the file.
+    expect(elapsed).toBeLessThan(2000);
+    expect(JSON.stringify(found).length).toBeLessThan(64 * 1024);
+    // Never silent about the gap.
+    expect(rules(found)).toEqual(["INTERNAL_DISCLOSURE_TRUNCATED"]);
+    expect(found[0].severity).toBe("info");
+  });
+
+  it("caps findings per rule and per file, and says so", () => {
+    const lines: string[] = [];
+    for (let i = 0; i < 3000; i++) {
+      lines.push(`  const h${i} = { ip: "10.1.${i % 250}.${(i % 253) + 1}", host: "box${i}.corp" };`);
+    }
+    const found = scanInternalDisclosure(lines.join("\n"), "src/generated.ts");
+
+    const perRule = new Map<string, number>();
+    for (const f of found) perRule.set(f.rule, (perRule.get(f.rule) ?? 0) + 1);
+    expect(perRule.get("INTERNAL_PRIVATE_IP")).toBe(MAX_FINDINGS_PER_RULE);
+    expect(perRule.get("INTERNAL_HOSTNAME")).toBe(MAX_FINDINGS_PER_RULE);
+    expect(found.length).toBeLessThanOrEqual(MAX_FINDINGS_PER_FILE + 1);
+    expect(rules(found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+  });
+
+  it("does not report a coverage gap for a long line with nothing plausible on it", () => {
+    // SVG path coordinates ("1.16.68.344") have the shape of an address and
+    // are not one; the value guard settles them before the length guard runs.
+    const svg = `<svg><path d="M ${Array.from({ length: 400 }, (_, i) => `${i}.16.68.344`).join(" L ")}"/></svg>`;
+    expect(svg.length).toBeGreaterThan(MAX_LINE_LENGTH);
+    expect(scanInternalDisclosure(svg, "assets/banner.svg")).toHaveLength(0);
+  });
+
+  it("maps a match offset back to its line by binary search", () => {
+    const index = buildLineIndex("alpha\nbeta\n\ngamma");
+    expect(index.starts).toEqual([0, 6, 11, 12]);
+    expect(lineAtOffset(index, 0)).toBe(0);
+    expect(lineAtOffset(index, 5)).toBe(0);
+    expect(lineAtOffset(index, 6)).toBe(1);
+    expect(lineAtOffset(index, 11)).toBe(2);
+    expect(lineAtOffset(index, 16)).toBe(3);
   });
 });
 
@@ -539,6 +857,59 @@ describe("internal-disclosure: configurable deny-list", () => {
     expect(policy?.internalDisclosure?.hashedTerms).toHaveLength(1);
     expect(policy?.internalDisclosure?.patterns).toEqual(["sample-service"]);
     expect(policy?.internalDisclosure?.externalFile).toBe(".scg-internal-terms.local");
+  });
+
+  it("salts the digest when SCG_INTERNAL_HASH_SALT is set", () => {
+    // An unsalted sha256 of a low-entropy value such as a hostname is
+    // dictionary-attackable: a reader hashes candidate names until one
+    // matches. A salt held OUTSIDE the repository is what makes the digest
+    // worth what the README now claims it is worth.
+    const salt = "project-salt-value";
+    const salted = hashInternalTerm(SECRET_TERM, salt);
+    expect(salted).not.toBe(hashInternalTerm(SECRET_TERM));
+    expect(salted).toBe(
+      crypto.createHash("sha256").update(`${salt}\n${SECRET_TERM}`, "utf8").digest("hex"),
+    );
+
+    writePolicy(
+      "internalDisclosure:",
+      "  hashSalted: true",
+      "  hashedTerms:",
+      `    - ${salted}`,
+    );
+    const policy = loadPolicyConfig(tempDir);
+    const runtime = loadInternalDisclosureConfig(tempDir, policy, {
+      [INTERNAL_HASH_SALT_ENV]: salt,
+    } as NodeJS.ProcessEnv);
+    expect(runtime.salt).toBe(salt);
+    expect(runtime.loadFindings).toHaveLength(0);
+
+    const found = scanInternalDisclosure(`host = ${SECRET_TERM}`, "src/config.ts", runtime);
+    expect(rules(found)).toContain("INTERNAL_DENYLIST_MATCH");
+    expect(JSON.stringify(found)).not.toContain(SECRET_TERM);
+  });
+
+  it("reports a missing salt instead of quietly matching nothing", () => {
+    writePolicy(
+      "internalDisclosure:",
+      "  hashSalted: true",
+      "  hashedTerms:",
+      `    - ${hashInternalTerm(SECRET_TERM, "some-salt")}`,
+    );
+    const runtime = loadInternalDisclosureConfig(tempDir, loadPolicyConfig(tempDir), {} as NodeJS.ProcessEnv);
+    expect(runtime.enabled).toBe(false);
+    expect(rules(runtime.loadFindings)).toContain("INTERNAL_DENYLIST_UNAVAILABLE");
+    expect(runtime.loadFindings[0].description).toContain(INTERNAL_HASH_SALT_ENV);
+    // The declaration is the only reason this is visible at all: without it a
+    // salted digest and a clean repository look identical.
+    expect(runtime.hashes.size).toBe(0);
+  });
+
+  it("accepts hashSalted without warning about unknown keys", () => {
+    writePolicy("internalDisclosure:", "  hashSalted: true");
+    const policy = loadPolicyConfig(tempDir);
+    expect((policy?.warnings ?? []).filter((w) => w.rule === "POLICY_UNKNOWN_KEY")).toEqual([]);
+    expect(policy?.internalDisclosure?.hashSalted).toBe(true);
   });
 
   it("runs the built-in rules with no deny-list configured", () => {

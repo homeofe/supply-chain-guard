@@ -1,3 +1,72 @@
+> Note (2026-07-25, claude-opus-5): Adversarial review of the
+> internal-disclosure family came back FAIL with measured numbers; this is the
+> remediation, measured the same way (axios, express, got, awesome-compose =
+> 992 files, plus an 810 KB single-line bundle).
+> BLOCKER, quadratic scan cost. The 810 KB bundle took 49 s and produced a
+> 26 MB report. Three causes, all fixed: the per-match lexical context
+> (quotedRanges + three indexOf calls) rescanned the whole line for EVERY match
+> on it, the overlap dedupe was quadratic across the whole file (on a bundle
+> every finding shares line 1), and nothing bounded the match count. Now: one
+> line index per file built once and binary-searched (buildLineIndex /
+> lineAtOffset), per-line context computed once and cached, a 2000-character
+> line limit that skips the rest of an over-long line in a single lastIndex
+> jump, dedupe grouped by line, and caps of 25 findings per rule, 100 per file,
+> 20000 candidate matches per rule. Same file now scans in 0.01 s with a
+> sub-1 KB report. Every limit that fires emits INTERNAL_DISCLOSURE_TRUNCATED
+> (info) - the FILE_TOO_LARGE_SKIPPED principle: a scanner that silently
+> stopped looking is indistinguishable from a clean repository.
+> BLOCKER, test directories were not excluded. TEST_FILE used /\/tests?\//,
+> which requires a LEADING slash, so a top-level test/ or tests/ directory (the
+> dominant JS layout) never matched: 28 of the 35 findings on the sample came
+> from directories that were meant to be excluded. The pattern now matches a
+> leading segment and covers spec/, e2e/, __tests__/, __fixtures__/, __mocks__/,
+> __snapshots__/, fixtures/, testdata/ and test-data/.
+> Universal constants are no longer topology: cloud metadata (169.254.169.254,
+> ECS 169.254.170.2, Amazon Time Sync, Alibaba), Kubernetes and k3s service and
+> DNS defaults, the default pod/service CIDRs, the Docker bridge gateway and
+> host.docker.internal. Each entry names what it is in the source; a real
+> address in the same range still reports.
+> Severity now follows the HOST, not the rule that matched first:
+> INTERNAL_SERVICE_ENDPOINT was promoting every compose and Kubernetes service
+> name to medium by winning the overlap dedupe against the deliberately-low
+> single-label rule. severityForHost() is the single decision point.
+> /Users/ is matched case-SENSITIVELY, which removes the worst false positive
+> in the set: REST routes (/users/:id, /users/{id}, app.get("/users/profile/edit"))
+> were being read as macOS home directories. A route or template parameter after
+> the account segment is rejected as well. Windows keeps both spellings because
+> the drive letter makes it unambiguous.
+> A .local name preceded by a path separator is a module specifier, not a host
+> ("./config.local"), and a name followed by "(" is a method call
+> ("res.local(name, val)" in a changelog).
+> Documentation rebalanced, and this is the one that mattered most: markdown
+> prose AND fenced blocks now report private addresses, ULAs, developer paths
+> and hostnames. Excluding documentation wholesale silenced exactly the case
+> this family exists for - the sample turned up a real /home/<name>/ inside a
+> pasted stack trace in a ```js block that the old behaviour never saw. What
+> stays excluded is what MEASURED as noise: inline code spans (8 findings on
+> the sample, every one an API signature or documented example), ```text
+> fences, and files that exist to BE an example (examples/, fixtures/,
+> *.example.*). The reserved namespace (RFC5737/RFC2606/loopback) is the
+> backstop and works on every surface.
+> Honesty fix: the README said a digest "reveals nothing". An unsalted
+> single-round sha256 of a hostname is dictionary-attackable. The wording now
+> says what it actually buys (out of the file, out of grep, out of reports) and
+> an optional salt was added - SCG_INTERNAL_HASH_SALT, deliberately env-only
+> because a salt committed beside the digests is hashed by the same reader,
+> plus internalDisclosure.hashSalted so a scan without the salt is reported
+> instead of matching nothing and looking clean.
+> Two more real defects found while measuring: line.indexOf("//") treated the
+> "//" of "https://" as a comment start, so every dotted name to the right of a
+> URL was accepted as a hostname (and "#" is now only a comment outside the C
+> family); and "http://unix" - the UNIX-domain-socket pseudo-host used by got,
+> axios and dockerode - was 14 of the 35 sample findings.
+> Result: 3.5 findings per 100 files -> 1.1, with the one genuine leak in the
+> sample (a developer home directory in got's documentation) now REPORTED
+> rather than silently missed. Self-scan stays clean at 0 findings; the new
+> README and doc-comment examples were written into the reserved namespace,
+> same discipline as before. NOT DONE HERE: no version bump, the release is cut
+> separately.
+
 > Note (2026-07-25, claude-opus-5): Added the internal-disclosure rule family
 > (src/internal-disclosure.ts, 8 rules, INTERNAL_*). New detection axis: existing
 > scanners including this one hunt CREDENTIALS, nothing hunts internal TOPOLOGY

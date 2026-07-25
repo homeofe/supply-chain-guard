@@ -108,7 +108,7 @@ const KNOWN_SECTIONS: Record<string, string[]> = {
   suppress: [],
   baseline: ["file"],
   ignore: [],
-  internalDisclosure: ["hashedTerms", "patterns", "externalFile"],
+  internalDisclosure: ["hashedTerms", "patterns", "externalFile", "hashSalted"],
 };
 
 /** A committed `hashedTerms` entry: sha256 hex, with an optional `sha256:` prefix. */
@@ -335,6 +335,11 @@ function parseYamlConfig(content: string): PolicyConfig {
         // its contents are what must never be committed.
         config.internalDisclosure ??= {};
         config.internalDisclosure.externalFile = stripQuotes(val);
+      } else if (currentSection === "internalDisclosure" && k === "hashSalted") {
+        // The digests above were generated with SCG_INTERNAL_HASH_SALT. Saying
+        // so is what lets a missing salt be reported rather than look clean.
+        config.internalDisclosure ??= {};
+        config.internalDisclosure.hashSalted = /^(?:true|yes|1)$/i.test(stripQuotes(val));
       } else if (currentSection === "suppress" && SUPPRESS_ENTRY_KEYS.has(k)) {
         // Handle suppress reason/path on inline entries. ("rule:" continuation
         // lines are tolerated; entries are created by the "- rule:" item.)

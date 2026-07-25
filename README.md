@@ -257,9 +257,12 @@ The rules are **shape-based**, so they work on a repository whose owner has conf
 | `INTERNAL_HOSTNAME` | medium | Hostnames in an internal-only TLD: `.internal`, `.local`, `.lan`, `.corp`, `.home`, `.intranet` |
 | `INTERNAL_SERVICE_ENDPOINT` | medium | `http(s)://HOST:PORT` where HOST is private or internal |
 | `INTERNAL_GIT_REMOTE` | medium | `ssh://git@<host>:<port>/<path>` and scp-style `git@<host>:<path>` where the host is not a known public forge |
-| `INTERNAL_DEV_PATH` | medium | `C:\Users\<name>\`, `/home/<name>/`, `/Users/<name>/` in committed code or docs |
+| `INTERNAL_DEV_PATH` | medium | `C:\Users\<name>\`, `/home/<name>/`, `/Users/<name>/` in committed code or docs. `/Users/` is matched case-sensitively, because `/users/` is a REST route |
 | `INTERNAL_SINGLE_LABEL_URL` | low | A URL whose host has no domain at all, so it only resolves through internal DNS or a hosts file |
 | `INTERNAL_DENYLIST_MATCH` | medium | A term your project configured (see below). Off unless configured |
+| `INTERNAL_DISCLOSURE_TRUNCATED` | info | A limit stopped this family short on one file (see [Bounded cost](#bounded-cost)). Never silent about a gap |
+
+**Severity follows the host, not the rule.** A host with no domain part is the weakest signal in the family whichever rule reports it, so a dotless `payments` host with a port is `low`, exactly like the same host without one. Only a dotted internal name or a private address makes an endpoint `medium`.
 
 `INTERNAL_GIT_REMOTE` is the one worth pointing at: it finds a self-hosted forge **without anyone having to name it**. Any clone URL that is not github.com, gitlab.com, bitbucket.org, codeberg.org, git.sr.ht and the other well-known public hosts is, by shape alone, a forge somebody runs privately.
 
@@ -277,7 +280,7 @@ rules:
 
 ### False-positive controls
 
-A rule that screams on every README gets switched off, and a switched-off rule protects nothing. Two independent layers keep this quiet.
+A rule that screams on every README gets switched off, and a switched-off rule protects nothing. Three independent layers keep this quiet.
 
 **1. The reserved documentation space never fires.** Anything written the way the RFCs intend is invisible to these rules:
 
@@ -285,23 +288,43 @@ A rule that screams on every README gets switched off, and a switched-off rule p
 - names from RFC2606: `example.com`, `example.org`, `example.net`, the `.example` TLD, `.invalid`, `.test`
 - loopback and the unspecified address, `localhost` URLs
 - placeholder and CI account names in paths: `runner`, `vscode`, `ubuntu`, `jenkins`, `you`, `dev`, `user`, `Public` and more
-- container and compose service aliases in single-label URLs: `db`, `redis`, `api`, `minio`, `nginx` and more
+- container and compose service aliases in single-label URLs: `db`, `redis`, `api`, `minio`, `nginx`, and the `unix` / `npipe` pseudo-hosts that mean "a UNIX domain socket, not a machine"
 - a CIDR range such as `10.0.0.0/16` is a subnet layout, not a host, so it is not reported (a `/32` host route is)
+- **universal infrastructure constants**, which are the same address in every installation on earth and therefore describe nobody's topology: the cloud metadata endpoint `169.254.169.254` (and the ECS `169.254.170.2`, Amazon Time Sync `169.254.169.123`, Alibaba `100.100.100.200`), the Kubernetes defaults `10.96.0.1` and `10.96.0.10` and the k3s `10.43.0.1` / `10.43.0.10`, the default service and pod CIDRs (`10.96.0.0/12`, `10.244.0.0/16`, `10.42.0.0/16`), the Docker bridge gateway `172.17.0.1`, and the Docker Desktop names `host.docker.internal` and friends. A real address inside the same ranges is still reported.
 
-**2. Context decides which rules stay armed.** Documentation genuinely teaches with addresses and paths:
+**2. A match has to sit where its rule can mean what it claims.**
 
-| Context | Rules that still fire |
+- An internal-only TLD has to be the **last** label of the name, so `config.internal.timeout`, `com.acme.internal.util` and `settings.local.json` are never hosts.
+- A name preceded by a path separator is a **file**, not a host: `./config.local`, `src/config.local` and `../lib/settings.local` are module specifiers. `https://db.example.corp/`, `//registry.svc.example.corp/` and `git@forge.internal.example:...` still are hosts.
+- A name followed by `(` is a **method call**: `res.local(name, val)` in a changelog is not a machine.
+- In programming-language sources a bare dotted name is only reported inside a string literal, a comment or a URL, because `config.internal.timeout` and `state.local.value` are property accesses. Data and config files (`.yml`, `.json`, `.toml`, `.env`, Dockerfile, lockfiles) carry unquoted values, so no quotes are required there.
+- `/Users/` is matched **case-sensitively** and `:id`, `{id}`, `<id>` and `${user}` are rejected after the account segment, so `app.get("/users/:id")`, `"/users/{id}"` and `app.get("/users/profile/edit")` are routes, not macOS home directories. A Windows path keeps both spellings, because `C:\users\` is unambiguous.
+
+**3. The surface decides which rules stay armed.**
+
+| Surface | Rules that still fire |
 |---|---|
 | Source files (`.ts`, `.py`, `.tf`, `.yml`, Dockerfile, `.npmrc`, lockfiles) | all of them |
-| Prose in `.md` / `.rst` / `.txt`, anything under `docs/` or `examples/`, `*.example.*` / `*.sample.*` / `*.template.*` files | hostname, endpoint, clone URL |
-| Markdown fenced code blocks and inline code spans | clone URL only |
-| Test, spec, mock and fixture files, minified bundles | none |
+| Documentation prose and fenced code blocks: `.md` / `.rst` / `.txt`, anything under `docs/` | everything except the single-label URL |
+| Markdown inline code spans, and fenced blocks tagged ```` ```text ```` / ```` ```plaintext ```` | hostname, endpoint, clone URL |
+| Files that exist to BE an example: `examples/`, `samples/`, `fixtures/`, `testdata/`, `*.example.*` / `*.sample.*` / `*.template.*` | hostname, endpoint, clone URL |
+| Test, spec, mock and fixture files and directories (`test/`, `tests/`, `spec/`, `e2e/`, `__tests__/`, `__mocks__/`, `*.test.*`), minified and bundled output | none |
 
-The reasoning: a README that names an internal host or a staging endpoint is a real leak (and the reserved namespace above is right there for teaching), while the example IPs and `C:\Users\you\` paths that documentation is full of are not. A fenced block is a literal example, with one exception: the copy-and-paste clone command is exactly where a self-hosted forge URL ends up in the real world.
-
-Two more precision rules for hostnames specifically. An internal-only TLD has to be the **last** label of the name, so `config.internal.timeout`, `com.acme.internal.util` and `settings.local.json` are never hosts. And in programming-language sources a bare dotted name is only reported inside a string literal, a comment or a URL, because `config.internal` and `state.local` are property accesses, not machines. Data and config files (`.yml`, `.json`, `.toml`, `.env`, Dockerfile, lockfiles) carry unquoted values, so no quotes are required there.
+The reasoning changed here, deliberately. Documentation used to be excluded wholesale, which silenced precisely the case this family exists for: **a private address or a developer path inside a README is one of the most common ways internal topology reaches a public repository**, and a `/home/<name>/` in a pasted stack trace is a real leak, not a teaching aid. The reserved namespace above is what protects a writer who follows the RFCs, and it works on every surface. What stays excluded is what measurement showed to be noise rather than signal: inline code spans (on the sample used to tune this, eight findings, all of them API signatures or documented examples), placeholder fences, and files whose whole purpose is to show a shape.
 
 Two things are reported on purpose even though they can be examples. Kubernetes in-cluster names (`<service>.<namespace>.svc.cluster.local`) name your service inventory. And an address or path inside a **code comment** (a JSDoc `@example` block, say) is reported, because a comment is the single most common place a real host gets written down and nothing distinguishes an illustrative address from a real one there. Use RFC5737 addresses in code examples, or suppress by path.
+
+<a id="bounded-cost"></a>
+### Bounded cost
+
+A generated bundle is one 800 KB line, and a rule family that takes minutes on it is a rule family that gets switched off. Four limits keep the cost flat, and none of them is silent:
+
+- line offsets are computed **once per file** and binary-searched, and each line's quoting and comment structure is computed **once per line** rather than once per match
+- a line longer than **2000 characters** is skipped, the way an oversized file is skipped by `FILE_TOO_LARGE_SKIPPED`
+- at most **25 findings per rule** and **100 per file**
+- at most **20000 candidate matches per rule per file**, which bounds the case where nearly everything is filtered out and so produces no findings to count
+
+Whenever a limit is reached, the file gets one `INTERNAL_DISCLOSURE_TRUNCATED` finding at `info` severity naming the limit. A scanner that quietly stopped looking is indistinguishable from a repository with nothing to find, and that is not a trade this tool makes.
 
 On top of that, everything else already in this tool applies: `suppress` with a `path:` glob, `ignore:` globs, `--exclude`, `--min-severity`, and inline `// scg-ignore-next-line INTERNAL_HOSTNAME reason`.
 
@@ -313,7 +336,8 @@ Shape rules cannot know that `sample-service` is one of your private repositorie
 # yaml-language-server: $schema=./node_modules/supply-chain-guard/policy-schema.json
 
 internalDisclosure:
-  # (a) HASHED. Safe to commit: a digest reveals nothing.
+  # (a) HASHED. Publishable: the digest hides the term from a reader and from
+  #     grep. It is not a vault - see "What hashing is worth" below.
   #     Generate with: supply-chain-guard internal-hash forge.internal.example
   hashedTerms:
     # sha256("forge.internal.example") and sha256("acme/sample-service"),
@@ -343,7 +367,27 @@ supply-chain-guard internal-hash forge.internal.example
 printf '%s' "forge.internal.example" | tr 'A-Z' 'a-z' | sha256sum
 ```
 
-**Be honest about what hashing can do:** it is exact-token matching, nothing more. A token is a maximal run of letters, digits, `.`, `_` and `-` (so `https://forge.internal.example/x` yields `forge.internal.example`), plus an `org/repo` pair and a `.git` suffix stripped, all lowercased. A hashed entry for `forge.internal.example` therefore matches that host but not `sub.forge.internal.example`, and there is no way around it: a scanner that could match substrings of a hash would be a scanner that could recover the term. When you need substring or regex power, use `externalFile` (b).
+**What hashing is worth, honestly.**
+
+*As a matcher* it is exact-token matching, nothing more. A token is a maximal run of letters, digits, `.`, `_` and `-` (so `https://forge.internal.example/x` yields `forge.internal.example`), plus an `org/repo` pair and a `.git` suffix stripped, all lowercased. A hashed entry for `forge.internal.example` therefore matches that host but not `sub.forge.internal.example`, and there is no way around it: a scanner that could match substrings of a hash would be a scanner that could recover the term. When you need substring or regex power, use `externalFile` (b).
+
+*As a secret* it buys less than "hashed" suggests, and it is worth saying plainly. An unsalted, single-round sha256 of a low-entropy value is **dictionary-attackable**: hostnames come from a small, guessable space (a short site or service word, a two-digit index, one of a handful of internal TLDs), so anyone with your repository can hash candidate names until one matches. What a digest genuinely buys is that the term is not sitting in the file to be read, copied or grepped, and that it does not travel into a report, a log or a screenshot. That is real, and it is not the same as being unrecoverable.
+
+*If you need the stronger claim,* salt it with a value that lives outside the repository:
+
+```bash
+export SCG_INTERNAL_HASH_SALT="$(openssl rand -hex 16)"    # store it wherever your CI secrets live
+supply-chain-guard internal-hash forge.internal.example    # generates a salted digest
+```
+
+```yaml
+internalDisclosure:
+  hashSalted: true          # says the digests below are salted
+  hashedTerms:
+    - <salted digest>
+```
+
+The salt has to be held outside the repository to be worth anything: a salt committed next to the digests is hashed by the same reader who reads them, which is why there is no config key for the salt itself. `hashSalted: true` is what keeps this fail-visible - a scan that runs without the salt matches nothing, which looks exactly like a clean repository, so the declaration turns that silence into an `INTERNAL_DENYLIST_UNAVAILABLE` finding instead.
 
 **An environment variable** does the same thing as `externalFile` without touching the committed config at all:
 
@@ -380,7 +424,7 @@ allowlist:
   domains:
     # Suppresses THREAT_INTEL_MATCH / IOC_KNOWN_C2_DOMAIN findings whose matched
     # host is this domain or a subdomain of it.
-    - company.internal
+    - company.example.internal
   githubOrgs:
     # Trusted action publishers. Suppresses the ownership-trust findings
     # (GHA_THIRD_PARTY_ACTION, GHA_TAG_NOT_SHA) for actions owned by these
