@@ -11,7 +11,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.17.10 |
+| Version | 5.18.0 |
 | Node engines | >=20.0.0 |
 | Source modules | 65 under `src/` |
 | Test files | 84 under `src/__tests__/` |

@@ -2,10 +2,10 @@
   "aahp_version": "3.0",
   "project": "supply-chain-guard",
   "last_session": {
-    "agent": "cli-tool",
-    "session_id": "cli-1785003207",
-    "timestamp": "2026-07-25T18:13:28Z",
-    "commit": "53843ef",
+    "agent": "handoff-refresh",
+    "session_id": "cli-1785003477",
+    "timestamp": "2026-07-25T18:17:58Z",
+    "commit": "1b1459f",
     "phase": "idle",
     "duration_minutes": 0
   },
@@ -17,15 +17,15 @@
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:46f93f5df485f76c6ad8b87ec95d2a03d34e83d0072165d87680e896b1d96a03",
-      "updated": "2026-07-25T18:04:16Z",
+      "checksum": "sha256:7e56482285ae971a6a901a93781173e02f503cd7a7a7437d71d6dfe4981f6d4a",
+      "updated": "2026-07-25T18:17:57Z",
       "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
-      "checksum": "sha256:7e876b3055ceecbfee972b32cf6aa603005d693a5446d84ae39db5b38351cebd",
-      "updated": "2026-07-25T18:04:16Z",
-      "lines": 114,
+      "checksum": "sha256:7672cdfd560ecb334891f81ed2916bc559ebfea61af72356206e9c276bfbb686",
+      "updated": "2026-07-25T18:17:57Z",
+      "lines": 115,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:709cd91bbfe9beed41d3680488c1428172178a8130c947112afb967ff5e339c6",
-      "updated": "2026-07-25T18:10:20Z",
+      "checksum": "sha256:edf5a5650c508e0daf85c5d742a75678dc84aa8ae1c5bb6222b8f1c435773b27",
+      "updated": "2026-07-25T18:17:57Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:e86536bac195818adfb2e5e68eb5e0f4bc9a6c6d1743ad869b46516bb5cfbce6",
-      "updated": "2026-07-25T18:10:20Z",
+      "checksum": "sha256:45f17ad31c0a8ea8a720957c58951a31107f4908e86454a4a0e0e176cae7d540",
+      "updated": "2026-07-25T18:17:57Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
@@ -81,6 +81,6 @@
   "token_budget": {
     "manifest_only": 85,
     "manifest_plus_core": 18141,
-    "full_read": 26481
+    "full_read": 26491
   }
 }
