@@ -28,20 +28,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   recovered rather than lost. `--limit` stays 250: unlike a page cap it is
   recoverable, and the report now states how many entries are waiting and that
   they expire, instead of the bare "(limit reached)" that made the shortfall look
-  self-healing.
+  self-healing. That recovery is conditional, not guaranteed: leftovers survive
+  only while `remaining <= limit * runs_left`, so on a burst window the excess
+  still ages out. The difference from a page cap is that the number is now
+  reported, so the window can be widened or sliced deliberately.
 - **`## [5.18.0]`'s changelog section is restored.** The v5.18.1 release commit
   renamed the `## [5.18.0]` heading instead of adding a new one, so two releases'
   notes sat under one heading and the `[5.18.0]:` reference link was orphaned.
-  The published v5.18.0 release body was captured at tag time and is unaffected.
+  The published v5.18.0 release body was captured at tag time and is unaffected;
+  the published v5.18.1 body does carry v5.18.0's notes as a result, and is left
+  as-is because a release body is a historical record once tagged.
 - **The em-dash gate was scanning almost nothing.** Its `docs/**/*.md` and
   `.ai/handoff/**/*.md` entries are git pathspecs, where `**/` still requires a
   literal intervening slash, so both matched zero tracked files and the rule only
   ever covered four files at the repository root. Corrected to `docs/*.md` and
-  `.ai/handoff/*.md`, which brings 12 further files under the gate.
+  `.ai/handoff/*.md`, taking the rule from 4 files to 15.
 
 ### Added
 
-- **AI-attribution gate.** Tool and model attribution (a `Claude Code` markdown
+- **Repo process: AI-attribution gate.** Tool and model attribution (a `Claude Code` markdown
   link, the `claude[.]com/claude-code` footer URL, or a `Co-authored-by` trailer
   naming the model) is now blocked on every published surface. The indicators are
   defanged here for the same reason IOCs are: writing one raw trips the gate, as
@@ -55,7 +60,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   shell variables, never interpolated into the script, so an attacker-controlled
   body cannot execute on the runner. `.ai/handoff/**` is out of scope by design:
   that is where an agent note is expected to carry a model id.
-- **CHANGELOG reference-link gate.** The pinned AAHP changelog gate walks release
+- **Repo process: CHANGELOG reference-link gate.** The pinned AAHP changelog gate walks release
   headings to footer links but not the reverse, and never inspects what the
   `[Unreleased]` link points at, which is how a compare link stale by two releases
   shipped green. Two `docSync` groups now assert both directions plus that the

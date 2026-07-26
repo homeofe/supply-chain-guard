@@ -2,7 +2,7 @@
 // advisory databases into the curated feed (src/threat-intel.ts BUNDLED_FEED),
 // then regenerate feed.json.
 //
-//   node scripts/import-threat-feed.mjs              -> import the last 7 days
+//   node scripts/import-threat-feed.mjs              -> import the last 14 days
 //   node scripts/import-threat-feed.mjs --dry-run    -> report only, write nothing
 //   node scripts/import-threat-feed.mjs --days 30 --limit 500
 //   node scripts/import-threat-feed.mjs --json       -> machine-readable report
@@ -13,8 +13,10 @@
 //      Reviewed by GitHub's security team, CWE-506 "Embedded Malicious Code".
 //      Data licensed CC BY 4.0 - attribution travels with every imported entry
 //      in its `source` field and is documented in docs/threat-feed-sources.md.
-//      GITHUB_TOKEN / GH_TOKEN is OPTIONAL: it only raises the REST rate limit
-//      from 60 to 5000 requests/hour. Without it the import still works.
+//      GITHUB_TOKEN / GH_TOKEN raises the REST rate limit from 60 to 5000
+//      requests/hour. It needs no scopes. It is optional only for a window small
+//      enough to fit the 60-request anonymous budget; the default --max-pages 200
+//      does not, so a default run REQUIRES one and fails fast without it.
 //   2. OSV.dev querybatch (corroboration only, never discovery)
 //      POST https://api.osv.dev/v1/querybatch
 //      Confirms the package is also listed as malicious (a MAL- id, sourced
@@ -112,6 +114,9 @@ export const SEVERITY_MAP = {
  */
 export const CONFIDENCE_SINGLE_SOURCE = 0.9;
 export const CONFIDENCE_CORROBORATED = 1.0;
+
+/** GitHub's unauthenticated REST allowance, requests/hour. Authenticated is 5000. */
+const ANONYMOUS_REQUEST_BUDGET = 60;
 
 /**
  * Package names are serialized into a TypeScript source file, so the charset
@@ -541,6 +546,24 @@ export async function importUpstreamFeed({
   fetchImpl = globalThis.fetch,
 } = {}) {
   const from = since ?? sinceDate(days, now);
+
+  // Fail fast, before spending the anonymous budget. The anonymous REST allowance is
+  // 60 requests/hour against 5000 authenticated, so a page budget above it cannot
+  // complete unauthenticated: without this the run dies mid-pagination on an opaque
+  // 403 after 60 wasted requests. Checked here rather than in the fetch helper so the
+  // message can name the fix.
+  // Scoped to the real network path: an injected fetchImpl (the offline tests) never
+  // touches GitHub, so it has no budget to exhaust.
+  const resolvedToken = token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  if (!resolvedToken && maxPages > ANONYMOUS_REQUEST_BUDGET && fetchImpl === globalThis.fetch) {
+    throw new Error(
+      `no GITHUB_TOKEN and --max-pages is ${maxPages}: the anonymous REST budget is ` +
+        `${ANONYMOUS_REQUEST_BUDGET} requests/hour, so this run cannot finish. Export a token ` +
+        `(export GITHUB_TOKEN=$(gh auth token)) - it needs no scopes for public advisories - ` +
+        `or pass --max-pages ${ANONYMOUS_REQUEST_BUDGET} or lower to stay inside the anonymous budget.`,
+    );
+  }
+
   const threatIntelPath = join(root, "src", "threat-intel.ts");
   const feedPath = join(root, "feed.json");
 

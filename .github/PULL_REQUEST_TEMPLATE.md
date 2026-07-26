@@ -30,3 +30,7 @@ What does this PR do?
 - [ ] I have performed a self-review
 - [ ] I have added tests that prove my fix/feature works
 - [ ] New and existing tests pass
+
+## Checklist
+
+- [ ] No AI/tool attribution in the commits, the title or this body (see CONTRIBUTING.md). A required check enforces it.

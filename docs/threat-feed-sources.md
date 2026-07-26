@@ -24,10 +24,12 @@ Malware advisories only (CWE-506, "Embedded Malicious Code"), reviewed by
 GitHub's security team. These are the records that say "this published package
 is malware", which is exactly the indicator class this scanner blocks.
 
-- **No account and no API key required.** `GITHUB_TOKEN` / `GH_TOKEN` is read
-  from the environment if present and only raises the REST rate limit from 60
-  to 5000 requests/hour. Without a token the import still works; if the
-  unauthenticated limit is exhausted the run fails with a message that says so.
+- **No account required, and the token needs no scopes.** `GITHUB_TOKEN` /
+  `GH_TOKEN` is read from the environment and raises the REST rate limit from 60
+  to 5000 requests/hour. It is optional only for a window small enough to fit the
+  60-request anonymous budget. The default `--max-pages 200` does not fit it, so a
+  default run needs a token and fails fast with an actionable message rather than
+  dying mid-pagination on a 403.
 - **Licence: CC BY 4.0** (`github/advisory-database`). Attribution is required
   and travels with the data: every imported entry carries its `GHSA-...` id in
   the `source` field, and this page names the database.
@@ -143,9 +145,13 @@ window.
 The two caps fail in completely different ways, and only one of them is
 recoverable.
 
-`--limit` is a **review** bound. Entries over the limit are still in the window,
-so the next run picks them up; the report prints how many are waiting. Nothing is
-lost as long as a run happens before they age out of `--days`.
+`--limit` is a **review** bound. Entries over the limit are still in the window, so
+the next run picks them up and the report prints how many are waiting. That makes
+them recoverable, but only conditionally: a run drains at most `--limit` per run, so
+the leftovers survive only while `remaining <= limit * runs_left_before_they_expire`.
+On a burst window the arithmetic does not close and the excess ages out just as
+page-cap loss does. The difference is that the number is reported, so the operator
+can widen `--days`, raise `--limit`, or slice the window deliberately.
 
 `--max-pages` is a **correctness** bound. The upstream query sorts
 `published/desc`, so a page cap keeps the newest advisories and never fetches the

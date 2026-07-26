@@ -54,8 +54,31 @@ Known indicators of compromise go in `src/ioc-blocklist.ts`:
 3. Make your changes
 4. Run tests: `npm test`
 5. Run type check: `npm run lint`
-6. Commit with a clear message
+6. Commit with a clear message, and **no AI or tool attribution** (see below)
 7. Push and open a PR
+
+### No AI or tool attribution
+
+The project is developed with AI assistance, but the **author of record is the
+human**. A required CI check therefore fails a pull request whose **commit
+messages, commit author/committer identity, PR title or PR body** carry tool or
+model attribution: a "Generated with ..." footer, a `Co-authored-by:` (or
+`Assisted-by:` / `Generated-by:`) trailer naming an AI, or an AI vendor no-reply
+address. The same rule is gated over the published files (`CHANGELOG.md`,
+`README.md`, `docs/`, `package.json`, `server.json`, and the rest of the npm
+payload), because `CHANGELOG.md` becomes the GitHub Release body and is indexed
+permanently.
+
+Two deliberate carve-outs:
+
+- Matching is anchored on attribution **phrasing**, not on vendor names, so this
+  repository's own threat intelligence about AI-branded malware (for example a
+  "Claude Code leak campaign" indicator) is unaffected.
+- `.ai/handoff/**` is out of scope. That is where an agent note is expected to
+  record which model did the work.
+
+If a revert or cherry-pick inherits a trailer from an older commit, the check
+skips it: you are not asked to rewrite history you did not author.
 
 ### Code Style
 

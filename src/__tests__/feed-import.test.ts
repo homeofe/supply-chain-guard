@@ -800,6 +800,39 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.truncated).toBe(true);
     expect(report.added).toBe(2);
   });
+
+  it("derives a 14-day window when days is not passed", async () => {
+    const { importUpstreamFeed } = await load();
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      dryRun: true,
+      now: new Date("2026-07-26T12:00:00Z"),
+      fetchImpl: singlePage([]),
+    });
+    expect(report.since).toBe("2026-07-12");
+  });
+
+  // Fails BEFORE spending any of the 60-request anonymous budget, so the operator
+  // gets an actionable message instead of an opaque 403 mid-pagination.
+  it("refuses a default-sized real-network run with no token", async () => {
+    const { importUpstreamFeed } = await load();
+    const noToken = { ...process.env };
+    delete noToken.GITHUB_TOKEN;
+    delete noToken.GH_TOKEN;
+    const saved = { GITHUB_TOKEN: process.env.GITHUB_TOKEN, GH_TOKEN: process.env.GH_TOKEN };
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+    try {
+      await expect(
+        // fetchImpl omitted on purpose: the guard is scoped to the real network path.
+        importUpstreamFeed({ root: tmpRoot, maxPages: 200, useOsv: false }),
+      ).rejects.toThrow(/no GITHUB_TOKEN/);
+    } finally {
+      if (saved.GITHUB_TOKEN !== undefined) process.env.GITHUB_TOKEN = saved.GITHUB_TOKEN;
+      if (saved.GH_TOKEN !== undefined) process.env.GH_TOKEN = saved.GH_TOKEN;
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -821,5 +854,26 @@ describe("parseArgs", () => {
   it("rejects an unknown option instead of ignoring it", async () => {
     const { parseArgs } = await load();
     expect(() => parseArgs(["--wat"])).toThrow(/unknown option/);
+  });
+
+  // --allow-truncated is the only documented recovery path from the fatal page-cap
+  // error, so a flag that parsed but never reached importUpstreamFeed would be a
+  // silent no-op that only surfaced during an incident.
+  it("parses --allow-truncated and --max-pages", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--allow-truncated", "--max-pages", "7"])).toEqual({
+      allowTruncated: true,
+      maxPages: 7,
+      dryRun: false,
+      useOsv: true,
+      json: false,
+    });
+  });
+
+  // The default window width is the whole point of the 5.19.0 change: it sets how
+  // much of a missed run is still recoverable, so it is asserted, not commented.
+  it("looks back 14 days by default", async () => {
+    const { sinceDate } = await load();
+    expect(sinceDate(14, new Date("2026-07-26T12:00:00Z"))).toBe("2026-07-12");
   });
 });

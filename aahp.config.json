@@ -68,9 +68,9 @@
     },
     {
       "id": "ai-attribution",
-      "pattern": "\\[Claude Code\\]\\(|claude\\.(?:com/claude-code|ai/code)|Co-authored-by:[ \\t]*Claude",
+      "pattern": "(?:generated|created|authored|assisted|written)[ \\t]+(?:with|by)[ \\t]+\\[?[^ \\n]{0,20}claude|(?:co-authored|assisted|generated|created)-by:[^\\n]*(?:claude|anthropic)|noreply@anthropic\\.com|\\[Claude Code\\]\\(|claude\\.(?:com/claude-code|ai/code)",
       "flags": "gi",
-      "message": "AI/tool attribution is banned in published artefacts (SCG hard rule): the author of record is the human. CHANGELOG.md feeds the GitHub Release body via ci.yml, so it is a public surface. Agent notes belong in .ai/handoff/STATUS.md, which is deliberately out of scope here.",
+      "message": "AI/tool attribution is banned in published artefacts (see CONTRIBUTING.md): the author of record is the human. CHANGELOG.md feeds the GitHub Release body via ci.yml, and package.json/server.json/socket.yml/policy-schema.json are published to npm or the MCP registry, so all of them are public surfaces. Matching is ATTRIBUTION-PHRASE anchored, not brand anchored, so legitimate threat intelligence about Claude-branded malware (e.g. 'Claude Code leak campaign') does not trip it. Agent notes belong in .ai/handoff/STATUS.md, which is deliberately out of scope.",
       "include": [
         "CHANGELOG.md",
         "README.md",
@@ -79,6 +79,12 @@
         "CODE_OF_CONDUCT.md",
         "docs/*.md",
         "action.yml",
+        "package.json",
+        "server.json",
+        "socket.yml",
+        "policy-schema.json",
+        ".pre-commit-hooks.yaml",
+        "src/*.ts",
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/ISSUE_TEMPLATE/*.md"
       ]
@@ -95,15 +101,16 @@
     {
       "id": "changelog-reflink-coverage",
       "sources": [
-        { "file": "CHANGELOG.md", "pattern": "\\n## \\[(\\d+\\.\\d+\\.\\d+)\\] - " },
-        { "file": "CHANGELOG.md", "pattern": "\\n\\[(\\d+\\.\\d+\\.\\d+)\\]: " }
+        { "file": "CHANGELOG.md", "pattern": "\\n## \\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\] - " },
+        { "file": "CHANGELOG.md", "pattern": "\\n\\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\]: " },
+        { "file": "CHANGELOG.md", "pattern": "\\n\\[\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?\\]: \\S*/(?:releases/tag/)?v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\b" }
       ]
     },
     {
       "id": "changelog-unreleased-compare-base",
       "sources": [
-        { "file": "CHANGELOG.md", "pattern": "/compare/v(\\d+\\.\\d+\\.\\d+)\\.\\.\\.HEAD" },
-        { "file": "package.json", "pattern": "\\n  \"version\": \"(\\d+\\.\\d+\\.\\d+)\"" }
+        { "file": "CHANGELOG.md", "pattern": "/compare/v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\.\\.\\.HEAD" },
+        { "file": "package.json", "pattern": "\"version\": \"(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\",\\s*\\n\\s*\"mcpName\"" }
       ]
     }
   ],

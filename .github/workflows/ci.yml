@@ -21,6 +21,14 @@ on:
         description: 'Tag to publish (e.g. v5.0.0)'
         required: false
 
+# Adding `edited` to the PR triggers means title/body edits now spawn runs on the same
+# head sha. Without a concurrency group a run started before a body fix can finish after
+# the run started by the fix, leaving the REQUIRED context reporting the stale red. Tag
+# and main pushes are keyed by ref so a release is never cancelled by a later one.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     name: Build and Test
@@ -52,8 +60,12 @@ jobs:
       # This lives inside "Build and Test" on purpose: that job is a REQUIRED
       # status check on main, so the gate blocks a merge today. A new top-level
       # job would be advisory only until branch protection is updated to require it.
+      # dependabot is exempt for the same reason aahp-verify.yml exempts it: its PR
+      # bodies quote upstream release notes verbatim, it cannot edit its own body,
+      # and this step sits in a REQUIRED check with enforce_admins - so a quoted
+      # trailer upstream would hard-block a security update with no way out.
       - name: No AI attribution in PR body or commit messages
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         env:
           # The PR title and body are attacker-controlled: anyone who can open a PR
           # from a fork controls them. They MUST reach the script as environment
@@ -67,16 +79,33 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # POSIX-ERE twin of the aahp.config.json "ai-attribution" rule. grep -E
-          # has no (?:...) syntax, so the group is a plain (...). Anchored on the
-          # markdown link, the footer URL, or the trailer colon, so PROSE that
-          # merely describes the footer does not match. That is what keeps this
-          # gate from flagging its own definition.
-          PATTERN='\[Claude Code\]\(|claude\.(com/claude-code|ai/code)|Co-authored-by:[[:space:]]*Claude'
+          # POSIX-ERE twin of the aahp.config.json "ai-attribution" rule; grep -E has
+          # no (?:...) syntax, so the groups are plain (...). Keep the two in lockstep.
+          # PROSE that merely describes a footer does not match, which is what keeps
+          # this gate from flagging its own definition and CONTRIBUTING.md's wording.
+          # Anchored on attribution PHRASING plus the anthropic no-reply address, not
+          # on the brand name, so this repo's legitimate threat intelligence about
+          # Claude-branded malware ("Claude Code leak campaign") does not trip it.
+          PATTERN='(generated|created|authored|assisted|written)[ \t]+(with|by)[ \t]+\[?[^ ]{0,20}claude|(co-authored|assisted|generated|created)-by:[^\n]*(claude|anthropic)|noreply@anthropic\.com|\[Claude Code\]\(|claude\.(com/claude-code|ai/code)'
           fail=0
 
+          # Fail closed on a malformed event payload. Without this, an empty BASE_SHA
+          # makes git resolve "..$HEAD_SHA" as "HEAD..$HEAD_SHA", which is empty on the
+          # checked-out merge commit, so git exits 0 and the gate PASSES having
+          # inspected nothing.
+          if [ -z "$BASE_SHA" ] || [ -z "$HEAD_SHA" ]; then
+            echo "::error title=PR sha missing::base.sha or head.sha absent from the event payload; refusing to pass without checking."
+            exit 1
+          fi
+          for sha in "$BASE_SHA" "$HEAD_SHA"; do
+            if ! git rev-parse --verify --quiet "$sha^{commit}" >/dev/null; then
+              echo "::error title=PR sha not fetched::$sha is not in the object graph. Usually a synchronize race (the head moved mid-run); re-run the job."
+              exit 1
+            fi
+          done
+
           if printf '%s' "$PR_TITLE" | grep -Eiq -- "$PATTERN"; then
-            echo "::error title=AI attribution in PR title::Remove the tool/model attribution. The author of record is the human (CLAUDE.md hard rule)."
+            echo "::error title=AI attribution in PR title::Remove the tool/model attribution. The author of record is the human. See CONTRIBUTING.md."
             fail=1
           fi
 
@@ -87,16 +116,36 @@ jobs:
 
           # Fail closed: if the range cannot be read, do NOT silently pass. A bare
           # `git log ... | grep` would swallow the git failure and report clean.
-          if ! MSGS=$(git log --format='%B' "$BASE_SHA..$HEAD_SHA"); then
-            echo "::error title=Cannot read PR commit range::git log $BASE_SHA..$HEAD_SHA failed. The checkout step needs fetch-depth: 0."
+          if ! SHAS=$(git log --format='%H' "$BASE_SHA..$HEAD_SHA"); then
+            echo "::error title=Cannot read PR commit range::git log $BASE_SHA..$HEAD_SHA failed even though both endpoints verified. Inspect the checkout step."
             exit 1
           fi
 
-          if printf '%s' "$MSGS" | grep -Eiq -- "$PATTERN"; then
-            echo "::error title=AI attribution in a commit message::A commit in this PR carries an attribution footer or a Co-Authored-By: Claude trailer. Rewrite it before merging - once merged the message is permanent."
-            git log --format='  %h %s' "$BASE_SHA..$HEAD_SHA" >&2
-            fail=1
-          fi
+          # Per commit, so a revert or cherry-pick can be exempted. main carries 137
+          # commits whose messages contain an inherited trailer, and `git revert` copies
+          # the body verbatim: without this, reverting the repo's own history would be
+          # permanently unmergeable through a rule the author never typed.
+          for sha in $SHAS; do
+            BODY=$(git log -1 --format='%B' "$sha")
+            case "$BODY" in
+              *"This reverts commit"*|*"cherry picked from commit"*)
+                echo "note: skipping $sha (revert/cherry-pick, trailer is inherited)"
+                continue
+                ;;
+            esac
+            if printf '%s' "$BODY" | grep -Eiq -- "$PATTERN"; then
+              echo "::error title=AI attribution in a commit message::$sha carries an attribution footer or a Co-Authored-By trailer. Rewrite it before merging - once merged the message is permanent. See CONTRIBUTING.md."
+              git log -1 --format='  %h %s' "$sha" >&2
+              fail=1
+            fi
+            # The identity fields are published on the commit page even when the body is
+            # clean, so "the author of record is the human" has to cover them too.
+            IDENT=$(git log -1 --format='%an%n%ae%n%cn%n%ce' "$sha")
+            if printf '%s' "$IDENT" | grep -Eiq -- 'claude|anthropic\.com'; then
+              echo "::error title=AI attribution in commit identity::$sha is authored or committed as an AI identity ($(printf '%s' "$IDENT" | tr '\n' ' ')). Re-author it with git commit --amend --reset-author. See CONTRIBUTING.md."
+              fail=1
+            fi
+          done
 
           if [ "$fail" -ne 0 ]; then
             exit 1
