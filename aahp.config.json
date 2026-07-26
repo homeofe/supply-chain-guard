@@ -58,12 +58,29 @@
         "CONTRIBUTING.md",
         "SECURITY.md",
         "CODE_OF_CONDUCT.md",
-        "docs/**/*.md",
-        ".ai/handoff/**/*.md"
+        "docs/*.md",
+        ".ai/handoff/*.md"
       ],
       "exclude": [
         "CHANGELOG.md",
         ".ai/handoff/LOG-ARCHIVE.md"
+      ]
+    },
+    {
+      "id": "ai-attribution",
+      "pattern": "\\[Claude Code\\]\\(|claude\\.(?:com/claude-code|ai/code)|Co-authored-by:[ \\t]*Claude",
+      "flags": "gi",
+      "message": "AI/tool attribution is banned in published artefacts (SCG hard rule): the author of record is the human. CHANGELOG.md feeds the GitHub Release body via ci.yml, so it is a public surface. Agent notes belong in .ai/handoff/STATUS.md, which is deliberately out of scope here.",
+      "include": [
+        "CHANGELOG.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "docs/*.md",
+        "action.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE/*.md"
       ]
     }
   ],
@@ -73,6 +90,20 @@
       "sources": [
         { "file": "policy-schema.json", "pattern": "\"(critical|high|medium|low|info)\"" },
         { "file": ".ai/handoff/CONVENTIONS.md", "pattern": "`(critical|high|medium|low|info)`" }
+      ]
+    },
+    {
+      "id": "changelog-reflink-coverage",
+      "sources": [
+        { "file": "CHANGELOG.md", "pattern": "\\n## \\[(\\d+\\.\\d+\\.\\d+)\\] - " },
+        { "file": "CHANGELOG.md", "pattern": "\\n\\[(\\d+\\.\\d+\\.\\d+)\\]: " }
+      ]
+    },
+    {
+      "id": "changelog-unreleased-compare-base",
+      "sources": [
+        { "file": "CHANGELOG.md", "pattern": "/compare/v(\\d+\\.\\d+\\.\\d+)\\.\\.\\.HEAD" },
+        { "file": "package.json", "pattern": "\\n  \"version\": \"(\\d+\\.\\d+\\.\\d+)\"" }
       ]
     }
   ],

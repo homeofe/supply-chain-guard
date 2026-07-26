@@ -733,6 +733,72 @@ describe("importUpstreamFeed failure mode", () => {
     });
     expect(report.added).toBe(2);
     expect(report.capped).toBe(true);
+    expect(report.limitApplied).toBe(2);
+    // The 3 left behind are recoverable by a later run, unlike a page-cap loss.
+    expect(report.remaining).toBe(3);
+  });
+
+  // A page cap is NOT a resumable backlog. The query is published/desc, so the
+  // unfetched remainder is the OLDEST part of the window and the next run re-fetches
+  // the same newest pages - the remainder ages out of --days permanently. Silently
+  // importing a partial window is a false negative in a security scanner, so it
+  // must be fatal. Regression guard for the 2026-07-26 run, where the cap dropped
+  // 94% of the window and the report called it "page cap reached" and exited 0.
+  it("refuses to import a truncated window and writes nothing", async () => {
+    const { importUpstreamFeed } = await load();
+    const before = fs.readFileSync(path.join(tmpRoot, "src", "threat-intel.ts"), "utf8");
+    let calls = 0;
+    const alwaysMorePages = async () => {
+      calls++;
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h === "link" ? '<https://next.example/page>; rel="next"' : null) },
+        json: async () => [
+          advisory({
+            ghsa_id: `GHSA-trunc${calls}-bbbb-cccc`,
+            vulnerabilities: [
+              { package: { ecosystem: "npm", name: `scg-fixture-trunc-${calls}` }, vulnerable_version_range: ">= 0" },
+            ],
+          }),
+        ],
+      };
+    };
+    await expect(
+      importUpstreamFeed({ root: tmpRoot, maxPages: 2, useOsv: false, fetchImpl: alwaysMorePages }),
+    ).rejects.toThrow(/page cap reached/);
+    // Inert failure: the source file is byte-identical.
+    expect(fs.readFileSync(path.join(tmpRoot, "src", "threat-intel.ts"), "utf8")).toBe(before);
+  });
+
+  it("imports a truncated window only when --allow-truncated is passed", async () => {
+    const { importUpstreamFeed } = await load();
+    let calls = 0;
+    const alwaysMorePages = async () => {
+      calls++;
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h === "link" ? '<https://next.example/page>; rel="next"' : null) },
+        json: async () => [
+          advisory({
+            ghsa_id: `GHSA-allow${calls}-bbbb-cccc`,
+            vulnerabilities: [
+              { package: { ecosystem: "npm", name: `scg-fixture-allow-${calls}` }, vulnerable_version_range: ">= 0" },
+            ],
+          }),
+        ],
+      };
+    };
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      maxPages: 2,
+      allowTruncated: true,
+      useOsv: false,
+      fetchImpl: alwaysMorePages,
+    });
+    expect(report.truncated).toBe(true);
+    expect(report.added).toBe(2);
   });
 });
 

