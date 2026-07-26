@@ -7,6 +7,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **Threat-feed import 2026-07-26.** Imported 250 malicious-package IOCs from
+  the GitHub Advisory Database (CWE-506) for advisories published 2026-07-19
+  and later, 194 of them corroborated against OSV.dev; the bundled feed grows
+  from 430 to 680 entries. These are the ongoing clusters of throwaway npm and
+  PyPI malware names (`app-*`, `eth-*`, `streak-*`, `svgcraft-core`,
+  `cktool-core` and similar), each carrying its advisory id in `FeedIOC.source`.
+  The run hit the importer's default 250-entry cap, so a backlog remains for the
+  next run. No atomic (C2 / hash / account) indicators were addable: every
+  current vendor write-up (AsyncAPI, jscrambler, node-ipc, Shai-Hulud family) is
+  already covered, and the one uncovered campaign (payment-SDK typosquats, July
+  2026) exfiltrates only over shared `ngrok-free[.]dev` tunnels and AWS
+  infrastructure, which are deliberately not blocked.
+
 ## [5.18.1] - 2026-07-25
 
 ### Fixed
