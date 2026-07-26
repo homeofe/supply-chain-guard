@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Docker image build no longer hangs.** It built `linux/arm64` under QEMU
+  emulation, and Node under `qemu-user` has a deadlock class that stalls `npm ci`
+  and `tsc` while emitting no log output at all - so the step could not even be
+  expanded in the Actions UI. It usually finished in about 90 seconds, but v5.18.0
+  hung until GitHub's default 360-minute job timeout killed it, and v5.19.0 hung
+  the same way, leaving `:latest` on the previous release. Each architecture now
+  builds on a native runner and pushes a digest-only image, and a final job
+  stitches the digests into one manifest, so emulation is gone rather than
+  time-boxed. Tagging happens only in that merge job, so a half-finished matrix
+  can no longer move `:latest` onto a single-architecture image, and the job
+  verifies both architectures are in the published manifest before going green.
+  Explicit `timeout-minutes` turns any future hang into a fast, visible failure,
+  per-architecture build caching makes a retry cheap, and a `version` input gives
+  a recovery path for a release whose image failed after npm had already published.
+
 ## [5.19.0] - 2026-07-26
 
 ### Fixed

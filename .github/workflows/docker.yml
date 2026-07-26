@@ -7,6 +7,10 @@ on:
       # not a tag - see ci.yml for the v5.2.35 incident.
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag the image with, without the leading v (e.g. 5.19.0). Blank pushes only :latest.'
+        required: false
 
 permissions:
   contents: read
@@ -15,15 +19,38 @@ permissions:
 env:
   IMAGE: ghcr.io/homeofe/supply-chain-guard
 
+# Each platform builds on a NATIVE runner and pushes an untagged, digest-only
+# image; a final job stitches the digests into one multi-arch manifest.
+#
+# Why not the obvious single-job `platforms: linux/amd64,linux/arm64`: that built
+# arm64 under QEMU emulation, and Node under qemu-user has a deadlock class that
+# hangs `npm ci` / `tsc` while emitting no output at all. It normally finished in
+# about 90 seconds, but v5.18.0 hung until the default 360-minute job timeout killed
+# it, and v5.19.0 hung the same way, leaving :latest on the previous release. Native
+# runners remove the emulation instead of time-boxing the hang.
 jobs:
-  build-push:
-    name: Build and push multi-arch image
-    runs-on: ubuntu-latest
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    # A hang must fail fast and visibly. Without this the job inherits GitHub's
+    # 360-minute default, which is how v5.18.0 burned six hours to produce nothing.
+    # A healthy native build is well under five minutes.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            slug: amd64
+          # Free native arm64 runner for public repositories. If this label ever
+          # stops resolving, the job fails immediately - which is the loud failure
+          # the emulated build never gave us.
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            slug: arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
@@ -35,23 +62,107 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # On a release tag (v5.4.2) push both :latest and :5.4.2. On a manual
-      # workflow_dispatch from a branch there is no version, so only :latest.
-      - name: Compute image tags
-        id: tags
-        run: |
-          TAGS="${IMAGE}:latest"
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            TAGS="${TAGS},${IMAGE}:${GITHUB_REF_NAME#v}"
-          fi
-          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
+      # push-by-digest: deliberately no `tags` here. Tagging happens once, in the
+      # merge job, so a half-finished matrix can never move :latest onto a
+      # single-architecture image.
+      - name: Build and push by digest
+        id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           provenance: true
           sbom: true
+          # Per-platform cache scope, so the two runners never overwrite each other.
+          cache-from: type=gha,scope=${{ matrix.slug }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.slug }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.slug }}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digest-${{ matrix.slug }}
+          path: /tmp/digests/${{ matrix.slug }}
+          retention-days: 1
+          if-no-files-found: error
+
+  merge:
+    name: Push multi-arch manifest
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # On a release tag (v5.4.2) push both :latest and :5.4.2. On a manual run the
+      # version comes from the `version` input instead, because GITHUB_REF is then a
+      # branch and carries no version. That input is the recovery path for a release
+      # whose image build failed after the npm publish had already succeeded.
+      - name: Create and push the manifest
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$DISPATCH_VERSION"
+          fi
+
+          TAG_ARGS=(-t "${IMAGE}:latest")
+          if [[ -n "$VERSION" ]]; then
+            # Reject anything that is not plain semver, so a hand-typed input can
+            # never smuggle extra arguments into the tag list.
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error title=Bad version input::'$VERSION' is not X.Y.Z"
+              exit 1
+            fi
+            TAG_ARGS+=(-t "${IMAGE}:${VERSION}")
+          fi
+
+          SOURCES=()
+          for f in /tmp/digests/*; do
+            SOURCES+=("${IMAGE}@$(cat "$f")")
+          done
+          if [[ "${#SOURCES[@]}" -lt 2 ]]; then
+            echo "::error title=Incomplete matrix::expected 2 platform digests, found ${#SOURCES[@]}. Refusing to publish a partial manifest."
+            exit 1
+          fi
+
+          docker buildx imagetools create "${TAG_ARGS[@]}" "${SOURCES[@]}"
+
+      - name: Verify the published manifest
+        run: |
+          set -euo pipefail
+          # Proves both architectures are really in the manifest before this job goes
+          # green, rather than trusting that the create call did the right thing.
+          docker buildx imagetools inspect "${IMAGE}:latest" --raw > /tmp/manifest.json
+          cat /tmp/manifest.json
+          for arch in amd64 arm64; do
+            if ! grep -q "\"architecture\": *\"${arch}\"" /tmp/manifest.json; then
+              echo "::error title=Missing architecture::${arch} is not in the published manifest."
+              exit 1
+            fi
+            echo "ok: ${arch} present"
+          done
