@@ -1587,10 +1587,31 @@ const IOC_VALUE_SHAPES: Record<string, RegExp> = {
   // IPv6 blocklist entries ("fe80::1", "2001:db8::1") are 7+ chars. Octet
   // ranges are deliberately not enforced - not security relevant here.
   ip: /^(\d{1,3}(\.\d{1,3}){3}|(?=(?:[^:]*:){2})(?=[^a-f0-9]*[a-f0-9])[0-9a-f:.]{7,})$/i,
-  // URL-ish indicator: printable ASCII, no whitespace, and a structure floor
-  // of 8+ chars (bundled entries include host/path URLs and 42-char 0x wallet
-  // addresses; a 1-char printable like "(" must not pass - same flood risk).
-  url: /^[\x21-\x7e]{8,}$/,
+  // URL-ish indicator. A charset + length floor is NOT enough: "require(",
+  // "process.env" and "module.exports" all pass /^[\x21-\x7e]{8,}$/, and every
+  // type:"url" entry is substring-matched against whole file contents at the
+  // entry's own severity (see the non-package branch of checkThreatIntel), so
+  // one typo - or one hostile remote feed entry - would flag an entire
+  // repository as critical. The floor is therefore structural, in three
+  // branches:
+  //   1. 0x + 40..64 hex: EVM wallet / contract addresses (four ship in the
+  //      bundled feed; the Tron and Aptos addresses live in ioc-blocklist.ts
+  //      KNOWN_C2_WALLETS instead).
+  //   2. scheme:// or protocol-relative // + host, with optional userinfo,
+  //      port, path, query or fragment.
+  //   3. a bare host that carries a port OR a path/query/fragment.
+  // Requiring MORE THAN A BARE HOST is the whole trick: a bare dotted host is
+  // structurally identical to a dotted code identifier ("process.env",
+  // "Object.keys", "README.md"), so no host-only rule can separate them. A bare
+  // host belongs in type:"domain".
+  // Non-EVM wallets (Tron "T...", bech32 "bc1q...") are deliberately NOT
+  // accepted here: they are opaque base58/bech32 blobs with no structure to
+  // floor, and they belong in KNOWN_C2_WALLETS.
+  // VERSION-SKEW INVARIANT: this shape may only ever be LOOSENED in a release
+  // that does not itself add an entry relying on the looser shape. parseFeedPayload
+  // rejects the ENTIRE document on one invalid entry, so shipping both at once
+  // makes every client on an older version discard the whole feed on refresh.
+  url: /^(?=[\x21-\x7e]{8,}$)(?:0x[0-9a-f]{40,64}|(?:[a-z][a-z0-9+.-]*:)?\/\/(?:[a-z0-9._~%!$&'()*+,;=:-]{1,64}@)?(?:(?:[a-z0-9_-]+\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:[/?#][\x21-\x7e]*)?|(?:[a-z0-9._~%!$&'()*+,;=:-]{1,64}@)?(?:(?:[a-z0-9_-]+\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5}(?:[/?#][\x21-\x7e]*)?|[/?#][\x21-\x7e]*))$/i,
   // MD5 / SHA-1 / SHA-256 / SHA-512 hex digest.
   hash: /^[0-9a-f]{32,128}$/i,
   // Package coordinates incl. ecosystem prefixes (ruby:, go:github.com/x/y),

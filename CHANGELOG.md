@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.20.0] - 2026-07-27
+
 ### Added
 
 - **259 new threat indicators.** 250 malicious-package IOCs imported from the
@@ -34,8 +36,31 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   substring-match nearly every file. Documentation files are exempt as before,
   and the rule can be turned off with `--exclude IOC_KNOWN_C2_WALLET`.
 
+### Removed
+
+- Two internal pattern collections in `src/patterns.ts` that nothing read:
+  `GLASSWORM_MARKERS` (its marker is an active `FILE_PATTERNS` rule) and
+  `C2_DOMAIN_PATTERNS` (its first pattern duplicates a live C2 domain entry; its
+  second would have matched ordinary Cloudflare Workers hostnames). Neither was
+  part of the package's public exports.
+
 ### Fixed
 
+- **The `url` indicator shape accepted any 8+ character printable token.**
+  Feed values of type `url` are substring-matched against whole file contents at
+  the entry's own severity, so a value such as `process.env` or `require(` would
+  have flagged entire repositories as critical. The shape is now structural: an
+  `0x` EVM address, or a host that carries a scheme, a port, or a path. Bare
+  dotted hosts are rejected because they are indistinguishable from dotted code
+  identifiers; those belong in `type: "domain"`. Internationalized (punycode)
+  hosts, IPv4 hosts, userinfo, ports and query-only URLs are all accepted, and
+  every indicator in the published feed passes unchanged.
+- **A critical Jenkins-plugin indicator was unreachable.** No code path passed
+  the `jenkins:` ecosystem prefix to the package matcher, so
+  `jenkins:checkmarx-ast-plugin@2026.5.09` shipped as detection that could never
+  fire. The offline MCP `ioc_lookup` tool now accepts `go` and `jenkins`, and a
+  new test asserts that every package indicator in the feed is reachable by a
+  matcher some caller actually invokes.
 - **Every mixed-case entry in the malicious-GitHub-account blocklist was
   unreachable** through the repo-owner path. The check compared an already
   lowercased owner against the raw array, so six of the 26 entries could never
@@ -2007,7 +2032,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.19.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.20.0...HEAD
+[5.20.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.0
 [5.19.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.19.0
 [5.18.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.18.2
 [5.18.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.18.1

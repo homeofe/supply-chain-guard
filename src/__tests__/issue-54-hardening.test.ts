@@ -19,6 +19,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { scan } from "../scanner.js";
 import { scanExtractedNpmFiles } from "../npm-scanner.js";
 import { scanExtractedFiles } from "../pypi-scanner.js";
@@ -239,6 +240,60 @@ describe("issue #54: threat-intel indicator hardening", () => {
     expect(isValidFeedIOC({ type: "ip", value: "fe80::1", severity: "critical" })).toBe(true);
     expect(isValidFeedIOC({ type: "url", value: "0xc12c8d8f9706244eca0acf04e880f10ff4e52522", severity: "critical" })).toBe(true);
     expect(isValidFeedIOC({ type: "url", value: "216.126.225.243:8087/api/notify", severity: "critical" })).toBe(true);
+  });
+
+  it("rejects ordinary code tokens as url indicators", () => {
+    // A charset+length floor is not enough. Every type:"url" entry is
+    // substring-matched against whole file contents at its own severity, so a
+    // value like "process.env" would flag every repository as critical. These
+    // all passed the previous /^[\x21-\x7e]{8,}$/ shape.
+    for (const value of [
+      "require(", "function", "process.env", "module.exports", "console.log",
+      "Object.keys", "Array.isArray", "JSON.stringify", "String.raw", "process.argv",
+      "index.js", "README.md", "package.json", "tsconfig.json", "src/index.ts",
+      "node_modules/.bin", "../../etc/passwd", "</script>", "0xdeadbeef",
+      "application/json", "child_process", "import.meta", "path.resolve",
+    ]) {
+      expect(isValidFeedIOC({ type: "url", value, severity: "critical" }), value).toBe(false);
+    }
+  });
+
+  it("accepts every url indicator shape a real campaign produces", () => {
+    // Guards against over-tightening: rejecting a legitimate shape would make
+    // parseFeedPayload throw on the whole document, silently disabling the
+    // same-day protection channel for everyone.
+    for (const value of [
+      "https://evil-c2.example.com/beacon",
+      "//cdn.evil.example/loader.js",
+      "http://185.199.108.153/payload.sh",
+      "evil.example.com:8443/gate.php",
+      "216.126.225.243:8087",
+      "http://evil.example.com?id=1",
+      "https://user:pass@evil.example.com/x",
+      "https://evil.xn--p1ai/loader.js",
+      "steamcommunity.com/profiles/76561198721263282",
+      "0xC12C8D8F9706244ECA0ACF04E880F10FF4E52522",
+    ]) {
+      expect(isValidFeedIOC({ type: "url", value, severity: "critical" }), value).toBe(true);
+    }
+  });
+
+  it("the published feed.json still passes the current validator", () => {
+    // The exact failure a stricter shape creates: parseFeedPayload rejects the
+    // ENTIRE document on one invalid entry, and DEFAULT_FEED_URL is unversioned,
+    // so an over-strict floor would break refresh for every installed client.
+    const feedPath = fileURLToPath(new URL("../../feed.json", import.meta.url));
+    const doc = JSON.parse(fs.readFileSync(feedPath, "utf-8")) as {
+      iocs?: unknown[];
+      entries?: unknown[];
+    };
+    const entries = (doc.iocs ?? doc.entries ?? []) as Array<{ type: string; value: string }>;
+    expect(entries.length).toBeGreaterThan(100);
+    const rejected = entries.filter((e) => !isValidFeedIOC(e));
+    expect(
+      rejected.map((e) => `${e.type}:${e.value}`),
+      "published feed.json entries rejected by the validator",
+    ).toEqual([]);
   });
 
   it("rejects unknown severity and malformed confidence (would break score math)", () => {

@@ -640,7 +640,7 @@ export function isKnownMaliciousAccount(owner: string): boolean {
  */
 function normalizePackageName(
   name: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins",
 ): string {
   if (ecosystem === "pypi") {
     return name.trim().toLowerCase().replace(/[-_.]+/g, "-");
@@ -1287,7 +1287,7 @@ export function checkIOCBlocklist(
 export function checkBadVersion(
   name: string,
   version: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins",
 ): Finding | null {
   // ruby/composer/nuget/cargo have no pinned entries yet (their curated IOCs
   // live in threat-intel.ts as ecosystem-prefixed package entries); the union

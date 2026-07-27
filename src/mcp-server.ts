@@ -108,7 +108,12 @@ interface ToolDefinition {
 }
 
 const SEVERITY_VALUES = ["critical", "high", "medium", "low", "info"] as const;
-const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget"] as const;
+// Every ecosystem prefix that appears in the bundled feed must be listed here
+// or reachable from a file scanner, otherwise an indicator ships as detection
+// that can never fire. "go" is also scanned from go.mod; "jenkins" has no
+// lockfile the scanner reads, so this offline lookup is its only reachable
+// path. src/__tests__/collection-reachability.test.ts asserts the invariant.
+const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget", "go", "jenkins"] as const;
 
 const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
