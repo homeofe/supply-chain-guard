@@ -10,6 +10,7 @@ import {
   KNOWN_BAD_PYPI_VERSIONS,
   KNOWN_C2_WALLETS,
 } from "../ioc-blocklist.js";
+import { getBundledFeed } from "../threat-intel.js";
 
 describe("IOC Blocklist", () => {
   describe("checkIOCBlocklist", () => {
@@ -206,6 +207,24 @@ describe("IOC Blocklist", () => {
       for (const address of addresses) {
         const body = address.startsWith("0x") ? address.slice(2) : address;
         expect(Object.keys(KNOWN_MALICIOUS_HASHES)).not.toContain(body.toLowerCase());
+      }
+    });
+
+    it("does not duplicate a wallet already carried by the bundled feed", () => {
+      // Wallet addresses have two homes: this blocklist, and the bundled feed
+      // as type "url" (four EtherRAT/FakeAgent operator wallets ship that way).
+      // checkIOCBlocklist and checkThreatIntel run independently, so an address
+      // present in both would emit two critical findings for one string. Same
+      // invariant the load-time hash guard enforces, across modules where an
+      // import would be the wrong way to enforce it.
+      const feedValues = new Set(
+        getBundledFeed().map((i) => i.value.toLowerCase().replace(/^0x/, "")),
+      );
+      for (const address of addresses) {
+        const body = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
+        expect(feedValues.has(body), `${address} is in both the blocklist and the feed`).toBe(
+          false,
+        );
       }
     });
   });

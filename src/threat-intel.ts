@@ -1369,32 +1369,37 @@ export function getBundledFeed(): FeedIOC[] {
 // Feed loading
 // ---------------------------------------------------------------------------
 
-/**
- * Load and merge IOC feeds. Starts with bundled feed, merges remote if available.
- */
-/**
- * Memoization for loadThreatIntel.
- *
- * A single scan() calls loadThreatIntel several times (once per scanner family)
- * and every call previously re-read and re-JSON.parse'd the whole cache file.
- * At a large cached feed that is the dominant cost of a scan, and it is pure
- * repeated work: the inputs are the cache path and the file's own mtime/size.
- *
- * The cached array is returned BY REFERENCE rather than copied, which is what
- * lets the package index below stay valid across calls. No caller mutates the
- * returned array (verified across all 29 call sites); treat it as read-only.
- */
+/** Memoized result of loadThreatIntel, keyed on the cache file's identity. */
 interface FeedCacheEntry {
   key: string;
   feed: FeedIOC[];
 }
 let memoizedFeed: FeedCacheEntry | null = null;
 
-/** Test seam: drop the memoized feed and its derived index. */
+/**
+ * Drop the memoized feed (and, with it, the derived package index).
+ *
+ * Needed by any test that writes a feed cache file and then loads it: two
+ * writes inside the same timer tick can share an mtime, and if they also share
+ * a byte size the memo key would not change. Production code never refreshes
+ * and loads in one process, so this exists for tests and for embedders that
+ * manage the cache themselves.
+ */
 export function resetThreatIntelCache(): void {
   memoizedFeed = null;
 }
 
+/**
+ * Load and merge IOC feeds. Starts with bundled feed, merges remote if available.
+ *
+ * MEMOIZED on the cache file's path, mtime, size and TTL window: a single
+ * scan() calls this once per scanner family, and re-reading and re-parsing the
+ * whole cache document each time is the dominant cost of a scan at a large
+ * feed. Call resetThreatIntelCache() to force a re-read.
+ *
+ * The returned array is SHARED, not a copy - that is what lets the package
+ * index stay valid across calls. Treat it as read-only; no caller mutates it.
+ */
 export function loadThreatIntel(
   cacheDir?: string,
   remoteFeedUrl?: string,

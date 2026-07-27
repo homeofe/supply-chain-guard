@@ -26,6 +26,7 @@ import {
   checkThreatIntel,
   matchPackageIOC,
   getBundledFeed,
+  resetThreatIntelCache,
   FEED_CACHE_FILE,
   type FeedIOC,
 } from "../threat-intel.js";
@@ -80,6 +81,10 @@ let tmpDir: string;
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-feed-test-"));
   (https.get as unknown as MockedGet).mockReset();
+  // loadThreatIntel memoizes on the cache file's mtime and size. Two writes
+  // inside one timer tick can share both, so tests that write a cache must
+  // drop the memo or they can read the previous test's feed.
+  resetThreatIntelCache();
 });
 
 afterEach(() => {
