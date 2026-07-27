@@ -109,11 +109,10 @@ export function isLikelyRealSecretValue(value: string): boolean {
 /** Known GlassWorm marker variables */
 export const GLASSWORM_MARKERS = ["lzcdrtfxyqiplpd"];
 
-/** Known GlassWorm Solana wallet addresses used for C2 */
-export const KNOWN_C2_WALLETS: string[] = [
-  // Add confirmed wallet addresses here as they are discovered
-  // Example: "2fTGKciRBTwLpcMVMPGwWEqGkRrG7MkR1FoKGhCPNw2S"
-];
+// KNOWN_C2_WALLETS moved to ioc-blocklist.ts. It sat here empty and
+// unreferenced, which made it look like the home for wallet IOCs while nothing
+// read it - a real, published indicator was skipped on that basis. It now lives
+// beside the other blocklists and is matched by checkIOCBlocklist.
 
 /** Known C2 domain patterns (regex strings) */
 export const C2_DOMAIN_PATTERNS: string[] = [

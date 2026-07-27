@@ -213,6 +213,10 @@ function checkSpec(spec: InstallPackageSpec, feed: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
 
   // 1. Threat-intel package IOCs (bundled + refreshed .scg-cache feed).
+  // The prefixed lookup matches nothing in the BUNDLED feed by construction
+  // (npm entries carry no prefix), but it is kept deliberately: a remote or
+  // third-party feed may legitimately publish "npm:"-prefixed entries, and
+  // since matchPackageIOC became an indexed O(1) lookup this costs nothing.
   const ioc =
     matchPackageIOC("npm", spec.name, spec.version, feed) ??
     matchBareNpmIOC(spec.name, spec.version, feed);

@@ -1372,16 +1372,59 @@ export function getBundledFeed(): FeedIOC[] {
 /**
  * Load and merge IOC feeds. Starts with bundled feed, merges remote if available.
  */
+/**
+ * Memoization for loadThreatIntel.
+ *
+ * A single scan() calls loadThreatIntel several times (once per scanner family)
+ * and every call previously re-read and re-JSON.parse'd the whole cache file.
+ * At a large cached feed that is the dominant cost of a scan, and it is pure
+ * repeated work: the inputs are the cache path and the file's own mtime/size.
+ *
+ * The cached array is returned BY REFERENCE rather than copied, which is what
+ * lets the package index below stay valid across calls. No caller mutates the
+ * returned array (verified across all 29 call sites); treat it as read-only.
+ */
+interface FeedCacheEntry {
+  key: string;
+  feed: FeedIOC[];
+}
+let memoizedFeed: FeedCacheEntry | null = null;
+
+/** Test seam: drop the memoized feed and its derived index. */
+export function resetThreatIntelCache(): void {
+  memoizedFeed = null;
+}
+
 export function loadThreatIntel(
   cacheDir?: string,
   remoteFeedUrl?: string,
 ): FeedIOC[] {
+  const cacheBase = cacheDir ?? CACHE_DIR;
+  const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
+
+  // Identity of the inputs: which cache file, and what state is it in. stat()
+  // is one syscall against a read+parse of the entire document.
+  let stamp = "none";
+  let stat: fs.Stats | undefined;
+  try {
+    stat = fs.statSync(cachePath);
+    stamp = `${stat.mtimeMs}:${stat.size}`;
+  } catch { /* no cache file: stamp stays "none" */ }
+
+  // The TTL is evaluated against wall-clock time, so a memo may not outlive the
+  // window in which the cache is still considered fresh. Bucket by TTL period
+  // so an expiring cache is re-evaluated rather than served stale.
+  const ttlBucket = Math.floor(Date.now() / CACHE_TTL_MS);
+  // NUL-separated: no filesystem path can contain the separator, so two
+  // different cache identities cannot collide into one key.
+  const key = `${cachePath}\u0000${remoteFeedUrl ?? ""}\u0000${stamp}\u0000${ttlBucket}`;
+
+  if (memoizedFeed && memoizedFeed.key === key) return memoizedFeed.feed;
+
   let feed = [...BUNDLED_FEED];
 
   // Try to load cached remote feed
-  const cacheBase = cacheDir ?? CACHE_DIR;
-  const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
-  if (fs.existsSync(cachePath)) {
+  if (stat) {
     try {
       const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
         timestamp: string;
@@ -1397,6 +1440,7 @@ export function loadThreatIntel(
     } catch { /* ignore corrupt cache */ }
   }
 
+  memoizedFeed = { key, feed };
   return feed;
 }
 
@@ -1678,6 +1722,42 @@ export function matchPackageIOC(
 ): FeedIOC | null {
   const entries = feed ?? loadThreatIntel();
   const eco = ecosystem.toLowerCase();
+
+  // An ecosystem containing ":" would make the prefix split ambiguous (the
+  // index keys on the segment before the FIRST colon). No real ecosystem does,
+  // but fall back to the reference scan rather than risk a false negative.
+  if (eco.includes(":")) return matchPackageIOCLinear(entries, eco, name, version);
+
+  const caseInsensitive = eco === "nuget";
+  const wantName = caseInsensitive ? name.toLowerCase() : name;
+
+  const candidates = getPackageIndex(entries).get(`${eco}:${wantName}`);
+  if (!candidates) return null;
+
+  // Candidates are held in original feed order, so "first match wins" is
+  // preserved exactly: a bare-name entry hits any version, a versioned entry
+  // only its own, and whichever appears first in the feed is returned.
+  for (const { ioc, version: iocVersion } of candidates) {
+    if (iocVersion === undefined) return ioc; // bare-name IOC: any version
+    if (version !== undefined && iocVersion === version) return ioc;
+  }
+
+  return null;
+}
+
+/**
+ * Reference implementation of the package-matching semantics.
+ *
+ * Retained deliberately: it is the fallback for exotic ecosystem strings, and
+ * the parity test asserts the index agrees with it across the whole bundled
+ * feed. If the two ever disagree, this one is right by definition.
+ */
+function matchPackageIOCLinear(
+  entries: FeedIOC[],
+  eco: string,
+  name: string,
+  version?: string,
+): FeedIOC | null {
   const prefix = `${eco}:`;
   const caseInsensitive = eco === "nuget";
   const wantName = caseInsensitive ? name.toLowerCase() : name;
@@ -1687,8 +1767,6 @@ export function matchPackageIOC(
     if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
 
     const rest = ioc.value.substring(prefix.length);
-    // Split "name@version" at the last "@". Ecosystem-prefixed names never
-    // start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
     const at = rest.lastIndexOf("@");
     const iocName = at > 0 ? rest.substring(0, at) : rest;
     const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
@@ -1698,11 +1776,67 @@ export function matchPackageIOC(
       : iocName === wantName;
     if (!nameMatches) continue;
 
-    if (iocVersion === undefined) return ioc; // bare-name IOC: any version
+    if (iocVersion === undefined) return ioc;
     if (version !== undefined && iocVersion === version) return ioc;
   }
 
   return null;
+}
+
+/** One indexed candidate: the entry plus its parsed version (undefined = bare). */
+interface IndexedIOC {
+  ioc: FeedIOC;
+  version: string | undefined;
+}
+
+/**
+ * Lazily-built lookup index over a feed array, keyed by "ecosystem:name".
+ *
+ * matchPackageIOC used to be a full linear scan of the feed for EVERY package
+ * in the dependency tree, allocating a lowercased copy of every entry value on
+ * every call: O(deps * feed) with a large constant. That put a ceiling on how
+ * far the bundled feed could grow, which in turn capped how many advisories the
+ * daily import could take in.
+ *
+ * Keyed on the feed array identity via a WeakMap, so a caller-supplied feed and
+ * the memoized shared feed each get their own index and neither leaks.
+ */
+const packageIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedIOC[]>>();
+
+function getPackageIndex(entries: FeedIOC[]): Map<string, IndexedIOC[]> {
+  const cached = packageIndexCache.get(entries);
+  if (cached) return cached;
+
+  const index = new Map<string, IndexedIOC[]>();
+  for (const ioc of entries) {
+    if (ioc.type !== "package") continue;
+
+    // Ecosystem is the segment before the first ":". Entries without a colon
+    // (bare npm names) are unreachable through matchPackageIOC by design, since
+    // every lookup prefix ends in one; they are matched by matchBareNpmIOC.
+    const colon = ioc.value.indexOf(":");
+    if (colon <= 0) continue;
+    const entryEco = ioc.value.substring(0, colon).toLowerCase();
+
+    const rest = ioc.value.substring(colon + 1);
+    // Split "name@version" at the last "@". Ecosystem-prefixed names never
+    // start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
+    const at = rest.lastIndexOf("@");
+    const iocName = at > 0 ? rest.substring(0, at) : rest;
+    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+
+    // NuGet package ids are case-insensitive; every other ecosystem compares
+    // exactly, so only NuGet keys are folded.
+    const keyName = entryEco === "nuget" ? iocName.toLowerCase() : iocName;
+    const key = `${entryEco}:${keyName}`;
+
+    const bucket = index.get(key);
+    if (bucket) bucket.push({ ioc, version: iocVersion });
+    else index.set(key, [{ ioc, version: iocVersion }]);
+  }
+
+  packageIndexCache.set(entries, index);
+  return index;
 }
 
 /**

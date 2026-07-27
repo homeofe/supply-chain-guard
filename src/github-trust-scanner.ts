@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { LURE_PATTERNS } from "./patterns.js";
-import { KNOWN_MALICIOUS_GITHUB_ACCOUNTS } from "./ioc-blocklist.js";
+import { isKnownMaliciousAccount } from "./ioc-blocklist.js";
 
 interface RepoMetadata {
   owner: string;
@@ -176,8 +176,6 @@ export function analyzeGitHubTrust(
   owner: string,
   repo: string,
 ): Finding[] {
-  if (!hasGhCli()) return [];
-
   const findings: Finding[] = [];
 
   // Reject owner/repo that are not valid GitHub names before any gh-api call,
@@ -186,8 +184,16 @@ export function analyzeGitHubTrust(
     return findings;
   }
 
-  // Check known malicious accounts
-  if (KNOWN_MALICIOUS_GITHUB_ACCOUNTS.includes(owner.toLowerCase())) {
+  // The blocklist check runs BEFORE the gh-CLI gate on purpose: it is a local
+  // array lookup that needs no network and no `gh`. It used to sit below the
+  // gate, which silently disabled the entire known-malicious-account list on
+  // every runner without the GitHub CLI installed - i.e. on most CI.
+  //
+  // GitHub logins are case-insensitive, and the blocklist stores the handles
+  // as the reporting vendor published them (mixed case), so both sides are
+  // normalized here. Comparing a lowercased owner against the raw array missed
+  // every mixed-case entry.
+  if (isKnownMaliciousAccount(owner)) {
     findings.push({
       rule: "REPO_KNOWN_MALICIOUS_ACCOUNT",
       description: `Repository owner "${owner}" is a known malicious GitHub account.`,
@@ -197,6 +203,10 @@ export function analyzeGitHubTrust(
     });
     return findings; // No need to check further
   }
+
+  // Everything below this point shells out to `gh`, so the CLI gate belongs
+  // here rather than at the top of the function.
+  if (!hasGhCli()) return findings;
 
   // Fetch metadata
   const meta = fetchRepoMetadata(owner, repo);

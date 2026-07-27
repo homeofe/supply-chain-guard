@@ -1700,7 +1700,12 @@ function generateRecommendations(findings: Finding[]): string[] {
   }
 
   // IOC blocklist recommendations (v4.1)
-  if (rules.has("IOC_KNOWN_C2_DOMAIN") || rules.has("IOC_KNOWN_C2_IP") || rules.has("IOC_KNOWN_DEAD_DROP")) {
+  if (
+    rules.has("IOC_KNOWN_C2_DOMAIN") ||
+    rules.has("IOC_KNOWN_C2_IP") ||
+    rules.has("IOC_KNOWN_DEAD_DROP") ||
+    rules.has("IOC_KNOWN_C2_WALLET")
+  ) {
     recommendations.push(
       "CRITICAL: Known malicious infrastructure (C2/dead-drop) detected in code. This is a confirmed threat indicator.",
     );
@@ -1930,6 +1935,8 @@ function getRecommendation(rule: string): string {
       "Known malicious C2 IP address. Quarantine immediately.",
     IOC_KNOWN_DEAD_DROP:
       "Known dead-drop resolver URL. This is used to retrieve malware C2 addresses.",
+    IOC_KNOWN_C2_WALLET:
+      "Known C2 blockchain address. Treat referencing code as malicious.",
     IOC_KNOWN_MALWARE_HASH:
       "This hash matches known malware. Do not execute associated files.",
     IOC_KNOWN_MALICIOUS_ACCOUNT:

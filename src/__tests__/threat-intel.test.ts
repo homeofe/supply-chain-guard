@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadThreatIntel, checkThreatIntel } from "../threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, matchPackageIOC } from "../threat-intel.js";
 import type { FeedIOC } from "../threat-intel.js";
 
 describe("Threat Intelligence", () => {
@@ -54,5 +54,171 @@ describe("Threat Intelligence", () => {
     const content = "axios@1.14.1";
     const findings = checkThreatIntel(content, "test.js", feed);
     expect(findings).toHaveLength(0); // Packages checked separately
+  });
+});
+
+// ---------------------------------------------------------------------------
+// matchPackageIOC index parity
+// ---------------------------------------------------------------------------
+
+/**
+ * Reference implementation: the exact pre-index semantics of matchPackageIOC.
+ * The indexed implementation must agree with this for every probe. An index
+ * that changes matching semantics generates both false positives and, far
+ * worse, false negatives - so this differential test is the real guard, not
+ * any timing assertion.
+ */
+function referenceMatch(
+  entries: FeedIOC[],
+  ecosystem: string,
+  name: string,
+  version?: string,
+): FeedIOC | null {
+  const eco = ecosystem.toLowerCase();
+  const prefix = `${eco}:`;
+  const caseInsensitive = eco === "nuget";
+  const wantName = caseInsensitive ? name.toLowerCase() : name;
+
+  for (const ioc of entries) {
+    if (ioc.type !== "package") continue;
+    if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
+    const rest = ioc.value.substring(prefix.length);
+    const at = rest.lastIndexOf("@");
+    const iocName = at > 0 ? rest.substring(0, at) : rest;
+    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    const nameMatches = caseInsensitive
+      ? iocName.toLowerCase() === wantName
+      : iocName === wantName;
+    if (!nameMatches) continue;
+    if (iocVersion === undefined) return ioc;
+    if (version !== undefined && iocVersion === version) return ioc;
+  }
+  return null;
+}
+
+describe("matchPackageIOC index parity", () => {
+  const feed = loadThreatIntel();
+
+  /** Every ecosystem:name pair actually present in the feed, parsed once. */
+  const parsed = feed
+    .filter((i) => i.type === "package")
+    .map((i) => {
+      const colon = i.value.indexOf(":");
+      if (colon <= 0) return null;
+      const eco = i.value.substring(0, colon);
+      const rest = i.value.substring(colon + 1);
+      const at = rest.lastIndexOf("@");
+      return {
+        eco,
+        name: at > 0 ? rest.substring(0, at) : rest,
+        version: at > 0 ? rest.substring(at + 1) : undefined,
+      };
+    })
+    .filter((x): x is { eco: string; name: string; version: string | undefined } => x !== null);
+
+  it("has a non-trivial set of prefixed package entries to probe", () => {
+    // Guards the whole suite: if the feed shape changes so nothing is indexed,
+    // every parity assertion below would pass vacuously.
+    expect(parsed.length).toBeGreaterThan(20);
+  });
+
+  it("agrees with the reference scan for every real feed entry", () => {
+    for (const p of parsed) {
+      expect(matchPackageIOC(p.eco, p.name, p.version, feed), `${p.eco}:${p.name}`).toBe(
+        referenceMatch(feed, p.eco, p.name, p.version),
+      );
+    }
+  });
+
+  it("agrees with the reference scan for wrong-version and case-flipped probes", () => {
+    for (const p of parsed) {
+      const flipped =
+        p.name === p.name.toUpperCase() ? p.name.toLowerCase() : p.name.toUpperCase();
+      const probes: Array<[string, string, string | undefined]> = [
+        [p.eco, p.name, "0.0.0-does-not-exist"],
+        [p.eco, p.name, undefined],
+        [p.eco, flipped, p.version],
+        [p.eco.toUpperCase(), p.name, p.version],
+      ];
+      for (const [eco, name, version] of probes) {
+        expect(
+          matchPackageIOC(eco, name, version, feed),
+          `${eco}:${name}@${version ?? "-"}`,
+        ).toBe(referenceMatch(feed, eco, name, version));
+      }
+    }
+  });
+
+  it("agrees with the reference scan for names that are not in the feed", () => {
+    const absent: Array<[string, string, string | undefined]> = [
+      ["npm", "definitely-not-a-real-package-xyz", "1.0.0"],
+      ["pypi", "definitely-not-a-real-package-xyz", undefined],
+      ["nuget", "Definitely.Not.Real", "2.0.0"],
+      ["go", "github.com/nobody/nothing", "v1.0.0"],
+      ["cargo", "", undefined],
+    ];
+    for (const [eco, name, version] of absent) {
+      expect(matchPackageIOC(eco, name, version, feed), `${eco}:${name}`).toBe(
+        referenceMatch(feed, eco, name, version),
+      );
+    }
+  });
+
+  it("preserves first-match-wins when a bare name and a versioned entry collide", () => {
+    // Order matters: the linear scan returned whichever came first.
+    const versionedFirst: FeedIOC[] = [
+      { type: "package", value: "pypi:dup@1.0.0", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "pypi:dup", severity: "high", confidence: 0.9 },
+    ];
+    const bareFirst: FeedIOC[] = [versionedFirst[1]!, versionedFirst[0]!];
+
+    // Exact version hit: the versioned entry wins only when it comes first.
+    expect(matchPackageIOC("pypi", "dup", "1.0.0", versionedFirst)?.severity).toBe("critical");
+    expect(matchPackageIOC("pypi", "dup", "1.0.0", bareFirst)?.severity).toBe("high");
+    // Non-matching version falls through to the bare entry in both orders.
+    expect(matchPackageIOC("pypi", "dup", "9.9.9", versionedFirst)?.severity).toBe("high");
+    expect(matchPackageIOC("pypi", "dup", "9.9.9", bareFirst)?.severity).toBe("high");
+
+    for (const f of [versionedFirst, bareFirst]) {
+      for (const v of ["1.0.0", "9.9.9", undefined]) {
+        expect(matchPackageIOC("pypi", "dup", v, f)).toBe(referenceMatch(f, "pypi", "dup", v));
+      }
+    }
+  });
+
+  it("keeps NuGet case-insensitive and other ecosystems case-sensitive", () => {
+    const f: FeedIOC[] = [
+      { type: "package", value: "nuget:Newtonsoft.Json", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "pypi:CaseSensitive", severity: "critical", confidence: 1.0 },
+    ];
+    expect(matchPackageIOC("nuget", "newtonsoft.json", "1.0.0", f)).not.toBeNull();
+    expect(matchPackageIOC("nuget", "NEWTONSOFT.JSON", "1.0.0", f)).not.toBeNull();
+    // PyPI entries are matched exactly here; PEP 503 normalization applies to
+    // the KNOWN_BAD_PYPI_VERSIONS blocklist, not to feed values.
+    expect(matchPackageIOC("pypi", "casesensitive", undefined, f)).toBeNull();
+    expect(matchPackageIOC("pypi", "CaseSensitive", undefined, f)).not.toBeNull();
+  });
+
+  it("does not match unprefixed npm entries through the prefixed lookup", () => {
+    // npm feed entries carry no ecosystem prefix by construction; they are
+    // matched by matchBareNpmIOC instead. Documented so a future change that
+    // starts emitting "npm:" prefixes is a deliberate one.
+    const f: FeedIOC[] = [
+      { type: "package", value: "left-pad@1.0.0", severity: "critical", confidence: 1.0 },
+    ];
+    expect(matchPackageIOC("npm", "left-pad", "1.0.0", f)).toBeNull();
+    expect(matchPackageIOC("npm", "left-pad", "1.0.0", f)).toBe(
+      referenceMatch(f, "npm", "left-pad", "1.0.0"),
+    );
+  });
+
+  it("returns a stable result across repeated calls on the same feed array", () => {
+    // The index is cached per feed array; a stale or mutated index would show
+    // up as a second call disagreeing with the first.
+    const p = parsed[0]!;
+    const first = matchPackageIOC(p.eco, p.name, p.version, feed);
+    for (let i = 0; i < 3; i++) {
+      expect(matchPackageIOC(p.eco, p.name, p.version, feed)).toBe(first);
+    }
   });
 });

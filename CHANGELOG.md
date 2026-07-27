@@ -21,8 +21,46 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   legitimate release exists under those names and they are matched by bare name.
   The packages they impersonate (`tailwind-merge`, `rate-limiter-flexible`,
   `typeorm`) are explicitly not matched, and a regression test asserts that.
+- **Known C2 blockchain wallets are now detected**, as a new `IOC_KNOWN_C2_WALLET`
+  rule, seeded with the three published ViteVenom/ChainVeil Tron and Aptos
+  tier-2 addresses. `KNOWN_C2_WALLETS` previously sat in `src/patterns.ts`
+  empty and imported by nothing, which made it look like the home for wallet
+  indicators while reading it detected nothing; it now lives beside the other
+  blocklists. Matching is exact-literal and always will be: a bare `0x` plus 64
+  hex characters is indistinguishable from an Ethereum transaction hash or a
+  keccak digest, so a shape-based rule would flag legitimate web3 repositories
+  on sight. A load-time floor rejects short or low-entropy addresses, since the
+  realistic ingest mistake is a short-form address such as `0x1`, which would
+  substring-match nearly every file. Documentation files are exempt as before,
+  and the rule can be turned off with `--exclude IOC_KNOWN_C2_WALLET`.
 
 ### Fixed
+
+- **Every mixed-case entry in the malicious-GitHub-account blocklist was
+  unreachable** through the repo-owner path. The check compared an already
+  lowercased owner against the raw array, so six of the 26 entries could never
+  match. GitHub logins are case-insensitive, so both sides are now normalized
+  through a single helper.
+- **The same blocklist was disabled entirely on any machine without the GitHub
+  CLI.** The `gh` availability gate sat above the check, so `scg repo <url>` on
+  a runner without `gh` returned no findings at all. The blocklist is a local
+  array lookup that needs no network, and now runs before the gate.
+- **PyPI package names are matched under PEP 503 equivalence.** PyPI treats
+  names case-insensitively and collapses runs of `-`, `_` and `.`, so
+  `LiteLLM==1.82.7` in a requirements file silently passed while `litellm`
+  was flagged. npm is deliberately left case-sensitive, because npm names are
+  case-sensitive at the registry and widening there could flag a legitimate
+  package.
+- **Package IOC matching no longer scans the whole feed for every dependency.**
+  `matchPackageIOC` was a linear scan that lowercased every feed value on every
+  call. It is now an index built once per feed, preserving the matching
+  semantics exactly, including NuGet's case-insensitivity and first-match-wins
+  ordering between bare-name and version-pinned entries. Measured over 200
+  dependencies: 12.1 ms to 0.08 ms at the current feed size, and 573.6 ms to
+  0.10 ms at 26,000 entries. `loadThreatIntel` is memoized on the cache file's
+  identity rather than re-reading and re-parsing it for each scanner family,
+  saving a further 142 ms per scan against a 2.3 MB cache. This is what unblocks
+  growing the bundled feed beyond its current size.
 
 - **The Docker image build no longer hangs.** It built `linux/arm64` under QEMU
   emulation, and Node under `qemu-user` has a deadlock class that stalls `npm ci`

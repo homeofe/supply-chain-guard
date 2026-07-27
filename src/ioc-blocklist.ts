@@ -537,6 +537,118 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Known C2 / operator blockchain wallet and contract addresses
+// ---------------------------------------------------------------------------
+
+/**
+ * Blockchain addresses used as malware command-and-control or as the operator
+ * wallet of a campaign.
+ *
+ * MATCHING IS EXACT-LITERAL, DELIBERATELY. There is no shape or prefix matcher
+ * here and there must never be one: a bare "0x" followed by 64 hex characters
+ * is indistinguishable from an Ethereum transaction hash, a keccak256 digest,
+ * or a Hardhat/Foundry test fixture, so a shape rule would flag legitimate web3
+ * repositories on sight. Only addresses actually published by a threat report
+ * belong in here.
+ *
+ * Aptos addresses are stored WITHOUT the "0x" prefix so that a source file
+ * building one by concatenation ("0x" + hex) still matches on the hex body.
+ */
+export const KNOWN_C2_WALLETS: Record<string, string> = {
+  // ViteVenom / ChainVeil - four-tier blockchain C2 (Checkmarx Zero, June-July 2026).
+  // Tier-2 addresses shared between both waves of the campaign; OpenSourceMalware
+  // ties them to the DPRK/Lazarus PolinRider cluster via matching XOR keys.
+  TMfKQEd7TJJa5xNZJZ2Lep838vrzrs7mAP:
+    "ViteVenom/ChainVeil Tron tier-2 C2 wallet (July 2026)",
+  TXfxHUet9pJVU1BgVkBAbrES4YUc1nGzcG:
+    "ViteVenom/ChainVeil Tron tier-2 C2 wallet (July 2026)",
+  be037400670fbf1c32364f762975908dc43eeb38759263e7dfcdabc76380811e:
+    "ViteVenom/ChainVeil Aptos tier-2 C2 account (July 2026)",
+};
+
+/**
+ * Runtime floor on wallet entries.
+ *
+ * This is enforced at module load rather than only in a unit test, because the
+ * realistic ingest mistake is a SHORT address: Aptos renders its framework
+ * accounts as "0x1" / "0x3", and a 1-to-3 character literal substring-matched
+ * against every scanned file would flag essentially every repository. A test
+ * asserting "at least 12 distinct characters" does not catch a 3-char value
+ * that was never added to the test's fixture list.
+ */
+for (const [address, description] of Object.entries(KNOWN_C2_WALLETS)) {
+  const body = address.startsWith("0x") ? address.slice(2) : address;
+  if (body.length < 32) {
+    throw new Error(
+      `KNOWN_C2_WALLETS entry "${address}" is too short (${body.length} chars, minimum 32). ` +
+        "Short-form addresses substring-match almost every file and must never be ingested.",
+    );
+  }
+  if (new Set(body).size < 12) {
+    throw new Error(
+      `KNOWN_C2_WALLETS entry "${address}" has too few distinct characters and looks like a padded placeholder.`,
+    );
+  }
+  if (!description) {
+    throw new Error(`KNOWN_C2_WALLETS entry "${address}" is missing a description.`);
+  }
+  // A bare 64-hex address that is also a known malware hash would emit two
+  // separate critical findings for a single string, since checkIOCBlocklist
+  // runs its loops independently with no cross-loop dedupe.
+  if (Object.prototype.hasOwnProperty.call(KNOWN_MALICIOUS_HASHES, body.toLowerCase())) {
+    throw new Error(
+      `KNOWN_C2_WALLETS entry "${address}" collides with a KNOWN_MALICIOUS_HASHES entry and would double-report.`,
+    );
+  }
+}
+
+/**
+ * Lowercased lookup set for KNOWN_MALICIOUS_GITHUB_ACCOUNTS.
+ *
+ * The array above deliberately stores handles exactly as the reporting vendor
+ * published them, because the content matcher prints them back in its finding
+ * description. Every COMPARISON, though, must be case-insensitive: GitHub
+ * logins are case-insensitive, so "TeamPCP" and "teampcp" are the same account.
+ */
+const MALICIOUS_ACCOUNT_SET: ReadonlySet<string> = new Set(
+  KNOWN_MALICIOUS_GITHUB_ACCOUNTS.map((a) => a.toLowerCase()),
+);
+
+/**
+ * Case-insensitive membership test for the malicious-account blocklist.
+ *
+ * This is the single normalization point. Comparing a lowercased owner against
+ * the raw mixed-case array silently missed every mixed-case entry, so callers
+ * must use this helper rather than `.includes()`.
+ */
+export function isKnownMaliciousAccount(owner: string): boolean {
+  return MALICIOUS_ACCOUNT_SET.has(owner.trim().toLowerCase());
+}
+
+/**
+ * Normalize a package name to its registry's own equivalence rule.
+ *
+ * PyPI treats names case-insensitively and collapses runs of "-", "_" and "."
+ * into a single "-" (PEP 503), so "LiteLLM", "litellm" and "lite_llm" are one
+ * project. Looking the raw parsed name up in the blocklist therefore missed
+ * `LiteLLM==1.82.7` entirely.
+ *
+ * npm is deliberately NOT normalized: npm package names are case-sensitive at
+ * the registry level, so lowercasing there could flag a legitimate package that
+ * differs from a blocked one only by case. Widening a match is only safe when
+ * the registry itself considers the two names identical.
+ */
+function normalizePackageName(
+  name: string,
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo",
+): string {
+  if (ecosystem === "pypi") {
+    return name.trim().toLowerCase().replace(/[-_.]+/g, "-");
+  }
+  return name;
+}
+
+// ---------------------------------------------------------------------------
 // Known compromised npm package versions
 // ---------------------------------------------------------------------------
 
@@ -1136,6 +1248,21 @@ export function checkIOCBlocklist(
     }
   }
 
+  // Check known C2 / operator blockchain wallets. Exact-literal substring only
+  // (see the KNOWN_C2_WALLETS doc comment for why a shape matcher is banned).
+  for (const [address, desc] of Object.entries(KNOWN_C2_WALLETS)) {
+    if (contentLower.includes(address.toLowerCase())) {
+      findings.push({
+        rule: "IOC_KNOWN_C2_WALLET",
+        description: `Known C2 blockchain address detected: ${address} (${desc})`,
+        severity: "critical",
+        file: relativePath,
+        recommendation:
+          "This blockchain address is used for malware command-and-control. Treat any code referencing it as malicious and audit how it entered the dependency tree.",
+      });
+    }
+  }
+
   // Check known malicious GitHub accounts
   for (const account of KNOWN_MALICIOUS_GITHUB_ACCOUNTS) {
     const pattern = new RegExp(`github\\.com/${account}\\b`, "i");
@@ -1172,7 +1299,19 @@ export function checkBadVersion(
         ? KNOWN_BAD_PYPI_VERSIONS
         : {};
 
-  const entry = blocklist[name];
+  // Look the name up under the registry's own equivalence rule (PEP 503 for
+  // PyPI, exact for everything else). The direct hit is tried first so the
+  // common path stays a single property access.
+  let entry = blocklist[name];
+  if (!entry && ecosystem === "pypi") {
+    const normalized = normalizePackageName(name, ecosystem);
+    for (const [key, value] of Object.entries(blocklist)) {
+      if (normalizePackageName(key, ecosystem) === normalized) {
+        entry = value;
+        break;
+      }
+    }
+  }
   if (!entry) return null;
 
   if (entry.versions.includes(version)) {
