@@ -469,6 +469,16 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // the directory-scan MALICIOUS_DEPENDENCY path uses the exact feed names, so pin them explicitly).
   "^(@uw010010\\/vite-tree|@vite-tab\\/tab|@vite-ln\\/build-ts|@vite-mcp\\/vite-type|@vite-pro\\/vite-ui|@vitets\\/vite-ts|@vite-ts\\/vite-ui)$",
 
+  // ChainVeil - predecessor wave of the ViteVenom campaign above (Checkmarx Zero, June 16, 2026;
+  // package list + versions corroborated by OpenSourceMalware, July 17, 2026, which ties both waves
+  // to the DPRK/Lazarus PolinRider campaign via shared Tron/Aptos addresses and XOR decryption keys).
+  // Nine typosquats of Tailwind / Sass / TypeORM / rate-limiter libraries carrying the same 77 KB RAT
+  // and four-tier Tron/Aptos/BNB Smart Chain C2. All nine now resolve to npm "security holding
+  // package" placeholders (registry-verified 2026-07-27), i.e. npm removed them as malware and no
+  // legitimate release history exists under these names - so bare names are safe here. The typosquat
+  // TARGETS (tailwind-merge, rate-limiter-flexible, typeorm) are legitimate and are NOT matched.
+  "^(tailwindcss-animatics|tailwindcss-animates-kit|tailwindcss-merge|sass-formats|sass-format|clsx-tailwind|typeorm-encrypt|rate-limit-flexible|rate-limits-flexible)$",
+
   // SleeperGem - malicious RubyGems releases (StepSecurity via The Hacker News, July 20, 2026)
   // Only the pure impersonation gem is anchored here. It carries no legitimate history in any
   // registry, so a bare name is safe. The campaign's other two gems (Dendreo,

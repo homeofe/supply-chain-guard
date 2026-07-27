@@ -2539,6 +2539,84 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // ChainVeil - predecessor wave of ViteVenom (Checkmarx Zero, June 2026)
+  // =================================================================
+
+  describe("ChainVeil npm typosquats (June 2026)", () => {
+    const NAMES = [
+      "tailwindcss-animatics",
+      "tailwindcss-animates-kit",
+      "tailwindcss-merge",
+      "sass-formats",
+      "sass-format",
+      "clsx-tailwind",
+      "typeorm-encrypt",
+      "rate-limit-flexible",
+      "rate-limits-flexible",
+    ];
+
+    it("matches every ChainVeil package name against the malicious-name patterns", () => {
+      for (const name of NAMES) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT match the legitimate packages the campaign typosquats", () => {
+      const legit = [
+        "tailwind-merge",
+        "tailwindcss",
+        "tailwindcss-animate",
+        "sass",
+        "clsx",
+        "typeorm",
+        "rate-limiter-flexible",
+      ];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    it("flags a directory scan that depends on a ChainVeil package (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { "tailwindcss-merge": "1.0.3" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeDefined();
+      expect(dep?.match).toBe("tailwindcss-merge");
+      expect(dep?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a directory scan depending on the legitimate tailwind-merge", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { "tailwind-merge": "2.5.4", "rate-limiter-flexible": "5.0.3" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeUndefined();
+    });
+
+    it("the install guard blocks a ChainVeil package before npm runs", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      expect(analyzeInstallCommand("npm", ["install", "clsx-tailwind"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "rate-limits-flexible@1.0.1"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "rate-limiter-flexible"]).blocked).toBe(false);
+    });
+  });
+
+  // =================================================================
   // NadMesh botnet - Go-based botnet hunting exposed AI services
   // (XLab via The Hacker News, July 2026)
   // =================================================================

@@ -7,6 +7,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **259 new threat indicators.** 250 malicious-package IOCs imported from the
+  GitHub Advisory Database (CWE-506 advisories published 2026-07-13 and later),
+  173 of them corroborated against OSV.dev; the bundled feed grows from 680 to
+  939 entries.
+- **ChainVeil campaign coverage (Checkmarx Zero, June 2026).** The nine npm
+  typosquats of the Tailwind, Sass, TypeORM and rate-limiter libraries that
+  preceded the already-covered ViteVenom wave, carrying the same 77 KB RAT and
+  the same four-tier Tron/Aptos/BNB Smart Chain C2. All nine were confirmed
+  against the npm registry as "security holding package" placeholders, so no
+  legitimate release exists under those names and they are matched by bare name.
+  The packages they impersonate (`tailwind-merge`, `rate-limiter-flexible`,
+  `typeorm`) are explicitly not matched, and a regression test asserts that.
+
 ### Fixed
 
 - **The Docker image build no longer hangs.** It built `linux/arm64` under QEMU
