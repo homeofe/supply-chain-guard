@@ -23,6 +23,18 @@
 > straight back into TS2590. Every threshold here is tied to the current FeedIOC interface and
 > to tsc 7.0.2; re-measure if either changes.
 >
+> HOW LONG THIS HOLDS, HONESTLY. The CLIFF is gone: with rollover no single literal can grow
+> into TS2590 again, and the three guards make a silent short feed impossible. What remains is
+> GRADUAL, not a cliff. At 250/day the feed reaches ~100k entries in about a year, where tsc
+> measured ~9.1s (today: 0.34s), and src/threat-intel.ts plus its compiled dist/ output would
+> be roughly 15 MB - and package.json `files` ships dist/**, so the npm tarball grows with it.
+> Neither breaks anything; both degrade. The structural answer WHEN that matters is to move the
+> feed data out of TypeScript into a JSON data file loaded at runtime, which fixes build time
+> and tarball size together. That is deliberately NOT done here: it would trade the compile-time
+> FeedIOC validation this release just proved intact for a runtime check, and it is a far bigger
+> change than a build that was days from breaking could wait for. Revisit when tsc time or
+> tarball size actually hurts, not before.
+>
 > VALIDATION IS NOT WEAKENED by chunking - verified, not assumed. Five defect classes were
 > injected into a 30,000-entry chunked build at first/middle/last chunk positions and all five
 > were caught: bad severity literal (TS2322), missing required field (TS2741), wrong primitive
