@@ -2412,6 +2412,69 @@ describe("Campaign Signatures", () => {
       expect(finding).toBeDefined();
       expect(finding?.severity).toBe("critical");
     });
+
+    it("detects the second IPFS payload CID serving the specs branch", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const cfg = "https://ipfs.io/ipfs/Qmet4fhsAaWMBUxNDfREHwgiyDeSWy4YSYs9wiKUW5jGyf";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the botnet C2 IP address", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const c2 = "http://85.137.53.71:8080/cmd";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects a malicious tarball hash in a vendored-artifact manifest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "vendor-manifest.json"),
+        JSON.stringify({
+          artifact: "asyncapi-generator.tgz",
+          sha256:
+            "bfaeb987faa6de2b5a5eb63b1233d055215b09b0349a9394f2175fd7cdf385e4",
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a clean file with no campaign indicators", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        'const gateway = "https://ipfs.io/ipfs/";\nconst host = "85.137.53.70";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.some(
+          (f) =>
+            f.rule === "IOC_KNOWN_DEAD_DROP" ||
+            f.rule === "IOC_KNOWN_C2_IP" ||
+            f.rule === "IOC_KNOWN_MALWARE_HASH"
+        )
+      ).toBe(false);
+    });
   });
 
   describe("PhantomSync npm crypto stealer (July 2026)", () => {

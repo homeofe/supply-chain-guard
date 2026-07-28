@@ -255,6 +255,16 @@ export const KNOWN_C2_IPS: string[] = [
   "107.189.17.143",
   "195.110.58.222",
   "191.101.80.211",
+
+  // AsyncAPI npm compromise (Socket + StepSecurity, July 14, 2026). Single host
+  // carrying the whole botnet control plane on three ports: :8080 command
+  // channel, :8081 credential upload, :8091 proxy management. The package
+  // versions were already pinned in v5.x; this is the C2 infrastructure the
+  // advisory databases never publish. The campaign's Nostr relays
+  // (relay.damus[.]io), BitTorrent DHT bootstrap nodes (router.bittorrent[.]com)
+  // and the ipfs[.]io gateway are shared public infrastructure and are
+  // intentionally NOT listed - only the campaign-specific CID paths are.
+  "85.137.53.71",
 ];
 
 // ---------------------------------------------------------------------------
@@ -272,6 +282,9 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // specific malicious CID path is matched, NOT the ipfs.io gateway host, so
   // legitimate IPFS usage is not flagged.
   "ipfs.io/ipfs/QmQobZSp1wRPrpSEQ56qnyq7ecZh5Bg5k1fnjt4SUwwHb9",
+  // Second payload CID, serving the @asyncapi/specs branch of the same campaign
+  // (single-source: StepSecurity; Socket's write-up lists only the generator CID).
+  "ipfs.io/ipfs/Qmet4fhsAaWMBUxNDfREHwgiyDeSWy4YSYs9wiKUW5jGyf",
 
   // PhantomSync npm crypto stealer (Xygeni, July 15, 2026). Config dead-drop is a
   // specific GitHub gist raw path; the three IPFS CIDs are config fallbacks (bare
@@ -430,6 +443,17 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "1fe3646d27d286db8123297e06ae7badf3e26f352a04f91b6d82c28869a91664": "FakeAgent SectopRAT payload (SHA256)",
   "f8acb8f5cf88b77a4c27d7fd6856aa299bb178e85f9963c2fbd447d818da3ed0": "FakeAgent SectopRAT payload (SHA256)",
   "fd826215add30c1319eefa291b6eaf8ddfa7720cfe816c49aef6fe8a88de7939": "FakeAgent SectopRAT payload (SHA256)",
+
+  // AsyncAPI npm supply-chain compromise (Socket, July 14, 2026) - SHA-256 of the
+  // five malicious registry tarballs. The package@version pins already cover an
+  // install from npm; these catch a vendored or mirrored copy of the same artifact
+  // where the version metadata is gone. Single-source (Socket published the hash
+  // set; StepSecurity's write-up corroborates the same five artifacts by version).
+  "34014776d3d3ff11bc4439b02fd7ac0f02a887eb3a052eeafff236e2f6db8ad1": "AsyncAPI compromise: @asyncapi/generator-helpers@1.1.1 tarball (SHA256)",
+  "082d733db0687dcd768104972b065d4b58cb1e6043688c6c20fa3702337f36ab": "AsyncAPI compromise: @asyncapi/generator-components@0.7.1 tarball (SHA256)",
+  "bfaeb987faa6de2b5a5eb63b1233d055215b09b0349a9394f2175fd7cdf385e4": "AsyncAPI compromise: @asyncapi/generator@3.3.1 tarball (SHA256)",
+  "9b2e65db653ca8575c9b10eefb9a80c6006404812c2ec212bf5675e3c690233b": "AsyncAPI compromise: @asyncapi/specs@6.11.2 tarball (SHA256)",
+  "d425e4583cc6185d41e95c45eda00550045a5d1919b9a012236a4520d009dbd7": "AsyncAPI compromise: @asyncapi/specs@6.11.2-alpha.1 tarball (SHA256)",
 };
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **258 new threat indicators.** 250 malicious-package IOCs imported from the
+  GitHub Advisory Database (CWE-506 advisories published 2026-07-14 and later),
+  125 of them corroborated against OSV.dev.
+- **AsyncAPI campaign infrastructure (Socket + StepSecurity, July 14 2026).** The
+  package versions have been pinned since v5.20.0, but the atomic indicators were
+  missing, and the advisory databases never publish them. Adds the botnet C2 host
+  `85[.]137[.]53[.]71` (`:8080` commands, `:8081` credential upload, `:8091` proxy
+  management), the Ethereum fallback-channel contract address, the second IPFS
+  payload CID serving the `@asyncapi/specs` branch, and SHA-256 hashes for all
+  five malicious registry tarballs so a vendored or mirrored copy is caught even
+  when the version metadata is gone. The campaign's Nostr relays, BitTorrent DHT
+  bootstrap nodes and the `ipfs[.]io` gateway host are deliberately not matched:
+  they are shared public infrastructure, and only the campaign-specific CID paths
+  are ingested.
+
 ## [5.20.0] - 2026-07-27
 
 ### Added

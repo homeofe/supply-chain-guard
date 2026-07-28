@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1785147372",
-    "timestamp": "2026-07-27T10:16:13Z",
-    "commit": "109bd01",
+    "session_id": "cli-1785216717",
+    "timestamp": "2026-07-28T05:31:57Z",
+    "commit": "b382ba9",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:6034b0b4e9527d5034a65c41a3caf562a3cd72242836dfdcdde81c7e5e522be4",
-      "updated": "2026-07-27T10:16:02Z",
-      "lines": 1225,
+      "checksum": "sha256:f3b91590af573c60aadaa53a5d1f430815fc451f8543e1a75f7bd032bca41214",
+      "updated": "2026-07-28T05:30:21Z",
+      "lines": 1233,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:7f64a9ed72dadd0c78f065bbc1d28f912bbacc5eee3a07cfffe9a96d8e800ecd",
-      "updated": "2026-07-27T10:15:28Z",
+      "updated": "2026-07-27T10:18:50Z",
       "lines": 62,
       "summary": "(no summary available)"
     },
     "LOG.md": {
       "checksum": "sha256:b11fc400f812f41efd9da6c04ca471ec1b7fd6d551a5e50b93e5c0b4999cb444",
-      "updated": "2026-07-27T10:16:12Z",
+      "updated": "2026-07-28T05:31:57Z",
       "lines": 119,
       "summary": "(no summary available)"
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:c004deab835d1fa47f752812a2f0c914ed1efc1b41621b333c378667abe1ee04",
-      "updated": "2026-07-27T10:16:12Z",
+      "updated": "2026-07-28T05:31:57Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
       "checksum": "sha256:fc7b07bc7cf8be79edd4fbccbceadbb3a5ea20ba99dad260c6135367dd904541",
-      "updated": "2026-07-27T10:16:12Z",
+      "updated": "2026-07-28T05:31:57Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 22427,
-    "full_read": 30820
+    "manifest_plus_core": 23225,
+    "full_read": 31618
   }
 }
