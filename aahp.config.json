@@ -6,7 +6,8 @@
     { "file": "src/scanner.ts", "minOccurrences": 1, "note": "TOOL_VERSION const (ScanReport.tool + risk-history)" },
     { "file": "README.md", "minOccurrences": 1, "note": "pre-commit snippet rev: tag" },
     { "file": ".pre-commit-hooks.yaml", "minOccurrences": 1, "note": "example rev: tag in header comment" },
-    { "file": "server.json", "minOccurrences": 2, "note": "MCP registry version + npm package version" }
+    { "file": "server.json", "minOccurrences": 2, "note": "MCP registry version + npm package version" },
+    { "file": "package-lock.json", "minOccurrences": 2, "note": "lockfile root version + packages[\"\"].version; npm writes these at install time, so a sed-based bump leaves them a release behind (was stale in v5.20.1 and v5.20.2). Resync with `npm install --package-lock-only`" }
   ],
   "claims": [
     {

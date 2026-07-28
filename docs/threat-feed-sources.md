@@ -10,9 +10,17 @@ The feed has two kinds of entries:
 | Curated | A maintainer reads a vendor write-up and hand-adds the atomic indicators (package, domain, IP, hash, URL) | Recorded in the `CHANGELOG.md` entry for the release that shipped it |
 | Imported | `npm run feed:import` pulls malicious-package records from upstream advisory databases | Recorded per entry in the `source` field |
 
-Both land in the same place: the `BUNDLED_FEED` array in `src/threat-intel.ts`,
-which is the single source of truth. `npm run feed:generate` republishes it as
-`feed.json`, and `npm run check:feed` fails the build if the two ever drift.
+Both land in the same place: the bundled feed in `src/threat-intel.ts`, which is
+the single source of truth. `npm run feed:generate` republishes it as `feed.json`,
+and `npm run check:feed` fails the build if the two ever drift.
+
+The feed is stored as capacity-bounded `FEED_CHUNK_n` consts spread back together
+into `BUNDLED_FEED`. That is not cosmetic: one array literal of this size trips
+`TS2590` in `tsc`, and the limit is content-dependent (uniformly-shaped imported
+entries hit it far sooner than hand-curated ones). Entries are appended to the last
+chunk; when it reaches `FEED_CHUNK_CAPACITY` the importer opens a new chunk and
+registers it in the spread, so no single literal can grow into that ceiling. Nothing
+about this changes how you run an import - the rollover is automatic.
 
 ## Upstream sources
 
@@ -200,6 +208,7 @@ batch are collapsed too.
 ## Reviewing an import
 
 An import is a proposal, not a release. Read the diff before committing: the
-entries are appended to `BUNDLED_FEED` under a dated comment, and every one of
-them names the advisory it came from, so each line can be checked against
+entries are appended to the last feed chunk under a dated comment (or to a new
+chunk, if that one was full), and every one of them names the advisory it came
+from, so each line can be checked against
 `https://github.com/advisories/<GHSA-id>`.

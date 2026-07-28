@@ -7,6 +7,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- `package-lock.json` is now covered by the version-sync gate. The release bump edits
+  version strings in place, but npm writes the lockfile's own `version` fields at install
+  time, so the lockfile trailed a release behind (5.20.0 at the v5.20.1 tag, 5.20.1 at the
+  v5.20.2 tag) and nothing caught it because the file was not a configured version site.
+  It never affected the published package, which does not ship the lockfile. Resync with
+  `npm install --package-lock-only` when bumping.
+
 ## [5.20.2] - 2026-07-28
 
 ### Fixed
@@ -21,7 +30,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `FEED_CHUNK_n` consts spread back into `BUNDLED_FEED`, which typechecks 100,000 entries
   across 100 chunks in about 9 seconds. Every entry is still validated against `FeedIOC`
   (bad severity, wrong field type, missing required field and unknown property are all
-  still compile errors), and no IOC data changed: `feed.json` is byte-identical.
+  still compile errors), and no IOC data changed: all 1,197 entries in `feed.json` are
+  identical, with only its embedded version string differing.
 ### Changed
 
 - **The daily import now rolls over to a new chunk instead of growing one array.**

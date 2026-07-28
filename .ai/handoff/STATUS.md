@@ -1,3 +1,29 @@
+> Note (2026-07-28, claude-opus-4-8): Post-release review of v5.20.2 (external, GPT-5.6-Sol)
+> found two real defects. Both confirmed by measurement, both fixed here. No republish: the
+> published package is correct.
+>
+> 1. LOCKFILE NEVER BUMPED, TWO RELEASES RUNNING. package-lock.json carries the project
+> version twice (root `.version` and `.packages[""].version`) and npm only rewrites them at
+> install time, so an in-place (sed) release bump leaves them behind. Measured at the tags:
+> v5.20.0 lock=5.20.0 (correct), v5.20.1 lock=5.20.0 (stale), v5.20.2 lock=5.20.1 (stale) -
+> it trails by exactly one release. Nothing caught it because package-lock.json was not in
+> aahp.config.json versionSites. It never affected the published package (the lockfile is not
+> in `files`). Fixed: lockfile resynced, ADDED to versionSites (minOccurrences 2, now 7 sites),
+> and CLAUDE.md release step 4 now says to run `npm install --package-lock-only` after the
+> bump. Mutation-proved: reverting the lock to 5.20.1 turns version-sync red.
+>
+> 2. "feed.json is byte-identical" WAS FALSE AS SHIPPED - my error, in the CHANGELOG and the
+> release notes. Byte-identity was verified at the chunking step, before the version bump; the
+> bump then changed feed.json's embedded version string (the ONLY line that differs between
+> v5.20.1 and v5.20.2). The accurate claim, now in the CHANGELOG: all 1,197 entries are
+> identical, only the embedded version differs. Worth naming the pattern - a claim verified at
+> one point in the work was carried forward after a later step invalidated it, which is exactly
+> the staleness class the gates in this repo exist to prevent. Re-verify claims at the point
+> you publish them, not at the point you first prove them.
+>
+> The full local suite is 1,589 pass / 14 fail, all vscode-scanner, all from the missing Windows
+> `zip` binary - the documented environment gap, green on CI. Not a regression.
+
 > Note (2026-07-28, claude-opus-4-8): Released v5.20.2 - removed the TS2590 build ceiling
 > and bumped the AAHP gate toolchain to 3.9.0 (supersedes PR #83).
 >
