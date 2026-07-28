@@ -10,11 +10,11 @@
 
 | Status | Count |
 |--------|-------|
-| Ready (open follow-ups) | 2 |
+| Ready (open follow-ups) | 3 |
 | Blocked | 0 |
 | Roadmap bets remaining | 0 |
 
-Current version: **v5.20.0**. The 2026-07 ideation roadmap plus the follow-on
+Current version: **v5.20.1**. The 2026-07 ideation roadmap plus the follow-on
 gap-analysis push (v5.12.4-v5.17.x: fresh threat-intel, Rust/Go/Python lockfile
 coverage, product/DX, honest SLSA grading, starjacking, OSV export, MCP-registry
 metadata) are shipped. See CHANGELOG.md for the full per-release history.
@@ -25,6 +25,7 @@ metadata) are shipped. See CHANGELOG.md for the full per-release history.
 
 | Item | Where | Note |
 |------|-------|------|
+| **URGENT (by ~2026-08-01): chunk `BUNDLED_FEED` or the build dies.** `tsc` throws TS2590 on the array literal at exactly 2,243 entries (2,242 is clean; boundary reproduced on TypeScript 7.0.2). main is at 1,197 and the daily import adds 250/day. Fix: split into const arrays of ~1,500 and spread them back (`[...FEED_CHUNK_0, ...]`); verified clean at 30,197 entries in 2.76 s with feed.json byte-identical | src/threat-intel.ts | small; do first |
 | Full offline sigstore signature verification (DSSE signature vs Fulcio cert chain + Rekor inclusion proof) on top of v5.15.0's structural validation | src/slsa-verifier.ts | large; documented follow-up |
 | Digest-78 threat cluster (wagni_bot ~30 npm crypto-SDK impersonations, FauxUV PyPI RCE, mcp-server-pg) - needs the same primary-source verification as v5.12.4 before ingest | threat-intel | small-medium; own refresh |
 
