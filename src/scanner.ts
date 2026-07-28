@@ -89,7 +89,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.20.1";
+const TOOL_VERSION = "5.20.2";
 
 /**
  * Exact files that contain this package's own inert detector definitions or

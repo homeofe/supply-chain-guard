@@ -26,24 +26,52 @@ import { runInNewContext } from "node:vm";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+/**
+ * Every `FeedIOC[]` array declaration, at line start, in source order. The feed
+ * is stored as capacity-bounded `FEED_CHUNK_n` consts spread back together into
+ * BUNDLED_FEED (a single array literal that large trips TS2590 in tsc), so this
+ * has to collect all of them, not just one array.
+ */
+const DECL_RE = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:\s*FeedIOC\[\]\s*=\s*\[/gm;
+
 /** Extract the BUNDLED_FEED entries from src/threat-intel.ts. */
 export function extractBundledEntries(root = repoRoot) {
   const source = readFileSync(join(root, "src", "threat-intel.ts"), "utf8");
-  const marker = "const BUNDLED_FEED: FeedIOC[] = [";
-  const start = source.indexOf(marker);
-  if (start === -1) {
+  const decls = [];
+  for (const m of source.matchAll(DECL_RE)) {
+    const bodyStart = m.index + m[0].length;
+    const end = source.indexOf("\n];", bodyStart);
+    if (end === -1) {
+      throw new Error(`${m[1]} array terminator not found in src/threat-intel.ts`);
+    }
+    decls.push({ name: m[1], body: source.slice(bodyStart, end) });
+  }
+  if (!decls.some((d) => d.name === "BUNDLED_FEED")) {
     throw new Error("BUNDLED_FEED marker not found in src/threat-intel.ts");
   }
-  const bodyStart = start + marker.length;
-  const end = source.indexOf("\n];", bodyStart);
-  if (end === -1) {
-    throw new Error("BUNDLED_FEED array terminator not found in src/threat-intel.ts");
-  }
-  const body = source.slice(bodyStart, end);
-  // Empty sandbox: no require, no process, no fs - just literal evaluation.
-  const entries = runInNewContext(`[${body}\n]`, {});
+
+  // Declare every array in source order in ONE empty sandbox (no require, no
+  // process, no fs - just literal evaluation), then read BUNDLED_FEED out of it.
+  // The chunk consts are declared before BUNDLED_FEED, so its spread resolves.
+  const chunkNames = decls.map((d) => d.name).filter((n) => n !== "BUNDLED_FEED");
+  const script =
+    decls.map((d) => `const ${d.name} = [${d.body}\n];`).join("\n") +
+    `\n({ entries: BUNDLED_FEED, chunkTotal: ${
+      chunkNames.length ? chunkNames.map((n) => `${n}.length`).join(" + ") : "null"
+    } });`;
+  const { entries, chunkTotal } = runInNewContext(script, {});
+
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new Error("BUNDLED_FEED evaluation produced no entries");
+  }
+  // A chunk that exists but was never added to the BUNDLED_FEED spread would
+  // silently ship a short feed. Fail the gate instead of publishing the gap.
+  if (chunkTotal !== null && chunkTotal !== entries.length) {
+    throw new Error(
+      `BUNDLED_FEED spreads ${entries.length} entries but the ${chunkNames.length} ` +
+        `FEED_CHUNK_* consts hold ${chunkTotal}. A chunk is missing from the spread ` +
+        `in src/threat-intel.ts.`,
+    );
   }
   return entries;
 }

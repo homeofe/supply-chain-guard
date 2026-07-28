@@ -32,7 +32,9 @@ import {
 } from "../threat-intel.js";
 
 const GEN_SCRIPT_URL = new URL("../../scripts/generate-feed.mjs", import.meta.url).href;
+const IMPORT_SCRIPT_URL = new URL("../../scripts/import-threat-feed.mjs", import.meta.url).href;
 const REPO_FEED_JSON = fileURLToPath(new URL("../../feed.json", import.meta.url));
+const THREAT_INTEL_SRC = fileURLToPath(new URL("../threat-intel.ts", import.meta.url));
 
 // Not a real IOC - synthetic fixture values on the reserved .example TLD.
 const EXTRA_DOMAIN = "evil-feed-refresh-test.example";
@@ -133,6 +135,75 @@ describe("generate-feed.mjs", () => {
     const gen = await import(/* @vite-ignore */ GEN_SCRIPT_URL);
     const expected = gen.serializeFeed(gen.buildFeed());
     expect(gen.feedFileIsFresh(path.join(tmpDir, "nope.json"), expected)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chunked feed integrity
+//
+// BUNDLED_FEED is stored as capacity-bounded FEED_CHUNK_n consts spread back
+// together, because one array literal that large trips TS2590 in tsc. The
+// failure mode that shape introduces is a chunk that exists but never makes it
+// into the spread: the feed silently ships short and every behavioural test
+// still passes, because they only assert on entries that ARE present. These
+// assert on the total.
+// ---------------------------------------------------------------------------
+
+describe("chunked feed integrity", () => {
+  it("ships every chunk: BUNDLED_FEED total matches the committed feed.json", () => {
+    const onDisk = JSON.parse(fs.readFileSync(REPO_FEED_JSON, "utf8"));
+    const bundled = getBundledFeed();
+    expect(bundled.length).toBe(onDisk.entryCount);
+    expect(onDisk.entries.length).toBe(onDisk.entryCount);
+  });
+
+  it("carries a non-trivial feed (floor guard against a dropped chunk)", () => {
+    // A dropped chunk would still leave a valid, self-consistent feed - just a
+    // much smaller one. The floor is what turns that into a red test.
+    expect(getBundledFeed().length).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("spreads every declared FEED_CHUNK_n: chunk totals equal the bundled feed", async () => {
+    const imp = await import(/* @vite-ignore */ IMPORT_SCRIPT_URL);
+    const source = fs.readFileSync(THREAT_INTEL_SRC, "utf8");
+    const chunks = imp.findFeedChunks(source);
+    expect(chunks.length).toBeGreaterThan(0);
+    const chunkTotal = chunks.reduce((n: number, c: { count: number }) => n + c.count, 0);
+    expect(chunkTotal).toBe(getBundledFeed().length);
+    // Each declared chunk is actually referenced in the composed array.
+    for (const c of chunks) {
+      expect(source).toContain(`...${c.name},`);
+    }
+  });
+
+  it("keeps every chunk under the capacity that guards the tsc ceiling", async () => {
+    const imp = await import(/* @vite-ignore */ IMPORT_SCRIPT_URL);
+    const chunks = imp.findFeedChunks(fs.readFileSync(THREAT_INTEL_SRC, "utf8"));
+    for (const c of chunks) {
+      expect(c.count).toBeLessThanOrEqual(imp.FEED_CHUNK_CAPACITY);
+    }
+  });
+
+  it("generate-feed rejects a chunk that is missing from the spread", async () => {
+    // Mutation proof for the gate itself: drop a chunk from the composed array
+    // and the extractor must refuse to build a short feed.
+    const gen = await import(/* @vite-ignore */ GEN_SCRIPT_URL);
+    const imp = await import(/* @vite-ignore */ IMPORT_SCRIPT_URL);
+    const source = fs.readFileSync(THREAT_INTEL_SRC, "utf8");
+    const chunks = imp.findFeedChunks(source);
+    const dropped = chunks[chunks.length - 1].name;
+
+    const eol = source.includes("\r\n") ? "\r\n" : "\n";
+    const spreadLine = `  ...${dropped},${eol}`;
+    expect(source).toContain(spreadLine);
+
+    const root = path.join(tmpDir, "dropped-chunk");
+    fs.mkdirSync(path.join(root, "src"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "src", "threat-intel.ts"),
+      source.replace(spreadLine, ""),
+    );
+    expect(() => gen.extractBundledEntries(root)).toThrow(/missing from the spread/);
   });
 });
 

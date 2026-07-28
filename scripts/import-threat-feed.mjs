@@ -494,30 +494,111 @@ export function publicEntry(entry) {
 }
 
 /**
- * Append entries to the BUNDLED_FEED array literal in a threat-intel.ts source
- * string. Uses the same marker/terminator pair as generate-feed.mjs, so the
- * two never disagree about where the array ends.
+ * Maximum entries per FEED_CHUNK_n const. The feed is stored as chunks spread
+ * back together because ONE array literal trips TS2590 ("union type that is too
+ * complex to represent") in tsc at roughly 2.2k entries. Appending forever to a
+ * single array would walk straight back into that ceiling, so the importer rolls
+ * over to a new chunk here. Well under the measured limit, on purpose.
  */
-export function applyEntries(source, entries, { date, sourceLabel = "GitHub Advisory Database" } = {}) {
+export const FEED_CHUNK_CAPACITY = 1000;
+
+const CHUNK_DECL_RE = /^const (FEED_CHUNK_(\d+)): FeedIOC\[\] = \[/gm;
+const ENTRY_LINE_RE = /^[ \t]*\{\s*type:/gm;
+
+/** Locate every FEED_CHUNK_n array: source order, with its entry count. */
+export function findFeedChunks(source) {
+  const chunks = [];
+  for (const m of source.matchAll(CHUNK_DECL_RE)) {
+    const bodyStart = m.index + m[0].length;
+    const term = source.indexOf("\n];", bodyStart);
+    if (term === -1) throw new Error(`${m[1]} array terminator not found in src/threat-intel.ts`);
+    const body = source.slice(bodyStart, term);
+    chunks.push({
+      name: m[1],
+      index: Number(m[2]),
+      term,
+      count: (body.match(ENTRY_LINE_RE) || []).length,
+    });
+  }
+  return chunks;
+}
+
+/** Offset to insert at so the text lands before the terminator's own line break. */
+const insertPoint = (source, terminator) =>
+  terminator > 0 && source[terminator - 1] === "\r" ? terminator - 1 : terminator;
+
+/**
+ * Append entries to the bundled feed in a threat-intel.ts source string.
+ *
+ * The feed lives in capacity-bounded FEED_CHUNK_n consts spread into
+ * BUNDLED_FEED. Entries go into the LAST chunk; when it is full the importer
+ * opens a new chunk and registers it in the spread, so no single array literal
+ * ever grows into the TS2590 ceiling. A source with no chunks (the pre-chunking
+ * shape) still appends straight into BUNDLED_FEED.
+ */
+export function applyEntries(source, entries, { date, sourceLabel = "GitHub Advisory Database", capacity = FEED_CHUNK_CAPACITY } = {}) {
   const start = source.indexOf(FEED_MARKER);
   if (start === -1) throw new Error("BUNDLED_FEED marker not found in src/threat-intel.ts");
-  const terminator = source.indexOf("\n];", start + FEED_MARKER.length);
-  if (terminator === -1) throw new Error("BUNDLED_FEED array terminator not found in src/threat-intel.ts");
+  const bundledTerm = source.indexOf("\n];", start + FEED_MARKER.length);
+  if (bundledTerm === -1) throw new Error("BUNDLED_FEED array terminator not found in src/threat-intel.ts");
 
   // Insert BEFORE the terminator's own line break, carriage return included.
   // Splitting a CRLF pair here would leave a stray "\r" behind, which turns a
   // 25-line append into a whole-file diff on a CRLF checkout.
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
-  const insertAt = terminator > 0 && source[terminator - 1] === "\r" ? terminator - 1 : terminator;
-
   const header = `  // Imported from ${sourceLabel} (${date}) - see docs/threat-feed-sources.md`;
-  // A leading empty line separates the imported block from the curated entries.
-  // Every line is prefixed (not suffixed) with the EOL, so the last imported
+  const format = (list) => list.map((e) => formatEntry(publicEntry(e)));
+  // Every line is prefixed (not suffixed) with the EOL, so the last appended
   // line borrows the terminator's own line break from the untouched remainder.
-  const lines = ["", header, ...entries.map((e) => formatEntry(publicEntry(e)))];
-  const block = lines.map((line) => eol + line).join("");
+  const prefix = (lines) => lines.map((line) => eol + line).join("");
 
-  return source.slice(0, insertAt) + block + source.slice(insertAt);
+  const chunks = findFeedChunks(source);
+  if (chunks.length === 0) {
+    // Pre-chunking shape: one BUNDLED_FEED literal, append directly.
+    const at = insertPoint(source, bundledTerm);
+    return source.slice(0, at) + prefix(["", header, ...format(entries)]) + source.slice(at);
+  }
+
+  const last = chunks[chunks.length - 1];
+  const room = Math.max(0, capacity - last.count);
+  const intoLast = entries.slice(0, room);
+  const overflow = entries.slice(room);
+
+  // Split the overflow across as many new chunks as it needs.
+  const newChunks = [];
+  for (let i = 0; i < overflow.length; i += capacity) {
+    newChunks.push({
+      name: `FEED_CHUNK_${last.index + 1 + newChunks.length}`,
+      entries: overflow.slice(i, i + capacity),
+    });
+  }
+
+  // Apply highest offset first so the earlier offsets stay valid.
+  const edits = [];
+  if (newChunks.length > 0) {
+    edits.push({
+      at: insertPoint(source, bundledTerm),
+      insert: prefix(newChunks.map((c) => `  ...${c.name},`)),
+    });
+    edits.push({
+      at: last.term + "\n];".length,
+      insert: prefix(
+        newChunks.flatMap((c) => ["", `const ${c.name}: FeedIOC[] = [`, header, ...format(c.entries), "];"]),
+      ),
+    });
+  }
+  if (intoLast.length > 0) {
+    edits.push({
+      at: insertPoint(source, last.term),
+      insert: prefix(["", header, ...format(intoLast)]),
+    });
+  }
+
+  let out = source;
+  for (const e of edits.sort((a, b) => b.at - a.at)) {
+    out = out.slice(0, e.at) + e.insert + out.slice(e.at);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

@@ -553,6 +553,101 @@ describe("applyEntries", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Chunk rollover
+//
+// The feed is stored as capacity-bounded FEED_CHUNK_n consts spread into
+// BUNDLED_FEED, because one array literal that large trips TS2590 in tsc.
+// Appending forever into a single array would walk straight back into that
+// ceiling, so the importer rolls over. These pin that behaviour: the daily
+// import is the thing that would otherwise re-create the problem.
+// ---------------------------------------------------------------------------
+
+describe("applyEntries chunk rollover", () => {
+  const entryLine = (v: string) =>
+    `  { type: "package", value: ${JSON.stringify(v)}, severity: "high", confidence: 0.9 },`;
+
+  /** Build a chunked threat-intel.ts source with the given chunk contents. */
+  const chunkedSource = (chunks: string[][]) => {
+    const parts: string[] = [];
+    chunks.forEach((values, i) => {
+      parts.push(`const FEED_CHUNK_${i}: FeedIOC[] = [`);
+      values.forEach((v) => parts.push(entryLine(v)));
+      parts.push("];", "");
+    });
+    parts.push("const BUNDLED_FEED: FeedIOC[] = [");
+    chunks.forEach((_, i) => parts.push(`  ...FEED_CHUNK_${i},`));
+    parts.push("];", "");
+    return parts.join("\n");
+  };
+
+  const mk = (v: string) => ({
+    type: "package",
+    value: v,
+    severity: "high",
+    confidence: 0.9,
+    source: "GHSA-test",
+  });
+
+  const counts = async (source: string) => {
+    const { findFeedChunks } = await load();
+    return findFeedChunks(source).map((c: { count: number }) => c.count);
+  };
+
+  it("appends into the last chunk while it has room", async () => {
+    const { applyEntries } = await load();
+    const source = chunkedSource([["a", "b"]]);
+    const out = applyEntries(source, [mk("c")], { date: "2026-07-28", capacity: 3 });
+    expect(await counts(out)).toEqual([3]);
+    expect(out).not.toContain("FEED_CHUNK_1");
+  });
+
+  it("opens a new chunk when the last one is full and registers it in the spread", async () => {
+    const { applyEntries } = await load();
+    const source = chunkedSource([["a", "b", "c"]]);
+    const out = applyEntries(source, [mk("d"), mk("e")], { date: "2026-07-28", capacity: 3 });
+    expect(await counts(out)).toEqual([3, 2]);
+    // Declared AND spread - a chunk missing from the spread ships a short feed.
+    expect(out).toContain("const FEED_CHUNK_1: FeedIOC[] = [");
+    expect(out).toContain("  ...FEED_CHUNK_1,");
+    // The new chunk is declared before the array that spreads it.
+    expect(out.indexOf("const FEED_CHUNK_1: FeedIOC[] = [")).toBeLessThan(
+      out.indexOf("const BUNDLED_FEED: FeedIOC[] = ["),
+    );
+  });
+
+  it("splits an oversized batch across chunks, none above capacity", async () => {
+    const { applyEntries } = await load();
+    const source = chunkedSource([["a", "b"]]);
+    const batch = ["c", "d", "e", "f", "g"].map(mk);
+    const out = applyEntries(source, batch, { date: "2026-07-28", capacity: 2 });
+    const sizes = await counts(out);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(2);
+    expect(sizes.reduce((a: number, b: number) => a + b, 0)).toBe(7);
+    for (let i = 0; i < sizes.length; i++) expect(out).toContain(`  ...FEED_CHUNK_${i},`);
+  });
+
+  it("never drops entries when rolling over", async () => {
+    const { applyEntries } = await load();
+    const source = chunkedSource([["a", "b", "c"]]);
+    const batch = ["d", "e", "f", "g"].map(mk);
+    const out = applyEntries(source, batch, { date: "2026-07-28", capacity: 3 });
+    for (const v of ["a", "b", "c", "d", "e", "f", "g"]) {
+      expect(out).toContain(`value: ${JSON.stringify(v)}`);
+    }
+    const sizes = await counts(out);
+    expect(sizes.reduce((a: number, b: number) => a + b, 0)).toBe(7);
+  });
+
+  it("still appends into BUNDLED_FEED when the source has no chunks", async () => {
+    const { applyEntries } = await load();
+    const source = ["const BUNDLED_FEED: FeedIOC[] = [", entryLine("a"), "];", ""].join("\n");
+    const out = applyEntries(source, [mk("b")], { date: "2026-07-28", capacity: 3 });
+    expect(out).toContain('value: "b"');
+    expect(out).not.toContain("FEED_CHUNK_");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Failure mode - the feed must survive a broken upstream untouched
 // ---------------------------------------------------------------------------
 

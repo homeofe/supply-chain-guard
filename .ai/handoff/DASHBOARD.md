@@ -11,7 +11,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.20.1 |
+| Version | 5.20.2 |
 | Node engines | >=20.0.0 |
 | Source modules | 66 under `src/` |
 | Test files | 86 under `src/__tests__/` |
@@ -29,7 +29,7 @@ reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
 
 | Package | Range |
 |---------|-------|
-| @elvatis_com/aahp | 3.8.1 |
+| @elvatis_com/aahp | 3.9.0 |
 | @types/node | ^26.1.1 |
 | @vitest/coverage-v8 | ^4.1.10 |
 | commander | ^14.0.3 |

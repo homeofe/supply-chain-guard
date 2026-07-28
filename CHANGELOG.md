@@ -7,6 +7,44 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.20.2] - 2026-07-28
+
+### Fixed
+
+- **The bundled feed was one import away from breaking the build.** `tsc` reports
+  TS2590 ("Expression produces a union type that is too complex to represent") on the
+  `BUNDLED_FEED` array literal once it grows too complex. The limit is content-dependent,
+  not a fixed entry count: measured on this file, uniformly-shaped entries (exactly what
+  the daily advisory import appends) fail at 1,256 total, while shape-diverse entries
+  reach 4,245. At 1,197 entries that left as little as 58 entries of headroom against an
+  import that adds 250 at a time. The feed is now stored as capacity-bounded
+  `FEED_CHUNK_n` consts spread back into `BUNDLED_FEED`, which typechecks 100,000 entries
+  across 100 chunks in about 9 seconds. Every entry is still validated against `FeedIOC`
+  (bad severity, wrong field type, missing required field and unknown property are all
+  still compile errors), and no IOC data changed: `feed.json` is byte-identical.
+### Changed
+
+- **The daily import now rolls over to a new chunk instead of growing one array.**
+  Chunking alone would only have deferred the ceiling, because the importer appends
+  to a single place; it now fills the last chunk to `FEED_CHUNK_CAPACITY` (1,000) and
+  then opens a new one, registering it in the composed array. An oversized batch is
+  split across as many chunks as it needs, so no single literal can grow back into
+  TS2590.
+- `scripts/generate-feed.mjs` collects every `FeedIOC[]` declaration and evaluates the
+  composed array, rather than one hard-coded literal. It now fails loudly when a chunk
+  exists but is missing from the spread - the one failure mode chunking introduces,
+  where the feed would otherwise ship silently short.
+
+### Added
+
+- Feed-integrity tests: the bundled entry total must equal `feed.json`'s `entryCount`,
+  must stay above a floor, must equal the sum of the declared chunks, and no chunk may
+  exceed capacity. Plus rollover coverage for the importer. Every prior test asserted
+  on entries that were present, so a dropped chunk would have shipped green.
+
+### Security
+
+- Bumped the pinned `@elvatis_com/aahp` gate toolchain to 3.9.0 (supersedes #83).
 ## [5.20.1] - 2026-07-28
 
 ### Added
@@ -2051,7 +2089,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.20.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.20.2...HEAD
+[5.20.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.2
 [5.20.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.1
 [5.20.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.0
 [5.19.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.19.0

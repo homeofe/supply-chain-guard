@@ -1,3 +1,65 @@
+> Note (2026-07-28, claude-opus-4-8): Released v5.20.2 - removed the TS2590 build ceiling
+> and bumped the AAHP gate toolchain to 3.9.0 (supersedes PR #83).
+>
+> THE CEILING - AND A CORRECTION. The incoming handoff stated the boundary as exactly 2,243
+> entries (clean at 2,242), giving "about 4 days". That number is UNREPRODUCIBLE and is
+> retracted. Re-measured on this file with TypeScript 7.0.2 across four padding shapes: the
+> TS2590 limit is CONTENT-dependent, not an entry count. Uniformly-shaped entries - exactly
+> what the daily advisory import appends ({type:"package", severity, confidence, source,
+> firstSeen}) - fail at 1,256 total, i.e. only 58 entries of headroom above the 1,197 on main.
+> Shape-diverse entries reach 4,245. 2,243 sits between the two, consistent with a third
+> unrecorded shape. Operationally this was FAR more urgent than "4 days": the next 250-entry
+> import could have broken the build. Do not record any single number as "the ceiling" again
+> without stating the entry shape it was measured with - that ambiguity is what caused this.
+>
+> Fixed by storing the feed as capacity-bounded FEED_CHUNK_n consts spread into BUNDLED_FEED.
+> Measured: 100,000 entries across 100 chunks typecheck clean in ~9.1s; 4,547 real entries
+> produced by the actual importer in 2.35s. feed.json is byte-identical - no IOC data changed.
+>
+> CHUNKS HAVE THEIR OWN CEILING - capacity is not arbitrary. A single chunk fails at 3,053
+> real-shape entries (clean at 3,052), and the per-chunk limit is independent of chunk count
+> (9 x 3,000 = 28,197 total is clean). FEED_CHUNK_CAPACITY is therefore 1,000: a 3.05x margin.
+> Do not raise it toward 3,000 "because chunks are fine" - that is a 1.02x margin and walks
+> straight back into TS2590. Every threshold here is tied to the current FeedIOC interface and
+> to tsc 7.0.2; re-measure if either changes.
+>
+> VALIDATION IS NOT WEAKENED by chunking - verified, not assumed. Five defect classes were
+> injected into a 30,000-entry chunked build at first/middle/last chunk positions and all five
+> were caught: bad severity literal (TS2322), missing required field (TS2741), wrong primitive
+> type (TS2322), unknown property (TS2353), bad type literal (TS2322). tsc still typechecks
+> every entry against FeedIOC, so the data-integrity gate the array shape provides is intact.
+>
+> THE HANDOFF UNDERSTATED THE SCOPE. It called this a two-file change (threat-intel.ts +
+> generate-feed.mjs). It is THREE: scripts/import-threat-feed.mjs (the daily importer) uses
+> the SAME marker/terminator pair, so after chunking it would have appended into the spread
+> array and check:feed would have gone red the next morning. More importantly, chunking
+> ALONE only defers the ceiling: the importer appends to one place, so that array grows back
+> to 2,243 in about eight days. The real fix is ROLLOVER - applyEntries now fills the last
+> chunk to FEED_CHUNK_CAPACITY (1000) then opens a new chunk and registers it in the spread,
+> splitting oversized batches across as many chunks as needed. Simulated three consecutive
+> imports (+250, +600, +2500) against the real file: counts exact, max chunk 1000, no drops.
+>
+> THE NEW FAILURE MODE IS GATED. Chunking introduces exactly one way to ship a silently short
+> feed: a chunk that exists but never makes it into the spread. That is now caught three ways -
+> generate-feed.mjs throws at generate/--check time (chunk totals vs composed total), and four
+> feed-integrity tests assert the bundled total equals feed.json entryCount, stays above a
+> floor, equals the sum of declared chunks, and that no chunk exceeds capacity. Mutation-proved:
+> dropping ...FEED_CHUNK_1, turns check:feed red and fails 3 guard tests; restore returns green.
+>
+> PR #83 (dependabot aahp 3.8.1 -> 3.9.0) was red on Build and Test, but NOT because of AAHP.
+> Its check:aahp step passed all 7 gates on 3.9.0; the failure was check:handoff, because the
+> generated DASHBOARD.md embeds the dependency table, so any dep bump makes it stale and
+> dependabot cannot regenerate it. Integrated the bump here with a handoff refresh instead;
+> #83 is superseded and should be closed rather than merged.
+>
+> STILL OPEN (deliberate, unchanged): the sourcemap packaging win (tsconfig sourceMap +
+> declarationMap ship ~862 KB of dead maps pointing at src/, which is not in the tarball) was
+> NOT bundled into this release - it is a packaging change, independent of the build ceiling,
+> and mixing it in would widen the blast radius of a fix that had a deadline. Next-highest-value
+> work remains item 2 in the 2026-07-28 note below: making shipped indicators reachable
+> (npm dependency check wired to the feed, requirements.txt/pyproject matching, and the
+> cross-namespace over-match where bare unscoped npm entries are compared against PyPI names).
+
 > Note (2026-07-28, claude-opus-5): Released v5.20.1. Data-only release: the 258 indicators from PR #84 (250 imported package IOCs plus the 8 hand-added AsyncAPI infrastructure indicators) and the 5 campaign tests covering them. No behaviour change, hence a patch.
 >
 > URGENT, DISCOVERED THIS SESSION AND NOT FIXED BY THIS RELEASE: `npm run build` will begin failing on its own within about four days. `tsc` throws TS2590 ("union type too complex to represent") on the BUNDLED_FEED array literal at exactly 2,243 entries; 2,242 is clean. Boundary reproduced directly on this box with the repo's pinned compiler (TypeScript 7.0.2), both sides confirmed. main is now at 1,197 entries and the daily importer adds 250/day, so the wall lands about 2026-08-01. Nothing needs to change for this to happen - the scheduled import walks into it. THE FIX IS CHEAP AND MEASURED: split BUNDLED_FEED into chunked const arrays of about 1,500 and spread them back together (`const BUNDLED_FEED: FeedIOC[] = [...FEED_CHUNK_0, ...]`). Verified clean at 30,197 entries in 2.76 s, with no build-plumbing change, `tsc` still typechecking every entry, and feed.json byte-identical. This is the next action and it should not wait for the next daily run.

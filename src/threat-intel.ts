@@ -29,7 +29,7 @@ export interface FeedIOC {
 // Default bundled feed (curated by supply-chain-guard)
 // ---------------------------------------------------------------------------
 
-const BUNDLED_FEED: FeedIOC[] = [
+const FEED_CHUNK_0: FeedIOC[] = [
   // Claude Code leak campaign (April 2026)
   { type: "domain", value: "rti.cargomanbd.com", severity: "critical", confidence: 1.0, family: "Vidar", campaign: "Claude Code Leak" },
   { type: "ip", value: "147.45.197.92", severity: "critical", confidence: 1.0, family: "GhostSocks", campaign: "Claude Code Leak" },
@@ -1416,6 +1416,9 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "dotenvv-tool@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-v6vw-vv5w-p658, MAL-2026-3758", firstSeen: "2026-07-27" },
   { type: "package", value: "exxpress-tool@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-xfj5-439g-p6qm, MAL-2026-3762", firstSeen: "2026-07-27" },
   { type: "package", value: "exxpress-tool@1.0.5", severity: "critical", confidence: 1.0, source: "GHSA-xfj5-439g-p6qm, MAL-2026-3762", firstSeen: "2026-07-27" },
+];
+
+const FEED_CHUNK_1: FeedIOC[] = [
   { type: "package", value: "exxpress-tool@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-xfj5-439g-p6qm, MAL-2026-3762", firstSeen: "2026-07-27" },
   { type: "package", value: "@design-system-coopeuch/web@999.0.0", severity: "critical", confidence: 1.0, source: "GHSA-4fqj-2fv5-gj83, MAL-2026-3653", firstSeen: "2026-07-27" },
   { type: "package", value: "@design-system-coopeuch/web@999.0.4", severity: "critical", confidence: 1.0, source: "GHSA-4fqj-2fv5-gj83, MAL-2026-3653", firstSeen: "2026-07-27" },
@@ -1613,6 +1616,17 @@ const BUNDLED_FEED: FeedIOC[] = [
   { type: "package", value: "wrld-dev@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-c4wx-mhpg-qpf5, MAL-2026-4733", firstSeen: "2026-07-27" },
   { type: "package", value: "tax4all-components@0.1.26", severity: "critical", confidence: 0.9, source: "GHSA-228g-vcmq-qp4q", firstSeen: "2026-07-27" },
   { type: "package", value: "sparkecoder@0.1.104", severity: "critical", confidence: 1.0, source: "GHSA-r795-5c6p-x827, MAL-2026-4673", firstSeen: "2026-07-27" },
+];
+
+// Composed from the chunks above. A single array literal of this size trips
+// TS2590 ("union type that is too complex to represent") in tsc; splitting it
+// into capacity-bounded consts and spreading them keeps every entry fully
+// typechecked against FeedIOC while staying far under that ceiling.
+// scripts/import-threat-feed.mjs appends to the last chunk and starts a new one
+// at FEED_CHUNK_CAPACITY entries, so no single literal grows back into TS2590.
+const BUNDLED_FEED: FeedIOC[] = [
+  ...FEED_CHUNK_0,
+  ...FEED_CHUNK_1,
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download
