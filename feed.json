@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "5.21.0",
-  "entryCount": 1478,
+  "version": "5.22.0",
+  "entryCount": 1479,
   "entries": [
     {
       "type": "domain",
@@ -12325,6 +12325,15 @@
       "campaign": "SANDWORM_MODE",
       "source": "Socket (single-source)",
       "firstSeen": "2026-02-20"
+    },
+    {
+      "type": "package",
+      "value": "@tc-core/campus-service",
+      "severity": "critical",
+      "confidence": 0.95,
+      "campaign": "Dependency confusion (scoped)",
+      "source": "bundled feed (bare-name promotion, registry-verified 2026-07-29)",
+      "firstSeen": "2026-07-29"
     }
   ]
 }

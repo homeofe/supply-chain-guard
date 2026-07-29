@@ -1914,6 +1914,17 @@ const FEED_CHUNK_1: FeedIOC[] = [
   { type: "domain", value: "freefan.net", severity: "critical", confidence: 0.85, family: "SANDWORM_MODE worm", campaign: "SANDWORM_MODE", source: "Socket (single-source)", firstSeen: "2026-02-20" },
   { type: "domain", value: "fanfree.net", severity: "critical", confidence: 0.85, family: "SANDWORM_MODE worm", campaign: "SANDWORM_MODE", source: "Socket (single-source)", firstSeen: "2026-02-20" },
   { type: "hash", value: "5440e1a424631192dff1162eebc8af5dc2389e3d3b23bd26e9c012279ae116e4", severity: "critical", confidence: 0.85, family: "SANDWORM_MODE worm", campaign: "SANDWORM_MODE", source: "Socket (single-source)", firstSeen: "2026-02-20" },
+
+  // Bare-name entry added when the DEP_INTERNAL_NAME_PUBLIC suffix heuristic was
+  // removed (v5.22.0). That heuristic flagged this package for its NAME SHAPE
+  // (anything ending in "-service"), which also hit @babel/helper-plugin-utils and
+  // @vue/compiler-core at critical - it was never knowledge, just a coincidence
+  // that overlapped a real threat. The knowledge belongs here instead.
+  // Registry-verified 2026-07-29: the package is ABSENT from npm (pulled), and the
+  // only version ever published is the malicious one, so a bare name cannot flag a
+  // clean install. Contrast @convera/ui-shared, which stays VERSION-PINNED at
+  // 0.0.2/0.0.3 because its 0.0.1 exists and was never called malicious upstream.
+  { type: "package", value: "@tc-core/campus-service", severity: "critical", confidence: 0.95, campaign: "Dependency confusion (scoped)", source: "bundled feed (bare-name promotion, registry-verified 2026-07-29)", firstSeen: "2026-07-29" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

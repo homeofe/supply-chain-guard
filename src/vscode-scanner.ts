@@ -14,7 +14,7 @@ import * as https from "node:https";
 import type { Finding, PatternEntry, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { extractZip } from "./archive-extractor.js";
-import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding, isPatternMatchAccepted } from "./patterns.js";
+import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding, isPatternMatchAccepted, isPatternApplicableToFile } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
 
@@ -537,6 +537,7 @@ function checkVscodePatterns(
   const lines = content.split("\n");
 
   for (const pattern of EXTENSION_DANGER_PATTERNS) {
+    if (!isPatternApplicableToFile(pattern, content)) continue;
     const regex = new RegExp(pattern.pattern, "g");
 
     for (let i = 0; i < lines.length; i++) {

@@ -23,6 +23,7 @@ import {
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
   isPatternMatchAccepted,
+  isPatternApplicableToFile,
 } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -306,6 +307,7 @@ export function scanExtractedFiles(
 
     // Apply general file patterns (catches obfuscation, eval/atob, etc.)
     for (const pattern of FILE_PATTERNS) {
+      if (!isPatternApplicableToFile(pattern, content)) continue;
       const regex = new RegExp(pattern.pattern, "g");
       for (let i = 0; i < lines.length; i++) {
         const match = regex.exec(lines[i] ?? "");
@@ -330,6 +332,7 @@ export function scanExtractedFiles(
     // Apply PyPI-specific patterns to Python files and setup files
     if (isPython || isSetupFile) {
       for (const pattern of PYPI_FILE_PATTERNS) {
+        if (!isPatternApplicableToFile(pattern, content)) continue;
         const regex = new RegExp(pattern.pattern, "g");
         for (let i = 0; i < lines.length; i++) {
           const match = regex.exec(lines[i] ?? "");
@@ -363,6 +366,7 @@ export function scanExtractedFiles(
       // Check for install hook overrides in setup files
       if (isSetupFile) {
         for (const pattern of PYPI_INSTALL_HOOK_PATTERNS) {
+          if (!isPatternApplicableToFile(pattern, content)) continue;
           const regex = new RegExp(pattern.pattern, "g");
           for (let i = 0; i < lines.length; i++) {
             const match = regex.exec(lines[i] ?? "");

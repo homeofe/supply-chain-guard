@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
-import { isPatternMatchAccepted } from "./patterns.js";
+import { isPatternMatchAccepted, isPatternApplicableToFile } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Config patterns
@@ -104,6 +104,7 @@ export function scanConfigFile(
   const lines = content.split("\n");
 
   for (const pattern of CONFIG_PATTERNS) {
+    if (!isPatternApplicableToFile(pattern, content)) continue;
     const regex = new RegExp(pattern.pattern, "i");
 
     for (let i = 0; i < lines.length; i++) {

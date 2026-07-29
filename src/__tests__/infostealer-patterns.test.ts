@@ -53,11 +53,29 @@ describe("Infostealer Patterns", () => {
   });
 
   describe("Proxy/backconnect", () => {
-    it("should detect SOCKS5 proxy patterns", () => {
+    it("should detect SOCKS5 protocol implementation details", () => {
       const p = INFOSTEALER_PATTERNS.find((p) => p.rule === "GHOSTSOCKS_SOCKS5");
       expect(p).toBeDefined();
-      expect(matchPattern(p!.pattern, "socks5://proxy.evil.com:1080")).toBe(true);
-      expect(matchPattern(p!.pattern, "SOCKS5 handshake")).toBe(true);
+      // The actual protocol: the raw binary greeting (real control bytes, not
+      // the literal text "0x05"), the connect call, and the version field.
+      expect(matchPattern(p!.pattern, `x${String.fromCharCode(5)}${String.fromCharCode(1)}y`)).toBe(true);
+      expect(matchPattern(p!.pattern, "function connect_socks(host, port) {}")).toBe(true);
+      expect(matchPattern(p!.pattern, "socks_version = 5")).toBe(true);
+      expect(matchPattern(p!.pattern, "socks_version: 5")).toBe(true);
+    });
+
+    it("should NOT flag the bare word SOCKS5 or a socks5:// URL", () => {
+      // The bare literal made every proxy library, egress config and type
+      // declaration a CRITICAL finding. socks5:// URLs are owned by
+      // PROXY_BACKCONNECT, so dropping them here removes a double-report rather
+      // than any coverage.
+      const p = INFOSTEALER_PATTERNS.find((p) => p.rule === "GHOSTSOCKS_SOCKS5");
+      expect(matchPattern(p!.pattern, "SOCKS5 handshake")).toBe(false);
+      expect(matchPattern(p!.pattern, 'const SUPPORTED = ["SOCKS4", "SOCKS5"];')).toBe(false);
+      expect(matchPattern(p!.pattern, "socks5://proxy.evil.com:1080")).toBe(false);
+
+      const bc = INFOSTEALER_PATTERNS.find((p) => p.rule === "PROXY_BACKCONNECT");
+      expect(matchPattern(bc!.pattern, "socks5://proxy.evil.com:1080")).toBe(true);
     });
 
     it("should detect backconnect patterns", () => {

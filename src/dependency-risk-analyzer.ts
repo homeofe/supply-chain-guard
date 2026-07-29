@@ -105,17 +105,29 @@ export function resolveNpmAlias(
   return version === undefined ? { name } : { name, version };
 }
 
-/** Patterns that suggest internal/private package names */
+/**
+ * Patterns that suggest an internal/private package name published publicly.
+ *
+ * Only the two EXPLICIT prefixes are kept. The six suffix patterns that used to
+ * live here (-service, -api, -lib, -utils, -common, -core, -shared) matched
+ * around 1.7% of every real scoped package on npm and reported them at CRITICAL:
+ * @babel/helper-plugin-utils, @vue/compiler-core, @tanstack/query-core,
+ * @jest/expect-utils, @azure/msal-common and @prisma/driver-adapter-utils were
+ * all dependency-confusion verdicts. "-core" is how the JavaScript ecosystem
+ * names its core packages; it is not evidence of anything.
+ *
+ * They did overlap two curated malicious packages, but by coincidence of name
+ * shape rather than knowledge. That knowledge now lives where it belongs: the
+ * malicious VERSIONS are pinned in the bundled feed, and @tc-core/campus-service
+ * carries a bare-name feed entry (registry-verified: absent from npm, every
+ * published version malicious).
+ *
+ * "internal-" and "private-" are deliberate, self-declared markers and had zero
+ * measured false positives.
+ */
 const INTERNAL_PATTERNS = [
   /^@[^/]+\/internal-/,
   /^@[^/]+\/private-/,
-  /^@[^/]+\/.+-service$/,
-  /^@[^/]+\/.+-api$/,
-  /^@[^/]+\/.+-lib$/,
-  /^@[^/]+\/.+-utils$/,
-  /^@[^/]+\/.+-common$/,
-  /^@[^/]+\/.+-core$/,
-  /^@[^/]+\/.+-shared$/,
 ];
 
 /**

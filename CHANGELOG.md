@@ -7,6 +7,97 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.22.0] - 2026-07-29
+
+### Fixed
+
+- **Nine detection rules fired on ordinary source code.** Measured on a corpus of
+  everyday files, seven of them produced 8 findings (2 critical, 5 high) with not one
+  true positive among them. A release script running `npm publish` was a CRITICAL
+  `SHAI_HULUD_WORM` verdict; the word `SOCKS5` in a proxy config was CRITICAL; a CI
+  helper writing `.npmrc` was HIGH, twice; a gist link in a comment, a plain ES6
+  `Proxy`, and a template-literal WebSocket URL were each HIGH. All nine are now
+  corroboration-gated or narrowed, and the same corpus produces zero high or critical
+  findings while all nine still detect their genuine malicious counterparts.
+
+- **New `requiresInFile` pattern guard.** The worst false positives were rules whose
+  regex asserted something true of innocent code, which no path- or value-level filter
+  could fix. A rule may now require corroboration elsewhere in the same file, so
+  `npm publish` counts only alongside credential access and process execution, `.npmrc`
+  only alongside an exfiltration call, and a gist URL only alongside a fetch.
+
+- **The guard was honoured by one scanner out of eight.** The pattern arrays are
+  iterated by the directory, npm, PyPI, VS Code, Dockerfile and config scanners, so a
+  filter applied in only one of them means the same file gets different verdicts
+  depending on which entry point looked at it. Both the file-level and value-level
+  guards are now applied in every loop, enforced by a wiring test that fails the build
+  if a new pattern loop appears without them.
+
+- **The scoped-package catch-all matched 94% of all scoped packages.** `scg npm
+  <any scoped package>` exited 1 with riskLevel critical: `@vitest/runner`,
+  `@babel/helper-plugin-utils` and `@vue/compiler-core` were all reported as malicious.
+  The allowlist could never keep up either, since `vitejs` was listed but not `vitest`,
+  while `types` accidentally exempted `@typescript-eslint/*`. The rule is gone; the npm
+  scanner now resolves scoped malware by exact name through the bundled feed, which
+  covers every curated name instead of only scoped ones.
+
+- **Dependency-confusion suffixes flagged the JavaScript ecosystem's naming
+  conventions.** `-core`, `-utils`, `-api`, `-service`, `-common`, `-lib` and `-shared`
+  matched around 1.7% of every real scoped package at CRITICAL. Removed, keeping the
+  self-declared `internal-` and `private-` prefixes, which had no measured false
+  positives. The one curated package that relied on the suffix rule now carries an exact
+  bare-name feed entry, registry-verified as absent from npm with every published
+  version malicious.
+
+- **Entropy was computed on the wrong scale, and never fired on base64.** The metric
+  iterated code points rather than UTF-8 bytes, so it was unbounded while its thresholds
+  assumed the 0..8 byte range. Worse, base64 cannot exceed log2(64) = 6.0, so a strict
+  `> 6.0` threshold never matched a base64 payload at all - the exact shape the rule
+  exists to catch. Now byte-based, with the threshold re-derived from measurement:
+  across 1,151 real third-party files the maximum was 5.70 and none exceeded 5.8, so
+  5.8 catches base64 payloads with no measured false positive. Inlined `data:` URIs are
+  excluded, since an embedded asset is not obfuscation.
+
+- `ENV_EXFILTRATION` matched the English word "got" (as in "expected 1.1.5 but got"),
+  and missed a real exfiltration shape where the network call precedes `process.env`.
+  Both fixed.
+
+- `SECRETS_AWS_KEY` had no charset floor and fired on padded binary inside a WASM blob.
+  It now requires the key body to contain at least 8 distinct characters.
+
+- `DEAD_DROP_GIST` accepted short all-digit gist ids, making ordinary gist links high
+  severity. It now requires a realistic 20+ character hex id.
+
+- **Every dependabot pull request arrived red, permanently.** The generated handoff
+  dashboard embeds a table of every dependency and its version, and the staleness gate
+  required a byte-exact match, so any bump failed `prebuild` on "Handoff docs are
+  stale". Dependabot cannot fix that: its pull requests run with a read-only token and
+  it cannot regenerate the docs. The version column is still written truthfully but is
+  no longer part of the comparison, since it is derived entirely from `package.json` in
+  the same commit. Every other kind of drift, including adding or removing a dependency,
+  still fails the gate.
+
+### Added
+
+- **Load-time pattern validation.** A malformed regex anywhere in the pattern table used
+  to be a silent, total loss of content scanning: the scanner compiles patterns inside a
+  per-file try/catch, so one bad entry threw on the first file, was swallowed, and
+  suppressed every rule ordered after it for the whole scan while still exiting 0.
+  Measured: a single invalid entry placed first took a scan from 21 findings to 1 and
+  reported success. Every pattern is now compiled at module load and a bad one is a loud,
+  immediate failure.
+
+- **Pattern guard wiring test.** Fails the build if a new pattern loop appears that does not
+  apply both the file-level and value-level guards, which is how `requiresInFile` came to be
+  honoured by one scanner out of eight.
+
+- **Precision regression corpus.** A committed corpus of ordinary source is scanned on
+  every test run and must produce no high or critical finding, alongside a matching
+  malicious corpus that must keep firing. Every false positive this scanner has shipped
+  was found by someone measuring by hand; this makes an over-broad rule fail the build
+  instead.
+
+
 ## [5.21.0] - 2026-07-29
 
 ### Added
@@ -2195,7 +2286,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.21.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.22.0...HEAD
+[5.22.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.22.0
 [5.21.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.21.0
 [5.20.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.2
 [5.20.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.1

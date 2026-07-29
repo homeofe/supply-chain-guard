@@ -89,7 +89,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.21.0";
+const TOOL_VERSION = "5.22.0";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
@@ -801,6 +801,9 @@ function checkFilePatterns(
     if (pattern.notFilePattern  && pattern.notFilePattern.test(normalizedPath))  continue;
     // Skip test/spec/fixture files for patterns marked notTestFile
     if (pattern.notTestFile     && isTestFile)                                    continue;
+    // v5.22 file-level guard: the line match must be corroborated elsewhere in
+    // the same file. Evaluated once per file per pattern, before the line loop.
+    if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
 
     const regex = new RegExp(pattern.pattern, "g");
 
@@ -1018,6 +1021,7 @@ function checkBeaconMinerPatterns(
     if (pattern.onlyFilePattern && !pattern.onlyFilePattern.test(normalizedPath)) continue;
     if (pattern.notFilePattern  && pattern.notFilePattern.test(normalizedPath))  continue;
     if (pattern.notTestFile     && isTestFile)                                    continue;
+    if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
 
     const regex = new RegExp(pattern.pattern, "gi");
 

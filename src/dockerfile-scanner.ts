@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
-import { isPatternMatchAccepted } from "./patterns.js";
+import { isPatternMatchAccepted, isPatternApplicableToFile } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Global npm install: pinned or not?
@@ -189,6 +189,7 @@ export function scanDockerFile(
   const lines = content.split("\n");
 
   for (const pattern of DOCKERFILE_PATTERNS) {
+    if (!isPatternApplicableToFile(pattern, content)) continue;
     const regex = new RegExp(pattern.pattern, "i");
 
     for (let i = 0; i < lines.length; i++) {

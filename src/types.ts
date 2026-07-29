@@ -474,6 +474,25 @@ export interface PatternEntry {
   valueFilter?: (value: string) => boolean;
   /** Capture group handed to valueFilter (default 1). */
   valueGroup?: number;
+  /**
+   * Optional FILE-level guard (v5.22). The line regex says "this shape appears
+   * here"; this says "and the rest of the file corroborates it". The finding is
+   * emitted only when the WHOLE file content also matches.
+   *
+   * This exists because the worst false positives in this scanner were rules
+   * whose regex asserted something true of perfectly ordinary code: the literal
+   * string `npm publish` in a release script, the word `SOCKS5` in a proxy
+   * config, `.npmrc` in a CI helper. No path- or value-level guard can fix that,
+   * because the matched text really is present and really is innocent. What
+   * separates the malicious case is CORROBORATION elsewhere in the file - a
+   * spawn, a credential read, an exfil call.
+   *
+   * Use it only where the corroborating signal is intrinsic to the attack, not
+   * incidental. A guard an attacker can drop (by splitting the payload across
+   * files) weakens detection, so pair it with an exact-match pin in the feed,
+   * ioc-blocklist or patterns where one exists.
+   */
+  requiresInFile?: RegExp;
 }
 
 export interface WatchlistEntry {

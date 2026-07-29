@@ -20,8 +20,11 @@ import {
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
   isPatternMatchAccepted,
+  isPatternApplicableToFile,
 } from "./patterns.js";
 import { parseGitHubUrl } from "./github-trust-scanner.js";
+import { getBundledFeed } from "./threat-intel.js";
+import { matchBareNpmIOC } from "./install-guard.js";
 
 const TOOL_VERSION = "1.0.0";
 const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -127,6 +130,23 @@ export async function scanNpmPackage(
  * Check if the package name matches known malicious patterns.
  */
 function checkPackageName(name: string, findings: Finding[]): void {
+  // Exact-match first. This path used to rely entirely on name-shape regexes,
+  // which is why it needed a scoped catch-all that flagged 94% of all scoped
+  // packages. The bundled feed gives an exact verdict for every curated name,
+  // scoped or not, with no false-positive surface.
+  const ioc = matchBareNpmIOC(name, undefined, getBundledFeed());
+  if (ioc) {
+    const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
+    findings.push({
+      rule: "MALICIOUS_PACKAGE_NAME",
+      description: `Package "${name}" is a known-malicious package in the threat feed${attrib}`,
+      severity: "critical",
+      confidence: ioc.confidence ?? 0.95,
+      recommendation: `Do not install "${name}". Rotate any secrets exposed while it was installed.`,
+    });
+    return;
+  }
+
   for (const pattern of MALICIOUS_PACKAGE_PATTERNS) {
     const regex = new RegExp(pattern);
     if (regex.test(name)) {
@@ -188,7 +208,21 @@ function checkDependencies(
   if (deps) allDeps.push(...Object.keys(deps));
   if (devDeps) allDeps.push(...Object.keys(devDeps));
 
+  const feed = getBundledFeed();
   for (const dep of allDeps) {
+    const depIoc = matchBareNpmIOC(dep, undefined, feed);
+    if (depIoc) {
+      const attrib = depIoc.campaign ? ` (campaign: ${depIoc.campaign})` : "";
+      findings.push({
+        rule: "MALICIOUS_DEPENDENCY",
+        description: `Dependency "${dep}" is a known-malicious package in the threat feed${attrib}`,
+        severity: "critical",
+        confidence: depIoc.confidence ?? 0.95,
+        file: "package.json",
+        recommendation: `Remove "${dep}" immediately and rotate any exposed secrets.`,
+      });
+      continue;
+    }
     for (const pattern of MALICIOUS_PACKAGE_PATTERNS) {
       const regex = new RegExp(pattern);
       if (regex.test(dep)) {
@@ -481,6 +515,7 @@ export function scanExtractedNpmFiles(
       const relativePath = path.relative(extractDir, filePath);
 
       for (const pattern of FILE_PATTERNS) {
+        if (!isPatternApplicableToFile(pattern, content)) continue;
         const regex = new RegExp(pattern.pattern, "g");
         const lines = content.split("\n");
 

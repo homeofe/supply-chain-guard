@@ -46,6 +46,26 @@ export function isPatternMatchAccepted(
 }
 
 /**
+ * Apply a pattern's optional FILE-level guard to a whole file's content.
+ * Returns true when the pattern may be evaluated against this file at all.
+ *
+ * Companion to isPatternMatchAccepted, and it exists for the same reason: the
+ * pattern arrays are iterated by SIX different scanners (directory, npm, PyPI,
+ * VS Code extension, Dockerfile, config). A guard honoured in only one of them
+ * is worse than no guard, because the same file then produces different verdicts
+ * depending on which entry point looked at it.
+ *
+ * Call this once per file, before the per-line loop.
+ */
+export function isPatternApplicableToFile(
+  pattern: Pick<PatternEntry, "requiresInFile">,
+  content: string,
+): boolean {
+  if (!pattern.requiresInFile) return true;
+  return pattern.requiresInFile.test(content);
+}
+
+/**
  * Values that are references to a secret rather than a secret: shell and
  * make variables (`$FOO`, `${FOO}`), command substitution (`$(...)`, backticks),
  * template expressions (`${{ ... }}`, `{{ ... }}`, `<%= ... %>`, `#{...}`),
@@ -223,7 +243,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
   {
     name: "env-exfil",
     pattern:
-      "process\\.env\\b[^;]*(?:fetch|https?\\.(?:get|request)|axios|got|node-fetch)",
+      "process\\.env\\b[^;\\n]*(?:fetch\\s*\\(|https?\\.(?:get|request)|axios|\\bgot\\s*[.(]|node-fetch)|(?:fetch\\s*\\(|https?\\.(?:get|request)|axios|\\bgot\\s*[.(]|node-fetch)[^;\\n]*process\\.env\\b",
     description:
       "Environment variable access combined with network request (data exfiltration pattern)",
     severity: "high",
@@ -333,7 +353,7 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(event-streem|event_stream)$",
 
   // GlassWorm campaign packages (pattern: random-looking names)
-  "^[a-z]{15,}$", // Very long single-word lowercase names
+  "^[a-z]{20,}$", // Very long single-word lowercase names
 
   // DPRK AI-inserted npm malware (April 2026)
   "^@validate-sdk\\/v2$",
@@ -497,8 +517,15 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // and are NOT matched.
   "^(claud-code|cloude-code|cloude|crypto-locale|crypto-reader-info|detect-cache|format-defaults|hardhta|locale-loader-pro|naniod|node-native-bridge|opencraw|parse-compat|rimarf|scan-store|secp256|suport-color|veim|yarsg)$",
 
-  // Suspicious scoped packages mimicking official ones
-  "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
+  // NOTE: there is deliberately NO scoped-package catch-all here.
+  // A rule of the shape "^@(?!<allowlist>)/.*$" matched 94% of every scoped
+  // package on npm, so `scg npm <any scoped package>` exited 1 with riskLevel
+  // critical. The allowlist could never keep up either: "vitejs" was listed but
+  // not "vitest", so @vitest/* was flagged, while "types" accidentally
+  // prefix-matched "typescript" and silently exempted @typescript-eslint/*.
+  // Scoped malware is now caught by EXACT NAME through the bundled feed in
+  // npm-scanner.ts, which covers every curated npm name instead of only scoped
+  // ones and cannot produce a false positive.
 ];
 
 // ---------------------------------------------------------------------------
@@ -1533,12 +1560,20 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
   {
     name: "shai-hulud-self-replicate",
     pattern:
-      "npm\\s+publish|\\bnpm\\b.*\\bpublish\\b|child_process.*npm.*publish",
+      "child_process.*npm.*publish|(?:npm\\s+publish|\\bnpm\\b[^\\n]*\\bpublish\\b)",
     description:
       "Self-publishing pattern detected. The Shai-Hulud worm replicates by publishing infected packages via npm.",
     severity: "critical",
     rule: "SHAI_HULUD_WORM",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
+    // A bare "npm publish" string is a RELEASE SCRIPT, not a worm: every library
+    // repo has one, and this rule made all of them critical on sight. The worm
+    // signature is publishing PROGRAMMATICALLY with STOLEN credentials, so the
+    // file must also show credential access AND process execution. The campaign's
+    // package@version set is pinned exactly in KNOWN_BAD_NPM_VERSIONS regardless,
+    // so an install of a real Shai-Hulud release blocks on the pin, not on this.
+    requiresInFile:
+      /(?:\.npmrc|NPM_TOKEN|npm_config_userconfig|_authToken|process\.env)[\s\S]*?(?:child_process|execSync|spawnSync|execFile|spawn\s*\(|subprocess|os\.system)|(?:child_process|execSync|spawnSync|execFile|spawn\s*\(|subprocess|os\.system)[\s\S]*?(?:\.npmrc|NPM_TOKEN|npm_config_userconfig|_authToken)/,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1551,6 +1586,11 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     severity: "high",
     rule: "SHAI_HULUD_CRED_STEAL",
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
+    // Touching .npmrc is what every CI publish helper does. STEALING it means
+    // reading it and sending it somewhere, so require a read-and-transmit context
+    // in the same file.
+    requiresInFile:
+      /\b(?:fetch\s*\(|axios|https?\.(?:get|post|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|requests\.|urllib|http\.client|\.post\s*\(|readFileSync|readFile\s*\(|createReadStream)/,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1592,6 +1632,11 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
+    // new Proxy({}, { get, set }) is a plain ES6 idiom used by prisma, vitest,
+    // jiti and playwright-core. It is only interesting when the trap body does
+    // something hostile, so require an exfil / eval / credential-harvest signal.
+    requiresInFile:
+      /\b(?:eval\s*\(|new\s+Function|fetch\s*\(|axios|XMLHttpRequest|child_process|execSync|atob\s*\()|process\.env\s*\[/,
     notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -1780,9 +1825,9 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "ghostsocks-socks5",
     pattern:
-      "\\x05[\\x00-\\x03]|SOCKS5|socks5://|socks_version.*5|connect_socks",
+      "\\x05[\\x00-\\x03]|socks_version\\s*[=:]\\s*5|connect_socks",
     description:
-      "SOCKS5 proxy protocol pattern. GhostSocks and similar malware turn infected machines into residential proxies.",
+      "SOCKS5 protocol implementation detail (binary handshake or connect_socks call). GhostSocks and similar malware turn infected machines into residential proxies. The bare word SOCKS5 and socks5:// URLs are NOT matched - those appear in ordinary proxy configuration; socks5:// is covered by PROXY_BACKCONNECT.",
     severity: "critical",
     rule: "GHOSTSOCKS_SOCKS5",
     notTestFile: true,
@@ -1809,6 +1854,11 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
     rule: "DROPPER_TEMP_EXEC",
+    // Writing into os.tmpdir() and running it is exactly how tsx, jiti, prisma and
+    // playwright cache-compile. A dropper is distinguished by the payload being
+    // FETCHED or DECODED first rather than generated from local source.
+    requiresInFile:
+      /\b(?:fetch\s*\(|axios|https?\.(?:get|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|urllib|requests\.|atob\s*\(|powershell)|Buffer\.from\s*\([^)]*base64|chmod/,
     notFilePattern: /\.json$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -2022,11 +2072,16 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
   {
     name: "dead-drop-gist",
     pattern:
-      "gist\\.github(?:usercontent)?\\.com/[a-zA-Z0-9]+/[a-f0-9]+",
+      "gist\\.github(?:usercontent)?\\.com/[a-zA-Z0-9_-]+/[a-f0-9]{20,}",
     description:
       "GitHub Gist used as dead-drop resolver. Gists store C2 configuration that changes without updating malware code.",
     severity: "high",
     rule: "DEAD_DROP_GIST",
+    // A gist URL in a comment is a CITATION. A dead drop is FETCHED, so require a
+    // download context in the file. The 20-hex id floor rejects the short
+    // all-digit legacy gist ids that made ordinary links match.
+    requiresInFile:
+      /\b(?:fetch\s*\(|axios|https?\.(?:get|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|requests\.|urllib|execSync|child_process)|\/raw\//,
     notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
@@ -2044,9 +2099,9 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
   {
     name: "c2-websocket-dynamic",
     pattern:
-      "new\\s+WebSocket\\s*\\(\\s*(?:`|\\+|atob|Buffer\\.from|decodeURI|String\\.fromCharCode)",
+      "new\\s+WebSocket\\s*\\(\\s*(?:\\+|atob|Buffer\\.from|decodeURI|String\\.fromCharCode)",
     description:
-      "WebSocket connection with dynamically constructed URL. Hides C2 server address.",
+      "WebSocket URL built by decoding or concatenation. Hides the C2 server address. Plain template interpolation is NOT matched: that is ordinary frontend code, already covered at medium by BEACON_WEBSOCKET_EXTERNAL.",
     severity: "high",
     rule: "C2_WEBSOCKET_DYNAMIC",
     notFilePattern: SCANNER_SRC_OR_DOCS,
@@ -2058,11 +2113,15 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
   {
     name: "secrets-aws-key",
     pattern:
-      "(?:AKIA|ASIA)[A-Z0-9]{16}",
+      "(?:AKIA|ASIA)([A-Z0-9]{16})",
     description:
       "AWS Access Key ID detected. Hardcoded AWS credentials can be used for unauthorized access.",
     severity: "critical",
     rule: "SECRETS_AWS_KEY",
+    // Real AWS key bodies are random. A padded, repetitive run is binary noise,
+    // not a credential: this fired on "AKIAAAB0AAAAAAAAAKMA" inside an emscripten
+    // WASM blob. Same distinct-character defence KNOWN_C2_WALLETS uses.
+    valueFilter: (v) => new Set(v).size >= 8,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -2176,3 +2235,76 @@ export const PROVENANCE_PATTERNS: PatternEntry[] = [
     notTestFile: true,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Load-time validation (v5.22)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every PatternEntry array that any scanner iterates.
+ *
+ * Kept explicit rather than discovered, so a new array must be registered here
+ * deliberately and cannot quietly skip validation.
+ */
+type ValidatablePattern = { pattern: string; rule: string; name?: string };
+
+const ALL_PATTERN_SETS: ReadonlyArray<readonly [string, ReadonlyArray<ValidatablePattern>]> = [
+  ["FILE_PATTERNS", FILE_PATTERNS],
+  ["SUSPICIOUS_FILES", SUSPICIOUS_FILES],
+  ["SUSPICIOUS_SCRIPTS", SUSPICIOUS_SCRIPTS],
+  ["CAMPAIGN_PATTERNS", CAMPAIGN_PATTERNS],
+  ["PYPI_FILE_PATTERNS", PYPI_FILE_PATTERNS],
+  ["PYPI_INSTALL_HOOK_PATTERNS", PYPI_INSTALL_HOOK_PATTERNS],
+  ["BINARY_DOWNLOAD_PATTERNS", BINARY_DOWNLOAD_PATTERNS],
+  ["BEACON_MINER_PATTERNS", BEACON_MINER_PATTERNS],
+  ["BUILD_TOOL_PATTERNS", BUILD_TOOL_PATTERNS],
+  ["MONOREPO_PATTERNS", MONOREPO_PATTERNS],
+  ["CAMPAIGN_PATTERNS_V2", CAMPAIGN_PATTERNS_V2],
+  ["OBFUSCATION_PATTERNS_V2", OBFUSCATION_PATTERNS_V2],
+  ["IAC_PATTERNS", IAC_PATTERNS],
+  ["INFOSTEALER_PATTERNS", INFOSTEALER_PATTERNS],
+  ["LURE_PATTERNS", LURE_PATTERNS],
+  ["PROMPT_INJECTION_PATTERNS", PROMPT_INJECTION_PATTERNS],
+  ["C2_EXTENDED_PATTERNS", C2_EXTENDED_PATTERNS],
+  ["SECRETS_PATTERNS", SECRETS_PATTERNS],
+  ["OBFUSCATION_V3_PATTERNS", OBFUSCATION_V3_PATTERNS],
+  ["PROVENANCE_PATTERNS", PROVENANCE_PATTERNS],
+];
+
+/** Every rule id the pattern tables can emit, for coverage assertions. */
+export const ALL_PATTERN_RULES: readonly string[] = ALL_PATTERN_SETS.flatMap(
+  ([, set]) => set.map((p) => p.rule),
+);
+
+/**
+ * Compile every pattern once, at module load, and throw loudly on a bad one.
+ *
+ * This is enforced here rather than in a test because of how the failure used to
+ * present. scanner.ts builds `new RegExp(pattern.pattern, "g")` INSIDE a
+ * per-file `try { ... } catch { skip }`, so a single malformed pattern threw on
+ * the first file, was swallowed, and silently suppressed every content rule
+ * ordered after it - for every file in the scan, with the process still exiting
+ * 0. Measured: one invalid entry placed first reduced a scan from 21 findings to
+ * 1, reporting success.
+ *
+ * A security scanner that quietly stops scanning is the worst failure it can
+ * have, so this turns it into an immediate, unmissable crash at import time.
+ */
+for (const [setName, set] of ALL_PATTERN_SETS) {
+  for (const entry of set) {
+    try {
+      new RegExp(entry.pattern, "g");
+    } catch (err) {
+      throw new Error(
+        `${setName}: pattern for rule "${entry.rule}" (name "${entry.name ?? "unnamed"}") is not a valid regular expression: ` +
+          `${err instanceof Error ? err.message : String(err)}. ` +
+          "Refusing to load: an invalid pattern silently disables every rule after it.",
+      );
+    }
+    if (entry.pattern.length === 0) {
+      throw new Error(
+        `${setName}: pattern for rule "${entry.rule}" is empty, which matches every line.`,
+      );
+    }
+  }
+}

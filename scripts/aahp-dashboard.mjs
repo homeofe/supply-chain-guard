@@ -226,6 +226,29 @@ const targets = [
 ];
 const norm = (s) => s.replace(/\r/g, ""); // CRLF-agnostic (Windows working tree)
 
+/**
+ * Blank the version column of the Toolchain table for COMPARISON purposes only.
+ *
+ * That table lists every dependency and its range straight out of package.json,
+ * so ANY bump - runtime or dev - made DASHBOARD.md stale and turned the build
+ * red on prebuild. Dependabot cannot run `handoff:refresh` (its PRs get a
+ * read-only token), so every single dependency PR arrived red and needed a human
+ * to hand-pull the bump into a release commit. That is friction with no safety
+ * behind it: the table is derived entirely from a file in the SAME commit, so it
+ * can always be regenerated and can never encode a stale claim about anything
+ * that is not already visible in package.json.
+ *
+ * The real versions are still written on every `handoff:refresh`; they are only
+ * excluded from the staleness check. Everything else in the file - version,
+ * module count, test-file count, tsconfig types, release table - stays gated.
+ */
+const ungateToolchainVersions = (s) =>
+  s.replace(/## Toolchain\n[\s\S]*?(?=\nOverrides:)/, (block) =>
+    block.replace(/^\| (.+?) \| .*? \|$/gm, "| $1 | - |"),
+  );
+
+const cmp = (s) => ungateToolchainVersions(norm(s));
+
 // MANIFEST.json stores a sha256 checksum per handoff file; "AAHP Verify"
 // Layer 1 (lint-handoff.sh) fails if any stored checksum does not match the
 // file on disk. Regenerating DASHBOARD.md/TRUST.md here (e.g. on a version
@@ -253,7 +276,7 @@ if (process.argv.includes("--check")) {
   const stale = targets.filter(([name, content]) => {
     const p = join(handoff, name);
     const current = existsSync(p) ? readFileSync(p, "utf8") : "";
-    return norm(current) !== norm(content);
+    return cmp(current) !== cmp(content);
   });
   if (stale.length > 0) {
     console.error(

@@ -1,3 +1,57 @@
+> Note (2026-07-29, claude-opus-5, fourth pass - v5.22.0): Emre asked for the whole remaining
+> precision backlog fixed at once, with real testing, because the daily routine kept surfacing a
+> new defect every run. Root cause of THAT complaint: every FP so far was found by ad-hoc
+> measurement, so a new one appeared whenever anyone looked. Two permanent harnesses now make
+> that class fail the build instead.
+>
+> MEASURED BEFORE: 7 files of completely ordinary code (a release script, a proxy config, a CI
+> helper, a gist link in a comment, an ES6 Proxy, a template-literal WebSocket URL, a napi-rs
+> version check) produced 8 findings, 2 critical, 5 high. Zero true positives. AFTER: zero high,
+> zero critical, and all 9 matching malicious samples still detected.
+>
+> NEW ENGINE CAPABILITY: PatternEntry.requiresInFile. The worst FPs were rules whose regex
+> asserted something true of innocent code, which no path- or value-level filter can fix. A rule
+> can now demand corroboration elsewhere in the file: "npm publish" counts only next to
+> credential access AND process execution, ".npmrc" only next to an exfil call, a gist URL only
+> next to a fetch.
+>
+> THREE DEFECTS FOUND THAT NOBODY ASKED FOR, all worse than the ones on the list:
+> 1. A MALFORMED REGEX SILENTLY DISABLED CONTENT SCANNING ENTIRELY. scanner.ts compiles patterns
+> inside a per-file try/catch, so one bad entry threw on the first file, was swallowed, and
+> suppressed every rule ordered after it, for every file, exiting 0. Reproduced: an invalid entry
+> placed first took a scan from 2 findings to 1 (EVAL_ATOB lost) and reported success. All 145
+> patterns are now compiled at module load and a bad one is a loud crash.
+> 2. requiresInFile WAS HONOURED BY ONE SCANNER OUT OF EIGHT. The pattern arrays are iterated by
+> the directory, npm, PyPI, VS Code, Dockerfile and config scanners. A guard applied in one loop
+> means the same file gets different verdicts depending on entry point. Both guards are now
+> applied everywhere, via isPatternApplicableToFile, enforced by a wiring test that DISCOVERED
+> two consumers I had missed (agentic-workflow-scanner, mcp-scanner) and now fails if a new loop
+> appears without them.
+> 3. ENTROPY NEVER FIRED ON BASE64. base64 cannot exceed log2(64) = 6.0 and the threshold was a
+> strict "> 6.0", so the payload shape the rule exists for was systematically missed. The metric
+> also iterated code points, not bytes, so it was unbounded while its thresholds assumed 0..8.
+> Now byte-based, threshold re-derived by measurement: over 1,151 real third-party files max was
+> 5.70 and none exceeded 5.8.
+>
+> ALSO FIXED: dependabot PRs were red FOREVER. The generated dashboard embeds a dependency
+> version table and the staleness gate demanded a byte-exact match, so every bump failed prebuild
+> and dependabot cannot regenerate it (read-only token). The version column is still written
+> truthfully but is out of the comparison; add/remove of a dependency still gates.
+>
+> A CORRECTION I had to make against my own sources: the review told me to add a bare-name feed
+> entry for @convera/ui-shared. The npm registry says it has a 0.0.1 that upstream never flagged,
+> so a bare entry would block a release no source called malicious. Only @tc-core/campus-service
+> got one (absent from npm, every published version malicious).
+>
+> VERIFIED: full suite 1,672 pass / 14 fail, all 14 the documented vscode-scanner `zip` gap
+> (binary genuinely absent on this box; green on Linux CI). npm run build green. Self-scan 0
+> critical - note my first draft of the tests embedded the REAL PhantomSync dead-drop literal and
+> made the repo flag itself with 5 criticals; the fixtures now use a synthetic id of the same
+> shape.
+>
+> STILL OPEN: the line-based pattern engine cannot match a construct split across lines
+> (documented in precision-corpus.test.ts). Fixing that is a real engine change, not a regex edit.
+
 > Note (2026-07-29, claude-opus-5, third pass - v5.21.0): Emre asked for the two deferred items
 > plus a general quality lift, then the release. A second measurement workflow (4 agents) and a
 > 3-lens adversarial judge panel ran first. The judges refuted three of the dossier's own
