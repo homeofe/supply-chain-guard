@@ -45,11 +45,13 @@
 >
 > RELEASE HYGIENE: v5.23.1 is synchronized across every governed version site, including
 > specialized ScanReport versions and the Action CLI pin. Public release notes contain no
-> private environment details. Windows-compatible focused verification is green: 38 files,
-> 907 tests passed, and 17 platform skips; platform-dependent VSIX fixtures remain for Linux.
-> TypeScript, feed, and 14-site governance gates pass. Complete Linux verification counts
-> will be recorded before the branch is declared ready. No release tag or publish action has
-> been performed.
+> private environment details. Verification is green: the Windows-compatible focused set
+> passed 907 tests in 38 files with 17 platform skips; the complete Linux set passed all
+> 2,169 tests in all 104 files with no skips or failures. Linux TypeScript lint, the governed
+> production build, Action Bash/jq gates, npm pack/install and packaged-CLI smoke checks,
+> feed integrity, handoff integrity, and all 14 governed version sites pass. The first Linux
+> pass exposed four platform-only gaps; each was fixed before the complete green rerun. No
+> release tag or publish action has been performed.
 
 > Note (2026-07-29, grok-4.5 - v5.23.0): Multi-line pattern matching. The engine matched line by
 > line, so PROXY_HANDLER_TRAP (and any rule bridging two ideas) only fired on one-line payloads.
