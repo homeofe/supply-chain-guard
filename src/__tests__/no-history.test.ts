@@ -16,6 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scan } from "../scanner.js";
+import { MAX_FILE_SIZE } from "../patterns.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -55,6 +56,28 @@ describe("scan history opt-out (library)", () => {
     expect(report.summary).toBeDefined();
     expect(report.score).toBeGreaterThanOrEqual(0);
     expect(report.riskLevel).toBeDefined();
+  });
+
+  it("partial scans never create or update a trend baseline", async () => {
+    const oversized = path.join(tmpDir, "oversized.js");
+    fs.writeFileSync(oversized, Buffer.alloc(MAX_FILE_SIZE + 1));
+
+    const firstPartial = await scan({ target: tmpDir, format: "json" });
+    expect(firstPartial.partialScan).toBe(true);
+    expect(fs.existsSync(historyDir())).toBe(false);
+
+    fs.rmSync(oversized);
+    const complete = await scan({ target: tmpDir, format: "json" });
+    expect(complete.partialScan).not.toBe(true);
+    const historyFile = path.join(historyDir(), "risk-history.json");
+    expect(fs.existsSync(historyFile)).toBe(true);
+    const completeHistory = fs.readFileSync(historyFile, "utf-8");
+    expect(JSON.parse(completeHistory)).toHaveLength(1);
+
+    fs.writeFileSync(oversized, Buffer.alloc(MAX_FILE_SIZE + 1));
+    const secondPartial = await scan({ target: tmpDir, format: "json" });
+    expect(secondPartial.partialScan).toBe(true);
+    expect(fs.readFileSync(historyFile, "utf-8")).toBe(completeHistory);
   });
 });
 

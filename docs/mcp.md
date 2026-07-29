@@ -20,7 +20,7 @@ Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip 
 
 ## Version pinning guidance
 
-The snippets below use `supply-chain-guard@latest` so the bundled threat-intel feed stays current - for a threat scanner, freshness IS the feature. If your environment requires reproducible toolchains, pin an exact version (e.g. `supply-chain-guard@5.3.0`) and bump it on a schedule; a pinned scanner slowly goes blind to new campaigns.
+The snippets below use `supply-chain-guard@latest` so the bundled threat-intel feed stays current - for a threat scanner, freshness IS the feature. If your environment requires reproducible toolchains, pin an exact version (e.g. `supply-chain-guard@X.Y.Z`) and bump it on a schedule; a pinned scanner slowly goes blind to new campaigns.
 
 ## Claude Code
 
@@ -95,7 +95,7 @@ Add to `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` globally):
 
 ```
 -> {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}
-<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"5.3.0"},...}}
+<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"5.23.1"},...}}
 -> {"jsonrpc":"2.0","method":"notifications/initialized"}
 -> {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ioc_lookup","arguments":{"ecosystem":"npm","name":"event-stream","version":"3.3.6"}}}
 <- {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"verdict\":\"malicious\",...}"}]}}

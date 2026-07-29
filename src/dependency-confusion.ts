@@ -14,7 +14,7 @@ import * as https from "node:https";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 
-const TOOL_VERSION = "1.0.0";
+const TOOL_VERSION = "5.23.1";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";
@@ -550,7 +550,7 @@ async function fetchRegistryInfo(packageName: string): Promise<NpmRegistryInfo> 
         {
           headers: {
             Accept: "application/json",
-            "User-Agent": "supply-chain-guard/1.0.0",
+            "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
           },
         },
         (res) => {
@@ -594,7 +594,7 @@ async function fetchDownloads(packageName: string): Promise<DownloadInfo> {
         {
           headers: {
             Accept: "application/json",
-            "User-Agent": "supply-chain-guard/1.0.0",
+            "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
           },
         },
         (res) => {
@@ -736,7 +736,7 @@ async function fetchPypiInfo(packageName: string): Promise<PypiInfo> {
     https
       .get(
         url,
-        { headers: { Accept: "application/json", "User-Agent": "supply-chain-guard/4.9.0" } },
+        { headers: { Accept: "application/json", "User-Agent": `supply-chain-guard/${TOOL_VERSION}` } },
         (res) => {
           if (res.statusCode === 404) {
             reject(new Error(`PyPI package not found: ${packageName}`));

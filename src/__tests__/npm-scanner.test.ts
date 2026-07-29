@@ -1,11 +1,70 @@
 import { describe, it, expect } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import {
   FILE_PATTERNS,
   MALICIOUS_PACKAGE_PATTERNS,
   SUSPICIOUS_SCRIPTS,
 } from "../patterns.js";
+import {
+  filterNpmFindings,
+  recordNpmNoArtifact,
+  scanExtractedNpmFiles,
+} from "../npm-scanner.js";
+import type { Finding } from "../types.js";
 
 describe("npm Scanner Patterns", () => {
+  it("scans bundled dependencies shipped inside an npm tarball", () => {
+    const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-bundled-"));
+    try {
+      const bundledFile = path.join(
+        extractDir,
+        "package",
+        "node_modules",
+        "bundled-dependency",
+        "index.js",
+      );
+      fs.mkdirSync(path.dirname(bundledFile), { recursive: true });
+      fs.writeFileSync(bundledFile, 'eval(atob("cGF5bG9hZA=="));');
+
+      const findings: Finding[] = [];
+      const counts = scanExtractedNpmFiles(extractDir, findings);
+
+      expect(counts).toEqual({ totalFiles: 1, filesScanned: 1 });
+      expect(findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            rule: "EVAL_ATOB",
+            file: expect.stringMatching(
+              /package[\\/]node_modules[\\/]bundled-dependency[\\/]index\.js$/,
+            ),
+          }),
+        ]),
+      );
+    } finally {
+      fs.rmSync(extractDir, { recursive: true, force: true });
+    }
+  });
+  it("keeps no-artifact coverage partial after minSeverity hides info", () => {
+    const findings: Finding[] = [];
+    recordNpmNoArtifact(findings);
+
+    const result = filterNpmFindings(findings, "critical");
+    expect(findings).toEqual([
+      expect.objectContaining({ rule: "NPM_NO_ARTIFACT", severity: "info" }),
+    ]);
+    expect(result.filteredFindings).toEqual([]);
+    expect(result.partialScan).toBe(true);
+  });
+
+  it("applies npm minSeverity to reportable findings", () => {
+    const findings: Finding[] = [
+      { rule: "LOW", description: "low", severity: "low", recommendation: "review" },
+      { rule: "HIGH", description: "high", severity: "high", recommendation: "review" },
+    ];
+    expect(filterNpmFindings(findings, "high").filteredFindings.map((f) => f.rule)).toEqual(["HIGH"]);
+  });
   describe("Malicious package name detection", () => {
     it("should match known typosquatting names", () => {
       const typosquats = ["lodas", "l0dash", "crossenv", "babelcli"];

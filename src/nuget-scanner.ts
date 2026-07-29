@@ -12,6 +12,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import {
+  listOptionalDirectory,
+  readDiscoveredUtf8File,
+  recordUnreadablePath,
+} from "./pattern-scanner.js";
 
 /** NuGet-related file names (compared case-insensitively, .NET style) */
 const PACKAGES_LOCK = "packages.lock.json";
@@ -39,7 +44,9 @@ export function hasNuGetFiles(dir: string): boolean {
   try {
     return fs.readdirSync(dir).some((name) => isNuGetFile(name));
   } catch {
-    return false;
+    // Let scanNuGetFiles surface an unreadable scan root instead of letting
+    // this optimization turn an I/O failure into a false negative.
+    return true;
   }
 }
 
@@ -48,33 +55,35 @@ export function hasNuGetFiles(dir: string): boolean {
  */
 export function scanNuGetFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
-  const feed = loadThreatIntel();
+  let feed: FeedIOC[] | undefined;
+  const entries = listOptionalDirectory(dir, dir, ".", findings);
+  if (entries === null) return findings;
 
-  let entries: string[];
-  try {
-    entries = fs.readdirSync(dir);
-  } catch {
-    return findings;
-  }
-
-  for (const name of entries) {
-    const lower = name.toLowerCase();
-    const fullPath = path.join(dir, name);
-    if (!isNuGetFile(name)) continue;
-
-    let content: string;
-    try {
-      content = fs.readFileSync(fullPath, "utf-8");
-    } catch {
+  for (const entry of entries) {
+    if (!isNuGetFile(entry.name)) continue;
+    if (!entry.isFile() && !entry.isSymbolicLink()) {
+      recordUnreadablePath(findings, entry.name);
       continue;
     }
+    const name = entry.name;
+    const lower = name.toLowerCase();
+    const content = readDiscoveredUtf8File(
+      dir,
+      path.join(dir, name),
+      name,
+      findings,
+    );
+    if (content === null) continue;
 
-    if (lower === PACKAGES_LOCK) {
-      findings.push(...scanPackagesLockContent(content, name, feed));
-    } else if (lower === NUGET_CONFIG) {
+    if (lower === NUGET_CONFIG) {
       findings.push(...scanNuGetConfigContent(content, name));
     } else {
-      findings.push(...scanCsprojContent(content, name, feed));
+      feed ??= loadThreatIntel();
+      if (lower === PACKAGES_LOCK) {
+        findings.push(...scanPackagesLockContent(content, name, feed));
+      } else {
+        findings.push(...scanCsprojContent(content, name, feed));
+      }
     }
   }
 

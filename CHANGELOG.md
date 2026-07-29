@@ -7,6 +7,81 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.23.1] - 2026-07-29
+
+### Fixed
+
+- **Pattern evaluation no longer silently stops on ordinary source files.** The
+  500-line cutoff and 4,096-character multi-line truncation are gone. Registered
+  broad-gap rules now require bounded structural matchers at module load, and
+  admitted long or minified lines retain exact matching where a structural
+  matcher exists. Any remaining safety limit produces
+  `PATTERN_SCAN_INCOMPLETE` and `partialScan: true` instead of a clean verdict.
+
+- **High-impact correlation rules are more precise.** `DROPPER_TEMP_EXEC` no
+  longer reads `.exe` out of `.execSync` and requires the written payload to
+  reach an execution call. Proxy traps require the hostile operation inside the
+  trap, GeoIP protestware requires a destructive target, and PyPI base64
+  execution requires direct or same-variable data flow. Rejected value
+  candidates no longer hide a later valid match on the same line.
+
+- **Scanner entry points now honor one complete pattern contract.** Extension,
+  path, test-file, corroboration, value, and line-span guards are shared across
+  repository, npm, PyPI, VS Code, config, Docker, Cargo, Go, Git, README, MCP,
+  skill, agentic-workflow, and GitHub Actions workflow scans. This fixes the
+  package-scanner applicability drift and the VS Code obfuscation-loop bypass.
+
+- **Incomplete filesystem coverage fails closed.** Unreadable, unenumerable,
+  depth-limited, oversized, broken-link, escaping-link, special-node, and
+  traversal-budget paths produce deduplicated coverage findings. Internal
+  symlinks retain their shipped public paths for rule applicability, while
+  canonical containment prevents reading host files outside the scan root.
+
+- **Published artifacts are scanned as published.** PyPI scans every unique
+  sdist and wheel in the latest release, verifies downloaded SHA-256 identities,
+  retries equivalent metadata URLs after acquisition failures, continues other
+  identities, and keeps distinct valid digests separate. Missing or malformed
+  digest metadata keeps the content scan but marks the verdict partial. npm and
+  VSIX scans include shipped `node_modules`. Archive members are preflighted
+  before extraction for unsafe paths and link graphs, special nodes, duplicate
+  or inconsistent trees, and bounded input, entry, and expanded sizes. Walkers
+  follow contained symlinks with bounded expansion, and VSIX manifest reads use
+  the same file-size protection as normal content scans.
+
+- **Partial status survives every reporting and policy surface.** Text, JSON,
+  Markdown, SARIF, CycloneDX, HTML, badge, GitLab, JUnit, MCP, SOC, repository,
+  and organization results distinguish incomplete from clean. Severity filters
+  cannot erase the partial verdict, partial scans do not write clean risk
+  history. The default CLI critical verdict and the Action's critical threshold
+  retain exit code 2.
+
+- **The GitHub Marketplace Action now has one authoritative scan.** The CLI
+  produces the requested format and canonical JSON from the same in-memory
+  report. The Action validates inputs and consumed schema, uses the same
+  severity gate as the CLI, reconciles formatter and exit status, pins the CLI
+  and third-party Actions, bounds logs and outputs, neutralizes workflow-command
+  and PR-comment injection, paginates canonical bot comments, and fails closed
+  when setup, scanning, formatting, or coverage is incomplete.
+
+- **CLI outputs are collision-safe and complete.** `--json-output` writes a
+  canonical sidecar from the same scan. Incompatible severity thresholds and
+  aliases among `--output`, `--json-output`, `--save-baseline`, and
+  `--sbom-output` are rejected before scanning, including hard links and
+  dangling symbolic-link chains. Nonzero scan verdicts now let buffered stdout
+  drain instead of truncating piped reports.
+
+- **Release metadata is consistent.** Repository, npm, PyPI, VS Code,
+  dependency-confusion, and CycloneDX reports now carry the real release
+  version instead of stale `1.0.0` or `4.9.0` values. Every governed
+  version site includes the exact Marketplace Action CLI pin.
+
+### Changed
+
+- Pattern tables are validated at load time for duplicate IDs, invalid spans,
+  unsafe broad gaps, and missing structural matchers. AST-based wiring tests,
+  differential matcher checks, long-line adversarial cases, late-file fixtures,
+  symlink/archive cases, and Action contract tests guard the repaired behavior.
+
 ## [5.23.0] - 2026-07-29
 
 ### Added
@@ -2327,7 +2402,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.1...HEAD
+[5.23.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.1
 [5.23.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.0
 [5.22.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.22.0
 [5.21.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.21.0

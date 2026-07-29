@@ -19,13 +19,16 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
-  isPatternMatchAccepted,
-  isPatternApplicableToFile,
-  matchPatternInContent,
   truncateMatch,
+  validatePatternSet,
 } from "./patterns.js";
+import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
+import {
+  collectExtractedFiles,
+  readContainedExtractedUtf8File,
+} from "./extracted-file-walker.js";
 
-const TOOL_VERSION = "1.0.0";
+const TOOL_VERSION = "5.23.1";
 
 // VS Code Marketplace API endpoint
 const MARKETPLACE_API = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
@@ -88,6 +91,189 @@ const SUSPICIOUS_ACTIVATION_EVENTS = [
   "onUri",                 // activates on URI open (can be triggered externally)
 ];
 
+const VSCODE_PATTERN_WHITESPACE = /\s/u;
+
+function skipVscodePatternWhitespace(content: string, start: number): number {
+  let index = start;
+  while (
+    index < content.length &&
+    content[index] !== "\n" &&
+    VSCODE_PATTERN_WHITESPACE.test(content[index]!)
+  ) {
+    index += 1;
+  }
+  return index;
+}
+
+function encodedBufferSuffixComma(content: string, close: number): number {
+  let cursor = close;
+  while (
+    cursor > 0 &&
+    content[cursor - 1] !== "\n" &&
+    VSCODE_PATTERN_WHITESPACE.test(content[cursor - 1]!)
+  ) {
+    cursor -= 1;
+  }
+
+  if (content[cursor - 1] !== "'" && content[cursor - 1] !== '"') return -1;
+  cursor -= 1;
+
+  if (cursor >= 6 && content.slice(cursor - 6, cursor) === "base64") {
+    cursor -= 6;
+  } else if (cursor >= 3 && content.slice(cursor - 3, cursor) === "hex") {
+    cursor -= 3;
+  } else {
+    return -1;
+  }
+
+  // The source regex deliberately permits mixed quote characters.
+  if (content[cursor - 1] !== "'" && content[cursor - 1] !== '"') return -1;
+  cursor -= 1;
+
+  while (
+    cursor > 0 &&
+    content[cursor - 1] !== "\n" &&
+    VSCODE_PATTERN_WHITESPACE.test(content[cursor - 1]!)
+  ) {
+    cursor -= 1;
+  }
+  return content[cursor - 1] === "," ? cursor - 1 : -1;
+}
+
+const vscodeEncodedBufferMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = function* (content) {
+  const tokens = /Buffer\.from|\)|\n/g;
+  let firstPrefix: { start: number; bodyStart: number } | undefined;
+  let matchedPhysicalLine = false;
+  let token: RegExpExecArray | null;
+
+  while ((token = tokens.exec(content)) !== null) {
+    if (token[0] === "\n") {
+      firstPrefix = undefined;
+      matchedPhysicalLine = false;
+      continue;
+    }
+    if (matchedPhysicalLine) continue;
+
+    if (token[0] === ")") {
+      const comma = encodedBufferSuffixComma(content, token.index);
+      if (firstPrefix && firstPrefix.bodyStart < comma) {
+        const end = token.index + 1;
+        yield {
+          start: firstPrefix.start,
+          end,
+          // Findings historically expose truncateMatch(regexMatch), so
+          // normalize here before the structural evidence-size guard.
+          evidence: truncateMatch(content.slice(firstPrefix.start, end)),
+        };
+        matchedPhysicalLine = true;
+      }
+      // [^)] cannot cross this close parenthesis, successful or otherwise.
+      firstPrefix = undefined;
+      continue;
+    }
+
+    const previous = content[token.index - 1];
+    if (previous !== undefined && /[A-Za-z0-9_]/.test(previous)) continue;
+
+    const afterLiteral = token.index + token[0].length;
+    const open = skipVscodePatternWhitespace(content, afterLiteral);
+    if (content[open] === "(" && !firstPrefix) {
+      firstPrefix = { start: token.index, bodyStart: open + 1 };
+    }
+    // Do not make the token regex rescan whitespace already classified above.
+    tokens.lastIndex = open + (content[open] === "(" ? 1 : 0);
+  }
+};
+
+function parseShortQuotedArrayElement(
+  content: string,
+  start: number,
+  lineEnd: number,
+): number {
+  const quote = content[start];
+  if (quote !== "'" && quote !== '"') return -1;
+
+  let cursor = start + 1;
+  let length = 0;
+  while (
+    cursor < lineEnd &&
+    content[cursor] !== quote &&
+    length < 4
+  ) {
+    cursor += 1;
+    length += 1;
+  }
+  return length >= 1 && content[cursor] === quote ? cursor + 1 : -1;
+}
+
+function parseVscodeStringArrayAt(
+  content: string,
+  start: number,
+  lineEnd: number,
+): number {
+  let cursor = skipVscodePatternWhitespace(content, start + 1);
+  cursor = parseShortQuotedArrayElement(content, cursor, lineEnd);
+  if (cursor === -1) return -1;
+
+  let elements = 1;
+  while (cursor <= lineEnd) {
+    cursor = skipVscodePatternWhitespace(content, cursor);
+    if (elements >= 21 && content[cursor] === "]") return cursor + 1;
+    if (content[cursor] !== ",") return -1;
+
+    cursor = skipVscodePatternWhitespace(content, cursor + 1);
+    cursor = parseShortQuotedArrayElement(content, cursor, lineEnd);
+    if (cursor === -1) return -1;
+    elements = Math.min(21, elements + 1);
+  }
+  return -1;
+}
+
+const vscodeStringArrayMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = function* (content) {
+  let lineStart = 0;
+  while (lineStart <= content.length) {
+    const newline = content.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? content.length : newline;
+    let candidate = content.indexOf("[", lineStart);
+
+    while (candidate !== -1 && candidate < lineEnd) {
+      const end = parseVscodeStringArrayAt(content, candidate, lineEnd);
+      if (end !== -1) {
+        yield {
+          start: candidate,
+          end,
+          evidence: truncateMatch(content.slice(candidate, end)),
+        };
+        break;
+      }
+      candidate = content.indexOf("[", candidate + 1);
+    }
+
+    if (newline === -1) break;
+    lineStart = newline + 1;
+  }
+};
+
+export const VSCODE_STRING_ARRAY_PATTERN: Omit<PatternEntry, "name"> = {
+  pattern: "\\[\\s*(?:'[^']{1,4}'|\"[^\"]{1,4}\")\\s*(?:,\\s*(?:'[^']{1,4}'|\"[^\"]{1,4}\")\\s*){20,}\\]",
+  description: "Large string array detected (common in obfuscated code)",
+  severity: "medium",
+  rule: "VSCODE_STRING_ARRAY",
+  correlatedMatcher: vscodeStringArrayMatcher,
+};
+
+export const VSCODE_ENCODED_BUFFER_PATTERN: Omit<PatternEntry, "name"> = {
+  pattern: "\\bBuffer\\.from\\s*\\([^)]+,\\s*['\"](?:base64|hex)['\"]\\s*\\)",
+  description: "Encoded buffer construction detected (potential payload decoding)",
+  severity: "medium",
+  rule: "VSCODE_ENCODED_BUFFER",
+  correlatedMatcher: vscodeEncodedBufferMatcher,
+};
+
 // Suspicious node APIs frequently abused in malicious extensions
 const EXTENSION_DANGER_PATTERNS: Array<Omit<PatternEntry, "name">> = [
   {
@@ -132,12 +318,7 @@ const EXTENSION_DANGER_PATTERNS: Array<Omit<PatternEntry, "name">> = [
     severity: "low",
     rule: "VSCODE_FILE_WRITE",
   },
-  {
-    pattern: "\\bBuffer\\.from\\s*\\([^)]+,\\s*['\"](?:base64|hex)['\"]\\s*\\)",
-    description: "Encoded buffer construction detected (potential payload decoding)",
-    severity: "medium",
-    rule: "VSCODE_ENCODED_BUFFER",
-  },
+  VSCODE_ENCODED_BUFFER_PATTERN,
   {
     pattern: "\\batob\\s*\\(|\\bbtoa\\s*\\(",
     description: "Base64 encoding/decoding detected in extension",
@@ -154,12 +335,7 @@ const OBFUSCATION_PATTERNS: Array<Omit<PatternEntry, "name">> = [
     severity: "high",
     rule: "VSCODE_OBFUSCATED_VARS",
   },
-  {
-    pattern: "\\[\\s*(?:'[^']{1,4}'|\"[^\"]{1,4}\")\\s*(?:,\\s*(?:'[^']{1,4}'|\"[^\"]{1,4}\")\\s*){20,}\\]",
-    description: "Large string array detected (common in obfuscated code)",
-    severity: "medium",
-    rule: "VSCODE_STRING_ARRAY",
-  },
+  VSCODE_STRING_ARRAY_PATTERN,
   {
     pattern: "(?:\\\\x[0-9a-fA-F]{2}){10,}",
     description: "Hex-encoded string sequence detected in extension",
@@ -173,6 +349,9 @@ const OBFUSCATION_PATTERNS: Array<Omit<PatternEntry, "name">> = [
     rule: "VSCODE_CHARCODE",
   },
 ];
+
+validatePatternSet("EXTENSION_DANGER_PATTERNS", EXTENSION_DANGER_PATTERNS);
+validatePatternSet("OBFUSCATION_PATTERNS", OBFUSCATION_PATTERNS);
 
 export interface VscodeScanOptions {
   /** .vsix file path or extension ID (publisher.name) */
@@ -201,7 +380,7 @@ export async function scanVscodeExtension(
   // If target looks like an extension ID (publisher.name), download from the registry
   if (!vsixPath.endsWith(".vsix") && vsixPath.includes(".")) {
     const registryLabel = registry === "openvsx" ? "Open VSX" : "VS Code Marketplace";
-    console.log(`  Downloading extension ${vsixPath} from ${registryLabel}...`);
+    console.error(`  Downloading extension ${vsixPath} from ${registryLabel}...`);
     const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-dl-"));
     tempDownload = downloadDir;
     vsixPath = await downloadVsix(vsixPath, downloadDir, registry);
@@ -220,55 +399,29 @@ export async function scanVscodeExtension(
     // user-supplied path are never interpreted by a command shell.
     extractZip(vsixPath, extractDir, true);
 
-    // Collect all files
-    const allFiles = collectFilesRecursive(extractDir);
+    // Collect before manifest analysis so unreadable-directory coverage findings
+    // retain their established ordering in the report.
+    const allFiles = collectExtractedFiles(extractDir, findings);
 
     // Scan package.json for suspicious metadata
-    scanExtensionManifest(extractDir, findings);
+    scanExtensionManifest(extractDir, allFiles, findings);
 
-    // Scan extension source files
-    let filesScanned = 0;
-    for (const filePath of allFiles) {
-      const ext = path.extname(filePath).toLowerCase();
-      const basename = path.basename(filePath);
-      const relativePath = path.relative(extractDir, filePath);
+    const fileCounts = scanExtractedVscodeFiles(
+      extractDir,
+      findings,
+      allFiles,
+    );
 
-      // Scan JS/TS files and JSON config
-      if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
-
-      const fileStat = fs.statSync(filePath);
-      if (fileStat.size > MAX_FILE_SIZE) {
-        // Surface the skip instead of silently dropping coverage (issue #54).
-        findings.push(makeOversizedSkipFinding(relativePath, fileStat.size));
-        continue;
-      }
-
-      filesScanned++;
-
-      try {
-        const content = fs.readFileSync(filePath, "utf-8");
-
-        // Check against VS Code specific danger patterns
-        checkVscodePatterns(content, relativePath, findings);
-
-        // Check against obfuscation patterns
-        checkObfuscationPatterns(content, relativePath, findings);
-
-        // Check against general malware patterns
-        checkGeneralPatterns(content, relativePath, findings);
-      } catch {
-        // Skip unreadable files
-      }
-    }
+    const partialScan = hasPartialScanFinding(findings);
 
     // Filter by severity
     const filteredFindings = filterFindings(findings, options.minSeverity);
 
     // Calculate results
-    const summary = calculateSummary(allFiles.length, filesScanned, filteredFindings);
+    const summary = calculateSummary(fileCounts.totalFiles, fileCounts.filesScanned, filteredFindings);
     const score = calculateScore(filteredFindings);
     const riskLevel = getRiskLevel(score);
-    const recommendations = generateVscodeRecommendations(filteredFindings, options.target);
+    const recommendations = generateVscodeRecommendations(filteredFindings, options.target, partialScan);
 
     return {
       tool: `supply-chain-guard v${TOOL_VERSION}`,
@@ -281,6 +434,7 @@ export async function scanVscodeExtension(
       score,
       riskLevel,
       recommendations,
+      partialScan: partialScan || undefined,
     };
   } finally {
     // Cleanup
@@ -381,7 +535,7 @@ function fetchOpenVsxMetadata(
         path: urlObj.pathname + urlObj.search,
         method: "GET",
         headers: {
-          "User-Agent": "supply-chain-guard/1.0.0",
+          "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
           Accept: "application/json",
         },
       };
@@ -440,35 +594,59 @@ function fetchOpenVsxMetadata(
   });
 }
 
+function recordOversizedVscodeFile(
+  findings: Finding[],
+  relativePath: string,
+  sizeBytes: number,
+): void {
+  const publicPath = relativePath.replace(/\\/g, "/");
+  if (findings.some((finding) =>
+    finding.rule === "FILE_TOO_LARGE_SKIPPED" &&
+    (finding.file ?? "").replace(/\\/g, "/") === publicPath
+  )) return;
+  findings.push(makeOversizedSkipFinding(publicPath, sizeBytes));
+}
 /**
  * Scan the extension manifest (package.json inside the vsix).
  */
-function scanExtensionManifest(extractDir: string, findings: Finding[]): void {
-  // The package.json is typically at extension/package.json inside a vsix
-  const manifestPaths = [
-    path.join(extractDir, "extension", "package.json"),
-    path.join(extractDir, "package.json"),
-  ];
+function scanExtensionManifest(
+  extractDir: string,
+  collectedFiles: readonly string[],
+  findings: Finding[],
+): void {
+  const filesByPublicPath = new Map(
+    collectedFiles.map((filePath) => [
+      path.relative(extractDir, filePath).replace(/\\/g, "/"),
+      filePath,
+    ]),
+  );
 
-  let manifestPath: string | null = null;
+  let relativePath: string | null = null;
   let manifest: Record<string, unknown> | null = null;
-
-  for (const mp of manifestPaths) {
-    if (fs.existsSync(mp)) {
-      try {
-        manifest = JSON.parse(fs.readFileSync(mp, "utf-8")) as Record<string, unknown>;
-        manifestPath = mp;
-        break;
-      } catch {
-        // Invalid JSON
-      }
+  for (const candidate of ["extension/package.json", "package.json"]) {
+    const manifestPath = filesByPublicPath.get(candidate);
+    if (!manifestPath) continue;
+    const content = readContainedExtractedUtf8File(
+      extractDir,
+      manifestPath,
+      findings,
+      {
+        maxBytes: MAX_FILE_SIZE,
+        onOversized: (sizeBytes) =>
+          recordOversizedVscodeFile(findings, candidate, sizeBytes),
+      },
+    );
+    if (content === null) continue;
+    try {
+      manifest = JSON.parse(content) as Record<string, unknown>;
+      relativePath = candidate;
+      break;
+    } catch {
+      // Invalid JSON is not an I/O coverage failure.
     }
   }
 
-  if (!manifest || !manifestPath) return;
-
-  const relativePath = path.basename(path.dirname(manifestPath)) + "/package.json";
-
+  if (!manifest || !relativePath) return;
   // Check activation events
   const activationEvents = manifest.activationEvents as string[] | undefined;
   if (activationEvents && Array.isArray(activationEvents)) {
@@ -544,8 +722,14 @@ function checkVscodePatterns(
   findings: Finding[],
 ): void {
   for (const pattern of EXTENSION_DANGER_PATTERNS) {
-    if (!isPatternApplicableToFile(pattern, content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "g")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "g",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -568,26 +752,25 @@ function checkObfuscationPatterns(
   findings: Finding[],
 ): void {
   for (const pattern of OBFUSCATION_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, "g");
-    const match = regex.exec(content);
-    if (match) {
-      regex.lastIndex = 0;
-      // v5.18: value-level guard (see PatternEntry.valueFilter)
-      if (!isPatternMatchAccepted(pattern, match)) continue;
-      // Find the line number
-      const beforeMatch = content.substring(0, match.index);
-      const lineNumber = beforeMatch.split("\n").length;
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "g",
+    );
+    const hit = hits?.[0];
+    if (!hit) continue;
 
-      findings.push({
-        rule: pattern.rule,
-        description: pattern.description,
-        severity: pattern.severity,
-        file: relativePath,
-        line: lineNumber,
-        match: truncateMatch(match[0]),
-        recommendation: "Obfuscated code in VS Code extensions is a red flag. Legitimate extensions typically ship readable source code.",
-      });
-    }
+    findings.push({
+      rule: pattern.rule,
+      description: pattern.description,
+      severity: pattern.severity,
+      file: relativePath,
+      line: hit.line,
+      match: truncateMatch(hit.text),
+      recommendation: "Obfuscated code in VS Code extensions is a red flag. Legitimate extensions typically ship readable source code.",
+    });
   }
 }
 
@@ -600,8 +783,14 @@ function checkGeneralPatterns(
   findings: Finding[],
 ): void {
   for (const pattern of FILE_PATTERNS) {
-    if (!isPatternApplicableToFile(pattern, content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "g")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "g",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -616,8 +805,61 @@ function checkGeneralPatterns(
 }
 
 /**
- * Filter findings by minimum severity.
+ * Scan all files shipped inside an extracted VSIX, including bundled
+ * dependencies under node_modules. Exported as a portable archive-walker seam.
  */
+export function scanExtractedVscodeFiles(
+  extractDir: string,
+  findings: Finding[],
+  collectedFiles?: readonly string[],
+): { totalFiles: number; filesScanned: number } {
+  const files = collectedFiles ?? collectExtractedFiles(extractDir, findings);
+  let filesScanned = 0;
+  for (const filePath of files) {
+    if (scanExtractedVscodeFile(extractDir, filePath, findings)) {
+      filesScanned++;
+    }
+  }
+  return { totalFiles: files.length, filesScanned };
+}
+
+/** Scan one extracted VSIX file. Exported for portable I/O coverage tests. */
+export function scanExtractedVscodeFile(
+  extractDir: string,
+  filePath: string,
+  findings: Finding[],
+): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  const relativePath = path.relative(extractDir, filePath);
+  if (!SCANNABLE_EXTENSIONS.has(ext)) return false;
+
+  let fileStat: fs.Stats;
+  try {
+    fileStat = fs.statSync(filePath);
+  } catch {
+    recordUnreadablePath(findings, relativePath);
+    return false;
+  }
+  if (fileStat.size > MAX_FILE_SIZE) {
+    recordOversizedVscodeFile(findings, relativePath, fileStat.size);
+    return false;
+  }
+
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf-8");
+  } catch {
+    recordUnreadablePath(findings, relativePath);
+    return false;
+  }
+
+  checkVscodePatterns(content, relativePath, findings);
+  checkObfuscationPatterns(content, relativePath, findings);
+  checkGeneralPatterns(content, relativePath, findings);
+  return true;
+}
+
+/** Filter findings by minimum severity. */
 function filterFindings(findings: Finding[], minSeverity?: Severity): Finding[] {
   if (!minSeverity) return findings;
 
@@ -698,6 +940,7 @@ function getVscodeRecommendation(rule: string): string {
 function generateVscodeRecommendations(
   findings: Finding[],
   target: string,
+  partialScan = false,
 ): string[] {
   const recommendations: string[] = [];
   const rules = new Set(findings.map((f) => f.rule));
@@ -736,7 +979,12 @@ function generateVscodeRecommendations(
       `CRITICAL findings in extension "${target}". Uninstall immediately if already installed.`,
     );
   }
-  if (findings.length === 0) {
+  if (partialScan) {
+    recommendations.unshift(
+      "WARNING: Scan incomplete because one or more extension files could not be evaluated. Resolve coverage gaps before treating this extension as safe.",
+    );
+  }
+  if (findings.length === 0 && !partialScan) {
     recommendations.push(
       `No malicious indicators found in "${target}". The extension appears safe based on known patterns.`,
     );
@@ -782,7 +1030,7 @@ function downloadFile(
         path: urlObj.pathname + urlObj.search,
         method: "GET",
         headers: {
-          "User-Agent": "supply-chain-guard/1.0.0",
+          "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
           Accept: "application/octet-stream",
         },
       };
@@ -824,26 +1072,4 @@ function downloadFile(
 /**
  * Recursively collect files.
  */
-function collectFilesRecursive(dir: string): string[] {
-  const files: string[] = [];
-  let entries: fs.Dirent[];
-
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory() && entry.name !== "node_modules") {
-      files.push(...collectFilesRecursive(fullPath));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
 // truncateMatch is imported from patterns.ts (shared with the multi-line engine).

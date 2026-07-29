@@ -19,10 +19,13 @@
  * - Lockfile version downgrades
  */
 
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import {
+  optionalFileExists,
+  readOptionalUtf8File,
+} from "./pattern-scanner.js";
 
 /** Valid integrity hash prefixes */
 const VALID_INTEGRITY_PREFIXES = ["sha512-", "sha256-", "sha1-"];
@@ -115,31 +118,39 @@ export function checkNpmLockfile(dir: string): Finding[] {
   const lockfilePath = path.join(dir, "package-lock.json");
   const packageJsonPath = path.join(dir, "package.json");
 
-  if (!fs.existsSync(lockfilePath)) {
-    return [];
-  }
+  const findings: Finding[] = [];
+  const rawLockfile = readOptionalUtf8File(
+    dir,
+    lockfilePath,
+    "package-lock.json",
+    findings,
+  );
+  if (rawLockfile === null) return findings;
 
   let lockfile: Lockfile;
   try {
-    lockfile = JSON.parse(fs.readFileSync(lockfilePath, "utf-8")) as Lockfile;
+    lockfile = JSON.parse(rawLockfile) as Lockfile;
   } catch {
-    return [parseErrorFinding("package-lock.json", "npm install")];
+    findings.push(parseErrorFinding("package-lock.json", "npm install"));
+    return findings;
   }
-
-  const findings: Finding[] = [];
 
   // Check lockfile version
   checkLockfileVersion(lockfile, findings);
 
   // Parse package.json for cross-reference
   let packageJson: PackageJson | null = null;
-  if (fs.existsSync(packageJsonPath)) {
+  const rawPackageJson = readOptionalUtf8File(
+    dir,
+    packageJsonPath,
+    "package.json",
+    findings,
+  );
+  if (rawPackageJson !== null) {
     try {
-      packageJson = JSON.parse(
-        fs.readFileSync(packageJsonPath, "utf-8"),
-      ) as PackageJson;
+      packageJson = JSON.parse(rawPackageJson) as PackageJson;
     } catch {
-      // If package.json is unparseable, skip cross-reference checks
+      // If package.json is unparseable, skip cross-reference checks.
     }
   }
 
@@ -484,21 +495,15 @@ function checkOrphanedDependencies(
 export function checkPnpmLockfile(dir: string): Finding[] {
   const lockfileName = "pnpm-lock.yaml";
   const lockfilePath = path.join(dir, lockfileName);
-  if (!fs.existsSync(lockfilePath)) return [];
-
-  let content: string;
-  try {
-    content = fs.readFileSync(lockfilePath, "utf-8");
-  } catch {
-    return [];
-  }
+  const findings: Finding[] = [];
+  const content = readOptionalUtf8File(dir, lockfilePath, lockfileName, findings);
+  if (content === null) return findings;
 
   const deps = parsePnpmLock(content);
   if (deps === null) {
     return [parseErrorFinding(lockfileName, "pnpm install")];
   }
 
-  const findings: Finding[] = [];
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
@@ -618,21 +623,15 @@ function parsePnpmPackageKey(rawKey: string): ParsedLockDependency | null {
 export function checkYarnLockfile(dir: string): Finding[] {
   const lockfileName = "yarn.lock";
   const lockfilePath = path.join(dir, lockfileName);
-  if (!fs.existsSync(lockfilePath)) return [];
-
-  let content: string;
-  try {
-    content = fs.readFileSync(lockfilePath, "utf-8");
-  } catch {
-    return [];
-  }
+  const findings: Finding[] = [];
+  const content = readOptionalUtf8File(dir, lockfilePath, lockfileName, findings);
+  if (content === null) return findings;
 
   const deps = parseYarnLock(content);
   if (deps === null) {
     return [parseErrorFinding(lockfileName, "yarn install")];
   }
 
-  const findings: Finding[] = [];
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
@@ -813,8 +812,9 @@ export function checkBunLockfile(dir: string): Finding[] {
   const textPath = path.join(dir, "bun.lock");
   const binaryPath = path.join(dir, "bun.lockb");
 
-  if (!fs.existsSync(textPath)) {
-    if (fs.existsSync(binaryPath)) {
+  const raw = readOptionalUtf8File(dir, textPath, "bun.lock", findings);
+  if (raw === null) {
+    if (optionalFileExists(dir, binaryPath, "bun.lockb", findings)) {
       findings.push({
         rule: "LOCKFILE_BUN_BINARY_UNAUDITABLE",
         description:
@@ -827,13 +827,6 @@ export function checkBunLockfile(dir: string): Finding[] {
           "Migrate to the text lockfile with `bun install --save-text-lockfile` (bun >= 1.2) so supply-chain scanners and code review can audit dependency sources.",
       });
     }
-    return findings;
-  }
-
-  let raw: string;
-  try {
-    raw = fs.readFileSync(textPath, "utf-8");
-  } catch {
     return findings;
   }
 

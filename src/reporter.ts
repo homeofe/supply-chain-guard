@@ -7,6 +7,69 @@
 import { randomUUID } from "node:crypto";
 import type { Finding, ScanReport, Severity } from "./types.js";
 
+const PARTIAL_SCAN_WARNING =
+  "Scan incomplete: one or more configured checks or files could not be fully evaluated. No clean verdict can be established until coverage gaps are resolved.";
+
+/** Default CLI gate semantics for a collection of findings. */
+export function getFindingsExitCode(
+  findings: ReadonlyArray<Pick<Finding, "severity">>,
+): 0 | 1 | 2 {
+  if (findings.some((finding) => finding.severity === "critical")) return 2;
+  return findings.some((finding) => finding.severity === "high") ? 1 : 0;
+}
+
+/**
+ * A partial scan is an indeterminate result, never a successful clean gate.
+ * Critical findings retain the CLI's stronger exit code 2; otherwise partial
+ * coverage exits 1, independently of --fail-on.
+ */
+export function getReportExitCode(
+  report: ScanReport,
+  failOn?: string,
+): 0 | 1 | 2 {
+  if (!failOn && report.summary.critical > 0) return 2;
+  if (report.partialScan) return 1;
+
+  if (failOn) {
+    const severityOrder: Record<string, number> = {
+      critical: 4,
+      high: 3,
+      medium: 2,
+      low: 1,
+      info: 0,
+    };
+    const threshold = severityOrder[failOn] ?? 0;
+    return report.findings.some(
+      (finding) => (severityOrder[finding.severity] ?? 0) >= threshold,
+    )
+      ? 1
+      : 0;
+  }
+
+  return report.summary.high > 0 ? 1 : 0;
+}
+
+/**
+ * Defensively remove stale clean-verdict recommendations from partial reports.
+ * Scanner-specific generators also understand partial coverage, but reports can
+ * be loaded from older JSON or constructed by API consumers.
+ */
+function normalizePartialReport(report: ScanReport): ScanReport {
+  if (!report.partialScan) return report;
+
+  const recommendations = report.recommendations.filter(
+    (recommendation) =>
+      !/(?:no malicious indicators|appears (?:clean|safe)|no findings)/i.test(
+        recommendation,
+      ),
+  );
+  if (!recommendations.some((recommendation) => /scan (?:is )?incomplete/i.test(recommendation))) {
+    recommendations.unshift(PARTIAL_SCAN_WARNING);
+  }
+
+  return { ...report, recommendations };
+}
+
 const SEVERITY_COLORS: Record<Severity, string> = {
   critical: "\x1b[91m", // bright red
   high: "\x1b[31m",     // red
@@ -33,26 +96,27 @@ export function formatReport(
   report: ScanReport,
   format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab" | "junit",
 ): string {
+  const outputReport = normalizePartialReport(report);
   switch (format) {
     case "json":
-      return formatJson(report);
+      return formatJson(outputReport);
     case "markdown":
-      return formatMarkdown(report);
+      return formatMarkdown(outputReport);
     case "sarif":
-      return formatSarif(report);
+      return formatSarif(outputReport);
     case "sbom":
-      return formatSbom(report);
+      return formatSbom(outputReport);
     case "html":
-      return formatHtml(report);
+      return formatHtml(outputReport);
     case "badge":
-      return formatBadge(report);
+      return formatBadge(outputReport);
     case "gitlab":
-      return formatGitlab(report);
+      return formatGitlab(outputReport);
     case "junit":
-      return formatJunit(report);
+      return formatJunit(outputReport);
     case "text":
     default:
-      return formatText(report);
+      return formatText(outputReport);
   }
 }
 
@@ -70,7 +134,7 @@ function formatText(report: ScanReport): string {
   const lines: string[] = [];
 
   // ── layout constants ───────────────────────────────────────────────────────
-  const VERSION = "5.23.0";
+  const VERSION = "5.23.1";
   const W = 76; // visible chars between "│ " and " │" (total line = 80)
 
   // ── ANSI helpers ───────────────────────────────────────────────────────────
@@ -159,13 +223,16 @@ function formatText(report: ScanReport): string {
   }
   lines.push(metaRow("Duration", `${report.durationMs}ms`));
   lines.push(metaRow("Time", report.timestamp));
+  if (report.partialScan) {
+    lines.push(metaRow("Status", "\x1b[33mPARTIAL - coverage incomplete\x1b[0m"));
+  }
   lines.push("");
 
   // ── RISK SCORE ─────────────────────────────────────────────────────────────
   {
     const sc    = report.score;
-    const scCol = scoreColor(sc);
-    const level = report.riskLevel.toUpperCase();
+    const scCol = report.partialScan ? "\x1b[33m" : scoreColor(sc);
+    const level = report.partialScan ? "PARTIAL" : report.riskLevel.toUpperCase();
     const BAR_W = 36;
     const filled = Math.round((sc / 100) * BAR_W);
     const gauge  = scCol + "█".repeat(filled) + DIM + "░".repeat(BAR_W - filled) + RESET;
@@ -197,7 +264,11 @@ function formatText(report: ScanReport): string {
 
     lines.push(boxTop("FINDINGS SUMMARY"));
 
-    if (totalFindings === 0) {
+    if (totalFindings === 0 && report.partialScan) {
+      lines.push(boxBlank());
+      lines.push(boxRow(`  \x1b[33m${BOLD}!  No reported findings - scan incomplete${RESET}`));
+      lines.push(boxBlank());
+    } else if (totalFindings === 0) {
       lines.push(boxBlank());
       lines.push(boxRow(`  \x1b[32m${BOLD}✓  No findings — clean${RESET}`));
       lines.push(boxBlank());
@@ -393,8 +464,9 @@ function mdInlineCode(value: unknown): string {
 }
 
 function mdText(value: unknown): string {
-  // Content placed as plain markdown (headers, cells): strip newlines and
-  // neutralize HTML, code, and table-cell metacharacters.
+  // Content placed as plain Markdown (headers, lists, and cells) must remain
+  // text. HTML entities render as the original punctuation but are not parsed
+  // as image, link, emphasis, heading, or table syntax.
   return String(value)
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/[\u200b-\u200f\u202a-\u202e\ufeff]/g, "")
@@ -402,7 +474,10 @@ function mdText(value: unknown): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/`/g, "'")
-    .replace(/\|/g, "\\|");
+    .replace(
+      /\\|!|\[|\]|\(|\)|\*|_|#|~|\|/g,
+      (character) => `&#${character.charCodeAt(0)};`,
+    );
 }
 
 function mdCell(value: unknown): string {
@@ -424,8 +499,13 @@ function formatMarkdown(report: ScanReport): string {
   lines.push(`| Time | ${mdText(report.timestamp)} |`);
   lines.push(`| Duration | ${mdText(report.durationMs)}ms |`);
   lines.push(
-    `| **Risk Score** | **${report.score}/100** (${report.riskLevel.toUpperCase()}) |`,
+    report.partialScan
+      ? `| **Risk Score** | **${report.score}/100** (PARTIAL; detected risk: ${report.riskLevel.toUpperCase()}) |`
+      : `| **Risk Score** | **${report.score}/100** (${report.riskLevel.toUpperCase()}) |`,
   );
+  if (report.partialScan) {
+    lines.push("| **Scan Status** | **PARTIAL - coverage incomplete** |");
+  }
   lines.push("");
 
   // Summary
@@ -439,7 +519,12 @@ function formatMarkdown(report: ScanReport): string {
     lines.push("");
   }
 
-  if (report.findings.length === 0) {
+  if (report.partialScan) {
+    lines.push("> **Scan incomplete:** No clean verdict can be established until coverage gaps are resolved.");
+    lines.push("");
+  }
+
+  if (report.findings.length === 0 && !report.partialScan) {
     lines.push("> ✅ No malicious indicators detected.");
     lines.push("");
   } else {
@@ -574,11 +659,26 @@ function formatSarif(report: ScanReport): string {
         tool: {
           driver: {
             name: "supply-chain-guard",
-            version: "5.23.0",
+            version: "5.23.1",
             informationUri: "https://github.com/homeofe/supply-chain-guard",
             rules,
           },
         },
+        ...(report.partialScan
+          ? {
+              invocations: [
+                {
+                  executionSuccessful: false,
+                  toolExecutionNotifications: [
+                    {
+                      level: "warning",
+                      message: { text: PARTIAL_SCAN_WARNING },
+                    },
+                  ],
+                },
+              ],
+            }
+          : {}),
         results,
       },
     ],
@@ -607,11 +707,27 @@ function severityRank(severity: Severity): number {
  * otherwise falls back to a findings-based SBOM.
  */
 function formatSbom(report: ScanReport): string {
+  const partialScanProperty = {
+    name: "supply-chain-guard:scan-status",
+    value: "partial",
+  };
+
   // v4.9: use the proper CycloneDX 1.6 document if available
   if (report.sbomDocument) {
+    const metadata = report.sbomDocument.metadata as typeof report.sbomDocument.metadata & {
+      properties?: Array<{ name: string; value: string }>;
+    };
     // Attach scan findings as vulnerabilities to the real SBOM
     const withVulns = {
       ...report.sbomDocument,
+      ...(report.partialScan
+        ? {
+            metadata: {
+              ...metadata,
+              properties: [...(metadata.properties ?? []), partialScanProperty],
+            },
+          }
+        : {}),
       vulnerabilities: [
         ...(report.sbomDocument.vulnerabilities ?? []),
         ...report.findings
@@ -640,7 +756,7 @@ function formatSbom(report: ScanReport): string {
       timestamp: report.timestamp,
       tools: {
         components: [
-          { type: "application", name: "supply-chain-guard", version: "5.23.0" },
+          { type: "application", name: "supply-chain-guard", version: "5.23.1" },
         ],
       },
       component: {
@@ -648,6 +764,7 @@ function formatSbom(report: ScanReport): string {
         name: report.target,
         "bom-ref": "target",
       },
+      ...(report.partialScan ? { properties: [partialScanProperty] } : {}),
     },
     components: [] as unknown[],
     vulnerabilities: report.findings.filter((f) => !f.suppressed).map((finding, idx) => ({
@@ -687,6 +804,9 @@ function formatBadge(report: ScanReport): string {
     color = "red";
   } else if (s.high > 0) {
     message = `${s.high} high`;
+    color = "orange";
+  } else if (report.partialScan) {
+    message = "partial";
     color = "orange";
   } else if (s.medium > 0) {
     message = `${s.medium} medium`;
@@ -758,7 +878,7 @@ function formatGitlab(report: ScanReport): string {
     name: "supply-chain-guard",
     url: "https://github.com/homeofe/supply-chain-guard",
     vendor: { name: "supply-chain-guard" },
-    version: "5.23.0",
+    version: "5.23.1",
   };
 
   const vulnerabilities = report.findings
@@ -842,13 +962,23 @@ function formatJunit(report: ScanReport): string {
   const findings = report.findings.filter((f) => !f.suppressed);
   const isFailure = (s: Severity) => s === "critical" || s === "high";
   const failureCount = findings.filter((f) => isFailure(f.severity)).length;
+  const errorCount = report.partialScan ? 1 : 0;
+  const testCount = findings.length + errorCount;
   const timeSeconds = ((report.durationMs ?? 0) / 1000).toFixed(3);
 
   const lines: string[] = [];
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push(
-    `<testsuite name="supply-chain-guard" tests="${findings.length}" failures="${failureCount}" errors="0" time="${timeSeconds}">`,
+    `<testsuite name="supply-chain-guard" tests="${testCount}" failures="${failureCount}" errors="${errorCount}" time="${timeSeconds}">`,
   );
+
+  if (report.partialScan) {
+    lines.push('  <testcase name="SCAN_INCOMPLETE" classname="supply-chain-guard">');
+    lines.push(
+      `    <error type="partial-scan" message="Scan incomplete">${xmlEscape(PARTIAL_SCAN_WARNING)}</error>`,
+    );
+    lines.push("  </testcase>");
+  }
 
   for (const f of findings) {
     const loc = f.file ? (f.line ? `${f.file}:${f.line}` : f.file) : report.target;
@@ -891,7 +1021,8 @@ function formatHtml(report: ScanReport): string {
   };
 
   const scoreColor =
-    report.score === 0 ? "#22c55e"
+    report.partialScan ? "#d97706"
+    : report.score === 0 ? "#22c55e"
     : report.score <= 10 ? "#06b6d4"
     : report.score <= 30 ? "#ca8a04"
     : report.score <= 60 ? "#dc2626"
@@ -935,6 +1066,7 @@ header .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:14px;opacity:0.85}
 .score-num{font-size:48px;font-weight:800;color:${scoreColor}}
 .score-label{font-size:14px;color:#64748b}
 .score-level{font-size:20px;font-weight:600;text-transform:uppercase;color:${scoreColor}}
+.partial-warning{background:#fffbeb;border:1px solid #f59e0b;color:#92400e;padding:16px 20px;border-radius:10px;margin-bottom:24px}
 .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
 .summary .chip{padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px}
 .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:24px;margin-bottom:24px}
@@ -965,13 +1097,15 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
     </div>
   </header>
 
+  ${report.partialScan ? `<div class="partial-warning"><strong>Scan incomplete.</strong> Coverage gaps prevented a complete verdict. Resolve skipped or unreadable files before treating this result as clean.</div>` : ""}
+
   <div class="score-card">
     <div>
       <div class="score-num">${report.score}</div>
       <div class="score-label">/ 100 Risk Score</div>
     </div>
     <div>
-      <div class="score-level">${report.riskLevel}</div>
+      <div class="score-level">${report.partialScan ? "partial" : report.riskLevel}</div>
       <div class="score-label">${report.summary.filesScanned} files scanned of ${report.summary.totalFiles} total</div>
     </div>
   </div>
@@ -982,7 +1116,8 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
     ${report.summary.medium > 0 ? `<span class="chip" style="background:${severityBg.medium};color:${severityColors.medium}">${SEVERITY_ICONS.medium} ${report.summary.medium} Medium</span>` : ""}
     ${report.summary.low > 0 ? `<span class="chip" style="background:${severityBg.low};color:${severityColors.low}">${SEVERITY_ICONS.low} ${report.summary.low} Low</span>` : ""}
     ${report.summary.info > 0 ? `<span class="chip" style="background:${severityBg.info};color:${severityColors.info}">${SEVERITY_ICONS.info} ${report.summary.info} Info</span>` : ""}
-    ${report.findings.length === 0 ? '<span class="chip" style="background:#f0fdf4;color:#22c55e">No findings</span>' : ""}
+    ${report.partialScan ? '<span class="chip" style="background:#fffbeb;color:#d97706">Partial scan</span>' : ""}
+    ${report.findings.length === 0 && !report.partialScan ? '<span class="chip" style="background:#f0fdf4;color:#22c55e">No findings</span>' : ""}
   </div>
 
   ${report.findings.length > 0 ? `
@@ -1011,7 +1146,7 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
   ` : ""}
 
   <footer>
-    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v5.23.0
+    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v5.23.1
   </footer>
 </div>
 <script>

@@ -11,17 +11,17 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.23.0 |
+| Version | 5.23.1 |
 | Node engines | >=20.0.0 |
-| Source modules | 66 under `src/` |
-| Test files | 91 under `src/__tests__/` |
+| Source modules | 73 under `src/` |
+| Test files | 104 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit | verified continuously in CI - see below |
 
 Time-varying facts (build/test pass-fail, `npm audit`) are intentionally not
 snapshotted here: they are verified on every push in CI (the authoritative source)
-and by dependabot. Locally, `npm test` shows 13 vscode-scanner failures that only
-reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
+and by dependabot. On Windows, VS Code archive tests that require the external `zip`
+binary may fail locally; the authoritative Ubuntu CI environment provides it.
 
 ---
 
@@ -29,6 +29,7 @@ reflect a missing `zip` binary (green on Ubuntu CI); not regressions.
 
 | Package | Range |
 |---------|-------|
+| @babel/parser | ^7.29.7 |
 | @elvatis_com/aahp | 3.9.0 |
 | @types/node | ^26.1.1 |
 | @vitest/coverage-v8 | ^4.1.10 |
@@ -40,9 +41,9 @@ Overrides: none.
 
 ---
 
-## Source Modules (66)
+## Source Modules (73)
 
-`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `cargo-scanner.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `continuous-monitor.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `dockerfile-scanner.ts`, `entropy.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `internal-disclosure.ts`, `ioc-blocklist.ts`, `lockfile-checker.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `osv-export.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `release-scanner.ts`, `remediation-engine.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `state-dir.ts`, `threat-intel.ts`, `triage-engine.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`
+`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `broad-gap-pattern-matchers.ts`, `cargo-scanner.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `continuous-monitor.ts`, `correlated-pattern-matchers.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `dockerfile-scanner.ts`, `entropy.ts`, `extracted-file-walker.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `internal-disclosure.ts`, `ioc-blocklist.ts`, `lockfile-checker.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `osv-export.ts`, `pattern-applicability.ts`, `pattern-scanner.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `regex-complexity.ts`, `release-scanner.ts`, `remediation-engine.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `state-dir.ts`, `threat-intel.ts`, `triage-engine.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`, `workflow-pattern-matchers.ts`
 
 ---
 
@@ -53,7 +54,7 @@ Overrides: none.
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (`ci.yml`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, `v5` branch fast-forward |
 | AAHP Verify (`aahp-verify.yml`) | handoff gate; dependabot exempt |
-| Prebuild gates | `check:changelog` + `check:changelog-format` + `check:version-sync` + `check:handoff` + `check:feed` + `check:claims` |
+| Prebuild gates | `check:aahp` (changelog, format, version sync, claims, forbidden patterns, schema/docs, links) + `check:feed` + `check:handoff` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; `uses: homeofe/supply-chain-guard@v5` (floating branch) |
 | Dependabot | weekly npm + github-actions; commander >=15 ignored |

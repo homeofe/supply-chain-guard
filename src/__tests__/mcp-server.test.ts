@@ -259,6 +259,27 @@ describe("MCP Server", () => {
       expect(marker.recommendation.length).toBeGreaterThan(0);
     });
 
+    it("returns an explicit partial verdict when coverage findings are filtered", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "oversized.js"),
+        Buffer.alloc(5 * 1024 * 1024 + 1),
+      );
+
+      const response = await callTool("scan_directory", {
+        path: tempDir,
+        minSeverity: "critical",
+      });
+      const summary = parseToolText(response);
+
+      expect(summary.partialScan).toBe(true);
+      expect(summary.scanStatus).toBe("partial");
+      expect(summary.riskLevel).toBe("partial");
+      expect(summary.totalFindings).toBe(0);
+      expect(
+        (summary.recommendations as string[]).join(" "),
+      ).toMatch(/scan incomplete/i);
+    });
+
     it("should accept the optional `since` diff-scan argument", async () => {
       fs.writeFileSync(
         path.join(tempDir, "clean.js"),

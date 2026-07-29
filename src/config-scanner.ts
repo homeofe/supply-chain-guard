@@ -8,7 +8,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
-import { isPatternApplicableToFile, matchPatternInContent, truncateMatch } from "./patterns.js";
+import { truncateMatch, validatePatternSet } from "./patterns.js";
+import { matchPatternInFile } from "./pattern-scanner.js";
 
 // ---------------------------------------------------------------------------
 // Config patterns
@@ -76,6 +77,8 @@ export const CONFIG_PATTERNS: PatternEntry[] = [
   },
 ];
 
+validatePatternSet("CONFIG_PATTERNS", CONFIG_PATTERNS);
+
 /** Config file names to scan */
 const CONFIG_FILES = new Set([
   ".npmrc",
@@ -103,13 +106,13 @@ export function scanConfigFile(
   const findings: Finding[] = [];
 
   for (const pattern of CONFIG_PATTERNS) {
-    if (!isPatternApplicableToFile(pattern, content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "i", {
+    const hits = matchPatternInFile(pattern, content, relativePath, findings, "i", {
       skipLine: (line) => {
         const t = line.trimStart();
         return t.startsWith("#") || t.startsWith(";");
       },
-    })) {
+    });
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,

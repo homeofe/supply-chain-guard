@@ -118,6 +118,7 @@ describe("Dependency Confusion Detector", () => {
       format: "text",
     });
 
+    expect(report.tool).toBe("supply-chain-guard v5.23.1");
     expect(report.score).toBe(0);
     expect(report.riskLevel).toBe("clean");
     expect(report.findings).toHaveLength(0);

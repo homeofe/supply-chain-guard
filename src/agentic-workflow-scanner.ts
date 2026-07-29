@@ -15,6 +15,7 @@ import * as path from "node:path";
 import type { Finding, Severity } from "./types.js";
 import { parseWorkflow } from "./workflow-ast.js";
 import { PROMPT_INJECTION_PATTERNS } from "./patterns.js";
+import { matchPatternInSemanticText } from "./pattern-scanner.js";
 
 /** Triggers that feed attacker-controllable text into the agent. */
 const UNTRUSTED_TRIGGERS = [
@@ -137,17 +138,22 @@ function scanOne(
       `full GitLost lethal trifecta.`, rel, 1);
   }
 
-  // LLM control tokens hidden in the instruction body.
-  const bodyLines = body.split("\n");
-  for (const p of PROMPT_INJECTION_PATTERNS) {
-    const re = new RegExp(p.pattern, "i");
-    for (let i = 0; i < bodyLines.length; i++) {
-      if (re.test(bodyLines[i] ?? "")) {
-        push(findings, "AGENTIC_WF_PROMPT_INJECTION", "high",
-          `LLM control token / override phrase in an Agentic Workflow instruction body ` +
-          `(matched ${p.rule}). Agents read the body verbatim.`, rel, i + 1);
-        break; // one finding per pattern is enough
-      }
-    }
+  // LLM control tokens hidden in the instruction body. File/path gates target
+  // ordinary repository files and are intentionally irrelevant after this
+  // scanner has selected the agent-facing instruction body.
+  for (const pattern of PROMPT_INJECTION_PATTERNS) {
+    const hits = matchPatternInSemanticText(
+      pattern,
+      body,
+      rel,
+      findings,
+      "i",
+    );
+    const hit = hits?.[0];
+    if (!hit) continue;
+
+    push(findings, "AGENTIC_WF_PROMPT_INJECTION", "high",
+      `LLM control token / override phrase in an Agentic Workflow instruction body ` +
+      `(matched ${pattern.rule}). Agents read the body verbatim.`, rel, hit.line);
   }
 }

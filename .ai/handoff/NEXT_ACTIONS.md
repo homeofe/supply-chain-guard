@@ -14,11 +14,12 @@
 | Blocked | 0 |
 | Roadmap bets remaining | 0 |
 
-Current version: **v5.23.0**. The 2026-07 ideation roadmap plus the follow-on
+Current version: **v5.23.1**. The 2026-07 ideation roadmap plus the follow-on
 gap-analysis push (v5.12.4-v5.17.x: fresh threat-intel, Rust/Go/Python lockfile
 coverage, product/DX, honest SLSA grading, starjacking, OSV export, MCP-registry
-metadata) are shipped. v5.23.0 adds opt-in bounded multi-line pattern matching
-(`spansLines`). See CHANGELOG.md for the full per-release history.
+metadata) are shipped. v5.23.1 repairs the v5.23.0 multi-line engine with exact
+structural correlation, complete guard parity, and explicit partial-scan reporting.
+See CHANGELOG.md for the full per-release history.
 
 ---
 
@@ -49,6 +50,7 @@ metadata) are shipped. v5.23.0 adds opt-in bounded multi-line pattern matching
 
 | Item | Date |
 |------|------|
+| v5.23.1: exact multi-line structural matching, false-positive repairs, complete PatternEntry guard wiring, and transparent partial scans | 2026-07-29 |
 | v5.17.3: ViteVenom malicious @vite* npm IOCs (import-time RAT, blockchain C2) | 2026-07-18 |
 | v5.17.2: self-scan false-positive fix (recognize own repo checkout by package.json identity, not just install path) | 2026-07-17 |
 | v5.17.1: MCP registry metadata (mcpName + server.json) + honest npm description | 2026-07-17 |

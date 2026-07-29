@@ -8,8 +8,10 @@
  */
 
 import { Command } from "commander";
+import * as fs from "node:fs";
 import { globalAgent as httpGlobalAgent } from "node:http";
 import { globalAgent as httpsGlobalAgent } from "node:https";
+import * as path from "node:path";
 import { scan } from "./scanner.js";
 import { scanNpmPackage } from "./npm-scanner.js";
 import { scanPypiPackage } from "./pypi-scanner.js";
@@ -25,17 +27,169 @@ import {
   listWatchlist,
   monitorWatchlist,
 } from "./solana-monitor.js";
-import { formatReport } from "./reporter.js";
+import { formatReport, getFindingsExitCode, getReportExitCode } from "./reporter.js";
 import type { ScanOptions, Severity } from "./types.js";
 
 const program = new Command();
+
+const SEVERITY_RANK: Record<Severity, number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+  info: 0,
+};
+
+function parseSeverityOption(
+  value: string | undefined,
+  flag: "--min-severity" | "--fail-on",
+): Severity | undefined {
+  if (value === undefined) return undefined;
+  if (!Object.hasOwn(SEVERITY_RANK, value)) {
+    throw new Error(
+      `${flag} must be one of: critical, high, medium, low, info (received "${value}").`,
+    );
+  }
+  return value as Severity;
+}
+
+function assertCompatibleSeverityThresholds(
+  minSeverity: Severity | undefined,
+  failOn: Severity | undefined,
+): void {
+  if (minSeverity === undefined) return;
+  const effectiveFailOn = failOn ?? "high";
+  if (SEVERITY_RANK[minSeverity] <= SEVERITY_RANK[effectiveFailOn]) return;
+
+  const gate = failOn === undefined
+    ? "the default high gate"
+    : `--fail-on ${failOn}`;
+  throw new Error(
+    `--min-severity ${minSeverity} would hide findings required by ${gate}. ` +
+      "Choose a minimum severity at or below the fail threshold.",
+  );
+}
+
+function parseDefaultGatedMinSeverity(value: string | undefined): Severity | undefined {
+  const minSeverity = parseSeverityOption(value, "--min-severity");
+  assertCompatibleSeverityThresholds(minSeverity, undefined);
+  return minSeverity;
+}
+
+function finishCliCommand(exitCode: number): void {
+  // Forced process.exit() can truncate a report buffered to a pipe. Close the
+  // scanners' pooled network sockets, set the eventual status, and let Node
+  // drain stdout/stderr naturally.
+  httpGlobalAgent.destroy();
+  httpsGlobalAgent.destroy();
+  process.exitCode = exitCode;
+}
+
+interface OutputPathOption {
+  flag: string;
+  value?: string;
+}
+
+function isMissingPathError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+function comparablePathKey(value: string): string {
+  // Default Windows and macOS filesystems are case-insensitive. Conservatively
+  // reject case-only writer aliases on Darwin as well; on a case-sensitive APFS
+  // volume this can reject two distinct names, but can never permit overwrite.
+  return process.platform === "win32" || process.platform === "darwin"
+    ? value.toLowerCase()
+    : value;
+}
+
+function canonicalizeMissingOutputPath(value: string): string {
+  let cursor = value;
+  const suffix: string[] = [];
+
+  while (true) {
+    try {
+      const ancestor = fs.realpathSync.native(cursor);
+      return path.resolve(ancestor, ...suffix.reverse());
+    } catch (error) {
+      if (!isMissingPathError(error)) throw error;
+      const parent = path.dirname(cursor);
+      if (parent === cursor) return path.resolve(value);
+      suffix.push(path.basename(cursor));
+      cursor = parent;
+    }
+  }
+}
+
+function canonicalOutputPath(value: string): { pathKey: string; inodeKey?: string } {
+  let canonical = path.resolve(value);
+  const seenSymlinks = new Set<string>();
+
+  // realpath cannot resolve a dangling final symlink. Follow final-component
+  // links explicitly so `target.json` and `alias.json -> target.json` collide
+  // even before either writer creates the target.
+  for (let depth = 0; depth <= 64; depth += 1) {
+    let stat: fs.Stats;
+    try {
+      stat = fs.lstatSync(canonical);
+    } catch (error) {
+      if (!isMissingPathError(error)) throw error;
+      canonical = canonicalizeMissingOutputPath(canonical);
+      break;
+    }
+
+    if (!stat.isSymbolicLink()) {
+      canonical = fs.realpathSync.native(canonical);
+      break;
+    }
+
+    const symlinkKey = comparablePathKey(fs.realpathSync.native(path.dirname(canonical)) +
+      path.sep + path.basename(canonical));
+    if (seenSymlinks.has(symlinkKey) || depth === 64) {
+      throw new Error("An output path contains a symbolic-link cycle.");
+    }
+    seenSymlinks.add(symlinkKey);
+
+    const target = fs.readlinkSync(canonical);
+    const physicalParent = fs.realpathSync.native(path.dirname(canonical));
+    canonical = path.resolve(physicalParent, target);
+  }
+
+  const pathKey = comparablePathKey(canonical);
+  try {
+    const stat = fs.statSync(canonical, { bigint: true });
+    return { pathKey, inodeKey: `${stat.dev}:${stat.ino}` };
+  } catch (error) {
+    if (!isMissingPathError(error)) throw error;
+    return { pathKey };
+  }
+}
+
+function assertDistinctOutputPaths(options: OutputPathOption[]): void {
+  const seenPaths = new Map<string, string>();
+  const seenInodes = new Map<string, string>();
+  for (const option of options) {
+    if (!option.value) continue;
+    const { pathKey, inodeKey } = canonicalOutputPath(option.value);
+    const previous = seenPaths.get(pathKey) ??
+      (inodeKey === undefined ? undefined : seenInodes.get(inodeKey));
+    if (previous !== undefined) {
+      throw new Error(
+        `${option.flag} must not target the same file as ${previous}.`,
+      );
+    }
+    seenPaths.set(pathKey, option.flag);
+    if (inodeKey !== undefined) seenInodes.set(inodeKey, option.flag);
+  }
+}
 
 program
   .name("supply-chain-guard")
   .description(
     "Open-source supply-chain security scanner. Detects GlassWorm and similar malware campaigns in npm packages, PyPI packages, code repos, VS Code extensions, and project dependencies.",
   )
-  .version("5.23.0");
+  .version("5.23.1");
 
 // ── scan command ────────────────────────────────────────────────────
 
@@ -45,6 +199,10 @@ program
   .argument("<target>", "Local directory path or GitHub repo URL")
   .option("-f, --format <format>", "Output format: text, json, markdown, sarif, sbom, html, badge, gitlab, junit", "text")
   .option("-o, --output <file>", "Write the formatted report to a file instead of stdout")
+  .option(
+    "--json-output <file>",
+    "Write a canonical JSON copy from the same scan (for CI format reconciliation)",
+  )
   .option(
     "-s, --min-severity <severity>",
     "Minimum severity to report: critical, high, medium, low, info",
@@ -73,6 +231,7 @@ program
       opts: {
         format: string;
         output?: string;
+        jsonOutput?: string;
         minSeverity?: string;
         exclude?: string;
         depth: string;
@@ -89,10 +248,20 @@ program
       },
     ) => {
       try {
+        const minSeverity = parseSeverityOption(opts.minSeverity, "--min-severity");
+        const failOn = parseSeverityOption(opts.failOn, "--fail-on");
+        assertCompatibleSeverityThresholds(minSeverity, failOn);
+        assertDistinctOutputPaths([
+          { flag: "--output", value: opts.output },
+          { flag: "--json-output", value: opts.jsonOutput },
+          { flag: "--save-baseline", value: opts.saveBaseline },
+          { flag: "--sbom-output", value: opts.sbomOutput },
+        ]);
+
         const options: ScanOptions = {
           target,
           format: opts.format as ScanOptions["format"],
-          minSeverity: opts.minSeverity as Severity | undefined,
+          minSeverity,
           excludeRules: opts.exclude?.split(",").map((r) => r.trim()),
           maxDepth: parseInt(opts.depth, 10),
           baselineFile: opts.baseline,
@@ -102,6 +271,14 @@ program
         };
 
         const report = await scan(options);
+
+        // CI can request a canonical JSON copy from this exact in-memory report
+        // while stdout uses another formatter. This avoids a second scan whose
+        // network or filesystem state could produce a contradictory verdict.
+        if (opts.jsonOutput) {
+          const { writeFileSync } = await import("node:fs");
+          writeFileSync(opts.jsonOutput, formatReport(report, "json"), "utf-8");
+        }
 
         // Save baseline if requested
         if (opts.saveBaseline) {
@@ -140,7 +317,10 @@ program
         // Write SBOM to separate file if requested
         if (opts.sbomOutput && report.sbomDocument) {
           const { writeFileSync } = await import("node:fs");
-          writeFileSync(opts.sbomOutput, JSON.stringify(report.sbomDocument, null, 2), "utf-8");
+          const sbomOutput = report.partialScan
+            ? formatReport(report, "sbom")
+            : JSON.stringify(report.sbomDocument, null, 2);
+          writeFileSync(opts.sbomOutput, sbomOutput, "utf-8");
           console.error(`SBOM written to ${opts.sbomOutput} (CycloneDX 1.6, ${report.sbomDocument.components.length} components)`);
         }
 
@@ -156,45 +336,12 @@ program
           console.error("");
         }
 
-        // Exit code logic
-        if (opts.failOn) {
-          const severityOrder: Record<string, number> = {
-            critical: 4, high: 3, medium: 2, low: 1, info: 0,
-          };
-          const threshold = severityOrder[opts.failOn] ?? 0;
-          const hasFindings = report.findings.some(
-            (f) => (severityOrder[f.severity] ?? 0) >= threshold,
-          );
-          if (hasFindings) {
-            process.exit(1);
-          }
-        } else {
-          if (report.summary.critical > 0) {
-            process.exit(2);
-          }
-          if (report.summary.high > 0) {
-            process.exit(1);
-          }
-        }
-
-        // The scanners reach the npm and PyPI registries over Node's global
-        // HTTP(S) agents (dependency-confusion PyPI lookups run on every scan;
-        // --check-registry adds an npm lookup). Since Node 19 those agents pool
-        // sockets with keepAlive, and an idle pooled socket can keep the event
-        // loop alive. On a clean or medium/low-only scan none of the exit-code
-        // branches above fire, so without this teardown the CLI finishes its
-        // work and then never terminates. Destroying the global agents closes
-        // the pooled sockets so the loop drains and the command self-exits.
-        // The critical/high and --fail-on paths already process.exit(), so this
-        // only runs on the clean-return path and leaves those unchanged. Letting
-        // the loop drain naturally (rather than a forced process.exit) means any
-        // buffered stdout is flushed before the process ends.
-        httpGlobalAgent.destroy();
-        httpsGlobalAgent.destroy();
+        // Preserve the report bytes even when the verdict is nonzero.
+        finishCliCommand(getReportExitCode(report, failOn));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
-        process.exit(1);
+        finishCliCommand(1);
       }
     },
   );
@@ -219,17 +366,13 @@ program
         const report = await scanNpmPackage(packageName, {
           target: packageName,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
-          minSeverity: opts.minSeverity as Severity | undefined,
+          minSeverity: parseDefaultGatedMinSeverity(opts.minSeverity),
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
 
-        if (report.summary.critical > 0) {
-          process.exit(2);
-        }
-        if (report.summary.high > 0) {
-          process.exit(1);
-        }
+        const exitCode = getReportExitCode(report);
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
@@ -258,17 +401,13 @@ program
         const report = await scanPypiPackage(packageName, {
           target: packageName,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
-          minSeverity: opts.minSeverity as Severity | undefined,
+          minSeverity: parseDefaultGatedMinSeverity(opts.minSeverity),
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
 
-        if (report.summary.critical > 0) {
-          process.exit(2);
-        }
-        if (report.summary.high > 0) {
-          process.exit(1);
-        }
+        const exitCode = getReportExitCode(report);
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
@@ -310,18 +449,14 @@ program
         const report = await scanVscodeExtension({
           target,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
-          minSeverity: opts.minSeverity as Severity | undefined,
+          minSeverity: parseDefaultGatedMinSeverity(opts.minSeverity),
           registry: opts.registry as "marketplace" | "openvsx",
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
 
-        if (report.summary.critical > 0) {
-          process.exit(2);
-        }
-        if (report.summary.high > 0) {
-          process.exit(1);
-        }
+        const exitCode = getReportExitCode(report);
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
@@ -351,18 +486,14 @@ program
         const report = await scanDependencyConfusion({
           target,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
-          minSeverity: opts.minSeverity as Severity | undefined,
+          minSeverity: parseDefaultGatedMinSeverity(opts.minSeverity),
           includeDevDeps: opts.dev,
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));
 
-        if (report.summary.critical > 0) {
-          process.exit(2);
-        }
-        if (report.summary.high > 0) {
-          process.exit(1);
-        }
+        const exitCode = getReportExitCode(report);
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
@@ -416,12 +547,8 @@ program
 
         console.log(formatReport(report, opts.format as ScanOptions["format"]));
 
-        if (report.summary.critical > 0) {
-          process.exit(2);
-        }
-        if (report.summary.high > 0) {
-          process.exit(1);
-        }
+        const exitCode = getReportExitCode(report);
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
@@ -449,18 +576,27 @@ program
 
         if (repos.length === 0) {
           console.error(`\n  No repos found for org "${org}". Is gh CLI authenticated?\n`);
-          process.exit(1);
+          finishCliCommand(1);
+          return;
         }
 
         console.error(`\n  Scanning ${repos.length} repos in ${org}...\n`);
 
         const repoFindings = new Map<string, import("./types.js").Finding[]>();
+        let completedRepos = 0;
+        let partialRepos = 0;
+        let failedRepos = 0;
+        let orgExitCode: 0 | 1 | 2 = 0;
         for (const repoUrl of repos) {
           try {
             const report = await scan({
               target: repoUrl,
               format: opts.format as ScanOptions["format"],
             });
+            completedRepos++;
+            if (report.partialScan) partialRepos++;
+            const repoExitCode = getReportExitCode(report);
+            if (repoExitCode > orgExitCode) orgExitCode = repoExitCode;
             repoFindings.set(repoUrl, report.findings);
             const critCount = report.findings.filter((f) => f.severity === "critical").length;
             const highCount = report.findings.filter((f) => f.severity === "high").length;
@@ -468,15 +604,32 @@ program
               console.error(`  ${repoUrl}: ${critCount} critical, ${highCount} high`);
             }
           } catch {
+            failedRepos++;
             console.error(`  ${repoUrl}: scan failed`);
           }
         }
 
         const orgFindings = analyzeOrgFindings(repoFindings);
+        const synthesizedExitCode = getFindingsExitCode(orgFindings);
+        if (synthesizedExitCode > orgExitCode) orgExitCode = synthesizedExitCode;
+        const partialScan = partialRepos > 0 || failedRepos > 0;
         if (opts.format === "json") {
-          console.log(JSON.stringify({ org, reposScanned: repos.length, findings: orgFindings }, null, 2));
+          console.log(JSON.stringify({
+            org,
+            reposScanned: completedRepos,
+            ...(partialScan ? { partialScan: true, partialRepos, failedRepos } : {}),
+            findings: orgFindings,
+          }, null, 2));
         } else {
-          console.log(`\n  Organization: ${org} (${repos.length} repos scanned)`);
+          const repoCountLabel = partialScan
+            ? `${completedRepos} of ${repos.length}`
+            : `${repos.length}`;
+          console.log(`\n  Organization: ${org} (${repoCountLabel} repos scanned)`);
+          if (partialScan) {
+            console.log(
+              `  WARNING: Partial scan (${partialRepos} incomplete, ${failedRepos} failed). No clean organization verdict can be established.`,
+            );
+          }
           if (orgFindings.length === 0) {
             console.log("  No cross-repo patterns detected.\n");
           } else {
@@ -486,10 +639,12 @@ program
             console.log("");
           }
         }
+
+        finishCliCommand(orgExitCode !== 0 ? orgExitCode : partialScan ? 1 : 0);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
-        process.exit(1);
+        finishCliCommand(1);
       }
     },
   );
@@ -794,11 +949,11 @@ program
           force: opts.force,
           dryRun: opts.dryRun,
         });
-        process.exit(code);
+        finishCliCommand(code);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);
-        process.exit(1);
+        finishCliCommand(1);
       }
     },
   );

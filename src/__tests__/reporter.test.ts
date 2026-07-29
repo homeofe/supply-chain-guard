@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatReport } from "../reporter.js";
+import { formatReport, getFindingsExitCode, getReportExitCode } from "../reporter.js";
 import type { ScanReport } from "../types.js";
 import pkg from "../../package.json";
 
@@ -701,7 +701,7 @@ describe("formatReport – markdown injection hardening", () => {
         findings: [
           {
             rule: "EVIL`RULE",
-            description: "Heading <img src=x onerror=alert(1)>\n# Injected Heading",
+            description: "Heading <img src=x onerror=alert(1)>\n# Injected Heading ![scan-tracker](https://example.invalid/pixel.svg)",
             severity: "critical",
             file: "a.js",
             line: 1,
@@ -722,6 +722,10 @@ describe("formatReport – markdown injection hardening", () => {
     // A newline in scan content cannot inject a new markdown line or header.
     expect(md).not.toContain("\n# Fake Heading");
     expect(md).not.toContain("\n# Injected Heading");
+    // Plain-text fields cannot create active Markdown images or links.
+    expect(md).not.toContain("![scan-tracker]");
+    expect(md).not.toContain("](https://example.invalid/pixel.svg)");
+    expect(md).toContain("&#33;&#91;scan-tracker&#93;&#40;https://example.invalid/pixel.svg&#41;");
   });
 });
 
@@ -751,5 +755,142 @@ describe("formatReport – suppressed findings excluded from SARIF, SBOM and Git
     const gitlab = formatReport(reportWithSuppressed, "gitlab");
     expect(gitlab).toContain("ACTIVE_RULE");
     expect(gitlab).not.toContain("SUPPRESSED_RULE");
+  });
+});
+
+describe("partial-scan verdict contract", () => {
+  function partialEmptyReport(): ScanReport {
+    return makeReport({
+      findings: [],
+      summary: {
+        totalFiles: 1,
+        filesScanned: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+      },
+      score: 0,
+      riskLevel: "clean",
+      recommendations: [
+        "No malicious indicators detected. The scanned code appears clean.",
+      ],
+      partialScan: true,
+    });
+  }
+
+  it("keeps JSON machine-readable and removes a stale clean recommendation", () => {
+    const original = partialEmptyReport();
+    const parsed = JSON.parse(formatReport(original, "json")) as ScanReport;
+    expect(parsed.partialScan).toBe(true);
+    expect(parsed.recommendations.join(" ")).toMatch(/scan incomplete/i);
+    expect(parsed.recommendations.join(" ")).not.toMatch(/appears clean/i);
+    expect(original.recommendations.join(" ")).toMatch(/appears clean/i);
+  });
+
+  it("renders text as partial, never clean", () => {
+    const output = stripAnsi(formatReport(partialEmptyReport(), "text"));
+    expect(output).toMatch(/PARTIAL/);
+    expect(output).toMatch(/scan incomplete/i);
+    expect(output).not.toMatch(/No findings[^\n]*clean/i);
+    expect(output).not.toMatch(/appears clean/i);
+  });
+
+  it("renders Markdown as partial, never a no-indicators verdict", () => {
+    const output = formatReport(partialEmptyReport(), "markdown");
+    expect(output).toContain("PARTIAL - coverage incomplete");
+    expect(output).toMatch(/scan incomplete/i);
+    expect(output).not.toContain("No malicious indicators detected");
+  });
+
+  it("marks a SARIF invocation unsuccessful with a coverage notification", () => {
+    const parsed = JSON.parse(formatReport(partialEmptyReport(), "sarif")) as {
+      runs: Array<{
+        invocations: Array<{
+          executionSuccessful: boolean;
+          toolExecutionNotifications: Array<{ message: { text: string } }>;
+        }>;
+      }>;
+    };
+    expect(parsed.runs[0].invocations[0].executionSuccessful).toBe(false);
+    expect(parsed.runs[0].invocations[0].toolExecutionNotifications[0].message.text)
+      .toMatch(/scan incomplete/i);
+  });
+
+  it("marks fallback and inventory SBOM metadata as partial", () => {
+    const fallback = JSON.parse(formatReport(partialEmptyReport(), "sbom")) as {
+      metadata: { properties?: Array<{ name: string; value: string }> };
+    };
+    expect(fallback.metadata.properties).toContainEqual({
+      name: "supply-chain-guard:scan-status",
+      value: "partial",
+    });
+
+    const withInventory = partialEmptyReport();
+    withInventory.sbomDocument = {
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      serialNumber: "urn:uuid:00000000-0000-4000-8000-000000000001",
+      version: 1,
+      metadata: {
+        timestamp: withInventory.timestamp,
+        tools: { components: [] },
+        component: { type: "application", name: "test", "bom-ref": "target" },
+      },
+      components: [],
+    };
+    const inventory = JSON.parse(formatReport(withInventory, "sbom")) as {
+      metadata: { properties?: Array<{ name: string; value: string }> };
+    };
+    expect(inventory.metadata.properties).toContainEqual({
+      name: "supply-chain-guard:scan-status",
+      value: "partial",
+    });
+  });
+
+  it("renders HTML with a visible partial warning and no no-findings chip", () => {
+    const output = formatReport(partialEmptyReport(), "html");
+    expect(output).toContain("Scan incomplete.");
+    expect(output).toContain("Partial scan");
+    expect(output).not.toContain(">No findings</span>");
+  });
+
+  it("renders a partial badge without masking a critical finding", () => {
+    const partial = JSON.parse(formatReport(partialEmptyReport(), "badge")) as BadgeOutput;
+    expect(partial.message).toBe("partial");
+    expect(partial.color).toBe("orange");
+
+    const criticalPartial = JSON.parse(
+      formatReport(makeReport({ partialScan: true }), "badge"),
+    ) as BadgeOutput;
+    expect(criticalPartial.message).toBe("1 critical");
+    expect(criticalPartial.color).toBe("red");
+  });
+
+  it("represents partial coverage as a JUnit error", () => {
+    const output = formatReport(partialEmptyReport(), "junit");
+    expect(output).toContain('tests="1"');
+    expect(output).toContain('errors="1"');
+    expect(output).toContain('<error type="partial-scan"');
+    expect(output).toContain("SCAN_INCOMPLETE");
+  });
+
+  it("uses exit 1 for partial reports without weakening critical exit 2", () => {
+    const partial = partialEmptyReport();
+    expect(getReportExitCode(partial)).toBe(1);
+    expect(getReportExitCode(partial, "critical")).toBe(1);
+    expect(getReportExitCode(makeReport({ partialScan: true }))).toBe(2);
+
+    expect(getReportExitCode(makeEmptyReport())).toBe(0);
+    expect(getReportExitCode(makeReport())).toBe(2);
+    expect(getReportExitCode(makeReport(), "critical")).toBe(1);
+  });
+
+  it("applies default gate severity to standalone finding collections", () => {
+    expect(getFindingsExitCode([])).toBe(0);
+    expect(getFindingsExitCode([{ severity: "medium" }])).toBe(0);
+    expect(getFindingsExitCode([{ severity: "high" }])).toBe(1);
+    expect(getFindingsExitCode([{ severity: "critical" }])).toBe(2);
   });
 });

@@ -10,7 +10,8 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
-import { LURE_PATTERNS } from "./patterns.js";
+import { LURE_PATTERNS, truncateMatch } from "./patterns.js";
+import { matchPatternInFile } from "./pattern-scanner.js";
 import { isKnownMaliciousAccount } from "./ioc-blocklist.js";
 
 interface RepoMetadata {
@@ -362,30 +363,27 @@ export function scanReadmeLures(
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
-  const lines = readmeContent.split("\n");
 
   for (const pattern of LURE_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, "i");
+    const hits = matchPatternInFile(
+      pattern,
+      readmeContent,
+      relativePath,
+      findings,
+      "i",
+    );
+    const hit = hits?.[0];
+    if (!hit) continue;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match:
-            match[0].length > 120
-              ? match[0].substring(0, 120) + "..."
-              : match[0],
-          recommendation: getLureRecommendation(pattern.rule),
-        });
-        break; // One match per pattern per file
-      }
-    }
+    findings.push({
+      rule: pattern.rule,
+      description: pattern.description,
+      severity: pattern.severity,
+      file: relativePath,
+      line: hit.line,
+      match: truncateMatch(hit.text),
+      recommendation: getLureRecommendation(pattern.rule),
+    });
   }
 
   return findings;

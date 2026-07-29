@@ -22,13 +22,47 @@ const FIXTURES_SRC = path.join(__dirname, "fixtures");
 let workdir: string;
 let CLEAN_FIXTURE: string;
 let MALICIOUS_FIXTURE: string;
+let HIGH_FIXTURE: string;
+let PARTIAL_FIXTURE: string;
+let PARTIAL_CRITICAL_FIXTURE: string;
+let INTERNAL_PARTIAL_FIXTURE: string;
 
 beforeAll(() => {
   workdir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cli-test-"));
   CLEAN_FIXTURE = path.join(workdir, "clean-npm-pkg");
   MALICIOUS_FIXTURE = path.join(workdir, "malicious-npm-pkg");
+  HIGH_FIXTURE = path.join(workdir, "high-only-npm-pkg");
+  PARTIAL_FIXTURE = path.join(workdir, "partial-npm-pkg");
+  PARTIAL_CRITICAL_FIXTURE = path.join(workdir, "partial-critical-npm-pkg");
+  INTERNAL_PARTIAL_FIXTURE = path.join(workdir, "internal-partial-npm-pkg");
   fs.cpSync(path.join(FIXTURES_SRC, "clean-npm-pkg"), CLEAN_FIXTURE, { recursive: true });
   fs.cpSync(path.join(FIXTURES_SRC, "malicious-npm-pkg"), MALICIOUS_FIXTURE, { recursive: true });
+  fs.cpSync(CLEAN_FIXTURE, HIGH_FIXTURE, { recursive: true });
+  fs.writeFileSync(
+    path.join(HIGH_FIXTURE, "unicode.js"),
+    `const marker = "normal\u200B\u200B\u200B\u200Btext";`,
+    "utf-8",
+  );
+  fs.cpSync(CLEAN_FIXTURE, PARTIAL_FIXTURE, { recursive: true });
+  fs.cpSync(CLEAN_FIXTURE, INTERNAL_PARTIAL_FIXTURE, { recursive: true });
+  fs.cpSync(MALICIOUS_FIXTURE, PARTIAL_CRITICAL_FIXTURE, { recursive: true });
+  for (const fixture of [PARTIAL_FIXTURE, PARTIAL_CRITICAL_FIXTURE]) {
+    fs.writeFileSync(path.join(fixture, "oversized.js"), Buffer.alloc(5 * 1024 * 1024 + 1));
+  }
+  fs.writeFileSync(
+    path.join(INTERNAL_PARTIAL_FIXTURE, ".supply-chain-guard.yml"),
+    "internalDisclosure:\n  hashedTerms:\n    - " + "0".repeat(64) + "\n",
+    "utf-8",
+  );
+  const denylistFiller = Array.from(
+    { length: 410 },
+    (_, index) => "token" + index,
+  ).join(" ");
+  fs.writeFileSync(
+    path.join(INTERNAL_PARTIAL_FIXTURE, "internal.ts"),
+    denylistFiller + " unseen.internal.example",
+    "utf-8",
+  );
 });
 
 afterAll(() => {
@@ -177,6 +211,140 @@ describe("CLI scan --output", () => {
     expect(Array.isArray(parsed.findings)).toBe(true);
   });
 
+  it("writes canonical JSON from the same scan while stdout uses another format", () => {
+    const jsonFile = path.join(workdir, "canonical-report.json");
+    const { stdout, status } = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--format",
+      "markdown",
+      "--json-output",
+      jsonFile,
+      "--no-history",
+    ]);
+
+    expect(status).toBe(0);
+    expect(stdout).toContain("supply-chain-guard Scan Report");
+    const canonical = JSON.parse(fs.readFileSync(jsonFile, "utf-8")) as {
+      findings: unknown[];
+      summary: { totalFiles: number; filesScanned: number };
+    };
+    expect(Array.isArray(canonical.findings)).toBe(true);
+    expect(canonical.summary.filesScanned).toBeLessThanOrEqual(
+      canonical.summary.totalFiles,
+    );
+  });
+
+  it("drains a large failing JSON report before applying the exit status", () => {
+    const fixture = path.join(workdir, "large-failing-output");
+    fs.mkdirSync(fixture);
+    fs.writeFileSync(
+      path.join(fixture, "package.json"),
+      JSON.stringify({ name: "large-failing-output", version: "1.0.0" }),
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(fixture, "payload.js"),
+      Array.from(
+        { length: 4_000 },
+        (_, index) => `const payload${index} = eval(atob("YWxlcnQoMSk="));`,
+      ).join("\n"),
+      "utf-8",
+    );
+    const sidecar = path.join(workdir, "large-failing-sidecar.json");
+
+    const result = spawnSync(process.execPath, [
+      CLI,
+      "scan",
+      fixture,
+      "--format",
+      "json",
+      "--json-output",
+      sidecar,
+      "--min-severity",
+      "high",
+      "--fail-on",
+      "high",
+      "--no-history",
+    ], {
+      encoding: "utf-8",
+      timeout: 30_000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+
+    expect(result.status).toBe(1);
+    expect(Buffer.byteLength(result.stdout ?? "", "utf-8")).toBeGreaterThan(64 * 1024);
+    expect(JSON.parse(result.stdout ?? "")).toEqual(
+      JSON.parse(fs.readFileSync(sidecar, "utf-8")),
+    );
+  });
+  it("rejects output-file aliases before any writer can overwrite another", () => {
+    for (const flag of ["--output", "--sbom-output", "--save-baseline"]) {
+      const name = `collision-${flag.slice(2)}.json`;
+      const canonical = path.join(workdir, name);
+      const alias = path.join(workdir, "unused", "..", name);
+      const { stderr, status } = cli([
+        "scan",
+        CLEAN_FIXTURE,
+        "--json-output",
+        canonical,
+        flag,
+        alias,
+        "--no-history",
+      ]);
+
+      expect(status, flag).toBe(1);
+      const collisionMessage = flag === "--output"
+        ? "--json-output must not target the same file as --output"
+        : `${flag} must not target the same file as --json-output`;
+      expect(stderr, flag).toContain(collisionMessage);
+      expect(fs.existsSync(canonical), flag).toBe(false);
+    }
+
+    const report = path.join(workdir, "report-and-sbom.json");
+    const collision = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--output",
+      report,
+      "--sbom-output",
+      path.join(workdir, ".", "report-and-sbom.json"),
+      "--no-history",
+    ]);
+    expect(collision.status).toBe(1);
+    expect(collision.stderr).toContain(
+      "--sbom-output must not target the same file as --output",
+    );
+  });
+
+  it("rejects a dangling final-symlink alias before either writer runs", (context) => {
+    const target = path.join(workdir, "dangling-target.json");
+    const alias = path.join(workdir, "dangling-alias.json");
+    try {
+      fs.symlinkSync(target, alias, "file");
+    } catch {
+      context.skip();
+      return;
+    }
+
+    const { stderr, status } = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--format",
+      "text",
+      "--output",
+      target,
+      "--json-output",
+      alias,
+      "--no-history",
+    ]);
+
+    expect(status).toBe(1);
+    expect(stderr).toContain(
+      "--json-output must not target the same file as --output",
+    );
+    expect(fs.existsSync(target)).toBe(false);
+  });
   it("writes a JUnit XML report to a file", () => {
     const outFile = path.join(workdir, "report.xml");
     cli(["scan", MALICIOUS_FIXTURE, "--format", "junit", "--output", outFile]);
@@ -210,6 +378,148 @@ describe("CLI --fail-on flag", () => {
     const { status } = cli(["scan", CLEAN_FIXTURE, "--fail-on", "high"]);
     expect(status).toBe(0);
   });
+
+  it("rejects a minimum severity that would hide the explicit fail threshold", () => {
+    const { stdout, stderr, status } = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--min-severity",
+      "critical",
+      "--fail-on",
+      "high",
+    ]);
+    expect(status).toBe(1);
+    expect(stdout.trim()).toBe("");
+    expect(stderr).toContain(
+      "--min-severity critical would hide findings required by --fail-on high",
+    );
+  });
+
+  it("rejects a minimum severity that would hide the implicit high gate", () => {
+    const { stdout, stderr, status } = cli([
+      "scan",
+      HIGH_FIXTURE,
+      "--min-severity",
+      "critical",
+    ]);
+    expect(status).toBe(1);
+    expect(stdout.trim()).toBe("");
+    expect(stderr).toContain(
+      "--min-severity critical would hide findings required by the default high gate",
+    );
+  });
+
+  it("accepts compatible report and fail thresholds", () => {
+    const { status } = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--min-severity",
+      "low",
+      "--fail-on",
+      "critical",
+    ]);
+    expect(status).toBe(0);
+  });
+
+  it("rejects unknown severity option values", () => {
+    const { stderr, status } = cli([
+      "scan",
+      CLEAN_FIXTURE,
+      "--min-severity",
+      "urgent",
+    ]);
+    expect(status).toBe(1);
+    expect(stderr).toContain("--min-severity must be one of");
+  });
+
+describe("CLI partial-scan verdict", () => {
+  it("exits 1 and preserves partialScan when severity filtering hides the coverage finding", () => {
+    const { stdout, status } = cli([
+      "scan",
+      PARTIAL_FIXTURE,
+      "--format",
+      "json",
+      "--min-severity",
+      "critical",
+      "--fail-on",
+      "critical",
+    ]);
+    expect(status).toBe(1);
+    const parsed = JSON.parse(stdout) as {
+      partialScan?: boolean;
+      findings: unknown[];
+      recommendations: string[];
+    };
+    expect(parsed.partialScan).toBe(true);
+    expect(parsed.findings).toHaveLength(0);
+    expect(parsed.recommendations.join(" ")).toMatch(/scan incomplete/i);
+    expect(parsed.recommendations.join(" ")).not.toMatch(/appears clean/i);
+  });
+
+  it("treats internal-disclosure truncation as partial after filtering", () => {
+    const { stdout, status } = cli([
+      "scan",
+      INTERNAL_PARTIAL_FIXTURE,
+      "--format",
+      "json",
+      "--min-severity",
+      "critical",
+      "--fail-on",
+      "critical",
+    ]);
+
+    expect(status).toBe(1);
+    const parsed = JSON.parse(stdout) as {
+      partialScan?: boolean;
+      findings: unknown[];
+      recommendations: string[];
+    };
+    expect(parsed.partialScan).toBe(true);
+    expect(parsed.findings).toHaveLength(0);
+    expect(parsed.recommendations.join(" ")).toMatch(/scan incomplete/i);
+  });
+
+  it("exits 1 for partial coverage even when --fail-on would otherwise pass", () => {
+    const { status } = cli([
+      "scan",
+      PARTIAL_FIXTURE,
+      "--min-severity",
+      "critical",
+      "--fail-on",
+      "critical",
+    ]);
+    expect(status).toBe(1);
+  });
+
+  it("does not let partial coverage weaken the default critical exit code", () => {
+    const { status } = cli(["scan", PARTIAL_CRITICAL_FIXTURE]);
+    expect(status).toBe(2);
+  });
+
+  it("writes the partial marker through --sbom-output", () => {
+    const outFile = path.join(workdir, "partial.cdx.json");
+    const { status } = cli([
+      "scan",
+      PARTIAL_FIXTURE,
+      "--format",
+      "json",
+      "--min-severity",
+      "critical",
+      "--fail-on",
+      "critical",
+      "--sbom-output",
+      outFile,
+    ]);
+    expect(status).toBe(1);
+    const parsed = JSON.parse(fs.readFileSync(outFile, "utf-8")) as {
+      metadata: { properties?: Array<{ name: string; value: string }> };
+    };
+    expect(parsed.metadata.properties).toContainEqual({
+      name: "supply-chain-guard:scan-status",
+      value: "partial",
+    });
+  });
+});
 });
 
 // ─── watchlist ────────────────────────────────────────────────────────────────
@@ -232,5 +542,38 @@ describe("CLI unknown command", () => {
   it("should exit non-zero for an unknown command", () => {
     const { status } = cli(["nonexistent-command-xyz"]);
     expect(status).not.toBe(0);
+  });
+});
+
+describe("CLI org partial-scan wiring", () => {
+  it("tracks incomplete and failed repository scans without weakening critical exits", () => {
+    const source = fs.readFileSync(path.join(ROOT, "src", "cli.ts"), "utf-8");
+    const orgStart = source.indexOf('.command("org")');
+    const monitorStart = source.indexOf('.command("monitor")', orgStart);
+    const orgCommand = source.slice(orgStart, monitorStart);
+
+    expect(orgStart).toBeGreaterThanOrEqual(0);
+    expect(monitorStart).toBeGreaterThan(orgStart);
+    expect(orgCommand).toContain("partialRepos");
+    expect(orgCommand).toContain("failedRepos");
+    expect(orgCommand).toContain("partialScan: true");
+    expect(orgCommand).toContain("getReportExitCode(report)");
+    expect(orgCommand).toContain("getFindingsExitCode(orgFindings)");
+    expect(orgCommand).toContain(
+      "finishCliCommand(orgExitCode !== 0 ? orgExitCode : partialScan ? 1 : 0)",
+    );
+    expect(orgCommand).not.toContain("process.exit(");
+  });
+
+  it("lets blocked install-guard output drain before applying its exit code", () => {
+    const source = fs.readFileSync(path.join(ROOT, "src", "cli.ts"), "utf-8");
+    const guardStart = source.indexOf('.command("guard")');
+    const hashStart = source.indexOf('.command("internal-hash")', guardStart);
+    const guardCommand = source.slice(guardStart, hashStart);
+
+    expect(guardStart).toBeGreaterThanOrEqual(0);
+    expect(hashStart).toBeGreaterThan(guardStart);
+    expect(guardCommand).toContain("finishCliCommand(code)");
+    expect(guardCommand).not.toContain("process.exit(");
   });
 });

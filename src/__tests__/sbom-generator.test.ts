@@ -135,7 +135,7 @@ describe("generateSbomDocument", () => {
   it("should include tool metadata", () => {
     const doc = generateSbomDocument(tmpDir, []);
     expect(doc.metadata.tools.components[0]?.name).toBe("supply-chain-guard");
-    expect(doc.metadata.tools.components[0]?.version).toBe("4.9.0");
+    expect(doc.metadata.tools.components[0]?.version).toBe("5.23.1");
   });
 
   it("should mark dev deps as excluded scope", () => {

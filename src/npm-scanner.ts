@@ -19,15 +19,15 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
-  isPatternApplicableToFile,
-  matchPatternInContent,
   truncateMatch,
 } from "./patterns.js";
 import { parseGitHubUrl } from "./github-trust-scanner.js";
+import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
+import { collectExtractedFiles } from "./extracted-file-walker.js";
 import { getBundledFeed } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
 
-const TOOL_VERSION = "1.0.0";
+const TOOL_VERSION = "5.23.1";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 
 interface NpmRegistryResponse {
@@ -42,6 +42,39 @@ interface NpmVersionData {
   dist?: { tarball?: string };
   repository?: unknown;
   [key: string]: unknown;
+}
+
+/** Testable package-coverage contract shared by the network scan path. */
+export function recordNpmNoArtifact(findings: Finding[]): void {
+  findings.push({
+    rule: "NPM_NO_ARTIFACT",
+    description:
+      "Registry metadata does not provide a package tarball, so package contents could not be scanned.",
+    severity: "info",
+    recommendation:
+      "Treat this result as partial and inspect a trustworthy package artifact before use.",
+  });
+}
+
+export function filterNpmFindings(
+  findings: Finding[],
+  minSeverity: ScanOptions["minSeverity"],
+): { filteredFindings: Finding[]; partialScan: boolean } {
+  const severityOrder: Record<string, number> = {
+    critical: 4,
+    high: 3,
+    medium: 2,
+    low: 1,
+    info: 0,
+  };
+  const partialScan = hasPartialScanFinding(findings);
+  const minimum = severityOrder[minSeverity ?? "info"] ?? 0;
+  return {
+    filteredFindings: findings.filter(
+      (finding) => (severityOrder[finding.severity] ?? 0) >= minimum,
+    ),
+    partialScan,
+  };
 }
 
 /**
@@ -81,24 +114,34 @@ export async function scanNpmPackage(
   await checkRepositoryClaim(packageName, versionData as NpmVersionData, findings);
 
   // Download and scan tarball
+  let fileCounts = { totalFiles: 0, filesScanned: 0 };
   const tarballUrl = (versionData as NpmVersionData).dist?.tarball;
   if (tarballUrl) {
-    await downloadAndScanTarball(tarballUrl, findings);
+    fileCounts = await downloadAndScanTarball(tarballUrl, findings);
+  } else {
+    recordNpmNoArtifact(findings);
   }
+
+  // Snapshot completeness before a severity filter can hide its informational
+  // transparency finding, matching the PyPI scanner contract.
+  const { filteredFindings, partialScan } = filterNpmFindings(
+    findings,
+    options.minSeverity,
+  );
 
   // Calculate results
   const summary = {
-    totalFiles: 0,
-    filesScanned: 0,
-    critical: findings.filter((f) => f.severity === "critical").length,
-    high: findings.filter((f) => f.severity === "high").length,
-    medium: findings.filter((f) => f.severity === "medium").length,
-    low: findings.filter((f) => f.severity === "low").length,
-    info: findings.filter((f) => f.severity === "info").length,
+    totalFiles: fileCounts.totalFiles,
+    filesScanned: fileCounts.filesScanned,
+    critical: filteredFindings.filter((f) => f.severity === "critical").length,
+    high: filteredFindings.filter((f) => f.severity === "high").length,
+    medium: filteredFindings.filter((f) => f.severity === "medium").length,
+    low: filteredFindings.filter((f) => f.severity === "low").length,
+    info: filteredFindings.filter((f) => f.severity === "info").length,
   };
 
   let score = 0;
-  for (const finding of findings) {
+  for (const finding of filteredFindings) {
     score += SEVERITY_SCORES[finding.severity];
   }
   score = Math.min(100, score);
@@ -119,11 +162,12 @@ export async function scanNpmPackage(
     target: `${packageName}@${latestVersion}`,
     scanType: "npm",
     durationMs: Date.now() - startTime,
-    findings,
+    findings: filteredFindings,
     summary,
     score,
     riskLevel,
-    recommendations: generateNpmRecommendations(findings, packageName),
+    recommendations: generateNpmRecommendations(filteredFindings, packageName, partialScan),
+    partialScan: partialScan || undefined,
   };
 }
 
@@ -179,8 +223,14 @@ function checkPackageScripts(
     if (!script) continue;
 
     for (const pattern of SUSPICIOUS_SCRIPTS) {
-      const regex = new RegExp(pattern.pattern, "i");
-      if (regex.test(script)) {
+      const hits = matchPatternInFile(
+        pattern,
+        script,
+        "package.json",
+        findings,
+        "i",
+      );
+      if (hits && hits.length > 0) {
         findings.push({
           rule: pattern.rule,
           description: `npm ${hook}: ${pattern.description}`,
@@ -469,7 +519,7 @@ async function fetchPackageMetadata(
 async function downloadAndScanTarball(
   tarballUrl: string,
   findings: Finding[],
-): Promise<void> {
+): Promise<{ totalFiles: number; filesScanned: number }> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-"));
   const tarballPath = path.join(tempDir, "package.tgz");
 
@@ -483,7 +533,7 @@ async function downloadAndScanTarball(
     extractTarGz(tarballPath, extractDir);
 
     // Scan extracted files
-    scanExtractedNpmFiles(extractDir, findings);
+    return scanExtractedNpmFiles(extractDir, findings);
   } finally {
     // Cleanup
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -497,42 +547,59 @@ async function downloadAndScanTarball(
 export function scanExtractedNpmFiles(
   extractDir: string,
   findings: Finding[],
-): void {
-  const files = collectFilesRecursive(extractDir);
+): { totalFiles: number; filesScanned: number } {
+  const files = collectExtractedFiles(extractDir, findings);
+  let filesScanned = 0;
 
   for (const filePath of files) {
     const ext = path.extname(filePath).toLowerCase();
     if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
 
-    const stat = fs.statSync(filePath);
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(filePath);
+    } catch {
+      recordUnreadablePath(findings, path.relative(extractDir, filePath));
+      continue;
+    }
     if (stat.size > MAX_FILE_SIZE) {
       // Surface the skip instead of silently dropping coverage (issue #54).
       findings.push(makeOversizedSkipFinding(path.relative(extractDir, filePath), stat.size));
       continue;
     }
 
+    let content: string;
     try {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const relativePath = path.relative(extractDir, filePath);
-
-      for (const pattern of FILE_PATTERNS) {
-        if (!isPatternApplicableToFile(pattern, content)) continue;
-        for (const hit of matchPatternInContent(pattern, content, "g")) {
-          findings.push({
-            rule: pattern.rule,
-            description: pattern.description,
-            severity: pattern.severity,
-            file: relativePath,
-            line: hit.line,
-            match: truncateMatch(hit.text),
-            recommendation: `Found in published npm tarball. ${pattern.description}`,
-          });
-        }
-      }
+      content = fs.readFileSync(filePath, "utf-8");
     } catch {
-      // Skip unreadable files
+      recordUnreadablePath(findings, path.relative(extractDir, filePath));
+      continue;
+    }
+    const relativePath = path.relative(extractDir, filePath);
+    filesScanned++;
+
+    for (const pattern of FILE_PATTERNS) {
+      const hits = matchPatternInFile(
+        pattern,
+        content,
+        relativePath,
+        findings,
+        "g",
+      );
+      for (const hit of hits ?? []) {
+        findings.push({
+          rule: pattern.rule,
+          description: pattern.description,
+          severity: pattern.severity,
+          file: relativePath,
+          line: hit.line,
+          match: truncateMatch(hit.text),
+          recommendation: `Found in published npm tarball. ${pattern.description}`,
+        });
+      }
     }
   }
+  return { totalFiles: files.length, filesScanned };
 }
 
 /**
@@ -568,34 +635,13 @@ function downloadFile(url: string, dest: string): Promise<void> {
 /**
  * Recursively collect files.
  */
-function collectFilesRecursive(dir: string): string[] {
-  const files: string[] = [];
-  let entries: fs.Dirent[];
-
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory() && entry.name !== "node_modules") {
-      files.push(...collectFilesRecursive(fullPath));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
 /**
  * Generate recommendations for npm package scan.
  */
 function generateNpmRecommendations(
   findings: Finding[],
   packageName: string,
+  partialScan = false,
 ): string[] {
   const recommendations: string[] = [];
 
@@ -619,7 +665,12 @@ function generateNpmRecommendations(
       "This package depends on packages matching known malicious patterns. Audit the full dependency tree.",
     );
   }
-  if (findings.length === 0) {
+  if (partialScan) {
+    recommendations.unshift(
+      "WARNING: Scan incomplete because one or more package files could not be evaluated. Resolve coverage gaps before treating this package as safe.",
+    );
+  }
+  if (findings.length === 0 && !partialScan) {
     recommendations.push(
       `No malicious indicators found in ${packageName}. The package appears safe based on known patterns.`,
     );

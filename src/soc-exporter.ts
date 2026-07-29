@@ -11,14 +11,17 @@ import type { ScanReport, Finding, IncidentCluster, Remediation } from "./types.
  * Export as JSON incident bundle for SIEM ingestion.
  */
 export function exportIncidentBundle(report: ScanReport): string {
+  const partialScan = report.partialScan === true;
   const bundle = {
     schema: "supply-chain-guard-incident/1.0",
     scannerVersion: report.tool,
     timestamp: report.timestamp,
     target: report.target,
     scanType: report.scanType,
+    ...(partialScan ? { partialScan: true } : {}),
     riskScore: report.score,
-    riskLevel: report.riskLevel,
+    // A clean risk level is not a valid verdict when coverage was incomplete.
+    riskLevel: partialScan && report.riskLevel === "clean" ? "unknown" : report.riskLevel,
     confidence: report.riskDimensions?.confidence ?? null,
     summary: {
       totalFindings: report.findings.length,
@@ -60,12 +63,25 @@ export function exportIncidentBundle(report: ScanReport): string {
  */
 export function exportIncidentMarkdown(report: ScanReport): string {
   const lines: string[] = [];
+  const partialScan = report.partialScan === true;
+  const riskLabel = partialScan
+    ? report.riskLevel === "clean"
+      ? "UNKNOWN; PARTIAL SCAN"
+      : `${report.riskLevel.toUpperCase()}; PARTIAL SCAN`
+    : report.riskLevel.toUpperCase();
 
   lines.push("# Supply Chain Security Incident Report");
   lines.push("");
   lines.push(`**Target:** ${report.target}`);
   lines.push(`**Scan Time:** ${report.timestamp}`);
-  lines.push(`**Risk Score:** ${report.score}/100 (${report.riskLevel.toUpperCase()})`);
+  lines.push(`**Risk Score:** ${report.score}/100 (${riskLabel})`);
+  if (partialScan) {
+    lines.push("");
+    lines.push("> [!WARNING]");
+    lines.push(
+      "> **Scan incomplete:** Coverage was partial. Findings and the observed score reflect only the content that could be analyzed; this is not a clean verdict.",
+    );
+  }
   lines.push("");
 
   // Incidents
@@ -137,10 +153,36 @@ export function exportIncidentMarkdown(report: ScanReport): string {
  * Export as CSV summary for executive reporting.
  */
 export function exportCsvSummary(report: ScanReport): string {
-  const lines = ["rule,severity,confidence,file,description"];
+  const status = report.partialScan === true ? "partial" : "complete";
+  const partialScan = report.partialScan === true ? "true" : "false";
+  const csvCell = (value: unknown): string =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = [
+    "rule,severity,confidence,file,description,scan_status,partial_scan",
+  ];
+
+  // Preserve coverage status even when there are no findings. An empty partial
+  // scan must never be indistinguishable from a completed clean scan.
+  if (report.findings.length === 0) {
+    lines.push(
+      ["", "", "", "", "", status, partialScan].map(csvCell).join(","),
+    );
+  }
+
   for (const f of report.findings) {
-    const desc = f.description.replace(/"/g, '""');
-    lines.push(`"${f.rule}","${f.severity}","${f.confidence ?? ""}","${f.file ?? ""}","${desc}"`);
+    lines.push(
+      [
+        f.rule,
+        f.severity,
+        f.confidence,
+        f.file,
+        f.description,
+        status,
+        partialScan,
+      ]
+        .map(csvCell)
+        .join(","),
+    );
   }
   return lines.join("\n");
 }

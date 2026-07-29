@@ -24,6 +24,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { PROMPT_INJECTION_PATTERNS, MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
+import {
+  listDiscoveredDirectory,
+  listOptionalDirectory,
+  matchPatternInSemanticText,
+  readDiscoveredUtf8File,
+  readOptionalUtf8File,
+  recordUnreadablePath,
+} from "./pattern-scanner.js";
 
 // ---------------------------------------------------------------------------
 // Target file discovery
@@ -44,6 +52,14 @@ const ROOT_RULES_FILES = [
 /** Maximum recursion depth when walking .claude/skills. */
 const MAX_SKILL_DEPTH = 8;
 
+/**
+ * Maximum public directory entries expanded across both recursive rules-file
+ * trees. Symlink aliases retain their public paths, so a small alias DAG can
+ * otherwise multiply into exponential work even when no canonical cycle is
+ * present.
+ */
+const MAX_SKILL_WALK_ENTRIES = 10_000;
+
 // ---------------------------------------------------------------------------
 // Detection patterns
 // ---------------------------------------------------------------------------
@@ -53,16 +69,13 @@ const MAX_SKILL_DEPTH = 8;
  * The natural-language override-prose pattern is split out and downgraded
  * (see module header) because rules files legitimately instruct agents.
  */
-const TOKEN_INJECTION_REGEXES = PROMPT_INJECTION_PATTERNS
-  .filter((p) => p.rule !== "PROMPT_INJECTION_OVERRIDE_PROSE")
-  .map((p) => ({ name: p.name, regex: new RegExp(p.pattern, "i") }));
+const TOKEN_INJECTION_PATTERNS = PROMPT_INJECTION_PATTERNS.filter(
+  (pattern) => pattern.rule !== "PROMPT_INJECTION_OVERRIDE_PROSE",
+);
 
 const OVERRIDE_PROSE_ENTRY = PROMPT_INJECTION_PATTERNS.find(
-  (p) => p.rule === "PROMPT_INJECTION_OVERRIDE_PROSE",
+  (pattern) => pattern.rule === "PROMPT_INJECTION_OVERRIDE_PROSE",
 );
-const OVERRIDE_PROSE_REGEX = OVERRIDE_PROSE_ENTRY
-  ? new RegExp(OVERRIDE_PROSE_ENTRY.pattern, "i")
-  : null;
 
 /**
  * Invisible Unicode runs (same character class as the INVISIBLE_UNICODE
@@ -139,17 +152,42 @@ const HOOK_SHELL_RC_WRITE_REGEX =
 export function scanAgentSkillFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
 
-  for (const relPath of collectRulesFiles(dir)) {
-    const content = readSmallFile(path.join(dir, relPath), (size) =>
-      findings.push(makeOversizedSkipFinding(relPath, size)),
-    );
+  for (const target of collectRulesFiles(dir, findings)) {
+    const options = {
+      maxBytes: MAX_FILE_SIZE,
+      onOversized: (size: number) =>
+        findings.push(makeOversizedSkipFinding(target.relativePath, size)),
+    };
+    const content = target.discovered
+      ? readDiscoveredUtf8File(
+          dir,
+          path.join(dir, target.relativePath),
+          target.relativePath,
+          findings,
+          options,
+        )
+      : readOptionalUtf8File(
+          dir,
+          path.join(dir, target.relativePath),
+          target.relativePath,
+          findings,
+          options,
+        );
     if (content === null) continue;
-    findings.push(...scanSkillContent(content, relPath));
+    findings.push(...scanSkillContent(content, target.relativePath));
   }
 
   for (const relPath of [".claude/settings.json", ".claude/settings.local.json"]) {
-    const content = readSmallFile(path.join(dir, relPath), (size) =>
-      findings.push(makeOversizedSkipFinding(relPath, size)),
+    const content = readOptionalUtf8File(
+      dir,
+      path.join(dir, relPath),
+      relPath,
+      findings,
+      {
+        maxBytes: MAX_FILE_SIZE,
+        onOversized: (size) =>
+          findings.push(makeOversizedSkipFinding(relPath, size)),
+      },
     );
     if (content === null) continue;
     findings.push(...scanAgentSettingsContent(content, relPath));
@@ -169,33 +207,47 @@ export function scanSkillContent(content: string, relativePath: string): Finding
     const line = lines[i] ?? "";
 
     // 1a. Raw LLM control tokens - no legitimate reason in a rules file.
-    for (const token of TOKEN_INJECTION_REGEXES) {
-      const match = token.regex.exec(line);
-      if (match) {
-        findings.push({
-          rule: "SKILL_PROMPT_INJECTION",
-          description:
-            `Agent rules file contains a raw LLM control token (${token.name}). ` +
-            "Rules files are read verbatim by AI coding agents; embedded role/system " +
-            "tokens hijack the agent's instruction context.",
-          severity: "high",
-          file: relativePath,
-          line: i + 1,
-          match: truncate(match[0]),
-          confidence: 0.9,
-          category: "supply-chain",
-          recommendation:
-            "Remove the control token. A skill or rules file never needs literal LLM role markers.",
-        });
-        break; // one token finding per line is enough
-      }
+    for (const pattern of TOKEN_INJECTION_PATTERNS) {
+      const hits = matchPatternInSemanticText(
+        pattern,
+        line,
+        relativePath,
+        findings,
+        "i",
+      );
+      const hit = hits?.[0];
+      if (!hit) continue;
+
+      findings.push({
+        rule: "SKILL_PROMPT_INJECTION",
+        description:
+          `Agent rules file contains a raw LLM control token (${pattern.name}). ` +
+          "Rules files are read verbatim by AI coding agents; embedded role/system " +
+          "tokens hijack the agent's instruction context.",
+        severity: "high",
+        file: relativePath,
+        line: i + 1,
+        match: truncate(hit.text),
+        confidence: 0.9,
+        category: "supply-chain",
+        recommendation:
+          "Remove the control token. A skill or rules file never needs literal LLM role markers.",
+      });
+      break; // one token finding per line is enough
     }
 
     // 1b. Jailbreak-style override prose - reduced confidence, because these
     // files legitimately instruct agents in imperative natural language.
-    if (OVERRIDE_PROSE_REGEX) {
-      const match = OVERRIDE_PROSE_REGEX.exec(line);
-      if (match) {
+    if (OVERRIDE_PROSE_ENTRY) {
+      const hits = matchPatternInSemanticText(
+        OVERRIDE_PROSE_ENTRY,
+        line,
+        relativePath,
+        findings,
+        "i",
+      );
+      const hit = hits?.[0];
+      if (hit) {
         findings.push({
           rule: "SKILL_PROMPT_INJECTION",
           description:
@@ -205,7 +257,7 @@ export function scanSkillContent(content: string, relativePath: string): Finding
           severity: "medium",
           file: relativePath,
           line: i + 1,
-          match: truncate(match[0].trim()),
+          match: truncate(hit.text.trim()),
           confidence: 0.45,
           category: "supply-chain",
           recommendation:
@@ -359,64 +411,146 @@ export function scanAgentSettingsContent(
 // Helpers
 // ---------------------------------------------------------------------------
 
+interface RulesFileTarget {
+  relativePath: string;
+  discovered: boolean;
+}
+
 /** Collect all prose rules files relative to the scan root. */
-function collectRulesFiles(dir: string): string[] {
-  const files: string[] = [];
-
-  for (const name of ROOT_RULES_FILES) {
-    if (isFile(path.join(dir, name))) files.push(name);
-  }
-
-  if (isFile(path.join(dir, ".github", "copilot-instructions.md"))) {
-    files.push(".github/copilot-instructions.md");
-  }
+function collectRulesFiles(
+  dir: string,
+  findings: Finding[],
+): RulesFileTarget[] {
+  const files: RulesFileTarget[] = ROOT_RULES_FILES.map((relativePath) => ({
+    relativePath,
+    discovered: false,
+  }));
+  const recursiveWalkState: RecursiveWalkState = {
+    expandedEntries: 0,
+    budgetExhausted: false,
+  };
+  files.push({
+    relativePath: ".github/copilot-instructions.md",
+    discovered: false,
+  });
 
   // .claude/commands/*.md (non-recursive)
-  for (const name of listFiles(path.join(dir, ".claude", "commands"))) {
-    if (name.toLowerCase().endsWith(".md")) files.push(`.claude/commands/${name}`);
-  }
+  collectFlatFiles(
+    dir,
+    path.join(dir, ".claude", "commands"),
+    ".claude/commands",
+    ".md",
+    files,
+    findings,
+  );
 
   // .cursor/rules/*.mdc (non-recursive)
-  for (const name of listFiles(path.join(dir, ".cursor", "rules"))) {
-    if (name.toLowerCase().endsWith(".mdc")) files.push(`.cursor/rules/${name}`);
-  }
+  collectFlatFiles(
+    dir,
+    path.join(dir, ".cursor", "rules"),
+    ".cursor/rules",
+    ".mdc",
+    files,
+    findings,
+  );
 
   // .claude/skills/**/SKILL.md (recursive)
-  collectSkillManifests(path.join(dir, ".claude", "skills"), ".claude/skills", files, 0);
+  collectSkillManifests(
+    dir,
+    path.join(dir, ".claude", "skills"),
+    ".claude/skills",
+    files,
+    findings,
+    0,
+    false,
+    new Set(),
+    recursiveWalkState,
+  );
 
   // Agent memory directories. Agents read these verbatim, so they run through
   // the same scanSkillContent pipeline as CLAUDE.md / AGENTS.md.
-  // memory/*.md plus one level of subdirectories (memory/<sub>/*.md).
-  collectMemoryDir(path.join(dir, "memory"), "memory", files);
-  // .claude/memory/*.md (non-recursive)
-  for (const name of listFiles(path.join(dir, ".claude", "memory"))) {
-    if (name.toLowerCase().endsWith(".md")) files.push(`.claude/memory/${name}`);
-  }
+  collectMemoryDir(dir, path.join(dir, "memory"), "memory", files, findings);
+  collectFlatFiles(
+    dir,
+    path.join(dir, ".claude", "memory"),
+    ".claude/memory",
+    ".md",
+    files,
+    findings,
+  );
+
   // .specstory/**/*.md (recursive; skips node_modules)
-  collectMarkdownTree(path.join(dir, ".specstory"), ".specstory", files, 0);
+  collectMarkdownTree(
+    dir,
+    path.join(dir, ".specstory"),
+    ".specstory",
+    files,
+    findings,
+    0,
+    false,
+    new Set(),
+    recursiveWalkState,
+  );
 
   return files;
 }
 
-/**
- * Collect memory/*.md plus one level of subdirectories (memory/<sub>/*.md).
- * node_modules is never scanned.
- */
-function collectMemoryDir(absDir: string, relDir: string, out: string[]): void {
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(absDir, { withFileTypes: true });
-  } catch {
-    return;
+function collectFlatFiles(
+  scanRoot: string,
+  absDir: string,
+  relDir: string,
+  extension: string,
+  out: RulesFileTarget[],
+  findings: Finding[],
+): void {
+  const entries = listOptionalDirectory(scanRoot, absDir, relDir, findings);
+  if (entries === null) return;
+  for (const entry of entries) {
+    if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.toLowerCase().endsWith(extension)) {
+      out.push({
+        relativePath: `${relDir}/${entry.name}`,
+        discovered: true,
+      });
+    }
   }
+}
+
+/** Collect memory/*.md plus one level of subdirectories. */
+function collectMemoryDir(
+  scanRoot: string,
+  absDir: string,
+  relDir: string,
+  out: RulesFileTarget[],
+  findings: Finding[],
+): void {
+  const entries = listOptionalDirectory(scanRoot, absDir, relDir, findings);
+  if (entries === null) return;
 
   for (const entry of entries) {
-    if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-      out.push(`${relDir}/${entry.name}`);
-    } else if (entry.isDirectory() && entry.name !== "node_modules") {
-      // Recurse exactly one level.
-      for (const sub of listFiles(path.join(absDir, entry.name))) {
-        if (sub.toLowerCase().endsWith(".md")) out.push(`${relDir}/${entry.name}/${sub}`);
+    if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.toLowerCase().endsWith(".md")) {
+      out.push({
+        relativePath: `${relDir}/${entry.name}`,
+        discovered: true,
+      });
+    } else if (
+      (entry.isDirectory() || entry.isSymbolicLink()) &&
+      entry.name !== "node_modules"
+    ) {
+      const childRelDir = `${relDir}/${entry.name}`;
+      const children = listDiscoveredDirectory(
+        scanRoot,
+        path.join(absDir, entry.name),
+        childRelDir,
+        findings,
+      );
+      if (children === null) continue;
+      for (const child of children) {
+        if ((child.isFile() || child.isSymbolicLink()) && child.name.toLowerCase().endsWith(".md")) {
+          out.push({
+            relativePath: `${childRelDir}/${child.name}`,
+            discovered: true,
+          });
+        }
       }
     }
   }
@@ -424,62 +558,112 @@ function collectMemoryDir(absDir: string, relDir: string, out: string[]): void {
 
 /** Recursively collect *.md files under a directory, skipping node_modules/.git. */
 function collectMarkdownTree(
+  scanRoot: string,
   absDir: string,
   relDir: string,
-  out: string[],
+  out: RulesFileTarget[],
+  findings: Finding[],
   depth: number,
+  discovered: boolean,
+  ancestors: ReadonlySet<string>,
+  state: RecursiveWalkState,
 ): void {
-  if (depth > MAX_SKILL_DEPTH) return;
-
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(absDir, { withFileTypes: true });
-  } catch {
+  if (state.budgetExhausted) return;
+  if (depth > MAX_SKILL_DEPTH) {
+    recordUnreadablePath(findings, relDir);
     return;
   }
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
+  const directory = enterRecursiveDirectory(
+    scanRoot,
+    absDir,
+    relDir,
+    findings,
+    discovered,
+    ancestors,
+  );
+  if (directory === null) return;
+
+  for (const entry of directory.entries) {
+    if (!consumeRecursiveWalkEntry(state, findings)) break;
+    if (
+      entry.isDirectory() ||
+      (entry.isSymbolicLink() && !entry.name.toLowerCase().endsWith(".md"))
+    ) {
       if (entry.name === "node_modules" || entry.name === ".git") continue;
       collectMarkdownTree(
+        scanRoot,
         path.join(absDir, entry.name),
         `${relDir}/${entry.name}`,
         out,
+        findings,
         depth + 1,
+        true,
+        directory.nextAncestors,
+        state,
       );
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-      out.push(`${relDir}/${entry.name}`);
+    } else if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.toLowerCase().endsWith(".md")) {
+      out.push({
+        relativePath: `${relDir}/${entry.name}`,
+        discovered: true,
+      });
     }
+    if (state.budgetExhausted) break;
   }
 }
 
 /** Recursively find SKILL.md manifests under .claude/skills. */
 function collectSkillManifests(
+  scanRoot: string,
   absDir: string,
   relDir: string,
-  out: string[],
+  out: RulesFileTarget[],
+  findings: Finding[],
   depth: number,
+  discovered: boolean,
+  ancestors: ReadonlySet<string>,
+  state: RecursiveWalkState,
 ): void {
-  if (depth > MAX_SKILL_DEPTH) return;
-
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(absDir, { withFileTypes: true });
-  } catch {
+  if (state.budgetExhausted) return;
+  if (depth > MAX_SKILL_DEPTH) {
+    recordUnreadablePath(findings, relDir);
     return;
   }
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
+  const directory = enterRecursiveDirectory(
+    scanRoot,
+    absDir,
+    relDir,
+    findings,
+    discovered,
+    ancestors,
+  );
+  if (directory === null) return;
+
+  for (const entry of directory.entries) {
+    if (!consumeRecursiveWalkEntry(state, findings)) break;
+    if (
+      entry.isDirectory() ||
+      (entry.isSymbolicLink() && entry.name.toUpperCase() !== "SKILL.MD")
+    ) {
       collectSkillManifests(
+        scanRoot,
         path.join(absDir, entry.name),
         `${relDir}/${entry.name}`,
         out,
+        findings,
         depth + 1,
+        true,
+        directory.nextAncestors,
+        state,
       );
-    } else if (entry.isFile() && entry.name.toUpperCase() === "SKILL.MD") {
-      out.push(`${relDir}/${entry.name}`);
+    } else if ((entry.isFile() || entry.isSymbolicLink()) && entry.name.toUpperCase() === "SKILL.MD") {
+      out.push({
+        relativePath: `${relDir}/${entry.name}`,
+        discovered: true,
+      });
     }
+    if (state.budgetExhausted) break;
   }
 }
 
@@ -501,46 +685,6 @@ function collectHookCommands(node: unknown, out: string[], depth: number): void 
   }
 }
 
-function isFile(p: string): boolean {
-  try {
-    return fs.statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function listFiles(absDir: string): string[] {
-  try {
-    return fs
-      .readdirSync(absDir, { withFileTypes: true })
-      .filter((e) => e.isFile())
-      .map((e) => e.name);
-  } catch {
-    return [];
-  }
-}
-
-/** Read a file as UTF-8, skipping unreadable or oversized files. */
-function readSmallFile(
-  p: string,
-  onOversized?: (sizeBytes: number) => void,
-): string | null {
-  try {
-    const stat = fs.statSync(p);
-    if (!stat.isFile()) return null;
-    if (stat.size > MAX_FILE_SIZE) {
-      // Surface the skip instead of silently dropping coverage (issue #54):
-      // an agent-rules file padded past the limit would otherwise dodge the
-      // injection scan without a trace in the report.
-      onOversized?.(stat.size);
-      return null;
-    }
-    return fs.readFileSync(p, "utf-8");
-  } catch {
-    return null;
-  }
-}
-
 /** Render invisible/bidi characters as \uXXXX escapes for the match snippet. */
 function escapeInvisible(s: string): string {
   return s
@@ -558,4 +702,80 @@ function escapeInvisible(s: string): string {
 
 function truncate(s: string): string {
   return s.length > 120 ? s.substring(0, 120) + "..." : s;
+}
+
+interface RecursiveWalkState {
+  expandedEntries: number;
+  budgetExhausted: boolean;
+}
+
+interface RecursiveDirectory {
+  entries: fs.Dirent[];
+  nextAncestors: ReadonlySet<string>;
+}
+
+function consumeRecursiveWalkEntry(
+  state: RecursiveWalkState,
+  findings: Finding[],
+): boolean {
+  if (state.budgetExhausted) return false;
+  if (state.expandedEntries >= MAX_SKILL_WALK_ENTRIES) {
+    state.budgetExhausted = true;
+    // The limit applies to both recursive trees. Report global incomplete
+    // coverage because the first unexpanded public path is not necessarily the
+    // only path omitted after the shared budget is exhausted.
+    recordUnreadablePath(findings, ".");
+    return false;
+  }
+  state.expandedEntries++;
+  return true;
+}
+
+function enterRecursiveDirectory(
+  scanRoot: string,
+  absDir: string,
+  relDir: string,
+  findings: Finding[],
+  discovered: boolean,
+  ancestors: ReadonlySet<string>,
+): RecursiveDirectory | null {
+  let canonicalDir: string;
+  let entries: fs.Dirent[] | null;
+
+  if (discovered) {
+    // Check the canonical target before enumerating a discovered alias. This
+    // stops a symlink back-edge without repeatedly listing the ancestor.
+    try {
+      canonicalDir = fs.realpathSync(absDir);
+    } catch {
+      recordUnreadablePath(findings, relDir);
+      return null;
+    }
+    if (ancestors.has(canonicalDir)) {
+      recordUnreadablePath(findings, relDir);
+      return null;
+    }
+    entries = listDiscoveredDirectory(scanRoot, absDir, relDir, findings);
+  } else {
+    // A statically known root is optional. Let the containment helper
+    // distinguish ordinary absence from an unreadable or escaping path before
+    // canonicalizing it.
+    entries = listOptionalDirectory(scanRoot, absDir, relDir, findings);
+    if (entries === null) return null;
+    try {
+      canonicalDir = fs.realpathSync(absDir);
+    } catch {
+      recordUnreadablePath(findings, relDir);
+      return null;
+    }
+    if (ancestors.has(canonicalDir)) {
+      recordUnreadablePath(findings, relDir);
+      return null;
+    }
+  }
+  if (entries === null) return null;
+
+  const nextAncestors = new Set(ancestors);
+  nextAncestors.add(canonicalDir);
+  return { entries, nextAncestors };
 }

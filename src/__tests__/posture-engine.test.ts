@@ -25,6 +25,26 @@ describe("Posture Engine", () => {
     expect(posture.reposScanned).toBe(2);
   });
 
+  it("marks partial posture and does not let incomplete scores dilute the average", () => {
+    const complete = makeReport(80);
+    const partial = { ...makeReport(0), partialScan: true };
+    const reports = new Map<string, ScanReport>([
+      ["complete-repo", complete],
+      ["partial-repo", partial],
+    ]);
+
+    const posture = calculateOrgPosture("test-org", reports);
+
+    expect(posture.partialScan).toBe(true);
+    expect(posture.reposComplete).toBe(1);
+    expect(posture.partialRepos).toEqual(["partial-repo"]);
+    expect(posture.overallPostureScore).toBe(80);
+    expect(posture.topRiskyRepos[0]).toEqual(expect.objectContaining({
+      repo: "partial-repo",
+      partialScan: true,
+    }));
+  });
+
   it("should identify top risky repos", () => {
     const reports = new Map<string, ScanReport>();
     reports.set("safe-repo", makeReport(5));

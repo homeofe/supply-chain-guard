@@ -9,9 +9,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as https from "node:https";
+
+import { createHash } from "node:crypto";
 import type { Finding, ScanReport, ScanOptions } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
-import { extractTarGz, extractZip } from "./archive-extractor.js";
+import { extractTar, extractZip } from "./archive-extractor.js";
 import {
   FILE_PATTERNS,
   PYPI_FILE_PATTERNS,
@@ -22,12 +24,12 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
-  isPatternApplicableToFile,
-  matchPatternInContent,
   truncateMatch,
 } from "./patterns.js";
+import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
+import { collectExtractedFiles } from "./extracted-file-walker.js";
 
-const TOOL_VERSION = "1.0.0";
+const TOOL_VERSION = "5.23.1";
 const PYPI_API = "https://pypi.org/pypi";
 
 interface PyPIPackageResponse {
@@ -42,12 +44,30 @@ interface PyPIPackageResponse {
   urls?: PyPIReleaseFile[];
 }
 
-interface PyPIReleaseFile {
+export interface PyPIReleaseFile {
   filename: string;
   url: string;
   packagetype: string;
   size: number;
   digests?: { sha256?: string; md5?: string };
+}
+
+interface FileCounts {
+  totalFiles: number;
+  filesScanned: number;
+}
+
+export type PyPIArtifactScanner = (
+  artifact: PyPIReleaseFile,
+  findings: Finding[],
+  expectedSha256?: string,
+) => Promise<FileCounts>;
+
+export class PyPIArtifactAcquisitionError extends Error {
+  constructor(readonly artifactFilename: string) {
+    super(`Could not download, verify, or extract PyPI artifact: ${artifactFilename}`);
+    this.name = "PyPIArtifactAcquisitionError";
+  }
 }
 
 /**
@@ -72,38 +92,42 @@ export async function scanPypiPackage(
   // Check package metadata for suspicious indicators
   checkPackageMetadata(metadata, findings);
 
-  // Find an sdist (.tar.gz) to download and scan
-  const sdist = findSdist(metadata.urls ?? []);
-  if (sdist) {
-    await downloadAndScanSdist(sdist.url, findings);
-  } else {
-    // If no sdist, try a wheel
-    const wheel = findWheel(metadata.urls ?? []);
-    if (wheel) {
-      await downloadAndScanWheel(wheel.url, findings);
-    } else {
-      findings.push({
-        rule: "PYPI_NO_SOURCE",
-        description: "No source distribution (sdist) or wheel found. Cannot scan package contents.",
-        severity: "info",
-        recommendation: "The package has no downloadable artifacts to scan.",
-      });
-    }
-  }
+  // PyPI releases can ship different code in their sdist and platform wheels.
+  // Scan every downloadable artifact for the latest release, not just the
+  // first sdist (or first wheel when no sdist exists).
+  const fileCounts = await scanPypiReleaseArtifacts(
+    metadata.urls ?? [],
+    findings,
+  );
+
+  // Capture coverage before minimum-severity filtering can hide an
+  // informational transparency finding such as PYPI_NO_SOURCE.
+  const partialScan = hasPartialScanFinding(findings);
+  const severityOrder: Record<string, number> = {
+    critical: 4,
+    high: 3,
+    medium: 2,
+    low: 1,
+    info: 0,
+  };
+  const minimum = severityOrder[options.minSeverity ?? "info"] ?? 0;
+  const filteredFindings = findings.filter(
+    (finding) => (severityOrder[finding.severity] ?? 0) >= minimum,
+  );
 
   // Calculate results
   const summary = {
-    totalFiles: 0,
-    filesScanned: 0,
-    critical: findings.filter((f) => f.severity === "critical").length,
-    high: findings.filter((f) => f.severity === "high").length,
-    medium: findings.filter((f) => f.severity === "medium").length,
-    low: findings.filter((f) => f.severity === "low").length,
-    info: findings.filter((f) => f.severity === "info").length,
+    totalFiles: fileCounts.totalFiles,
+    filesScanned: fileCounts.filesScanned,
+    critical: filteredFindings.filter((f) => f.severity === "critical").length,
+    high: filteredFindings.filter((f) => f.severity === "high").length,
+    medium: filteredFindings.filter((f) => f.severity === "medium").length,
+    low: filteredFindings.filter((f) => f.severity === "low").length,
+    info: filteredFindings.filter((f) => f.severity === "info").length,
   };
 
   let score = 0;
-  for (const finding of findings) {
+  for (const finding of filteredFindings) {
     score += SEVERITY_SCORES[finding.severity];
   }
   score = Math.min(100, score);
@@ -125,11 +149,12 @@ export async function scanPypiPackage(
     target: `${displayName}==${version}`,
     scanType: "pypi",
     durationMs: Date.now() - startTime,
-    findings,
+    findings: filteredFindings,
     summary,
     score,
     riskLevel,
-    recommendations: generatePypiRecommendations(findings, displayName),
+    recommendations: generatePypiRecommendations(filteredFindings, displayName, partialScan),
+    partialScan: partialScan || undefined,
   };
 }
 
@@ -196,75 +221,336 @@ function checkPackageMetadata(
   }
 }
 
-/**
- * Find a source distribution (sdist) from release files.
- */
-function findSdist(urls: PyPIReleaseFile[]): PyPIReleaseFile | undefined {
-  return urls.find(
-    (u) =>
-      u.packagetype === "sdist" ||
-      u.filename.endsWith(".tar.gz") ||
-      u.filename.endsWith(".tar.bz2") ||
-      u.filename.endsWith(".zip"),
-  );
+type PyPIArtifactKind = "sdist" | "wheel";
+
+function getPyPIArtifactKind(
+  artifact: PyPIReleaseFile,
+): PyPIArtifactKind | undefined {
+  const filename = artifact.filename.toLowerCase();
+  if (artifact.packagetype === "bdist_wheel") return "wheel";
+  if (artifact.packagetype === "sdist") return "sdist";
+  if (filename.endsWith(".whl")) return "wheel";
+  if (
+    filename.endsWith(".tar.gz") ||
+    filename.endsWith(".tar.bz2") ||
+    filename.endsWith(".zip")
+  ) {
+    return "sdist";
+  }
+  return undefined;
 }
 
-/**
- * Find a wheel from release files.
- */
-function findWheel(urls: PyPIReleaseFile[]): PyPIReleaseFile | undefined {
-  return urls.find(
-    (u) => u.packagetype === "bdist_wheel" || u.filename.endsWith(".whl"),
-  );
+function getArtifactIdentity(
+  artifact: PyPIReleaseFile,
+  index: number,
+): string {
+  const normalizedFilename = artifact.filename.replace(/\\/g, "/");
+  const basename = normalizedFilename.split("/").pop() || "artifact";
+  const safeBasename = basename.replace(/[^A-Za-z0-9._+-]/g, "_");
+  return `artifacts/${String(index + 1).padStart(3, "0")}-${safeBasename}`;
 }
 
-/**
- * Download and scan an sdist (.tar.gz).
- */
-async function downloadAndScanSdist(
-  url: string,
-  findings: Finding[],
-): Promise<void> {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-"));
-  const archivePath = path.join(tempDir, "package.tar.gz");
+function appendArtifactFindings(
+  destination: Finding[],
+  artifactFindings: Finding[],
+  artifactIdentity: string,
+): void {
+  for (const finding of artifactFindings) {
+    const subpath = (finding.file ?? "")
+      .split(/[\\/]+/)
+      .filter((segment) => segment.length > 0 && segment !== "." && segment !== "..")
+      .join("/");
+    destination.push({
+      ...finding,
+      file: subpath ? `${artifactIdentity}/${subpath}` : artifactIdentity,
+    });
+  }
+}
 
+function normalizeArtifactUrl(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
   try {
-    await downloadFile(url, archivePath);
+    const parsed = new URL(trimmed);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return trimmed;
+  }
+}
 
-    const extractDir = path.join(tempDir, "extracted");
-    fs.mkdirSync(extractDir, { recursive: true });
+interface PyPIArtifactGroup {
+  expectedSha256?: string;
+  candidates: PyPIReleaseFile[];
+}
 
-    // Determine archive type and extract
-    if (url.endsWith(".zip") || url.includes(".zip")) {
-      extractZip(archivePath, extractDir);
-    } else {
-      extractTarGz(archivePath, extractDir);
+type Sha256Metadata =
+  | { kind: "missing" }
+  | { kind: "malformed"; raw: string }
+  | { kind: "valid"; value: string };
+
+function getSha256Metadata(artifact: PyPIReleaseFile): Sha256Metadata {
+  const raw = artifact.digests?.sha256;
+  if (raw === undefined) return { kind: "missing" };
+  const normalized = raw.trim().toLowerCase();
+  return /^[a-f0-9]{64}$/.test(normalized)
+    ? { kind: "valid", value: normalized }
+    : { kind: "malformed", raw: normalized };
+}
+
+/**
+ * PyPI metadata can repeat one file record or expose multiple CDN aliases for
+ * the same digest. Preserve every distinct alias in an identity group so a
+ * broken first URL cannot hide working bytes at a later URL.
+ */
+function groupReleaseArtifacts(
+  releaseFiles: PyPIReleaseFile[],
+): PyPIArtifactGroup[] {
+  const artifacts = releaseFiles.filter(
+    (artifact) => getPyPIArtifactKind(artifact) !== undefined,
+  );
+
+  // A digestless duplicate may bridge a registry URL to its one unambiguous
+  // SHA-256 identity. Never collapse two different valid digests merely because
+  // metadata reuses a URL: inconsistent metadata must cause extra scanning, not
+  // a false negative.
+  const digestsByUrl = new Map<string, Set<string>>();
+  for (const artifact of artifacts) {
+    const url = normalizeArtifactUrl(artifact.url);
+    const sha256 = getSha256Metadata(artifact);
+    if (url === undefined || sha256.kind !== "valid") continue;
+    const digests = digestsByUrl.get(url) ?? new Set<string>();
+    digests.add(sha256.value);
+    digestsByUrl.set(url, digests);
+  }
+
+  const groupsByIdentity = new Map<string, PyPIArtifactGroup>();
+  const candidateKeysByIdentity = new Map<string, Set<string>>();
+  for (const [index, artifact] of artifacts.entries()) {
+    const url = normalizeArtifactUrl(artifact.url);
+    const sha256 = getSha256Metadata(artifact);
+    const urlDigests = url === undefined ? undefined : digestsByUrl.get(url);
+    const bridgedSha256 = sha256.kind === "valid"
+      ? sha256.value
+      : sha256.kind === "missing" && urlDigests?.size === 1
+        ? urlDigests.values().next().value
+        : undefined;
+
+    // Malformed digest metadata is deliberately kept outside a valid-digest
+    // group. Conflicting valid digests sharing a URL likewise have distinct
+    // SHA identities. Both cases favor an extra scan/partial result over
+    // accidentally deduplicating away potentially different release bytes.
+    const identity = bridgedSha256 !== undefined
+      ? `sha256:${bridgedSha256}`
+      : sha256.kind === "malformed" && url !== undefined
+        ? `malformed:${sha256.raw}:${url}`
+        : sha256.kind === "missing" && url !== undefined
+          ? `digestless:${url}`
+          : `record:${index}`;
+
+    let group = groupsByIdentity.get(identity);
+    if (group === undefined) {
+      group = {
+        expectedSha256: bridgedSha256,
+        candidates: [],
+      };
+      groupsByIdentity.set(identity, group);
+      candidateKeysByIdentity.set(identity, new Set<string>());
     }
 
-    scanExtractedFiles(extractDir, findings);
+    // URL fragments do not identify different download bytes, but extraction
+    // behavior also depends on filename/kind metadata. Only collapse records
+    // that are equivalent on both dimensions so a bad first archive label
+    // cannot hide a later, correct interpretation of the same URL and digest.
+    const normalizedFilename = artifact.filename
+      .trim()
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const artifactKind = getPyPIArtifactKind(artifact)!;
+    const candidateKey = url === undefined
+      ? `record:${index}`
+      : `url:${url}|kind:${artifactKind}|filename:${normalizedFilename}`;
+    const candidateKeys = candidateKeysByIdentity.get(identity)!;
+    if (!candidateKeys.has(candidateKey)) {
+      candidateKeys.add(candidateKey);
+      group.candidates.push(artifact);
+    }
+  }
+
+  return [...groupsByIdentity.values()];
+}
+/**
+ * Scan every source distribution and wheel exposed for the latest release.
+ * The scanner dependency is injectable so artifact enumeration and aggregation
+ * can be regression-tested without network access or archive tooling.
+ */
+export async function scanPypiReleaseArtifacts(
+  releaseFiles: PyPIReleaseFile[],
+  findings: Finding[],
+  scanArtifact: PyPIArtifactScanner = downloadAndScanArtifact,
+): Promise<FileCounts> {
+  const artifactGroups = groupReleaseArtifacts(releaseFiles);
+  const totals: FileCounts = { totalFiles: 0, filesScanned: 0 };
+
+  if (artifactGroups.length === 0) {
+    findings.push({
+      rule: "PYPI_NO_SOURCE",
+      description: "No source distribution (sdist) or wheel found. Cannot scan package contents.",
+      severity: "info",
+      recommendation: "The package has no downloadable artifacts to scan.",
+    });
+    return totals;
+  }
+
+  for (const [index, group] of artifactGroups.entries()) {
+    const representative = group.candidates[0]!;
+    const failureArtifactIdentity = getArtifactIdentity(representative, index);
+    let scanned = false;
+
+    for (const artifact of group.candidates) {
+      const artifactFindings: Finding[] = [];
+      try {
+        const counts = await scanArtifact(
+          artifact,
+          artifactFindings,
+          group.expectedSha256,
+        );
+        totals.totalFiles += counts.totalFiles;
+        totals.filesScanned += counts.filesScanned;
+        const scannedArtifactIdentity = getArtifactIdentity(artifact, index);
+        appendArtifactFindings(findings, artifactFindings, scannedArtifactIdentity);
+        if (group.expectedSha256 === undefined) {
+          appendArtifactFindings(findings, [{
+            rule: "PATH_SCAN_INCOMPLETE",
+            description: `PyPI artifact "${artifact.filename}" was scanned, but registry metadata did not provide a valid SHA-256 identity, so the downloaded bytes could not be authenticated.`,
+            severity: "info",
+            recommendation:
+              "Verify this artifact's identity independently before treating the package as safe.",
+          }], scannedArtifactIdentity);
+        }
+        scanned = true;
+        break;
+      } catch (error) {
+        // Acquisition, archive, and digest failures may be alias-specific.
+        // Scanner logic failures are operational errors and must propagate.
+        if (!(error instanceof PyPIArtifactAcquisitionError)) throw error;
+      }
+    }
+
+    if (!scanned) {
+      appendArtifactFindings(findings, [{
+        rule: "PATH_SCAN_INCOMPLETE",
+        description: `PyPI artifact "${representative.filename}" could not be downloaded, SHA-256 verified, or extracted from any registry alias, so its contents were not scanned.`,
+        severity: "info",
+        recommendation:
+          "Retry the scan and inspect this release artifact independently before treating the package as safe.",
+      }], failureArtifactIdentity);
+    }
+  }
+
+  return totals;
+}
+
+async function downloadAndScanArtifact(
+  artifact: PyPIReleaseFile,
+  findings: Finding[],
+  expectedSha256?: string,
+): Promise<FileCounts> {
+  return getPyPIArtifactKind(artifact) === "wheel"
+    ? downloadAndScanWheel(artifact, findings, expectedSha256)
+    : downloadAndScanSdist(artifact, findings, expectedSha256);
+}
+
+/**
+ * Verify an on-disk artifact without loading it into memory.
+ */
+export function verifyArtifactSha256(
+  artifactPath: string,
+  expectedSha256: string,
+): Promise<boolean> {
+  if (!/^[a-f0-9]{64}$/i.test(expectedSha256)) {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve, reject) => {
+    const hash = createHash("sha256");
+    const stream = fs.createReadStream(artifactPath);
+    stream.on("data", (chunk: Buffer) => {
+      hash.update(chunk);
+    });
+    stream.on("error", reject);
+    stream.on("end", () => {
+      resolve(hash.digest("hex") === expectedSha256.toLowerCase());
+    });
+  });
+}
+
+
+/** Download, extract, and scan one source distribution. */
+async function downloadAndScanSdist(
+  artifact: PyPIReleaseFile,
+  findings: Finding[],
+  expectedSha256?: string,
+): Promise<FileCounts> {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-"));
+  const archivePath = path.join(tempDir, "package.archive");
+
+  try {
+    const extractDir = path.join(tempDir, "extracted");
+    try {
+      await downloadFile(artifact.url, archivePath);
+      if (
+        expectedSha256 !== undefined &&
+        !(await verifyArtifactSha256(archivePath, expectedSha256))
+      ) {
+        throw new PyPIArtifactAcquisitionError(artifact.filename);
+      }
+      fs.mkdirSync(extractDir, { recursive: true });
+      if (artifact.filename.toLowerCase().endsWith(".zip")) {
+        extractZip(archivePath, extractDir);
+      } else {
+        extractTar(archivePath, extractDir);
+      }
+    } catch (error) {
+      if (error instanceof PyPIArtifactAcquisitionError) throw error;
+      throw new PyPIArtifactAcquisitionError(artifact.filename);
+    }
+
+    // Scanner logic errors must remain operational failures, not be mislabeled
+    // as an artifact coverage problem.
+    return scanExtractedFiles(extractDir, findings);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 }
 
-/**
- * Download and scan a wheel (.whl is a zip file).
- */
+/** Download, extract, and scan one wheel. */
 async function downloadAndScanWheel(
-  url: string,
+  artifact: PyPIReleaseFile,
   findings: Finding[],
-): Promise<void> {
+  expectedSha256?: string,
+): Promise<FileCounts> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-"));
   const wheelPath = path.join(tempDir, "package.whl");
 
   try {
-    await downloadFile(url, wheelPath);
-
     const extractDir = path.join(tempDir, "extracted");
-    fs.mkdirSync(extractDir, { recursive: true });
-    extractZip(wheelPath, extractDir);
+    try {
+      await downloadFile(artifact.url, wheelPath);
+      if (
+        expectedSha256 !== undefined &&
+        !(await verifyArtifactSha256(wheelPath, expectedSha256))
+      ) {
+        throw new PyPIArtifactAcquisitionError(artifact.filename);
+      }
+      fs.mkdirSync(extractDir, { recursive: true });
+      extractZip(wheelPath, extractDir);
+    } catch (error) {
+      if (error instanceof PyPIArtifactAcquisitionError) throw error;
+      throw new PyPIArtifactAcquisitionError(artifact.filename);
+    }
 
-    scanExtractedFiles(extractDir, findings);
+    return scanExtractedFiles(extractDir, findings);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -277,8 +563,17 @@ async function downloadAndScanWheel(
 export function scanExtractedFiles(
   extractDir: string,
   findings: Finding[],
-): void {
-  const files = collectFilesRecursive(extractDir);
+): { totalFiles: number; filesScanned: number } {
+  const files = collectExtractedFiles(extractDir, findings, {
+    shouldEnterDirectory: (name) =>
+      name !== "__pycache__" &&
+      name !== ".git" &&
+      name !== "node_modules" &&
+      name !== ".tox" &&
+      name !== ".venv" &&
+      name !== "venv",
+  });
+  let filesScanned = 0;
 
   for (const filePath of files) {
     const ext = path.extname(filePath).toLowerCase();
@@ -290,7 +585,13 @@ export function scanExtractedFiles(
     // Only scan known file types
     if (!SCANNABLE_EXTENSIONS.has(ext) && !isPython) continue;
 
-    const stat = fs.statSync(filePath);
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(filePath);
+    } catch {
+      recordUnreadablePath(findings, relativePath);
+      continue;
+    }
     if (stat.size > MAX_FILE_SIZE) {
       // Surface the skip instead of silently dropping coverage (issue #54).
       findings.push(makeOversizedSkipFinding(relativePath, stat.size));
@@ -301,13 +602,21 @@ export function scanExtractedFiles(
     try {
       content = fs.readFileSync(filePath, "utf-8");
     } catch {
+      recordUnreadablePath(findings, relativePath);
       continue;
     }
+    filesScanned++;
 
     // Apply general file patterns (catches obfuscation, eval/atob, etc.)
     for (const pattern of FILE_PATTERNS) {
-      if (!isPatternApplicableToFile(pattern, content)) continue;
-      for (const hit of matchPatternInContent(pattern, content, "g")) {
+      const hits = matchPatternInFile(
+        pattern,
+        content,
+        relativePath,
+        findings,
+        "g",
+      );
+      for (const hit of hits ?? []) {
         findings.push({
           rule: pattern.rule,
           description: pattern.description,
@@ -323,8 +632,14 @@ export function scanExtractedFiles(
     // Apply PyPI-specific patterns to Python files and setup files
     if (isPython || isSetupFile) {
       for (const pattern of PYPI_FILE_PATTERNS) {
-        if (!isPatternApplicableToFile(pattern, content)) continue;
-        for (const hit of matchPatternInContent(pattern, content, "g")) {
+        const hits = matchPatternInFile(
+          pattern,
+          content,
+          relativePath,
+          findings,
+          "g",
+        );
+        for (const hit of hits ?? []) {
           // Boost severity if found in setup.py
           const severity =
             isSetupFile && pattern.severity === "medium"
@@ -349,8 +664,14 @@ export function scanExtractedFiles(
       // Check for install hook overrides in setup files
       if (isSetupFile) {
         for (const pattern of PYPI_INSTALL_HOOK_PATTERNS) {
-          if (!isPatternApplicableToFile(pattern, content)) continue;
-          for (const hit of matchPatternInContent(pattern, content, "g")) {
+          const hits = matchPatternInFile(
+            pattern,
+            content,
+            relativePath,
+            findings,
+            "g",
+          );
+          for (const hit of hits ?? []) {
             findings.push({
               rule: pattern.rule,
               description: pattern.description,
@@ -368,6 +689,7 @@ export function scanExtractedFiles(
       }
     }
   }
+  return { totalFiles: files.length, filesScanned };
 }
 
 /**
@@ -544,42 +866,13 @@ function downloadFile(url: string, dest: string): Promise<void> {
 /**
  * Recursively collect files from a directory.
  */
-function collectFilesRecursive(dir: string): string[] {
-  const files: string[] = [];
-  let entries: fs.Dirent[];
-
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (
-      entry.isDirectory() &&
-      entry.name !== "__pycache__" &&
-      entry.name !== ".git" &&
-      entry.name !== "node_modules" &&
-      entry.name !== ".tox" &&
-      entry.name !== ".venv" &&
-      entry.name !== "venv"
-    ) {
-      files.push(...collectFilesRecursive(fullPath));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
 /**
  * Generate recommendations for PyPI package scan.
  */
 function generatePypiRecommendations(
   findings: Finding[],
   packageName: string,
+  partialScan = false,
 ): string[] {
   const recommendations: string[] = [];
   const rules = new Set(findings.map((f) => f.rule));
@@ -665,7 +958,12 @@ function generatePypiRecommendations(
     );
   }
 
-  if (findings.length === 0) {
+  if (partialScan) {
+    recommendations.unshift(
+      "WARNING: Scan incomplete because one or more package checks or files could not be evaluated. Resolve coverage gaps before treating this package as safe.",
+    );
+  }
+  if (findings.length === 0 && !partialScan) {
     recommendations.push(
       `No malicious indicators found in ${packageName}. The package appears safe based on known patterns.`,
     );

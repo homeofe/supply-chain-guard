@@ -8,7 +8,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
-import { isPatternApplicableToFile, matchPatternInContent, truncateMatch } from "./patterns.js";
+import {
+  MAX_CORRELATED_EVIDENCE_CHARS,
+  truncateMatch,
+  validatePatternSet,
+} from "./patterns.js";
+import { matchPatternInFile } from "./pattern-scanner.js";
 
 // ---------------------------------------------------------------------------
 // Global npm install: pinned or not?
@@ -42,6 +47,203 @@ function isPinnedSpec(spec: string): boolean {
   return /^\d+(?:\.\d+)*(?:[-+][0-9A-Za-z.-]+)?$/.test(version);
 }
 
+interface LocalStructuralMatch {
+  start: number;
+  end: number;
+  evidence: string;
+}
+
+type DockerMatchRange = Pick<LocalStructuralMatch, "start" | "end">;
+
+function boundedStructuralMatch(
+  content: string,
+  start: number,
+  end: number,
+): LocalStructuralMatch {
+  return {
+    start,
+    end,
+    evidence: content.slice(
+      start,
+      Math.min(end, start + MAX_CORRELATED_EVIDENCE_CHARS),
+    ),
+  };
+}
+
+function* matchDockerLines(
+  content: string,
+  findMatch: (line: string) => DockerMatchRange | undefined,
+): Iterable<LocalStructuralMatch> {
+  let lineStart = 0;
+  while (lineStart <= content.length) {
+    const newline = content.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? content.length : newline;
+    const line = content.slice(lineStart, lineEnd);
+    const match = findMatch(line);
+    if (match) {
+      yield boundedStructuralMatch(
+        content,
+        lineStart + match.start,
+        lineStart + match.end,
+      );
+    }
+    if (newline === -1) break;
+    lineStart = newline + 1;
+  }
+}
+
+function hasDotTerminator(value: string): boolean {
+  return /[\r\u2028\u2029]/u.test(value);
+}
+
+function preferLegacyMatch(
+  current: DockerMatchRange | undefined,
+  candidate: DockerMatchRange,
+): DockerMatchRange {
+  if (!current || candidate.start < current.start) return candidate;
+  if (candidate.start === current.start && candidate.end > current.end) {
+    return candidate;
+  }
+  return current;
+}
+
+const DOCKER_INTERPRETER_AT_PIPE = /\s*(?:bash|sh|python|node|perl)/iy;
+
+const dockerCurlPipeMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (
+  content,
+) =>
+  matchDockerLines(content, (line) => {
+    const tokens = /RUN\s+|(?:curl|wget)\s+|\||[\r\u2028\u2029]/gi;
+    let activeRun = -1;
+    let pendingRun = -1;
+    let best: DockerMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (value === "|") {
+        if (pendingRun !== -1) {
+          DOCKER_INTERPRETER_AT_PIPE.lastIndex = token.index + 1;
+          if (DOCKER_INTERPRETER_AT_PIPE.exec(line)) {
+            best = preferLegacyMatch(best, {
+              start: pendingRun,
+              end: DOCKER_INTERPRETER_AT_PIPE.lastIndex,
+            });
+          }
+        }
+        pendingRun = -1;
+      } else if (/^[\r\u2028\u2029]$/u.test(value)) {
+        activeRun = -1;
+      } else if (/^(?:curl|wget)/i.test(value)) {
+        if (
+          activeRun !== -1 &&
+          (pendingRun === -1 || activeRun < pendingRun)
+        ) {
+          pendingRun = activeRun;
+        }
+        // The downloader's own \s+ may consume a dot terminator. It belongs
+        // to this completed stage, but the RUN start cannot reach a later
+        // downloader beyond it.
+        if (hasDotTerminator(value)) activeRun = -1;
+      } else {
+        // A later RUN token that consumes a dot terminator replaces an older
+        // start: the older RUN's dot gap cannot cross that terminator.
+        if (activeRun === -1 || hasDotTerminator(value)) {
+          activeRun = token.index;
+        }
+      }
+    }
+    return best;
+  });
+
+const dockerSuidMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (
+  content,
+) =>
+  matchDockerLines(content, (line) => {
+    const tokens =
+      /RUN\s+|chmod\s+[ugo]*\+s|[\r\u2028\u2029]/gi;
+    let activeRun = -1;
+    let best: DockerMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (/^[\r\u2028\u2029]$/u.test(value)) {
+        activeRun = -1;
+      } else if (/^RUN/i.test(value)) {
+        if (activeRun === -1 || hasDotTerminator(value)) {
+          activeRun = token.index;
+        }
+      } else {
+        if (activeRun !== -1) {
+          best = preferLegacyMatch(best, {
+            start: activeRun,
+            end: tokens.lastIndex,
+          });
+        }
+        if (hasDotTerminator(value)) activeRun = -1;
+      }
+    }
+    return best;
+  });
+
+const dockerAptNoVerifyMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchDockerLines(content, (line) => {
+    const tokens =
+      /RUN\s+|apt(?:-get)?\s+|--allow-unauthenticated|--force-yes|[\r\u2028\u2029]/gi;
+    let activeRun = -1;
+    let aptRun = -1;
+    let firstForce = -1;
+    let bestApt: DockerMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      const lower = value.toLowerCase();
+      if (/^[\r\u2028\u2029]$/u.test(value)) {
+        activeRun = -1;
+        aptRun = -1;
+      } else if (lower === "--force-yes") {
+        if (firstForce === -1) firstForce = token.index;
+      } else if (lower === "--allow-unauthenticated") {
+        if (aptRun !== -1) {
+          bestApt = preferLegacyMatch(bestApt, {
+            start: aptRun,
+            end: tokens.lastIndex,
+          });
+        }
+      } else if (lower.startsWith("apt")) {
+        const associatedRun = activeRun;
+        if (hasDotTerminator(value)) {
+          // The separator is valid inside apt's \s+, so this apt stage may
+          // survive it. Earlier apt and RUN stages may not.
+          aptRun = associatedRun;
+          activeRun = -1;
+        } else if (
+          associatedRun !== -1 &&
+          (aptRun === -1 || associatedRun < aptRun)
+        ) {
+          aptRun = associatedRun;
+        }
+      } else if (hasDotTerminator(value)) {
+        // This is RUN\s+ containing a dot terminator. It starts a fresh RUN
+        // stage and invalidates an older apt completion stage.
+        activeRun = token.index;
+        aptRun = -1;
+      } else if (activeRun === -1) {
+        activeRun = token.index;
+      }
+    }
+
+    if (bestApt && (firstForce === -1 || bestApt.start < firstForce)) {
+      return bestApt;
+    }
+    return firstForce === -1
+      ? bestApt
+      : { start: firstForce, end: firstForce + "--force-yes".length };
+  });
 /**
  * True when a global npm install leaves at least one package UNPINNED.
  *
@@ -69,6 +271,37 @@ export function isUnpinnedGlobalInstall(specs: string): boolean {
   return packages.some((p) => !isPinnedSpec(p));
 }
 
+const DOCKER_NPM_GLOBAL_PREFIX =
+  /RUN\s+npm\s+(?:install|i|add)\s+(?:-g|--global|--location=global)\s+(?=.)/gi;
+
+const dockerNpmGlobalMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchDockerLines(content, (line) => {
+    const matchEnd = line.length;
+    const lastInternalTerminator = Math.max(
+      line.lastIndexOf("\r", matchEnd - 1),
+      line.lastIndexOf("\u2028", matchEnd - 1),
+      line.lastIndexOf("\u2029", matchEnd - 1),
+    );
+
+    DOCKER_NPM_GLOBAL_PREFIX.lastIndex = 0;
+    let prefix: RegExpExecArray | null;
+    while ((prefix = DOCKER_NPM_GLOBAL_PREFIX.exec(line)) !== null) {
+      const specsStart = DOCKER_NPM_GLOBAL_PREFIX.lastIndex;
+      if (specsStart <= lastInternalTerminator || specsStart >= matchEnd) {
+        continue;
+      }
+
+      DOCKER_NPM_GLOBAL_PREFIX.lastIndex = 0;
+      return isUnpinnedGlobalInstall(line.slice(specsStart, matchEnd))
+        ? { start: prefix.index, end: matchEnd }
+        : undefined;
+    }
+    DOCKER_NPM_GLOBAL_PREFIX.lastIndex = 0;
+    return undefined;
+  });
+
 // ---------------------------------------------------------------------------
 // Dockerfile patterns
 // ---------------------------------------------------------------------------
@@ -82,6 +315,7 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
       "Dockerfile downloads and pipes remote content to a shell (remote code execution risk)",
     severity: "critical",
     rule: "DOCKER_CURL_PIPE",
+    correlatedMatcher: dockerCurlPipeMatcher,
   },
   {
     name: "docker-unpinned-base",
@@ -131,7 +365,7 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
       "different (or compromised) package on the next build.",
     severity: "medium",
     rule: "DOCKER_NPM_GLOBAL",
-    valueFilter: isUnpinnedGlobalInstall,
+    correlatedMatcher: dockerNpmGlobalMatcher,
   },
   {
     name: "docker-untrusted-registry",
@@ -150,6 +384,7 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
       "Dockerfile sets SUID/SGID bit on a file. This can be used for privilege escalation.",
     severity: "high",
     rule: "DOCKER_SUID",
+    correlatedMatcher: dockerSuidMatcher,
   },
   {
     name: "docker-apt-no-verify",
@@ -159,8 +394,11 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
       "Dockerfile disables APT package signature verification. Packages may be tampered with.",
     severity: "high",
     rule: "DOCKER_APT_NO_VERIFY",
+    correlatedMatcher: dockerAptNoVerifyMatcher,
   },
 ];
+
+validatePatternSet("DOCKERFILE_PATTERNS", DOCKERFILE_PATTERNS);
 
 /** Files that this scanner checks */
 const DOCKER_FILE_PATTERNS = [
@@ -188,8 +426,8 @@ export function scanDockerFile(
   const findings: Finding[] = [];
 
   for (const pattern of DOCKERFILE_PATTERNS) {
-    if (!isPatternApplicableToFile(pattern, content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "i")) {
+    const hits = matchPatternInFile(pattern, content, relativePath, findings, "i");
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,

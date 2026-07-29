@@ -10,8 +10,11 @@ import type { Finding, ScanReport, Severity } from "./types.js";
 export interface OrgPosture {
   organization: string;
   reposScanned: number;
+  reposComplete?: number;
+  partialScan?: boolean;
+  partialRepos?: string[];
   overallPostureScore: number;
-  topRiskyRepos: Array<{ repo: string; score: number; criticalCount: number }>;
+  topRiskyRepos: Array<{ repo: string; score: number; criticalCount: number; partialScan?: boolean }>;
   recurringPackages: Array<{ name: string; repos: string[]; severity: Severity }>;
   recurringActions: Array<{ action: string; repos: string[]; pinned: boolean }>;
   systemicFindings: Finding[];
@@ -24,16 +27,20 @@ export function calculateOrgPosture(
   org: string,
   reports: Map<string, ScanReport>,
 ): OrgPosture {
-  const repoScores: Array<{ repo: string; score: number; criticalCount: number }> = [];
+  const repoScores: Array<{ repo: string; score: number; criticalCount: number; partialScan: boolean }> = [];
+  const partialRepos: string[] = [];
   const packageUsage = new Map<string, { repos: Set<string>; severity: Severity }>();
   const actionUsage = new Map<string, { repos: Set<string>; pinned: boolean }>();
   const systemicFindings: Finding[] = [];
 
   for (const [repo, report] of reports) {
+    const partialScan = report.partialScan === true;
+    if (partialScan) partialRepos.push(repo);
     repoScores.push({
       repo,
       score: report.score,
       criticalCount: report.summary.critical,
+      partialScan,
     });
 
     // Track recurring risky packages
@@ -78,16 +85,23 @@ export function calculateOrgPosture(
   }
 
   // Overall posture score (average of repo scores, capped)
-  const avgScore = repoScores.length > 0
-    ? repoScores.reduce((s, r) => s + r.score, 0) / repoScores.length
+  // Partial reports are not comparable measurements: their apparent low
+  // score may only reflect unreadable or unscanned content. Keep them visible
+  // and rank them first, but do not let them dilute the complete-repo average.
+  const completeRepoScores = repoScores.filter((repo) => !repo.partialScan);
+  const avgScore = completeRepoScores.length > 0
+    ? completeRepoScores.reduce((sum, repo) => sum + repo.score, 0) / completeRepoScores.length
     : 0;
 
   return {
     organization: org,
     reposScanned: reports.size,
+    reposComplete: completeRepoScores.length,
+    partialScan: partialRepos.length > 0 || undefined,
+    partialRepos,
     overallPostureScore: Math.round(avgScore),
     topRiskyRepos: repoScores
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => Number(b.partialScan) - Number(a.partialScan) || b.score - a.score)
       .slice(0, 10),
     recurringPackages: [...packageUsage.entries()]
       .filter(([, v]) => v.repos.size >= 2)

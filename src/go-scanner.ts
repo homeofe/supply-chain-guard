@@ -5,15 +5,169 @@
  * (particularly init() functions).
  */
 
-import * as fs from "node:fs";
+
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import {
+  listOptionalDirectory,
+  matchPatternInFile,
+  readDiscoveredUtf8File,
+  readOptionalUtf8File,
+} from "./pattern-scanner.js";
+import {
+  MAX_CORRELATED_EVIDENCE_CHARS,
+  validatePatternSet,
+} from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Go-specific patterns
 // ---------------------------------------------------------------------------
 
+interface GoStructuralMatch {
+  start: number;
+  end: number;
+  evidence: string;
+}
+
+type GoMatchRange = Pick<GoStructuralMatch, "start" | "end">;
+
+function goStructuralMatch(
+  content: string,
+  start: number,
+  end: number,
+): GoStructuralMatch {
+  return {
+    start,
+    end,
+    evidence: content.slice(
+      start,
+      Math.min(end, start + MAX_CORRELATED_EVIDENCE_CHARS),
+    ),
+  };
+}
+
+function* matchGoLines(
+  content: string,
+  findMatch: (line: string) => GoMatchRange | undefined,
+): Iterable<GoStructuralMatch> {
+  let lineStart = 0;
+  while (lineStart <= content.length) {
+    const newline = content.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? content.length : newline;
+    const line = content.slice(lineStart, lineEnd);
+    const match = findMatch(line);
+    if (match) {
+      yield goStructuralMatch(
+        content,
+        lineStart + match.start,
+        lineStart + match.end,
+      );
+    }
+    if (newline === -1) break;
+    lineStart = newline + 1;
+  }
+}
+
+function preferGoMatch(
+  current: GoMatchRange | undefined,
+  candidate: GoMatchRange,
+): GoMatchRange {
+  if (!current || candidate.start < current.start) return candidate;
+  if (candidate.start === current.start && candidate.end > current.end) {
+    return candidate;
+  }
+  return current;
+}
+
+function isGoAsciiWord(value: string | undefined): boolean {
+  return value !== undefined && /[A-Za-z0-9_]/.test(value);
+}
+
+function makeGoInitMatcher(
+  sinkPattern: string,
+): NonNullable<PatternEntry["correlatedMatcher"]> {
+  return (content) =>
+    matchGoLines(content, (line) => {
+      const tokens = new RegExp(
+        `func\\s+init\\s*\\(\\s*\\)|(?:${sinkPattern})|\\}`,
+        "gi",
+      );
+      let initStart = -1;
+      let best: GoMatchRange | undefined;
+      let token: RegExpExecArray | null;
+
+      while ((token = tokens.exec(line)) !== null) {
+        if (token[0] === "}") {
+          initStart = -1;
+        } else if (/^func/i.test(token[0]!)) {
+          if (initStart === -1) initStart = token.index;
+        } else if (initStart !== -1) {
+          best = preferGoMatch(best, {
+            start: initStart,
+            end: tokens.lastIndex,
+          });
+        }
+      }
+      return best;
+    });
+}
+
+const goInitExecMatcher = makeGoInitMatcher("exec\\.Command");
+const goInitNetworkMatcher = makeGoInitMatcher(
+  "http\\.(?:Get|Post|NewRequest)|net\\.Dial",
+);
+
+const goEnvExfilMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchGoLines(content, (line) => {
+    const tokens = /os\.Getenv|http\.|net\.Dial|[\r\u2028\u2029]/gi;
+    const httpMethod = /(?:Post|Get|NewRequest)/iy;
+    let forwardEnv = -1;
+    let reverseNetwork = -1;
+    let best: GoMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (/^[\r\u2028\u2029]$/u.test(value)) {
+        forwardEnv = -1;
+        reverseNetwork = -1;
+      } else if (/^os\.Getenv$/i.test(value)) {
+        // As in the Cargo rule, only the forward alternative has a boundary.
+        if (reverseNetwork !== -1) {
+          best = preferGoMatch(best, {
+            start: reverseNetwork,
+            end: tokens.lastIndex,
+          });
+        }
+        if (
+          forwardEnv === -1 &&
+          !isGoAsciiWord(line[tokens.lastIndex])
+        ) {
+          forwardEnv = token.index;
+        }
+      } else {
+        if (forwardEnv !== -1) {
+          best = preferGoMatch(best, {
+            start: forwardEnv,
+            end: tokens.lastIndex,
+          });
+        }
+
+        let reverseEligible = /^net\.Dial$/i.test(value);
+        if (!reverseEligible) {
+          httpMethod.lastIndex = tokens.lastIndex;
+          reverseEligible = httpMethod.exec(line) !== null;
+        }
+        if (reverseEligible && reverseNetwork === -1) {
+          reverseNetwork = token.index;
+        }
+      }
+    }
+    return best;
+  });
 export const GO_PATTERNS: PatternEntry[] = [
   // go.mod risks
   {
@@ -44,6 +198,7 @@ export const GO_PATTERNS: PatternEntry[] = [
       "Go init() function executes system commands. init() runs automatically on package import.",
     severity: "high",
     rule: "GO_INIT_EXEC",
+    correlatedMatcher: goInitExecMatcher,
   },
   {
     name: "go-init-network",
@@ -53,6 +208,7 @@ export const GO_PATTERNS: PatternEntry[] = [
       "Go init() function makes network requests. init() runs automatically on package import.",
     severity: "medium",
     rule: "GO_INIT_NETWORK",
+    correlatedMatcher: goInitNetworkMatcher,
   },
 
   // General Go source risks
@@ -100,8 +256,11 @@ export const GO_PATTERNS: PatternEntry[] = [
       "Environment variable access combined with network requests (potential exfiltration).",
     severity: "high",
     rule: "GO_ENV_EXFIL",
+    correlatedMatcher: goEnvExfilMatcher,
   },
 ];
+
+validatePatternSet("GO_PATTERNS", GO_PATTERNS);
 
 /** Go-related file patterns */
 const GO_MOD = "go.mod";
@@ -121,31 +280,36 @@ export function scanGoFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
 
   // Scan go.mod
-  const goMod = path.join(dir, GO_MOD);
-  if (fs.existsSync(goMod)) {
-    try {
-      const content = fs.readFileSync(goMod, "utf-8");
-      findings.push(...scanGoContent(content, GO_MOD, "mod"));
-    } catch { /* skip */ }
+  const goMod = readOptionalUtf8File(
+    dir,
+    path.join(dir, GO_MOD),
+    GO_MOD,
+    findings,
+  );
+  if (goMod !== null) {
+    findings.push(...scanGoContent(goMod, GO_MOD, "mod"));
   }
 
   // Scan go.sum (resolved module inventory) for malicious modules
-  const goSum = path.join(dir, GO_SUM);
-  if (fs.existsSync(goSum)) {
-    try {
-      const content = fs.readFileSync(goSum, "utf-8");
-      findings.push(...scanGoSumContent(content, GO_SUM));
-    } catch { /* skip */ }
+  const goSum = readOptionalUtf8File(
+    dir,
+    path.join(dir, GO_SUM),
+    GO_SUM,
+    findings,
+  );
+  if (goSum !== null) {
+    findings.push(...scanGoSumContent(goSum, GO_SUM));
   }
 
+  // Preserve the historical module gate: standalone Go source is handled by
+  // the main file scanner, while this pass owns module-specific source checks.
+  if (goMod === null && goSum === null) return findings;
+
   // Scan .go files in root and common source dirs
-  scanGoSourceDir(dir, findings);
-  const cmdDir = path.join(dir, "cmd");
-  if (fs.existsSync(cmdDir)) scanGoSourceDir(cmdDir, findings);
-  const internalDir = path.join(dir, "internal");
-  if (fs.existsSync(internalDir)) scanGoSourceDir(internalDir, findings);
-  const pkgDir = path.join(dir, "pkg");
-  if (fs.existsSync(pkgDir)) scanGoSourceDir(pkgDir, findings);
+  scanGoSourceDir(dir, dir, ".", findings);
+  scanGoSourceDir(dir, path.join(dir, "cmd"), "cmd", findings);
+  scanGoSourceDir(dir, path.join(dir, "internal"), "internal", findings);
+  scanGoSourceDir(dir, path.join(dir, "pkg"), "pkg", findings);
 
   return findings;
 }
@@ -159,7 +323,6 @@ export function scanGoContent(
   fileType: "mod" | "source",
 ): Finding[] {
   const findings: Finding[] = [];
-  const lines = content.split("\n");
 
   const patterns =
     fileType === "mod"
@@ -171,25 +334,23 @@ export function scanGoContent(
         );
 
   for (const pattern of patterns) {
-    const regex = new RegExp(pattern.pattern, "i");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match:
-            match[0].length > 120
-              ? match[0].substring(0, 120) + "..."
-              : match[0],
-          recommendation: getGoRecommendation(pattern.rule),
-        });
-      }
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "i",
+    );
+    for (const hit of hits ?? []) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: goTruncate(hit.text),
+        recommendation: getGoRecommendation(pattern.rule),
+      });
     }
   }
 
@@ -261,21 +422,30 @@ function goTruncate(value: string): string {
 /**
  * Scan .go files in a directory (non-recursive, single level).
  */
-function scanGoSourceDir(dir: string, findings: Finding[]): void {
-  try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".go")) continue;
+function scanGoSourceDir(
+  scanRoot: string,
+  dir: string,
+  relativeDir: string,
+  findings: Finding[],
+): void {
+  const entries = listOptionalDirectory(scanRoot, dir, relativeDir, findings);
+  if (entries === null) return;
 
-      const fullPath = path.join(dir, entry.name);
-      const relPath = path.relative(process.cwd(), fullPath).replace(/\\/g, "/");
+  for (const entry of entries) {
+    if ((!entry.isFile() && !entry.isSymbolicLink()) || !entry.name.endsWith(".go")) continue;
 
-      try {
-        const content = fs.readFileSync(fullPath, "utf-8");
-        findings.push(...scanGoContent(content, relPath, "source"));
-      } catch { /* skip */ }
-    }
-  } catch { /* skip */ }
+    const relPath = relativeDir === "."
+      ? entry.name
+      : `${relativeDir}/${entry.name}`;
+    const content = readDiscoveredUtf8File(
+      scanRoot,
+      path.join(dir, entry.name),
+      relPath,
+      findings,
+    );
+    if (content === null) continue;
+    findings.push(...scanGoContent(content, relPath, "source"));
+  }
 }
 
 function getGoRecommendation(rule: string): string {

@@ -131,7 +131,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.23.0
+    rev: v5.23.1
     hooks:
       - id: supply-chain-guard
 ```
@@ -201,6 +201,7 @@ supply-chain-guard scan ./project --format sbom   # CycloneDX 1.6 SBOM with real
 supply-chain-guard scan ./project --sbom-output sbom.json  # Write SBOM to file separately
 supply-chain-guard scan ./project --format badge   # Shields.io endpoint JSON
 supply-chain-guard scan ./project --format gitlab  # GitLab Dependency Scanning report (security-report-schemas 15.2.4, see examples/gitlab-ci.yml)
+supply-chain-guard scan ./project --format markdown --json-output canonical.json  # Same scan, human report plus canonical JSON
 ```
 
 ### Badge
@@ -232,6 +233,12 @@ supply-chain-guard scan ./project --fail-on critical  # Fail only on critical
 supply-chain-guard scan ./project --fail-on high       # Fail on high or above
 supply-chain-guard scan ./project --fail-on info       # Fail on any finding
 ```
+
+`--min-severity` may reduce report noise, but it cannot be stricter than the
+active `--fail-on` gate because that would hide findings required for the exit
+verdict. Invalid combinations fail before scanning. Incomplete coverage also
+exits nonzero regardless of the severity threshold and is reported as
+`partialScan: true` in JSON.
 
 ## Filtering
 
@@ -585,6 +592,10 @@ Honest caveats: Socket's registry-wide behavioral detection is deeper than anyth
 name: Supply Chain Security
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -601,11 +612,32 @@ jobs:
 | Input | Description | Default |
 |-------|-------------|---------|
 | `path` | Path to scan | `.` |
-| `format` | Output format (text/json/markdown/html/sarif/sbom) | `markdown` |
+| `format` | Output format (text/json/markdown/sarif/sbom/html/badge/gitlab/junit) | `markdown` |
 | `min-severity` | Minimum severity to report | `low` |
 | `exclude-rules` | Comma-separated rule IDs to exclude | |
-| `fail-on` | Fail check at this severity or above | `critical` |
-| `comment-on-pr` | Post findings as PR comment | `true` |
+| `fail-on` | Fail check at this severity or above, including `info` | `critical` |
+| `comment-on-pr` | Post or update a PR comment | `true` |
+
+Coverage failures are fail-closed regardless of `fail-on`: the Action exits
+nonzero, sets `partial-scan` to `true` and `risk-level` to `partial`, and posts
+a warning even when severity filters hide the informational coverage finding.
+A critical threshold failure retains exit code 2; other partial results exit 1.
+
+PR comments require `pull-requests: write` (shown above). GitHub restricts write
+access for pull requests from forks, so the check verdict, job log, and outputs
+remain authoritative when the platform refuses a comment.
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `score` | Risk score from 0 to 100 |
+| `risk-level` | `partial`, `clean`, `low`, `medium`, `high`, or `critical` |
+| `findings-count` | Number of reportable findings after filters |
+| `partial-scan` | `true` when coverage was incomplete |
+| `report` | Requested report, or a size notice when it exceeds the safe output budget |
+| `report-path` | Runner-local path to the complete report for later steps in the same job |
+| `report-truncated` | `true` when `report` was replaced by the size notice |
 
 ## For AI Coding Agents (MCP)
 

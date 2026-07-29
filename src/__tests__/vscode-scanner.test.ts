@@ -1,8 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
-import { scanVscodeExtension } from "../vscode-scanner.js";
+import { execFileSync, execSync } from "node:child_process";
+import { performance } from "node:perf_hooks";
+import {
+  scanVscodeExtension,
+  scanExtractedVscodeFile,
+  scanExtractedVscodeFiles,
+  VSCODE_ENCODED_BUFFER_PATTERN,
+  VSCODE_STRING_ARRAY_PATTERN,
+} from "../vscode-scanner.js";
+import { MAX_FILE_SIZE, matchPatternInContent, truncateMatch } from "../patterns.js";
+import type { Finding } from "../types.js";
 
 /**
  * Helper: create a minimal .vsix (zip) file from a directory structure.
@@ -38,6 +47,162 @@ describe("VS Code Extension Scanner", () => {
   afterEach(() => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
+
+  it("scans bundled dependencies shipped inside an extracted VSIX", () => {
+    const bundledFile = path.join(
+      tempDir,
+      "extension",
+      "node_modules",
+      "bundled-dependency",
+      "index.js",
+    );
+    fs.mkdirSync(path.dirname(bundledFile), { recursive: true });
+    fs.writeFileSync(bundledFile, 'eval(atob("cGF5bG9hZA=="));');
+
+    const findings: Finding[] = [];
+    const counts = scanExtractedVscodeFiles(tempDir, findings);
+
+    expect(counts).toEqual({ totalFiles: 1, filesScanned: 1 });
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rule: "EVAL_ATOB",
+          file: expect.stringMatching(
+            /extension[\\/]node_modules[\\/]bundled-dependency[\\/]index\.js$/,
+          ),
+        }),
+      ]),
+    );
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "bounds an oversized extension manifest and reports one partial finding",
+    async () => {
+      const oversizedManifest = JSON.stringify({
+        activationEvents: ["*"],
+        padding: "x".repeat(MAX_FILE_SIZE),
+      });
+      const vsixPath = createVsix(tempDir, {
+        "extension/package.json": oversizedManifest,
+      });
+
+      const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+      const oversized = report.findings.filter((finding) =>
+        finding.rule === "FILE_TOO_LARGE_SKIPPED" &&
+        finding.file === "extension/package.json"
+      );
+
+      expect(oversized).toHaveLength(1);
+      expect(report.partialScan).toBe(true);
+      expect(report.findings.some((finding) =>
+        finding.rule === "VSCODE_SUSPICIOUS_ACTIVATION" ||
+        finding.rule === "VSCODE_INSTALL_SCRIPT"
+      )).toBe(false);
+    },
+  );
+  it.skipIf(process.platform === "win32")(
+    "rejects an external manifest symlink without leaking or analyzing outside content",
+    async () => {
+      const staging = path.join(tempDir, "external-staging");
+      const extensionDir = path.join(staging, "extension");
+      fs.mkdirSync(extensionDir, { recursive: true });
+      const secretMarker = "OUTSIDE_MANIFEST_SECRET_7f6a";
+      const outsideManifest = path.join(tempDir, "outside-package.json");
+      fs.writeFileSync(outsideManifest, JSON.stringify({
+        activationEvents: ["*"],
+        scripts: { postinstall: `echo ${secretMarker}` },
+      }));
+      fs.symlinkSync(outsideManifest, path.join(extensionDir, "package.json"), "file");
+      fs.writeFileSync(path.join(staging, "[Content_Types].xml"), "<Types />");
+      const vsixPath = path.join(tempDir, "external-manifest.vsix");
+      execFileSync("zip", ["-q", "-y", "-r", vsixPath, "."], { cwd: staging });
+
+      const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+
+      expect(report.partialScan).toBe(true);
+      expect(report.findings).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          rule: "PATH_SCAN_INCOMPLETE",
+          file: "extension/package.json",
+        }),
+      ]));
+      expect(report.findings.some((finding) =>
+        finding.rule === "VSCODE_SUSPICIOUS_ACTIVATION" ||
+        finding.rule === "VSCODE_INSTALL_SCRIPT",
+      )).toBe(false);
+      expect(JSON.stringify(report)).not.toContain(secretMarker);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "analyzes an internal manifest symlink under its public package.json path",
+    async () => {
+      const staging = path.join(tempDir, "internal-staging");
+      const extensionDir = path.join(staging, "extension");
+      fs.mkdirSync(extensionDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(extensionDir, "manifest.json"),
+        JSON.stringify({ activationEvents: ["*"] }),
+      );
+      fs.symlinkSync("manifest.json", path.join(extensionDir, "package.json"), "file");
+      fs.writeFileSync(path.join(staging, "[Content_Types].xml"), "<Types />");
+      const vsixPath = path.join(tempDir, "internal-manifest.vsix");
+      execFileSync("zip", ["-q", "-y", "-r", vsixPath, "."], { cwd: staging });
+
+      const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+
+      expect(report.findings).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          rule: "VSCODE_SUSPICIOUS_ACTIVATION",
+          file: "extension/package.json",
+        }),
+      ]));
+    },
+  );
+  it("surfaces an extracted source stat failure as partial coverage", () => {
+    const findings: Finding[] = [];
+    const missing = path.join(tempDir, "vanished.js");
+
+    expect(scanExtractedVscodeFile(tempDir, missing, findings)).toBe(false);
+    expect(findings).toEqual([
+      expect.objectContaining({
+        rule: "PATH_SCAN_INCOMPLETE",
+        severity: "info",
+        file: "vanished.js",
+      }),
+    ]);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "surfaces a denied extracted source read as partial coverage",
+    (context) => {
+      const file = path.join(tempDir, "denied.js");
+      fs.writeFileSync(file, "const safe = true;");
+      fs.chmodSync(file, 0o000);
+
+      let denied = false;
+      try { fs.readFileSync(file); } catch { denied = true; }
+      if (!denied) {
+        fs.chmodSync(file, 0o600);
+        context.skip();
+        return;
+      }
+
+      try {
+        const findings: Finding[] = [];
+        expect(scanExtractedVscodeFile(tempDir, file, findings)).toBe(false);
+        expect(findings).toEqual([
+          expect.objectContaining({
+            rule: "PATH_SCAN_INCOMPLETE",
+            severity: "info",
+            file: "denied.js",
+          }),
+        ]);
+      } finally {
+        fs.chmodSync(file, 0o600);
+      }
+    },
+  );
 
   it("should return a clean report for a safe extension", async () => {
     const vsixPath = createVsix(tempDir, {
@@ -264,6 +429,156 @@ module.exports = { activate };
     );
     expect(bufFinding).toBeDefined();
   });
+
+  it("preserves encoded Buffer regex matching, starts, lines, and evidence", () => {
+    const lines = [
+      "Buffer.from(data, 'base64')",
+      'Buffer.from \t( value ,\t"hex" \r)',
+      '$Buffer.from(x,\'base64")',
+      "\u00e9Buffer.from(value, \"hex\")",
+      "Buffer.from(value,\u2028'hex'\u2028)",
+      "Buffer.from( , 'base64')",
+      "Buffer.from(Buffer.from(x, 'hex')",
+      "Buffer.from(nope) Buffer.from(x, 'hex')",
+      "xBuffer.from(value, 'base64')",
+      "_Buffer.from(value, 'base64')",
+      "buffer.from(value, 'base64')",
+      "Buffer.From(value, 'base64')",
+      "Buffer.from(,'base64')",
+      "Buffer.from(value), 'base64')",
+      "Buffer.from(value, 'BASE64')",
+      "Buffer.from(value, 'utf8')",
+      "Buffer.from(value, 'base64' extra)",
+      "Buffer.from(value,",
+      "'base64')",
+    ];
+    const content = lines.join("\n");
+    const baseline = matchPatternInContent(
+      { ...VSCODE_ENCODED_BUFFER_PATTERN, correlatedMatcher: undefined },
+      content,
+      "g",
+    );
+    const structural = matchPatternInContent(
+      VSCODE_ENCODED_BUFFER_PATTERN,
+      content,
+      "g",
+    );
+    const lineStarts: number[] = [];
+    let offset = 0;
+    for (const line of lines) {
+      lineStarts.push(offset);
+      offset += line.length + 1;
+    }
+
+    expect(baseline.map((hit) => hit.line)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(structural.map((hit) => hit.line)).toEqual(
+      baseline.map((hit) => hit.line),
+    );
+    expect(structural.map((hit) => hit.match.index)).toEqual(
+      baseline.map(
+        (hit) => lineStarts[hit.line - 1]! + (hit.match.index ?? 0),
+      ),
+    );
+    expect(structural.map((hit) => truncateMatch(hit.text))).toEqual(
+      baseline.map((hit) => truncateMatch(hit.text)),
+    );
+    expect(structural.coverage.complete).toBe(true);
+    expect(structural.coverage.regexAttempts).toBe(1);
+  });
+
+  it(
+    "fully evaluates a 5 MiB repeated Buffer.from( near-miss",
+    { timeout: 15_000 },
+    () => {
+      const fiveMiB = 5 * 1024 * 1024;
+      const unit = "Buffer.from(";
+      const content = unit
+        .repeat(Math.ceil(fiveMiB / unit.length))
+        .slice(0, fiveMiB);
+      const started = performance.now();
+      const hits = matchPatternInContent(
+        VSCODE_ENCODED_BUFFER_PATTERN,
+        content,
+        "g",
+      );
+
+      expect(hits).toEqual([]);
+      expect(hits.coverage.complete).toBe(true);
+      expect(hits.coverage.regexAttempts).toBe(1);
+      expect(hits.coverage.tiledRanges).toBe(0);
+      expect(performance.now() - started).toBeLessThan(5_000);
+    },
+  );
+
+  it("preserves large string-array regex matching, starts, lines, and evidence", () => {
+    const array = (count: number, value = "a") =>
+      `[${Array.from({ length: count }, () => `'${value}'`).join(",")}]`;
+    const lines = [
+      array(21),
+      `prefix ${array(25, "abcd")} suffix`,
+      `[ \r'a'\u2028,\u2029${Array.from({ length: 20 }, () => '"bc"').join(", ")} ]`,
+      array(20),
+      `[${Array.from({ length: 21 }, () => "''").join(",")}]`,
+      array(21, "abcde"),
+      `[${Array.from({ length: 10 }, () => "'a'").join(",")}`,
+      `${Array.from({ length: 11 }, () => "'a'").join(",")}]`,
+      `${array(21)} ${array(22, "b")}`,
+    ];
+    const content = lines.join("\n");
+    const baseline = matchPatternInContent(
+      { ...VSCODE_STRING_ARRAY_PATTERN, correlatedMatcher: undefined },
+      content,
+      "g",
+    );
+    const structural = matchPatternInContent(
+      VSCODE_STRING_ARRAY_PATTERN,
+      content,
+      "g",
+    );
+    const lineStarts: number[] = [];
+    let offset = 0;
+    for (const line of lines) {
+      lineStarts.push(offset);
+      offset += line.length + 1;
+    }
+
+    expect(structural.map((hit) => hit.line)).toEqual(
+      baseline.map((hit) => hit.line),
+    );
+    expect(structural.map((hit) => hit.match.index)).toEqual(
+      baseline.map(
+        (hit) => lineStarts[hit.line - 1]! + (hit.match.index ?? 0),
+      ),
+    );
+    expect(structural.map((hit) => truncateMatch(hit.text))).toEqual(
+      baseline.map((hit) => truncateMatch(hit.text)),
+    );
+    expect(structural.coverage.complete).toBe(true);
+    expect(structural.coverage.regexAttempts).toBe(1);
+  });
+
+  it(
+    "fully evaluates a 5 MiB unterminated string array",
+    { timeout: 15_000 },
+    () => {
+      const fiveMiB = 5 * 1024 * 1024;
+      const unit = "'abcd',";
+      const content = (`[${unit.repeat(Math.ceil(fiveMiB / unit.length))}`)
+        .slice(0, fiveMiB);
+      const started = performance.now();
+      const hits = matchPatternInContent(
+        VSCODE_STRING_ARRAY_PATTERN,
+        content,
+        "g",
+      );
+
+      expect(hits).toEqual([]);
+      expect(hits.coverage.complete).toBe(true);
+      expect(hits.coverage.regexAttempts).toBe(1);
+      expect(hits.coverage.tiledRanges).toBe(0);
+      expect(performance.now() - started).toBeLessThan(5_000);
+    },
+  );
 
   it("should detect hex-encoded strings", async () => {
     const vsixPath = createVsix(tempDir, {

@@ -1,3 +1,56 @@
+> Note (2026-07-29, independent review - v5.23.1): The complete v5.23.0 review
+> set is fixed in one patch release. The two release blockers were reproduced before
+> implementation: the engine silently stopped after 500 lines, and `DROPPER_TEMP_EXEC`
+> treated `.execSync` as an executable-file suffix in ordinary installer code. The
+> multi-line engine also lost matches beyond character 4,096 on a minified line.
+>
+> MATCHING: the scanner no longer raises the regex window over attacker-controlled input.
+> Registered broad-gap patterns instead require bounded structural matchers at load time.
+> This covers the core tables plus Docker, Cargo, Go, Git, npm, VS Code, and GitHub Actions
+> workflow tables. Differential tests preserve legacy start, greedy-end, overlap, line
+> separator, and evidence semantics where no precision correction was intended. Safety
+> budgets and conservative fallbacks emit `PATTERN_SCAN_INCOMPLETE`; they never return a
+> clean verdict. The false-positive corrections require real same-value/data-flow or
+> in-body correlation for dropper, Proxy, GeoIP protestware, and PyPI base64 rules.
+>
+> WIRING: one shared runner now applies the full `PatternEntry` contract, including file
+> extension, path, test-file, corroboration, value, line-span, and structural-matcher
+> guards. AST-based wiring checks reject new direct regex consumers, and load validation
+> rejects malformed patterns, invalid spans, duplicate core rule IDs, unsafe broad gaps,
+> and missing structural matchers. Late-file, long-line, repeated-token, and non-vacuous
+> boundary fixtures cover the review's nine findings.
+>
+> COVERAGE: partial status survives severity and policy filtering and is explicit in every
+> report/gate surface. Unreadable, unenumerable, depth-limited, oversized, broken-link,
+> escaping-link, special-node, cycle, and traversal-budget paths fail closed with normalized,
+> deduplicated public paths. Specialized scanners receive an explicit trusted root.
+> Contained internal symlinks retain their public artifact path; external targets are not
+> read. Walk depth and alias expansion are bounded, including skill trees and VSIX manifests.
+>
+> ARTIFACTS: PyPI scans every unique latest-release sdist and wheel, preserves distinct
+> valid digests, verifies downloaded SHA-256 identities, retries equivalent metadata URLs,
+> and attributes findings to the alias whose bytes passed verification. Missing or malformed
+> digest metadata leaves the content scan explicitly partial. npm and VSIX scans include
+> shipped `node_modules`. Archive members are fully preflighted before extraction for unsafe
+> paths, links, types, structures, and bounded resource use.
+>
+> VERDICT INTEGRITY: the CLI rejects incompatible report/gate thresholds and colliding
+> output writers before scanning, produces a canonical JSON sidecar from the same report,
+> and lets large nonzero reports drain before exit. Direct state and organization APIs also
+> preserve partial status and exclude incomplete scores from complete-repository averages.
+> The Marketplace Action uses one scan, one explicit severity gate, isolated temp files,
+> schema and formatter reconciliation, immutable Action pins, an exact CLI pin, bounded
+> logs/outputs/comments, inert report rendering, and fail-closed partial behavior. PR comment
+> updates are paginated and limited to the canonical GitHub Actions bot marker.
+>
+> RELEASE HYGIENE: v5.23.1 is synchronized across every governed version site, including
+> specialized ScanReport versions and the Action CLI pin. Public release notes contain no
+> private environment details. Windows-compatible focused verification is green: 38 files,
+> 907 tests passed, and 17 platform skips; platform-dependent VSIX fixtures remain for Linux.
+> TypeScript, feed, and 14-site governance gates pass. Complete Linux verification counts
+> will be recorded before the branch is declared ready. No release tag or publish action has
+> been performed.
+
 > Note (2026-07-29, grok-4.5 - v5.23.0): Multi-line pattern matching. The engine matched line by
 > line, so PROXY_HANDLER_TRAP (and any rule bridging two ideas) only fired on one-line payloads.
 > Reproduced: one-line Proxy+fetch was HIGH; the identical construct pretty-printed across three
@@ -1552,7 +1605,10 @@
 > 2026-03-26 v3.1.0 session; this refresh brings the manifest commit-pointer and
 > file index current. No application code changed in this onboarding.
 
-## Current Version: 5.17.3
+## Historical Snapshot: 5.17.3 (superseded)
+
+> This section is retained as historical provenance. It is not the current
+> product state; see the v5.23.1 review note at the top and `package.json`.
 
 ### Published
 - npm: supply-chain-guard@5.17.3 (unscoped, public)

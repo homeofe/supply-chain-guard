@@ -404,6 +404,8 @@ export interface ScanOptions {
   excludeRules?: string[];
   /** Maximum directory depth */
   maxDepth?: number;
+  /** Optional lower cap for expanded filesystem entries (hard-capped by the scanner) */
+  maxEntries?: number;
   /** Baseline file path (v4.4) */
   baselineFile?: string;
   /** Policy config file path (v4.4) */
@@ -444,6 +446,30 @@ export interface SolanaMonitorOptions {
   /** Output format */
   format: "text" | "json";
 }
+
+/**
+ * One exact correlation produced by a dependency-free structural matcher.
+ *
+ * Offsets are absolute UTF-16 code-unit offsets into the scanned content.
+ * `end` is exclusive. Evidence is deliberately bounded so a correlation
+ * across a minified multi-megabyte line cannot leak that whole line into a
+ * report.
+ */
+export interface CorrelatedPatternMatch {
+  start: number;
+  end: number;
+  evidence: string;
+}
+
+/**
+ * A near-linear structural matcher for patterns that correlate two or more
+ * code events. The engine applies spansLines and file/path guards centrally.
+ */
+export type CorrelatedPatternMatcher = (
+  content: string,
+) => Iterable<CorrelatedPatternMatch>;
+/** A near-linear whole-file corroboration predicate for PatternEntry metadata. */
+export type FileContentRequirementMatcher = (content: string) => boolean;
 
 export interface PatternEntry {
   /** Pattern name or identifier */
@@ -494,6 +520,11 @@ export interface PatternEntry {
    */
   requiresInFile?: RegExp;
   /**
+   * Near-linear equivalent of requiresInFile for corroboration that requires
+   * boolean composition or other logic unsafe to encode with broad regex gaps.
+   */
+  requiresInFileMatcher?: FileContentRequirementMatcher;
+  /**
    * Optional multi-line window size (v5.23). How many consecutive lines the
    * engine may join when evaluating this pattern.
    *
@@ -510,6 +541,11 @@ export interface PatternEntry {
    * code.
    */
   spansLines?: number;
+  /**
+   * Exact structural matcher for correlations that cannot safely be expressed
+   * as an unbounded JavaScript regex over an admitted multi-megabyte file.
+   */
+  correlatedMatcher?: CorrelatedPatternMatcher;
 }
 
 export interface WatchlistEntry {

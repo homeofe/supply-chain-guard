@@ -31,6 +31,7 @@ import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion, checkIOCBlocklist } from "./ioc-blocklist.js";
 import { PROMPT_INJECTION_PATTERNS } from "./patterns.js";
+import { matchPatternInSemanticText } from "./pattern-scanner.js";
 
 /** MCP config file locations, relative to the scanned directory (never the user home). */
 export const MCP_CONFIG_FILES: string[] = [
@@ -226,7 +227,7 @@ export function scanMcpConfigContent(
 
     // 4. Prompt-injection tokens in description/instructions strings
     for (const { key, value } of collectInstructionStrings(entryRaw as Record<string, unknown>)) {
-      const hit = matchPromptInjection(value);
+      const hit = matchPromptInjection(value, relativePath, findings);
       if (hit) {
         findings.push({
           rule: "MCP_TOOL_DESCRIPTION_INJECTION",
@@ -387,9 +388,20 @@ function collectInstructionStrings(
  * (onlyFilePattern/notTestFile) target docs and do not apply here - the
  * string comes out of a parsed MCP config, which is always agent-facing.
  */
-function matchPromptInjection(text: string): { description: string } | null {
+function matchPromptInjection(
+  text: string,
+  relativePath: string,
+  findings: Finding[],
+): { description: string } | null {
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
-    if (new RegExp(pattern.pattern, "i").test(text)) {
+    const hits = matchPatternInSemanticText(
+      pattern,
+      text,
+      relativePath,
+      findings,
+      "i",
+    );
+    if (hits && hits.length > 0) {
       return { description: pattern.description };
     }
   }

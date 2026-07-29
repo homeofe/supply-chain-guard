@@ -24,7 +24,7 @@ inputs:
     required: false
     default: ""
   fail-on:
-    description: "Fail the check if findings at this severity or above are found: critical, high, medium, low"
+    description: "Fail the check if findings at this severity or above are found: critical, high, medium, low, info"
     required: false
     default: "critical"
   comment-on-pr:
@@ -35,24 +35,38 @@ inputs:
 outputs:
   score:
     description: "Risk score (0-100)"
+    value: ${{ steps.scan.outputs.score }}
   risk-level:
-    description: "Risk level: clean, low, medium, high, critical"
+    description: "Risk level: partial, clean, low, medium, high, critical"
+    value: ${{ steps.scan.outputs['risk-level'] }}
   findings-count:
-    description: "Total number of findings"
+    description: "Number of reportable findings after filters"
+    value: ${{ steps.scan.outputs['findings-count'] }}
+  partial-scan:
+    description: "Whether coverage was incomplete and the check failed closed"
+    value: ${{ steps.scan.outputs['partial-scan'] }}
   report:
-    description: "Full scan report in the requested format"
+    description: "Scan report in the requested format (bounded for GitHub output limits)"
+    value: ${{ steps.scan.outputs.report }}
+  report-path:
+    description: "Runner-local path containing the complete scan report"
+    value: ${{ steps.scan.outputs['report-path'] }}
+  report-truncated:
+    description: "Whether the report output was replaced by a size-limit notice"
+    value: ${{ steps.scan.outputs['report-truncated'] }}
 
 runs:
   using: "composite"
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: "22"
+        package-manager-cache: false
 
     - name: Install supply-chain-guard
       shell: bash
-      run: npm install -g supply-chain-guard
+      run: npm install -g supply-chain-guard@5.23.1 --ignore-scripts --no-audit --no-fund
 
     - name: Run scan
       id: scan
@@ -60,18 +74,53 @@ runs:
       env:
         SCG_PATH: ${{ inputs.path }}
         SCG_FORMAT: ${{ inputs.format }}
-        SCG_MIN_SEVERITY: ${{ inputs.min-severity }}
-        SCG_EXCLUDE_RULES: ${{ inputs.exclude-rules }}
-        SCG_FAIL_ON: ${{ inputs.fail-on }}
+        SCG_MIN_SEVERITY: ${{ inputs['min-severity'] }}
+        SCG_EXCLUDE_RULES: ${{ inputs['exclude-rules'] }}
+        SCG_FAIL_ON: ${{ inputs['fail-on'] }}
+        SCG_COMMENT_ON_PR: ${{ inputs['comment-on-pr'] }}
       run: |
         set +e
 
         # Inputs arrive via env (set by the runner), never interpolated into this
-        # script at template-render time. Build the filter flags as an array so
-        # values cannot word-split or be parsed by the shell. The SAME filters
-        # feed both the human report and the JSON metrics so they describe one
-        # finding set.
-        FILTER_ARGS=()
+        # script at template-render time. Validate every enum here: Commander
+        # validates its own invocation, but the Action must not turn a typo into
+        # an ignored gate or a successful scan.
+        SCG_FORMAT="${SCG_FORMAT:-markdown}"
+        FAIL_SEVERITY="${SCG_FAIL_ON:-critical}"
+        COMMENT_ON_PR="${SCG_COMMENT_ON_PR:-true}"
+        case "$SCG_FORMAT" in
+          text|json|markdown|sarif|sbom|html|badge|gitlab|junit) ;;
+          *) echo "Invalid format input. Allowed: text, json, markdown, sarif, sbom, html, badge, gitlab, junit." >&2; exit 1 ;;
+        esac
+        case "$COMMENT_ON_PR" in
+          true|false) ;;
+          *) echo "Invalid comment-on-pr input. Allowed: true, false." >&2; exit 1 ;;
+        esac
+        case "$SCG_MIN_SEVERITY" in
+          ""|info) MIN_SEVERITY_RANK=0 ;;
+          low) MIN_SEVERITY_RANK=1 ;;
+          medium) MIN_SEVERITY_RANK=2 ;;
+          high) MIN_SEVERITY_RANK=3 ;;
+          critical) MIN_SEVERITY_RANK=4 ;;
+          *) echo "Invalid min-severity input. Allowed: info, low, medium, high, critical." >&2; exit 1 ;;
+        esac
+        case "$FAIL_SEVERITY" in
+          info) FAIL_SEVERITY_RANK=0 ;;
+          low) FAIL_SEVERITY_RANK=1 ;;
+          medium) FAIL_SEVERITY_RANK=2 ;;
+          high) FAIL_SEVERITY_RANK=3 ;;
+          critical) FAIL_SEVERITY_RANK=4 ;;
+          *) echo "Invalid fail-on input. Allowed: info, low, medium, high, critical." >&2; exit 1 ;;
+        esac
+        if [ "$MIN_SEVERITY_RANK" -gt "$FAIL_SEVERITY_RANK" ]; then
+          echo "Invalid severity thresholds: min-severity '$SCG_MIN_SEVERITY' would hide findings required by fail-on '$FAIL_SEVERITY'." >&2
+          exit 1
+        fi
+
+        # Build the filter flags as an array so values cannot word-split or be
+        # parsed by the shell. The scan is read-only, and --no-history prevents
+        # it from mutating the repository while producing both report formats.
+        FILTER_ARGS=(--no-history --fail-on "$FAIL_SEVERITY")
         if [ -n "$SCG_MIN_SEVERITY" ]; then
           FILTER_ARGS+=(--min-severity "$SCG_MIN_SEVERITY")
         fi
@@ -79,88 +128,353 @@ runs:
           FILTER_ARGS+=(--exclude "$SCG_EXCLUDE_RULES")
         fi
 
-        # JSON drives the machine-readable outputs (score / risk-level /
-        # findings-count) and the fail-on gate below, so it is the canonical
-        # single scan. Only run a SECOND scan when the requested human format is
-        # not already JSON (previously json was ALWAYS re-scanned, doubling CI
-        # time even when the requested format WAS json).
-        JSON_FILE="$RUNNER_TEMP/scg-report.json"
-        if [ "$SCG_FORMAT" = "json" ]; then
-          supply-chain-guard scan "$SCG_PATH" --format json "${FILTER_ARGS[@]}" > "$JSON_FILE" 2>/dev/null
-          REPORT=$(cat "$JSON_FILE")
-        else
-          REPORT=$(supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" "${FILTER_ARGS[@]}" 2>&1)
-          supply-chain-guard scan "$SCG_PATH" --format json "${FILTER_ARGS[@]}" > "$JSON_FILE" 2>/dev/null
+        # One scan produces both payloads from the same in-memory ScanReport.
+        # The canonical JSON drives policy; stdout carries the requested format.
+        SCG_RUN_DIR=$(mktemp -d "$RUNNER_TEMP/scg-action.XXXXXX") || {
+          echo "Could not create the isolated scan output directory." >&2
+          exit 1
+        }
+        JSON_FILE="$SCG_RUN_DIR/canonical-report.json"
+        FORMAT_FILE="$SCG_RUN_DIR/requested-report"
+        FORMAT_ERR="$SCG_RUN_DIR/format.stderr"
+        supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" \
+          --json-output "$JSON_FILE" "${FILTER_ARGS[@]}" \
+          > "$FORMAT_FILE" 2>"$FORMAT_ERR"
+        SCAN_STATUS=$?
+        set -e
+        JSON_STATUS=$SCAN_STATUS
+        FORMAT_STATUS=$SCAN_STATUS
+        # Validate every field consumed by the gate or published through a
+        # single-line output. Exact per-severity counts prevent a malformed
+        # summary from under-reporting a finding and passing the threshold.
+        if ! jq -e '
+          def nonnegint: type == "number" and . >= 0 and floor == .;
+          def severity_score:
+            if . == "critical" then 25
+            elif . == "high" then 15
+            elif . == "medium" then 5
+            elif . == "low" then 2
+            else 1
+            end;
+          def minimum_visible_score:
+            [.findings[]
+             | select(.rule != "CRITICAL_FINDING_NO_OWNER"
+                      and .rule != "RISK_STAGNATION_HIGH")
+             | { rule: .rule, score: (.severity | severity_score) }]
+            | group_by(.rule)
+            | map(map(.score) | max)
+            | (add // 0)
+            | if . > 100 then 100 else . end;
+          def coverage_rule:
+            . == "FILE_TOO_LARGE_SKIPPED"
+            or . == "PATTERN_SCAN_INCOMPLETE"
+            or . == "PATH_SCAN_INCOMPLETE"
+            or . == "INTERNAL_DISCLOSURE_TRUNCATED"
+            or . == "PYPI_NO_SOURCE"
+            or . == "NPM_NO_ARTIFACT"
+            or . == "INTERNAL_DENYLIST_UNAVAILABLE"
+            or . == "INTERNAL_DENYLIST_INVALID_ENTRY"
+            or . == "POLICY_INVALID_INTERNAL_TERM";
+          type == "object"
+          and (.summary | type == "object")
+          and (.findings | type == "array")
+          and ([.summary.totalFiles, .summary.filesScanned, .summary.critical,
+                .summary.high, .summary.medium, .summary.low, .summary.info]
+               | all(nonnegint))
+          and (.summary.filesScanned <= .summary.totalFiles)
+          and (.score | nonnegint and . <= 100)
+          and (.score >= (minimum_visible_score))
+          and (.riskLevel == "clean" or .riskLevel == "low" or .riskLevel == "medium"
+               or .riskLevel == "high" or .riskLevel == "critical")
+          and ((.score == 0 and .riskLevel == "clean")
+               or (.score >= 1 and .score <= 10 and .riskLevel == "low")
+               or (.score >= 11 and .score <= 30 and .riskLevel == "medium")
+               or (.score >= 31 and .score <= 60 and .riskLevel == "high")
+               or (.score >= 61 and .riskLevel == "critical"))
+          and ((has("partialScan") | not) or (.partialScan | type == "boolean"))
+          and all(.findings[];
+            type == "object"
+            and (.rule | type == "string" and length > 0)
+            and (.severity == "critical" or .severity == "high" or .severity == "medium"
+                 or .severity == "low" or .severity == "info"))
+          and (([.findings[] | select(.rule | coverage_rule)] | length) == 0
+               or .partialScan == true)
+          and (.summary.critical == ([.findings[] | select(.severity == "critical")] | length))
+          and (.summary.high == ([.findings[] | select(.severity == "high")] | length))
+          and (.summary.medium == ([.findings[] | select(.severity == "medium")] | length))
+          and (.summary.low == ([.findings[] | select(.severity == "low")] | length))
+          and (.summary.info == ([.findings[] | select(.severity == "info")] | length))
+        ' "$JSON_FILE" >/dev/null; then
+          echo "supply-chain-guard did not produce a valid JSON scan report; failing closed." >&2
+          exit 1
         fi
-        JSON_REPORT=$(cat "$JSON_FILE")
 
-        # Extract values from JSON
-        SCORE=$(echo "$JSON_REPORT" | jq -r '.score // 0')
-        RISK_LEVEL=$(echo "$JSON_REPORT" | jq -r '.riskLevel // "unknown"')
-        FINDINGS_COUNT=$(echo "$JSON_REPORT" | jq -r '.findings | length // 0')
+        # Extract only schema-validated scalar values.
+        SCORE=$(jq -r '.score' "$JSON_FILE")
+        PARTIAL_SCAN=$(jq -r '.partialScan // false' "$JSON_FILE")
+        RISK_LEVEL=$(jq -r '.riskLevel' "$JSON_FILE")
+        FINDINGS_COUNT=$(jq -r '.findings | length' "$JSON_FILE")
+        if [ "$PARTIAL_SCAN" = "true" ]; then
+          RISK_LEVEL="partial"
+        fi
 
-        echo "score=$SCORE" >> $GITHUB_OUTPUT
-        echo "risk-level=$RISK_LEVEL" >> $GITHUB_OUTPUT
-        echo "findings-count=$FINDINGS_COUNT" >> $GITHUB_OUTPUT
-
-        # Save report to a per-job temp file for multi-line output. RUNNER_TEMP
-        # is per-job and cross-platform; a random heredoc delimiter prevents scan
-        # output from closing the block early and injecting step outputs.
-        echo "$REPORT" > "$RUNNER_TEMP/scg-report.txt"
-        REPORT_DELIM="SCG_REPORT_$(date +%s%N)_${RANDOM}${RANDOM}"
-        {
-          echo "report<<$REPORT_DELIM"
-          cat "$RUNNER_TEMP/scg-report.txt"
-          echo "$REPORT_DELIM"
-        } >> $GITHUB_OUTPUT
-
-        # Print report to log
-        echo "$REPORT"
-
-        # Determine if we should fail
-        FAIL_SEVERITY="$SCG_FAIL_ON"
-        case "$FAIL_SEVERITY" in
-          critical)
-            [ "$(echo "$JSON_REPORT" | jq '.summary.critical')" -gt 0 ] && exit 2
+        # Validate that the requested formatter produced its documented payload,
+        # not an error message whose exit code happens to equal a finding gate.
+        FORMAT_VALID=false
+        case "$SCG_FORMAT" in
+          json)
+            jq -s -e 'length == 2 and .[0] == .[1]' "$FORMAT_FILE" "$JSON_FILE" >/dev/null && FORMAT_VALID=true
             ;;
-          high)
-            [ "$(echo "$JSON_REPORT" | jq '.summary.critical + .summary.high')" -gt 0 ] && exit 1
+          sarif)
+            jq -e '.version == "2.1.0" and (.runs | type == "array") and (.runs[0].tool.driver.name == "supply-chain-guard") and (.runs[0].results | type == "array")' "$FORMAT_FILE" >/dev/null && FORMAT_VALID=true
             ;;
-          medium)
-            [ "$(echo "$JSON_REPORT" | jq '.summary.critical + .summary.high + .summary.medium')" -gt 0 ] && exit 1
+          sbom)
+            jq -e '.bomFormat == "CycloneDX" and .specVersion == "1.6" and (.vulnerabilities | type == "array")' "$FORMAT_FILE" >/dev/null && FORMAT_VALID=true
             ;;
-          low)
-            [ "$(echo "$JSON_REPORT" | jq '.summary.critical + .summary.high + .summary.medium + .summary.low')" -gt 0 ] && exit 1
+          badge)
+            jq -e '.schemaVersion == 1 and .label == "supply-chain-guard" and (.message | type == "string") and (.color | type == "string")' "$FORMAT_FILE" >/dev/null && FORMAT_VALID=true
+            ;;
+          gitlab)
+            jq -e '.version == "15.2.4" and .scan.scanner.name == "supply-chain-guard" and (.vulnerabilities | type == "array")' "$FORMAT_FILE" >/dev/null && FORMAT_VALID=true
+            ;;
+          text)
+            grep -Fq 'supply-chain-guard' "$FORMAT_FILE" && grep -Fq 'FINDINGS SUMMARY' "$FORMAT_FILE" && FORMAT_VALID=true
+            ;;
+          markdown)
+            grep -Fq 'supply-chain-guard Scan Report' "$FORMAT_FILE" && grep -Fq '| Property | Value |' "$FORMAT_FILE" && FORMAT_VALID=true
+            ;;
+          html)
+            grep -Fq '<!DOCTYPE html>' "$FORMAT_FILE" && grep -Fq '<h1>supply-chain-guard Scan Report</h1>' "$FORMAT_FILE" && grep -Fq '</html>' "$FORMAT_FILE" && FORMAT_VALID=true
+            ;;
+          junit)
+            grep -Fq '<?xml version="1.0" encoding="UTF-8"?>' "$FORMAT_FILE" && grep -Fq '<testsuite name="supply-chain-guard"' "$FORMAT_FILE" && grep -Fq '</testsuite>' "$FORMAT_FILE" && FORMAT_VALID=true
             ;;
         esac
+
+        # The CLI receives the same explicit gate as this Action. Its explicit
+        # --fail-on contract exits 1 for a threshold hit (including critical)
+        # or partial coverage, and 0 otherwise. The Action maps a critical gate
+        # hit to its documented public exit 2 after this reconciliation.
+        EXPECTED_STATUS=0
+        if [ "$PARTIAL_SCAN" = "true" ]; then
+          EXPECTED_STATUS=1
+        else
+          case "$FAIL_SEVERITY" in
+            critical) GATE_QUERY='.summary.critical > 0' ;;
+            high) GATE_QUERY='.summary.critical + .summary.high > 0' ;;
+            medium) GATE_QUERY='.summary.critical + .summary.high + .summary.medium > 0' ;;
+            low) GATE_QUERY='.summary.critical + .summary.high + .summary.medium + .summary.low > 0' ;;
+            info) GATE_QUERY='.summary.critical + .summary.high + .summary.medium + .summary.low + .summary.info > 0' ;;
+          esac
+          if jq -e "$GATE_QUERY" "$JSON_FILE" >/dev/null; then
+            EXPECTED_STATUS=1
+          fi
+        fi
+        PASSES_CONSISTENT=false
+        if [ "$FORMAT_VALID" = "true" ] \
+          && [ "$JSON_STATUS" -eq "$EXPECTED_STATUS" ] \
+          && [ "$FORMAT_STATUS" -eq "$EXPECTED_STATUS" ]; then
+          PASSES_CONSISTENT=true
+        fi
+
+        # Keep the complete report on disk. GitHub limits all step outputs in a
+        # job to roughly 1 MB (UTF-16 accounting), so publish at most 400 KB and
+        # expose the runner-local path for callers that need the complete file.
+        REPORT_PATH="$SCG_RUN_DIR/report.txt"
+        cp "$FORMAT_FILE" "$REPORT_PATH"
+        REPORT_BYTES=$(wc -c < "$REPORT_PATH")
+        REPORT_TRUNCATED=false
+        if [ "$REPORT_BYTES" -gt 400000 ]; then
+          REPORT_TRUNCATED=true
+        fi
+
+        REPORT_DELIM="SCG_REPORT_$(node -p "require('node:crypto').randomUUID()")"
+        {
+          echo "score=$SCORE"
+          echo "risk-level=$RISK_LEVEL"
+          echo "findings-count=$FINDINGS_COUNT"
+          echo "partial-scan=$PARTIAL_SCAN"
+          echo "report-valid=true"
+          echo "passes-consistent=$PASSES_CONSISTENT"
+          echo "report-path=$REPORT_PATH"
+          echo "report-truncated=$REPORT_TRUNCATED"
+          echo "report<<$REPORT_DELIM"
+          if [ "$REPORT_TRUNCATED" = "true" ]; then
+            echo "Report exceeds the safe GitHub output limit ($REPORT_BYTES bytes). The complete report is retained at the report-path output."
+          else
+            cat "$REPORT_PATH"
+          fi
+          echo "$REPORT_DELIM"
+        } >> "$GITHUB_OUTPUT"
+
+        # Keep logs bounded as well as step outputs. The complete report remains
+        # available through report-path for later steps in this job.
+        LOG_BYTE_LIMIT=200000
+        LOG_COMMAND_TOKEN="SCG_LOG_$(node -p "require('node:crypto').randomUUID()")"
+        echo "::stop-commands::$LOG_COMMAND_TOKEN"
+        if [ "$REPORT_BYTES" -gt "$LOG_BYTE_LIMIT" ]; then
+          head -c "$LOG_BYTE_LIMIT" "$REPORT_PATH"
+          echo
+          echo "[supply-chain-guard report log truncated at $LOG_BYTE_LIMIT bytes]"
+        else
+          cat "$REPORT_PATH"
+        fi
+        echo
+        echo "::$LOG_COMMAND_TOKEN::"
+
+        # A malformed formatter payload or command-status disagreement is an
+        # operational failure, even when exit 1 could also mean findings.
+        if [ "$PASSES_CONSISTENT" != "true" ]; then
+          if [ -s "$FORMAT_ERR" ]; then
+            ERROR_COMMAND_TOKEN="SCG_ERR_$(node -p "require('node:crypto').randomUUID()")"
+            echo "::stop-commands::$ERROR_COMMAND_TOKEN"
+            head -c "$LOG_BYTE_LIMIT" "$FORMAT_ERR"
+            echo
+            echo "::$ERROR_COMMAND_TOKEN::"
+          fi
+          echo "Scan status or requested-format payload was invalid; failing closed (scan=$SCAN_STATUS, expected=$EXPECTED_STATUS)." >&2
+          exit 1
+        fi
+
+        # Determine if we should fail from validated counts.
+        case "$FAIL_SEVERITY" in
+          critical)
+            jq -e '.summary.critical > 0' "$JSON_FILE" >/dev/null && exit 2
+            ;;
+          high)
+            jq -e '.summary.critical + .summary.high > 0' "$JSON_FILE" >/dev/null && exit 1
+            ;;
+          medium)
+            jq -e '.summary.critical + .summary.high + .summary.medium > 0' "$JSON_FILE" >/dev/null && exit 1
+            ;;
+          low)
+            jq -e '.summary.critical + .summary.high + .summary.medium + .summary.low > 0' "$JSON_FILE" >/dev/null && exit 1
+            ;;
+          info)
+            jq -e '.summary.critical + .summary.high + .summary.medium + .summary.low + .summary.info > 0' "$JSON_FILE" >/dev/null && exit 1
+            ;;
+        esac
+
+        # Coverage failures are independent of the finding-severity threshold.
+        # A partial scan can never prove that no threshold finding exists.
+        if [ "$PARTIAL_SCAN" = "true" ]; then
+          exit 1
+        fi
 
         exit 0
 
     - name: Comment on PR
-      if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' && steps.scan.outputs.findings-count != '0'
-      uses: actions/github-script@v9
+      if: always() && inputs['comment-on-pr'] == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       continue-on-error: true
+      env:
+        SCG_PARTIAL_SCAN: ${{ steps.scan.outputs['partial-scan'] }}
+        SCG_REPORT_VALID: ${{ steps.scan.outputs['report-valid'] }}
+        SCG_PASSES_CONSISTENT: ${{ steps.scan.outputs['passes-consistent'] }}
+        SCG_FINDINGS_COUNT: ${{ steps.scan.outputs['findings-count'] }}
+        SCG_SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        SCG_REPORT_PATH: ${{ steps.scan.outputs['report-path'] }}
       with:
         script: |
           const fs = require('fs');
+          const marker = '## supply-chain-guard Scan Report';
+          const reportValid = process.env.SCG_REPORT_VALID === 'true';
+          const passesConsistent = process.env.SCG_PASSES_CONSISTENT === 'true';
+          const partial = process.env.SCG_PARTIAL_SCAN === 'true';
+          const parsedCount = Number.parseInt(process.env.SCG_FINDINGS_COUNT ?? '', 10);
+          const findingsCount = Number.isSafeInteger(parsedCount) && parsedCount >= 0
+            ? parsedCount
+            : null;
+          const scanOutcome = process.env.SCG_SCAN_OUTCOME || 'unavailable';
+
+          // Read only the bytes that can be useful in a GitHub comment. This
+          // keeps a maliciously large formatter payload from exhausting memory.
+          const reportByteLimit = 60000;
           let report = '';
+          let reportReadTruncated = false;
           try {
-            report = fs.readFileSync(process.env.RUNNER_TEMP + '/scg-report.txt', 'utf8');
+            const descriptor = fs.openSync(process.env.SCG_REPORT_PATH, 'r');
+            try {
+              const buffer = Buffer.alloc(reportByteLimit + 1);
+              const bytesRead = fs.readSync(descriptor, buffer, 0, buffer.length, 0);
+              reportReadTruncated = bytesRead > reportByteLimit;
+              report = buffer.subarray(0, Math.min(bytesRead, reportByteLimit)).toString('utf8').trim();
+            } finally {
+              fs.closeSync(descriptor);
+            }
           } catch (err) {
-            console.error('Failed to read report file:', err);
+            console.error('Failed to read the bounded report excerpt:', err);
           }
-          const { data: comments } = await github.rest.issues.listComments({
+
+          // Escape HTML and neutralize mentions before rendering the report as
+          // inert code in the PR comment.
+          const escapeReport = (value) => value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/@/g, '&#64;');
+          const escapedReport = escapeReport(report);
+          // Treat every scanner-rendered line as inert code. Even the Markdown
+          // formatter contains package-controlled text, which must not create
+          // links, images, headings, mentions, or other active PR content.
+          let reportForComment = escapedReport
+            .split(/\r?\n/)
+            .map((line) => `    ${line}`)
+            .join('\n');
+          if (reportReadTruncated && reportForComment) {
+            reportForComment += '\n\n> Report excerpt truncated before comment construction.';
+          }
+
+          const comments = await github.paginate(github.rest.issues.listComments, {
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
+            per_page: 100,
           });
 
-          // Update existing comment or create new one
           const botComment = comments.find(
-            (c) => c.body?.includes('supply-chain-guard Scan Report')
+            (comment) => comment.user?.login === 'github-actions[bot]'
+              && typeof comment.body === 'string'
+              && comment.body.startsWith(`${marker}\n`)
           );
+          const clean = reportValid && passesConsistent && !partial && findingsCount === 0 && scanOutcome === 'success';
 
-          const body = report || '## 🛡️ supply-chain-guard Scan Report\n\n> ✅ No malicious indicators detected.';
+          // Do not add noise for a first clean scan, but replace a stale finding
+          // or partial comment when the repository returns to a complete clean state.
+          if (clean && !botComment) {
+            core.info('Complete clean scan; no existing scan comment to update.');
+            return;
+          }
+
+          const canonicalLine = findingsCount === null
+            ? ''
+            : `> Canonical JSON report: **${findingsCount} reportable finding(s)**.`;
+          let detail;
+          if (!reportValid) {
+            detail = `> WARNING: The scanner did not produce a validated report (step outcome: ${scanOutcome}). No clean verdict is available.`;
+          } else if (findingsCount === null) {
+            detail = '> WARNING: Scan metadata is unavailable. No clean verdict is available.';
+          } else if (!passesConsistent) {
+            detail = `> WARNING: The requested formatter or canonical JSON reconciliation failed. No clean verdict is available.\n\n${canonicalLine}`;
+            if (reportForComment) detail += `\n\n${reportForComment}`;
+          } else if (partial) {
+            detail = `> WARNING: Scan incomplete. Coverage is partial; no clean verdict is available.\n\n${canonicalLine}`;
+            if (reportForComment) detail += `\n\n${reportForComment}`;
+          } else if (findingsCount > 0) {
+            detail = `> WARNING: Findings were detected.\n\n${canonicalLine}`;
+            if (reportForComment) detail += `\n\n${reportForComment}`;
+          } else if (scanOutcome !== 'success') {
+            detail = `> WARNING: The scan step ended with ${scanOutcome} after producing a report. No clean verdict is available.\n\n${canonicalLine}`;
+          } else {
+            detail = `${canonicalLine}\n\n${reportForComment || '> Complete scan: no reportable malicious indicators detected.'}`;
+          }
+
+          const maxDetailChars = 55000;
+          if (detail.length > maxDetailChars) {
+            detail = detail.slice(0, maxDetailChars)
+              + '\n\n> Comment truncated. See the bounded job-log excerpt or consume the report-path output in a later step.';
+          }
+          const body = `${marker}\n\n${detail}`;
 
           if (botComment) {
             await github.rest.issues.updateComment({

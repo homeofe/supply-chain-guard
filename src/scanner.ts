@@ -28,16 +28,27 @@ import {
   CAMPAIGN_PATTERNS_V2,
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
-  matchPatternInContent,
   truncateMatch,
 } from "./patterns.js";
 import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
+import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
+import {
+  hasPartialScanFinding,
+  matchPatternInFile,
+  matchPatternInSemanticText,
+  normalizePublicCoveragePath,
+  recordUnreadablePath,
+} from "./pattern-scanner.js";
 import type { FeedIOC } from "./threat-intel.js";
 import { checkLockfile } from "./lockfile-checker.js";
+import {
+  collectExtractedFiles,
+  DEFAULT_EXTRACTED_WALK_MAX_ENTRIES,
+} from "./extracted-file-walker.js";
 import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
 import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
-import { scanDockerFiles, isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
-import { scanConfigFiles, isConfigFile, scanConfigFile } from "./config-scanner.js";
+import { isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
+import { isConfigFile, scanConfigFile } from "./config-scanner.js";
 import {
   loadInternalDisclosureConfig,
   scanInternalDisclosure,
@@ -90,7 +101,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.23.0";
+const TOOL_VERSION = "5.23.1";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
@@ -135,8 +146,7 @@ const SELF_SCAN_INERT_FILES = new Set([
 ]);
 
 /** Detect test / spec / fixture / mock files. Shared constant (was duplicated inline). */
-const TEST_FILE_REGEX =
-  /[._-](test|spec|mock|fixture|stub|fake)\.|__tests__|\/tests?\/|conftest\.py/i;
+const TEST_FILE_REGEX = TEST_FILE_PATTERN;
 
 const SCANNER_PACKAGE_ROOT = fs.realpathSync(path.resolve(__dirname, ".."));
 
@@ -240,17 +250,40 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
   const policy = loadPolicyConfig(scanDir);
+  const ignoreGlobs = policy?.ignore ?? [];
 
-  // Collect files (v4.5: diff mode filters to changed files only)
-  let allFiles = collectFiles(scanDir, options.maxDepth ?? 20);
+  // Collect files (v4.5: diff mode filters to changed files only). Coverage
+  // failures are held separately so policy.ignore can remove out-of-scope
+  // directory failures before they become report findings.
+  const pathCoverageFindings: Finding[] = [];
+  let allFiles = collectFiles(
+    scanDir,
+    options.maxDepth ?? 20,
+    0,
+    pathCoverageFindings,
+    scanDir,
+    options.maxEntries,
+  );
 
   // Config `ignore:` path globs: drop matching files from the scan (v5.13).
-  if (policy?.ignore?.length) {
-    const globs = policy.ignore;
+  if (ignoreGlobs.length > 0) {
     allFiles = allFiles.filter((f) => {
       const rel = path.relative(scanDir, f).replace(/\\/g, "/");
-      return !globs.some((g) => matchGlob(g, rel));
+      return !ignoreGlobs.some((glob) => matchGlob(glob, rel));
     });
+    for (let i = pathCoverageFindings.length - 1; i >= 0; i--) {
+      const rel = pathCoverageFindings[i]!.file ?? ".";
+      if (rel === ".") continue;
+      if (
+        ignoreGlobs.some(
+          (glob) =>
+            matchGlob(glob, rel) ||
+            matchGlob(glob, `${rel}/__scg_ignored__`),
+        )
+      ) {
+        pathCoverageFindings.splice(i, 1);
+      }
+    }
   }
 
   if (options.sinceCommit && fs.existsSync(path.join(scanDir, ".git"))) {
@@ -269,7 +302,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // configured this is inert and only the built-in shape rules run.
   const internalDisclosure = loadInternalDisclosureConfig(scanDir, policy);
 
-  let findings: Finding[] = [...internalDisclosure.loadFindings];
+  let findings: Finding[] = [
+    ...pathCoverageFindings,
+    ...internalDisclosure.loadFindings,
+  ];
 
   // Scan each file
   let filesScanned = 0;
@@ -292,144 +328,182 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // this guard those files would be reported twice.
     let internalDisclosureScanned = false;
 
-    // Scan Docker/Config files inline (v4.0)
-    if (isDockerFile(basename) || isConfigFile(basename)) {
+    // Scan Docker/Config files inline (v4.0). Keep I/O separate from analysis
+    // so an analyzer defect is never mislabeled as an unreadable path. These
+    // extensionless targets are first-class scanned files and obey the same
+    // size/read contract as extension-based source files.
+    let prefetchedContent: string | undefined;
+    const inlineContentTarget = isDockerFile(basename) || isConfigFile(basename);
+    if (inlineContentTarget) {
+      let inlineStat: fs.Stats;
       try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        if (isDockerFile(basename)) {
-          findings.push(...scanDockerFile(content, relativePath));
-        }
-        if (isConfigFile(basename)) {
-          findings.push(...scanConfigFile(content, relativePath));
-        }
-        // A Dockerfile FROM line and an .npmrc registry line are two of the
-        // most common places an internal host name reaches a public repo, and
-        // neither file carries a scannable extension.
-        findings.push(
-          ...scanInternalDisclosure(content, relativePath, internalDisclosure),
-        );
-        internalDisclosureScanned = true;
-      } catch { /* skip */ }
+        inlineStat = fs.statSync(filePath);
+      } catch {
+        recordUnreadablePath(findings, relativePath);
+        continue;
+      }
+      if (inlineStat.size > MAX_FILE_SIZE) {
+        findings.push(makeOversizedSkipFinding(relativePath, inlineStat.size));
+        continue;
+      }
+      try {
+        prefetchedContent = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        recordUnreadablePath(findings, relativePath);
+        continue;
+      }
+
+      if (isDockerFile(basename)) {
+        findings.push(...scanDockerFile(prefetchedContent, relativePath));
+      }
+      if (isConfigFile(basename)) {
+        findings.push(...scanConfigFile(prefetchedContent, relativePath));
+      }
+      // A Dockerfile FROM line and an .npmrc registry line are two of the
+      // most common places an internal host name reaches a public repo, and
+      // neither file carries a scannable extension.
+      findings.push(
+        ...scanInternalDisclosure(
+          prefetchedContent,
+          relativePath,
+          internalDisclosure,
+        ),
+      );
+      internalDisclosureScanned = true;
     }
 
-    // Only scan content of known file types
-    if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
+    // Successfully analyzed extensionless Docker/config targets count once.
+    if (!SCANNABLE_EXTENSIONS.has(ext)) {
+      if (prefetchedContent !== undefined) filesScanned++;
+      continue;
+    }
 
     // Skip large files - but never silently (issue #54): an oversized
     // scannable file is a coverage gap an attacker can create on purpose
     // (pad a payload past the limit to dodge content scanning).
-    const fileStat = fs.statSync(filePath);
+    let fileStat: fs.Stats;
+    try {
+      fileStat = fs.statSync(filePath);
+    } catch {
+      recordUnreadablePath(findings, relativePath);
+      continue;
+    }
     if (fileStat.size > MAX_FILE_SIZE) {
       findings.push(makeOversizedSkipFinding(relativePath, fileStat.size));
       continue;
     }
 
+    let content: string;
+    if (prefetchedContent !== undefined) {
+      content = prefetchedContent;
+    } else {
+      try {
+        content = fs.readFileSync(filePath, "utf-8");
+      } catch {
+        recordUnreadablePath(findings, relativePath);
+        continue;
+      }
+    }
     filesScanned++;
 
-    try {
-      const content = fs.readFileSync(filePath, "utf-8");
+    // Skip supply-chain-guard's own published threat-feed data (feed.json /
+    // threat-feed.json): it intentionally carries raw IOC values as inert,
+    // structurally-validated detection data. Any deviation from the strict
+    // feed schema fails the check and the file is scanned normally.
+    if (isInertThreatFeedFile(relativePath, content)) continue;
 
-      // Skip supply-chain-guard's own published threat-feed data (feed.json /
-      // threat-feed.json): it intentionally carries raw IOC values as inert,
-      // structurally-validated detection data. Any deviation from the strict
-      // feed schema fails the check and the file is scanned normally.
-      if (isInertThreatFeedFile(relativePath, content)) continue;
+    // Check file content patterns
+    checkFilePatterns(content, relativePath, findings);
 
-      // Check file content patterns
-      checkFilePatterns(content, relativePath, findings);
+    // Internal topology disclosure: private addresses, internal-only
+    // hostnames, non-public forge URLs, developer paths, plus the
+    // configured deny-list. Reported at medium/low, so the family cannot
+    // change the exit code of an existing --fail-on high pipeline.
+    if (!internalDisclosureScanned) {
+      findings.push(
+        ...scanInternalDisclosure(content, relativePath, internalDisclosure),
+      );
+    }
 
-      // Internal topology disclosure: private addresses, internal-only
-      // hostnames, non-public forge URLs, developer paths, plus the
-      // configured deny-list. Reported at medium/low, so the family cannot
-      // change the exit code of an existing --fail-on high pipeline.
-      if (!internalDisclosureScanned) {
-        findings.push(
-          ...scanInternalDisclosure(content, relativePath, internalDisclosure),
-        );
+    // Check build tool configs for plugin risks (v4.0)
+    if (BUILD_CONFIG_FILES.has(basename)) {
+      checkBuildToolPatterns(content, relativePath, findings);
+    }
+
+    // Check workspace/monorepo patterns (v4.0)
+    if (basename === "package.json" && relativePath === "package.json") {
+      checkMonorepoPatterns(content, relativePath, findings);
+    }
+
+    // Check beacon and miner patterns (T-008)
+    checkBeaconMinerPatterns(content, relativePath, findings, scanningOwnPackage);
+
+    // Entropy analysis for obfuscated payloads (v4.0)
+    const entropyFindings = analyzeEntropy(content, relativePath);
+    findings.push(...entropyFindings);
+
+    // IOC blocklist + threat-intel checks (skip scanner source/test files — they contain IOC definitions)
+    const normForIOC = relativePath.replace(/\\/g, "/");
+    const isOwnDefinitionOrFixture =
+      scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normForIOC);
+    if (!isOwnDefinitionOrFixture) {
+      const iocFindings = checkIOCBlocklist(content, relativePath);
+      findings.push(...iocFindings);
+
+      const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
+      findings.push(...tiFindings);
+    }
+
+    // README / doc-file lure pattern scanning (v4.1, scope expanded v5.2.20)
+    // Covers README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release-notes -
+    // matches LURE_PATTERNS' onlyFilePattern. Previously only `readme*`
+    // files were routed here, but the LURE patterns themselves are scoped
+    // to all of these. After v5.2.20 removed LURE_PATTERNS from the
+    // general checkFilePatterns sweep (dedupe fix), scanReadmeLures became
+    // the sole entry point so it now covers the full doc-file family.
+    if (/^(?:readme|changelog|contributing|description|release[-_]notes)/i.test(basename)) {
+      const lureFindings = scanReadmeLures(content, relativePath);
+      findings.push(...lureFindings);
+    }
+
+    // Check package.json specifically (skip test fixture directories)
+    const normPkgPath = relativePath.replace(/\\/g, "/");
+    if (basename === "package.json" && !TEST_FILE_REGEX.test(normPkgPath)) {
+      checkPackageJson(content, relativePath, findings);
+      // Check for binary download patterns in install scripts (T-007)
+      checkBinaryDownloadScripts(content, relativePath, findings);
+      // Check for known-bad package versions (v4.1)
+      checkKnownBadVersions(content, relativePath, findings);
+      // Flag dependency names matching a known-malicious/typosquat pattern.
+      // Closes the gap where a directory scan of your own repo did not catch
+      // a known-bad dependency (only the `npm <pkg>` path did). Patterns are
+      // anchored, so only exact malicious names match.
+      checkMaliciousDependencyNames(content, relativePath, findings, threatFeed);
+
+      // Deep install hook analysis (v4.2)
+      const hookScripts = extractInstallScripts(content);
+      if (hookScripts) {
+        const hookFindings = analyzeInstallHooks(hookScripts, relativePath);
+        findings.push(...hookFindings);
       }
 
-      // Check build tool configs for plugin risks (v4.0)
-      if (BUILD_CONFIG_FILES.has(basename)) {
-        checkBuildToolPatterns(content, relativePath, findings);
-      }
-
-      // Check workspace/monorepo patterns (v4.0)
-      if (basename === "package.json" && relativePath === "package.json") {
-        checkMonorepoPatterns(content, relativePath, findings);
-      }
-
-      // Check beacon and miner patterns (T-008)
-      checkBeaconMinerPatterns(content, relativePath, findings, scanningOwnPackage);
-
-      // Entropy analysis for obfuscated payloads (v4.0)
-      const entropyFindings = analyzeEntropy(content, relativePath);
-      findings.push(...entropyFindings);
-
-      // IOC blocklist + threat-intel checks (skip scanner source/test files — they contain IOC definitions)
-      const normForIOC = relativePath.replace(/\\/g, "/");
-      const isOwnDefinitionOrFixture =
-        scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normForIOC);
-      if (!isOwnDefinitionOrFixture) {
-        const iocFindings = checkIOCBlocklist(content, relativePath);
-        findings.push(...iocFindings);
-
-        const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
-        findings.push(...tiFindings);
-      }
-
-      // README / doc-file lure pattern scanning (v4.1, scope expanded v5.2.20)
-      // Covers README, CHANGELOG, CONTRIBUTING, DESCRIPTION, release-notes -
-      // matches LURE_PATTERNS' onlyFilePattern. Previously only `readme*`
-      // files were routed here, but the LURE patterns themselves are scoped
-      // to all of these. After v5.2.20 removed LURE_PATTERNS from the
-      // general checkFilePatterns sweep (dedupe fix), scanReadmeLures became
-      // the sole entry point so it now covers the full doc-file family.
-      if (/^(?:readme|changelog|contributing|description|release[-_]notes)/i.test(basename)) {
-        const lureFindings = scanReadmeLures(content, relativePath);
-        findings.push(...lureFindings);
-      }
-
-      // Check package.json specifically (skip test fixture directories)
-      const normPkgPath = relativePath.replace(/\\/g, "/");
-      if (basename === "package.json" && !TEST_FILE_REGEX.test(normPkgPath)) {
-        checkPackageJson(content, relativePath, findings);
-        // Check for binary download patterns in install scripts (T-007)
-        checkBinaryDownloadScripts(content, relativePath, findings);
-        // Check for known-bad package versions (v4.1)
-        checkKnownBadVersions(content, relativePath, findings);
-        // Flag dependency names matching a known-malicious/typosquat pattern.
-        // Closes the gap where a directory scan of your own repo did not catch
-        // a known-bad dependency (only the `npm <pkg>` path did). Patterns are
-        // anchored, so only exact malicious names match.
-        checkMaliciousDependencyNames(content, relativePath, findings, threatFeed);
-
-        // Deep install hook analysis (v4.2)
-        const hookScripts = extractInstallScripts(content);
-        if (hookScripts) {
-          const hookFindings = analyzeInstallHooks(hookScripts, relativePath);
-          findings.push(...hookFindings);
+      // Dependency risk analysis (v4.2)
+      try {
+        const pkg = JSON.parse(content) as Record<string, unknown>;
+        const allDeps = {
+          ...(pkg.dependencies as Record<string, string> | undefined),
+          ...(pkg.devDependencies as Record<string, string> | undefined),
+        };
+        if (Object.keys(allDeps).length > 0) {
+          const depFindings = analyzeDependencyRisks(allDeps, relativePath);
+          findings.push(...depFindings);
         }
+      } catch { /* not valid JSON */ }
+    }
 
-        // Dependency risk analysis (v4.2)
-        try {
-          const pkg = JSON.parse(content) as Record<string, unknown>;
-          const allDeps = {
-            ...(pkg.dependencies as Record<string, string> | undefined),
-            ...(pkg.devDependencies as Record<string, string> | undefined),
-          };
-          if (Object.keys(allDeps).length > 0) {
-            const depFindings = analyzeDependencyRisks(allDeps, relativePath);
-            findings.push(...depFindings);
-          }
-        } catch { /* not valid JSON */ }
-      }
-
-      // Check package-lock.json for known-bad versions (v4.1)
-      if (basename === "package-lock.json") {
-        checkLockfileBadVersions(content, relativePath, findings);
-      }
-    } catch {
-      // Skip files that can't be read (binary, permissions, etc.)
+    // Check package-lock.json for known-bad versions (v4.1)
+    if (basename === "package-lock.json") {
+      checkLockfileBadVersions(content, relativePath, findings);
     }
   }
 
@@ -475,70 +549,26 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
   }
 
-  // Check Dockerfile / container configs (v4.0)
-  const dockerFindings = scanDockerFiles(scanDir);
-  findings.push(...dockerFindings);
+  // Docker and package-manager config files were already scanned inline in the
+  // policy-filtered file walk. A second directory pass duplicated findings and
+  // bypassed ignore globs.
 
-  // Check package manager config files (v4.0)
-  const configFindings = scanConfigFiles(scanDir);
-  findings.push(...configFindings);
+  // Explicit specialized targets perform their own tri-state path probes.
+  // Calling them without existsSync gates preserves the distinction between an
+  // absent optional target and a target whose stat/read operation failed.
+  findings.push(...scanGitSecurity(scanDir));
+  findings.push(...scanCargoFiles(scanDir));
+  findings.push(...scanGoFiles(scanDir));
+  findings.push(...scanRubyGemsFiles(scanDir));
+  findings.push(...scanComposerFiles(scanDir));
 
-  // Check git hooks and submodules (v4.0)
-  if (fs.existsSync(path.join(scanDir, ".git"))) {
-    const gitSecFindings = scanGitSecurity(scanDir);
-    findings.push(...gitSecFindings);
-  }
-
-  // Check Cargo/Rust files (v4.0; Cargo.lock IOC matching added later)
-  if (
-    fs.existsSync(path.join(scanDir, "Cargo.toml")) ||
-    fs.existsSync(path.join(scanDir, "Cargo.lock"))
-  ) {
-    const cargoFindings = scanCargoFiles(scanDir);
-    findings.push(...cargoFindings);
-  }
-
-  // Check Go module files (v4.0; go.sum IOC matching added later)
-  if (
-    fs.existsSync(path.join(scanDir, "go.mod")) ||
-    fs.existsSync(path.join(scanDir, "go.sum"))
-  ) {
-    const goFindings = scanGoFiles(scanDir);
-    findings.push(...goFindings);
-  }
-
-  // Check RubyGems files (Gemfile / Gemfile.lock)
-  if (
-    fs.existsSync(path.join(scanDir, "Gemfile")) ||
-    fs.existsSync(path.join(scanDir, "Gemfile.lock"))
-  ) {
-    const rubyFindings = scanRubyGemsFiles(scanDir);
-    findings.push(...rubyFindings);
-  }
-
-  // Check Composer/PHP files (composer.json / composer.lock)
-  if (
-    fs.existsSync(path.join(scanDir, "composer.json")) ||
-    fs.existsSync(path.join(scanDir, "composer.lock"))
-  ) {
-    const composerFindings = scanComposerFiles(scanDir);
-    findings.push(...composerFindings);
-  }
-
-  // Check NuGet/.NET files (packages.lock.json / *.csproj / nuget.config)
+  // NuGet discovery is a root-directory optimization that deliberately opens
+  // the scanner on enumeration failure so scanNuGetFiles can report coverage.
   if (hasNuGetFiles(scanDir)) {
-    const nugetFindings = scanNuGetFiles(scanDir);
-    findings.push(...nugetFindings);
+    findings.push(...scanNuGetFiles(scanDir));
   }
 
-  // Check Python lockfiles (poetry.lock / uv.lock / Pipfile.lock)
-  if (
-    fs.existsSync(path.join(scanDir, "poetry.lock")) ||
-    fs.existsSync(path.join(scanDir, "uv.lock")) ||
-    fs.existsSync(path.join(scanDir, "Pipfile.lock"))
-  ) {
-    findings.push(...scanPythonLockfiles(scanDir));
-  }
+  findings.push(...scanPythonLockfiles(scanDir));
 
   // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /
   // claude_desktop_config.json / .gemini/settings.json)
@@ -570,6 +600,41 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings.push(...trustSignals);
   }
 
+  // Apply path ignores to out-of-band scanners too. The primary file walk was
+  // pruned before scanning, but Git/lockfile/agent scanners discover their own
+  // targets and must honor the same path contract, including coverage findings.
+  if (ignoreGlobs.length > 0) {
+    findings = findings.filter((finding) => {
+      if (!finding.file) return true;
+      const relative = finding.file.replace(/\\/g, "/");
+      if (finding.rule === "PATH_SCAN_INCOMPLETE" && relative === ".") {
+        return true;
+      }
+      return !ignoreGlobs.some(
+        (glob) =>
+          matchGlob(glob, relative) ||
+          matchGlob(glob, `${relative}/__scg_ignored__`),
+      );
+    });
+  }
+
+  // The primary walk and specialized scanners may report the same failed path.
+  // Keep one public coverage signal per normalized relative path.
+  const seenIncompletePaths = new Set<string>();
+  findings = findings.filter((finding) => {
+    if (finding.rule !== "PATH_SCAN_INCOMPLETE") return true;
+    const publicPath = normalizePublicCoveragePath(finding.file ?? ".");
+    if (seenIncompletePaths.has(publicPath)) return false;
+    seenIncompletePaths.add(publicPath);
+    finding.file = publicPath;
+    return true;
+  });
+
+  // Preserve completeness independently of policy, baseline, or severity filters.
+  // A user may hide the informational finding, but that cannot turn a partial
+  // evaluation into a complete report.
+  let partialScan = hasPartialScanFinding(findings);
+
   // v4.7: Active validation (assign confidence tiers, rationale, evidence)
   validateFindings(findings);
 
@@ -593,6 +658,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     findings = policyResult.findings;
     suppressedCount += policyResult.suppressedCount;
   }
+  // Policy validation findings are materialized by applyPolicy(), so refresh
+  // the snapshot before later filters can hide a coverage-breaking warning.
+  partialScan ||= hasPartialScanFinding(findings);
 
   // v4.2: Correlation engine — link findings into incidents
   const correlation = correlateFindings(findings);
@@ -643,15 +711,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const baseScore = calculateScore(filteredFindings);
   const score = Math.min(100, baseScore + correlation.riskBoost);
   const riskLevel = getRiskLevel(score);
-  const recommendations = generateRecommendations(filteredFindings);
+  const recommendations = generateRecommendations(filteredFindings, partialScan);
 
   // v4.8: Calculate metrics and save history
   const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions);
 
   // Save risk history for trend tracking (skip temp dirs; --no-history lets
   // read-only callers like the pre-commit hook avoid writing state into the
-  // scanned repo)
-  if (!tempDir && !options.noHistory) {
+  // scanned repo). Partial results are not comparable measurements and must
+  // never become a zero-score baseline for later trend/forecast analysis.
+  if (!tempDir && !options.noHistory && !partialScan) {
     try { saveRiskHistory(scanDir, { timestamp: new Date().toISOString(), score, findings: filteredFindings, summary, riskLevel, recommendations, target, scanType, tool: `supply-chain-guard v${TOOL_VERSION}`, durationMs: Date.now() - startTime }); } catch { /* skip */ }
   }
 
@@ -674,6 +743,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     incidents: correlation.incidents.length > 0 ? correlation.incidents : undefined,
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
+    partialScan: partialScan || undefined,
     riskDimensions: calculateRiskDimensions(filteredFindings),
     remediations: generateRemediations(filteredFindings),
     fixSuggestions: generateFixSuggestions(filteredFindings),
@@ -695,49 +765,32 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 /**
  * Recursively collect all files in a directory.
  */
-function collectFiles(dir: string, maxDepth: number, depth = 0): string[] {
-  if (depth > maxDepth) return [];
-
-  const files: string[] = [];
-  let entries: fs.Dirent[];
-
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-
-    // Skip common non-relevant directories
-    if (entry.isDirectory()) {
-      if (
-        entry.name === "node_modules" ||
-        entry.name === ".git" ||
-        entry.name === "dist" ||
-        entry.name === "build" ||
-        entry.name === ".next" ||
-        entry.name === "__pycache__" ||
-        entry.name === ".venv" ||
-        entry.name === "venv" ||
-        entry.name === ".claude" ||
-        // Scanner runtime artifacts: risk history + refreshed threat-feed
-        // cache. The cache holds raw IOC values by design (detection data).
-        entry.name === ".scg-history" ||
-        entry.name === ".scg-cache"
-      ) {
-        continue;
-      }
-      files.push(...collectFiles(fullPath, maxDepth, depth + 1));
-    } else if (entry.isFile()) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
+function collectFiles(
+  dir: string,
+  maxDepth: number,
+  _depth = 0,
+  findings: Finding[] = [],
+  _rootDir = dir,
+  maxEntries?: number,
+): string[] {
+  const excludedDirectories = new Set([
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".claude",
+    ".scg-history",
+    ".scg-cache",
+  ]);
+  return collectExtractedFiles(dir, findings, {
+    maxDepth,
+    maxEntries: maxEntries === undefined
+      ? DEFAULT_EXTRACTED_WALK_MAX_ENTRIES
+      : Math.min(maxEntries, DEFAULT_EXTRACTED_WALK_MAX_ENTRIES),
+    shouldEnterDirectory: (name) => !excludedDirectories.has(name),
+  });
 }
-
 /**
  * Check if a filename matches known suspicious patterns.
  */
@@ -747,8 +800,13 @@ function checkSuspiciousFileName(
   findings: Finding[],
 ): void {
   for (const suspicious of SUSPICIOUS_FILES) {
-    const regex = new RegExp(suspicious.pattern);
-    if (regex.test(basename)) {
+    const hits = matchPatternInSemanticText(
+      suspicious,
+      basename,
+      relativePath,
+      findings,
+    );
+    if (hits && hits.length > 0) {
       findings.push({
         rule: suspicious.rule,
         description: suspicious.description,
@@ -787,27 +845,15 @@ function checkFilePatterns(
     ...PROVENANCE_PATTERNS,
   ];
 
-  const fileExt = path.extname(relativePath).toLowerCase();
-  // Normalise path separators for cross-platform regex matching
-  const normalizedPath = relativePath.replace(/\\/g, "/");
-  const isTestFile = TEST_FILE_REGEX.test(normalizedPath);
-
   for (const pattern of allPatterns) {
-    // Respect onlyExtensions restriction (e.g. SVG_SCRIPT_INJECTION → .svg only)
-    if (pattern.onlyExtensions && !pattern.onlyExtensions.includes(fileExt)) continue;
-    // Respect onlyFilePattern (e.g. README_LURE → README/docs files only)
-    if (pattern.onlyFilePattern && !pattern.onlyFilePattern.test(normalizedPath)) continue;
-    // Respect notFilePattern (e.g. skip .min.js for framework-heavy patterns)
-    if (pattern.notFilePattern  && pattern.notFilePattern.test(normalizedPath))  continue;
-    // Skip test/spec/fixture files for patterns marked notTestFile
-    if (pattern.notTestFile     && isTestFile)                                    continue;
-    // v5.22 file-level guard: the line match must be corroborated elsewhere in
-    // the same file. Evaluated once per file per pattern, before the line loop.
-    if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
-
-    // v5.23: bounded multi-line window when pattern.spansLines > 1; valueFilter
-    // is applied inside matchPatternInContent.
-    for (const hit of matchPatternInContent(pattern, content, "g")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "g",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -847,8 +893,14 @@ function checkPackageJson(
 
     // Check against suspicious script patterns
     for (const pattern of SUSPICIOUS_SCRIPTS) {
-      const regex = new RegExp(pattern.pattern, "i");
-      if (regex.test(script)) {
+      const hits = matchPatternInFile(
+        pattern,
+        script,
+        relativePath,
+        findings,
+        "i",
+      );
+      if (hits && hits.length > 0) {
         findings.push({
           rule: pattern.rule,
           description: `${hook}: ${pattern.description}`,
@@ -977,8 +1029,14 @@ function checkBinaryDownloadScripts(
     if (!script) continue;
 
     for (const pattern of BINARY_DOWNLOAD_PATTERNS) {
-      const regex = new RegExp(pattern.pattern, "i");
-      if (regex.test(script)) {
+      const hits = matchPatternInFile(
+        pattern,
+        script,
+        relativePath,
+        findings,
+        "i",
+      );
+      if (hits && hits.length > 0) {
         findings.push({
           rule: pattern.rule,
           description: `${hook}: ${pattern.description}${isKnownNative ? " (known native package)" : ""}`,
@@ -1003,17 +1061,15 @@ function checkBeaconMinerPatterns(
   findings: Finding[],
   scanningOwnPackage: boolean,
 ): void {
-  const normalizedPath = relativePath.replace(/\\/g, "/");
-  const isTestFile = TEST_FILE_REGEX.test(normalizedPath);
-
   for (const pattern of BEACON_MINER_PATTERNS) {
-    // Apply context-aware file filters (same guards as checkFilePatterns)
-    if (pattern.onlyFilePattern && !pattern.onlyFilePattern.test(normalizedPath)) continue;
-    if (pattern.notFilePattern  && pattern.notFilePattern.test(normalizedPath))  continue;
-    if (pattern.notTestFile     && isTestFile)                                    continue;
-    if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
-
-    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "gi",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -1178,9 +1234,14 @@ function checkBuildToolPatterns(
   findings: Finding[],
 ): void {
   for (const pattern of BUILD_TOOL_PATTERNS) {
-    // File-level guard before the window loop (same as checkFilePatterns).
-    if (pattern.requiresInFile && !pattern.requiresInFile.test(content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "gi",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -1274,8 +1335,14 @@ function checkMonorepoPatterns(
   if (!pkg.workspaces) return;
 
   for (const pattern of MONOREPO_PATTERNS) {
-    if (pattern.requiresInFile && !pattern.requiresInFile.test(content)) continue;
-    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "gi",
+    );
+    for (const hit of hits ?? []) {
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -1344,7 +1411,7 @@ function calculateSummary(
  */
 // Meta/governance findings that fire because other findings exist — excluded from
 // score to prevent circular inflation (they don't represent independent risk signals).
-const SCORE_EXCLUDED_RULES = new Set([
+export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
   "CRITICAL_FINDING_NO_OWNER",
   "RISK_STAGNATION_HIGH",
 ]);
@@ -1381,7 +1448,10 @@ function getRiskLevel(score: number): ScanReport["riskLevel"] {
 /**
  * Generate human-readable recommendations.
  */
-function generateRecommendations(findings: Finding[]): string[] {
+function generateRecommendations(
+  findings: Finding[],
+  partialScan = false,
+): string[] {
   const recommendations: string[] = [];
   const rules = new Set(findings.map((f) => f.rule));
 
@@ -1718,12 +1788,17 @@ function generateRecommendations(findings: Finding[]): string[] {
     );
   }
 
+  if (partialScan) {
+    recommendations.unshift(
+      "WARNING: Scan incomplete because one or more configured checks or files could not be evaluated. Resolve coverage gaps before treating this result as clean.",
+    );
+  }
   if (recommendations.length === 0 && findings.length > 0) {
     recommendations.push(
       "Review the listed findings and assess whether they represent legitimate functionality or potential threats.",
     );
   }
-  if (findings.length === 0) {
+  if (findings.length === 0 && !partialScan) {
     recommendations.push("No malicious indicators detected. The scanned code appears clean.");
   }
 

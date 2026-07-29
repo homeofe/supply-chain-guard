@@ -35,6 +35,9 @@ export function saveRiskHistory(
   dir: string,
   report: ScanReport,
 ): void {
+  // An incomplete scan is not a comparable measurement and must never become
+  // a deceptively low baseline, even when this public helper is called directly.
+  if (report.partialScan) return;
   const historyDir = ensureStateDir(dir);
 
   const history = loadRiskHistory(dir);

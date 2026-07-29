@@ -6,6 +6,14 @@
  */
 
 import type { Finding, PatternEntry, Severity } from "./types.js";
+import { CORRELATED_PATTERN_MATCHERS } from "./correlated-pattern-matchers.js";
+import {
+  createCoreBroadGapMatchers,
+  hasDropperPayloadPreparation,
+  hasShaiHuludCorroboration,
+} from "./broad-gap-pattern-matchers.js";
+import { hasBroadUnboundedConsumingGap } from "./regex-complexity.js";
+export { isPatternApplicableToFile } from "./pattern-applicability.js";
 
 /** Matches the scanner's own source files — used to prevent self-scan false positives. */
 const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
@@ -45,26 +53,6 @@ export function isPatternMatchAccepted(
   return pattern.valueFilter(match[pattern.valueGroup ?? 1] ?? "");
 }
 
-/**
- * Apply a pattern's optional FILE-level guard to a whole file's content.
- * Returns true when the pattern may be evaluated against this file at all.
- *
- * Companion to isPatternMatchAccepted, and it exists for the same reason: the
- * pattern arrays are iterated by SIX different scanners (directory, npm, PyPI,
- * VS Code extension, Dockerfile, config). A guard honoured in only one of them
- * is worse than no guard, because the same file then produces different verdicts
- * depending on which entry point looked at it.
- *
- * Call this once per file, before the per-line loop.
- */
-export function isPatternApplicableToFile(
-  pattern: Pick<PatternEntry, "requiresInFile">,
-  content: string,
-): boolean {
-  if (!pattern.requiresInFile) return true;
-  return pattern.requiresInFile.test(content);
-}
-
 // ---------------------------------------------------------------------------
 // Bounded multi-line pattern engine (v5.23)
 // ---------------------------------------------------------------------------
@@ -77,51 +65,447 @@ export function isPatternApplicableToFile(
 export const MAX_SPANS_LINES = 20;
 
 /**
- * Character budget for one multi-line window. Caps ReDoS cost: a `.*`-heavy
- * regex over an unbounded window against a multi-megabyte file is a hang, not
- * a slow scan. Windows longer than this are truncated from the end (match
- * start line stays correct).
+ * Character budget for unvalidated regex invocations. Shipped broad-gap rules
+ * use exact structural matchers. Load-validated, single-line regexes without a
+ * broad unbounded consuming gap run exactly over the admitted line; unvalidated
+ * callers retain transparent bounded tiling and explicit partial coverage.
  */
 export const MAX_SPAN_WINDOW_CHARS = 4096;
 
+const EXACT_VALIDATED_SINGLE_LINE_PATTERNS = new WeakSet<object>();
+
 /**
- * Max regex attempts per pattern per file (across all windows). Bounds
- * pathological inputs that would otherwise thrash the engine.
+ * Overlap between adjacent regex tiles. Any match shorter than or equal to the
+ * overlap is fully visible in at least one tile, including matches that cross a
+ * tile boundary. Unbounded matches whose endpoints are farther apart cannot be
+ * proven equivalent to whole-window matching, so the result reports partial
+ * coverage whenever tiling is required.
  */
-export const MAX_MATCH_ATTEMPTS_PER_PATTERN = 500;
+export const PATTERN_TILE_OVERLAP_CHARS = 2048;
+
+/**
+ * A file below MAX_FILE_SIZE can still contain millions of one-character
+ * physical lines. That shape is not normal source code and multiplying it by
+ * every registered rule would make the scanner itself a denial-of-service
+ * target. Ordinary files retain full coverage; pathological files report the
+ * exact line where coverage stopped through PatternMatchResult.coverage.
+ */
+export const MAX_PHYSICAL_LINES_PER_PATTERN = 250_000;
+
+/**
+ * Secondary ceiling for tiled regex invocations. This is deliberately above
+ * MAX_PHYSICAL_LINES_PER_PATTERN so normal one-tile-per-line scans never hit
+ * it. It only protects oversized/hostile inputs with many long tiled ranges.
+ */
+export const MAX_MATCH_ATTEMPTS_PER_PATTERN = 300_000;
 
 /** One accepted match of a pattern against file content. */
 export interface PatternHit {
   /** 1-based line number where the match STARTS. */
   line: number;
-  /** Raw matched text (caller should pass through truncateMatch for reports). */
+  /** Raw regex text or bounded structural evidence for reports. */
   text: string;
   /** Full regex match array (for valueFilter / capture groups). */
   match: RegExpMatchArray;
 }
 
+export type PatternCoverageLimitation =
+  | "invalid-pattern"
+  | "line-limit"
+  | "regex-attempt-limit"
+  | "overlong-range-tiled"
+  | "matcher-error"
+  | "invalid-matcher-result";
+
+/**
+ * Coverage information for one pattern evaluation.
+ *
+ * `complete` means the result is exactly equivalent to evaluating every
+ * logical line/window in full. It is false when work was omitted or when an
+ * overlong range had to be tiled: tiling sees late and boundary-crossing
+ * triggers, but no finite overlap can prove equivalence for an unbounded `.*`.
+ */
+export interface PatternMatchCoverage {
+  complete: boolean;
+  limitations: PatternCoverageLimitation[];
+  regexAttempts: number;
+  totalLines: number;
+  /** First physical line whose logical window was not fully evaluated. */
+  stoppedAtLine?: number;
+  /** Number of overlong logical ranges inspected with overlapping tiles. */
+  tiledRanges: number;
+}
+
+/**
+ * Array-compatible return value. Existing callers can keep iterating hits,
+ * while coverage-sensitive callers must inspect `.coverage` and surface a
+ * partial scan instead of silently treating omitted work as clean.
+ */
+export type PatternMatchResult = PatternHit[] & {
+  readonly coverage: PatternMatchCoverage;
+};
+
 /**
  * Truncate a match string for display in SARIF, JSON and annotations.
  * Multi-line hits are collapsed to a single readable line so a whole window
- * cannot leak into a report.
+ * cannot leak into a report. Invisible Unicode is rendered as a code point so
+ * evidence never disappears into an empty string.
  */
 export function truncateMatch(match: string, maxLen = 120): string {
-  const collapsed = match.replace(/\s+/g, " ").trim();
+  let readable = "";
+  for (const char of match) {
+    const codePoint = char.codePointAt(0)!;
+    if (char === " " || char === "\t" || char === "\r" || char === "\n" ||
+        char === "\f" || char === "\v") {
+      readable += " ";
+    } else if (/\s/u.test(char) || /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(char)) {
+      readable += `<U+${codePoint.toString(16).toUpperCase().padStart(4, "0")}>`;
+    } else {
+      readable += char;
+    }
+  }
+
+  const collapsed = readable.replace(/ +/g, " ").trim();
+  if (collapsed.length === 0 && match.length > 0) {
+    return "<invisible Unicode>";
+  }
   if (collapsed.length <= maxLen) return collapsed;
   return collapsed.substring(0, maxLen) + "...";
+}
+
+interface IndexedPatternContent {
+  content: string;
+  lineStarts: number[];
+  lineEnds: number[];
+  totalLines: number;
+}
+
+// Scanners evaluate many rules sequentially against the same immutable string.
+// Keep only the most recent bounded line index so each file is indexed once
+// rather than allocating a fresh `content.split("\n")` array for every pattern.
+let cachedPatternContent: IndexedPatternContent | undefined;
+
+function indexPatternContent(content: string): IndexedPatternContent {
+  if (cachedPatternContent?.content === content) return cachedPatternContent;
+
+  const lineStarts: number[] = [];
+  const lineEnds: number[] = [];
+  const storedLineLimit = MAX_PHYSICAL_LINES_PER_PATTERN + MAX_SPANS_LINES;
+  let start = 0;
+  let totalLines = 0;
+  while (true) {
+    const newline = content.indexOf("\n", start);
+    if (lineStarts.length < storedLineLimit) {
+      lineStarts.push(start);
+      lineEnds.push(newline === -1 ? content.length : newline);
+    }
+    totalLines++;
+    if (newline === -1) break;
+    start = newline + 1;
+  }
+
+  cachedPatternContent = { content, lineStarts, lineEnds, totalLines };
+  return cachedPatternContent;
+}
+
+function createPatternMatchResult(totalLines: number): PatternMatchResult {
+  const result = [] as PatternHit[] as PatternMatchResult;
+  Object.defineProperty(result, "coverage", {
+    value: {
+      complete: true,
+      limitations: [],
+      regexAttempts: 0,
+      totalLines,
+      tiledRanges: 0,
+    } satisfies PatternMatchCoverage,
+    enumerable: false,
+  });
+  return result;
+}
+
+function addCoverageLimitation(
+  coverage: PatternMatchCoverage,
+  limitation: PatternCoverageLimitation,
+): void {
+  coverage.complete = false;
+  if (!coverage.limitations.includes(limitation)) {
+    coverage.limitations.push(limitation);
+  }
+}
+
+/** Map an absolute character offset to its containing physical line. */
+function lineIndexAtOffset(lineStarts: number[], offset: number): number {
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low <= high) {
+    const middle = (low + high) >>> 1;
+    if (lineStarts[middle]! <= offset) {
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  return Math.max(0, high);
+}
+
+/** Maximum evidence a structural matcher may place in a report hit. */
+export const MAX_CORRELATED_EVIDENCE_CHARS = 240;
+
+function evaluateCorrelatedPattern(
+  pattern: Pick<
+    PatternEntry,
+    "spansLines" | "valueFilter" | "valueGroup" | "correlatedMatcher"
+  >,
+  content: string,
+  indexed: IndexedPatternContent,
+  hits: PatternMatchResult,
+  seenStartLines: Set<number>,
+  spans: number,
+  options?: {
+    skipLine?: (line: string, index: number) => boolean;
+  },
+): PatternMatchResult {
+  const matcher = pattern.correlatedMatcher!;
+  const lineLimit = Math.min(
+    indexed.totalLines,
+    MAX_PHYSICAL_LINES_PER_PATTERN,
+  );
+
+  // A start on the last admitted line may legitimately consume the remainder
+  // of its spansLines window. Keep that bounded look-ahead, but never accept a
+  // match whose start is beyond the admitted physical-line limit.
+  const lastAdmittedLine = Math.min(
+    indexed.totalLines - 1,
+    lineLimit + spans - 2,
+  );
+  const admittedEnd = lastAdmittedLine + 1 < indexed.totalLines
+    ? indexed.lineStarts[lastAdmittedLine + 1]!
+    : content.length;
+  const admittedContent = content.slice(0, admittedEnd);
+
+  // Structural matches do not expose regex capture groups. Refuse an
+  // incompatible valueFilter loudly instead of silently bypassing it.
+  if (pattern.valueFilter) {
+    addCoverageLimitation(hits.coverage, "invalid-matcher-result");
+  } else {
+    hits.coverage.regexAttempts++;
+    let yielded = 0;
+    try {
+      for (const candidate of matcher(admittedContent)) {
+        yielded++;
+        if (yielded > MAX_MATCH_ATTEMPTS_PER_PATTERN) {
+          addCoverageLimitation(hits.coverage, "regex-attempt-limit");
+          hits.coverage.stoppedAtLine = 1;
+          break;
+        }
+
+        if (
+          !Number.isInteger(candidate.start) ||
+          !Number.isInteger(candidate.end) ||
+          candidate.start < 0 ||
+          candidate.end <= candidate.start ||
+          candidate.end > admittedContent.length ||
+          typeof candidate.evidence !== "string" ||
+          candidate.evidence.length === 0 ||
+          candidate.evidence.length > MAX_CORRELATED_EVIDENCE_CHARS
+        ) {
+          addCoverageLimitation(hits.coverage, "invalid-matcher-result");
+          continue;
+        }
+
+        const startLineIndex = lineIndexAtOffset(
+          indexed.lineStarts,
+          candidate.start,
+        );
+        if (startLineIndex >= lineLimit) continue;
+
+        const endLineIndex = lineIndexAtOffset(
+          indexed.lineStarts,
+          candidate.end - 1,
+        );
+        if (endLineIndex - startLineIndex + 1 > spans) continue;
+
+        const startLine = startLineIndex + 1;
+        if (seenStartLines.has(startLine)) continue;
+        const skipped = options?.skipLine?.(
+          content.slice(
+            indexed.lineStarts[startLineIndex]!,
+            indexed.lineEnds[startLineIndex]!,
+          ),
+          startLineIndex,
+        ) ?? false;
+        if (skipped) continue;
+
+        const syntheticMatch = [candidate.evidence] as unknown as RegExpMatchArray;
+        syntheticMatch.index = candidate.start;
+        syntheticMatch.input = admittedContent;
+
+        seenStartLines.add(startLine);
+        hits.push({
+          line: startLine,
+          text: candidate.evidence,
+          match: syntheticMatch,
+        });
+      }
+    } catch {
+      // A custom matcher is production code, but fail closed if it throws or
+      // returns a non-iterable value. Other rules must still run.
+      addCoverageLimitation(hits.coverage, "matcher-error");
+    }
+  }
+
+  if (indexed.totalLines > MAX_PHYSICAL_LINES_PER_PATTERN) {
+    addCoverageLimitation(hits.coverage, "line-limit");
+    hits.coverage.stoppedAtLine = MAX_PHYSICAL_LINES_PER_PATTERN + 1;
+  }
+
+  return hits;
+}
+const TILE_CONTEXT_CHARS = 1;
+const TILE_CORE_CHARS = MAX_SPAN_WINDOW_CHARS - (TILE_CONTEXT_CHARS * 2);
+const TILE_STEP_CHARS = TILE_CORE_CHARS - PATTERN_TILE_OVERLAP_CHARS;
+
+interface OwnedRegexMatch {
+  match: RegExpMatchArray;
+  absoluteStart: number;
+}
+
+interface RegexBoundarySensitivity {
+  mayInspectLeft: boolean;
+  mayInspectRight: boolean;
+}
+
+/**
+ * Identify assertions that can observe a truncated tile boundary without
+ * consuming up to it. Anchors inside character classes and escaped literals
+ * are ignored. A non-final/non-initial tile with one of these assertions is
+ * accepted only where the boundary can be validated safely.
+ */
+function analyzeRegexBoundarySensitivity(source: string): RegexBoundarySensitivity {
+  let inCharacterClass = false;
+  let mayInspectLeft = false;
+  let mayInspectRight = false;
+  for (let index = 0; index < source.length; index++) {
+    const char = source[index]!;
+    if (char === "\\") {
+      index++;
+      continue;
+    }
+    if (char === "[") {
+      inCharacterClass = true;
+      continue;
+    }
+    if (char === "]" && inCharacterClass) {
+      inCharacterClass = false;
+      continue;
+    }
+    if (inCharacterClass) continue;
+    if (char === "^") mayInspectLeft = true;
+    else if (char === "$") mayInspectRight = true;
+    else if (source.startsWith("(?<=", index) || source.startsWith("(?<!", index)) {
+      mayInspectLeft = true;
+    } else if (source.startsWith("(?=", index) || source.startsWith("(?!", index)) {
+      mayInspectRight = true;
+    }
+    if (mayInspectLeft && mayInspectRight) break;
+  }
+  return { mayInspectLeft, mayInspectRight };
+}
+
+/**
+ * Execute a regex against one bounded tile and return its first match whose
+ * start belongs to that tile. Adjacent context plus assertion-sensitivity
+ * guards prevent a truncated slice from inventing ^/$/lookaround semantics.
+ */
+function firstOwnedMatch(
+  regex: RegExp,
+  input: string,
+  inputStart: number,
+  ownedStart: number,
+  ownedEnd: number,
+  continuation: string,
+  artificialStart: boolean,
+  boundarySensitivity: RegexBoundarySensitivity,
+  accept: (match: RegExpMatchArray, absoluteStart: number) => boolean,
+): OwnedRegexMatch | undefined {
+  regex.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(input)) !== null) {
+    if (match[0] === "") {
+      // Empty matches are not findings. Advance explicitly so a global regex
+      // cannot loop forever at the same index.
+      regex.lastIndex = Math.max(regex.lastIndex, (match.index ?? 0) + 1);
+      continue;
+    }
+
+    const localEnd = (match.index ?? 0) + match[0].length;
+    const touchesArtificialEof = continuation.length > 0 && (
+      localEnd === input.length ||
+      (!regex.multiline && (
+        (localEnd === input.length - 1 && /[\n\r\u2028\u2029]/u.test(input.at(-1) ?? "")) ||
+        (localEnd === input.length - 2 && input.endsWith("\r\n"))
+      ))
+    );
+    if (
+      (artificialStart && boundarySensitivity.mayInspectLeft) ||
+      (continuation.length > 0 && boundarySensitivity.mayInspectRight)
+    ) {
+      // An anchor or lookaround may have inspected a truncated side even when
+      // the consumed match ends elsewhere. The overlong range is already
+      // reported as partial; dropping the unverifiable candidate prevents a
+      // synthetic-boundary false positive.
+      continue;
+    }
+    if (touchesArtificialEof) {
+      // Re-run only this boundary candidate with real following content. A
+      // fixed match remains byte-for-byte identical; a greedy match or local
+      // boundary assertion changes or disappears when the slice is extended.
+      const resumeAt = regex.lastIndex;
+      regex.lastIndex = match.index ?? 0;
+      const probe = regex.exec(input + continuation);
+      regex.lastIndex = resumeAt;
+      if (
+        !probe ||
+        (probe.index ?? 0) !== (match.index ?? 0) ||
+        probe[0] !== match[0]
+      ) {
+        continue;
+      }
+      // The same full match can legitimately expose different captures once
+      // real following context is present (for example, a word-boundary
+      // alternation). Acceptance/valueFilter must observe the real-context
+      // result, not captures produced at synthetic EOF.
+      match = probe;
+    }
+
+    const absoluteStart = inputStart + (match.index ?? 0);
+    if (
+      absoluteStart >= ownedStart &&
+      absoluteStart < ownedEnd &&
+      accept(match, absoluteStart)
+    ) {
+      return { match, absoluteStart };
+    }
+  }
+  return undefined;
 }
 
 /**
  * Match a single pattern against file content using a bounded sliding line
  * window.
  *
- * - `spansLines` defaults to 1: identical to the historical per-line loop.
- * - `spansLines` > 1: join that many consecutive lines, match with the `s`
- *   (dotAll) flag so `.*` can bridge ideas inside the window, slide by one
+ * - `spansLines` defaults to 1: inspect one physical line at a time.
+ * - `spansLines` > 1: inspect that many consecutive lines with the `s`
+ *   (dotAll) flag so `.*` can bridge ideas inside the window, then slide by one
  *   line. Findings are deduplicated by start-line so overlapping windows do
  *   not emit the same hit twice.
+ * - Shipped broad-gap rules use exact structural matchers over admitted
+ *   content. Load-validated safe single-line regexes run over the exact line;
+ *   unvalidated or multi-line regex callers use overlapping bounded tiles and
+ *   receive an explicit partial-coverage signal.
  *
- * Always applies `isPatternMatchAccepted` (valueFilter). Callers still own
+ * Regex evaluation always applies `isPatternMatchAccepted` (valueFilter). Structural
+ * matcher metadata forbids valueFilter because it has no regex capture groups. Callers own
  * `isPatternApplicableToFile` and path/extension filters - those are
  * file-level and must run before this.
  *
@@ -129,20 +513,20 @@ export function truncateMatch(match: string, maxLen = 120): string {
  *   `s` is added automatically when spansLines > 1.
  */
 export function matchPatternInContent(
-  pattern: Pick<PatternEntry, "pattern" | "spansLines" | "valueFilter" | "valueGroup">,
+  pattern: Pick<PatternEntry, "pattern" | "spansLines" | "valueFilter" | "valueGroup" | "correlatedMatcher">,
   content: string,
   flags = "g",
   options?: {
     /** Skip a physical line before matching (e.g. config-file comments). */
     skipLine?: (line: string, index: number) => boolean;
   },
-): PatternHit[] {
+): PatternMatchResult {
   const rawSpans = pattern.spansLines ?? 1;
   const spans = Math.max(1, Math.min(rawSpans, MAX_SPANS_LINES));
-  const lines = content.split("\n");
-  const hits: PatternHit[] = [];
+  const indexed = indexPatternContent(content);
+  const { lineStarts, lineEnds } = indexed;
+  const hits = createPatternMatchResult(indexed.totalLines);
   const seenStartLines = new Set<number>();
-  let attempts = 0;
 
   // Build flags: always global; add dotAll only inside multi-line windows.
   let useFlags = flags.includes("g") ? flags : flags + "g";
@@ -152,58 +536,835 @@ export function matchPatternInContent(
   try {
     regex = new RegExp(pattern.pattern, useFlags);
   } catch {
-    // Load-time validation should have caught this; refuse quietly rather than
-    // throwing mid-scan and silencing later rules.
+    // Load-time validation should have caught this. Keep later rules alive but
+    // make the failed evaluation explicit to coverage-sensitive callers.
+    addCoverageLimitation(hits.coverage, "invalid-pattern");
     return hits;
   }
 
-  if (spans === 1) {
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      if (options?.skipLine?.(line, i)) continue;
-      if (++attempts > MAX_MATCH_ATTEMPTS_PER_PATTERN) break;
-      regex.lastIndex = 0;
-      const match = regex.exec(line);
-      if (!match || match[0] === "") continue;
-      if (!isPatternMatchAccepted(pattern, match)) continue;
-      const startLine = i + 1;
-      if (seenStartLines.has(startLine)) continue;
-      seenStartLines.add(startLine);
-      hits.push({ line: startLine, text: match[0], match });
-    }
-    return hits;
+  const boundarySensitivity = analyzeRegexBoundarySensitivity(regex.source);
+
+  if (pattern.correlatedMatcher) {
+    return evaluateCorrelatedPattern(
+      pattern,
+      content,
+      indexed,
+      hits,
+      seenStartLines,
+      spans,
+      options,
+    );
   }
 
-  // Multi-line sliding window.
-  for (let i = 0; i < lines.length; i++) {
-    if (++attempts > MAX_MATCH_ATTEMPTS_PER_PATTERN) break;
+  const lineLimit = Math.min(indexed.totalLines, MAX_PHYSICAL_LINES_PER_PATTERN);
+  for (let i = 0; i < lineLimit; i++) {
+    const rangeStart = lineStarts[i]!;
+    const lastLineIndex = spans === 1
+      ? i
+      : Math.min(i + spans - 1, indexed.totalLines - 1);
+    const rangeEnd = lineEnds[lastLineIndex]!;
 
-    const end = Math.min(i + spans, lines.length);
-    let window = lines.slice(i, end).join("\n");
-    if (window.length > MAX_SPAN_WINDOW_CHARS) {
-      window = window.slice(0, MAX_SPAN_WINDOW_CHARS);
+    if (spans === 1 && options?.skipLine) {
+      const line = content.slice(rangeStart, rangeEnd);
+      if (options.skipLine(line, i)) continue;
     }
 
-    regex.lastIndex = 0;
-    const match = regex.exec(window);
-    if (!match || match[0] === "") continue;
+    const rangeLength = rangeEnd - rangeStart;
+    if (rangeLength === 0) continue;
+    const exactValidatedSingleLine =
+      spans === 1 && EXACT_VALIDATED_SINGLE_LINE_PATTERNS.has(pattern);
+    const tiled =
+      !exactValidatedSingleLine && rangeLength > MAX_SPAN_WINDOW_CHARS;
+    if (tiled) {
+      hits.coverage.tiledRanges++;
+      addCoverageLimitation(hits.coverage, "overlong-range-tiled");
+    }
 
-    // Map match.index inside the window back to a 1-based file line.
-    const offset = match.index ?? 0;
-    const linesBeforeInWindow = window.slice(0, offset).split("\n").length - 1;
-    const startLine = i + linesBeforeInWindow + 1;
-    const startLineIndex = startLine - 1;
+    let coreStart = rangeStart;
+    while (coreStart < rangeEnd) {
+      if (hits.coverage.regexAttempts >= MAX_MATCH_ATTEMPTS_PER_PATTERN) {
+        addCoverageLimitation(hits.coverage, "regex-attempt-limit");
+        hits.coverage.stoppedAtLine = i + 1;
+        return hits;
+      }
 
-    if (options?.skipLine?.(lines[startLineIndex] ?? "", startLineIndex)) continue;
-    if (seenStartLines.has(startLine)) continue;
-    if (!isPatternMatchAccepted(pattern, match)) continue;
+      const coreEnd = tiled
+        ? Math.min(rangeEnd, coreStart + TILE_CORE_CHARS)
+        : rangeEnd;
+      const finalTile = coreEnd === rangeEnd;
+      const ownedEnd = finalTile
+        ? rangeEnd
+        : Math.min(rangeEnd, coreStart + TILE_STEP_CHARS);
+      const inputStart = coreStart === rangeStart
+        ? coreStart
+        : coreStart - TILE_CONTEXT_CHARS;
+      const inputEnd = finalTile
+        ? coreEnd
+        : Math.min(rangeEnd, coreEnd + TILE_CONTEXT_CHARS);
+      const input = content.slice(inputStart, inputEnd);
 
-    seenStartLines.add(startLine);
-    hits.push({ line: startLine, text: match[0], match });
+      hits.coverage.regexAttempts++;
+      const owned = firstOwnedMatch(
+        regex,
+        input,
+        inputStart,
+        coreStart,
+        ownedEnd,
+        finalTile ? "" : content.slice(inputEnd, Math.min(rangeEnd, inputEnd + 2)),
+        inputStart > rangeStart,
+        boundarySensitivity,
+        (candidate, absoluteStart) => {
+          const startLineIndex = spans === 1
+            ? i
+            : lineIndexAtOffset(lineStarts, absoluteStart);
+          const startLine = startLineIndex + 1;
+          if (seenStartLines.has(startLine)) return false;
+
+          const skipped = options?.skipLine?.(
+            content.slice(lineStarts[startLineIndex]!, lineEnds[startLineIndex]!),
+            startLineIndex,
+          ) ?? false;
+          return !skipped && isPatternMatchAccepted(pattern, candidate);
+        },
+      );
+      if (owned) {
+        const startLineIndex = spans === 1
+          ? i
+          : lineIndexAtOffset(lineStarts, owned.absoluteStart);
+        const startLine = startLineIndex + 1;
+        seenStartLines.add(startLine);
+        hits.push({
+          line: startLine,
+          text: owned.match[0],
+          match: owned.match,
+        });
+      }
+
+      if (finalTile) break;
+      coreStart += TILE_STEP_CHARS;
+    }
+  }
+
+  if (indexed.totalLines > MAX_PHYSICAL_LINES_PER_PATTERN) {
+    addCoverageLimitation(hits.coverage, "line-limit");
+    hits.coverage.stoppedAtLine = MAX_PHYSICAL_LINES_PER_PATTERN + 1;
   }
 
   return hits;
 }
+
+// ---------------------------------------------------------------------------
+// Near-linear single-line matchers for repeated-prefix regex rules
+// ---------------------------------------------------------------------------
+
+const LINEAR_EVIDENCE_CHARS = 240;
+type StructuralMatch = ReturnType<NonNullable<PatternEntry["correlatedMatcher"]>> extends Iterable<infer T> ? T : never;
+
+function makeStructuralMatch(content: string, start: number, end: number): StructuralMatch {
+  const raw = content.slice(start, end);
+  if (raw.length <= LINEAR_EVIDENCE_CHARS) return { start, end, evidence: raw };
+  const marker = " ... ";
+  const remaining = LINEAR_EVIDENCE_CHARS - marker.length;
+  const left = Math.ceil(remaining / 2);
+  return {
+    start,
+    end,
+    evidence: raw.slice(0, left) + marker + raw.slice(raw.length - (remaining - left)),
+  };
+}
+
+const isDotLineTerminator = (value: string): boolean =>
+  value === "\r" || value === "\u2028" || value === "\u2029";
+const isPatternWhitespace = (value: string | undefined): boolean =>
+  value !== undefined && /\s/u.test(value);
+
+/**
+ * Skip the whitespace visible to a regex invocation on one physical line.
+ * LF is the engine's physical-line delimiter and is not part of that input;
+ * standalone CR/U+2028/U+2029 remain visible and may be consumed by `\s`.
+ */
+function skipPatternWhitespace(
+  content: string,
+  start: number,
+): { end: number; crossedDotLineTerminator: boolean } {
+  let index = start;
+  let crossedDotLineTerminator = false;
+  while (content[index] !== "\n" && isPatternWhitespace(content[index])) {
+    if (isDotLineTerminator(content[index]!)) crossedDotLineTerminator = true;
+    index++;
+  }
+  return { end: index, crossedDotLineTerminator };
+}
+
+function commandPipeExecutableLength(content: string, start: number): number {
+  const tail = content.slice(start, start + 4).toLowerCase();
+  if (tail.startsWith("bash") || tail.startsWith("node")) return 4;
+  return tail.startsWith("sh") ? 2 : 0;
+}
+
+function makeCommandPipeMatcher(command: "curl" | "wget"): NonNullable<PatternEntry["correlatedMatcher"]> {
+  return (content) => {
+    const token = new RegExp(`${command}|\\||\\n|[\\r\\u2028\\u2029]`, "gi");
+    const results: StructuralMatch[] = [];
+    let commandStart = -1;
+    let best: { start: number; end: number } | undefined;
+    const flushPhysicalLine = (): void => {
+      if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+      best = undefined;
+      commandStart = -1;
+    };
+    let event: RegExpExecArray | null;
+    while ((event = token.exec(content)) !== null) {
+      const value = event[0]!;
+      if (value === "\n") {
+        flushPhysicalLine();
+        continue;
+      }
+      if (isDotLineTerminator(value)) {
+        commandStart = -1;
+        continue;
+      }
+      if (value !== "|") {
+        const whitespace = skipPatternWhitespace(content, event.index + value.length);
+        if (whitespace.end > event.index + value.length) {
+          if (commandStart === -1 || whitespace.crossedDotLineTerminator) {
+            commandStart = event.index;
+          }
+          // Whitespace swallowed by `\s+` cannot also act as an `.*` barrier.
+          token.lastIndex = whitespace.end;
+        }
+        continue;
+      }
+      if (commandStart === -1) continue;
+      const whitespace = skipPatternWhitespace(content, event.index + 1);
+      const length = commandPipeExecutableLength(content, whitespace.end);
+      if (length > 0) {
+        const candidate = { start: commandStart, end: whitespace.end + length };
+        if (
+          !best ||
+          candidate.start < best.start ||
+          (candidate.start === best.start && candidate.end > best.end)
+        ) {
+          best = candidate;
+        }
+      }
+    }
+    flushPhysicalLine();
+    return results;
+  };
+}
+
+const scriptCurlExecMatcher = makeCommandPipeMatcher("curl");
+const scriptWgetExecMatcher = makeCommandPipeMatcher("wget");
+
+const codecovCurlBashMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  const token = /curl|codecov\.io|\||\n/g;
+  const results: StructuralMatch[] = [];
+  let curlStart = -1;
+  let sawCodecov = false;
+  let best: { start: number; end: number } | undefined;
+  const record = (start: number, end: number): void => {
+    if (
+      !best ||
+      start < best.start ||
+      (start === best.start && end > best.end)
+    ) {
+      best = { start, end };
+    }
+  };
+  const flushPhysicalLine = (): void => {
+    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+    best = undefined;
+    curlStart = -1;
+    sawCodecov = false;
+  };
+  let event: RegExpExecArray | null;
+  while ((event = token.exec(content)) !== null) {
+    const value = event[0]!;
+    if (value === "\n") {
+      flushPhysicalLine();
+      continue;
+    }
+    if (value === "curl") {
+      const whitespace = skipPatternWhitespace(content, event.index + value.length);
+      if (whitespace.end > event.index + value.length) {
+        if (curlStart === -1) curlStart = event.index;
+        token.lastIndex = whitespace.end;
+      }
+    } else if (value === "codecov.io") {
+      if (curlStart !== -1) sawCodecov = true;
+    } else {
+      if (curlStart !== -1 && sawCodecov) {
+        const whitespace = skipPatternWhitespace(content, event.index + 1);
+        const tail = content.slice(whitespace.end, whitespace.end + 4);
+        const length = tail.startsWith("bash") ? 4 : tail.startsWith("sh") ? 2 : 0;
+        if (length > 0) {
+          record(curlStart, whitespace.end + length);
+        }
+      }
+      // Both [^|]* segments stop at every pipe, successful or not.
+      curlStart = -1;
+      sawCodecov = false;
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
+
+const uaParserMinerMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  // Keep the marker alternative in source-regex order. At
+  // `jsextension.exe`, JavaScript selects the earlier `jsextension` branch.
+  const token = /jsextension|jsextension\.exe|__package\.json|https?:\/\/|curl|wget|\n|[\r\u2028\u2029]/g;
+  const results: StructuralMatch[] = [];
+  let markerStart = -1;
+  let transportStart = -1;
+  let best: { start: number; end: number } | undefined;
+  const record = (start: number, end: number): void => {
+    if (
+      !best ||
+      start < best.start ||
+      (start === best.start && end > best.end)
+    ) {
+      best = { start, end };
+    }
+  };
+  const resetDotSegment = (): void => {
+    markerStart = -1;
+    transportStart = -1;
+  };
+  const flushPhysicalLine = (): void => {
+    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+    best = undefined;
+    resetDotSegment();
+  };
+  let event: RegExpExecArray | null;
+  while ((event = token.exec(content)) !== null) {
+    const value = event[0]!;
+    if (value === "\n") {
+      flushPhysicalLine();
+      continue;
+    }
+    if (isDotLineTerminator(value)) {
+      resetDotSegment();
+      continue;
+    }
+    if (value === "jsextension.exe" || value === "jsextension" || value === "__package.json") {
+      if (transportStart !== -1) {
+        record(transportStart, event.index + value.length);
+      }
+      if (markerStart === -1) markerStart = event.index;
+    } else {
+      if (markerStart !== -1) {
+        record(markerStart, event.index + value.length);
+      }
+      if (transportStart === -1) transportStart = event.index;
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
+
+const binaryDirectDownloadMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  const token = /curl|wget|\.(?:dylib|node|dll|exe|so)|\n|[\r\u2028\u2029]/gi;
+  const results: StructuralMatch[] = [];
+  let commandStart = -1;
+  let best: { start: number; end: number } | undefined;
+  const record = (start: number, end: number): void => {
+    if (
+      !best ||
+      start < best.start ||
+      (start === best.start && end > best.end)
+    ) {
+      best = { start, end };
+    }
+  };
+  const flushPhysicalLine = (): void => {
+    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+    best = undefined;
+    commandStart = -1;
+  };
+  let event: RegExpExecArray | null;
+  while ((event = token.exec(content)) !== null) {
+    const value = event[0]!;
+    if (value === "\n") {
+      flushPhysicalLine();
+      continue;
+    }
+    if (isDotLineTerminator(value)) {
+      commandStart = -1;
+      continue;
+    }
+    const lower = value.toLowerCase();
+    if (lower === "curl" || lower === "wget") {
+      const whitespace = skipPatternWhitespace(content, event.index + value.length);
+      if (whitespace.end > event.index + value.length) {
+        if (commandStart === -1 || whitespace.crossedDotLineTerminator) {
+          commandStart = event.index;
+        }
+        token.lastIndex = whitespace.end;
+      }
+      continue;
+    }
+    if (commandStart === -1) continue;
+    const next = content[event.index + value.length];
+    if (next === undefined || next === "\n" || isPatternWhitespace(next) || next === '"' || next === "'") {
+      const consumesSuffix = next !== undefined && next !== "\n";
+      record(commandStart, event.index + value.length + (consumesSuffix ? 1 : 0));
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
+
+const minerPoolDomainMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  const token = /(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\.(?:com|org|net|io)|(?:pool|mining|mine|hashrate)\.|(?:com|org|net|io)|\n|[\r\u2028\u2029]/gi;
+  const known = /^(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\./;
+  const prefix = /^(?:pool|mining|mine|hashrate)\.$/;
+  const results: StructuralMatch[] = [];
+  let genericPrefix: { start: number; end: number } | undefined;
+  let best: { start: number; end: number } | undefined;
+  const record = (start: number, end: number): void => {
+    if (
+      !best ||
+      start < best.start ||
+      (start === best.start && end > best.end)
+    ) {
+      best = { start, end };
+    }
+  };
+  const flushPhysicalLine = (): void => {
+    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+    best = undefined;
+    genericPrefix = undefined;
+  };
+  let event: RegExpExecArray | null;
+  while ((event = token.exec(content)) !== null) {
+    const value = event[0]!;
+    if (value === "\n") {
+      flushPhysicalLine();
+      continue;
+    }
+    if (isDotLineTerminator(value)) {
+      genericPrefix = undefined;
+      continue;
+    }
+    const lower = value.toLowerCase();
+    if (known.test(lower)) {
+      record(event.index, event.index + value.length);
+    } else if (prefix.test(lower)) {
+      genericPrefix ??= { start: event.index, end: event.index + value.length };
+    } else if (
+      genericPrefix &&
+      event.index > genericPrefix.end &&
+      content[event.index - 1] === "."
+    ) {
+      record(genericPrefix.start, event.index + value.length);
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
+
+const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  const results: StructuralMatch[] = [];
+  interface QueueRange { start: number; end: number }
+  interface ResidentialProxyRange extends QueueRange { proxyStart: number }
+  interface RankedRange extends QueueRange {
+    priority: number;
+    pivots: readonly number[];
+  }
+
+  const socks: QueueRange[] = [];
+  const backconnects: QueueRange[] = [];
+  const residentials: QueueRange[] = [];
+  const residentialProxies: ResidentialProxyRange[] = [];
+  const proxies: QueueRange[] = [];
+  let socksHead = 0;
+  let backconnectHead = 0;
+  let residentialHead = 0;
+  let residentialProxyHead = 0;
+  let proxyHead = 0;
+  let best: RankedRange | undefined;
+
+  const pathIsEarlier = (
+    next: readonly number[],
+    current: readonly number[],
+  ): boolean => {
+    for (let index = 0; index < Math.min(next.length, current.length); index++) {
+      if (next[index] !== current[index]) return next[index]! < current[index]!;
+    }
+    return next.length < current.length;
+  };
+  const record = (
+    start: number,
+    end: number,
+    priority: number,
+    pivots: readonly number[],
+  ): void => {
+    if (
+      !best ||
+      start < best.start ||
+      (start === best.start && (
+        priority < best.priority ||
+        (priority === best.priority && (
+          pathIsEarlier(pivots, best.pivots) ||
+          (pivots.length === best.pivots.length &&
+            pivots.every((pivot, index) => pivot === best!.pivots[index]) &&
+            end > best.end)
+        ))
+      ))
+    ) {
+      best = { start, end, priority, pivots: [...pivots] };
+    }
+  };
+  const trimQueue = <T extends QueueRange>(
+    queue: T[],
+    head: number,
+    position: number,
+  ): number => {
+    while (head < queue.length && position - queue[head]!.end > 512) head++;
+    if (head > 1_024 && head * 2 > queue.length) {
+      queue.splice(0, head);
+      return 0;
+    }
+    return head;
+  };
+  const trimChains = (position: number): void => {
+    socksHead = trimQueue(socks, socksHead, position);
+    backconnectHead = trimQueue(backconnects, backconnectHead, position);
+    residentialHead = trimQueue(residentials, residentialHead, position);
+    residentialProxyHead = trimQueue(
+      residentialProxies,
+      residentialProxyHead,
+      position,
+    );
+    proxyHead = trimQueue(proxies, proxyHead, position);
+  };
+  const resetChains = (): void => {
+    socks.length = 0;
+    backconnects.length = 0;
+    residentials.length = 0;
+    residentialProxies.length = 0;
+    proxies.length = 0;
+    socksHead = 0;
+    backconnectHead = 0;
+    residentialHead = 0;
+    residentialProxyHead = 0;
+    proxyHead = 0;
+  };
+  const flushPhysicalLine = (): void => {
+    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
+    best = undefined;
+    resetChains();
+  };
+
+  // Independent zero-width streams preserve overlapping starts. A consuming
+  // union loses `1.2.3.4` when `:12341` first consumes its leading digit, and
+  // it cannot expose the two-octet residential endpoint beside a full IPv4.
+  const streams = [
+    { kind: "scheme", regex: /(?=(socks[45]?:\/\/))/g },
+    { kind: "socks", regex: /(?=(\bsocks[45]\b))/g },
+    { kind: "back_connect", regex: /(?=(back_connect))/g },
+    { kind: "backconnect", regex: /(?=(backconnect))/g },
+    { kind: "residential", regex: /(?=(residential))/g },
+    { kind: "proxy", regex: /(?=(proxy))/g },
+    { kind: "checkin", regex: /(?=(checkin))/g },
+    { kind: "port", regex: /(?=(:\d{4,5}))/g },
+    { kind: "fullIpv4", regex: /(?=(\d{1,3}(?:\.\d{1,3}){3}))/g },
+    { kind: "partialIpv4", regex: /(?=(\d{1,3}\.\d{1,3}))/g },
+  ] as const;
+  const events = streams.map(({ regex }) => {
+    regex.lastIndex = 0;
+    return regex.exec(content);
+  });
+  const barrier = /[\n\r]/g;
+  let barrierEvent = barrier.exec(content);
+
+  while (true) {
+    let eventStart = barrierEvent?.index ?? Number.POSITIVE_INFINITY;
+    for (const event of events) {
+      if (event && event.index < eventStart) eventStart = event.index;
+    }
+    if (!Number.isFinite(eventStart)) break;
+    trimChains(eventStart);
+
+    for (let streamIndex = 0; streamIndex < streams.length; streamIndex++) {
+      const event = events[streamIndex];
+      if (!event || event.index !== eventStart) continue;
+      const stream = streams[streamIndex]!;
+      const value = event[1]!;
+      const end = eventStart + value.length;
+
+      switch (stream.kind) {
+        case "scheme":
+          record(eventStart, end, 0, [eventStart]);
+          break;
+        case "socks":
+          socks.push({ start: eventStart, end });
+          break;
+        case "back_connect":
+          record(eventStart, end, 4, [eventStart]);
+          break;
+        case "backconnect":
+          backconnects.push({ start: eventStart, end });
+          break;
+        case "residential":
+          residentials.push({ start: eventStart, end });
+          break;
+        case "proxy": {
+          const residential = residentials[residentialHead];
+          if (residential) {
+            residentialProxies.push({
+              start: residential.start,
+              end,
+              proxyStart: eventStart,
+            });
+          }
+          proxies.push({ start: eventStart, end });
+          break;
+        }
+        case "checkin": {
+          const proxy = proxies[proxyHead];
+          if (proxy) record(proxy.start, end, 5, [eventStart]);
+          break;
+        }
+        case "port": {
+          const backconnect = backconnects[backconnectHead];
+          if (backconnect) record(backconnect.start, end, 2, [eventStart]);
+          break;
+        }
+        case "fullIpv4": {
+          const socksPrefix = socks[socksHead];
+          if (socksPrefix) record(socksPrefix.start, end, 1, [eventStart]);
+          break;
+        }
+        case "partialIpv4": {
+          const residentialProxy = residentialProxies[residentialProxyHead];
+          if (residentialProxy) {
+            record(
+              residentialProxy.start,
+              end,
+              3,
+              [residentialProxy.proxyStart, eventStart],
+            );
+          }
+          break;
+        }
+      }
+
+      stream.regex.lastIndex = eventStart + 1;
+      events[streamIndex] = stream.regex.exec(content);
+    }
+
+    if (barrierEvent?.index === eventStart) {
+      if (barrierEvent[0] === "\n") flushPhysicalLine();
+      else resetChains();
+      barrierEvent = barrier.exec(content);
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
+interface OrderedSameLineToken {
+  text: string;
+  word?: boolean;
+}
+
+interface OrderedSameLineState {
+  nextToken: number;
+  nextAt: number;
+  start: number;
+  end: number;
+}
+
+const isRegExpWordCharacter = (value: string | undefined): boolean =>
+  value !== undefined && /[A-Za-z0-9_]/.test(value);
+
+function orderedTokenAt(
+  content: string,
+  index: number,
+  token: OrderedSameLineToken,
+): boolean {
+  if (!content.startsWith(token.text, index)) return false;
+  if (!token.word) return true;
+  return !isRegExpWordCharacter(content[index - 1]) &&
+    !isRegExpWordCharacter(content[index + token.text.length]);
+}
+
+/**
+ * Match fixed ordered token sequences separated by `.*` on one JavaScript
+ * regex line. Each character and sequence is considered a constant number of
+ * times; repeated prefixes cannot restart a scan. CR/LF/U+2028/U+2029 retain
+ * native dot semantics, while findings remain deduplicated per physical LF
+ * line just like matchPatternInContent.
+ */
+function makeOrderedSameLineMatcher(
+  sequences: ReadonlyArray<ReadonlyArray<OrderedSameLineToken>>,
+): NonNullable<PatternEntry["correlatedMatcher"]> {
+  return (content) => {
+    const results: StructuralMatch[] = [];
+    const states: OrderedSameLineState[] = sequences.map(() => ({
+      nextToken: 0,
+      nextAt: 0,
+      start: -1,
+      end: -1,
+    }));
+    let matchedPhysicalLine = false;
+
+    const resetStates = (): void => {
+      for (const state of states) {
+        state.nextToken = 0;
+        state.nextAt = 0;
+        state.start = -1;
+        state.end = -1;
+      }
+    };
+    const flushSegment = (): void => {
+      if (matchedPhysicalLine) {
+        resetStates();
+        return;
+      }
+      let selected = -1;
+      for (let sequence = 0; sequence < states.length; sequence++) {
+        const state = states[sequence]!;
+        if (state.end === -1) continue;
+        if (selected === -1 || state.start < states[selected]!.start) {
+          selected = sequence;
+        }
+      }
+      if (selected !== -1) {
+        const state = states[selected]!;
+        results.push(makeStructuralMatch(content, state.start, state.end));
+        matchedPhysicalLine = true;
+      }
+      resetStates();
+    };
+
+    for (let index = 0; index <= content.length; index++) {
+      const char = content[index];
+      if (index === content.length || char === "\n" || isDotLineTerminator(char ?? "")) {
+        flushSegment();
+        if (char === "\n") matchedPhysicalLine = false;
+        continue;
+      }
+      if (matchedPhysicalLine) continue;
+
+      for (let sequence = 0; sequence < sequences.length; sequence++) {
+        const tokens = sequences[sequence]!;
+        const state = states[sequence]!;
+        if (state.nextToken === tokens.length) {
+          const finalToken = tokens[tokens.length - 1]!;
+          if (index >= state.nextAt && orderedTokenAt(content, index, finalToken)) {
+            state.end = index + finalToken.text.length;
+            state.nextAt = state.end;
+          }
+          continue;
+        }
+
+        const token = tokens[state.nextToken]!;
+        if (index < state.nextAt || !orderedTokenAt(content, index, token)) continue;
+        if (state.nextToken === 0) state.start = index;
+        state.nextToken++;
+        state.nextAt = index + token.text.length;
+        if (state.nextToken === tokens.length) state.end = state.nextAt;
+      }
+    }
+
+    return results;
+  };
+}
+
+const xzObfuscatedTestMatcher = makeOrderedSameLineMatcher([
+  [
+    { text: "tests/files/" },
+    { text: ".xz" },
+    { text: "head", word: true },
+    { text: "tr", word: true },
+  ],
+  [
+    { text: "xz", word: true },
+    { text: "-d" },
+    { text: "|" },
+    { text: "head", word: true },
+    { text: "-c" },
+  ],
+]);
+
+const iacInlineScriptMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
+  const token = /provisioner|user_data|inline|curl|wget|\||\n|[\r\u2028\u2029]/g;
+  const results: StructuralMatch[] = [];
+  let markerStart = -1;
+  let commandStart = -1;
+  let bestStart = -1;
+  let bestEnd = -1;
+
+  const recordCandidate = (start: number, end: number): void => {
+    if (bestStart === -1 || start < bestStart || (start === bestStart && end > bestEnd)) {
+      bestStart = start;
+      bestEnd = end;
+    }
+  };
+  const flushPhysicalLine = (): void => {
+    if (bestStart !== -1) {
+      results.push(makeStructuralMatch(content, bestStart, bestEnd));
+    }
+    markerStart = -1;
+    commandStart = -1;
+    bestStart = -1;
+    bestEnd = -1;
+  };
+
+  let event: RegExpExecArray | null;
+  while ((event = token.exec(content)) !== null) {
+    const value = event[0]!;
+    if (value === "\n") {
+      flushPhysicalLine();
+      continue;
+    }
+    if (isDotLineTerminator(value)) {
+      markerStart = -1;
+      commandStart = -1;
+      continue;
+    }
+    if (value === "provisioner" || value === "user_data" || value === "inline") {
+      if (markerStart === -1) markerStart = event.index;
+      continue;
+    }
+    if (value === "curl" || value === "wget") {
+      if (markerStart === -1) continue;
+      const whitespace = skipPatternWhitespace(content, event.index + value.length);
+      if (whitespace.end > event.index + value.length) {
+        if (whitespace.crossedDotLineTerminator) {
+          // Only this command's `\s+` may cross the terminator. Older command
+          // paths and the marker-to-command `.*` cannot survive beyond it.
+          commandStart = markerStart;
+          markerStart = -1;
+        } else if (commandStart === -1) {
+          commandStart = markerStart;
+        }
+        token.lastIndex = whitespace.end;
+      }
+      continue;
+    }
+    if (commandStart === -1) continue;
+    const whitespace = skipPatternWhitespace(content, event.index + 1);
+    const tail = content.slice(whitespace.end, whitespace.end + 4);
+    const executableLength = tail.startsWith("bash") ? 4 : tail.startsWith("sh") ? 2 : 0;
+    if (executableLength > 0) {
+      recordCandidate(commandStart, whitespace.end + executableLength);
+      token.lastIndex = whitespace.end + executableLength;
+      if (whitespace.crossedDotLineTerminator) {
+        // Selecting a later pipe would put this terminator inside `.*`, where
+        // dot cannot consume it. Preserve the completed candidate, but expire
+        // both active prefixes before scanning the following segment.
+        markerStart = -1;
+        commandStart = -1;
+      }
+    }
+  }
+  flushPhysicalLine();
+  return results;
+};
 
 /**
  * Values that are references to a secret rather than a secret: shell and
@@ -261,6 +1422,8 @@ export function isLikelyRealSecretValue(value: string): boolean {
   if (VALUE_IS_EMPTY_LITERAL.test(v)) return false;
   return true;
 }
+const CORE_BROAD_GAP_MATCHERS = createCoreBroadGapMatchers(isLikelyRealSecretValue);
+
 
 // ---------------------------------------------------------------------------
 // File-based detection patterns
@@ -326,6 +1489,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "Hex-encoded eval detected",
     severity: "critical",
     rule: "EVAL_HEX",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.EVAL_HEX,
     notTestFile: true,
   },
   {
@@ -388,6 +1552,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
       "Environment variable access combined with network request (data exfiltration pattern)",
     severity: "high",
     rule: "ENV_EXFILTRATION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.ENV_EXFILTRATION,
     notTestFile: true,
   },
   {
@@ -396,6 +1561,7 @@ export const FILE_PATTERNS: PatternEntry[] = [
     description: "DNS-based data exfiltration pattern detected",
     severity: "high",
     rule: "DNS_EXFILTRATION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DNS_EXFILTRATION,
     notTestFile: true,
   },
 ];
@@ -439,6 +1605,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "postinstall script downloads and executes remote code",
     severity: "critical",
     rule: "SCRIPT_CURL_EXEC",
+    correlatedMatcher: scriptCurlExecMatcher,
     notTestFile: true,
   },
   {
@@ -447,6 +1614,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     description: "postinstall script downloads and executes remote code",
     severity: "critical",
     rule: "SCRIPT_WGET_EXEC",
+    correlatedMatcher: scriptWgetExecMatcher,
     notTestFile: true,
   },
   {
@@ -456,6 +1624,7 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
       "postinstall script executes inline Node.js with network access",
     severity: "high",
     rule: "SCRIPT_NODE_INLINE",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SCRIPT_NODE_INLINE,
     notTestFile: true,
   },
   {
@@ -702,6 +1871,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: build system injection pattern in configure.ac/m4 macros",
     severity: "high",
     rule: "XZ_BUILD_INJECT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.XZ_BUILD_INJECT,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -713,6 +1883,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "XZ Utils backdoor indicator: obfuscated test file extraction pattern (hidden payload in test fixtures)",
     severity: "high",
     rule: "XZ_OBFUSCATED_TEST",
+    correlatedMatcher: xzObfuscatedTestMatcher,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -726,6 +1897,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Codecov bash uploader pattern: curl from codecov.io piped to shell (supply-chain risk vector)",
     severity: "high",
     rule: "CODECOV_CURL_BASH",
+    correlatedMatcher: codecovCurlBashMatcher,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -737,6 +1909,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Codecov exfiltration indicator: environment secrets referenced alongside codecov operations",
     severity: "high",
     rule: "CODECOV_EXFIL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CODECOV_EXFIL,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -770,6 +1943,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "SUNBURST-style delayed execution: sleep/timeout exceeding 1 hour (evasion technique to avoid sandbox analysis)",
     severity: "high",
     rule: "SUNBURST_DELAYED_EXEC",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SUNBURST_DELAYED_EXEC,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -783,6 +1957,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "ua-parser-js hijack indicator: crypto miner download pattern (jsextension binary)",
     severity: "critical",
     rule: "UAPARSER_MINER",
+    correlatedMatcher: uaParserMinerMatcher,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -794,6 +1969,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "ua-parser-js hijack indicator: preinstall script downloading executables from external domains",
     severity: "critical",
     rule: "UAPARSER_PREINSTALL_DL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.UAPARSER_PREINSTALL_DL,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -904,6 +2080,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "preinstall script invoking Bun on setup.mjs or execution.js. Direct fingerprint of the Mini Shai-Hulud worm's npm hijack chain.",
     severity: "critical",
     rule: "MINI_SHAI_HULUD_PREINSTALL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.MINI_SHAI_HULUD_PREINSTALL,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -941,6 +2118,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Mini Shai-Hulud @antv wave C2 exfiltration endpoint masquerading as an OpenTelemetry traces collector at t.m-kosche.com (May 2026).",
     severity: "critical",
     rule: "ANTV_WAVE_OTEL_C2",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.ANTV_WAVE_OTEL_C2,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1033,6 +2211,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "coa/rc npm hijack indicator: postinstall script with encoded payload execution",
     severity: "critical",
     rule: "COA_RC_POSTINSTALL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.COA_RC_POSTINSTALL,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1195,6 +2374,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "Environment variable access combined with network activity (data exfiltration pattern)",
     severity: "high",
     rule: "PYPI_ENV_EXFILTRATION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PYPI_ENV_EXFILTRATION,
     notTestFile: true,
   },
   {
@@ -1203,6 +2383,7 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     description: "Hostname collection combined with network activity (reconnaissance/exfiltration)",
     severity: "high",
     rule: "PYPI_HOSTNAME_EXFIL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PYPI_HOSTNAME_EXFIL,
     notTestFile: true,
   },
 
@@ -1236,13 +2417,21 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     notTestFile: true,
   },
 
-  // base64.b64decode combined with exec (same line or a short multi-line block)
+  // base64.b64decode whose result is actually passed to exec (same line or a
+  // short multi-line block). Anchoring exec at a statement boundary prevents
+  // comments and string literals from turning a defensive mention into code.
   {
     name: "python-b64decode-exec-combined",
-    pattern: "base64\\.b64decode\\s*\\([^)]*\\).*\\bexec\\b|\\bexec\\b.*base64\\.b64decode",
+    pattern:
+      "(?:" +
+      "(?:^|[\\n;:])[ \\t]*exec\\s*\\(\\s*base64\\.b64decode\\s*\\([^\\n)]*\\)(?:\\.decode\\s*\\([^\\n)]*\\))?\\s*\\)" +
+      "|" +
+      "(?:^|\\n)[ \\t]*([A-Za-z_]\\w*)(?:[ \\t]*:[^=\\n]+)?[ \\t]*=[ \\t]*base64\\.b64decode\\s*\\([^\\n)]*\\)[\\s\\S]*?(?:[\\n;:])[ \\t]*exec\\s*\\(\\s*\\1(?:\\.decode\\s*\\([^\\n)]*\\))?\\s*(?:,|\\))" +
+      ")",
     description: "base64.b64decode combined with exec (obfuscated execution)",
     severity: "critical",
     rule: "PYPI_B64_EXEC_COMBINED",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_B64_EXEC_COMBINED,
     // decode then exec is almost always two statements. 4 lines is enough for
     // an assignment + blank line + exec without spanning half a module.
     spansLines: 4,
@@ -1265,6 +2454,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom install command class detected (code runs during pip install)",
     severity: "medium",
     rule: "PYPI_CUSTOM_INSTALL",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_CUSTOM_INSTALL,
     // cmdclass={ 'install': ... } is almost always pretty-printed.
     spansLines: 6,
     notTestFile: true,
@@ -1275,6 +2465,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom develop command class detected (code runs during pip install -e)",
     severity: "medium",
     rule: "PYPI_CUSTOM_DEVELOP",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_CUSTOM_DEVELOP,
     spansLines: 6,
     notTestFile: true,
   },
@@ -1284,6 +2475,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom egg_info command class detected (code runs during package metadata generation)",
     severity: "medium",
     rule: "PYPI_CUSTOM_EGG_INFO",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_CUSTOM_EGG_INFO,
     spansLines: 6,
     notTestFile: true,
   },
@@ -1293,6 +2485,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom sdist command class detected (code runs during source distribution build)",
     severity: "low",
     rule: "PYPI_CUSTOM_SDIST",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_CUSTOM_SDIST,
     spansLines: 6,
     notTestFile: true,
   },
@@ -1302,6 +2495,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom build_ext command class detected (code runs during native extension build)",
     severity: "low",
     rule: "PYPI_CUSTOM_BUILD_EXT",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PYPI_CUSTOM_BUILD_EXT,
     spansLines: 6,
     notTestFile: true,
   },
@@ -1391,6 +2585,7 @@ export const BINARY_DOWNLOAD_PATTERNS: PatternEntry[] = [
     description: "Install script downloads a binary/native file directly",
     severity: "high",
     rule: "BINARY_DIRECT_DOWNLOAD",
+    correlatedMatcher: binaryDirectDownloadMatcher,
     notTestFile: true,
   },
   {
@@ -1451,6 +2646,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Periodic network request detected (setInterval + fetch). This is a common beacon pattern for C2 communication.",
     severity: "medium",
     rule: "BEACON_INTERVAL_FETCH",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_INTERVAL_FETCH,
     notFilePattern: /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -1462,6 +2658,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Delayed network request detected (setTimeout + fetch). May be a beacon with jitter.",
     severity: "medium",
     rule: "BEACON_TIMEOUT_FETCH",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_TIMEOUT_FETCH,
     notTestFile: true,
   },
 
@@ -1485,6 +2682,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Known mining pool domain detected. This package may contain a cryptocurrency miner.",
     severity: "critical",
     rule: "MINER_POOL_DOMAIN",
+    correlatedMatcher: minerPoolDomainMatcher,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1532,6 +2730,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "Locale/timezone check followed by destructive code. This is a protestware pattern that targets users by geography.",
     severity: "critical",
     rule: "PROTESTWARE_LOCALE_DESTRUCT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PROTESTWARE_LOCALE_DESTRUCT,
     notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
@@ -1543,6 +2742,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
       "GeoIP lookup combined with destructive operations detected. This is a protestware/geo-targeted attack pattern.",
     severity: "critical",
     rule: "PROTESTWARE_GEOIP_DESTRUCT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.PROTESTWARE_GEOIP_DESTRUCT,
     notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
@@ -1617,6 +2817,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Build config plugin downloads code from an external URL during build.",
     severity: "high",
     rule: "BUILD_PLUGIN_DOWNLOAD",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BUILD_PLUGIN_DOWNLOAD,
     notTestFile: true,
   },
   {
@@ -1637,6 +2838,7 @@ export const BUILD_TOOL_PATTERNS: PatternEntry[] = [
       "Build config reads environment variables near network requests (potential secret exfiltration).",
     severity: "critical",
     rule: "BUILD_ENV_EXFIL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BUILD_ENV_EXFIL,
     notTestFile: true,
   },
   {
@@ -1686,6 +2888,7 @@ export const MONOREPO_PATTERNS: PatternEntry[] = [
       "Root-level postinstall in monorepo workspace. Affects all workspace packages.",
     severity: "high",
     rule: "WORKSPACE_ROOT_POSTINSTALL",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.WORKSPACE_ROOT_POSTINSTALL,
     notTestFile: true,
   },
   {
@@ -1696,6 +2899,7 @@ export const MONOREPO_PATTERNS: PatternEntry[] = [
       "Workspace package marked as non-private with publishConfig. Verify it should be public.",
     severity: "high",
     rule: "WORKSPACE_PRIVATE_PUBLISH",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.WORKSPACE_PRIVATE_PUBLISH,
     notTestFile: true,
   },
 ];
@@ -1714,6 +2918,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
       "Self-publishing pattern detected. The Shai-Hulud worm replicates by publishing infected packages via npm.",
     severity: "critical",
     rule: "SHAI_HULUD_WORM",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SHAI_HULUD_WORM,
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
     // A bare "npm publish" string is a RELEASE SCRIPT, not a worm: every library
     // repo has one, and this rule made all of them critical on sight. The worm
@@ -1721,8 +2926,7 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
     // file must also show credential access AND process execution. The campaign's
     // package@version set is pinned exactly in KNOWN_BAD_NPM_VERSIONS regardless,
     // so an install of a real Shai-Hulud release blocks on the pin, not on this.
-    requiresInFile:
-      /(?:\.npmrc|NPM_TOKEN|npm_config_userconfig|_authToken|process\.env)[\s\S]*?(?:child_process|execSync|spawnSync|execFile|spawn\s*\(|subprocess|os\.system)|(?:child_process|execSync|spawnSync|execFile|spawn\s*\(|subprocess|os\.system)[\s\S]*?(?:\.npmrc|NPM_TOKEN|npm_config_userconfig|_authToken)/,
+    requiresInFileMatcher: hasShaiHuludCorroboration,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1748,11 +2952,20 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
   {
     name: "protestware-ip-geo-destruct",
     pattern:
-      "(?:ip-api|ipinfo|geoip-lite|maxmind|geoip2).*(?:unlink|rmdir|rm\\s+-rf|del\\s+/|format\\s+c:)",
+      "(?:ip-api|ipinfo|geoip-lite|maxmind|MaxMind|geoip2|GeoIP2?).*" +
+      "(?:" +
+      "\\b(?:unlink(?:Sync)?|rmdir(?:Sync)?|rm(?:Sync)?)\\s*\\(\\s*" +
+      "(?![^)\\n]*(?:temp|tmp|archive|cache|download|\\.mmdb\\b))" +
+      "(?=[^)\\n]*(?:[\"'](?:/(?!/?(?:tmp|var/tmp)(?:/|[\"']))|[A-Za-z]:[\\\\/])|process\\.cwd\\s*\\(|__dirname|homedir\\s*\\(|HOME|USERPROFILE))" +
+      "|\\brm\\s+-rf\\s+(?:[\"']?(?:/(?!tmp(?:/|\\s|[\"']))|~|\\$HOME|%USERPROFILE%|[A-Za-z]:[\\\\/])|process\\.cwd\\s*\\(\\)|__dirname)" +
+      "|\\bdel\\s+/[a-z]*\\s+(?:[A-Za-z]:[\\\\/]|%USERPROFILE%)" +
+      "|\\bformat\\s+c:" +
+      ")",
     description:
       "IP geolocation combined with destructive file operations. Advanced protestware pattern.",
     severity: "critical",
     rule: "PROTESTWARE_IP_GEO_V2",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PROTESTWARE_IP_GEO_V2,
     // Geo lookup then destructive call is often two statements in a branch.
     spansLines: 8,
     notTestFile: true,
@@ -1778,11 +2991,13 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
   {
     name: "proxy-handler-trap",
     pattern:
-      "new\\s+Proxy\\s*\\([^)]*\\{[^}]*(?:get|set|apply|construct)\\s*:",
+      "new\\s+Proxy\\s*\\([^)]*\\{[^}]*(?:get|set|apply|construct)\\s*:[^}]*?" +
+      "(?:\\beval\\s*\\(|\\bnew\\s+Function\\b|\\bfetch\\s*\\(|\\baxios(?:\\.\\w+)?\\s*\\(|\\bXMLHttpRequest\\s*\\(|\\bchild_process\\.(?:exec(?:File)?(?:Sync)?|spawn(?:Sync)?)\\s*\\(|\\bexecSync\\s*\\(|\\batob\\s*\\(|process\\.env\\s*\\[)",
     description:
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.PROXY_HANDLER_TRAP,
     // new Proxy(target, { get: ... }) is routinely pretty-printed across 2-4
     // lines. spansLines:5 covers that formatting without pairing a Proxy on
     // line 1 with an unrelated handler 50 lines later.
@@ -1803,6 +3018,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Dynamic import() with computed URL (template literal with expression, env variable, or string construction). Can load modules from attacker-controlled sources.",
     severity: "medium",
     rule: "IMPORT_EXPRESSION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.IMPORT_EXPRESSION,
     notTestFile: true,
   },
   {
@@ -1823,6 +3039,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Base64 decoding applied to image/font file content. Potential steganographic payload extraction.",
     severity: "high",
     rule: "STEGANOGRAPHY_DECODE",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.STEGANOGRAPHY_DECODE,
     notTestFile: true,
   },
   {
@@ -1833,6 +3050,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "SVG file contains <script> tag or event handler. SVG files can execute JavaScript.",
     severity: "high",
     rule: "SVG_SCRIPT_INJECTION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SVG_SCRIPT_INJECTION,
     onlyExtensions: [".svg"],
     notTestFile: true,
   },
@@ -1861,6 +3079,7 @@ export const IAC_PATTERNS: PatternEntry[] = [
       "Terraform/IaC provisioner downloads and executes remote code.",
     severity: "high",
     rule: "IAC_INLINE_SCRIPT",
+    correlatedMatcher: iacInlineScriptMatcher,
     notTestFile: true,
   },
   {
@@ -1884,8 +3103,8 @@ export const IAC_PATTERNS: PatternEntry[] = [
       "Hardcoded secret in IaC configuration file. Secrets should use variables or secret managers.",
     severity: "critical",
     rule: "IAC_HARDCODED_SECRET",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.IAC_HARDCODED_SECRET,
     notTestFile: true,
-    valueFilter: isLikelyRealSecretValue,
   },
   {
     name: "iac-remote-exec",
@@ -1946,6 +3165,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels.",
     severity: "medium",
     rule: "DEAD_DROP_DNS_TXT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DEAD_DROP_DNS_TXT,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1959,6 +3179,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Browser credential/cookie file access pattern. Infostealers (Vidar, Lumma, RedLine) steal browser data from these paths.",
     severity: "high",
     rule: "VIDAR_BROWSER_THEFT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.VIDAR_BROWSER_THEFT,
     notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -1972,6 +3193,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Cryptocurrency wallet file/directory access. Infostealers target wallet files for fund theft.",
     severity: "high",
     rule: "VIDAR_WALLET_THEFT",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.VIDAR_WALLET_THEFT,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1991,11 +3213,12 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "proxy-backconnect",
     pattern:
-      "(?:socks[45]?://|\\bsocks[45]\\b.*\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|backconnect.*:\\d{4,5}|residential.*proxy.*\\d{1,3}\\.\\d{1,3}|back_connect|proxy.*checkin)",
+      "(?:socks[45]?://|\\bsocks[45]\\b[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|backconnect[^\\r\\n]{0,512}?:\\d{4,5}|residential[^\\r\\n]{0,512}?proxy[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}|back_connect|proxy[^\\r\\n]{0,512}?checkin)",
     description:
       "Reverse proxy/backconnect pattern. Infected machines are registered as proxy nodes for criminal infrastructure.",
     severity: "high",
     rule: "PROXY_BACKCONNECT",
+    correlatedMatcher: proxyBackconnectMatcher,
     notFilePattern: /\.min\.(js|css)$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -2004,11 +3227,20 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "dropper-temp-exec",
     pattern:
-      "(?:TEMP|TMP|AppData|tmp).*(?:exec|spawn|ShellExecute|CreateProcess|system\\()|(?:writeFile|write_bytes|writeFileSync|saveFile\\().*(?:TEMP|TMP|\\.exe|\\.bat|\\.cmd|\\.ps1)",
+      "(?:" +
+      // A declared temp/executable path must be passed to both the write and
+      // execution calls. The optional string prefix covers execSync("node " + path).
+      "(?:^|[\\n;])[ \\t]*(?:(?:const|let|var)[ \\t]+)?([A-Za-z_$][\\w$]*)[ \\t]*=[ \\t]*[^\\n;]*(?:\\b(?:TEMP|TMP|AppData)\\b|tmp(?:dir)?[ \\t]*\\(|tempfile|[\\\\/](?:tmp|temp)[\\\\/]|\\.(?:exe|bat|cmd|ps1)(?![A-Za-z0-9_]))[^\\n;]*;?[\\s\\S]*?\\b(?:writeFile(?:Sync)?|write_bytes|saveFile)\\s*\\(\\s*\\1\\b[^\\n;]*[\\s\\S]*?\\b(?:exec(?:File)?(?:Sync)?|spawn(?:Sync)?|ShellExecute|CreateProcess|system)\\s*\\(\\s*(?:[\"'][^\"'\\n]*[\"'][ \\t]*\\+[ \\t]*)?\\1\\b" +
+      "|" +
+      // Direct expressions are correlated by the executable basename. Requiring
+      // a real execution call also prevents ".exe" from matching ".execSync".
+      "\\b(?:writeFile(?:Sync)?|write_bytes|saveFile)\\s*\\([^\\n;]*?[\"'](?:[^\"'\\n]*[\\\\/])?([^\"'\\\\/\\n]+\\.(?:exe|bat|cmd|ps1)(?![A-Za-z0-9_]))[\"'][^\\n;]*[\\s\\S]*?\\b(?:exec(?:File)?(?:Sync)?|spawn(?:Sync)?|ShellExecute|CreateProcess|system)\\s*\\([^\\n;]*?\\2(?![A-Za-z0-9_])" +
+      ")",
     description:
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
     rule: "DROPPER_TEMP_EXEC",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.DROPPER_TEMP_EXEC,
     // writeFileSync(tmpdir) then execSync a few lines later is the real shape;
     // a one-line form is rare. 6 lines covers the common dropper layout without
     // pairing an early tmpdir reference with a distant spawn.
@@ -2016,8 +3248,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     // Writing into os.tmpdir() and running it is exactly how tsx, jiti, prisma and
     // playwright cache-compile. A dropper is distinguished by the payload being
     // FETCHED or DECODED first rather than generated from local source.
-    requiresInFile:
-      /\b(?:fetch\s*\(|axios|https?\.(?:get|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|urllib|requests\.|atob\s*\(|powershell)|Buffer\.from\s*\([^)]*base64|chmod/,
+    requiresInFileMatcher: hasDropperPayloadPreparation,
     notFilePattern: /\.json$|(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -2029,6 +3260,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Anti-VM/anti-debug evasion technique. Malware checks for sandbox environments before executing payloads.",
     severity: "high",
     rule: "DROPPER_ANTIVM",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DROPPER_ANTIVM,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -2080,6 +3312,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "README uses urgency language to pressure downloads. Classic social engineering tactic.",
     severity: "medium",
     rule: "README_LURE_URGENCY",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.README_LURE_URGENCY,
     onlyFilePattern: /(?:^|[/\\])(?:README|CHANGELOG|DESCRIPTION|CONTRIBUTING|release[-_]notes)[^/\\]*$/i,
     notTestFile: true,
   },
@@ -2091,6 +3324,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Claude Code lure detected. The April 2026 campaign distributed Vidar/GhostSocks via fake 'leaked Claude Code' repos.",
     severity: "critical",
     rule: "CAMPAIGN_CLAUDE_LURE",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CAMPAIGN_CLAUDE_LURE,
     notTestFile: true,
     // Stay on .md - lure patterns target malicious READMEs by design.
     notFilePattern: SCANNER_SRC,
@@ -2103,6 +3337,7 @@ export const LURE_PATTERNS: PatternEntry[] = [
       "Fake AI tool lure detected. The 2026 campaign impersonated 25+ software brands to distribute malware.",
     severity: "critical",
     rule: "CAMPAIGN_AI_TOOL_LURE",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CAMPAIGN_AI_TOOL_LURE,
     notTestFile: true,
     notFilePattern: SCANNER_SRC,
   },
@@ -2252,6 +3487,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
       "Dynamic config fetch followed by code execution. Runtime C2 command pattern.",
     severity: "high",
     rule: "C2_DYNAMIC_CONFIG",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.C2_DYNAMIC_CONFIG,
     notFilePattern: SCANNER_SRC_OR_DOCS,
     notTestFile: true,
   },
@@ -2314,6 +3550,7 @@ export const SECRETS_PATTERNS: PatternEntry[] = [
       "Code reads SSH private key files. Infostealers exfiltrate SSH keys for lateral movement.",
     severity: "critical",
     rule: "SECRETS_SSH_KEY_READ",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.SECRETS_SSH_KEY_READ,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -2374,6 +3611,7 @@ export const OBFUSCATION_V3_PATTERNS: PatternEntry[] = [
       "Delayed runtime deobfuscation. Code deobfuscates and executes payload after a delay to evade analysis.",
     severity: "high",
     rule: "CODE_RUNTIME_DEOBFUSCATION",
+    correlatedMatcher: CORE_BROAD_GAP_MATCHERS.CODE_RUNTIME_DEOBFUSCATION,
     notTestFile: true,
   },
 ];
@@ -2405,14 +3643,23 @@ export const PROVENANCE_PATTERNS: PatternEntry[] = [
  * Kept explicit rather than discovered, so a new array must be registered here
  * deliberately and cannot quietly skip validation.
  */
-type ValidatablePattern = {
+export type ValidatablePattern = {
   pattern: string;
   rule: string;
   name?: string;
   spansLines?: number;
+  correlatedMatcher?: PatternEntry["correlatedMatcher"];
+  valueFilter?: PatternEntry["valueFilter"];
+  requiresInFile?: PatternEntry["requiresInFile"];
+  requiresInFileMatcher?: PatternEntry["requiresInFileMatcher"];
 };
 
-const ALL_PATTERN_SETS: ReadonlyArray<readonly [string, ReadonlyArray<ValidatablePattern>]> = [
+export interface PatternValidationOptions {
+  /** Specialized engines validate syntax/invariants but do not use this runner. */
+  execution?: "shared-pattern-engine" | "specialized-engine";
+}
+
+export const ALL_PATTERN_SETS: ReadonlyArray<readonly [string, ReadonlyArray<ValidatablePattern>]> = [
   ["FILE_PATTERNS", FILE_PATTERNS],
   ["SUSPICIOUS_FILES", SUSPICIOUS_FILES],
   ["SUSPICIOUS_SCRIPTS", SUSPICIOUS_SCRIPTS],
@@ -2441,21 +3688,22 @@ export const ALL_PATTERN_RULES: readonly string[] = ALL_PATTERN_SETS.flatMap(
 );
 
 /**
- * Compile every pattern once, at module load, and throw loudly on a bad one.
- *
- * This is enforced here rather than in a test because of how the failure used to
- * present. scanner.ts builds `new RegExp(pattern.pattern, "g")` INSIDE a
- * per-file `try { ... } catch { skip }`, so a single malformed pattern threw on
- * the first file, was swallowed, and silently suppressed every content rule
- * ordered after it - for every file in the scan, with the process still exiting
- * 0. Measured: one invalid entry placed first reduced a scan from 21 findings to
- * 1, reporting success.
- *
- * A security scanner that quietly stops scanning is the worst failure it can
- * have, so this turns it into an immediate, unmissable crash at import time.
+ * Compile a pattern set at module load and reject metadata that would otherwise
+ * fail or silently narrow a scan only when a matching file is encountered.
+ * Scanner-local sets call this same function from their defining module.
  */
-for (const [setName, set] of ALL_PATTERN_SETS) {
+export function validatePatternSet(
+  setName: string,
+  set: ReadonlyArray<ValidatablePattern>,
+  options: PatternValidationOptions = {},
+): void {
+  const exactCandidates: object[] = [];
   for (const entry of set) {
+    if (entry.pattern.length === 0) {
+      throw new Error(
+        `${setName}: pattern for rule "${entry.rule}" is empty, which matches every line.`,
+      );
+    }
     try {
       new RegExp(entry.pattern, "g");
     } catch (err) {
@@ -2465,14 +3713,7 @@ for (const [setName, set] of ALL_PATTERN_SETS) {
           "Refusing to load: an invalid pattern silently disables every rule after it.",
       );
     }
-    if (entry.pattern.length === 0) {
-      throw new Error(
-        `${setName}: pattern for rule "${entry.rule}" is empty, which matches every line.`,
-      );
-    }
-    // Multi-line form is a second compiled shape (dotAll). Validate it too so a
-    // flag-sensitive construct cannot pass single-line compile and fail only in
-    // the multi-line engine path.
+
     const spans = entry.spansLines ?? 1;
     if (typeof spans !== "number" || !Number.isInteger(spans) || spans < 1) {
       throw new Error(
@@ -2485,6 +3726,35 @@ for (const [setName, set] of ALL_PATTERN_SETS) {
           "Large windows approach whole-file matching and reintroduce cross-file-region false positives.",
       );
     }
+
+    const hasBroadGap = hasBroadUnboundedConsumingGap(entry.pattern);
+    if (hasBroadGap && !entry.correlatedMatcher) {
+      throw new Error(
+        `${setName}: rule "${entry.rule}" contains a broad unbounded consuming gap and must declare a correlatedMatcher. ` +
+          "Refusing to evaluate that regex over an attacker-controlled long line.",
+      );
+    }
+    if (
+      entry.requiresInFile &&
+      hasBroadUnboundedConsumingGap(entry.requiresInFile.source)
+    ) {
+      throw new Error(
+        `${setName}: rule "${entry.rule}" has a broad requiresInFile regex. ` +
+          "Replace it with a denial-of-service-safe requiresInFileMatcher.",
+      );
+    }
+    if (spans > 1 && !entry.correlatedMatcher) {
+      throw new Error(
+        `${setName}: multi-line rule "${entry.rule}" must declare a correlatedMatcher. ` +
+          "Unbounded regex correlation cannot provide exact, denial-of-service-safe coverage on admitted minified files.",
+      );
+    }
+    if (entry.correlatedMatcher && entry.valueFilter) {
+      throw new Error(
+        `${setName}: rule "${entry.rule}" combines correlatedMatcher with valueFilter, ` +
+          "but structural matches do not expose regex capture groups.",
+      );
+    }
     if (spans > 1) {
       try {
         new RegExp(entry.pattern, "gs");
@@ -2495,5 +3765,60 @@ for (const [setName, set] of ALL_PATTERN_SETS) {
         );
       }
     }
+
+    if (
+      (options.execution ?? "shared-pattern-engine") === "shared-pattern-engine" &&
+      spans === 1 &&
+      !entry.correlatedMatcher &&
+      !hasBroadGap
+    ) {
+      exactCandidates.push(entry);
+    }
+  }
+
+  // Register only after the complete set validates. A rejected test/plugin set
+  // must not partially change how an earlier entry is executed.
+  for (const entry of exactCandidates) {
+    EXACT_VALIDATED_SINGLE_LINE_PATTERNS.add(entry);
   }
 }
+
+/** Validate raw regex-string tables that do not carry PatternEntry metadata. */
+export function validateRegexStringSet(
+  setName: string,
+  set: ReadonlyArray<string>,
+): void {
+  for (let index = 0; index < set.length; index++) {
+    const pattern = set[index]!;
+    if (pattern.length === 0) {
+      throw new Error(`${setName}[${index}] is empty, which matches every value.`);
+    }
+    try {
+      new RegExp(pattern, "g");
+    } catch (err) {
+      throw new Error(
+        `${setName}[${index}] is not a valid regular expression: ` +
+          `${err instanceof Error ? err.message : String(err)}.`,
+      );
+    }
+  }
+}
+
+for (const [setName, set] of ALL_PATTERN_SETS) {
+  validatePatternSet(setName, set);
+}
+
+// A duplicate rule id across the core tables makes exclusions, policy and
+// remediation ambiguous. Scanner-specific specialized engines may deliberately
+// use several shapes for one logical rule and validate those in their module.
+const duplicateCoreRules = ALL_PATTERN_RULES.filter(
+  (rule, index) => ALL_PATTERN_RULES.indexOf(rule) !== index,
+);
+if (duplicateCoreRules.length > 0) {
+  throw new Error(
+    `Duplicate core pattern rule ids: ${[...new Set(duplicateCoreRules)].join(", ")}`,
+  );
+}
+
+validateRegexStringSet("MALICIOUS_PACKAGE_PATTERNS", MALICIOUS_PACKAGE_PATTERNS);
+validateRegexStringSet("PYPI_TYPOSQUAT_PATTERNS", PYPI_TYPOSQUAT_PATTERNS);

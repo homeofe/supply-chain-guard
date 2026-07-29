@@ -7,10 +7,10 @@
  * http.
  */
 
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { readOptionalUtf8File } from "./pattern-scanner.js";
 
 /** Composer-related file names */
 const COMPOSER_JSON = "composer.json";
@@ -35,22 +35,26 @@ export function isComposerFile(filename: string): boolean {
  */
 export function scanComposerFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
+  const composerJson = readOptionalUtf8File(
+    dir,
+    path.join(dir, COMPOSER_JSON),
+    COMPOSER_JSON,
+    findings,
+  );
+  const composerLock = readOptionalUtf8File(
+    dir,
+    path.join(dir, COMPOSER_LOCK),
+    COMPOSER_LOCK,
+    findings,
+  );
+  if (composerJson === null && composerLock === null) return findings;
+
   const feed = loadThreatIntel();
-
-  const composerJson = path.join(dir, COMPOSER_JSON);
-  if (fs.existsSync(composerJson)) {
-    try {
-      const content = fs.readFileSync(composerJson, "utf-8");
-      findings.push(...scanComposerJsonContent(content, COMPOSER_JSON, feed));
-    } catch { /* skip */ }
+  if (composerJson !== null) {
+    findings.push(...scanComposerJsonContent(composerJson, COMPOSER_JSON, feed));
   }
-
-  const composerLock = path.join(dir, COMPOSER_LOCK);
-  if (fs.existsSync(composerLock)) {
-    try {
-      const content = fs.readFileSync(composerLock, "utf-8");
-      findings.push(...scanComposerLockContent(content, COMPOSER_LOCK, feed));
-    } catch { /* skip */ }
+  if (composerLock !== null) {
+    findings.push(...scanComposerLockContent(composerLock, COMPOSER_LOCK, feed));
   }
 
   return findings;

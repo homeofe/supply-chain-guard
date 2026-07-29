@@ -8,7 +8,10 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Finding, Severity } from "./types.js";
+import type { Finding, PatternEntry } from "./types.js";
+import { matchPatternInFile } from "./pattern-scanner.js";
+import { validatePatternSet } from "./patterns.js";
+import { WORKFLOW_BROAD_GAP_MATCHERS } from "./workflow-pattern-matchers.js";
 import {
   parseWorkflow,
   classifyWorkflowLines,
@@ -19,37 +22,37 @@ import {
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
  */
-const WORKFLOW_PATTERNS: Array<{
-  pattern: string;
-  description: string;
-  severity: Severity;
-  rule: string;
-  flags?: string;
-}> = [
+export const WORKFLOW_PATTERNS: Array<
+  Omit<PatternEntry, "name"> & { flags?: string }
+> = [
   // Remote content piped to shell execution
   {
     pattern: "curl\\s+[^|]*\\|\\s*(?:bash|sh|zsh|node|python|perl|ruby)",
     description: "Remote content fetched with curl and piped to shell execution",
     severity: "high",
     rule: "GHA_CURL_PIPE_EXEC",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.CURL_PIPE_EXEC,
   },
   {
     pattern: "wget\\s+[^|]*\\|\\s*(?:bash|sh|zsh|node|python|perl|ruby)",
     description: "Remote content fetched with wget and piped to shell execution",
     severity: "high",
     rule: "GHA_WGET_PIPE_EXEC",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.WGET_PIPE_EXEC,
   },
   {
     pattern: "curl\\s+.*-o\\s+\\S+.*&&.*(?:bash|sh|chmod\\s+\\+x)",
     description: "Remote script downloaded and executed in workflow",
     severity: "high",
     rule: "GHA_CURL_DOWNLOAD_EXEC",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.CURL_DOWNLOAD_EXEC,
   },
   {
     pattern: "wget\\s+.*-O\\s+\\S+.*&&.*(?:bash|sh|chmod\\s+\\+x)",
     description: "Remote script downloaded with wget and executed in workflow",
     severity: "high",
     rule: "GHA_WGET_DOWNLOAD_EXEC",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.WGET_DOWNLOAD_EXEC,
   },
 
   // Secrets exfiltration via network
@@ -58,24 +61,28 @@ const WORKFLOW_PATTERNS: Array<{
     description: "Secret value passed to curl command (potential exfiltration)",
     severity: "high",
     rule: "GHA_SECRET_CURL",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.SECRET_TO_CURL,
   },
   {
     pattern: "curl.*\\$\\{\\{\\s*secrets\\.[^}]+\\}\\}",
     description: "Secret value sent via curl request (potential exfiltration)",
     severity: "high",
     rule: "GHA_SECRET_CURL",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.CURL_TO_SECRET,
   },
   {
     pattern: "\\$\\{\\{\\s*secrets\\.[^}]+\\}\\}.*wget",
     description: "Secret value passed to wget command (potential exfiltration)",
     severity: "high",
     rule: "GHA_SECRET_WGET",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.SECRET_TO_WGET,
   },
   {
     pattern: "wget.*\\$\\{\\{\\s*secrets\\.[^}]+\\}\\}",
     description: "Secret value sent via wget request (potential exfiltration)",
     severity: "high",
     rule: "GHA_SECRET_WGET",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.WGET_TO_SECRET,
   },
 
   // Base64 encoded payloads
@@ -90,6 +97,7 @@ const WORKFLOW_PATTERNS: Array<{
     description: "Base64 decoded content piped to shell execution",
     severity: "high",
     rule: "GHA_BASE64_EXEC",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.BASE64_EXEC,
   },
   {
     pattern: "\\batob\\s*\\(",
@@ -104,6 +112,7 @@ const WORKFLOW_PATTERNS: Array<{
     description: "Secret or env variable passed as curl request data/header (potential exfiltration)",
     severity: "high",
     rule: "GHA_ENV_EXFIL",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.ENV_EXFIL,
   },
 
   // Suspicious shell patterns
@@ -164,8 +173,11 @@ const WORKFLOW_PATTERNS: Array<{
       "Workflow writes to .github/workflows/ — this can persist malicious code by modifying CI pipeline files (supply chain worm pattern)",
     severity: "critical",
     rule: "GHA_SELF_MODIFY",
+    correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.SELF_MODIFY,
   },
 ];
+
+validatePatternSet("WORKFLOW_PATTERNS", WORKFLOW_PATTERNS);
 
 /**
  * Known compromised action commit SHAs.
@@ -760,31 +772,32 @@ function checkWorkflowPatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
+  // Preserve the YAML-aware preprocessing contract while evaluating every
+  // rule through the validated shared engine. Joining with LF retains exact
+  // physical line numbers; shortening a stripped comment cannot move any
+  // surviving match to another line.
+  const strippedContent = lines.map((line) => stripYamlComment(line)).join("\n");
+
   for (const pattern of WORKFLOW_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, pattern.flags ?? "i");
+    const matches = matchPatternInFile(
+      pattern,
+      strippedContent,
+      relativePath,
+      findings,
+      pattern.flags ?? "i",
+    );
+    if (!matches) continue;
 
-    for (let i = 0; i < lines.length; i++) {
-      const rawLine = lines[i] ?? "";
-      // v5.2.22: strip YAML comments before matching. A comment line
-      // mentioning "id-token: write" or "secrets.X" as documentation is
-      // not the actual workflow declaring those - it's prose. Without
-      // this strip, the v5.2.21 self-scan flagged "id-token: write" in
-      // the OIDC explanation comment of ci.yml as a real permission.
-      const line = stripYamlComment(rawLine);
-      if (!line.trim()) continue;
-
-      const match = regex.exec(line);
-      if (match) {
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getWorkflowRecommendation(pattern.rule),
-        });
-      }
+    for (const match of matches) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: match.line,
+        match: truncateMatch(match.text),
+        recommendation: getWorkflowRecommendation(pattern.rule),
+      });
     }
   }
 }

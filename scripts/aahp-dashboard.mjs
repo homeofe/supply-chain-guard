@@ -75,8 +75,8 @@ const dashboard = `${header("Build Dashboard")}
 
 Time-varying facts (build/test pass-fail, \`npm audit\`) are intentionally not
 snapshotted here: they are verified on every push in CI (the authoritative source)
-and by dependabot. Locally, \`npm test\` shows 13 vscode-scanner failures that only
-reflect a missing \`zip\` binary (green on Ubuntu CI); not regressions.
+and by dependabot. On Windows, VS Code archive tests that require the external \`zip\`
+binary may fail locally; the authoritative Ubuntu CI environment provides it.
 
 ---
 
@@ -103,7 +103,7 @@ ${moduleList}
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (\`ci.yml\`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, \`v5\` branch fast-forward |
 | AAHP Verify (\`aahp-verify.yml\`) | handoff gate; dependabot exempt |
-| Prebuild gates | \`check:changelog\` + \`check:changelog-format\` + \`check:version-sync\` + \`check:handoff\` + \`check:feed\` + \`check:claims\` |
+| Prebuild gates | \`check:aahp\` (changelog, format, version sync, claims, forbidden patterns, schema/docs, links) + \`check:feed\` + \`check:handoff\` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; \`uses: homeofe/supply-chain-guard@v5\` (floating branch) |
 | Dependabot | weekly npm + github-actions; commander >=15 ignored |

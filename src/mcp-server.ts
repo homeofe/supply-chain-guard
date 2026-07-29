@@ -407,7 +407,9 @@ function compactReport(report: ScanReport, maxFindings = 20): object {
     target: report.target,
     scanType: report.scanType,
     score: report.score,
-    riskLevel: report.riskLevel,
+    riskLevel: report.partialScan ? "partial" : report.riskLevel,
+    scanStatus: report.partialScan ? "partial" : "complete",
+    partialScan: report.partialScan === true,
     findingsBySeverity: {
       critical: report.summary.critical,
       high: report.summary.high,

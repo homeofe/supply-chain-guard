@@ -90,7 +90,7 @@ describe("Infostealer Patterns", () => {
     it("should detect temp directory execution", () => {
       const p = INFOSTEALER_PATTERNS.find((p) => p.rule === "DROPPER_TEMP_EXEC");
       expect(p).toBeDefined();
-      expect(matchPattern(p!.pattern, 'writeFile(TEMP + "/payload.exe")')).toBe(true);
+      expect(matchPattern(p!.pattern, 'writeFile(TEMP + "/payload.exe"); exec(TEMP + "/payload.exe")')).toBe(true);
     });
 
     it("should detect anti-VM evasion", () => {

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { ALL_PATTERN_RULES } from "../patterns.js";
+import {
+  ALL_PATTERN_RULES,
+  ALL_PATTERN_SETS,
+  MAX_SPANS_LINES,
+  validatePatternSet,
+} from "../patterns.js";
+import { hasBroadUnboundedConsumingGap } from "../regex-complexity.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -24,8 +30,34 @@ describe("pattern table validation", () => {
     expect(ALL_PATTERN_RULES.length).toBeGreaterThan(100);
   });
 
-  it("exposes every rule id exactly once per entry", () => {
-    expect(ALL_PATTERN_RULES.every((r) => typeof r === "string" && r.length > 0)).toBe(true);
+  it("exposes non-empty, globally unique core rule ids", () => {
+    expect(ALL_PATTERN_RULES.every((rule) => rule.length > 0)).toBe(true);
+    expect(new Set(ALL_PATTERN_RULES).size).toBe(ALL_PATTERN_RULES.length);
+  });
+
+  it("requires an exact structural matcher for every shipped multi-line rule", () => {
+    const multiLine = ALL_PATTERN_SETS.flatMap(([, set]) =>
+      set.filter((entry) => (entry.spansLines ?? 1) > 1),
+    );
+
+    expect(multiLine).toHaveLength(9);
+    expect(multiLine.every((entry) => typeof entry.correlatedMatcher === "function")).toBe(true);
+  });
+
+  it("wires every shipped broad-gap regex to a structural matcher", () => {
+    const broad = ALL_PATTERN_SETS.flatMap(([, set]) =>
+      set.filter((entry) => hasBroadUnboundedConsumingGap(entry.pattern)),
+    );
+
+    expect(broad.length).toBeGreaterThan(40);
+    expect(broad.every((entry) => typeof entry.correlatedMatcher === "function")).toBe(true);
+    expect(
+      ALL_PATTERN_SETS.flatMap(([, set]) => set).filter(
+        (entry) =>
+          entry.requiresInFile &&
+          hasBroadUnboundedConsumingGap(entry.requiresInFile.source),
+      ),
+    ).toEqual([]);
   });
 
   it("registers every exported PatternEntry array for validation", () => {
@@ -45,29 +77,56 @@ describe("pattern table validation", () => {
     expect(missing, `unvalidated pattern arrays: ${missing.join(", ")}`).toEqual([]);
   });
 
-  it("rejects an invalid regex loudly rather than silently disabling rules", () => {
-    // Mirrors exactly what the load-time loop does. If this ever stops throwing,
-    // the silent-blindness failure mode is back.
-    const bad = "exec(";
-    expect(() => new RegExp(bad, "g")).toThrow();
-
-    const validate = (pattern: string, rule: string) => {
-      try {
-        new RegExp(pattern, "g");
-      } catch (err) {
-        throw new Error(
-          `pattern for rule "${rule}" is not a valid regular expression: ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        );
-      }
-      if (pattern.length === 0) {
-        throw new Error(`pattern for rule "${rule}" is empty`);
-      }
-    };
-
-    expect(() => validate(bad, "BAD_RULE")).toThrow(/BAD_RULE.*not a valid regular expression/s);
-    expect(() => validate("", "EMPTY_RULE")).toThrow(/EMPTY_RULE.*empty/s);
-    expect(() => validate("\\bfetch\\s*\\(", "GOOD_RULE")).not.toThrow();
+  it("rejects invalid pattern metadata through the production validator", () => {
+    expect(() =>
+      validatePatternSet("TEST", [{ pattern: "exec(", rule: "BAD_RULE" }]),
+    ).toThrow(/BAD_RULE.*not a valid regular expression/s);
+    expect(() =>
+      validatePatternSet("TEST", [{ pattern: "", rule: "EMPTY_RULE" }]),
+    ).toThrow(/EMPTY_RULE.*empty/s);
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "foo.*bar",
+        rule: "MISSING_MATCHER",
+        spansLines: 2,
+      }]),
+    ).toThrow(/MISSING_MATCHER.*correlatedMatcher/s);
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "foo.*bar",
+        rule: "SINGLE_LINE_BROAD",
+      }]),
+    ).toThrow(/SINGLE_LINE_BROAD.*broad.*correlatedMatcher/s);
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "foo.*bar",
+        rule: "STRUCTURAL_BROAD",
+        correlatedMatcher: () => [],
+      }]),
+    ).not.toThrow();
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "safe",
+        rule: "BROAD_FILE_GUARD",
+        requiresInFile: /foo.*bar/,
+      }]),
+    ).toThrow(/BROAD_FILE_GUARD.*requiresInFile.*requiresInFileMatcher/s);
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "safe",
+        rule: "STRUCTURAL_FILE_GUARD",
+        requiresInFileMatcher: (content) => content.includes("foo") && content.includes("bar"),
+      }]),
+    ).not.toThrow();
+    expect(() =>
+      validatePatternSet("TEST", [{
+        pattern: "foo",
+        rule: "OVER_CAP",
+        spansLines: MAX_SPANS_LINES + 1,
+      }]),
+    ).toThrow(/OVER_CAP.*exceeds MAX_SPANS_LINES/s);
+    expect(() =>
+      validatePatternSet("TEST", [{ pattern: "\\bfetch\\s*\\(", rule: "GOOD_RULE" }]),
+    ).not.toThrow();
   });
 });

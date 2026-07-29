@@ -69,7 +69,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry, PolicyConfig, Severity } from "./types.js";
-import { isPatternMatchAccepted } from "./patterns.js";
+import { isPatternMatchAccepted, validatePatternSet } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Reserved documentation space (the value layer)
@@ -539,6 +539,10 @@ const MINIFIED_OR_MAP = /(?:\.min\.(?:js|mjs|cjs|css)|[.-]bundle\.(?:js|mjs|cjs)
  * family needs and no other pattern list does.
  */
 export interface InternalPatternEntry extends PatternEntry {
+  /** This specialized whole-file engine intentionally forbids shared span/corroboration metadata. */
+  requiresInFile?: never;
+  spansLines?: never;
+  correlatedMatcher?: never;
   /**
    * Compile the pattern case-SENSITIVELY. Only `/Users/` needs it, and it
    * needs it badly: `/users/` is a REST route.
@@ -615,7 +619,7 @@ export const INTERNAL_DISCLOSURE_PATTERNS: InternalPatternEntry[] = [
   {
     name: "internal-service-endpoint",
     pattern:
-      "\\bhttps?://(?:[\\w.%+-]+(?::[^@\\s/]*)?@)?([a-z0-9.-]+|\\[[0-9a-f:]+\\]):(\\d{2,5})(?![\\d])",
+      "\\bhttps?://(?:[\\w.%+-]+(?::[^@\\s/]{0,2000})?@)?([a-z0-9.-]+|\\[[0-9a-f:]+\\]):(\\d{2,5})(?![\\d])",
     description:
       "Service endpoint (host plus port) on an internal or private host. Endpoint plus port is the most directly actionable piece of reconnaissance in a repository: it names a service, where it runs and how to reach it.",
     severity: "medium",
@@ -692,6 +696,12 @@ export const INTERNAL_DISCLOSURE_PATTERNS: InternalPatternEntry[] = [
     notTestFile: true,
   },
 ];
+
+validatePatternSet(
+  "INTERNAL_DISCLOSURE_PATTERNS",
+  INTERNAL_DISCLOSURE_PATTERNS,
+  { execution: "specialized-engine" },
+);
 
 // ---------------------------------------------------------------------------
 // Surface layer (which rules stay armed in which kind of file)

@@ -290,6 +290,138 @@ describe("Core Scanner", () => {
     expect(evalFindings.some((f) => (f.file ?? "").startsWith("vendor/"))).toBe(false);
   });
 
+  it("keeps global walk-budget exhaustion partial when the next path is ignored", async () => {
+    fs.writeFileSync(
+      path.join(tempDir, ".supply-chain-guard.yml"),
+      ["ignore:", "  - a-ignored/**"].join("\n"),
+    );
+    const ignoredDir = path.join(tempDir, "a-ignored");
+    fs.mkdirSync(ignoredDir);
+    fs.writeFileSync(path.join(ignoredDir, "first.js"), "safe");
+    fs.writeFileSync(
+      path.join(tempDir, "z-unwalked-malicious.js"),
+      'eval(atob("dGVzdA=="));',
+    );
+
+    const report = await scan({
+      target: tempDir,
+      format: "text",
+      maxEntries: 2,
+      noHistory: true,
+    });
+
+    expect(report.findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        rule: "PATH_SCAN_INCOMPLETE",
+        file: ".",
+      }),
+    ]));
+    expect(report.partialScan).toBe(true);
+    expect(report.findings.some((finding) => finding.rule === "EVAL_ATOB"))
+      .toBe(false);
+    expect(report.recommendations[0]).toMatch(/scan incomplete/i);
+  });
+  it("should apply ignore globs to specialized scanner findings", async () => {
+    fs.writeFileSync(
+      path.join(tempDir, ".supply-chain-guard.yml"),
+      ["ignore:", "  - .gitmodules"].join("\n"),
+    );
+    fs.mkdirSync(path.join(tempDir, ".git"));
+    fs.writeFileSync(
+      path.join(tempDir, ".gitmodules"),
+      '[submodule "hidden"]\n  url = http://untrusted.example/repo.git',
+    );
+
+    const report = await scan({ target: tempDir, format: "text" });
+
+    expect(report.findings.some((finding) => finding.file === ".gitmodules"))
+      .toBe(false);
+  });
+
+  it("should remove ignored specialized depth coverage before deriving partialScan", async () => {
+    fs.writeFileSync(
+      path.join(tempDir, ".supply-chain-guard.yml"),
+      ["ignore:", "  - .claude/**"].join("\n"),
+    );
+    const deepSkill = path.join(
+      tempDir,
+      ".claude",
+      "skills",
+      ...Array.from({ length: 10 }, (_, index) => `level-${index}`),
+      "SKILL.md",
+    );
+    fs.mkdirSync(path.dirname(deepSkill), { recursive: true });
+    fs.writeFileSync(deepSkill, "<|im_start|>system hidden", "utf-8");
+
+    const report = await scan({ target: tempDir, format: "text" });
+
+    expect(
+      report.findings.some(
+        (finding) =>
+          finding.rule === "PATH_SCAN_INCOMPLETE" &&
+          (finding.file ?? "").startsWith(".claude/"),
+      ),
+    ).toBe(false);
+    expect(report.partialScan ?? false).toBe(false);
+  });
+
+  it.skipIf(
+    process.platform === "win32" ||
+    typeof process.getuid !== "function" ||
+    process.getuid() === 0,
+  )("should globally deduplicate main and specialized path coverage", async () => {
+    const cargoLock = path.join(tempDir, "Cargo.lock");
+    fs.writeFileSync(cargoLock, "version = 3", "utf-8");
+    fs.chmodSync(cargoLock, 0o000);
+    try {
+      const report = await scan({ target: tempDir, format: "text" });
+      const coverage = report.findings.filter(
+        (finding) =>
+          finding.rule === "PATH_SCAN_INCOMPLETE" &&
+          finding.file === "Cargo.lock",
+      );
+
+      expect(coverage).toHaveLength(1);
+      expect(report.partialScan).toBe(true);
+    } finally {
+      fs.chmodSync(cargoLock, 0o600);
+    }
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "should scan contained symlinks by public path and reject escapes and cycles",
+    async () => {
+      const internalTarget = path.join(tempDir, "payload.data");
+      fs.writeFileSync(internalTarget, 'eval(atob("aW50ZXJuYWw="));');
+      fs.symlinkSync("payload.data", path.join(tempDir, "public.js"), "file");
+
+      const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-outside-scan-"));
+      try {
+        const marker = "OUTSIDE_SCAN_MARKER_91c4";
+        const outside = path.join(outsideDir, "outside.data");
+        fs.writeFileSync(outside, `eval(atob("${marker}"));`);
+        fs.symlinkSync(outside, path.join(tempDir, "escape.js"), "file");
+        const loop = path.join(tempDir, "loop");
+        fs.mkdirSync(loop);
+        fs.symlinkSync(tempDir, path.join(loop, "cycle"), "dir");
+
+        const report = await scan({ target: tempDir, format: "json" });
+
+        expect(report.findings).toEqual(expect.arrayContaining([
+          expect.objectContaining({ rule: "EVAL_ATOB", file: "public.js" }),
+          expect.objectContaining({ rule: "PATH_SCAN_INCOMPLETE", file: "escape.js" }),
+          expect.objectContaining({ rule: "PATH_SCAN_INCOMPLETE", file: "loop/cycle" }),
+        ]));
+        expect(report.findings.some((finding) =>
+          finding.rule === "EVAL_ATOB" && finding.file === "escape.js",
+        )).toBe(false);
+        expect(JSON.stringify(report)).not.toContain(marker);
+        expect(report.partialScan).toBe(true);
+      } finally {
+        fs.rmSync(outsideDir, { recursive: true, force: true });
+      }
+    },
+  );
   it("should honor an inline scg-ignore-next-line directive during a scan", async () => {
     fs.writeFileSync(
       path.join(tempDir, "inline.js"),

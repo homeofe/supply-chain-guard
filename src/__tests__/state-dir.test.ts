@@ -40,6 +40,11 @@ describe("scanner state directory", () => {
     expect(fs.readFileSync(ignore, "utf-8").split("\n")).toContain("*");
   });
 
+  it("does not persist a partial report when called directly", () => {
+    saveRiskHistory(tempDir, { ...report, partialScan: true });
+    expect(fs.existsSync(path.join(tempDir, STATE_DIR, "risk-history.json"))).toBe(false);
+  });
+
   it("self-ignores when risk history is saved, not only on a direct call", () => {
     saveRiskHistory(tempDir, report);
     expect(fs.existsSync(path.join(tempDir, STATE_DIR, "risk-history.json"))).toBe(true);

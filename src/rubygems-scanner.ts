@@ -7,10 +7,10 @@
  * integrity checks.
  */
 
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { readOptionalUtf8File } from "./pattern-scanner.js";
 
 /** RubyGems-related file names */
 const GEMFILE = "Gemfile";
@@ -35,22 +35,26 @@ export function isRubyGemsFile(filename: string): boolean {
  */
 export function scanRubyGemsFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
+  const gemfile = readOptionalUtf8File(
+    dir,
+    path.join(dir, GEMFILE),
+    GEMFILE,
+    findings,
+  );
+  const lockfile = readOptionalUtf8File(
+    dir,
+    path.join(dir, GEMFILE_LOCK),
+    GEMFILE_LOCK,
+    findings,
+  );
+  if (gemfile === null && lockfile === null) return findings;
+
   const feed = loadThreatIntel();
-
-  const gemfile = path.join(dir, GEMFILE);
-  if (fs.existsSync(gemfile)) {
-    try {
-      const content = fs.readFileSync(gemfile, "utf-8");
-      findings.push(...scanGemfileContent(content, GEMFILE, feed));
-    } catch { /* skip */ }
+  if (gemfile !== null) {
+    findings.push(...scanGemfileContent(gemfile, GEMFILE, feed));
   }
-
-  const lockfile = path.join(dir, GEMFILE_LOCK);
-  if (fs.existsSync(lockfile)) {
-    try {
-      const content = fs.readFileSync(lockfile, "utf-8");
-      findings.push(...scanGemfileLockContent(content, GEMFILE_LOCK, feed));
-    } catch { /* skip */ }
+  if (lockfile !== null) {
+    findings.push(...scanGemfileLockContent(lockfile, GEMFILE_LOCK, feed));
   }
 
   return findings;

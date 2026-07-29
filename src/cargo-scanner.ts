@@ -5,16 +5,194 @@
  * Rust procedural macros.
  */
 
-import * as fs from "node:fs";
+
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import {
+  listOptionalDirectory,
+  matchPatternInFile,
+  readDiscoveredUtf8File,
+  readOptionalUtf8File,
+} from "./pattern-scanner.js";
+import {
+  MAX_CORRELATED_EVIDENCE_CHARS,
+  validatePatternSet,
+} from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Cargo/Rust patterns
 // ---------------------------------------------------------------------------
 
+interface CargoStructuralMatch {
+  start: number;
+  end: number;
+  evidence: string;
+}
+
+type CargoMatchRange = Pick<CargoStructuralMatch, "start" | "end">;
+
+function cargoStructuralMatch(
+  content: string,
+  start: number,
+  end: number,
+): CargoStructuralMatch {
+  return {
+    start,
+    end,
+    evidence: content.slice(
+      start,
+      Math.min(end, start + MAX_CORRELATED_EVIDENCE_CHARS),
+    ),
+  };
+}
+
+function* matchCargoLines(
+  content: string,
+  findMatch: (line: string) => CargoMatchRange | undefined,
+): Iterable<CargoStructuralMatch> {
+  let lineStart = 0;
+  while (lineStart <= content.length) {
+    const newline = content.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? content.length : newline;
+    const line = content.slice(lineStart, lineEnd);
+    const match = findMatch(line);
+    if (match) {
+      yield cargoStructuralMatch(
+        content,
+        lineStart + match.start,
+        lineStart + match.end,
+      );
+    }
+    if (newline === -1) break;
+    lineStart = newline + 1;
+  }
+}
+
+function isDotTerminator(value: string): boolean {
+  return /^[\r\u2028\u2029]$/u.test(value);
+}
+
+function isAsciiWord(value: string | undefined): boolean {
+  return value !== undefined && /[A-Za-z0-9_]/.test(value);
+}
+
+function preferCargoMatch(
+  current: CargoMatchRange | undefined,
+  candidate: CargoMatchRange,
+): CargoMatchRange {
+  if (!current || candidate.start < current.start) return candidate;
+  if (candidate.start === current.start && candidate.end > current.end) {
+    return candidate;
+  }
+  return current;
+}
+
+const cargoBuildNetworkMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchCargoLines(content, (line) => {
+    const tokens =
+      /(?:reqwest|hyper|curl|ureq|attohttpc|minreq)\b|get|post|request|fetch|TcpStream::connect|[\r\u2028\u2029]/gi;
+    const sourceToken = /^(?:reqwest|hyper|curl|ureq|attohttpc|minreq)$/i;
+    let sourceStart = -1;
+    let firstTcp = -1;
+    let bestCorrelated: CargoMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (isDotTerminator(value)) {
+        sourceStart = -1;
+      } else if (/^TcpStream::connect$/i.test(value)) {
+        if (firstTcp === -1) firstTcp = token.index;
+      } else if (sourceToken.test(value)) {
+        if (sourceStart === -1) sourceStart = token.index;
+      } else if (sourceStart !== -1) {
+        bestCorrelated = preferCargoMatch(bestCorrelated, {
+          start: sourceStart,
+          end: tokens.lastIndex,
+        });
+      }
+    }
+
+    const standalone = firstTcp === -1
+      ? undefined
+      : { start: firstTcp, end: firstTcp + "TcpStream::connect".length };
+    if (!standalone) return bestCorrelated;
+    return preferCargoMatch(bestCorrelated, standalone);
+  });
+
+const cargoBuildEnvExfilMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchCargoLines(content, (line) => {
+    const tokens =
+      /env::var|reqwest|hyper|TcpStream|UdpSocket|[\r\u2028\u2029]/gi;
+    let forwardEnv = -1;
+    let reverseNetwork = -1;
+    let best: CargoMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (isDotTerminator(value)) {
+        forwardEnv = -1;
+        reverseNetwork = -1;
+      } else if (/^env::var$/i.test(value)) {
+        // The reverse legacy alternative ends in env::var without a boundary,
+        // while the forward alternative requires env::var\b.
+        if (reverseNetwork !== -1) {
+          best = preferCargoMatch(best, {
+            start: reverseNetwork,
+            end: tokens.lastIndex,
+          });
+        }
+        if (
+          forwardEnv === -1 &&
+          !isAsciiWord(line[tokens.lastIndex])
+        ) {
+          forwardEnv = token.index;
+        }
+      } else {
+        if (forwardEnv !== -1) {
+          best = preferCargoMatch(best, {
+            start: forwardEnv,
+            end: tokens.lastIndex,
+          });
+        }
+        if (reverseNetwork === -1) reverseNetwork = token.index;
+      }
+    }
+    return best;
+  });
+
+const cargoBuildDownloadMatcher: NonNullable<
+  PatternEntry["correlatedMatcher"]
+> = (content) =>
+  matchCargoLines(content, (line) => {
+    const tokens =
+      /curl|wget|fetch|download|write_all|copy|save|File::create|[\r\u2028\u2029]/gi;
+    let sourceStart = -1;
+    let best: CargoMatchRange | undefined;
+    let token: RegExpExecArray | null;
+
+    while ((token = tokens.exec(line)) !== null) {
+      const value = token[0]!;
+      if (isDotTerminator(value)) {
+        sourceStart = -1;
+      } else if (/^(?:curl|wget|fetch|download)$/i.test(value)) {
+        if (sourceStart === -1) sourceStart = token.index;
+      } else if (sourceStart !== -1) {
+        best = preferCargoMatch(best, {
+          start: sourceStart,
+          end: tokens.lastIndex,
+        });
+      }
+    }
+    return best;
+  });
 export const CARGO_PATTERNS: PatternEntry[] = [
   // build.rs risks
   {
@@ -34,6 +212,7 @@ export const CARGO_PATTERNS: PatternEntry[] = [
       "build.rs performs network requests. Build scripts should not access the network.",
     severity: "high",
     rule: "CARGO_BUILD_RS_NETWORK",
+    correlatedMatcher: cargoBuildNetworkMatcher,
   },
   {
     name: "cargo-build-rs-env-exfil",
@@ -43,6 +222,7 @@ export const CARGO_PATTERNS: PatternEntry[] = [
       "build.rs reads environment variables near network code (potential data exfiltration).",
     severity: "critical",
     rule: "CARGO_BUILD_RS_ENV_EXFIL",
+    correlatedMatcher: cargoBuildEnvExfilMatcher,
   },
   {
     name: "cargo-build-rs-download",
@@ -52,6 +232,7 @@ export const CARGO_PATTERNS: PatternEntry[] = [
       "build.rs downloads and writes files to disk.",
     severity: "high",
     rule: "CARGO_BUILD_RS_DOWNLOAD",
+    correlatedMatcher: cargoBuildDownloadMatcher,
   },
 
   // Cargo.toml risks
@@ -104,6 +285,8 @@ export const CARGO_PATTERNS: PatternEntry[] = [
   },
 ];
 
+validatePatternSet("CARGO_PATTERNS", CARGO_PATTERNS);
+
 /** Cargo-related file names */
 const CARGO_FILES = new Set(["Cargo.toml", "Cargo.lock"]);
 const BUILD_RS = "build.rs";
@@ -123,34 +306,40 @@ export function scanCargoFiles(dir: string): Finding[] {
   const findings: Finding[] = [];
 
   // Scan Cargo.toml
-  const cargoToml = path.join(dir, "Cargo.toml");
-  if (fs.existsSync(cargoToml)) {
-    try {
-      const content = fs.readFileSync(cargoToml, "utf-8");
-      findings.push(...scanCargoContent(content, "Cargo.toml", "toml"));
-    } catch { /* skip */ }
+  const cargoToml = readOptionalUtf8File(
+    dir,
+    path.join(dir, "Cargo.toml"),
+    "Cargo.toml",
+    findings,
+  );
+  if (cargoToml !== null) {
+    findings.push(...scanCargoContent(cargoToml, "Cargo.toml", "toml"));
   }
 
   // Scan build.rs
-  const buildRs = path.join(dir, BUILD_RS);
-  if (fs.existsSync(buildRs)) {
-    try {
-      const content = fs.readFileSync(buildRs, "utf-8");
-      findings.push(...scanCargoContent(content, BUILD_RS, "build"));
-    } catch { /* skip */ }
+  const buildRs = readOptionalUtf8File(
+    dir,
+    path.join(dir, BUILD_RS),
+    BUILD_RS,
+    findings,
+  );
+  if (buildRs !== null) {
+    findings.push(...scanCargoContent(buildRs, BUILD_RS, "build"));
   }
 
   // Scan Cargo.lock (resolved crate inventory) for malicious crates
-  const cargoLock = path.join(dir, CARGO_LOCK);
-  if (fs.existsSync(cargoLock)) {
-    try {
-      const content = fs.readFileSync(cargoLock, "utf-8");
-      findings.push(...scanCargoLockContent(content, CARGO_LOCK));
-    } catch { /* skip */ }
+  const cargoLock = readOptionalUtf8File(
+    dir,
+    path.join(dir, CARGO_LOCK),
+    CARGO_LOCK,
+    findings,
+  );
+  if (cargoLock !== null) {
+    findings.push(...scanCargoLockContent(cargoLock, CARGO_LOCK));
   }
 
   // Scan proc-macro crates (look in src/ for files with proc_macro attribute)
-  scanProcMacros(dir, findings);
+  if (cargoToml !== null) scanProcMacros(dir, cargoToml, findings);
 
   return findings;
 }
@@ -268,7 +457,6 @@ export function scanCargoContent(
   fileType: "toml" | "build" | "proc-macro",
 ): Finding[] {
   const findings: Finding[] = [];
-  const lines = content.split("\n");
 
   const patterns =
     fileType === "toml"
@@ -282,25 +470,23 @@ export function scanCargoContent(
         : CARGO_PATTERNS.filter((p) => p.rule.startsWith("CARGO_PROC_MACRO"));
 
   for (const pattern of patterns) {
-    const regex = new RegExp(pattern.pattern, "i");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match:
-            match[0].length > 120
-              ? match[0].substring(0, 120) + "..."
-              : match[0],
-          recommendation: getCargoRecommendation(pattern.rule),
-        });
-      }
+    const hits = matchPatternInFile(
+      pattern,
+      content,
+      relativePath,
+      findings,
+      "i",
+    );
+    for (const hit of hits ?? []) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncate(hit.text),
+        recommendation: getCargoRecommendation(pattern.rule),
+      });
     }
   }
 
@@ -310,37 +496,31 @@ export function scanCargoContent(
 /**
  * Look for proc-macro source files and scan them.
  */
-function scanProcMacros(dir: string, findings: Finding[]): void {
-  // Check if Cargo.toml declares proc-macro = true
-  const cargoToml = path.join(dir, "Cargo.toml");
-  if (!fs.existsSync(cargoToml)) return;
-
-  let tomlContent: string;
-  try {
-    tomlContent = fs.readFileSync(cargoToml, "utf-8");
-  } catch {
-    return;
-  }
-
+function scanProcMacros(
+  dir: string,
+  tomlContent: string,
+  findings: Finding[],
+): void {
   if (!tomlContent.includes("proc-macro") && !tomlContent.includes("proc_macro")) return;
 
   // Scan .rs files in src/
   const srcDir = path.join(dir, "src");
-  if (!fs.existsSync(srcDir)) return;
+  const entries = listOptionalDirectory(dir, srcDir, "src", findings);
+  if (entries === null) return;
 
-  try {
-    const entries = fs.readdirSync(srcDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".rs")) continue;
+  for (const entry of entries) {
+    if ((!entry.isFile() && !entry.isSymbolicLink()) || !entry.name.endsWith(".rs")) continue;
 
-      const fullPath = path.join(srcDir, entry.name);
-      try {
-        const content = fs.readFileSync(fullPath, "utf-8");
-        const relPath = `src/${entry.name}`;
-        findings.push(...scanCargoContent(content, relPath, "proc-macro"));
-      } catch { /* skip */ }
-    }
-  } catch { /* skip */ }
+    const relPath = `src/${entry.name}`;
+    const content = readDiscoveredUtf8File(
+      dir,
+      path.join(srcDir, entry.name),
+      relPath,
+      findings,
+    );
+    if (content === null) continue;
+    findings.push(...scanCargoContent(content, relPath, "proc-macro"));
+  }
 }
 
 function getCargoRecommendation(rule: string): string {

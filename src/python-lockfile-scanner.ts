@@ -14,11 +14,11 @@
  * parsers and how requirements.txt / pyproject.toml are read elsewhere).
  */
 
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import { readOptionalUtf8File } from "./pattern-scanner.js";
 
 /** Python lockfile names */
 const POETRY_LOCK = "poetry.lock";
@@ -37,27 +37,35 @@ export function isPythonLockfile(filename: string): boolean {
  */
 export function scanPythonLockfiles(dir: string): Finding[] {
   const findings: Finding[] = [];
+  const poetry = readOptionalUtf8File(
+    dir,
+    path.join(dir, POETRY_LOCK),
+    POETRY_LOCK,
+    findings,
+  );
+  const uv = readOptionalUtf8File(
+    dir,
+    path.join(dir, UV_LOCK),
+    UV_LOCK,
+    findings,
+  );
+  const pipfile = readOptionalUtf8File(
+    dir,
+    path.join(dir, PIPFILE_LOCK),
+    PIPFILE_LOCK,
+    findings,
+  );
+  if (poetry === null && uv === null && pipfile === null) return findings;
+
   const feed = loadThreatIntel();
-
-  const poetry = path.join(dir, POETRY_LOCK);
-  if (fs.existsSync(poetry)) {
-    try {
-      findings.push(...scanPoetryLockContent(fs.readFileSync(poetry, "utf-8"), POETRY_LOCK, feed));
-    } catch { /* skip */ }
+  if (poetry !== null) {
+    findings.push(...scanPoetryLockContent(poetry, POETRY_LOCK, feed));
   }
-
-  const uv = path.join(dir, UV_LOCK);
-  if (fs.existsSync(uv)) {
-    try {
-      findings.push(...scanUvLockContent(fs.readFileSync(uv, "utf-8"), UV_LOCK, feed));
-    } catch { /* skip */ }
+  if (uv !== null) {
+    findings.push(...scanUvLockContent(uv, UV_LOCK, feed));
   }
-
-  const pipfile = path.join(dir, PIPFILE_LOCK);
-  if (fs.existsSync(pipfile)) {
-    try {
-      findings.push(...scanPipfileLockContent(fs.readFileSync(pipfile, "utf-8"), PIPFILE_LOCK, feed));
-    } catch { /* skip */ }
+  if (pipfile !== null) {
+    findings.push(...scanPipfileLockContent(pipfile, PIPFILE_LOCK, feed));
   }
 
   return findings;

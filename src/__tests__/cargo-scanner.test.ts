@@ -5,6 +5,25 @@ import {
   isCargoFile,
   CARGO_PATTERNS,
 } from "../cargo-scanner.js";
+import { matchPatternInContent } from "../patterns.js";
+
+function normalizePatternMatches(
+  content: string,
+  matches: ReturnType<typeof matchPatternInContent>,
+) {
+  const lineStarts = [0];
+  for (let index = 0; index < content.length; index++) {
+    if (content[index] === "\n") lineStarts.push(index + 1);
+  }
+
+  return matches.map((hit) => {
+    const matchIndex = hit.match.index ?? 0;
+    const absoluteStart = hit.match.input === content
+      ? matchIndex
+      : (lineStarts[hit.line - 1] ?? 0) + matchIndex;
+    return { line: hit.line, start: absoluteStart, evidence: hit.text };
+  });
+}
 
 describe("Cargo/Rust Scanner", () => {
   it("should identify Cargo-related files", () => {
@@ -32,6 +51,36 @@ describe("Cargo/Rust Scanner", () => {
       const content = 'fn main() {\n    let key = env::var("SECRET").unwrap(); let _ = reqwest::blocking::Client::new().post(url).body(key).send();\n}';
       const findings = scanCargoContent(content, "build.rs", "build");
       expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_ENV_EXFIL")).toBe(true);
+    });
+
+    it("should detect a download written to disk in build.rs", () => {
+      const content = 'fn main() { let data = curl(url); File::create("payload"); }';
+      const findings = scanCargoContent(content, "build.rs", "build");
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_DOWNLOAD")).toBe(true);
+    });
+
+    it("does not correlate isolated build.rs signals", () => {
+      const content = [
+        "let client = reqwest::blocking::Client::new();",
+        'let secret = env::var("SECRET");',
+        "let transport = curlx;",
+      ].join("\n");
+      const findings = scanCargoContent(content, "build.rs", "build");
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_NETWORK")).toBe(false);
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_ENV_EXFIL")).toBe(false);
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_DOWNLOAD")).toBe(false);
+    });
+
+    it("does not bridge build.rs correlations across dot line terminators", () => {
+      const content = [
+        "reqwest\rget",
+        "env::var\rTcpStream",
+        "download\rFile::create",
+      ].join("\n");
+      const findings = scanCargoContent(content, "build.rs", "build");
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_NETWORK")).toBe(false);
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_ENV_EXFIL")).toBe(false);
+      expect(findings.some((f) => f.rule === "CARGO_BUILD_RS_DOWNLOAD")).toBe(false);
     });
 
     it("should not flag clean build.rs", () => {
@@ -157,6 +206,82 @@ describe("Cargo/Rust Scanner", () => {
     const content = "[dependencies]\n# comment\n[patch.crates-io]\nfoo = { path = '.' }";
     const findings = scanCargoContent(content, "Cargo.toml", "toml");
     expect(findings.find((f) => f.rule === "CARGO_PATCH_SECTION")?.line).toBe(3);
+  });
+
+  it("matches the legacy regex verdict on build.rs correlation edge cases", () => {
+    const cases: Array<[string, string[]]> = [
+      ["CARGO_BUILD_RS_NETWORK", [
+        "reqwest::blocking::get(url)",
+        "TcpStream::connect(addr)",
+        "reqwest\rget",
+        "reqwest\u2028get",
+        "reqwest\u2029get",
+        "REQWEST request then post then FETCH",
+        "reqwest hyper get x post",
+        "TcpStream::connect x reqwest get post",
+        "reqwest get x TcpStream::connect x post",
+        "before\nreqwest get x post",
+      ]],
+      ["CARGO_BUILD_RS_ENV_EXFIL", [
+        "env::var(name); reqwest x hyper",
+        "env::var_os then reqwest",
+        "reqwest then env::var_os",
+        "UdpSocket; env::var(name) x env::var_os",
+        "env::var\rTcpStream",
+        "env::var\u2028TcpStream",
+        "env::var\u2029TcpStream",
+        "TcpStream\renv::var_os",
+        "TcpStream\u2028env::var_os",
+        "TcpStream\u2029env::var_os",
+        "before\nreqwest env::var_os",
+      ]],
+      ["CARGO_BUILD_RS_DOWNLOAD", [
+        "curl(url); File::create(path) then save",
+        "curl wget copy x write_all",
+        "save(); download(url)",
+        "download\rwrite_all",
+        "download\u2028write_all",
+        "download\u2029write_all",
+        "before\ncurl copy x save",
+      ]],
+    ];
+
+    for (const [rule, sources] of cases) {
+      const structural = CARGO_PATTERNS.find((entry) => entry.rule === rule)!;
+      const regex = { ...structural, correlatedMatcher: undefined };
+      for (const content of sources) {
+        const expected = normalizePatternMatches(
+          content,
+          matchPatternInContent(regex, content, "i"),
+        );
+        const actual = normalizePatternMatches(
+          content,
+          matchPatternInContent(structural, content, "i"),
+        );
+        expect(actual, `${rule}: ${JSON.stringify(content)}`).toEqual(expected);
+      }
+    }
+  });
+
+  it("fully scans 5 MiB build.rs near misses in linear time", { timeout: 15_000 }, () => {
+    const size = 5 * 1024 * 1024;
+    const cases: Array<[string, string]> = [
+      ["CARGO_BUILD_RS_NETWORK", "reqwest "],
+      ["CARGO_BUILD_RS_ENV_EXFIL", "env::var "],
+      ["CARGO_BUILD_RS_DOWNLOAD", "curlx"],
+    ];
+    const started = Date.now();
+
+    for (const [rule, unit] of cases) {
+      const pattern = CARGO_PATTERNS.find((entry) => entry.rule === rule)!;
+      const content = unit.repeat(Math.ceil(size / unit.length)).slice(0, size);
+      const hits = matchPatternInContent(pattern, content, "i");
+      expect(hits, rule).toHaveLength(0);
+      expect(hits.coverage.complete, rule).toBe(true);
+      expect(hits.coverage.regexAttempts, rule).toBe(1);
+    }
+
+    expect(Date.now() - started).toBeLessThan(5_000);
   });
 
   it("should have patterns array", () => {

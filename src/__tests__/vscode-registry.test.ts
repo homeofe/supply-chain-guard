@@ -73,6 +73,7 @@ describe("VS Code Extension Scanner - registry support", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -181,6 +182,21 @@ describe("VS Code Extension Scanner - registry support", () => {
   });
 
   describe("scanVscodeExtension registry threading", () => {
+    it.each(["json", "sarif", "sbom"] as const)(
+      "routes %s download progress to stderr",
+      async (format) => {
+        mockHttpResponses([{ status: 404 }]);
+
+        await expect(
+          scanVscodeExtension({ target: "testpub.testext", format }),
+        ).rejects.toThrow("Download failed with status 404");
+
+        expect(console.log).not.toHaveBeenCalled();
+        expect(console.error).toHaveBeenCalledWith(
+          expect.stringContaining("Downloading extension testpub.testext"),
+        );
+      },
+    );
     it("uses the marketplace by default when no registry option is set", async () => {
       mockHttpResponses([{ status: 404 }]);
 
