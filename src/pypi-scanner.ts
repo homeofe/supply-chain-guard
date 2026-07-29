@@ -22,8 +22,9 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
-  isPatternMatchAccepted,
   isPatternApplicableToFile,
+  matchPatternInContent,
+  truncateMatch,
 } from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
@@ -303,29 +304,19 @@ export function scanExtractedFiles(
       continue;
     }
 
-    const lines = content.split("\n");
-
     // Apply general file patterns (catches obfuscation, eval/atob, etc.)
     for (const pattern of FILE_PATTERNS) {
       if (!isPatternApplicableToFile(pattern, content)) continue;
-      const regex = new RegExp(pattern.pattern, "g");
-      for (let i = 0; i < lines.length; i++) {
-        const match = regex.exec(lines[i] ?? "");
-        if (match) {
-          regex.lastIndex = 0;
-          // v5.18: value-level guard (see PatternEntry.valueFilter)
-          if (!isPatternMatchAccepted(pattern, match)) continue;
-          findings.push({
-            rule: pattern.rule,
-            description: pattern.description,
-            severity: pattern.severity,
-            file: relativePath,
-            line: i + 1,
-            match: match[0].substring(0, 120),
-            recommendation: `Found in PyPI package. ${pattern.description}`,
-          });
-          regex.lastIndex = 0;
-        }
+      for (const hit of matchPatternInContent(pattern, content, "g")) {
+        findings.push({
+          rule: pattern.rule,
+          description: pattern.description,
+          severity: pattern.severity,
+          file: relativePath,
+          line: hit.line,
+          match: truncateMatch(hit.text),
+          recommendation: `Found in PyPI package. ${pattern.description}`,
+        });
       }
     }
 
@@ -333,33 +324,25 @@ export function scanExtractedFiles(
     if (isPython || isSetupFile) {
       for (const pattern of PYPI_FILE_PATTERNS) {
         if (!isPatternApplicableToFile(pattern, content)) continue;
-        const regex = new RegExp(pattern.pattern, "g");
-        for (let i = 0; i < lines.length; i++) {
-          const match = regex.exec(lines[i] ?? "");
-          if (match) {
-            regex.lastIndex = 0;
-            // v5.18: value-level guard (see PatternEntry.valueFilter)
-            if (!isPatternMatchAccepted(pattern, match)) continue;
-            // Boost severity if found in setup.py
-            const severity =
-              isSetupFile && pattern.severity === "medium"
-                ? "high"
-                : pattern.severity;
-            findings.push({
-              rule: pattern.rule,
-              description: isSetupFile
-                ? `[${basename}] ${pattern.description}`
-                : pattern.description,
-              severity,
-              file: relativePath,
-              line: i + 1,
-              match: match[0].substring(0, 120),
-              recommendation: isSetupFile
-                ? `Found in ${basename}, which runs during installation. This is a high-risk location for malicious code.`
-                : `Review this code carefully. ${pattern.description}`,
-            });
-            regex.lastIndex = 0;
-          }
+        for (const hit of matchPatternInContent(pattern, content, "g")) {
+          // Boost severity if found in setup.py
+          const severity =
+            isSetupFile && pattern.severity === "medium"
+              ? "high"
+              : pattern.severity;
+          findings.push({
+            rule: pattern.rule,
+            description: isSetupFile
+              ? `[${basename}] ${pattern.description}`
+              : pattern.description,
+            severity,
+            file: relativePath,
+            line: hit.line,
+            match: truncateMatch(hit.text),
+            recommendation: isSetupFile
+              ? `Found in ${basename}, which runs during installation. This is a high-risk location for malicious code.`
+              : `Review this code carefully. ${pattern.description}`,
+          });
         }
       }
 
@@ -367,24 +350,16 @@ export function scanExtractedFiles(
       if (isSetupFile) {
         for (const pattern of PYPI_INSTALL_HOOK_PATTERNS) {
           if (!isPatternApplicableToFile(pattern, content)) continue;
-          const regex = new RegExp(pattern.pattern, "g");
-          for (let i = 0; i < lines.length; i++) {
-            const match = regex.exec(lines[i] ?? "");
-            if (match) {
-              regex.lastIndex = 0;
-              // v5.18: value-level guard (see PatternEntry.valueFilter)
-              if (!isPatternMatchAccepted(pattern, match)) continue;
-              findings.push({
-                rule: pattern.rule,
-                description: pattern.description,
-                severity: pattern.severity,
-                file: relativePath,
-                line: i + 1,
-                match: match[0].substring(0, 120),
-                recommendation: `Custom install commands in ${basename} execute code during pip install. Verify the command class is benign.`,
-              });
-              regex.lastIndex = 0;
-            }
+          for (const hit of matchPatternInContent(pattern, content, "g")) {
+            findings.push({
+              rule: pattern.rule,
+              description: pattern.description,
+              severity: pattern.severity,
+              file: relativePath,
+              line: hit.line,
+              match: truncateMatch(hit.text),
+              recommendation: `Custom install commands in ${basename} execute code during pip install. Verify the command class is benign.`,
+            });
           }
         }
 

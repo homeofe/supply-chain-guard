@@ -19,8 +19,9 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
-  isPatternMatchAccepted,
   isPatternApplicableToFile,
+  matchPatternInContent,
+  truncateMatch,
 } from "./patterns.js";
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 import { getBundledFeed } from "./threat-intel.js";
@@ -516,26 +517,16 @@ export function scanExtractedNpmFiles(
 
       for (const pattern of FILE_PATTERNS) {
         if (!isPatternApplicableToFile(pattern, content)) continue;
-        const regex = new RegExp(pattern.pattern, "g");
-        const lines = content.split("\n");
-
-        for (let i = 0; i < lines.length; i++) {
-          const match = regex.exec(lines[i] ?? "");
-          if (match) {
-            regex.lastIndex = 0;
-            // v5.18: value-level guard (see PatternEntry.valueFilter)
-            if (!isPatternMatchAccepted(pattern, match)) continue;
-            findings.push({
-              rule: pattern.rule,
-              description: pattern.description,
-              severity: pattern.severity,
-              file: relativePath,
-              line: i + 1,
-              match: match[0].substring(0, 120),
-              recommendation: `Found in published npm tarball. ${pattern.description}`,
-            });
-            regex.lastIndex = 0;
-          }
+        for (const hit of matchPatternInContent(pattern, content, "g")) {
+          findings.push({
+            rule: pattern.rule,
+            description: pattern.description,
+            severity: pattern.severity,
+            file: relativePath,
+            line: hit.line,
+            match: truncateMatch(hit.text),
+            recommendation: `Found in published npm tarball. ${pattern.description}`,
+          });
         }
       }
     } catch {

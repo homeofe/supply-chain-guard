@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
-import { isPatternMatchAccepted, isPatternApplicableToFile } from "./patterns.js";
+import { isPatternApplicableToFile, matchPatternInContent, truncateMatch } from "./patterns.js";
 
 // ---------------------------------------------------------------------------
 // Global npm install: pinned or not?
@@ -186,29 +186,19 @@ export function scanDockerFile(
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
-  const lines = content.split("\n");
 
   for (const pattern of DOCKERFILE_PATTERNS) {
     if (!isPatternApplicableToFile(pattern, content)) continue;
-    const regex = new RegExp(pattern.pattern, "i");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: match[0].length > 120 ? match[0].substring(0, 120) + "..." : match[0],
-          recommendation: getDockerRecommendation(pattern.rule),
-        });
-      }
+    for (const hit of matchPatternInContent(pattern, content, "i")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getDockerRecommendation(pattern.rule),
+      });
     }
   }
 

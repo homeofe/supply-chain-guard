@@ -51,7 +51,13 @@ describe("pattern guard wiring", () => {
 
   it.each(consumers)("%s honours the value-level guard", (file) => {
     const source = fs.readFileSync(path.join(srcDir, file), "utf8");
-    expect(source.includes("isPatternMatchAccepted"), file).toBe(true);
+    // v5.23: matchPatternInContent always applies isPatternMatchAccepted inside
+    // the shared engine. Callers that go through it are covered; direct callers
+    // must still invoke the helper themselves.
+    const honoured =
+      source.includes("isPatternMatchAccepted") ||
+      source.includes("matchPatternInContent");
+    expect(honoured, `${file} iterates patterns without applying valueFilter`).toBe(true);
   });
 
   /**

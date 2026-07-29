@@ -65,6 +65,146 @@ export function isPatternApplicableToFile(
   return pattern.requiresInFile.test(content);
 }
 
+// ---------------------------------------------------------------------------
+// Bounded multi-line pattern engine (v5.23)
+// ---------------------------------------------------------------------------
+
+/**
+ * Hard cap on PatternEntry.spansLines. Larger windows approach whole-file
+ * matching and reintroduce the false-positive class that v5.22 removed.
+ * Validated at module load.
+ */
+export const MAX_SPANS_LINES = 20;
+
+/**
+ * Character budget for one multi-line window. Caps ReDoS cost: a `.*`-heavy
+ * regex over an unbounded window against a multi-megabyte file is a hang, not
+ * a slow scan. Windows longer than this are truncated from the end (match
+ * start line stays correct).
+ */
+export const MAX_SPAN_WINDOW_CHARS = 4096;
+
+/**
+ * Max regex attempts per pattern per file (across all windows). Bounds
+ * pathological inputs that would otherwise thrash the engine.
+ */
+export const MAX_MATCH_ATTEMPTS_PER_PATTERN = 500;
+
+/** One accepted match of a pattern against file content. */
+export interface PatternHit {
+  /** 1-based line number where the match STARTS. */
+  line: number;
+  /** Raw matched text (caller should pass through truncateMatch for reports). */
+  text: string;
+  /** Full regex match array (for valueFilter / capture groups). */
+  match: RegExpMatchArray;
+}
+
+/**
+ * Truncate a match string for display in SARIF, JSON and annotations.
+ * Multi-line hits are collapsed to a single readable line so a whole window
+ * cannot leak into a report.
+ */
+export function truncateMatch(match: string, maxLen = 120): string {
+  const collapsed = match.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= maxLen) return collapsed;
+  return collapsed.substring(0, maxLen) + "...";
+}
+
+/**
+ * Match a single pattern against file content using a bounded sliding line
+ * window.
+ *
+ * - `spansLines` defaults to 1: identical to the historical per-line loop.
+ * - `spansLines` > 1: join that many consecutive lines, match with the `s`
+ *   (dotAll) flag so `.*` can bridge ideas inside the window, slide by one
+ *   line. Findings are deduplicated by start-line so overlapping windows do
+ *   not emit the same hit twice.
+ *
+ * Always applies `isPatternMatchAccepted` (valueFilter). Callers still own
+ * `isPatternApplicableToFile` and path/extension filters - those are
+ * file-level and must run before this.
+ *
+ * @param flags Base regex flags. `g` is always enforced for lastIndex hygiene;
+ *   `s` is added automatically when spansLines > 1.
+ */
+export function matchPatternInContent(
+  pattern: Pick<PatternEntry, "pattern" | "spansLines" | "valueFilter" | "valueGroup">,
+  content: string,
+  flags = "g",
+  options?: {
+    /** Skip a physical line before matching (e.g. config-file comments). */
+    skipLine?: (line: string, index: number) => boolean;
+  },
+): PatternHit[] {
+  const rawSpans = pattern.spansLines ?? 1;
+  const spans = Math.max(1, Math.min(rawSpans, MAX_SPANS_LINES));
+  const lines = content.split("\n");
+  const hits: PatternHit[] = [];
+  const seenStartLines = new Set<number>();
+  let attempts = 0;
+
+  // Build flags: always global; add dotAll only inside multi-line windows.
+  let useFlags = flags.includes("g") ? flags : flags + "g";
+  if (spans > 1 && !useFlags.includes("s")) useFlags += "s";
+
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern.pattern, useFlags);
+  } catch {
+    // Load-time validation should have caught this; refuse quietly rather than
+    // throwing mid-scan and silencing later rules.
+    return hits;
+  }
+
+  if (spans === 1) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? "";
+      if (options?.skipLine?.(line, i)) continue;
+      if (++attempts > MAX_MATCH_ATTEMPTS_PER_PATTERN) break;
+      regex.lastIndex = 0;
+      const match = regex.exec(line);
+      if (!match || match[0] === "") continue;
+      if (!isPatternMatchAccepted(pattern, match)) continue;
+      const startLine = i + 1;
+      if (seenStartLines.has(startLine)) continue;
+      seenStartLines.add(startLine);
+      hits.push({ line: startLine, text: match[0], match });
+    }
+    return hits;
+  }
+
+  // Multi-line sliding window.
+  for (let i = 0; i < lines.length; i++) {
+    if (++attempts > MAX_MATCH_ATTEMPTS_PER_PATTERN) break;
+
+    const end = Math.min(i + spans, lines.length);
+    let window = lines.slice(i, end).join("\n");
+    if (window.length > MAX_SPAN_WINDOW_CHARS) {
+      window = window.slice(0, MAX_SPAN_WINDOW_CHARS);
+    }
+
+    regex.lastIndex = 0;
+    const match = regex.exec(window);
+    if (!match || match[0] === "") continue;
+
+    // Map match.index inside the window back to a 1-based file line.
+    const offset = match.index ?? 0;
+    const linesBeforeInWindow = window.slice(0, offset).split("\n").length - 1;
+    const startLine = i + linesBeforeInWindow + 1;
+    const startLineIndex = startLine - 1;
+
+    if (options?.skipLine?.(lines[startLineIndex] ?? "", startLineIndex)) continue;
+    if (seenStartLines.has(startLine)) continue;
+    if (!isPatternMatchAccepted(pattern, match)) continue;
+
+    seenStartLines.add(startLine);
+    hits.push({ line: startLine, text: match[0], match });
+  }
+
+  return hits;
+}
+
 /**
  * Values that are references to a secret rather than a secret: shell and
  * make variables (`$FOO`, `${FOO}`), command substitution (`$(...)`, backticks),
@@ -1096,13 +1236,16 @@ export const PYPI_FILE_PATTERNS: PatternEntry[] = [
     notTestFile: true,
   },
 
-  // base64.b64decode combined with exec (various arrangements on same line)
+  // base64.b64decode combined with exec (same line or a short multi-line block)
   {
     name: "python-b64decode-exec-combined",
     pattern: "base64\\.b64decode\\s*\\([^)]*\\).*\\bexec\\b|\\bexec\\b.*base64\\.b64decode",
-    description: "base64.b64decode combined with exec on the same line (obfuscated execution)",
+    description: "base64.b64decode combined with exec (obfuscated execution)",
     severity: "critical",
     rule: "PYPI_B64_EXEC_COMBINED",
+    // decode then exec is almost always two statements. 4 lines is enough for
+    // an assignment + blank line + exec without spanning half a module.
+    spansLines: 4,
     notTestFile: true,
   },
 ];
@@ -1122,6 +1265,8 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom install command class detected (code runs during pip install)",
     severity: "medium",
     rule: "PYPI_CUSTOM_INSTALL",
+    // cmdclass={ 'install': ... } is almost always pretty-printed.
+    spansLines: 6,
     notTestFile: true,
   },
   {
@@ -1130,6 +1275,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom develop command class detected (code runs during pip install -e)",
     severity: "medium",
     rule: "PYPI_CUSTOM_DEVELOP",
+    spansLines: 6,
     notTestFile: true,
   },
   {
@@ -1138,6 +1284,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom egg_info command class detected (code runs during package metadata generation)",
     severity: "medium",
     rule: "PYPI_CUSTOM_EGG_INFO",
+    spansLines: 6,
     notTestFile: true,
   },
   {
@@ -1146,6 +1293,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom sdist command class detected (code runs during source distribution build)",
     severity: "low",
     rule: "PYPI_CUSTOM_SDIST",
+    spansLines: 6,
     notTestFile: true,
   },
   {
@@ -1154,6 +1302,7 @@ export const PYPI_INSTALL_HOOK_PATTERNS: PatternEntry[] = [
     description: "Custom build_ext command class detected (code runs during native extension build)",
     severity: "low",
     rule: "PYPI_CUSTOM_BUILD_EXT",
+    spansLines: 6,
     notTestFile: true,
   },
 ];
@@ -1604,6 +1753,8 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
       "IP geolocation combined with destructive file operations. Advanced protestware pattern.",
     severity: "critical",
     rule: "PROTESTWARE_IP_GEO_V2",
+    // Geo lookup then destructive call is often two statements in a branch.
+    spansLines: 8,
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
@@ -1632,6 +1783,10 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
     rule: "PROXY_HANDLER_TRAP",
+    // new Proxy(target, { get: ... }) is routinely pretty-printed across 2-4
+    // lines. spansLines:5 covers that formatting without pairing a Proxy on
+    // line 1 with an unrelated handler 50 lines later.
+    spansLines: 5,
     // new Proxy({}, { get, set }) is a plain ES6 idiom used by prisma, vitest,
     // jiti and playwright-core. It is only interesting when the trap body does
     // something hostile, so require an exfil / eval / credential-harvest signal.
@@ -1854,6 +2009,10 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
       "Dropper pattern: writing and executing files in temporary directories.",
     severity: "critical",
     rule: "DROPPER_TEMP_EXEC",
+    // writeFileSync(tmpdir) then execSync a few lines later is the real shape;
+    // a one-line form is rare. 6 lines covers the common dropper layout without
+    // pairing an early tmpdir reference with a distant spawn.
+    spansLines: 6,
     // Writing into os.tmpdir() and running it is exactly how tsx, jiti, prisma and
     // playwright cache-compile. A dropper is distinguished by the payload being
     // FETCHED or DECODED first rather than generated from local source.
@@ -2246,7 +2405,12 @@ export const PROVENANCE_PATTERNS: PatternEntry[] = [
  * Kept explicit rather than discovered, so a new array must be registered here
  * deliberately and cannot quietly skip validation.
  */
-type ValidatablePattern = { pattern: string; rule: string; name?: string };
+type ValidatablePattern = {
+  pattern: string;
+  rule: string;
+  name?: string;
+  spansLines?: number;
+};
 
 const ALL_PATTERN_SETS: ReadonlyArray<readonly [string, ReadonlyArray<ValidatablePattern>]> = [
   ["FILE_PATTERNS", FILE_PATTERNS],
@@ -2305,6 +2469,31 @@ for (const [setName, set] of ALL_PATTERN_SETS) {
       throw new Error(
         `${setName}: pattern for rule "${entry.rule}" is empty, which matches every line.`,
       );
+    }
+    // Multi-line form is a second compiled shape (dotAll). Validate it too so a
+    // flag-sensitive construct cannot pass single-line compile and fail only in
+    // the multi-line engine path.
+    const spans = entry.spansLines ?? 1;
+    if (typeof spans !== "number" || !Number.isInteger(spans) || spans < 1) {
+      throw new Error(
+        `${setName}: rule "${entry.rule}" has invalid spansLines=${String(spans)} (need integer >= 1).`,
+      );
+    }
+    if (spans > MAX_SPANS_LINES) {
+      throw new Error(
+        `${setName}: rule "${entry.rule}" spansLines=${spans} exceeds MAX_SPANS_LINES=${MAX_SPANS_LINES}. ` +
+          "Large windows approach whole-file matching and reintroduce cross-file-region false positives.",
+      );
+    }
+    if (spans > 1) {
+      try {
+        new RegExp(entry.pattern, "gs");
+      } catch (err) {
+        throw new Error(
+          `${setName}: multi-line form of rule "${entry.rule}" failed to compile with the s flag: ` +
+            `${err instanceof Error ? err.message : String(err)}.`,
+        );
+      }
     }
   }
 }

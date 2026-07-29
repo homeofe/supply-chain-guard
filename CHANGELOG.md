@@ -7,6 +7,47 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.23.0] - 2026-07-29
+
+### Added
+
+- **Bounded multi-line pattern matching (`spansLines`).** The pattern engine
+  previously matched line by line, so a rule whose regex bridges two ideas only
+  fired when the author happened to write them on one line. A payload like
+  `new Proxy(target, { get: ... })` on a single line was detected, and the
+  identical construct pretty-printed across three lines was silent. Patterns may
+  now opt in with `spansLines: N` (default 1 = today's single-line behaviour).
+  The engine joins a sliding window of N consecutive lines, matches with the `s`
+  (dotAll) flag inside that window only, and reports the line where the match
+  starts. Whole-file matching with dotAll is intentionally not offered: a rule
+  like `(?:TEMP|TMP).*(?:exec|spawn)` would then pair a tmpdir on line 3 with an
+  exec on line 900, which is the false-positive shape v5.22 eliminated and would
+  scale with file size.
+
+- **Shared `matchPatternInContent` engine** used by the directory, npm, PyPI,
+  VS Code, Dockerfile and config scanners, so multi-line behaviour cannot drift
+  between entry points. Value-level (`valueFilter`) and file-level
+  (`requiresInFile`) guards still apply on every path; load-time validation now
+  also compiles the multi-line form and rejects `spansLines` above the hard cap.
+
+### Changed
+
+- **Opt-in `spansLines` enabled on rules that need it**, with measured windows:
+  `PROXY_HANDLER_TRAP` (5), `DROPPER_TEMP_EXEC` (6), `PYPI_B64_EXEC_COMBINED` (4),
+  `PYPI_CUSTOM_*` install hooks (6), `PROTESTWARE_IP_GEO_V2` (8). All other rules
+  stay single-line.
+
+- **`truncateMatch` shared and multi-line-aware.** Multi-line hits collapse to one
+  readable line before SARIF / JSON / annotations, so a whole window cannot leak
+  into a report.
+
+### Fixed
+
+- **Pretty-printed Proxy traps and multi-line droppers were false negatives.**
+  Precision corpus now includes split-across-lines samples for
+  `PROXY_HANDLER_TRAP` and `DROPPER_TEMP_EXEC`; both fire. Window-boundary,
+  start-line mapping and ReDoS-budget tests cover the engine itself.
+
 ## [5.22.0] - 2026-07-29
 
 ### Fixed
@@ -2286,7 +2327,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.22.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.0...HEAD
+[5.23.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.0
 [5.22.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.22.0
 [5.21.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.21.0
 [5.20.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.2

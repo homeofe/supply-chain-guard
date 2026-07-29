@@ -493,6 +493,23 @@ export interface PatternEntry {
    * ioc-blocklist or patterns where one exists.
    */
   requiresInFile?: RegExp;
+  /**
+   * Optional multi-line window size (v5.23). How many consecutive lines the
+   * engine may join when evaluating this pattern.
+   *
+   * Default is 1: match each line in isolation (the pre-v5.23 behaviour). A
+   * value of N > 1 enables a bounded sliding window of N lines, with the `s`
+   * (dotAll) flag so `.*` can bridge ideas WITHIN that window only. Whole-file
+   * matching with dotAll is intentionally NOT offered: a rule like
+   * `(?:TEMP|TMP).*(?:exec|spawn)` would then pair a tmpdir on line 3 with an
+   * exec on line 900, which is the false-positive shape v5.22 eliminated and
+   * would scale with file size.
+   *
+   * Opt-in per rule. Hard-capped at load time (see MAX_SPANS_LINES). Pair with
+   * requiresInFile / valueFilter wherever the multi-line form risks ordinary
+   * code.
+   */
+  spansLines?: number;
 }
 
 export interface WatchlistEntry {

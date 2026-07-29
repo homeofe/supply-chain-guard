@@ -28,7 +28,8 @@ import {
   CAMPAIGN_PATTERNS_V2,
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
-  isPatternMatchAccepted,
+  matchPatternInContent,
+  truncateMatch,
 } from "./patterns.js";
 import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
 import type { FeedIOC } from "./threat-intel.js";
@@ -89,7 +90,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.22.0";
+const TOOL_VERSION = "5.23.0";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
@@ -767,7 +768,6 @@ function checkFilePatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
-  const lines = content.split("\n");
   // Note: LURE_PATTERNS deliberately excluded here. README-style files are
   // already covered by scanReadmeLures() in github-trust-scanner.ts (called
   // earlier in scanDirectory). Including them in this loop produced duplicate
@@ -805,27 +805,18 @@ function checkFilePatterns(
     // the same file. Evaluated once per file per pattern, before the line loop.
     if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
 
-    const regex = new RegExp(pattern.pattern, "g");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getRecommendation(pattern.rule),
-        });
-        // Reset regex lastIndex for next line
-        regex.lastIndex = 0;
-      }
+    // v5.23: bounded multi-line window when pattern.spansLines > 1; valueFilter
+    // is applied inside matchPatternInContent.
+    for (const hit of matchPatternInContent(pattern, content, "g")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getRecommendation(pattern.rule),
+      });
     }
   }
 }
@@ -1012,7 +1003,6 @@ function checkBeaconMinerPatterns(
   findings: Finding[],
   scanningOwnPackage: boolean,
 ): void {
-  const lines = content.split("\n");
   const normalizedPath = relativePath.replace(/\\/g, "/");
   const isTestFile = TEST_FILE_REGEX.test(normalizedPath);
 
@@ -1023,26 +1013,16 @@ function checkBeaconMinerPatterns(
     if (pattern.notTestFile     && isTestFile)                                    continue;
     if (pattern.requiresInFile  && !pattern.requiresInFile.test(content))          continue;
 
-    const regex = new RegExp(pattern.pattern, "gi");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getRecommendation(pattern.rule),
-        });
-        regex.lastIndex = 0;
-      }
+    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getRecommendation(pattern.rule),
+      });
     }
   }
 
@@ -1197,29 +1177,19 @@ function checkBuildToolPatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
-  const lines = content.split("\n");
-
   for (const pattern of BUILD_TOOL_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, "gi");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getRecommendation(pattern.rule),
-        });
-        regex.lastIndex = 0;
-      }
+    // File-level guard before the window loop (same as checkFilePatterns).
+    if (pattern.requiresInFile && !pattern.requiresInFile.test(content)) continue;
+    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getRecommendation(pattern.rule),
+      });
     }
   }
 }
@@ -1303,29 +1273,18 @@ function checkMonorepoPatterns(
   // Only check if it has workspaces
   if (!pkg.workspaces) return;
 
-  const lines = content.split("\n");
-
   for (const pattern of MONOREPO_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, "gi");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getRecommendation(pattern.rule),
-        });
-        regex.lastIndex = 0;
-      }
+    if (pattern.requiresInFile && !pattern.requiresInFile.test(content)) continue;
+    for (const hit of matchPatternInContent(pattern, content, "gi")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getRecommendation(pattern.rule),
+      });
     }
   }
 }
@@ -1989,10 +1948,4 @@ function getRecommendation(rule: string): string {
   return map[rule] ?? "Review this finding manually and assess the risk.";
 }
 
-/**
- * Truncate a match string for display.
- */
-function truncateMatch(match: string, maxLen = 120): string {
-  if (match.length <= maxLen) return match;
-  return match.substring(0, maxLen) + "...";
-}
+// truncateMatch is imported from patterns.ts (shared with the multi-line engine).

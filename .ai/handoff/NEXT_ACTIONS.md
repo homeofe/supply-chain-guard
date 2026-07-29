@@ -14,10 +14,11 @@
 | Blocked | 0 |
 | Roadmap bets remaining | 0 |
 
-Current version: **v5.22.0**. The 2026-07 ideation roadmap plus the follow-on
+Current version: **v5.23.0**. The 2026-07 ideation roadmap plus the follow-on
 gap-analysis push (v5.12.4-v5.17.x: fresh threat-intel, Rust/Go/Python lockfile
 coverage, product/DX, honest SLSA grading, starjacking, OSV export, MCP-registry
-metadata) are shipped. See CHANGELOG.md for the full per-release history.
+metadata) are shipped. v5.23.0 adds opt-in bounded multi-line pattern matching
+(`spansLines`). See CHANGELOG.md for the full per-release history.
 
 ---
 

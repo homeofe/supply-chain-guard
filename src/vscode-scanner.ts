@@ -14,7 +14,16 @@ import * as https from "node:https";
 import type { Finding, PatternEntry, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { extractZip } from "./archive-extractor.js";
-import { FILE_PATTERNS, SCANNABLE_EXTENSIONS, MAX_FILE_SIZE, makeOversizedSkipFinding, isPatternMatchAccepted, isPatternApplicableToFile } from "./patterns.js";
+import {
+  FILE_PATTERNS,
+  SCANNABLE_EXTENSIONS,
+  MAX_FILE_SIZE,
+  makeOversizedSkipFinding,
+  isPatternMatchAccepted,
+  isPatternApplicableToFile,
+  matchPatternInContent,
+  truncateMatch,
+} from "./patterns.js";
 
 const TOOL_VERSION = "1.0.0";
 
@@ -534,30 +543,18 @@ function checkVscodePatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
-  const lines = content.split("\n");
-
   for (const pattern of EXTENSION_DANGER_PATTERNS) {
     if (!isPatternApplicableToFile(pattern, content)) continue;
-    const regex = new RegExp(pattern.pattern, "g");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: getVscodeRecommendation(pattern.rule),
-        });
-        regex.lastIndex = 0;
-      }
+    for (const hit of matchPatternInContent(pattern, content, "g")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: getVscodeRecommendation(pattern.rule),
+      });
     }
   }
 }
@@ -602,29 +599,18 @@ function checkGeneralPatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
-  const lines = content.split("\n");
-
   for (const pattern of FILE_PATTERNS) {
-    const regex = new RegExp(pattern.pattern, "g");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i] ?? "";
-      const match = regex.exec(line);
-      if (match) {
-        regex.lastIndex = 0;
-        // v5.18: value-level guard (see PatternEntry.valueFilter)
-        if (!isPatternMatchAccepted(pattern, match)) continue;
-        findings.push({
-          rule: pattern.rule,
-          description: pattern.description,
-          severity: pattern.severity,
-          file: relativePath,
-          line: i + 1,
-          match: truncateMatch(match[0]),
-          recommendation: `Found in VS Code extension. ${pattern.description}`,
-        });
-        regex.lastIndex = 0;
-      }
+    if (!isPatternApplicableToFile(pattern, content)) continue;
+    for (const hit of matchPatternInContent(pattern, content, "g")) {
+      findings.push({
+        rule: pattern.rule,
+        description: pattern.description,
+        severity: pattern.severity,
+        file: relativePath,
+        line: hit.line,
+        match: truncateMatch(hit.text),
+        recommendation: `Found in VS Code extension. ${pattern.description}`,
+      });
     }
   }
 }
@@ -860,10 +846,4 @@ function collectFilesRecursive(dir: string): string[] {
   return files;
 }
 
-/**
- * Truncate a match string for display.
- */
-function truncateMatch(match: string, maxLen = 120): string {
-  if (match.length <= maxLen) return match;
-  return match.substring(0, maxLen) + "...";
-}
+// truncateMatch is imported from patterns.ts (shared with the multi-line engine).

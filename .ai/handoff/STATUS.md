@@ -1,3 +1,38 @@
+> Note (2026-07-29, grok-4.5 - v5.23.0): Multi-line pattern matching. The engine matched line by
+> line, so PROXY_HANDLER_TRAP (and any rule bridging two ideas) only fired on one-line payloads.
+> Reproduced: one-line Proxy+fetch was HIGH; the identical construct pretty-printed across three
+> lines was silent.
+>
+> DESIGN: opt-in PatternEntry.spansLines (default 1). Sliding window of N lines, match with the s
+> flag inside the window only. Hard caps: MAX_SPANS_LINES=20, MAX_SPAN_WINDOW_CHARS=4096,
+> MAX_MATCH_ATTEMPTS_PER_PATTERN=500. Shared matchPatternInContent used by directory/npm/PyPI/
+> VS Code/Dockerfile/config scanners so entry points cannot drift. Whole-file dotAll rejected:
+> would pair tmpdir on line 3 with exec on line 900 (the v5.22 FP class, scaled by file size).
+> Character-bounded `.{0,400}` under s was considered and rejected: one global char budget is a
+> worse fit than a per-rule line window, and line numbers are harder to justify to operators.
+>
+> ENABLED spansLines on: PROXY_HANDLER_TRAP(5), DROPPER_TEMP_EXEC(6), PYPI_B64_EXEC_COMBINED(4),
+> PYPI_CUSTOM_*(6), PROTESTWARE_IP_GEO_V2(8). All other rules stay single-line.
+>
+> MEASURED on this box's node_modules (~1,166 files / 903 scanned):
+> - FP high+critical by rule: BEFORE and AFTER identical (BINARY_UNEXPECTED 3, HIGH_ENTROPY 3,
+>   MINER_CONFIG_KEYS 1, MINER_POOL_DOMAIN 1). No new high/critical rule started firing.
+> - Wall time: 3056 ms -> 3231 ms (~+6%). Acceptable for a precision fix.
+> - FN: precision-corpus green; new multi-line proxytrap + dropper samples fire; one-line forms
+>   still fire. Window-boundary and ReDoS-budget unit tests green.
+>
+> ALSO NOTED (not fixed here): `scg scan .` vs `scg npm supply-chain-guard` produce different
+> results by design - local scan walks the full working tree (tests, docs, src, handoff); npm
+> path downloads the published tarball (packaged files only, different path filters / self-scan
+> suppression surface). Not a multi-line defect.
+>
+> NEEDS A DECISION from Emre: opt-in (this PR) vs opt-out multi-line for all `.*` / `[^}]` rules.
+> Recommendation remains opt-in: safer, slower to roll out, matches the v5.22 precision posture.
+>
+> STILL OPEN after this: more rules that could benefit from spansLines (inventory of ~41 bridge
+> patterns); only the high-value ones above were enabled with justification. Roll out further
+> only with per-rule node_modules measurement.
+
 > Note (2026-07-29, claude-opus-5, fourth pass - v5.22.0): Emre asked for the whole remaining
 > precision backlog fixed at once, with real testing, because the daily routine kept surfacing a
 > new defect every run. Root cause of THAT complaint: every FP so far was found by ad-hoc
