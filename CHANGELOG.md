@@ -27,6 +27,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **The typosquat heuristic flagged hundreds of legitimate packages.**
+  `TYPOSQUAT_LEVENSHTEIN` accepted two plain Levenshtein edits against a list of 92 popular
+  names. Measured against a 27,140-name corpus of real npm packages, that flagged **321
+  legitimate packages**, and the rate rose with popularity (2.37% of packages above 10M
+  weekly downloads): `acorn`, `preact`, `cypress`, `redux`, `viem`, `knex`, `globby`, `jose`,
+  `mime`, `util` and `enquirer` were all reported as typosquats. In `guard` that is a hard
+  install block. The scanner also flagged two of its own dependencies (`pathe`, `obug`), and
+  told users of `color` "Did you mean `colors`?", recommending the package its author
+  sabotaged in January 2022.
+  The ceiling is now **one transposition-aware edit** (Optimal String Alignment). Adjacent
+  transpositions are the shape every real squat in this project's threat data takes
+  (`rimarf`, `yarsg`, `lodahs`, `veim`), and plain Levenshtein scores those as 2, so
+  transposition awareness is what lets the ceiling drop without losing any of them. Leading
+  homoglyph squats (`1odash`, `l0dash`) are still caught: no same-first-character rule was
+  added, because this repo curates exactly those names in `patterns.ts` and on a public repo
+  such a rule would be a documented one-character bypass. A small allowlist covers the
+  legitimate names that genuinely sit one edit away (`pathe`, `color`, `nuxt`, `preact`,
+  `gaxios`, `enquirer` and others), each registry-verified on 2026-07-29. The allowlist gates
+  this one rule only: feed IOC matches, the known-bad-version blocklist and every scanner
+  pattern run on paths that never consult it.
+  Findings now also name the *closest* popular package rather than the first array match, so
+  the "Did you mean" text is no longer array-order dependent. The exported `levenshtein`
+  helper is unchanged.
+- **The importer's page cap was one busy fortnight from freezing the feed.** The 2026-07-29
+  run needed 184 of the 200 allowed pages. Hitting the cap is fatal and writes nothing, so a
+  burst window would have imported zero IOCs rather than fewer. The default is now 750, held
+  in a single `DEFAULT_MAX_PAGES` constant instead of four separate literals. This does not
+  change which IOCs a successful run imports: the fetch is newest-first and `--limit` still
+  takes the newest 250 either way. It only stops burst days from aborting to zero.
+- **`--limit abc` silently imported nothing and exited 0.** Numeric CLI options were parsed
+  with bare `Number()`, and `NaN` disabled every guard it reached: nothing reported as capped
+  and `slice(0, NaN)` returned an empty array, so the run claimed success while importing zero
+  IOCs. `--days`, `--limit`, `--max-pages` and `--timeout` now reject anything that is not a
+  positive integer.
 - `package-lock.json` is now covered by the version-sync gate. The release bump edits
   version strings in place, but npm writes the lockfile's own `version` fields at install
   time, so the lockfile trailed a release behind (5.20.0 at the v5.20.1 tag, 5.20.1 at the

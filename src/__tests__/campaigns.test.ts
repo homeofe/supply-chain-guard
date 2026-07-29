@@ -3141,18 +3141,19 @@ describe("Campaign Signatures", () => {
       expect(analyzeInstallCommand("npm", ["install", "viem-js@1.0.4"]).blocked).toBe(true);
     });
 
-    it("does NOT treat the legitimate viem as malware", async () => {
+    it("does NOT flag the legitimate viem at all", async () => {
       const { analyzeInstallCommand } = await import("../install-guard.js");
-      const rules = analyzeInstallCommand("npm", ["install", "viem"]).verdicts.flatMap((v) =>
-        v.findings.map((f) => f.rule),
-      );
-      // viem IS flagged, but only by the pre-existing generic Levenshtein heuristic
-      // (it is 2 edits from "vite"); that behaviour predates this campaign and is not
-      // asserted here. What must hold is that NeoShadow's entries never promote the
-      // real package to a malware verdict.
+      const result = analyzeInstallCommand("npm", ["install", "viem"]);
+      const rules = result.verdicts.flatMap((v) => v.findings.map((f) => f.rule));
+      // NeoShadow's entries must never promote the real package to a malware verdict.
       expect(rules).not.toContain("MALICIOUS_DEPENDENCY");
       expect(rules).not.toContain("THREAT_INTEL_MATCH");
-      expect(rules).toContain("TYPOSQUAT_LEVENSHTEIN");
+      // viem used to be flagged as a typosquat of "vite": 2 plain Levenshtein edits,
+      // under a ceiling that accepted 2. The ceiling is now one transposition-aware
+      // edit and viem/vite is still 2, so the finding is gone and installing the real
+      // package is no longer blocked. Restore the old <= 2 ceiling and this goes red.
+      expect(rules).not.toContain("TYPOSQUAT_LEVENSHTEIN");
+      expect(result.blocked).toBe(false);
     });
   });
 

@@ -1,3 +1,57 @@
+> Note (2026-07-29, claude-opus-5, second pass): Emre reviewed the threat-intel PR and asked for
+> BOTH open decisions to be fixed on the same branch before merge. Done. A four-agent
+> investigation plus a three-lens adversarial judge panel ran first; the headline finding is that
+> the "viem false positive" was not a one-off.
+>
+> MEASURED SCOPE OF THE FP: a 27,140-name corpus of real npm packages was run through the actual
+> heuristic. 321 legitimate packages were flagged, and the rate RISES with popularity (2.37% above
+> 10M weekly downloads). acorn (237M/wk), preact, cypress, redux, enquirer, gaxios, globby, jose,
+> mime, util, knex and viem were all reported as typosquats, which in `guard` is a hard install
+> block. Against the repo's own 653 unscoped known-malicious names the rule caught 2 (rimarf,
+> yarsg) - roughly 1:160 signal to noise. Both of those are ALSO already caught by exact name in
+> patterns.ts and the feed, so the rule's unique recall against known malware was ZERO. That is
+> what made tightening safe: there was no measured detection to lose.
+>
+> FIX: ceiling is now one Optimal-String-Alignment edit. OSA counts an adjacent transposition as
+> 1, and every real squat in this project's threat data is a transposition (rimarf, yarsg, lodahs,
+> veim) which plain Levenshtein scores 2 - so the ceiling could drop from 2 to 1 without losing
+> one of them. viem/vite is OSA 2, so viem clears structurally with no allowlist entry.
+>
+> THREE PROPOSALS WERE REJECTED after the judge panel, worth recording so they are not retried:
+> 1. Same-first-character predicate. Cuts ~24 more FPs but makes the rule structurally unable to
+> catch 1odash / l0dash, which patterns.ts curates by hand, and on a public repo it is a
+> documented one-character bypass. Two of three lenses rejected it independently.
+> 2. Adding viem to POPULAR_PACKAGES. That array doubles as the target list, so exempting viem
+> would newly flag the legitimate vuex (1.7M/wk) and timm (2.0M/wk). The allowlist is a SEPARATE
+> additive set for this reason; the POPULAR_PACKAGES membership term stays in the guard because 17
+> entries in that array collide with each other at distance 2.
+> 3. Applying the allowlist to TYPOSQUAT_SIMILAR_TO_DEP. Left alone deliberately - see the open
+> item below.
+>
+> ALSO FIXED, found during the investigation and not in the original ask: `--limit abc` parsed to
+> NaN, which disabled the cap and limit guards, imported ZERO IOCs and exited 0 reporting success.
+> A silent false negative in a threat-feed importer. All four numeric CLI options now reject
+> non-positive-integers.
+>
+> VERIFIED: mutation-proved by reverting the ceiling to <= 2 and watching three new tests go red,
+> then restoring. Self-scan of this repo went from 2 typosquat findings (pathe conf 0.85, obug
+> conf 0.65 - both registry-verified legitimate) to 0. npm run build green. Ran only the affected
+> suites (dependency-risk-analyzer, install-guard, campaigns, policy-engine, feed-import): 351
+> pass. Full suite left to CI.
+>
+> STILL OPEN, needs Emre - deliberately NOT fixed here:
+> 1. TYPOSQUAT_SIMILAR_TO_DEP is a second, parallel FP generator. It fires on legitimate pairs in
+> one manifest (vue+vuex, path+pathe, color+colors, mysql+mysql2, uuid+ulid), has no length floor,
+> never consults any allowlist, and has NO suppression path even via a policy file
+> (policy-engine.ts gates allowlist.packages on TYPOSQUAT_LEVENSHTEIN and DEP_INTERNAL_NAME_PUBLIC
+> only). It was left untouched because the obvious two-sided fix breaks the rule's highest-value
+> case - a squat sitting in the manifest next to the package it imitates - and the existing
+> expres+express test encodes exactly that. It needs its own corpus measurement.
+> 2. install-guard blocks on ANY finding (`findings.length > 0`) with no policy allowlist plumbed
+> in, so a 0.65-confidence heuristic carries the same blocking authority as a 1.0-confidence feed
+> match, escapable only with --force. That is the mechanism by which a false positive gets the
+> tool switched off.
+
 > Note (2026-07-29, claude-opus-5): Scheduled daily threat-intel run. No version bump; this is
 > a PR for Emre to review and release.
 >

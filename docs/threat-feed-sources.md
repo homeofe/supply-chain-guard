@@ -35,7 +35,7 @@ is malware", which is exactly the indicator class this scanner blocks.
 - **No account required, and the token needs no scopes.** `GITHUB_TOKEN` /
   `GH_TOKEN` is read from the environment and raises the REST rate limit from 60
   to 5000 requests/hour. It is optional only for a window small enough to fit the
-  60-request anonymous budget. The default `--max-pages 200` does not fit it, so a
+  60-request anonymous budget. The default `--max-pages 750` does not fit it, so a
   default run needs a token and fails fast with an actionable message rather than
   dying mid-pagination on a 403.
 - **Licence: CC BY 4.0** (`github/advisory-database`). Attribution is required
@@ -135,7 +135,7 @@ npm run feed:import -- --json             # machine-readable report
 | `--since <YYYY-MM-DD>` | - | Explicit start date, overrides `--days` |
 | `--until <YYYY-MM-DD>` | - | Explicit end date |
 | `--limit <n>` | 250 | Maximum new entries added in one run |
-| `--max-pages <n>` | 200 | Hard cap on upstream pages fetched; hitting it is fatal |
+| `--max-pages <n>` | 750 | Hard cap on upstream pages fetched; hitting it is fatal |
 | `--allow-truncated` | off | Import anyway when the page cap was hit |
 | `--timeout <ms>` | 15000 | Per-request timeout |
 | `--no-osv` | off | Skip the OSV corroboration query |

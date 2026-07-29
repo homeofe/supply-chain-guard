@@ -921,7 +921,9 @@ describe("importUpstreamFeed failure mode", () => {
     try {
       await expect(
         // fetchImpl omitted on purpose: the guard is scoped to the real network path.
-        importUpstreamFeed({ root: tmpRoot, maxPages: 200, useOsv: false }),
+        // maxPages omitted too: the guard fires for any default above the anonymous
+        // budget, so the test tracks the shipped default instead of restating it.
+        importUpstreamFeed({ root: tmpRoot, useOsv: false }),
       ).rejects.toThrow(/no GITHUB_TOKEN/);
     } finally {
       if (saved.GITHUB_TOKEN !== undefined) process.env.GITHUB_TOKEN = saved.GITHUB_TOKEN;

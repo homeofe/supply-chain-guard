@@ -15,8 +15,8 @@
 //      in its `source` field and is documented in docs/threat-feed-sources.md.
 //      GITHUB_TOKEN / GH_TOKEN raises the REST rate limit from 60 to 5000
 //      requests/hour. It needs no scopes. It is optional only for a window small
-//      enough to fit the 60-request anonymous budget; the default --max-pages 200
-//      does not, so a default run REQUIRES one and fails fast without it.
+//      enough to fit the 60-request anonymous budget; the default --max-pages
+//      (750) does not, so a default run REQUIRES one and fails fast without it.
 //   2. OSV.dev querybatch (corroboration only, never discovery)
 //      POST https://api.osv.dev/v1/querybatch
 //      Confirms the package is also listed as malicious (a MAL- id, sourced
@@ -117,6 +117,24 @@ export const CONFIDENCE_CORROBORATED = 1.0;
 
 /** GitHub's unauthenticated REST allowance, requests/hour. Authenticated is 5000. */
 const ANONYMOUS_REQUEST_BUDGET = 60;
+
+/**
+ * Default hard cap on upstream pages per run.
+ *
+ * One page is exactly one GitHub REST request (per_page is pinned to 100, the
+ * API maximum) and the OSV corroboration call goes to a different host, so it
+ * does not draw on this budget. Pages therefore map 1:1 onto the authenticated
+ * 5000 requests/hour allowance.
+ *
+ * Sized against observation, not taste: the 2026-07-29 run needed 184 pages for
+ * a 14-day window and left a ~29k-entry backlog, so the window is trending up
+ * and 200 was roughly one busy fortnight from the cap. Hitting the cap is fatal
+ * and writes NOTHING, so a burst day would have imported zero IOCs rather than
+ * fewer - the feed would silently stop moving. 750 is ~4x observed demand while
+ * staying well inside the authenticated budget, and inside the 1000/hour a
+ * GitHub Actions GITHUB_TOKEN would allow if this import ever moves into CI.
+ */
+const DEFAULT_MAX_PAGES = 750;
 
 /**
  * Package names are serialized into a TypeScript source file, so the charset
@@ -347,7 +365,7 @@ export function nextPageUrl(linkHeader) {
 export async function fetchMalwareAdvisories({
   since,
   until,
-  maxPages = 200,
+  maxPages = DEFAULT_MAX_PAGES,
   timeoutMs = 15000,
   token,
   fetchImpl = globalThis.fetch,
@@ -617,7 +635,7 @@ export async function importUpstreamFeed({
   since,
   until,
   limit = 250,
-  maxPages = 200,
+  maxPages = DEFAULT_MAX_PAGES,
   timeoutMs = 15000,
   token,
   useOsv = true,
@@ -763,6 +781,26 @@ function summarize(skipped) {
 // CLI
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse a numeric CLI option, rejecting anything that is not a positive integer.
+ *
+ * Not cosmetic. `Number("abc")` is NaN, and NaN silently disables every guard it
+ * touches: `added.length > NaN` is false so nothing reports as capped, and
+ * `added.slice(0, NaN)` returns [], so `--limit abc` used to import ZERO IOCs and
+ * exit 0 while reporting success. In a threat-feed importer that is a silent
+ * false negative, which is the exact failure this tool exists to prevent.
+ */
+function positiveInt(flag, raw) {
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(
+      `${flag} expects a positive integer, got ${JSON.stringify(raw ?? null)}. ` +
+        "Refusing to run: a non-numeric value silently disables the cap and limit guards.",
+    );
+  }
+  return value;
+}
+
 export function parseArgs(argv) {
   const opts = { dryRun: false, json: false, useOsv: true };
   for (let i = 0; i < argv.length; i++) {
@@ -771,13 +809,13 @@ export function parseArgs(argv) {
     if (arg === "--dry-run") opts.dryRun = true;
     else if (arg === "--json") opts.json = true;
     else if (arg === "--no-osv") opts.useOsv = false;
-    else if (arg === "--days") opts.days = Number(next());
+    else if (arg === "--days") opts.days = positiveInt(arg, next());
     else if (arg === "--since") opts.since = next();
     else if (arg === "--until") opts.until = next();
-    else if (arg === "--limit") opts.limit = Number(next());
-    else if (arg === "--max-pages") opts.maxPages = Number(next());
+    else if (arg === "--limit") opts.limit = positiveInt(arg, next());
+    else if (arg === "--max-pages") opts.maxPages = positiveInt(arg, next());
     else if (arg === "--allow-truncated") opts.allowTruncated = true;
-    else if (arg === "--timeout") opts.timeoutMs = Number(next());
+    else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -795,7 +833,7 @@ const USAGE = `
     --limit <n>         Maximum new entries to add in one run (default 250).
                         Anything over the limit stays available to the next run
                         until it ages out of the --days window.
-    --max-pages <n>     Maximum upstream pages to fetch (default 200). Pagination
+    --max-pages <n>     Maximum upstream pages to fetch (default 750). Pagination
                         stops early when there is no rel="next", so a quiet window
                         still costs about 3 requests. Hitting this cap is FATAL:
                         see --allow-truncated.
