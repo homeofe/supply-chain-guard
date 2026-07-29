@@ -3047,4 +3047,236 @@ describe("Campaign Signatures", () => {
       expect(finding).toBeUndefined();
     });
   });
+
+  // =================================================================
+  // NeoShadow - npm typosquats with MSBuild execution and an Ethereum
+  // contract as the C2 resolver (Aikido, January 2026; packages
+  // corroborated by o3.security MAL-2026-334)
+  // =================================================================
+
+  describe("NeoShadow npm typosquats (January 2026)", () => {
+    const NAMES = ["viem-js", "cyrpto", "tailwin", "supabase-js"];
+
+    it("matches every NeoShadow package name against the malicious-name patterns", () => {
+      for (const name of NAMES) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT match the legitimate packages the campaign typosquats", () => {
+      // Unscoped names only: the scoped catch-all pattern deliberately matches any
+      // non-allowlisted "@scope/name", so the real @supabase/supabase-js cannot be
+      // asserted here. What matters is that the unscoped squat is distinct from it.
+      const legit = ["viem", "tailwindcss", "tailwind-merge", "supabase"];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    it("flags a directory scan that depends on a NeoShadow package (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { "viem-js": "1.0.4" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeDefined();
+      expect(dep?.match).toBe("viem-js");
+      expect(dep?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a directory scan depending on the legitimate viem", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { viem: "2.21.1", tailwindcss: "3.4.4" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeUndefined();
+    });
+
+    it("should detect the NeoShadow C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const host = "https://metrics-flow.com/collect";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the NeoShadow fallback C2 IP", async () => {
+      fs.writeFileSync(path.join(tempDir, "ip.js"), 'const c2 = "80.78.22.206";');
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the analytics.node backdoor hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "012dfb89ebabcb8918efb0952f4a91515048fd3b87558e90fa45a7ded6656c07";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("the install guard blocks a NeoShadow package before npm runs", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      expect(analyzeInstallCommand("npm", ["install", "cyrpto"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "viem-js@1.0.4"]).blocked).toBe(true);
+    });
+
+    it("does NOT treat the legitimate viem as malware", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      const rules = analyzeInstallCommand("npm", ["install", "viem"]).verdicts.flatMap((v) =>
+        v.findings.map((f) => f.rule),
+      );
+      // viem IS flagged, but only by the pre-existing generic Levenshtein heuristic
+      // (it is 2 edits from "vite"); that behaviour predates this campaign and is not
+      // asserted here. What must hold is that NeoShadow's entries never promote the
+      // real package to a malware verdict.
+      expect(rules).not.toContain("MALICIOUS_DEPENDENCY");
+      expect(rules).not.toContain("THREAT_INTEL_MATCH");
+      expect(rules).toContain("TYPOSQUAT_LEVENSHTEIN");
+    });
+  });
+
+  // =================================================================
+  // SANDWORM_MODE / "Echoes of Shai-Hulud" - token-stealing npm worm
+  // that injects malicious MCP servers into AI coding tools
+  // (Socket + OX Security, February 2026)
+  // =================================================================
+
+  describe("SANDWORM_MODE npm worm (February 2026)", () => {
+    const NAMES = [
+      "claud-code",
+      "cloude-code",
+      "cloude",
+      "crypto-locale",
+      "crypto-reader-info",
+      "detect-cache",
+      "format-defaults",
+      "hardhta",
+      "locale-loader-pro",
+      "naniod",
+      "node-native-bridge",
+      "opencraw",
+      "parse-compat",
+      "rimarf",
+      "scan-store",
+      "secp256",
+      "suport-color",
+      "veim",
+      "yarsg",
+    ];
+
+    it("matches every SANDWORM_MODE package name against the malicious-name patterns", () => {
+      for (const name of NAMES) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT match the legitimate packages the worm typosquats", () => {
+      const legit = [
+        "hardhat",
+        "rimraf",
+        "supports-color",
+        "yargs",
+        "secp256k1",
+        "detect-libc",
+        "viem",
+      ];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    it("flags a directory scan that depends on a SANDWORM_MODE package (any version)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { rimarf: "1.0.0" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeDefined();
+      expect(dep?.match).toBe("rimarf");
+      expect(dep?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a directory scan depending on the legitimate rimraf", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { rimraf: "5.0.7", "supports-color": "9.4.0" },
+        })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const dep = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(dep).toBeUndefined();
+    });
+
+    it("should detect the worm C2 subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'fetch("https://pkg-metrics.official334.workers.dev/ingest");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag an unrelated workers.dev host", async () => {
+      // The shared Cloudflare Workers apex must never be blocked wholesale - only
+      // the attacker's specific subdomain is an indicator.
+      fs.writeFileSync(
+        path.join(tempDir, "legit.js"),
+        'fetch("https://my-app.example-team.workers.dev/api");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+
+    it("should detect the stage-2 payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "5440e1a424631192dff1162eebc8af5dc2389e3d3b23bd26e9c012279ae116e4";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("the install guard blocks a SANDWORM_MODE package before npm runs", async () => {
+      const { analyzeInstallCommand } = await import("../install-guard.js");
+      expect(analyzeInstallCommand("npm", ["install", "suport-color"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "yarsg@18.0.1"]).blocked).toBe(true);
+      expect(analyzeInstallCommand("npm", ["install", "supports-color"]).blocked).toBe(false);
+    });
+  });
 });

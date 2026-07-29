@@ -164,6 +164,25 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "downloading-api.it.com",
   "5ca8758c-02d0-4a72-89c8-d468b66dda41.com",
   "polse.us",
+
+  // NeoShadow npm supply-chain attack (Aikido, detected 2025-12-30, published 2026-01-05).
+  // Four typosquats (viem-js, cyrpto, tailwin, supabase-js) drop a JavaScript loader that
+  // runs a payload through MSBuild and resolves its live C2 from an Ethereum contract.
+  // metrics-flow[.]com is the attacker-registered static C2 apex. Single-source for the
+  // atomic indicators: only Aikido published the domain/IP/hash set (o3.security
+  // corroborates the packages via MAL-2026-334).
+  "metrics-flow.com",
+
+  // SANDWORM_MODE / "Echoes of Shai-Hulud" npm worm (Socket + OX Security, 2026-02-20).
+  // Worm steals npm tokens and CI secrets, injects malicious MCP servers into Claude Code /
+  // Cursor / VS Code, and detonates 48h after install. The specific attacker subdomain is
+  // listed, NOT the shared workers[.]dev apex (Cloudflare Workers is legitimate infra used
+  // by many projects).
+  "pkg-metrics.official334.workers.dev",
+  // Secondary C2 apexes, attacker-registered. Single-source (Socket; OX Security's write-up
+  // lists only the workers[.]dev subdomain).
+  "freefan.net",
+  "fanfree.net",
 ];
 
 // ---------------------------------------------------------------------------
@@ -265,6 +284,10 @@ export const KNOWN_C2_IPS: string[] = [
   // and the ipfs[.]io gateway are shared public infrastructure and are
   // intentionally NOT listed - only the campaign-specific CID paths are.
   "85.137.53.71",
+
+  // NeoShadow npm supply-chain attack (Aikido, 2026-01-05). Static fallback C2 used when the
+  // Ethereum contract lookup that normally hands out the live address fails. Single-source.
+  "80.78.22.206",
 ];
 
 // ---------------------------------------------------------------------------
@@ -454,6 +477,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "bfaeb987faa6de2b5a5eb63b1233d055215b09b0349a9394f2175fd7cdf385e4": "AsyncAPI compromise: @asyncapi/generator@3.3.1 tarball (SHA256)",
   "9b2e65db653ca8575c9b10eefb9a80c6006404812c2ec212bf5675e3c690233b": "AsyncAPI compromise: @asyncapi/specs@6.11.2 tarball (SHA256)",
   "d425e4583cc6185d41e95c45eda00550045a5d1919b9a012236a4520d009dbd7": "AsyncAPI compromise: @asyncapi/specs@6.11.2-alpha.1 tarball (SHA256)",
+
+  // NeoShadow npm supply-chain attack (Aikido, 2026-01-05). Windows native stage dropped by
+  // the JavaScript loader and side-loaded through MSBuild. Single-source.
+  "012dfb89ebabcb8918efb0952f4a91515048fd3b87558e90fa45a7ded6656c07": "NeoShadow analytics.node Windows backdoor (SHA256)",
+
+  // SANDWORM_MODE / "Echoes of Shai-Hulud" npm worm (Socket, 2026-02-20). Stage-2 payload
+  // fetched by the installed package. Socket also published the stage-2 AES-256-GCM key, IV
+  // and auth tag; those are decryption material, not file digests, so they are deliberately
+  // NOT ingested here - a key in the hash map would misreport as "this file is malware".
+  "5440e1a424631192dff1162eebc8af5dc2389e3d3b23bd26e9c012279ae116e4": "SANDWORM_MODE stage-2 worm payload (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -558,6 +591,21 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // here for source-reference matching. The broader "7span"/"sevenspan" and "Artiffusion-Inc"
   // accounts are NOT blocked to avoid false positives on their legitimate, non-weaponized repos.
   "Xpos587",
+
+  // NeoShadow npm supply-chain attack (Aikido, 2026-01-05)
+  // "cjh97123" is the npm publisher account that shipped all four typosquats (viem-js,
+  // cyrpto, tailwin, supabase-js). Account is attacker-created, not a compromised victim.
+  // npm publisher handle, tracked here for source-reference matching.
+  "cjh97123",
+
+  // SANDWORM_MODE / "Echoes of Shai-Hulud" npm worm (Socket + OX Security, 2026-02-20)
+  // "official334" is both the npm publisher alias and the Cloudflare Workers account behind
+  // the C2 subdomain; "javaorg" is the second publisher alias. "ci-quality" is the
+  // attacker-created GitHub account whose ci-quality/code-quality-check@v1 Action is injected
+  // into victim workflows to re-steal CI secrets. All three are attacker-created, not victims.
+  "official334",
+  "javaorg",
+  "ci-quality",
 ];
 
 // ---------------------------------------------------------------------------

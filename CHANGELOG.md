@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Daily threat-intel import (2026-07-29): 250 malware package IOCs from the GitHub Advisory
+  Database (CWE-506), corroborated against OSV.dev, appended to the bundled feed.
+- **NeoShadow npm typosquats (Aikido, January 2026).** Four Windows-targeting typosquats
+  (`viem-js`, `cyrpto`, `tailwin`, `supabase-js`) published by npm account `cjh97123`, running
+  their payload through MSBuild and resolving the live C2 from an Ethereum contract. Adds the
+  C2 domain `metrics-flow[.]com`, fallback C2 IP `80[.]78[.]22[.]206`, the `analytics.node`
+  backdoor SHA-256, and the Ethereum resolver contract. All four names are npm security-holding
+  placeholders with no legitimate release history, so they are blocked by name; the typosquat
+  targets (`viem`, `tailwindcss`, `@supabase/supabase-js`) are explicitly not matched.
+- **SANDWORM_MODE / "Echoes of Shai-Hulud" npm worm (Socket + OX Security, February 2026).**
+  Token-stealing worm that injects malicious MCP servers into Claude Code, Cursor and VS Code
+  and detonates 48 hours after install. Adds 19 malicious package names, the C2 subdomain
+  `pkg-metrics[.]official334[.]workers[.]dev`, two secondary C2 apexes, the stage-2 payload
+  SHA-256, and the attacker accounts `official334`, `javaorg` and `ci-quality`. Only the
+  specific attacker subdomain is listed, never the shared `workers[.]dev` apex.
+
 ### Fixed
 
 - `package-lock.json` is now covered by the version-sync gate. The release bump edits

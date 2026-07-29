@@ -1,3 +1,49 @@
+> Note (2026-07-29, claude-opus-5): Scheduled daily threat-intel run. No version bump; this is
+> a PR for Emre to review and release.
+>
+> IMPORTER: 250 package IOCs added from the GitHub Advisory Database (CWE-506, 120 OSV-corroborated).
+> 18,368 advisories fetched over 184 pages - the page cap is 200, so the window is close to the
+> FATAL "page cap reached" ceiling and the next run may need --since/--until slicing. 29,024 more
+> entries stayed behind --limit 250 (fine: they remain in the --days 14 window for later runs).
+> Skipped 30: 7 unmappable-version-range, 22 unsafe-package-name, 1 withdrawn.
+>
+> MANUAL ENRICHMENT (the part the advisory databases never publish): two campaigns, 35 non-package
+> indicators plus 23 package names.
+> - NeoShadow (Aikido, Jan 2026; packages corroborated by o3.security MAL-2026-334). Atomic IOCs
+>   are Aikido-only, so they carry confidence 0.85 and are commented single-source.
+> - SANDWORM_MODE (Socket + OX Security, Feb 2026). Both vendors publish the same 19 packages and
+>   the workers.dev C2; the two secondary apexes are Socket-only at 0.85.
+>
+> DISCIPLINE NOTES, three judgement calls worth recording:
+> 1. All 23 package names were verified against the npm registry before being blocked by bare name.
+> Every one returns a "security holding package" placeholder, i.e. npm removed the malware and no
+> legitimate release history exists under those names. The unscoped `supabase-js` is the squat; the
+> real package is the scoped `@supabase/supabase-js` and is not matched.
+> 2. The NeoShadow Ethereum address went into the FEED as type:"url" (0x-prefixed), NOT into
+> KNOWN_C2_WALLETS. That collection holds only Tron and Aptos addresses by design - the feed's
+> structural url floor is what covers EVM. I had it in the wrong collection first; the convention
+> is documented in the url-floor comment in threat-intel.ts.
+> 3. Socket's stage-2 AES key, IV and auth tag were deliberately NOT ingested into
+> KNOWN_MALICIOUS_HASHES. They are decryption material, not file digests, and a key in the hash map
+> would misreport as "this file is malware".
+>
+> NOT ADDED: a SHA-256 (46faab8a...) that a search snippet attributed to the OX Security worm
+> write-up. Fetching the article directly returned no hashes at all, so the snippet is unconfirmed
+> and inventing it would violate the never-invent-indicators rule. Left out on purpose.
+>
+> ONE PRE-EXISTING FALSE POSITIVE FOUND, not caused by this change and not fixed here: the install
+> guard blocks the legitimate `viem`, because the generic Levenshtein heuristic puts it 2 edits from
+> `vite` and `viem` is absent from POPULAR_PACKAGES in dependency-risk-analyzer.ts. My first test
+> asserted `viem` was unblocked and failed; the assertion was wrong, not the code. The test now
+> asserts the meaningful invariant (viem never earns a MALICIOUS_DEPENDENCY/THREAT_INTEL_MATCH
+> verdict) and documents why it is flagged. Adding `viem` to POPULAR_PACKAGES is a real candidate
+> fix but is out of scope for a threat-intel run - it needs Emre's call.
+>
+> Verified: npm run build green (check:aahp + check:feed + check:handoff + tsc). Ran only the
+> suites covering the change - campaigns, ioc-blocklist, feed, threat-intel, feed-import,
+> install-guard, dependency-risk-analyzer, npm-scanner, new-patterns, scanner: 438 pass. Full
+> suite deliberately not run locally; CI on the PR is the authoritative verdict.
+
 > Note (2026-07-28, claude-opus-4-8): Post-release review of v5.20.2 (external, GPT-5.6-Sol)
 > found two real defects. Both confirmed by measurement, both fixed here. No republish: the
 > published package is correct.

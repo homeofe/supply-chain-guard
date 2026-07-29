@@ -476,6 +476,27 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // scan's exact-name path relies on pinned names (same rationale as the ViteVenom block).
   "^(@apexfdn\\/apex|@copilot-mcp\\/apex)$",
 
+  // NeoShadow (Aikido, detected 2025-12-30, published 2026-01-05; packages corroborated by
+  // o3.security MAL-2026-334). Four Windows-targeting typosquats published by npm account
+  // cjh97123, carrying a JS loader that executes its payload via MSBuild and resolves the live
+  // C2 from an Ethereum contract. All four resolve to npm "security holding package"
+  // placeholders (registry-verified 2026-07-29), i.e. npm removed them as malware and no
+  // legitimate release history exists under these names - so bare names are safe. The typosquat
+  // TARGETS (viem, crypto, tailwindcss, @supabase/supabase-js) are legitimate and are NOT
+  // matched: note the unscoped "supabase-js" is the squat, the real package is scoped.
+  "^(viem-js|cyrpto|tailwin|supabase-js)$",
+
+  // SANDWORM_MODE / "Echoes of Shai-Hulud" npm worm (Socket + OX Security, 2026-02-20).
+  // Token-stealing worm that injects malicious MCP servers into Claude Code / Cursor / VS Code
+  // and detonates 48h after install. All 19 names resolve to npm "security holding package"
+  // placeholders (registry-verified 2026-07-29), so no legitimate release history exists and
+  // bare names are safe. Both sources publish versions, but the names are fully malicious
+  // rather than hijacked, so name-level blocking is the stronger pin (the two write-ups
+  // disagree on suport-color's version: Socket says 1.0.1, OX says 0.1.1). The typosquat
+  // TARGETS (claude-code, crypto, hardhat, rimraf, supports-color, viem, yargs) are legitimate
+  // and are NOT matched.
+  "^(claud-code|cloude-code|cloude|crypto-locale|crypto-reader-info|detect-cache|format-defaults|hardhta|locale-loader-pro|naniod|node-native-bridge|opencraw|parse-compat|rimarf|scan-store|secp256|suport-color|veim|yarsg)$",
+
   // Suspicious scoped packages mimicking official ones
   "^@(?!types|babel|eslint|jest|rollup|vitejs|vue|angular|react|next|nuxt|svelte|reduxjs|tanstack|trpc).*\\/.*$",
 ];
