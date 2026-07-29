@@ -123,14 +123,19 @@ describe("VS Code Extension Scanner", () => {
       expect(report.findings).toEqual(expect.arrayContaining([
         expect.objectContaining({
           rule: "PATH_SCAN_INCOMPLETE",
-          file: "extension/package.json",
+          file: ".",
         }),
       ]));
+      expect(report.summary).toEqual(expect.objectContaining({
+        totalFiles: 0,
+        filesScanned: 0,
+      }));
       expect(report.findings.some((finding) =>
         finding.rule === "VSCODE_SUSPICIOUS_ACTIVATION" ||
         finding.rule === "VSCODE_INSTALL_SCRIPT",
       )).toBe(false);
       expect(JSON.stringify(report)).not.toContain(secretMarker);
+      expect(JSON.stringify(report)).not.toContain(outsideManifest);
     },
   );
 

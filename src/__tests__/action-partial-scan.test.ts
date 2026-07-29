@@ -458,9 +458,17 @@ describe("Marketplace Action fail-closed contract", () => {
       ...validEmptyReport,
       summary: { ...validEmptyReport.summary, info: 1 },
       findings: [coverageFinding],
+      score: 1,
+      riskLevel: "low",
     };
     expect(jqAccepts(coverageReport)).toBe(false);
     expect(jqAccepts({ ...coverageReport, partialScan: true })).toBe(true);
+    expect(jqAccepts({
+      ...coverageReport,
+      score: 0,
+      riskLevel: "clean",
+      partialScan: true,
+    })).toBe(false);
   });
 
   it.skipIf(!hasBash || !hasJq)("executes clean, partial, critical, malformed, and invalid-input gates", () => {

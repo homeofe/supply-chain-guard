@@ -13,7 +13,7 @@ import * as path from "node:path";
 import * as https from "node:https";
 import type { Finding, PatternEntry, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
-import { extractZip } from "./archive-extractor.js";
+import { ArchiveSecurityError, extractZip } from "./archive-extractor.js";
 import {
   FILE_PATTERNS,
   SCANNABLE_EXTENSIONS,
@@ -397,20 +397,34 @@ export async function scanVscodeExtension(
   try {
     // VSIX is a zip file. The helper uses an argv array so metacharacters in a
     // user-supplied path are never interpreted by a command shell.
-    extractZip(vsixPath, extractDir, true);
+    let archiveExtracted = false;
+    try {
+      extractZip(vsixPath, extractDir, true);
+      archiveExtracted = true;
+    } catch (error) {
+      // Hostile archives are an expected scanner input, not an operational
+      // failure. Do not expose the validator's detail because it can contain a
+      // malicious member or link target. Unexpected implementation and I/O
+      // errors still propagate to the caller.
+      if (!(error instanceof ArchiveSecurityError)) throw error;
+      recordUnreadablePath(findings, ".");
+    }
 
-    // Collect before manifest analysis so unreadable-directory coverage findings
-    // retain their established ordering in the report.
-    const allFiles = collectExtractedFiles(extractDir, findings);
+    let fileCounts = { totalFiles: 0, filesScanned: 0 };
+    if (archiveExtracted) {
+      // Collect before manifest analysis so unreadable-directory coverage findings
+      // retain their established ordering in the report.
+      const allFiles = collectExtractedFiles(extractDir, findings);
 
-    // Scan package.json for suspicious metadata
-    scanExtensionManifest(extractDir, allFiles, findings);
+      // Scan package.json for suspicious metadata
+      scanExtensionManifest(extractDir, allFiles, findings);
 
-    const fileCounts = scanExtractedVscodeFiles(
-      extractDir,
-      findings,
-      allFiles,
-    );
+      fileCounts = scanExtractedVscodeFiles(
+        extractDir,
+        findings,
+        allFiles,
+      );
+    }
 
     const partialScan = hasPartialScanFinding(findings);
 

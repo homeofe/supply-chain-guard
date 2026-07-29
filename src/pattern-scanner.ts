@@ -165,15 +165,24 @@ function hasContainedExistingAncestor(
   while (isContainedPath(lexicalRoot, cursor)) {
     try {
       fs.lstatSync(cursor);
-      const ancestorRealPath = fs.realpathSync(cursor);
-      return isContainedPath(rootRealPath, ancestorRealPath);
     } catch (error) {
       if (!isMissingPathError(error)) return false;
+      if (cursor === lexicalRoot) break;
+      const parent = path.dirname(cursor);
+      if (parent === cursor) break;
+      cursor = parent;
+      continue;
     }
-    if (cursor === lexicalRoot) break;
-    const parent = path.dirname(cursor);
-    if (parent === cursor) break;
-    cursor = parent;
+
+    try {
+      const ancestorRealPath = fs.realpathSync(cursor);
+      return isContainedPath(rootRealPath, ancestorRealPath);
+    } catch {
+      // The lexical ancestor exists but cannot be resolved. In particular,
+      // do not climb past a dangling parent symlink and misclassify the
+      // optional leaf as an ordinary absence under the trusted root.
+      return false;
+    }
   }
   return false;
 }
