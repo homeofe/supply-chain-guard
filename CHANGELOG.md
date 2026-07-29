@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.21.0] - 2026-07-29
+
 ### Added
 
 - Daily threat-intel import (2026-07-29): 250 malware package IOCs from the GitHub Advisory
@@ -26,6 +28,48 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   specific attacker subdomain is listed, never the shared `workers[.]dev` apex.
 
 ### Fixed
+
+- **npm alias specs bypassed the scanner completely.** A dependency written as
+  `"utils": "npm:chalk-tempalte@1.0.0"` installs the aliased TARGET, but every check read
+  the manifest KEY, which is arbitrary text chosen by whoever wrote the file. A
+  known-malicious package hidden this way scanned clean (0 critical findings), and
+  `npm install x@npm:<malware>` was dropped before any check ran, because the spec failed to
+  parse and was discarded. Alias specs are now resolved to the installed package on both the
+  scan path and the install guard, and the finding names the alias so the offending manifest
+  line is easy to locate. A legitimate alias such as `npm:lodash@4.17.21` stays clean.
+
+- **The install guard treated a name-shape guess as seriously as a malware match.** It
+  blocked on ANY finding, so `DEP_INTERNAL_NAME_PUBLIC` - which fires on the shape of a
+  scoped name (`@scope/*-utils`, `-api`, `-core`, ...) and matches around 1.7% of all real
+  scoped packages, including `@babel/helper-plugin-utils` and `@vue/compiler-core` - blocked
+  installs at critical with only `--force` as an escape. That rule is now reported as a
+  warning and the install proceeds. Blocking authority is a deny-list, so every exact-match
+  verdict (threat-feed IOC, known-bad version) still blocks, as does `TYPOSQUAT_LEVENSHTEIN`:
+  the guard does not consult `patterns.ts`, so for curated squats such as `lodahs`,
+  `crossenv`, `cros-env`, `1odash` and `expresss` that rule is its only view of them.
+  `InstallCommandAnalysis` gains `warned`, and each verdict gains `blocking` and `warnings`;
+  `findings` still carries everything.
+
+- **`TYPOSQUAT_SIMILAR_TO_DEP` fired on ordinary dependency pairs.** Measured across 939 real
+  manifests it hit 5.0% of them (8.1% of repository roots), and every colliding pair was a
+  legitimate co-install: `preact`+`react`, `vue`+`vuex`, `path`+`pathe`, `color`+`colors`,
+  `mysql`+`mysql2`, `uuid`+`ulid`. It now requires both names to be at least 4 characters,
+  skips the pair when the reported side is a known-good package, and reports a pair once
+  instead of once per side. The known-good test is deliberately one-sided so a squat sitting
+  next to the package it imitates (`expres`+`express`) still reports. Switching it to the
+  same transposition-aware distance as its sibling also ADDS recall: `lodahs`+`lodash`,
+  `axois`+`axios`, `raect`+`react` and `rimarf`+`rimraf` were previously missed. This narrows
+  a noisy rule; it does not eliminate the class, since one-letter differences between two
+  real packages remain inherently ambiguous.
+
+- **`TYPOSQUAT_SIMILAR_TO_DEP` could not be suppressed per package.** `allowlist.packages` in
+  a policy file only covered two rules, so a project depending on both `vue` and `vuex` had
+  to disable the rule outright. Allowlisting either named package now suppresses the pair.
+
+- The typosquat target floor moved from 4 characters to 5. Four-letter targets (`path`,
+  `jest`, `cors`, `sass`, `vite`, `uuid`) produced roughly half the remaining false
+  positives, because almost any short name is one edit from them; measured over 29,687 real
+  published names this halves them with the curated true-positive set unchanged.
 
 - **The typosquat heuristic flagged hundreds of legitimate packages.**
   `TYPOSQUAT_LEVENSHTEIN` accepted two plain Levenshtein edits against a list of 92 popular
@@ -2151,7 +2195,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.20.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.21.0...HEAD
+[5.21.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.21.0
 [5.20.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.2
 [5.20.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.1
 [5.20.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.20.0

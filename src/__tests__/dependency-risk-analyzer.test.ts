@@ -113,13 +113,19 @@ describe("Dependency Risk Analyzer", () => {
       expect(findings.filter((f) => f.rule === "TYPOSQUAT_LEVENSHTEIN")).toHaveLength(0);
     });
 
-    it("names the closest popular package, not the first one in array order", () => {
-      // "rest" is 1 edit from jest and 2 from react; react comes first in the array.
-      const finding = analyzeDependencyRisks({ rest: "^1.0.0" }, "package.json").find(
+    it("ignores short popular targets, where almost any name is one edit away", () => {
+      // The target floor is 5. Four-letter targets (path, jest, cors, sass, vite,
+      // uuid, glob, less, next) were responsible for roughly half the measured
+      // false positives: "rest"/"test"/"nest" against jest, "upath"/"xpath"/"mpath"
+      // against path. Curated squats all target names of 5 characters or more.
+      for (const name of ["rest", "nest", "upath", "xpath", "corn", "scss"]) {
+        expect(flagsTyposquat(name), name).toBe(false);
+      }
+      // A 5+ character target still reports, and names that target.
+      const finding = analyzeDependencyRisks({ mocha1: "^1.0.0" }, "package.json").find(
         (f) => f.rule === "TYPOSQUAT_LEVENSHTEIN",
       );
-      expect(finding?.description).toContain('"jest"');
-      expect(finding?.description).not.toContain('"react"');
+      expect(finding?.description).toContain('"mocha"');
     });
 
     it("keeps the dependency name as the first quoted token", () => {
@@ -130,6 +136,95 @@ describe("Dependency Risk Analyzer", () => {
         (f) => f.rule === "TYPOSQUAT_LEVENSHTEIN",
       );
       expect(finding?.description.match(/"([^"]+)"/)?.[1]).toBe("lodas");
+    });
+
+    // -----------------------------------------------------------------
+    // TYPOSQUAT_SIMILAR_TO_DEP: two direct dependencies one edit apart.
+    // -----------------------------------------------------------------
+
+    const pairFindings = (deps: Record<string, string>) =>
+      analyzeDependencyRisks(deps, "package.json").filter(
+        (f) => f.rule === "TYPOSQUAT_SIMILAR_TO_DEP",
+      );
+
+    it("does not flag legitimate co-installed sibling packages", () => {
+      // Measured over 939 real manifests, these pairs accounted for the bulk of
+      // the rule's false positives. Every one is two real packages that projects
+      // legitimately install together.
+      const pairs: Record<string, string>[] = [
+        { vue: "^3", vuex: "^4" },
+        { react: "^18", preact: "^10" },
+        { path: "^0.12", pathe: "^2" },
+        { color: "^5", colors: "^1" },
+        { mysql: "^2", mysql2: "^3" },
+        { uuid: "^9", ulid: "^3" },
+        { ws: "^8", wss: "^1" },
+        { np: "^10", nx: "^19" },
+      ];
+      for (const deps of pairs) {
+        expect(pairFindings(deps), Object.keys(deps).join("+")).toHaveLength(0);
+      }
+    });
+
+    it("still flags a squat sitting next to the package it imitates", () => {
+      // The known-good check is one-sided, so the popular side is skipped while
+      // the suspicious side still reports. Making it two-sided would silence
+      // exactly this shape, which is the rule's whole purpose.
+      for (const deps of [
+        { expres: "^4", express: "^4.18" },
+        { "1odash": "^4", lodash: "^4.17" },
+        { lodahs: "^4", lodash: "^4.17" },
+        { axois: "^1", axios: "^1.7" },
+        { yarsg: "^17", yargs: "^17" },
+      ]) {
+        expect(pairFindings(deps), Object.keys(deps).join("+")).toHaveLength(1);
+      }
+    });
+
+    it("reports a colliding pair once, not once per side", () => {
+      const findings = pairFindings({ expres: "^4.0.0", express: "^4.18.0" });
+      expect(findings).toHaveLength(1);
+      // The suspicious side is named first so it is the token users allowlist.
+      expect(findings[0].description.match(/"([^"]+)"/)?.[1]).toBe("expres");
+    });
+
+    it("catches transposition squats the plain-Levenshtein version missed", () => {
+      // lodahs/lodash scores 2 under plain Levenshtein and 1 under OSA, so these
+      // were silently quiet before. Reverting to levenshtein turns this red.
+      for (const deps of [
+        { lodahs: "^4", lodash: "^4.17" },
+        { raect: "^18", react: "^18" },
+        { rimarf: "^5", rimraf: "^5" },
+      ]) {
+        expect(pairFindings(deps), Object.keys(deps).join("+")).toHaveLength(1);
+      }
+    });
+
+    // -----------------------------------------------------------------
+    // npm alias resolution. An alias installs the TARGET while the manifest
+    // key is arbitrary text, so every rule must judge the target.
+    // -----------------------------------------------------------------
+
+    it("resolves npm aliases so the installed package is what gets judged", () => {
+      // Squat hidden behind an innocuous key.
+      const hidden = analyzeDependencyRisks(
+        { helpers: "npm:lodahs@1.0.0" },
+        "package.json",
+      );
+      expect(hidden.some((f) => f.rule === "TYPOSQUAT_LEVENSHTEIN")).toBe(true);
+      expect(hidden[0].description).toContain("lodahs");
+      expect(hidden[0].description).toContain('npm alias "helpers"');
+
+      // An alias to a legitimate package stays clean.
+      expect(
+        analyzeDependencyRisks({ fine: "npm:lodash@4.17.21" }, "package.json"),
+      ).toHaveLength(0);
+
+      // The KEY is never judged: "lodahs" as a label pointing at real lodash is
+      // not a squat, because lodash is what actually gets installed.
+      expect(
+        analyzeDependencyRisks({ lodahs: "npm:lodash@4.17.21" }, "package.json"),
+      ).toHaveLength(0);
     });
 
     it("should detect similar dependency names", () => {

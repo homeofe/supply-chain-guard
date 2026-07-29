@@ -44,8 +44,30 @@ describe("Install Guard", () => {
       expect(parseSpecToken("./local-pkg")).toBeNull();
       expect(parseSpecToken("file:../local-pkg")).toBeNull();
       expect(parseSpecToken("pkg.tgz")).not.toBeNull(); // valid registry name shape
-      expect(parseSpecToken("alias@npm:real-pkg@1.0.0")).toBeNull(); // protocol version
       expect(parseSpecToken("")).toBeNull();
+    });
+
+    it("resolves an npm alias to the package that is actually installed", () => {
+      // This used to return null, which dropped the spec before any check ran -
+      // so `npm install x@npm:<malware>` was never inspected at all. The label is
+      // arbitrary attacker-chosen text; the TARGET is what gets installed.
+      expect(parseSpecToken("alias@npm:real-pkg@1.0.0")).toEqual({
+        raw: "alias@npm:real-pkg@1.0.0",
+        name: "real-pkg",
+        version: "1.0.0",
+      });
+      expect(parseSpecToken("x@npm:@scope/pkg@2.0.0")).toEqual({
+        raw: "x@npm:@scope/pkg@2.0.0",
+        name: "@scope/pkg",
+        version: "2.0.0",
+      });
+      // No version on the alias target: still resolves to the name.
+      expect(parseSpecToken("x@npm:real-pkg")).toEqual({
+        raw: "x@npm:real-pkg",
+        name: "real-pkg",
+      });
+      // Non-npm protocols stay unresolvable and are left to the full scan.
+      expect(parseSpecToken("x@git:github.com/o/r")).toBeNull();
     });
   });
 

@@ -38,7 +38,7 @@
       "additionalProperties": false,
       "properties": {
         "packages": {
-          "description": "Package names excluded from typosquat and dependency-confusion checks (TYPOSQUAT_LEVENSHTEIN, DEP_INTERNAL_NAME_PUBLIC).",
+          "description": "Package names excluded from typosquat and dependency-confusion checks (TYPOSQUAT_LEVENSHTEIN, DEP_INTERNAL_NAME_PUBLIC, TYPOSQUAT_SIMILAR_TO_DEP). For TYPOSQUAT_SIMILAR_TO_DEP, allowlisting either named package suppresses the pair.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },

@@ -43,6 +43,32 @@ describe("Policy Engine", () => {
       expect(result.findings).toHaveLength(0);
     });
 
+    it("should allowlist either side of a TYPOSQUAT_SIMILAR_TO_DEP pair", () => {
+      // The rule names two packages and either may be the one the user considers
+      // legitimate, so allowlisting either token suppresses the pair. Before this
+      // the rule had no per-package escape at all.
+      const description =
+        'Dependencies "tslint" and "eslint" differ by only 1 character(s). One may be a typosquat of the other.';
+      for (const allowed of ["tslint", "eslint"]) {
+        const findings = [{ ...makeFinding("TYPOSQUAT_SIMILAR_TO_DEP"), description }];
+        const result = applyPolicy(findings, { allowlist: { packages: [allowed] } });
+        expect(result.findings, allowed).toHaveLength(0);
+        expect(result.suppressedCount, allowed).toBe(1);
+      }
+    });
+
+    it("should NOT suppress a TYPOSQUAT_SIMILAR_TO_DEP pair naming other packages", () => {
+      const findings = [
+        {
+          ...makeFinding("TYPOSQUAT_SIMILAR_TO_DEP"),
+          description:
+            'Dependencies "expres" and "express" differ by only 1 character(s). One may be a typosquat of the other.',
+        },
+      ];
+      const result = applyPolicy(findings, { allowlist: { packages: ["tslint"] } });
+      expect(result.findings).toHaveLength(1);
+    });
+
     // ── allowlist.domains (previously parsed but never read) ──────────────────
     it("should suppress a THREAT_INTEL_MATCH for an allowlisted domain (subdomain-of)", () => {
       const findings = [

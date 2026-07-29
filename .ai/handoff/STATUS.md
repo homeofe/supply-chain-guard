@@ -1,3 +1,65 @@
+> Note (2026-07-29, claude-opus-5, third pass - v5.21.0): Emre asked for the two deferred items
+> plus a general quality lift, then the release. A second measurement workflow (4 agents) and a
+> 3-lens adversarial judge panel ran first. The judges refuted three of the dossier's own
+> recommendations AND caught two errors in the code I had landed an hour earlier.
+>
+> BIGGEST FIND, and it was nobody's brief: npm ALIAS SPECS BYPASSED THE SCANNER ENTIRELY.
+> `"utils": "npm:chalk-tempalte@1.0.0"` installs the target while every check read the manifest
+> KEY. Reproduced before/after: a fixture with two known-malicious feed packages behind aliases
+> scanned {critical: 0}; it now reports 3 critical. On the guard path `npm install
+> x@npm:<malware>` returned specs=[] because parseSpecToken split at the LAST "@", landed on the
+> alias target's own version, failed the registry-name regex and dropped the spec silently. Both
+> paths fixed by resolving the alias to its target. This was a live, trivially attacker-
+> controllable false negative in a public security tool, readable in the published source.
+>
+> TWO ERRORS IN MY OWN PREVIOUS COMMIT, both caught by the judges, both now fixed:
+> 1. The osaDistance doc comment claimed "veim" -> viem was a true positive of
+> TYPOSQUAT_LEVENSHTEIN. Measured: veim is QUIET, because viem is not in POPULAR_PACKAGES. That
+> comment was the public justification for lowering the ceiling, and it was false.
+> 2. The TYPOSQUAT_ALLOWLIST comment argued against adding viem to POPULAR_PACKAGES because it
+> would flag vuex and timm "at distance 2" - reasoning from the 2-edit rule that the same commit
+> had just replaced. Both rewritten to claims that measurement supports.
+>
+> SHIPPED: alias resolution (both paths); typosquat target floor 4 -> 5 (57 -> 29 measured FPs on
+> 29,687 real names, curated true positives unchanged); TYPOSQUAT_SIMILAR_TO_DEP hardened (length
+> floor, osaDistance, one-sided known-good guard, one finding per pair) taking it from 5.0% of
+> 939 real manifests to under 1% while ADDING transposition recall; policy allowlist extended to
+> that rule (it previously had no per-package escape at all); install-guard blocking demoted to a
+> deny-list with only DEP_INTERNAL_NAME_PUBLIC warn-only.
+>
+> REJECTED AFTER MEASUREMENT, do not retry without new data:
+> - Demoting TYPOSQUAT_LEVENSHTEIN to warn-only in the guard. Measured to lose 10 real blocks
+> (lodahs, expresss, crossenv, cros-env, 1odash, l0dash, nodemai1er, reqeust, axois, raect),
+> because checkSpec never consults patterns.ts - the heuristic is the guard's ONLY view of those
+> curated names. Wiring patterns.ts into checkSpec is the prerequisite for revisiting this.
+> - Two-sided known-good suppression on the pair rule. Drops 11 of 14 true positives; the
+> mutation proof for this is in the suite.
+> - Digit-edit suppression on the pair rule. Publishes the recipe "append a digit to a
+> non-popular dependency name"; 62 of 770 npm feed names end in a digit.
+> - Severity high -> medium on the pair rule. Left at high: it is the rule's only unique
+> territory (babelcli+babel-cli produces no other finding). Needs Emre.
+> - Entropy metric fix. src/entropy.ts iterates code points, so the metric is unbounded and the
+> 6.0/5.7 thresholds are calibrated against a byte range the code never computes. Fixing the
+> metric without re-deriving both thresholds is a blind severity change on the rule that exists
+> to catch obfuscated payloads. Needs its own corpus pass.
+>
+> MUTATION-PROVED (the part CI cannot do): revert osaDistance in the pair rule -> 2 tests red;
+> make the pair guard two-sided -> 4 tests red; revert alias resolution -> 1 test red. All
+> restored green. Self-scan of this repo: 0 critical, 0 typosquat findings.
+>
+> STILL OPEN FOR EMRE (documented, deliberately not shipped):
+> 1. A 13-item precision sweep of src/patterns.ts, measured with reproductions. The worst:
+> SHAI_HULUD_WORM makes the literal string "npm publish" a CRITICAL verdict in any file, so every
+> repo with a release script is critical on sight; GHOSTSOCKS_SOCKS5 fires on the bare word
+> SOCKS5; the MALICIOUS_PACKAGE_PATTERNS scoped catch-all matches 94.3% of ALL scoped packages on
+> the `scg npm` path. That last one must NOT be deleted outright - 85 curated malicious scoped
+> names are matched ONLY by it, so npm-scanner.ts needs a bundled-feed lookup wired in first.
+> 2. Removing the six DEP_INTERNAL_NAME_PUBLIC suffix patterns requires adding BARE feed entries
+> for @convera/ui-shared and @tc-core/campus-service first; they exist only as version pins, so
+> removing the suffixes silences them completely on every path.
+> 3. A pinned-corpus regression harness. Every defect found across both rounds was a rule whose
+> coverage was asserted on one code path and refuted on another.
+
 > Note (2026-07-29, claude-opus-5, second pass): Emre reviewed the threat-intel PR and asked for
 > BOTH open decisions to be fixed on the same branch before merge. Done. A four-agent
 > investigation plus a three-lens adversarial judge panel ran first; the headline finding is that

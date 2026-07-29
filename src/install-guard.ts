@@ -14,8 +14,12 @@
 import { spawnSync } from "node:child_process";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
-import { analyzeDependencyRisks } from "./dependency-risk-analyzer.js";
+import { analyzeDependencyRisks, resolveNpmAlias } from "./dependency-risk-analyzer.js";
 import type { Finding } from "./types.js";
+
+// Re-exported so the scanner can resolve alias specs without importing the
+// analyzer directly (it already depends on this module).
+export { resolveNpmAlias };
 
 // ---------------------------------------------------------------------------
 // Managers and install verbs
@@ -95,6 +99,23 @@ const REGISTRY_NAME_RE = /^(@[a-z0-9][a-z0-9-._~]*\/)?[a-z0-9-._~][a-z0-9-._~]*$
 export function parseSpecToken(token: string): InstallPackageSpec | null {
   if (token.length === 0 || token.startsWith("-")) return null;
 
+  // Alias form FIRST: "utils@npm:chalk-tempalte@1.0.0". This must be detected
+  // before the version split, because lastIndexOf("@") would land on the alias
+  // target's own version and leave an unparseable name. Previously that made the
+  // whole spec fail REGISTRY_NAME_RE and get dropped, so `npm install
+  // x@npm:<malware>` was never checked at all - a complete bypass of the guard.
+  // The installed package is the alias TARGET, so resolve and check that.
+  const aliasAt = token.indexOf("@npm:");
+  if (aliasAt > 0) {
+    const label = token.substring(0, aliasAt);
+    if (!REGISTRY_NAME_RE.test(label)) return null;
+    const alias = resolveNpmAlias(token.substring(aliasAt + 1));
+    if (!alias) return null;
+    return alias.version === undefined
+      ? { raw: token, name: alias.name }
+      : { raw: token, name: alias.name, version: alias.version };
+  }
+
   // Split "name@version" / "@scope/name@version" at the LAST "@";
   // index 0 is the scope marker, not a version separator.
   const at = token.lastIndexOf("@");
@@ -102,8 +123,8 @@ export function parseSpecToken(token: string): InstallPackageSpec | null {
   const version = at > 0 ? token.substring(at + 1) : undefined;
 
   if (!REGISTRY_NAME_RE.test(name)) return null;
-  // Protocol versions ("foo@npm:bar@1.0.0" aliases, "foo@git:...") are not
-  // plain registry pins; skip rather than mis-attribute a version.
+  // Other protocol versions ("foo@git:...") are not plain registry pins; skip
+  // rather than mis-attribute a version.
   if (version !== undefined && (version.length === 0 || version.includes(":"))) return null;
 
   return version === undefined ? { raw: token, name } : { raw: token, name, version };
@@ -165,9 +186,37 @@ export function extractInstallSpecs(
 // Offline analysis
 // ---------------------------------------------------------------------------
 
+/**
+ * Rules that are REPORTED but never block an install.
+ *
+ * A deny-list, not an allow-list, on purpose: a new exact-match rule added to
+ * checkSpec keeps blocking authority automatically, and only a rule someone
+ * deliberately lists here loses it. Given that a false negative silently lowers
+ * the bar everywhere this runs, the safe default has to be "blocks".
+ *
+ * Only DEP_INTERNAL_NAME_PUBLIC is demoted. It fires on the NAME SHAPE of a
+ * scoped package (any @scope/*-utils, -api, -core, -service, -shared, -common,
+ * -lib), which matched 1.7% of all real scoped packages in a registry sweep -
+ * including @babel/helper-plugin-utils, @vue/compiler-core and
+ * @tanstack/query-core - and blocked every one of them at critical.
+ *
+ * TYPOSQUAT_LEVENSHTEIN is deliberately NOT demoted, even though it is also a
+ * heuristic. checkSpec never consults src/patterns.ts, so for curated squats
+ * whose target is popular (lodahs, crossenv, cros-env, 1odash, l0dash, expresss,
+ * nodemai1er, reqeust, axois, raect) this rule is the guard's ONLY view of them:
+ * demoting it was measured to lose 10 real blocks. Wiring the curated names into
+ * checkSpec is the prerequisite for ever revisiting that.
+ */
+const WARN_ONLY_RULES: ReadonlySet<string> = new Set(["DEP_INTERNAL_NAME_PUBLIC"]);
+
 export interface InstallGuardVerdict {
   spec: InstallPackageSpec;
+  /** Every finding, blocking or not. Nothing is dropped. */
   findings: Finding[];
+  /** Findings that carry blocking authority */
+  blocking: Finding[];
+  /** Heuristic findings that are reported but do not block */
+  warnings: Finding[];
 }
 
 export interface InstallCommandAnalysis {
@@ -179,8 +228,10 @@ export interface InstallCommandAnalysis {
   specs: InstallPackageSpec[];
   /** One verdict per spec; findings empty = clean */
   verdicts: InstallGuardVerdict[];
-  /** True when at least one spec has findings */
+  /** True when at least one spec has a BLOCKING finding */
   blocked: boolean;
+  /** True when at least one spec has a warn-only finding */
+  warned: boolean;
 }
 
 /**
@@ -265,14 +316,23 @@ export function analyzeInstallCommand(
 
   const { verb, installVerb, specs } = extractInstallSpecs(manager, args);
   if (!installVerb || specs.length === 0) {
-    return { manager, verb, installVerb, specs, verdicts: [], blocked: false };
+    return { manager, verb, installVerb, specs, verdicts: [], blocked: false, warned: false };
   }
 
   const entries = feed ?? loadThreatIntel();
-  const verdicts = specs.map((spec) => ({ spec, findings: checkSpec(spec, entries) }));
-  const blocked = verdicts.some((v) => v.findings.length > 0);
+  const verdicts = specs.map((spec) => {
+    const findings = checkSpec(spec, entries);
+    return {
+      spec,
+      findings,
+      blocking: findings.filter((f) => !WARN_ONLY_RULES.has(f.rule)),
+      warnings: findings.filter((f) => WARN_ONLY_RULES.has(f.rule)),
+    };
+  });
+  const blocked = verdicts.some((v) => v.blocking.length > 0);
+  const warned = verdicts.some((v) => v.warnings.length > 0);
 
-  return { manager, verb, installVerb, specs, verdicts, blocked };
+  return { manager, verb, installVerb, specs, verdicts, blocked, warned };
 }
 
 // ---------------------------------------------------------------------------
@@ -352,15 +412,24 @@ export interface InstallGuardOptions {
   log?: (line: string) => void;
 }
 
-function printVerdicts(analysis: InstallCommandAnalysis, log: (line: string) => void): void {
-  const hits = analysis.verdicts.filter((v) => v.findings.length > 0);
-  const total = hits.reduce((n, v) => n + v.findings.length, 0);
+function printVerdicts(
+  analysis: InstallCommandAnalysis,
+  log: (line: string) => void,
+  kind: "blocking" | "warnings" = "blocking",
+): void {
+  const hits = analysis.verdicts.filter((v) => v[kind].length > 0);
+  if (hits.length === 0) return;
+  const total = hits.reduce((n, v) => n + v[kind].length, 0);
+  const label =
+    kind === "blocking"
+      ? `${total} finding(s)`
+      : `${total} warning(s) (reported, not blocking)`;
   log("");
-  log(`  Install guard: ${total} finding(s) in "${analysis.manager} ${analysis.verb}" command:`);
+  log(`  Install guard: ${label} in "${analysis.manager} ${analysis.verb}" command:`);
   for (const verdict of hits) {
     log("");
     log(`  Package: ${verdict.spec.raw}`);
-    for (const finding of verdict.findings) {
+    for (const finding of verdict[kind]) {
       log(`    [${finding.severity.toUpperCase()}] ${finding.rule}: ${finding.description}`);
       log(`    ${finding.recommendation}`);
     }
@@ -389,7 +458,9 @@ export function runInstallGuard(
   const analysis = analyzeInstallCommand(manager, managerArgs, options.feed);
 
   if (analysis.blocked) {
-    printVerdicts(analysis, log);
+    printVerdicts(analysis, log, "blocking");
+    // Warn-only findings on a blocked command are still worth showing.
+    printVerdicts(analysis, log, "warnings");
     if (options.dryRun) {
       log("  Dry run: package manager not invoked.");
       return 2;
@@ -399,6 +470,15 @@ export function runInstallGuard(
       return 2;
     }
     log("  WARNING: --force is set - proceeding DESPITE the findings above. The packages listed are known-bad or suspicious.");
+  } else if (analysis.warned) {
+    // Heuristic-only findings: report in full, then let the install proceed.
+    // These used to exit 2, which made a name-shape guess as authoritative as a
+    // threat-feed malware match.
+    printVerdicts(analysis, log, "warnings");
+    if (options.dryRun) {
+      log("  Dry run: nothing known-bad, warnings above are advisory only.");
+      return 0;
+    }
   } else if (options.dryRun) {
     log(
       `  Install guard: no known-bad packages in "${[analysis.manager, ...managerArgs].join(" ")}" (dry run, nothing executed).`,

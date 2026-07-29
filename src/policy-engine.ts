@@ -493,6 +493,18 @@ export function applyPolicy(
       }
     }
 
+    // TYPOSQUAT_SIMILAR_TO_DEP names TWO packages, and either may be the one the
+    // user considers legitimate, so allowlisting either side suppresses the pair.
+    // Without this the rule had no per-package escape at all: a project depending
+    // on both vue and vuex could only silence it by disabling the rule outright.
+    if (finding.rule === "TYPOSQUAT_SIMILAR_TO_DEP") {
+      const named = [...finding.description.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+      if (named.some((pkg) => allowedPackages.has(pkg))) {
+        suppressedCount++;
+        continue;
+      }
+    }
+
     // Allowlisted domains also answer the host-shaped internal-disclosure
     // rules: a project that has decided a given domain may appear in its
     // repository has answered INTERNAL_HOSTNAME / INTERNAL_SERVICE_ENDPOINT /

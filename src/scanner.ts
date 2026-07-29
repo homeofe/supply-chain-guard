@@ -30,7 +30,7 @@ import {
   IAC_PATTERNS,
   isPatternMatchAccepted,
 } from "./patterns.js";
-import { matchBareNpmIOC } from "./install-guard.js";
+import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
 import type { FeedIOC } from "./threat-intel.js";
 import { checkLockfile } from "./lockfile-checker.js";
 import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
@@ -89,7 +89,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.20.2";
+const TOOL_VERSION = "5.21.0";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
@@ -1245,25 +1245,40 @@ function checkMaliciousDependencyNames(
   } catch {
     return;
   }
-  const names = new Set<string>([
-    ...Object.keys(pkg.dependencies ?? {}),
-    ...Object.keys(pkg.devDependencies ?? {}),
-    ...Object.keys(pkg.optionalDependencies ?? {}),
-    ...Object.keys(pkg.peerDependencies ?? {}),
-  ]);
-  for (const name of names) {
-    const ioc = matchBareNpmIOC(name, undefined, feed);
+  // Collect the package that is actually INSTALLED for each entry, not the key.
+  // An npm alias ("utils": "npm:chalk-tempalte@1.0.0") installs the target while
+  // the key is arbitrary attacker-chosen text, so keying off Object.keys() alone
+  // let a known-malicious package scan completely clean.
+  const candidates = new Map<string, { name: string; version?: string; alias?: string }>();
+  for (const group of [
+    pkg.dependencies,
+    pkg.devDependencies,
+    pkg.optionalDependencies,
+    pkg.peerDependencies,
+  ]) {
+    for (const [key, spec] of Object.entries(group ?? {})) {
+      const alias = resolveNpmAlias(spec);
+      const candidate = alias
+        ? { name: alias.name, version: alias.version, alias: key }
+        : { name: key, version: undefined as string | undefined };
+      candidates.set(`${candidate.name}@${candidate.version ?? ""}`, candidate);
+    }
+  }
+
+  for (const { name, version, alias } of candidates.values()) {
+    const ioc = matchBareNpmIOC(name, version, feed);
     if (ioc) {
       const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
+      const via = alias ? ` (installed via the npm alias "${alias}")` : "";
       findings.push({
         rule: "MALICIOUS_DEPENDENCY",
-        description: `Dependency "${name}" is a known-malicious package in the threat feed${attrib}`,
+        description: `Dependency "${name}" is a known-malicious package in the threat feed${attrib}${via}`,
         severity: "critical",
         confidence: ioc.confidence ?? 0.95,
         category: "supply-chain",
         file,
-        match: name,
-        recommendation: `Remove "${name}" immediately and rotate any secrets exposed while it was installed.`,
+        match: alias ?? name,
+        recommendation: `Remove "${alias ?? name}" immediately and rotate any secrets exposed while it was installed.`,
       });
     }
   }
