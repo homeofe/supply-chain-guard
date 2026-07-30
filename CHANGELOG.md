@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.23.2] - 2026-07-30
+
 ### Added
 
 - **Threat intel: 250 malicious package IOCs** imported from the GitHub Advisory
@@ -30,6 +32,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Shared infrastructure is deliberately not blocked: only the specific attacker
   subdomains and bucket paths are ingested, never the `aliyuncs[.]com`,
   `fcapp[.]run`, `ai-app[.]pub`, `ngrok-free[.]dev` or `github[.]com` parent hosts.
+
+### Fixed
+
+- **Three test suites no longer hardcode the version string.**
+  `sbom-generator.test.ts`, `dependency-confusion.test.ts` and
+  `action-partial-scan.test.ts` asserted a literal `5.23.1` and went red on this
+  bump, the same drift class that broke the v5.2.14 and v5.2.17 publishes. They
+  now read `pkg.version` from `package.json`, as `reporter.test.ts` already did,
+  so they cannot fall a release behind again.
 
 ## [5.23.1] - 2026-07-30
 
@@ -2435,7 +2446,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.2...HEAD
+[5.23.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.2
 [5.23.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.1
 [5.23.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.0
 [5.22.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.22.0

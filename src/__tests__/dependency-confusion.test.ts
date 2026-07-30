@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { scanDependencyConfusion, scanPypiDependencyConfusion } from "../dependency-confusion.js";
+import pkg from "../../package.json";
 
 describe("Dependency Confusion Detector", () => {
   let tempDir: string;
@@ -118,7 +119,8 @@ describe("Dependency Confusion Detector", () => {
       format: "text",
     });
 
-    expect(report.tool).toBe("supply-chain-guard v5.23.1");
+    // Version must track package.json - hardcoding left this a release behind at v5.23.2.
+    expect(report.tool).toBe(`supply-chain-guard v${pkg.version}`);
     expect(report.score).toBe(0);
     expect(report.riskLevel).toBe("clean");
     expect(report.findings).toHaveLength(0);

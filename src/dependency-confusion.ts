@@ -14,7 +14,7 @@ import * as https from "node:https";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 
-const TOOL_VERSION = "5.23.1";
+const TOOL_VERSION = "5.23.2";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";

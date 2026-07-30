@@ -1,4 +1,9 @@
-> Note (2026-07-30, scheduled threat-intel run - no version bump): Daily IOC refresh.
+> Note (2026-07-30, v5.23.2): The threat-intel change below shipped as v5.23.2 (patch,
+> matching the threat-intel-only release precedent of v5.18.2 and v5.20.1). It was
+> reviewed and merged as #92 before the release was cut, so the release commit carries
+> only the version bump and the regenerated artifacts.
+>
+> Note (2026-07-30, scheduled threat-intel run): Daily IOC refresh.
 > The advisory importer added 250 package IOCs (GitHub Advisory Database CWE-506,
 > corroborated against OSV.dev); 28,763 more remain inside the 14-day window behind
 > the default --limit 250 and will be taken by subsequent runs. The fetch needed 184

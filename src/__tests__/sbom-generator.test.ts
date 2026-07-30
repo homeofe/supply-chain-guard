@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { generateSbomDocument } from "../sbom-generator.js";
+import pkg from "../../package.json";
 
 let tmpDir: string;
 
@@ -135,7 +136,9 @@ describe("generateSbomDocument", () => {
   it("should include tool metadata", () => {
     const doc = generateSbomDocument(tmpDir, []);
     expect(doc.metadata.tools.components[0]?.name).toBe("supply-chain-guard");
-    expect(doc.metadata.tools.components[0]?.version).toBe("5.23.1");
+    // Version must track package.json - hardcoding broke releases before
+    // (v5.2.14, v5.2.17) and left this suite a release behind at v5.23.2.
+    expect(doc.metadata.tools.components[0]?.version).toBe(pkg.version);
   });
 
   it("should mark dev deps as excluded scope", () => {

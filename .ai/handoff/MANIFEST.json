@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1785388814",
-    "timestamp": "2026-07-30T05:20:14Z",
-    "commit": "dbb66a5",
+    "session_id": "cli-1785389934",
+    "timestamp": "2026-07-30T05:38:55Z",
+    "commit": "90bf64b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2500072f0b0ab72c84b90215c058c1ac036113304a32714c4886c2fd2c6918fb",
-      "updated": "2026-07-30T05:20:02Z",
-      "lines": 1680,
+      "checksum": "sha256:6ddaf83ef9d6426d583ea4b2b94a6bd25da688e1c4a7a027d2ec1ec32af5e383",
+      "updated": "2026-07-30T05:33:14Z",
+      "lines": 1685,
       "summary": "(no summary available)"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:fa6cbc0dea2edb6a77835dd87114b00f63b931449228b5178edecbfbe9b47330",
-      "updated": "2026-07-30T03:47:10Z",
+      "checksum": "sha256:64c341a008f537515a42d82272a020e23c5a479651fb74499a49c0df1c27c35c",
+      "updated": "2026-07-30T05:33:37Z",
       "lines": 66,
       "summary": "(no summary available)"
     },
     "LOG.md": {
-      "checksum": "sha256:c01a54d3be0d79f456f5dbebdc750df0aa96f7fde116d40d1ebc356652eeca93",
-      "updated": "2026-07-30T05:20:14Z",
-      "lines": 125,
+      "checksum": "sha256:d745ec7534245cd6e2edf8f8425c89953bda8268ca33e33769aaf0e495f24c10",
+      "updated": "2026-07-30T05:38:54Z",
+      "lines": 126,
       "summary": "(no summary available)"
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:803ab3c01c46267ff0dd79d126eee46cbf8565254bf9fcf6c10238545fef4e0c",
-      "updated": "2026-07-30T05:20:14Z",
+      "checksum": "sha256:82b8a921cb1c521dda79a80050d37b59fc476c434e44200cdfa3f8e94956653f",
+      "updated": "2026-07-30T05:38:54Z",
       "lines": 67,
       "summary": "(no summary available)"
     },
     "TRUST.md": {
-      "checksum": "sha256:cd217bedb3179003c66a991d9242ee17fccb7b4115672da851ccf7b34516e199",
-      "updated": "2026-07-30T05:20:14Z",
+      "checksum": "sha256:d06b126e256c659724a2bbee4961c0f89088635e2023a2bbae788dc1a3e03215",
+      "updated": "2026-07-30T05:38:54Z",
       "lines": 49,
       "summary": "(no summary available)"
     },
@@ -80,7 +80,7 @@
   "quick_context": "(no summary available) (no summary available) ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 31366,
-    "full_read": 39843
+    "manifest_plus_core": 31426,
+    "full_read": 39914
   }
 }

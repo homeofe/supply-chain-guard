@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PARTIAL_SCAN_RULES } from "../pattern-scanner.js";
+import pkg from "../../package.json";
 import { SCORE_EXCLUDED_RULES } from "../scanner.js";
 import { SEVERITY_SCORES } from "../types.js";
 
@@ -236,7 +237,8 @@ describe("Marketplace Action fail-closed contract", () => {
     expect(action).toContain("value: ${{ steps.scan.outputs['partial-scan'] }}");
     expect(action).toContain("value: ${{ steps.scan.outputs['report-path'] }}");
     expect(action).toContain("value: ${{ steps.scan.outputs['report-truncated'] }}");
-    expect(action).toContain("npm install -g supply-chain-guard@5.23.1");
+    // Pin must track package.json - hardcoding left this a release behind at v5.23.2.
+    expect(action).toContain(`npm install -g supply-chain-guard@${pkg.version}`);
     expect(scanScript).toContain('SCG_RUN_DIR=$(mktemp -d "$RUNNER_TEMP/scg-action.XXXXXX")');
     expect(scanScript).not.toContain('$RUNNER_TEMP/scg-report.json');
     expect(commentScript).toContain("fs.openSync(process.env.SCG_REPORT_PATH, 'r')");
