@@ -183,6 +183,15 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // lists only the workers[.]dev subdomain).
   "freefan.net",
   "fanfree.net",
+
+  // Alibaba developer toolchain RAT (Socket, July 2026). A hijacked lib-mtop pulled a
+  // dependency chain (local-config-parser / smart-config-manager / cloud-config-fetcher)
+  // that writes .cloud-preferences.json and evaluates the rules inside it, giving a
+  // cross-platform RAT on developer machines and CI runners. Specific attacker
+  // subdomains only: the cn-shanghai.fcapp.run apex is Alibaba Function Compute and
+  // ai-app.pub is shared app hosting, so neither parent host is listed.
+  "xemzqli2vu.ai-app.pub",
+  "diamond-cli-znsxphqell.cn-shanghai.fcapp.run",
 ];
 
 // ---------------------------------------------------------------------------
@@ -325,6 +334,24 @@ export const KNOWN_DEAD_DROPS: string[] = [
   "huggingface.co/buckets/pepegit666",
   "discord.com/api/webhooks/1156474517871403078/zuHl6xQzdMcFjNrmm9jTiHvCzNbCiQhkYAIGWNUfj7X4KUIpEATekKlSNna6OvyCKaRw",
   "discord.com/api/webhooks/1156474527874818088/qS5cJuxEbyIA1s3tZX_A2u6YsKtLUARVPvN77_6fK5QHGdGFHb3JSuCUSDhtouEsyJgk",
+
+  // Alibaba developer toolchain RAT (Socket, July 2026). Staging buckets serving the
+  // config, the Electron app.asar and the native second stage. Full bucket paths only -
+  // oss-cn-beijing.aliyuncs.com is Alibaba Cloud OSS, shared infrastructure used by
+  // countless legitimate projects, so the gateway host is deliberately NOT listed.
+  "aone-cli-next.oss-cn-beijing.aliyuncs.com/config/setting.js",
+  "aone-ai-cli.oss-cn-beijing.aliyuncs.com/app/release/aone-cli.js",
+  "aone-ai-cli.oss-cn-beijing.aliyuncs.com/app/release/aone-cli-deps.tar.gz",
+  "aone-ai-cli.oss-cn-beijing.aliyuncs.com/app/release/aone-cli",
+  "aone-ai-cli.oss-cn-beijing.aliyuncs.com/app/release/aone-cli.zip",
+  "aone-kit.oss-cn-beijing.aliyuncs.com/plugins/crypto.js",
+  "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/aone-kit.js",
+  "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/app.asar",
+  // Config dead-drops under the attacker GitHub account, saved locally as
+  // .cloud-preferences.json and then evaluated by local-config-parser. Specific
+  // account/repo paths only - never the github.com apex.
+  "github.com/smi1e2u/fast-transform-pipeline",
+  "github.com/smi1e2u/smart-config-manager",
 ];
 
 // ---------------------------------------------------------------------------
@@ -487,6 +514,90 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // and auth tag; those are decryption material, not file digests, so they are deliberately
   // NOT ingested here - a key in the hash map would misreport as "this file is malware".
   "5440e1a424631192dff1162eebc8af5dc2389e3d3b23bd26e9c012279ae116e4": "SANDWORM_MODE stage-2 worm payload (SHA256)",
+
+  // Alibaba developer toolchain RAT (Socket, July 2026). SHA-256 of the loader and
+  // native second-stage artifacts staged in the attacker OSS buckets. Socket published
+  // the digests as a flat set without mapping each one to a package@version, so they
+  // are labelled by campaign only rather than inventing an attribution. Single-source.
+  "84a6ccaaab1596139d28e822f40cc99c68d337d4c81d1c6d9692c1d6bb22e4af": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "6044974c633b3a319c31bb32110411520c425e89722a64806528553227e7a50a": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "0910ecfa049738ef3f2540855341a380df89224ff71da94b4c21689fd66f62e3": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "b8b81af76163bdcc5b4f7d8fe6795f164991f8a62678c971db031b9e90a27813": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "ef9a1896eeaae929800eade768276e2240ef252d26d0d96c1950a1a5e1aadb34": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "e5d8350f1540fe91145dc262c455bca7748ad97dafb2d9facd5adebed9f66d2d": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "41957bd0ba2d9c07af2e069f10780fdf6b2102c065bebe0db2136dfe07d67a28": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+  "33b58598eb317553942e27545982d4c25ce6120eae10e42393746eb0e02ecae9": "Alibaba developer toolchain RAT: staged payload artifact (SHA256)",
+
+  // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 2026). SHA-256 of the
+  // malicious entry points: 52 npm index.js (13 packages x versions 1.0.0-1.0.3) and
+  // 4 PyPI __init__.py. The package@version pins already cover a registry install;
+  // these catch a vendored or mirrored copy where the version metadata is gone.
+  // Socket published the digests as one flat list per file name without a per-package
+  // mapping, so they are labelled by campaign and file name only. Corroborated by
+  // gbhackers for the campaign and C2; the hash set itself is single-source (Socket).
+  "ce09810adca70ebec87bc455380ef629ceaa2a0d926149d9115604060167682c": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "b2ea8d69f6792a87327ffde2ee4551bb6b99617f53e1ba71bf9a70f45dbc57ea": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "8a70a5c1075f2dea4db94633ddc64b0d03d0385fdeda7c226acc944331febf43": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "c8b4d17c1f0aa7c50f2fa23d7c328482a4ad2c4da4d600f358ebdf200cbefd83": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "9fd06d823d54183cc91625fdc6decffe8db2863f6499a955656ebdcc089792cf": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "615805652b2f006e69512b90d0d63883d7ae1ede69d86384fd77bd46235b2369": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "6dc672e3bab8bcf80c66b2f95150067fb47429d4cf65eb95215e5f3abc7cade5": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "4a4b5c1bc1e948c853cb0978c07c7b8d1540c7b1ded95f8d5ad25c126cb6c7b0": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "9727c804c4354e481d2ff9d4934bd1b2518293a9ca34a14f5c7ae9d0cd30ce94": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "313853a82bce61052c00e6a6af85b5069e007a76122c727f31661bc636b12f14": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "2cbfc4e4b1de5e68ab81fba7e1b0c711b4d26197b48ea4db6819c9cea223b0ed": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "a0313822513f9b89479f666888a4784a3fc99b4cc4566213dcda66b03b47120c": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "3a0dd3479eaf85b65e5abd63d6451f98506faddee47cf4bebd9f91296abb29f0": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "39371ac7061168dd3d890061267b3875bc4b30dca5e28d40dbc27a4396439ff1": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "c51c0b6c7817443b021aff44d4416c09fd039849db81860b9b5144e789fa3987": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "6e251c3d2bde8fff0487c1eecd359c4a544a09fd708755020e4b1c53ad6b8dd1": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "cd7255730b6a7a3895d622d37d0e8f984d2d280689acef56ff195d663e7723ad": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "5c4faef80c83c7ec0925a4aacb4bddabe82b91066ac41305907ba277cd7b3b85": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "50cb7550224d8d227a0625e7f53be86924d8e057e403b6b91b83ea20df834048": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "1bae9f2fb9866422f07345501fa2cb4c3a99f2652c8c9decdc27ffbf9714e7bc": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "1df8c579ffcbf5527b1856bd1774601a5188b380e442c5a0fbd400bd86a4501b": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "b29973eda4d0c090608c15a976688cad0b2114fdc0dcb89ad37515287ba13aad": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "9e9655f54bfac8a937d78ac506722bae1468ead4cc9ee95b35e0f8ef17ee13d9": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "67e4d6a4f53098e48bfa6ecceeaa754592bc249b83404fcfb8542977ae36dac4": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "1bfa32548676d32b7639d3171e2f9feefba5026dc336968c91f4ae2b152c5410": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "2bc8af4bd2f539630f7800f3491b64c7e2bffe12e955d0d4f03a4f6a4b0018bd": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "eae055c5736366811d2a4b1f78ff206486e7f7445040122efbe023ecd2d20bcc": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "d4ed2d87942fbefa5d7b7f19fb6f2e9bc293c96bf577bb97ed3ca56185abcf25": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "447484c76a06918d7f6f6c6f95ee2bced6dd2e9b282c6f5b92b2b7c0976381d5": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "f43cb68850a2506805d60ff466f54eba331e1cc2a513b329f5121e0c39104418": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "1314fc888ca5b3ea91a04e1f5b63039ffc7fc3832b8d809a28ad549c6f9d4f23": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "af66bc2b516d1ef71af9b6ee9f8f5af0a99fed562b34809cd55071b94c2d1304": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "b157a66826d27512c3618817fee924e53d14cabb2c4c7f454affde37350f55f0": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "2303a74a5fac917279f1078e03a4bfd6afbb89462f97d7344ed10e6e9e9e92b7": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "5242c5086d75a492d14e474de7c8f34b18ec0a8a9ce6d77eec8675a9572d9d23": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "1d567795a366b9edcfef7f1fa2d398b7cb41890dd3b2f3f1f9803de0cdba0c89": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "c2e4483abea830ba8b8230540ace51788d0712bed9006697ddddb9cbf133c151": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "390bca9d70efa42cb792f7f677189821a24527cd4298ab2acb954df0abb5c1c3": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "f7d9865ea3874d2b135eeee0aa0d12fc108d89e1dd706e4e40eb7605b76d35ca": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "2b7696575278e6e223cc44553c687e45afd04df7eb32efbf49b39da64b795982": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "2edb3f162f9676196e818d9b795d599ba119a961ffe98c4866351735980d213d": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "727fe9c1dfa39d6590012e0593c9837c628fc2cd22aa0f4e486b7ed1aec02697": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "8a58e3ed713c1c70f421ab56a18cfb6a120c960d227e495b511c2552f25f188b": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "67eb3bd505ebfffbd73fc3ef0b2976c375df732f0bd0496ed6653c3e2be5a0e5": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "616b41657e9afaa9354fc1a106393373dcbf8aac8455b7d2cbbb44463434528e": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "52a57c502e40b3f9897d0ca32bba6f844b4113f5c017627ea9eba660eb47f405": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "d1889d81cfa99d52017732da9dc52127d03893037874c8671943cede4b8d1bb2": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "a677c02e545941e43f8b21a5761b035e911b53e2c065fea219e0f3462f282fd8": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "e076e13a7e112d364f03bd1ead7abaa83249d544491621254860ab0a73adc9b9": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "c2a69a33b086364ca51b030b6b15e99be46ce8255ddf62839a4fc7f2b34023de": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "5cd62e708ae4393c99579ec1433571998299bf7e2fde9bafeb9a79f8bdf065e9": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "61b61dd25cd8dcc43cd78418f3e3eb3fd9002d9e49961eefb12c1022ce4c3b63": "Fake Payment SDK typosquat: malicious npm index.js (SHA256)",
+  "c6af37a6739f0d919ab7049caf3a85831cab44bdbea27e0d9de7adec80334e2b": "Fake Payment SDK typosquat: malicious PyPI __init__.py (SHA256)",
+  "b04daeacd1d1c9020cce2a97fa7af83dbedf4e6d17dd12c0f337f32240399785": "Fake Payment SDK typosquat: malicious PyPI __init__.py (SHA256)",
+  "dabb47d75f2efa6a5540661484efa989ccb338f24938b23152f14f3e424b0cb5": "Fake Payment SDK typosquat: malicious PyPI __init__.py (SHA256)",
+  "c2a361a7d8feb95be97c957fc7652d348f4fa9a987bde5f09883f46b65c460f1": "Fake Payment SDK typosquat: malicious PyPI __init__.py (SHA256)",
+
+  // AsyncAPI npm compromise (Unit 42, July 2026). Two further artifacts beyond the five
+  // registry tarballs already pinned above. Unit 42 published them in the campaign IOC
+  // table without naming the individual file, so they carry a campaign-level label.
+  // Single-source (Unit 42; Socket/StepSecurity published only the five tarballs).
+  "73b44b8724d31f80859018c988e9b033155c5fd8225205a914eda1a11b78a841": "AsyncAPI compromise: additional campaign artifact (SHA256)",
+  "f7367ce5509f536a406deecdbb577c60e8585cb2ab77058a86bde6188a609cfd": "AsyncAPI compromise: additional campaign artifact (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -606,6 +717,13 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "official334",
   "javaorg",
   "ci-quality",
+
+  // Alibaba developer toolchain RAT (Socket, July 2026)
+  // "smi1e2u" is the attacker-created GitHub account hosting the config the dependency
+  // chain fetches and saves as .cloud-preferences.json, in the repositories
+  // fast-transform-pipeline and smart-config-manager (both also published as npm
+  // packages in the same campaign). Attacker-created, not a compromised victim.
+  "smi1e2u",
 ];
 
 // ---------------------------------------------------------------------------

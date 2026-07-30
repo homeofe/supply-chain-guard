@@ -1,3 +1,29 @@
+> Note (2026-07-30, scheduled threat-intel run - no version bump): Daily IOC refresh.
+> The advisory importer added 250 package IOCs (GitHub Advisory Database CWE-506,
+> corroborated against OSV.dev); 28,763 more remain inside the 14-day window behind
+> the default --limit 250 and will be taken by subsequent runs. The fetch needed 184
+> of the 200 allowed pages, so the page cap was not hit and no window slicing was
+> required - but the margin is thin and the backlog is the open question below.
+>
+> Manual enrichment (STEP 1b) added 79 non-package indicators the advisory databases
+> never publish, across three campaigns: the Alibaba developer toolchain RAT (2 C2
+> subdomains, 8 OSS staging dead drops, 8 payload hashes, GitHub account smi1e2u -
+> the only campaign with no prior atomic coverage), 56 entry-point hashes for the
+> fake Paysafe/Skrill/Neteller payment SDKs, and 2 further AsyncAPI artifacts.
+> Sources: Socket (via cybersecuritynews), Socket + gbhackers, Unit 42.
+>
+> False-positive discipline: hijacked packages are version-pinned, never name-blocked,
+> and no shared host was ingested - aliyuncs[.]com, fcapp[.]run, ai-app[.]pub,
+> ngrok-free[.]dev and github[.]com apexes are excluded, matching the decision in
+> ioc-blocklist.ts not to block the AsyncAPI campaign's Nostr relays and BitTorrent
+> DHT bootstrap nodes. Two negative tests assert the OSS and Function Compute apexes
+> stay clean.
+>
+> Open question for Emre: at 250/run the 28,763-entry backlog cannot drain before the
+> --days 14 window ages entries out, which is a silent false negative by design. Worth
+> deciding whether to raise --limit for a catch-up run, widen --days, or accept the
+> loss. Recorded here rather than as an issue, per the zero-open-issues invariant.
+
 > Note (2026-07-29, independent review - v5.23.1): The complete v5.23.0 review
 > set is fixed in one patch release. The two release blockers were reproduced before
 > implementation: the engine silently stopped after 500 lines, and `DROPPER_TEMP_EXEC`

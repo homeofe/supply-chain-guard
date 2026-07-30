@@ -7,6 +7,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **Threat intel: 250 malicious package IOCs** imported from the GitHub Advisory
+  Database (CWE-506) and corroborated against OSV.dev. Clusters include the
+  ongoing Baileys/WhatsApp-library wave, AI-agent-tooling typosquats
+  (`@ai-agent-node/*`, `@ai-plus/*`, `claude-*`), crypto/wallet and
+  prediction-market SDK impersonations, and typosquats of popular build tooling.
+
+- **Threat intel: 79 non-package IOCs for three campaigns** that the advisory
+  databases do not publish:
+  - *Alibaba developer toolchain RAT* (Socket, July 2026): 2 C2 subdomains,
+    8 staging dead-drop paths, 8 payload hashes and the attacker GitHub account.
+    A hijacked `lib-mtop` pulled a config-parser dependency chain that writes
+    `.cloud-preferences.json` and evaluates the rules inside it, giving a
+    cross-platform RAT on developer machines and CI runners.
+  - *Fake Paysafe / Skrill / Neteller payment SDKs*: the 56 entry-point hashes
+    (52 npm `index.js`, 4 PyPI `__init__.py`) behind the 17 typosquats whose
+    names and C2 tunnel were already pinned.
+  - *AsyncAPI npm compromise*: 2 further campaign artifact hashes.
+
+  Shared infrastructure is deliberately not blocked: only the specific attacker
+  subdomains and bucket paths are ingested, never the `aliyuncs[.]com`,
+  `fcapp[.]run`, `ai-app[.]pub`, `ngrok-free[.]dev` or `github[.]com` parent hosts.
+
 ## [5.23.1] - 2026-07-30
 
 ### Fixed

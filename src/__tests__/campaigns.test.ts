@@ -3280,4 +3280,86 @@ describe("Campaign Signatures", () => {
       expect(analyzeInstallCommand("npm", ["install", "supports-color"]).blocked).toBe(false);
     });
   });
+  describe("Alibaba developer toolchain RAT (July 2026)", () => {
+    it("should detect the ai-app.pub C2 subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'fetch("https://xemzqli2vu.ai-app.pub/collect");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the Function Compute C2 subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "cfg.js"),
+        'const c2 = "diamond-cli-znsxphqell.cn-shanghai.fcapp.run";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag an unrelated Alibaba Function Compute host", async () => {
+      // cn-shanghai.fcapp.run is shared Alibaba Function Compute infrastructure.
+      // Only the attacker's specific subdomain is an indicator.
+      fs.writeFileSync(
+        path.join(tempDir, "legit.js"),
+        'fetch("https://my-service-abcdefghij.cn-shanghai.fcapp.run/api");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+
+    it("should NOT flag an unrelated Alibaba Cloud OSS bucket", async () => {
+      // oss-cn-beijing.aliyuncs.com is shared object storage used by countless
+      // legitimate projects; only the attacker bucket paths are indicators.
+      fs.writeFileSync(
+        path.join(tempDir, "assets.js"),
+        'const url = "https://my-company-assets.oss-cn-beijing.aliyuncs.com/logo.png";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+
+    it("should detect a staged payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "84a6ccaaab1596139d28e822f40cc99c68d337d4c81d1c6d9692c1d6bb22e4af";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
+
+  describe("Fake Payment SDK typosquats (July 2026)", () => {
+    it("should detect a malicious npm index.js hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "ce09810adca70ebec87bc455380ef629ceaa2a0d926149d9115604060167682c";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect a malicious PyPI __init__.py hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "c6af37a6739f0d919ab7049caf3a85831cab44bdbea27e0d9de7adec80334e2b";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+  });
 });
