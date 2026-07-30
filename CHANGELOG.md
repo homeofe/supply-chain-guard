@@ -39,9 +39,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 - **Published artifacts are scanned as published.** PyPI scans every unique
   sdist and wheel in the latest release, verifies downloaded SHA-256 identities,
-  retries equivalent metadata URLs after acquisition failures, continues other
-  identities, and keeps distinct valid digests separate. Missing or malformed
-  digest metadata keeps the content scan but marks the verdict partial. npm and
+  retries equivalent metadata URLs after acquisition failures, and attributes
+  findings to the exact metadata URL alias whose bytes passed digest
+  verification. Independent artifact identities continue after one fails, and
+  distinct valid digests remain separate. Missing or malformed digest metadata
+  keeps the content scan but marks the verdict partial. npm and
   VSIX scans include shipped `node_modules`. Archive members are preflighted
   before extraction for unsafe paths and link graphs, special nodes, duplicate
   or inconsistent trees, and bounded input, entry, and expanded sizes. Walkers
@@ -51,9 +53,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - **Partial status survives every reporting and policy surface.** Text, JSON,
   Markdown, SARIF, CycloneDX, HTML, badge, GitLab, JUnit, MCP, SOC, repository,
   and organization results distinguish incomplete from clean. Severity filters
-  cannot erase the partial verdict, partial scans do not write clean risk
-  history. The default CLI critical verdict and the Action's critical threshold
-  retain exit code 2.
+  cannot erase the partial verdict, and partial scans do not write clean risk
+  history. Organization posture excludes incomplete repositories from complete-score
+  averages and reports them separately. The default CLI critical verdict and the
+  Action's critical threshold retain exit code 2.
 
 - **The GitHub Marketplace Action now has one authoritative scan.** The CLI
   produces the requested format and canonical JSON from the same in-memory
@@ -61,7 +64,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   severity gate as the CLI, reconciles formatter and exit status, pins the CLI
   and third-party Actions, bounds logs and outputs, neutralizes workflow-command
   and PR-comment injection, paginates canonical bot comments, and fails closed
-  when setup, scanning, formatting, or coverage is incomplete.
+  when setup, scanning, formatting, or coverage is incomplete. It also supports
+  `fail-on: info`; exposes `partial-scan`, `report-path`, and `report-truncated`;
+  and reports `risk-level: partial` when coverage is incomplete.
 
 - **CLI outputs are collision-safe and complete.** `--json-output` writes a
   canonical sidecar from the same scan. Incompatible severity thresholds and
