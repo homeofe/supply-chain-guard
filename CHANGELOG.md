@@ -7,7 +7,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
-## [5.23.1] - 2026-07-29
+## [5.23.1] - 2026-07-30
 
 ### Fixed
 

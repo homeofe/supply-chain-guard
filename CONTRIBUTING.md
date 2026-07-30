@@ -100,7 +100,14 @@ skips it: you are not asked to rewrite history you did not author.
 ```
 src/
   scanner.ts              # Core orchestration
+  pattern-scanner.ts      # Bounded per-file pattern scan orchestration
+  pattern-applicability.ts # File-type and path applicability rules
+  broad-gap-pattern-matchers.ts # Structural matchers for broad-gap rules
+  correlated-pattern-matchers.ts # Correlated multi-signal matchers
+  workflow-pattern-matchers.ts # Structural GitHub Actions matchers
+  regex-complexity.ts     # Regex safety and complexity validation
   patterns.ts             # Detection pattern database
+  extracted-file-walker.ts # Containment-aware extracted-tree traversal
   ioc-blocklist.ts        # Known IOC database
   correlation-engine.ts   # Incident clustering
   trust-breakdown.ts      # Trust scoring
