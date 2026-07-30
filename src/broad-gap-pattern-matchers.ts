@@ -36,6 +36,8 @@ const RIGHT_ANGLE = 1 << 8;
 interface GapSpec {
   barrierMask: number;
   minChars?: number;
+  /** Maximum admitted distance from the previous token's end. */
+  maxChars?: number;
 }
 
 const GAP_DOT: GapSpec = { barrierMask: LF | DOT_TERMINATOR };
@@ -50,6 +52,11 @@ const GAP_RIGHT_ANGLE: GapSpec = { barrierMask: LF | RIGHT_ANGLE };
 const GAP_QUOTES_ONE: GapSpec = {
   barrierMask: GAP_QUOTES.barrierMask,
   minChars: 1,
+};
+const PROTESTWARE_MAX_GAP_CHARS = 512;
+const GAP_DOT_PROTESTWARE: GapSpec = {
+  barrierMask: GAP_DOT.barrierMask,
+  maxChars: PROTESTWARE_MAX_GAP_CHARS,
 };
 
 
@@ -200,6 +207,17 @@ function makeOrderedEventMatcher(
     if (
       sequence.tokens.length === 0 ||
       sequence.gaps.length !== sequence.tokens.length - 1 ||
+      sequence.gaps.some((gap) =>
+        (gap.minChars !== undefined && (
+          !Number.isInteger(gap.minChars) ||
+          gap.minChars < 0
+        )) ||
+        (gap.maxChars !== undefined && (
+          !Number.isInteger(gap.maxChars) ||
+          gap.maxChars < 0 ||
+          gap.maxChars < (gap.minChars ?? 0)
+        ))
+      ) ||
       (sequence.greedyBranchToken !== undefined && (
         sequence.greedyBranchToken < 0 ||
         sequence.greedyBranchToken >= sequence.tokens.length
@@ -284,6 +302,23 @@ function makeOrderedEventMatcher(
       }
       scheduledStages.length = write;
     };
+    const expireBoundedStages = (through: number): void => {
+      for (let index = 0; index < states.length; index++) {
+        const sequence = tokenized[index]!;
+        const state = states[index]!;
+        if (state.done) continue;
+        for (let stage = 1; stage < sequence.tokenIds.length; stage++) {
+          const maxChars = sequence.gaps[stage - 1]!.maxChars;
+          if (
+            state.active[stage] &&
+            maxChars !== undefined &&
+            through - state.ends[stage]! > maxChars
+          ) {
+            state.active[stage] = false;
+          }
+        }
+      }
+    };
     const flushLine = (): void => {
       if (best) results.push(structuralMatch(content, best.start, best.end));
       best = undefined;
@@ -303,6 +338,10 @@ function makeOrderedEventMatcher(
         if (event && event.index < eventStart) eventStart = event.index;
       }
       if (!Number.isFinite(eventStart)) break;
+      // Expire an older prefix before activating a newer scheduled one. Without
+      // this ordering, the NFA's normal earliest-start preference can leave an
+      // out-of-range prefix blocking a later, locally correlated prefix.
+      expireBoundedStages(eventStart);
       activateScheduled(eventStart);
 
       // Process every token beginning here before the barrier at the same
@@ -329,7 +368,13 @@ function makeOrderedEventMatcher(
               continue;
             }
             const gap = sequence.gaps[stage - 1]!;
-            if (eventStart < state.ends[stage]! + (gap.minChars ?? 0)) continue;
+            const gapChars = eventStart - state.ends[stage]!;
+            if (
+              gapChars < (gap.minChars ?? 0) ||
+              (gap.maxChars !== undefined && gapChars > gap.maxChars)
+            ) {
+              continue;
+            }
 
             const greedyStart = sequence.greedyBranchToken === stage
               ? eventStart
@@ -848,16 +893,16 @@ export function createCoreBroadGapMatchers(
     PROTESTWARE_LOCALE_DESTRUCT: makeOrderedEventMatcher([{
       tokens: [
         String.raw`(?:locale|timezone|timeZone|country|getTimezone|Intl\.DateTimeFormat)`,
-        String.raw`(?:fs\.(?:rm|rmdir|unlink|writeFile)|process\.exit|child_process|execSync|rimraf)`,
+        String.raw`(?:fs\.(?:rm|rmdir|unlink|truncate|ftruncate)|process\.exit|child_process|execSync|rimraf)`,
       ],
-      gaps: [GAP_DOT],
+      gaps: [GAP_DOT_PROTESTWARE],
     }], true),
     PROTESTWARE_GEOIP_DESTRUCT: makeOrderedEventMatcher([{
       tokens: [
         String.raw`(?:geoip|ip-api|ipinfo|freegeoip|ipgeolocation)`,
         String.raw`(?:fs\.(?:rm|rmdir|unlink)|process\.exit|execSync)`,
       ],
-      gaps: [GAP_DOT],
+      gaps: [GAP_DOT_PROTESTWARE],
     }], true),
     BUILD_PLUGIN_DOWNLOAD: makeOrderedEventMatcher([{
       tokens: [

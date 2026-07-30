@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { performanceBudget } from "./performance-budget.js";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -254,6 +255,237 @@ describe("internal-disclosure: false positives that would get the family disable
     expect(
       shapeScan("src/versions.ts", 'const v = ["9.1.6", "10.1.1", "1.2.3.4", "10.0.0.257"];'),
     ).toHaveLength(0);
+  });
+
+  it("distinguishes four-component V8 versions from private addresses", () => {
+    for (const line of [
+      'const V8_VERSION = "10.2.154.26";',
+      'const V8_VERSIONS = ["10.2.154.26", "10.3.22.1"];',
+      'const runtime = { "v8": "10.2.154.26" };',
+      'V8 version | 10.2.154.26',
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", line)),
+        line,
+      ).not.toContain("INTERNAL_PRIVATE_IP");
+    }
+
+    const mixed = shapeScan(
+      "src/runtime.ts",
+      'const runtime = { v8: "10.2.154.26", host: "10.20.30.40" };',
+    ).filter((finding) => finding.rule === "INTERNAL_PRIVATE_IP");
+    expect(mixed).toHaveLength(1);
+    expect(mixed[0]!.match).toBe("10.20.30.40");
+
+    for (const line of [
+      'const V8_VERSION = "192.168.7.12";',
+      'const V8_VERSIONS = ["172.16.8.9"];',
+      'const runtime = { v8: "10.2.154.26/32" };',
+      'V8 version | 192.168.7.12',
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", line)),
+        line,
+      ).toContain("INTERNAL_PRIVATE_IP");
+    }
+  });
+
+  it("recognizes exact same-line V8 member and private-field owners", () => {
+    for (const line of [
+      'runtime.v8 = "10.2.154.26";',
+      'process.versions.v8Version = "10.2.154.26";',
+      'runtime["v8Versions"] = "10.2.154.26";',
+      'runtime.v8 = ["10.2.154.26"];',
+      'class Runtime { #v8 = "10.2.154.26"; }',
+      'class Runtime { #v8Version: string = "10.2.154.26"; }',
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", line)),
+        line,
+      ).not.toContain("INTERNAL_PRIVATE_IP");
+    }
+  });
+
+  it("does not let V8 owner lookalikes hide private addresses", () => {
+    for (const line of [
+      'runtime.v8Host = "10.20.30.40";',
+      'runtime["notV8"] = "10.20.30.40";',
+      'class Runtime { #v8Host = "10.20.30.40"; }',
+    ]) {
+      expect(
+        rules(shapeScan("src/runtime.ts", line)),
+        line,
+      ).toContain("INTERNAL_PRIVATE_IP");
+    }
+
+    for (const line of [
+      'runtime.v8 = "10.2.154.26"; runtime.host = "10.20.30.40";',
+      'runtime.v8 = { host: "10.20.30.40" };',
+      'class Runtime { #v8 = "10.2.154.26"; #host = "10.20.30.40"; }',
+    ]) {
+      const privateIps = shapeScan("src/runtime.ts", line)
+        .filter((finding) => finding.rule === "INTERNAL_PRIVATE_IP");
+      expect(privateIps.map((finding) => finding.match), line).toEqual([
+        "10.20.30.40",
+      ]);
+    }
+  });
+
+  it("recognizes bounded multiline V8 array ownership", () => {
+    for (const lines of [
+      [
+        "const V8_VERSIONS = [",
+        '  "10.2.154.26",',
+        '  "10.3.22.1",',
+        "];",
+      ],
+      [
+        "const runtime = {",
+        '  "v8": [',
+        '    "10.2.154.26",',
+        "  ],",
+        "};",
+      ],
+      [
+        "const V8_VERSION = [",
+        "",
+        '  "10.2.154.26",',
+        "];",
+      ],
+      [
+        "export const V8_VERSIONS: readonly string[] = [",
+        '  "10.2.154.26",',
+        "];",
+      ],
+      [
+        "const V8_VERSIONS = [",
+        '  /* bundled */ "10.2.154.26",',
+        "];",
+      ],
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", ...lines)),
+        lines.join("\n"),
+      ).not.toContain("INTERNAL_PRIVATE_IP");
+    }
+  });
+
+  it("handles CRLF and lets nearer nested array ownership override V8", () => {
+    const crlf = scanInternalDisclosure(
+      [
+        "const V8_VERSIONS = [",
+        '  /* bundled */ "10.2.154.26",',
+        "];",
+        'const host = "10.20.30.40";',
+      ].join("\r\n"),
+      "src/versions.ts",
+    ).filter((finding) => finding.rule === "INTERNAL_PRIVATE_IP");
+    expect(crlf.map((finding) => finding.match)).toEqual(["10.20.30.40"]);
+
+    const nestedHost = shapeScan(
+      "src/versions.ts",
+      "const V8_VERSIONS = [",
+      "  { host: [",
+      '    "10.20.30.40",',
+      "  ] },",
+      "];",
+    );
+    expect(rules(nestedHost)).toContain("INTERNAL_PRIVATE_IP");
+  });
+
+  it("carries V8 ownership across a split array opener", () => {
+    for (const lines of [
+      [
+        "const V8_VERSIONS =",
+        "[",
+        '  "10.2.154.26",',
+        "];",
+      ],
+      [
+        "const runtime = {",
+        "  v8:",
+        "  // generated versions",
+        "  [",
+        '    "10.2.154.26",',
+        "  ],",
+        "};",
+      ],
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", ...lines)),
+        lines.join("\n"),
+      ).not.toContain("INTERNAL_PRIVATE_IP");
+    }
+  });
+
+  it("does not let V8 ownership hide a nearer host context or host prose", () => {
+    for (const lines of [
+      [
+        "const V8_VERSIONS = [",
+        "  { host:",
+        '    "10.20.30.40",',
+        "  },",
+        "];",
+      ],
+      [
+        "const V8_VERSIONS = [",
+        "  connect(",
+        '    "10.20.30.40",',
+        "  ),",
+        "];",
+      ],
+      ['const log = "v8: connected to host 10.20.30.40";'],
+    ]) {
+      const found = shapeScan("src/runtime.ts", ...lines)
+        .filter((finding) => finding.rule === "INTERNAL_PRIVATE_IP");
+      expect(found.map((finding) => finding.match), lines.join("\n"))
+        .toContain("10.20.30.40");
+    }
+  });
+
+  it("recognizes bounded V8 engine version prose lists", () => {
+    for (const lines of [
+      ["V8 engine versions:", "- 10.2.154.26", "- 10.3.22.1"],
+      ["### V8 engine versions", "- 10.2.154.26"],
+      ["| V8 engine version |", "| 10.2.154.26 |"],
+      ["V8 engine version: 10.2.154.26"],
+    ]) {
+      expect(
+        rules(shapeScan("src/versions.ts", ...lines)),
+        lines.join("\n"),
+      ).not.toContain("INTERNAL_PRIVATE_IP");
+    }
+  });
+
+  it("keeps bounded V8 context from hiding later real hosts", () => {
+    for (const lines of [
+      [
+        "const V8_VERSIONS = [",
+        '  "10.2.154.26",',
+        "];",
+        'const host = "10.20.30.40";',
+      ],
+      [
+        "V8 engine versions:",
+        "- 10.2.154.26",
+        "host: 10.20.30.40",
+      ],
+      [
+        "V8 engine versions:",
+        ...Array.from({ length: 33 }, () => ""),
+        "- 10.20.30.40",
+      ],
+      [
+        "const V8_VERSIONS = [",
+        `  /* ${"x".repeat(4_100)} */`,
+        '  "10.20.30.40",',
+      ],
+    ]) {
+      expect(
+        rules(shapeScan("src/runtime.ts", ...lines)),
+        lines.join("\n"),
+      ).toContain("INTERNAL_PRIVATE_IP");
+    }
   });
 
   it("never fires on a public host with a port", () => {
@@ -605,6 +837,24 @@ describe("internal-disclosure: bounded cost on generated files", () => {
     expect(found[0].severity).toBe("info");
   });
 
+  it("keeps repeated multiline V8-version suppression near-linear", { timeout: 15_000 }, () => {
+    const padding = " ".repeat(221);
+    const unit = [
+      "const V8_VERSIONS = [",
+      `  ${padding}"10.2.154.26",`,
+      "];",
+      "",
+    ].join("\n");
+    const content = unit.repeat(20_000);
+    expect(Buffer.byteLength(content)).toBeGreaterThan(5 * 1024 * 1024);
+
+    const started = Date.now();
+    const found = scanInternalDisclosure(content, "src/versions.ts");
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(performanceBudget(5_000));
+    expect(rules(found)).not.toContain("INTERNAL_PRIVATE_IP");
+  });
   it("caps findings per rule and per file, and says so", () => {
     const lines: string[] = [];
     for (let i = 0; i < 3000; i++) {

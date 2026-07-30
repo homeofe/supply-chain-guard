@@ -30,6 +30,9 @@ import {
   IAC_PATTERNS,
   truncateMatch,
 } from "./patterns.js";
+import {
+  maskMixedCommentsPreservingStrings,
+} from "./correlated-pattern-matchers.js";
 import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
 import {
@@ -101,18 +104,19 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.23.2";
+const TOOL_VERSION = "5.23.3";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
  * regression fixtures.
- * This allowlist is consulted only when the target is the package's physical
- * root below. Basenames, suffixes, and test-directory patterns are never an
- * exclusion boundary.
+ * This allowlist is consulted only when the target is this package or a
+ * checkout with its exact package identity. Basenames, suffixes, and
+ * test-directory patterns are never exclusion boundaries.
  */
 const SELF_SCAN_INERT_FILES = new Set([
   "src/active-validation.ts",
   "src/attack-graph.ts",
+  "src/broad-gap-pattern-matchers.ts",
   "src/config-scanner.ts",
   "src/correlation-engine.ts",
   "src/dependency-confusion.ts",
@@ -129,6 +133,7 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/workflow-modeler.ts",
   "src/__tests__/beacon-miner.test.ts",
   "src/__tests__/campaigns.test.ts",
+  "src/__tests__/core-broad-gap-matchers.test.ts",
   // Real go: IOC (github.com/BufferZoneCorp/...) used as a go.sum fixture.
   "src/__tests__/go-scanner.test.ts",
   "src/__tests__/infostealer-patterns.test.ts",
@@ -144,6 +149,71 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/__tests__/self-scan-recognition.test.ts",
   "src/__tests__/threat-intel.test.ts",
 ]);
+
+/**
+ * TypeScript's exact runtime/declaration outputs for inert source modules.
+ *
+ * Keep generated code globally scannable. Only the compiled counterparts of
+ * explicitly reviewed source definitions are inert during this package's own
+ * scan. Test fixtures are intentionally excluded because tsconfig does not
+ * compile them, and an arbitrary dist path must never inherit their exemption.
+ */
+const SELF_SCAN_INERT_COMPILED_FILES = new Set(
+  [...SELF_SCAN_INERT_FILES]
+    .filter(
+      (relativePath) =>
+        relativePath.startsWith("src/") &&
+        !relativePath.startsWith("src/__tests__/") &&
+        relativePath.endsWith(".ts"),
+    )
+    .flatMap((relativePath) => {
+      const modulePath = relativePath.slice("src/".length, -".ts".length);
+      return [`dist/${modulePath}.js`, `dist/${modulePath}.d.ts`];
+    }),
+);
+
+function isSelfScanInertFile(relativePath: string): boolean {
+  const normalizedPath = relativePath.replace(/\\/g, "/");
+  return (
+    SELF_SCAN_INERT_FILES.has(normalizedPath) ||
+    SELF_SCAN_INERT_COMPILED_FILES.has(normalizedPath)
+  );
+}
+
+/**
+ * Pattern literals in this matcher module deliberately spell out signatures
+ * that the public scanner detects. Suppress only those exact rule definitions
+ * in an identity-verified own checkout. A same-named third-party file, or any
+ * unrelated rule in this file, remains fully scannable.
+ */
+const SELF_SCAN_INERT_PATTERN_RULES = new Map<string, ReadonlySet<string>>([
+  [
+    "src/broad-gap-pattern-matchers.ts",
+    new Set([
+      "XZ_BUILD_INJECT",
+      "CODECOV_EXFIL",
+      "VIDAR_WALLET_THEFT",
+      "DROPPER_ANTIVM",
+    ]),
+  ],
+  [
+    "dist/broad-gap-pattern-matchers.js",
+    new Set([
+      "XZ_BUILD_INJECT",
+      "CODECOV_EXFIL",
+      "VIDAR_WALLET_THEFT",
+      "DROPPER_ANTIVM",
+    ]),
+  ],
+]);
+
+function isSelfScanInertPatternRule(
+  relativePath: string,
+  rule: string,
+): boolean {
+  const normalizedPath = relativePath.replace(/\\/g, "/");
+  return SELF_SCAN_INERT_PATTERN_RULES.get(normalizedPath)?.has(rule) ?? false;
+}
 
 /** Detect test / spec / fixture / mock files. Shared constant (was duplicated inline). */
 const TEST_FILE_REGEX = TEST_FILE_PATTERN;
@@ -173,10 +243,35 @@ function isOwnPackageRoot(scanDir: string): boolean {
  * Gated against spoofing: it matches only when the scanned package.json is BOTH
  * named "supply-chain-guard" (an npm name we own) AND points its repository at
  * homeofe/supply-chain-guard. Even if a hostile project forged both, the
- * suppression it unlocks is narrow - it only skips IOC-string matching for the
- * exact files in SELF_SCAN_INERT_FILES; the malware/obfuscation pattern checks
- * (checkFilePatterns) still run on every file, so no payload can hide here.
+ * suppression it unlocks is narrow: IOC-string matching is skipped only for
+ * exact reviewed inert files, and pattern suppression is limited to explicit
+ * path-and-rule pairs in SELF_SCAN_INERT_PATTERN_RULES. Every unrelated rule
+ * still runs, including on those same source and compiled files.
  */
+function isCanonicalOwnRepositoryUrl(value: string): boolean {
+  let normalized = value.trim();
+  if (
+    normalized.length === 0 ||
+    normalized.includes("?") ||
+    normalized.includes("#")
+  ) {
+    return false;
+  }
+
+  normalized = normalized.replace(/\/$/, "").replace(/\.git$/i, "");
+  normalized = normalized
+    .replace(/^git\+https:\/\//i, "https://")
+    .replace(/^git:\/\//i, "https://")
+    .replace(/^git\+ssh:\/\/git@github\.com\//i, "https://github.com/")
+    .replace(/^ssh:\/\/git@github\.com\//i, "https://github.com/")
+    .replace(/^git@github\.com:/i, "https://github.com/");
+
+  return (
+    normalized.toLowerCase() ===
+    "https://github.com/homeofe/supply-chain-guard"
+  );
+}
+
 function isOwnSourceCheckout(scanDir: string): boolean {
   try {
     const pkgPath = path.join(scanDir, "package.json");
@@ -190,7 +285,10 @@ function isOwnSourceCheckout(scanDir: string): boolean {
       typeof pkg.repository === "string"
         ? pkg.repository
         : (pkg.repository as { url?: unknown } | undefined)?.url;
-    return typeof repoUrl === "string" && repoUrl.includes("homeofe/supply-chain-guard");
+    return (
+      typeof repoUrl === "string" &&
+      isCanonicalOwnRepositoryUrl(repoUrl)
+    );
   } catch {
     return false;
   }
@@ -413,7 +511,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     if (isInertThreatFeedFile(relativePath, content)) continue;
 
     // Check file content patterns
-    checkFilePatterns(content, relativePath, findings);
+    checkFilePatterns(
+      content,
+      relativePath,
+      findings,
+      scanningOwnPackage,
+    );
 
     // Internal topology disclosure: private addresses, internal-only
     // hostnames, non-public forge URLs, developer paths, plus the
@@ -442,10 +545,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const entropyFindings = analyzeEntropy(content, relativePath);
     findings.push(...entropyFindings);
 
-    // IOC blocklist + threat-intel checks (skip scanner source/test files — they contain IOC definitions)
-    const normForIOC = relativePath.replace(/\\/g, "/");
+    // IOC blocklist + threat-intel checks skip only reviewed scanner
+    // definition/fixture paths and exact TypeScript-compiled counterparts.
     const isOwnDefinitionOrFixture =
-      scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normForIOC);
+      scanningOwnPackage && isSelfScanInertFile(relativePath);
     if (!isOwnDefinitionOrFixture) {
       const iocFindings = checkIOCBlocklist(content, relativePath);
       findings.push(...iocFindings);
@@ -825,6 +928,7 @@ function checkFilePatterns(
   content: string,
   relativePath: string,
   findings: Finding[],
+  scanningOwnPackage: boolean,
 ): void {
   // Note: LURE_PATTERNS deliberately excluded here. README-style files are
   // already covered by scanReadmeLures() in github-trust-scanner.ts (called
@@ -854,6 +958,12 @@ function checkFilePatterns(
       "g",
     );
     for (const hit of hits ?? []) {
+      if (
+        scanningOwnPackage &&
+        isSelfScanInertPatternRule(relativePath, pattern.rule)
+      ) {
+        continue;
+      }
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
@@ -1096,58 +1206,348 @@ function checkMultiLineProtestware(
   findings: Finding[],
   scanningOwnPackage: boolean,
 ): void {
-  // Only this installed package's exact source root may suppress its own
-  // definition/fixture examples. Target-controlled filenames never qualify.
-  const normPath = relativePath.replace(/\\/g, "/");
-  if (scanningOwnPackage && SELF_SCAN_INERT_FILES.has(normPath)) return;
+  // Only this package or an identity-verified checkout may suppress exact
+  // definition/fixture paths and compiled counterparts. Basenames never qualify.
+  if (scanningOwnPackage && isSelfScanInertFile(relativePath)) return;
 
-  const lines = content.split("\n");
   const PROXIMITY = 15;
+  const PROXIMITY_CHARS = 512;
+  const alreadyFound = findings.some(
+    (finding) =>
+      finding.rule === "PROTESTWARE_LOCALE_DESTRUCT" &&
+      finding.file === relativePath,
+  );
+  if (alreadyFound) return;
 
-  const localePattern =
-    /(?:locale|timezone|timeZone|Intl\.DateTimeFormat|getTimezone|country_code|country_name)/i;
-  const destructivePattern =
-    /(?:fs\.(?:rmSync|unlinkSync|rmdirSync|rmdir|unlink|rm)\s*\(|rimraf\s*\(|process\.exit\s*\(|execSync\s*\(["'`](?:rm|del|format|dd\s))/i;
+  // Comments and regex literals cannot provide either side of the correlation.
+  // Keep string values visible for geo comparisons and destructive shell calls;
+  // a second same-length view blanks them only while matching block structure.
+  const searchableContent = maskMixedCommentsPreservingStrings(content);
+  const structureCharacters = searchableContent.split("");
+  let quote: "'" | '"' | "`" | undefined;
+  for (let index = 0; index < structureCharacters.length; index++) {
+    const character = structureCharacters[index]!;
+    if (quote === undefined) {
+      if (character === "'" || character === '"' || character === "`") {
+        quote = character;
+        structureCharacters[index] = " ";
+      }
+      continue;
+    }
 
-  const localeLines: number[] = [];
-  const destructiveLines: number[] = [];
+    if (character === "\\") {
+      structureCharacters[index] = " ";
+      if (
+        index + 1 < structureCharacters.length &&
+        structureCharacters[index + 1] !== "\n" &&
+        structureCharacters[index + 1] !== "\r"
+      ) {
+        structureCharacters[++index] = " ";
+      }
+      continue;
+    }
+    if (character === quote) {
+      structureCharacters[index] = " ";
+      quote = undefined;
+      continue;
+    }
+    if (character === "\n" || character === "\r") {
+      if (quote !== "`") quote = undefined;
+    } else {
+      structureCharacters[index] = " ";
+    }
+  }
+  const structureContent = structureCharacters.join("");
+  const lines = content.split("\n");
+  const structureLines = structureContent.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? "";
-    if (localePattern.test(line)) localeLines.push(i);
-    if (destructivePattern.test(line)) destructiveLines.push(i);
+  const lineStarts = [0];
+  for (let index = 0; index < content.length; index++) {
+    if (content[index] === "\n") lineStarts.push(index + 1);
+  }
+  const lineAt = (offset: number): number => {
+    let low = 0;
+    let high = lineStarts.length;
+    while (low + 1 < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (lineStarts[middle]! <= offset) low = middle;
+      else high = middle;
+    }
+    return low;
+  };
+
+  // Precompute delimiter ownership once. Re-scanning from every nested control
+  // header makes deeply nested/minified files quadratic.
+  const parenClosings = new Map<number, number>();
+  const braceClosings = new Map<number, number>();
+  const parenStack: number[] = [];
+  const braceStack: number[] = [];
+  for (let index = 0; index < structureContent.length; index++) {
+    const character = structureContent[index];
+    if (character === "(") parenStack.push(index);
+    else if (character === ")") {
+      const open = parenStack.pop();
+      if (open !== undefined) parenClosings.set(open, index);
+    } else if (character === "{") braceStack.push(index);
+    else if (character === "}") {
+      const open = braceStack.pop();
+      if (open !== undefined) braceClosings.set(open, index);
+    }
   }
 
-  // Check if any locale line is within PROXIMITY of a destructive line
-  for (const localeLine of localeLines) {
-    for (const destructiveLine of destructiveLines) {
-      if (
-        Math.abs(localeLine - destructiveLine) <= PROXIMITY &&
-        localeLine !== destructiveLine
-      ) {
-        // Avoid duplicating if we already found a single-line match
-        const alreadyFound = findings.some(
-          (f) =>
-            f.rule === "PROTESTWARE_LOCALE_DESTRUCT" &&
-            f.file === relativePath,
-        );
-        if (!alreadyFound) {
-          findings.push({
-            rule: "PROTESTWARE_PROXIMITY",
-            description: `Locale/timezone check (line ${localeLine + 1}) found near destructive code (line ${destructiveLine + 1}). This proximity pattern is common in protestware.`,
-            severity: "high",
-            file: relativePath,
-            line: localeLine + 1,
-            match: truncateMatch(
-              `locale: "${(lines[localeLine] ?? "").trim()}" ... destruct: "${(lines[destructiveLine] ?? "").trim()}"`,
-            ),
-            recommendation:
-              "Review the surrounding code. Protestware uses locale/geo checks to selectively destroy data or crash for targeted users.",
-          });
+  const localePattern =
+    /(?:\blocale\b|\btimezone\b|\btimeZone\b|Intl\.DateTimeFormat|\bgetTimezone\b|\bcountry(?:Code|_code|_name)?\b)/i;
+  const localeIdentifierPattern =
+    /\b(?:locale|timezone|timeZone|tz|getTimezone|country|countryCode|country_code|country_name|region)\b/g;
+  const assignmentPattern =
+    /(?<![.\w$])([A-Za-z_$][\w$]*)\s*=(?!=|>)/;
+
+  interface LocaleBinding {
+    availableOffset: number;
+    sourceLine?: number;
+    evidenceOffset?: number;
+  }
+  const localeBindings = new Map<string, LocaleBinding[]>();
+  const noteLocaleBinding = (
+    name: string,
+    availableOffset: number,
+    sourceLine: number | undefined,
+    evidenceOffset: number | undefined,
+  ): void => {
+    const bindings = localeBindings.get(name) ?? [];
+    if (bindings.at(-1)?.availableOffset === availableOffset) {
+      bindings[bindings.length - 1] = { availableOffset, sourceLine, evidenceOffset };
+    } else {
+      bindings.push({ availableOffset, sourceLine, evidenceOffset });
+    }
+    localeBindings.set(name, bindings);
+  };
+  const derivedIdentifiers = new Map<
+    string,
+    { sourceLine: number; evidenceOffset: number }
+  >();
+  for (let line = 0; line < structureLines.length; line++) {
+    const lineSource = structureLines[line] ?? "";
+    let segmentStart = 0;
+    while (segmentStart <= lineSource.length) {
+      const semicolon = lineSource.indexOf(";", segmentStart);
+      const segmentEnd = semicolon === -1 ? lineSource.length : semicolon + 1;
+      const source = lineSource.slice(segmentStart, segmentEnd);
+      const availableOffset = lineStarts[line]! + segmentEnd;
+      const assignment = assignmentPattern.exec(source);
+      const assignmentName = assignment?.[1];
+      const identifiers = new Set<string>();
+      localeIdentifierPattern.lastIndex = 0;
+      let identifier: RegExpExecArray | null;
+      while ((identifier = localeIdentifierPattern.exec(source)) !== null) {
+        identifiers.add(identifier[0]);
+      }
+
+      const localeEvidence = localePattern.exec(source);
+      if (localeEvidence) {
+        if (assignmentName) identifiers.add(assignmentName);
+        const evidenceOffset =
+          lineStarts[line]! + segmentStart + localeEvidence.index + localeEvidence[0].length;
+        for (const name of identifiers) {
+          derivedIdentifiers.set(name, { sourceLine: line, evidenceOffset });
+          noteLocaleBinding(name, availableOffset, line, evidenceOffset);
         }
-        return; // One finding per file is enough
+      } else if (assignmentName) {
+        const rhs = source.slice((assignment?.index ?? 0) + assignment![0].length);
+        const sourceTokens = new Set(
+          rhs.match(/[A-Za-z_$][\w$]*/g) ?? [],
+        );
+        let derivedSource:
+          | { sourceLine: number; evidenceOffset: number }
+          | undefined;
+        for (const token of sourceTokens) {
+          const candidate = derivedIdentifiers.get(token);
+          if (
+            candidate &&
+            line - candidate.sourceLine <= PROXIMITY &&
+            availableOffset - candidate.evidenceOffset <= PROXIMITY_CHARS &&
+            (!derivedSource || candidate.evidenceOffset > derivedSource.evidenceOffset)
+          ) {
+            derivedSource = candidate;
+          }
+        }
+        if (!derivedSource) {
+          derivedIdentifiers.delete(assignmentName);
+          noteLocaleBinding(assignmentName, availableOffset, undefined, undefined);
+        } else {
+          const nextSource = {
+            sourceLine: derivedSource.sourceLine,
+            evidenceOffset: availableOffset,
+          };
+          derivedIdentifiers.set(assignmentName, nextSource);
+          noteLocaleBinding(
+            assignmentName,
+            availableOffset,
+            nextSource.sourceLine,
+            nextSource.evidenceOffset,
+          );
+        }
+      }
+
+      if (semicolon === -1) break;
+      segmentStart = segmentEnd;
+    }
+  }
+
+  interface GeoGate {
+    sourceLine: number;
+    sourceOffset: number;
+    bodyStart: number;
+    bodyEnd: number;
+  }
+  const geoGates: GeoGate[] = [];
+  const localeBindingAt = (
+    name: string,
+    gateOffset: number,
+  ): LocaleBinding | undefined => {
+    const bindings = localeBindings.get(name);
+    if (!bindings || bindings.length === 0) return undefined;
+    let low = 0;
+    let high = bindings.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (bindings[middle]!.availableOffset <= gateOffset) low = middle + 1;
+      else high = middle;
+    }
+    return low === 0 ? undefined : bindings[low - 1];
+  };
+  const controlPattern = /\b(if|switch|while)\s*\(/g;
+  let control: RegExpExecArray | null;
+  while ((control = controlPattern.exec(structureContent)) !== null) {
+    const open = control.index + control[0].lastIndexOf("(");
+    const close = parenClosings.get(open);
+    if (close === undefined) break;
+    controlPattern.lastIndex = close + 1;
+
+    const gateLine = lineAt(control.index);
+    const conditionStructure = structureContent.slice(open + 1, close);
+    const discriminatesByValue =
+      control[1] === "switch" ||
+      /(?:===?|!==?|\.\s*(?:includes|has|test|match|startsWith|endsWith)\s*\(|\bin\b)/.test(
+        conditionStructure,
+      );
+    if (!discriminatesByValue) continue;
+
+    const conditionIdentifiers = new Set(
+      conditionStructure.match(/[A-Za-z_$][\w$]*/g) ?? [],
+    );
+    let localeSourceLine: number | undefined;
+    let localeSourceOffset: number | undefined;
+    for (const name of conditionIdentifiers) {
+      const binding = localeBindingAt(name, control.index);
+      if (
+        binding?.sourceLine !== undefined &&
+        binding.evidenceOffset !== undefined &&
+        gateLine - binding.sourceLine <= PROXIMITY &&
+        control.index - binding.evidenceOffset <= PROXIMITY_CHARS &&
+        (localeSourceOffset === undefined || binding.evidenceOffset > localeSourceOffset)
+      ) {
+        localeSourceLine = binding.sourceLine;
+        localeSourceOffset = binding.evidenceOffset;
       }
     }
+    const directLocaleEvidence = localePattern.exec(conditionStructure);
+    if (localeSourceLine === undefined && directLocaleEvidence) {
+      localeSourceLine = gateLine;
+      localeSourceOffset =
+        open + 1 + directLocaleEvidence.index + directLocaleEvidence[0].length;
+    }
+    if (localeSourceLine === undefined || localeSourceOffset === undefined) continue;
+
+    let bodyStart = close + 1;
+    while (bodyStart < structureContent.length && /\s/.test(structureContent[bodyStart]!)) {
+      bodyStart++;
+    }
+    let bodyEnd: number;
+    if (structureContent[bodyStart] === "{") {
+      const closeBrace = braceClosings.get(bodyStart);
+      if (closeBrace === undefined) continue;
+      bodyStart++;
+      bodyEnd = closeBrace;
+    } else {
+      const semicolon = structureContent.indexOf(";", bodyStart);
+      const newline = structureContent.indexOf("\n", bodyStart);
+      const candidates = [semicolon === -1 ? undefined : semicolon + 1, newline]
+        .filter((value): value is number => value !== undefined && value !== -1);
+      bodyEnd = candidates.length > 0
+        ? Math.min(...candidates)
+        : structureContent.length;
+    }
+    geoGates.push({
+      sourceLine: localeSourceLine,
+      sourceOffset: localeSourceOffset,
+      bodyStart,
+      bodyEnd,
+    });
+  }
+
+  const destructivePattern =
+    /(?:\bfs\s*\.\s*(?:rmSync|rm|unlinkSync|unlink|rmdirSync|rmdir|truncateSync|truncate|ftruncateSync|ftruncate)\s*\(|\brimraf\s*\(|\bprocess\s*\.\s*exit\s*\(|\bexecSync\s*\(\s*["'`](?:rm|del|format|dd\s))/gi;
+  interface ActiveGeoGate {
+    gate: GeoGate;
+    bestSourceGate: GeoGate;
+  }
+  const activeGates: ActiveGeoGate[] = [];
+  let nextGateIndex = 0;
+  let destructive: RegExpExecArray | null;
+  while ((destructive = destructivePattern.exec(searchableContent)) !== null) {
+    // The lexical structure view blanks string contents. A signal beginning on
+    // a blanked character is documentation/data, not an executable call.
+    if (!/[A-Za-z_$]/.test(structureContent[destructive.index] ?? "")) continue;
+    const destructiveStart = destructive.index;
+    const destructiveLine = lineAt(destructiveStart);
+
+    while (
+      nextGateIndex < geoGates.length &&
+      geoGates[nextGateIndex]!.bodyStart <= destructiveStart
+    ) {
+      const gate = geoGates[nextGateIndex++]!;
+      while (
+        activeGates.length > 0 &&
+        activeGates.at(-1)!.gate.bodyEnd <= gate.bodyStart
+      ) {
+        activeGates.pop();
+      }
+      const previousBest = activeGates.at(-1)?.bestSourceGate;
+      activeGates.push({
+        gate,
+        bestSourceGate:
+          !previousBest || gate.sourceOffset >= previousBest.sourceOffset
+            ? gate
+            : previousBest,
+      });
+    }
+    while (
+      activeGates.length > 0 &&
+      activeGates.at(-1)!.gate.bodyEnd <= destructiveStart
+    ) {
+      activeGates.pop();
+    }
+    const gate = activeGates.at(-1)?.bestSourceGate;
+    if (
+      !gate ||
+      destructiveLine - gate.sourceLine > PROXIMITY ||
+      destructiveStart - gate.sourceOffset > PROXIMITY_CHARS
+    ) continue;
+
+    findings.push({
+      rule: "PROTESTWARE_PROXIMITY",
+      description: `Locale/timezone gate (line ${gate.sourceLine + 1}) controls destructive code (line ${destructiveLine + 1}). This conditional pattern is common in protestware.`,
+      severity: "high",
+      file: relativePath,
+      line: gate.sourceLine + 1,
+      match: truncateMatch(
+        `locale: "${(lines[gate.sourceLine] ?? "").trim()}" ... destruct: "${(lines[destructiveLine] ?? "").trim()}"`,
+      ),
+      recommendation:
+        "Review the surrounding code. Protestware uses locale/geo checks to selectively destroy data or crash for targeted users.",
+    });
+    return;
   }
 }
 

@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
 import { describe, expect, it } from "vitest";
+import { performanceBudget } from "./performance-budget.js";
 import { CORE_BROAD_GAP_RULES } from "../broad-gap-pattern-matchers.js";
 import { isPatternApplicableToFile } from "../pattern-applicability.js";
 import {
@@ -283,6 +284,56 @@ describe("core broad-gap structural matchers", () => {
     expect(isPatternApplicableToFile(rule, "child_process only", "src/a.js")).toBe(false);
   });
 
+  it.each([
+    ["PROTESTWARE_LOCALE_DESTRUCT", "locale", "fs.rm(path)"],
+    ["PROTESTWARE_GEOIP_DESTRUCT", "geoip", "execSync(cmd)"],
+  ] as const)("bounds %s correlation distance without losing a newer local prefix", (rule, prefix, sink) => {
+    const pattern = shippedRule(rule);
+    const atBoundary = matchPatternInContent(
+      pattern,
+      `${prefix}${"x".repeat(512)}${sink}`,
+      "i",
+    );
+    expect(atBoundary.map((hit) => hit.line)).toEqual([1]);
+
+    const tooFar = matchPatternInContent(
+      pattern,
+      `${prefix}${"x".repeat(513)}${sink}`,
+      "i",
+    );
+    expect(tooFar).toEqual([]);
+    expect(tooFar.coverage.complete).toBe(true);
+
+    const expiredPrefix = `${prefix}${"x".repeat(513)}`;
+    const newerLocalPrefix = matchPatternInContent(
+      pattern,
+      `${expiredPrefix}${prefix} ${sink}`,
+      "i",
+    );
+    expect(newerLocalPrefix).toHaveLength(1);
+    expect(newerLocalPrefix[0]!.match.index).toBe(expiredPrefix.length);
+  });
+
+  it.each([
+    `const country = profile.country; fs.writeFile("prefs.json", JSON.stringify(profile));`,
+    `const timezone = settings.timezone; fs.writeFileSync(cachePath, timezone);`,
+  ])("rejects ordinary locale/timezone persistence: %s", (source) => {
+    const pattern = shippedRule("PROTESTWARE_LOCALE_DESTRUCT");
+    expect(matchPatternInContent(pattern, source, "i")).toEqual([]);
+    expect(matchPatternInContent(legacyRegexOnly(pattern), source, "i"))
+      .toEqual([]);
+  });
+
+  it.each([
+    `const locale = currentLocale; fs.rm(cachePath);`,
+    `const timezone = settings.timezone; fs.truncate(cachePath, 0, callback);`,
+    `const country = profile.country; fs.ftruncate(fd, 0, callback);`,
+  ])("retains inherently destructive locale-gated filesystem behavior: %s", (source) => {
+    const pattern = shippedRule("PROTESTWARE_LOCALE_DESTRUCT");
+    expect(matchPatternInContent(pattern, source, "i")).toHaveLength(1);
+    expect(matchPatternInContent(legacyRegexOnly(pattern), source, "i"))
+      .toHaveLength(1);
+  });
   it("covers every converted matcher on a concrete 5 MiB repeated-prefix near miss", { timeout: 30_000 }, () => {
     expect(Object.keys(nearMissUnits).sort()).toEqual([...CORE_BROAD_GAP_RULES].sort());
     const fiveMiB = 5 * 1024 * 1024;
@@ -300,6 +351,6 @@ describe("core broad-gap structural matchers", () => {
 
     const guardOnly = ".npmrc ".repeat(Math.ceil(fiveMiB / 7)).slice(0, fiveMiB);
     expect(shippedRule("SHAI_HULUD_WORM").requiresInFileMatcher!(guardOnly)).toBe(false);
-    expect(performance.now() - started).toBeLessThan(15_000);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
   });
 });

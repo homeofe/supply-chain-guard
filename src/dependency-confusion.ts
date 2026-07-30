@@ -13,8 +13,9 @@ import * as path from "node:path";
 import * as https from "node:https";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
+import { readOptionalUtf8File } from "./pattern-scanner.js";
 
-const TOOL_VERSION = "5.23.2";
+const TOOL_VERSION = "5.23.3";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";
@@ -758,44 +759,1516 @@ async function fetchPypiInfo(packageName: string): Promise<PypiInfo> {
   });
 }
 
-/**
- * Parse requirements.txt lines into package names.
- * Handles: name, name==1.0, name>=1.0, name[extra], # comments
- */
-function parseRequirementsTxt(content: string): string[] {
-  const names: string[] = [];
-  for (const rawLine of content.split("\n")) {
-    const line = rawLine.split("#")[0]?.trim() ?? "";
-    if (!line || line.startsWith("-") || line.startsWith("http")) continue;
-    // Strip extras, version constraints, environment markers
-    const name = line.split(/[=<>!\[;]/)[0]?.trim();
-    if (name) names.push(name);
-  }
-  return names;
+interface ParsedDependencyNames {
+  names: string[];
+  complete: boolean;
+  unresolvedIncludes?: boolean;
+  unresolvedDependencySources?: boolean;
+  unresolvedDynamicDependencies?: boolean;
+  unresolvedDependencyGroups?: boolean;
+  unresolvedToolDependencies?: boolean;
+}
+
+type PypiManifestName = "requirements.txt" | "pyproject.toml";
+
+function normalizePypiProjectName(value: string): string {
+  return value.toLowerCase().replace(/[-_.]+/g, "-");
+}
+
+interface PypiPackageReference {
+  name: string;
+  manifest: PypiManifestName;
 }
 
 /**
- * Parse pyproject.toml [project] dependencies section (basic, no TOML parser).
+ * Parse one PEP 508-shaped requirement conservatively. Returning null means
+ * the line carries dependency intent that this scanner cannot evaluate safely.
  */
-function parsePyprojectToml(content: string): string[] {
-  const names: string[] = [];
-  let inDeps = false;
-  for (const rawLine of content.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "[project.dependencies]" || line === 'dependencies = [') {
-      inDeps = true;
+function stripPerRequirementOptions(value: string): string {
+  let requirement = value.trim();
+  while (requirement !== "") {
+    const hash = /\s+--hash=\S+\s*$/.exec(requirement);
+    if (hash !== null) {
+      requirement = requirement.slice(0, hash.index).trimEnd();
       continue;
     }
-    if (inDeps && line.startsWith("[") && !line.startsWith("[project")) {
-      inDeps = false;
+
+    const configSetting =
+      /\s+--config-settings(?:=|\s+)([^\s=]+=[^\s]*)\s*$/.exec(requirement);
+    if (configSetting !== null) {
+      requirement = requirement.slice(0, configSetting.index).trimEnd();
+      continue;
     }
-    if (inDeps) {
-      // Match lines like: "name>=1.0", 'name', "name[extra]"
-      const match = /["']?([A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?)["']?\s*[=<>!\[,]?/.exec(line);
-      if (match?.[1]) names.push(match[1]);
+    break;
+  }
+  return requirement;
+}
+
+function parseRequirementName(
+  value: string,
+  allowPipOptions = false,
+): string | null {
+  const requirement = allowPipOptions ? stripPerRequirementOptions(value) : value.trim();
+  if (requirement === "") return null;
+
+  const markerIndex = requirement.indexOf(";");
+  if (markerIndex >= 0) {
+    const marker = requirement.slice(markerIndex + 1);
+    let quote: "\"" | "'" | undefined;
+    let escaped = false;
+    for (const char of marker) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === "\\" && quote === '"') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        quote = quote === char ? undefined : quote ?? char;
+      }
+    }
+    if (quote !== undefined || /(?:===|==|!=|<=|>=|<|>)\s*$/.test(marker)) {
+      return null;
     }
   }
-  return names;
+
+  const nameShape = "[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?";
+  const extrasShape = "(?:\\[\\s*[A-Za-z0-9._-]+(?:\\s*,\\s*[A-Za-z0-9._-]+)*\\s*\\])?";
+  const operatorShape = "(?:===|==|~=|!=|<=|>=|<|>)";
+  const versionShape = `${operatorShape}\\s*[^,;\\s)]+`;
+  const constraintsShape = `(?:\\s*\\(\\s*${versionShape}(?:\\s*,\\s*${versionShape})*\\s*\\)|\\s*${versionShape}(?:\\s*,\\s*${versionShape})*)?`;
+  const directReferenceShape = "(?:\\s*@\\s*\\S+)?";
+  const markerShape = "(?:\\s*;\\s*\\S[\\s\\S]*)?";
+  const match = new RegExp(
+    `^(${nameShape})${extrasShape}${constraintsShape}${directReferenceShape}${markerShape}$`,
+  ).exec(requirement);
+  return match?.[1] ?? null;
+}
+
+function stripRequirementComment(line: string): string {
+  for (let index = 0; index < line.length; index++) {
+    if (line[index] === "#" && (index === 0 || /\s/.test(line[index - 1]!))) {
+      return line.slice(0, index);
+    }
+  }
+  return line;
+}
+
+function hasUnescapedTrailingBackslash(line: string): boolean {
+  let count = 0;
+  for (let index = line.length - 1; index >= 0 && line[index] === "\\"; index--) {
+    count++;
+  }
+  return count % 2 === 1;
+}
+
+interface LogicalRequirementLines {
+  lines: string[];
+  complete: boolean;
+}
+
+/** pip joins continuations before it removes comments. */
+function buildLogicalRequirementLines(content: string): LogicalRequirementLines {
+  const lines: string[] = [];
+  const physicalLines = content.split(/\r\n|\n|\r/);
+  if (/(?:\r\n|\n|\r)$/.test(content)) physicalLines.pop();
+  let logicalLine = "";
+  let continued = false;
+
+  for (const physicalLine of physicalLines) {
+    const continues = hasUnescapedTrailingBackslash(physicalLine);
+    logicalLine += continues ? physicalLine.slice(0, -1) : physicalLine;
+    if (continues) {
+      continued = true;
+      continue;
+    }
+    lines.push(logicalLine);
+    logicalLine = "";
+    continued = false;
+  }
+
+  if (continued || logicalLine !== "") lines.push(logicalLine);
+  return { lines, complete: !continued };
+}
+
+function optionArgument(
+  line: string,
+  shortOption: string,
+  longOption: string,
+): string | null {
+  if (line === shortOption || line === longOption) return "";
+  if (line.startsWith(`${shortOption} `)) return line.slice(shortOption.length).trimStart();
+  if (line.startsWith(shortOption) && !line.startsWith("--")) {
+    return line.slice(shortOption.length).trimStart();
+  }
+  if (line.startsWith(`${longOption} `)) return line.slice(longOption.length).trimStart();
+  if (line.startsWith(`${longOption}=`)) return line.slice(longOption.length + 1).trimStart();
+  return null;
+}
+
+function parseLegacyEggName(value: string): string | null {
+  const match = /(?:[#&])egg=([^&#]+)/i.exec(stripPerRequirementOptions(value));
+  if (!match?.[1]) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  return parseRequirementName(decoded);
+}
+
+const PIP_OPTIONS_WITH_ARGUMENT = [
+  ["-i", "--index-url"],
+  ["-f", "--find-links"],
+  ["-c", "--constraint"],
+] as const;
+const PIP_LONG_OPTIONS_WITH_ARGUMENT = [
+  "--extra-index-url",
+  "--trusted-host",
+  "--no-binary",
+  "--only-binary",
+  "--build-constraint",
+  "--all-releases",
+  "--only-final",
+  "--use-feature",
+] as const;
+const PIP_FLAG_OPTIONS = new Set([
+  "--no-index",
+  "--prefer-binary",
+  "--require-hashes",
+  "--pre",
+]);
+
+function isRecognizedNonDependencyOption(line: string): boolean {
+  if (PIP_FLAG_OPTIONS.has(line)) return true;
+  for (const [shortOption, longOption] of PIP_OPTIONS_WITH_ARGUMENT) {
+    const argument = optionArgument(line, shortOption, longOption);
+    if (argument !== null) return argument !== "";
+  }
+  for (const option of PIP_LONG_OPTIONS_WITH_ARGUMENT) {
+    if (line.startsWith(`${option} `)) return line.slice(option.length).trim() !== "";
+    if (line.startsWith(`${option}=`)) return line.slice(option.length + 1).trim() !== "";
+  }
+  return false;
+}
+
+function looksLikeDependencySource(line: string): boolean {
+  return /^(?:https?|git\+|hg\+|svn\+|bzr\+|file:)/i.test(line) ||
+    /^(?:\.{1,2}[\\/]|[\\/]|[A-Za-z]:[\\/])/.test(line) ||
+    /\.(?:whl|zip|tgz|tar\.gz|tar\.bz2)(?:$|[?#])/i.test(line);
+}
+
+/**
+ * Parse requirements.txt lines into package names while preserving a coverage
+ * signal for malformed, delegated, or unsupported dependency entries.
+ */
+function parseRequirementsTxt(content: string): ParsedDependencyNames {
+  const names: string[] = [];
+  const logical = buildLogicalRequirementLines(content);
+  let complete = logical.complete;
+  let unresolvedIncludes = false;
+  let unresolvedDependencySources = false;
+
+  for (const rawLine of logical.lines) {
+    const line = stripRequirementComment(rawLine).trim();
+    if (line === "") continue;
+
+    const includeArgument = optionArgument(line, "-r", "--requirement");
+    if (includeArgument !== null) {
+      unresolvedIncludes = true;
+      continue;
+    }
+
+    const scriptArgument = line.startsWith("--requirements-from-script ")
+      ? line.slice("--requirements-from-script".length).trim()
+      : line.startsWith("--requirements-from-script=")
+        ? line.slice("--requirements-from-script=".length).trim()
+        : null;
+    if (scriptArgument !== null) {
+      unresolvedDependencySources = true;
+      continue;
+    }
+
+    const editableArgument = optionArgument(line, "-e", "--editable");
+    if (editableArgument !== null) {
+      const editableName = parseRequirementName(editableArgument, true) ??
+        parseLegacyEggName(editableArgument);
+      if (editableName === null) unresolvedDependencySources = true;
+      else names.push(editableName);
+      continue;
+    }
+
+    if (isRecognizedNonDependencyOption(line)) continue;
+
+    const name = parseRequirementName(line, true);
+    if (name !== null && line.includes("@")) {
+      names.push(name);
+      continue;
+    }
+
+    if (looksLikeDependencySource(line)) {
+      const eggName = parseLegacyEggName(line);
+      if (eggName === null) unresolvedDependencySources = true;
+      else names.push(eggName);
+      continue;
+    }
+
+    if (name !== null) names.push(name);
+    else complete = false;
+  }
+
+  return {
+    names,
+    complete,
+    unresolvedIncludes,
+    unresolvedDependencySources,
+  };
+}
+
+interface TomlStringArrayResult {
+  values: string[];
+  complete: boolean;
+  endIndex: number;
+}
+
+interface TomlEscapeResult {
+  value: string;
+  nextIndex: number;
+}
+
+function decodeTomlBasicEscape(value: string, slashIndex: number): TomlEscapeResult | null {
+  const escape = value[slashIndex + 1];
+  const simple: Record<string, string> = {
+    b: "\b",
+    t: "\t",
+    n: "\n",
+    f: "\f",
+    r: "\r",
+    '"': '"',
+    "\\": "\\",
+  };
+  if (escape !== undefined && Object.hasOwn(simple, escape)) {
+    return { value: simple[escape]!, nextIndex: slashIndex + 2 };
+  }
+  if (escape !== "u" && escape !== "U") return null;
+
+  const digits = escape === "u" ? 4 : 8;
+  const encoded = value.slice(slashIndex + 2, slashIndex + 2 + digits);
+  if (!new RegExp(`^[0-9A-Fa-f]{${digits}}$`).test(encoded)) return null;
+  const codePoint = Number.parseInt(encoded, 16);
+  if (codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) return null;
+  return {
+    value: String.fromCodePoint(codePoint),
+    nextIndex: slashIndex + 2 + digits,
+  };
+}
+
+/** Parse a TOML array of quoted dependency strings from the opening bracket. */
+function parseTomlStringArray(
+  value: string,
+  allowInlineTail = false,
+): TomlStringArrayResult {
+  const values: string[] = [];
+  let index = 0;
+
+  const closeArray = (): TomlStringArrayResult => {
+    index++;
+    if (allowInlineTail) return { values, complete: true, endIndex: index };
+    const newline = value.indexOf("\n", index);
+    const sameLineTail = value.slice(index, newline < 0 ? value.length : newline);
+    return {
+      values,
+      complete: /^\s*(?:#.*)?$/.test(sameLineTail),
+      endIndex: index,
+    };
+  };
+
+  const fail = (): TomlStringArrayResult => ({ values, complete: false, endIndex: index });
+
+  const skipTrivia = (): void => {
+    while (index < value.length) {
+      if (/\s/.test(value[index]!)) {
+        index++;
+        continue;
+      }
+      if (value[index] === "#") {
+        const newline = value.indexOf("\n", index + 1);
+        index = newline < 0 ? value.length : newline + 1;
+        continue;
+      }
+      break;
+    }
+  };
+
+  skipTrivia();
+  if (value[index] !== "[") return fail();
+  index++;
+
+  while (index < value.length) {
+    skipTrivia();
+    if (value[index] === "]") return closeArray();
+
+    const quote = value[index];
+    if (quote !== '"' && quote !== "'") return fail();
+    index++;
+
+    let dependency = "";
+    let closed = false;
+    while (index < value.length) {
+      const char = value[index]!;
+      if (char === quote) {
+        index++;
+        closed = true;
+        break;
+      }
+      if (quote === '"' && char === "\\") {
+        const decoded = decodeTomlBasicEscape(value, index);
+        if (decoded === null) return fail();
+        dependency += decoded.value;
+        index = decoded.nextIndex;
+        continue;
+      }
+      if (char === "\n" || char === "\r") return fail();
+      if (char.charCodeAt(0) < 0x20 && char !== "\t") return fail();
+      dependency += char;
+      index++;
+    }
+    if (!closed) return fail();
+    values.push(dependency);
+
+    skipTrivia();
+    if (value[index] === ",") {
+      index++;
+      continue;
+    }
+    if (value[index] === "]") return closeArray();
+    return fail();
+  }
+
+  return fail();
+}
+
+interface CollectedTomlArray {
+  source: string;
+  endLine: number;
+}
+
+/** Collect one array once and let the caller advance beyond its closing line. */
+function collectTomlArray(
+  lines: string[],
+  startLine: number,
+  initialValue: string,
+): CollectedTomlArray {
+  if (!initialValue.trimStart().startsWith("[")) {
+    return { source: initialValue, endLine: startLine };
+  }
+
+  const chunks: string[] = [];
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+  let started = false;
+
+  for (let lineIndex = startLine; lineIndex < lines.length; lineIndex++) {
+    const chunk = lineIndex === startLine ? initialValue : lines[lineIndex]!;
+    chunks.push(chunk);
+    let comment = false;
+
+    for (let index = 0; index < chunk.length; index++) {
+      const char = chunk[index]!;
+      if (comment) break;
+      if (quote !== undefined) {
+        if (escaped) {
+          escaped = false;
+        } else if (quote === '"' && char === "\\") {
+          escaped = true;
+        } else if (char === quote) {
+          quote = undefined;
+        }
+        continue;
+      }
+      if (char === "#") {
+        comment = true;
+      } else if (char === '"' || char === "'") {
+        quote = char;
+      } else if (char === "[") {
+        started = true;
+      } else if (char === "]" && started) {
+        return { source: chunks.join("\n"), endLine: lineIndex };
+      }
+    }
+  }
+
+  return { source: chunks.join("\n"), endLine: lines.length - 1 };
+}
+
+function decodeTomlBasicQuotedToken(token: string): string | null {
+  if (!token.startsWith('"') || !token.endsWith('"')) return null;
+  let decoded = "";
+  for (let index = 1; index < token.length - 1;) {
+    const char = token[index]!;
+    if (char === "\\") {
+      const escape = decodeTomlBasicEscape(token, index);
+      if (escape === null || escape.nextIndex > token.length - 1) return null;
+      decoded += escape.value;
+      index = escape.nextIndex;
+      continue;
+    }
+    if (char === "\n" || char === "\r" || (char.charCodeAt(0) < 0x20 && char !== "\t")) {
+      return null;
+    }
+    decoded += char;
+    index++;
+  }
+  return decoded;
+}
+
+/** Parse a single TOML key or dotted-key path without changing case. */
+function parseTomlDottedKey(value: string): string[] | null {
+  const segments: string[] = [];
+  let index = 0;
+
+  const skipWhitespace = (): void => {
+    while (index < value.length && /\s/.test(value[index]!)) index++;
+  };
+
+  while (index < value.length) {
+    skipWhitespace();
+    if (index >= value.length) return null;
+
+    let segment: string;
+    const quote = value[index];
+    if (quote === '"' || quote === "'") {
+      const start = index;
+      index++;
+      let closed = false;
+      while (index < value.length) {
+        const char = value[index]!;
+        if (quote === '"' && char === "\\") {
+          index += 2;
+          continue;
+        }
+        if (char === quote) {
+          index++;
+          closed = true;
+          break;
+        }
+        index++;
+      }
+      if (!closed) return null;
+
+      const token = value.slice(start, index);
+      if (quote === '"') {
+        const decoded = decodeTomlBasicQuotedToken(token);
+        if (decoded === null) return null;
+        segment = decoded;
+      } else {
+        segment = token.slice(1, -1);
+      }
+    } else {
+      const match = /^[A-Za-z0-9_-]+/.exec(value.slice(index));
+      if (!match) return null;
+      segment = match[0];
+      index += match[0].length;
+    }
+
+    segments.push(segment);
+    skipWhitespace();
+    if (index === value.length) return segments;
+    if (value[index] !== ".") return null;
+    index++;
+  }
+
+  return segments.length > 0 ? segments : null;
+}
+
+interface TomlAssignment {
+  key: string[];
+  value: string;
+}
+
+/** Split a TOML assignment at the first equals sign outside a quoted key. */
+function parseTomlAssignment(line: string): TomlAssignment | null {
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote === '"' && char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = quote === char ? undefined : quote ?? char;
+      continue;
+    }
+    if (char !== "=" || quote !== undefined) continue;
+
+    const key = parseTomlDottedKey(line.slice(0, index));
+    return key === null ? null : { key, value: line.slice(index + 1) };
+  }
+
+  return null;
+}
+
+function startsWithTomlField(line: string, field: string): boolean {
+  return new RegExp(
+    `^(?:${field}|["']${field}["'])(?=\\s|=|\\.|$)`,
+  ).test(line);
+}
+
+function sameTomlPath(left: string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+interface ParsedInlineDependencyGroup {
+  name: string;
+  values: string[];
+  includes: string[];
+}
+
+interface InlineDependencyTableResult {
+  groups: ParsedInlineDependencyGroup[];
+  complete: boolean;
+  endIndex: number;
+}
+
+interface InlineProjectResult extends ParsedDependencyNames {
+  seenFields: Array<"dependencies" | "dynamic">;
+  optionalGroups: ParsedInlineDependencyGroup[];
+  dynamicRequiredDependencies: boolean;
+  dynamicOptionalDependencies: boolean;
+}
+
+function skipInlineTomlValue(value: string, start: number): number {
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+  let squareDepth = 0;
+  let curlyDepth = 0;
+
+  for (let index = start; index < value.length; index++) {
+    const char = value[index]!;
+    if (quote !== undefined) {
+      if (escaped) escaped = false;
+      else if (quote === '"' && char === "\\") escaped = true;
+      else if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === "[") squareDepth++;
+    else if (char === "]") squareDepth = Math.max(0, squareDepth - 1);
+    else if (char === "{") curlyDepth++;
+    else if (char === "}" && squareDepth === 0 && curlyDepth === 0) return index;
+    else if (char === "}") curlyDepth--;
+    else if (char === "," && squareDepth === 0 && curlyDepth === 0) return index;
+  }
+  return value.length;
+}
+
+interface InlineTomlKey {
+  key: string[];
+  nextIndex: number;
+}
+
+function parseInlineTomlKey(value: string, start: number): InlineTomlKey | null {
+  let index = start;
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+
+  while (index < value.length) {
+    const char = value[index]!;
+    if (char === "\n" || char === "\r") return null;
+    if (escaped) {
+      escaped = false;
+    } else if (quote === '"' && char === "\\") {
+      escaped = true;
+    } else if (char === '"' || char === "'") {
+      quote = quote === char ? undefined : quote ?? char;
+    } else if (char === "=" && quote === undefined) {
+      const key = parseTomlDottedKey(value.slice(start, index));
+      return key === null ? null : { key, nextIndex: index + 1 };
+    } else if ((char === "," || char === "}") && quote === undefined) {
+      return null;
+    }
+    index++;
+  }
+  return null;
+}
+
+interface ParsedTomlString {
+  value: string;
+  nextIndex: number;
+}
+
+function parseTomlQuotedString(value: string, start: number): ParsedTomlString | null {
+  const quote = value[start];
+  if (quote !== '"' && quote !== "'") return null;
+  let decoded = "";
+
+  for (let index = start + 1; index < value.length;) {
+    const char = value[index]!;
+    if (char === quote) return { value: decoded, nextIndex: index + 1 };
+    if (quote === '"' && char === "\\") {
+      const escape = decodeTomlBasicEscape(value, index);
+      if (escape === null) return null;
+      decoded += escape.value;
+      index = escape.nextIndex;
+      continue;
+    }
+    if (char === "\n" || char === "\r" || (char.charCodeAt(0) < 0x20 && char !== "\t")) {
+      return null;
+    }
+    decoded += char;
+    index++;
+  }
+  return null;
+}
+
+interface TomlDependencyGroupArrayResult extends TomlStringArrayResult {
+  includes: string[];
+}
+
+function parseTomlDependencyGroupArray(
+  value: string,
+  allowInlineTail = false,
+): TomlDependencyGroupArrayResult {
+  const values: string[] = [];
+  const includes: string[] = [];
+  let index = 0;
+
+  const finish = (complete: boolean): TomlDependencyGroupArrayResult => ({
+    values,
+    includes,
+    complete,
+    endIndex: index,
+  });
+  const skipTrivia = (): void => {
+    while (index < value.length) {
+      if (/\s/.test(value[index]!)) {
+        index++;
+        continue;
+      }
+      if (value[index] === "#") {
+        const newline = value.indexOf("\n", index + 1);
+        index = newline < 0 ? value.length : newline + 1;
+        continue;
+      }
+      break;
+    }
+  };
+  const parseInclude = (): string | null => {
+    index++;
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+    const parsedKey = parseInlineTomlKey(value, index);
+    if (parsedKey === null || parsedKey.key.length !== 1 || parsedKey.key[0] !== "include-group") {
+      return null;
+    }
+    index = parsedKey.nextIndex;
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+    const parsedValue = parseTomlQuotedString(value, index);
+    if (parsedValue === null) return null;
+    index = parsedValue.nextIndex;
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+    if (value[index] !== "}") return null;
+    index++;
+    return parsedValue.value;
+  };
+
+  skipTrivia();
+  if (value[index] !== "[") return finish(false);
+  index++;
+
+  while (index < value.length) {
+    skipTrivia();
+    if (value[index] === "]") {
+      index++;
+      if (allowInlineTail) return finish(true);
+      const newline = value.indexOf("\n", index);
+      const tail = value.slice(index, newline < 0 ? value.length : newline);
+      return finish(/^\s*(?:#.*)?$/.test(tail));
+    }
+
+    if (value[index] === "{") {
+      const include = parseInclude();
+      if (include === null) return finish(false);
+      includes.push(include);
+    } else {
+      const parsed = parseTomlQuotedString(value, index);
+      if (parsed === null) return finish(false);
+      values.push(parsed.value);
+      index = parsed.nextIndex;
+    }
+
+    skipTrivia();
+    if (value[index] === ",") {
+      index++;
+      continue;
+    }
+    if (value[index] === "]") continue;
+    return finish(false);
+  }
+
+  return finish(false);
+}
+
+function parseInlineDependencyTable(
+  value: string,
+  kind: "optional" | "groups" | "build",
+  allowInlineTail = false,
+): InlineDependencyTableResult {
+  const groups: ParsedInlineDependencyGroup[] = [];
+  let complete = true;
+  let index = 0;
+  const skipWhitespace = (): void => {
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+  };
+  const finish = (isComplete: boolean): InlineDependencyTableResult => ({
+    groups,
+    complete: complete && isComplete,
+    endIndex: index,
+  });
+
+  skipWhitespace();
+  if (value[index] !== "{") return finish(false);
+  index++;
+
+  while (index < value.length) {
+    skipWhitespace();
+    if (value[index] === "}") {
+      index++;
+      if (allowInlineTail) return finish(true);
+      return finish(/^\s*(?:#.*)?$/.test(value.slice(index)));
+    }
+
+    const parsedKey = parseInlineTomlKey(value, index);
+    if (parsedKey === null || parsedKey.key.length !== 1) return finish(false);
+    const name = parsedKey.key[0]!;
+    index = parsedKey.nextIndex;
+    skipWhitespace();
+
+    if (kind === "build" && name !== "requires") {
+      index = skipInlineTomlValue(value, index);
+    } else if (kind === "groups") {
+      const parsed = parseTomlDependencyGroupArray(value.slice(index), true);
+      groups.push({ name, values: parsed.values, includes: parsed.includes });
+      complete = complete && parsed.complete;
+      if (!parsed.complete) return finish(false);
+      index += parsed.endIndex;
+    } else {
+      const parsed = parseTomlStringArray(value.slice(index), true);
+      groups.push({ name, values: parsed.values, includes: [] });
+      complete = complete && parsed.complete;
+      if (!parsed.complete) return finish(false);
+      index += parsed.endIndex;
+    }
+
+    skipWhitespace();
+    if (value[index] === ",") {
+      index++;
+      continue;
+    }
+    if (value[index] !== "}") return finish(false);
+  }
+
+  return finish(false);
+}
+
+function parseInlineProjectTable(value: string): InlineProjectResult {
+  const names: string[] = [];
+  const seenFields: Array<"dependencies" | "dynamic"> = [];
+  const optionalGroups: ParsedInlineDependencyGroup[] = [];
+  let complete = true;
+  let dynamicRequiredDependencies = false;
+  let dynamicOptionalDependencies = false;
+  let sawOptionalDependencies = false;
+  let index = 0;
+  const skipWhitespace = (): void => {
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+  };
+  const result = (isComplete: boolean): InlineProjectResult => ({
+    names,
+    complete: complete && isComplete,
+    seenFields,
+    optionalGroups,
+    dynamicRequiredDependencies,
+    dynamicOptionalDependencies,
+  });
+
+  skipWhitespace();
+  if (value[index] !== "{") return result(false);
+  index++;
+
+  while (index < value.length) {
+    skipWhitespace();
+    if (value[index] === "}") {
+      index++;
+      return result(/^\s*(?:#.*)?$/.test(value.slice(index)));
+    }
+
+    const parsedKey = parseInlineTomlKey(value, index);
+    if (parsedKey === null || parsedKey.key.length !== 1) return result(false);
+    const field = parsedKey.key[0]!;
+    index = parsedKey.nextIndex;
+    skipWhitespace();
+
+    if (field === "dependencies" || field === "dynamic") {
+      const parsedArray = parseTomlStringArray(value.slice(index), true);
+      seenFields.push(field);
+      complete = complete && parsedArray.complete;
+      if (field === "dynamic") {
+        dynamicRequiredDependencies = dynamicRequiredDependencies ||
+          parsedArray.values.includes("dependencies");
+        dynamicOptionalDependencies = dynamicOptionalDependencies ||
+          parsedArray.values.includes("optional-dependencies");
+      } else {
+        for (const dependency of parsedArray.values) {
+          const name = parseRequirementName(dependency);
+          if (name === null) complete = false;
+          else names.push(name);
+        }
+      }
+      if (!parsedArray.complete) return result(false);
+      index += parsedArray.endIndex;
+    } else if (field === "optional-dependencies") {
+      if (sawOptionalDependencies) complete = false;
+      sawOptionalDependencies = true;
+      const parsedTable = parseInlineDependencyTable(value.slice(index), "optional", true);
+      optionalGroups.push(...parsedTable.groups);
+      complete = complete && parsedTable.complete;
+      if (!parsedTable.complete) return result(false);
+      index += parsedTable.endIndex;
+    } else {
+      index = skipInlineTomlValue(value, index);
+    }
+
+    skipWhitespace();
+    if (value[index] === ",") {
+      index++;
+      continue;
+    }
+    if (value[index] !== "}") return result(false);
+  }
+
+  return result(false);
+}
+
+function looksLikeRelevantTomlField(line: string, tablePath: string[] | null): boolean {
+  if (tablePath === null) return false;
+  if (sameTomlPath(tablePath, ["project"])) {
+    return startsWithTomlField(line, "dependencies") ||
+      startsWithTomlField(line, "optional-dependencies") ||
+      startsWithTomlField(line, "dynamic");
+  }
+  if (
+    sameTomlPath(tablePath, ["project", "optional-dependencies"]) ||
+    sameTomlPath(tablePath, ["dependency-groups"])
+  ) {
+    return true;
+  }
+  if (sameTomlPath(tablePath, ["build-system"])) {
+    return startsWithTomlField(line, "requires");
+  }
+  if (tablePath.length === 0) {
+    return /^(?:(?:project|build-system|dependency-groups|tool)(?:\s*\.|\s*=)|["'](?:project|build-system|dependency-groups|tool)["'](?:\s*\.|\s*=))/.test(line);
+  }
+  return isPoetryDependencyPath(tablePath);
+}
+
+interface TomlTableHeader {
+  path: string[];
+  array: boolean;
+}
+
+function parseTomlTableHeader(line: string): TomlTableHeader | null {
+  const array = line.startsWith("[[");
+  if (!line.startsWith("[")) return null;
+  const openerLength = array ? 2 : 1;
+  let quote: string | undefined;
+  let escaped = false;
+
+  for (let index = openerLength; index < line.length; index++) {
+    const char = line[index]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote === '"' && char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = quote === char ? undefined : quote ?? char;
+      continue;
+    }
+    if (char !== "]" || quote !== undefined) continue;
+    const closeLength = array ? 2 : 1;
+    if (array && line[index + 1] !== "]") return null;
+    const tail = line.slice(index + closeLength);
+    if (!/^\s*(?:#.*)?$/.test(tail)) return null;
+    const path = parseTomlDottedKey(line.slice(openerLength, index));
+    return path === null ? null : { path, array };
+  }
+
+  return null;
+}
+
+function isValidDependencyGroupName(value: string): boolean {
+  return /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/.test(value);
+}
+
+function normalizeDependencyGroupName(value: string): string {
+  return value.toLowerCase().replace(/[-_.]+/g, "-");
+}
+
+function isPoetryDependencyPath(path: readonly string[]): boolean {
+  if (path[0] !== "tool" || path[1] !== "poetry") return false;
+  if (
+    path.length === 3 &&
+    (path[2] === "dependencies" || path[2] === "dev-dependencies")
+  ) {
+    return true;
+  }
+  return path.length === 5 &&
+    path[2] === "group" &&
+    path[4] === "dependencies";
+}
+
+function poetryDependencyNameFromPath(path: readonly string[]): string | undefined {
+  if (
+    path.length === 4 &&
+    path[0] === "tool" &&
+    path[1] === "poetry" &&
+    (path[2] === "dependencies" || path[2] === "dev-dependencies")
+  ) {
+    return path[3];
+  }
+  if (
+    path.length === 6 &&
+    path[0] === "tool" &&
+    path[1] === "poetry" &&
+    path[2] === "group" &&
+    path[4] === "dependencies"
+  ) {
+    return path[5];
+  }
+  return undefined;
+}
+
+interface InlinePoetryDependencies {
+  names: string[];
+  complete: boolean;
+}
+
+function parseInlinePoetryDependencies(value: string): InlinePoetryDependencies {
+  const names: string[] = [];
+  let index = 0;
+  const skipWhitespace = (): void => {
+    while (index < value.length && /[ \t]/.test(value[index]!)) index++;
+  };
+  const result = (complete: boolean): InlinePoetryDependencies => ({ names, complete });
+
+  skipWhitespace();
+  if (value[index] !== "{") return result(false);
+  index++;
+  while (index < value.length) {
+    skipWhitespace();
+    if (value[index] === "}") {
+      index++;
+      return result(/^\s*(?:#.*)?$/.test(value.slice(index)));
+    }
+    const parsedKey = parseInlineTomlKey(value, index);
+    if (parsedKey === null || parsedKey.key.length !== 1) return result(false);
+    const poetryName = parseRequirementName(parsedKey.key[0]!);
+    if (poetryName === null) return result(false);
+    let valueStart = parsedKey.nextIndex;
+    while (valueStart < value.length && /[ \t]/.test(value[valueStart]!)) valueStart++;
+    if (
+      valueStart >= value.length ||
+      value[valueStart] === "," ||
+      value[valueStart] === "}" ||
+      value[valueStart] === "#"
+    ) {
+      return result(false);
+    }
+    if (poetryName !== "python") names.push(poetryName);
+    index = skipInlineTomlValue(value, valueStart);
+    skipWhitespace();
+    if (value[index] === ",") {
+      index++;
+      continue;
+    }
+    if (value[index] !== "}") return result(false);
+  }
+  return result(false);
+}
+
+/**
+ * Parse standardized dependency-bearing pyproject.toml metadata without a
+ * general TOML dependency. Relevant arrays are collected once and the line
+ * cursor advances past them, keeping malformed multi-megabyte manifests linear.
+ */
+function parsePyprojectToml(content: string): ParsedDependencyNames {
+  const names: string[] = [];
+  const lines = content.split(/\r\n|\n|\r/);
+  let tablePath: string[] | null = [];
+  let complete = true;
+  let dynamicRequiredDependencies = false;
+  let dynamicOptionalDependencies = false;
+  let unresolvedDependencyGroups = false;
+  let unresolvedToolDependencies = false;
+  let hasStaticOptionalDependencies = false;
+  let hasBuildSystem = false;
+  let sawBuildRequires = false;
+  const seenProjectFields = new Set<"dependencies" | "dynamic">();
+  const seenOptionalGroups = new Set<string>();
+  const dependencyGroups = new Map<string, { includes: string[] }>();
+
+  const addRequirementValues = (values: readonly string[]): void => {
+    for (const dependency of values) {
+      const name = parseRequirementName(dependency);
+      if (name === null) complete = false;
+      else names.push(name);
+    }
+  };
+  const noteProjectField = (field: "dependencies" | "dynamic"): void => {
+    if (seenProjectFields.has(field)) complete = false;
+    seenProjectFields.add(field);
+  };
+  const consumeProjectArray = (
+    field: "dependencies" | "dynamic",
+    parsedArray: TomlStringArrayResult,
+  ): void => {
+    noteProjectField(field);
+    complete = complete && parsedArray.complete;
+    if (field === "dynamic") {
+      dynamicRequiredDependencies = dynamicRequiredDependencies ||
+        parsedArray.values.includes("dependencies");
+      dynamicOptionalDependencies = dynamicOptionalDependencies ||
+        parsedArray.values.includes("optional-dependencies");
+    } else {
+      addRequirementValues(parsedArray.values);
+    }
+  };
+  const noteOptionalGroup = (group: ParsedInlineDependencyGroup): void => {
+    hasStaticOptionalDependencies = true;
+    if (!isValidDependencyGroupName(group.name)) complete = false;
+    const normalized = normalizeDependencyGroupName(group.name);
+    if (seenOptionalGroups.has(normalized)) complete = false;
+    seenOptionalGroups.add(normalized);
+    addRequirementValues(group.values);
+  };
+  const noteBuildRequires = (values: readonly string[]): void => {
+    hasBuildSystem = true;
+    if (sawBuildRequires) complete = false;
+    sawBuildRequires = true;
+    addRequirementValues(values);
+  };
+  const noteDependencyGroup = (group: ParsedInlineDependencyGroup): void => {
+    if (!isValidDependencyGroupName(group.name)) complete = false;
+    const normalized = normalizeDependencyGroupName(group.name);
+    if (dependencyGroups.has(normalized)) complete = false;
+    dependencyGroups.set(normalized, { includes: group.includes });
+    addRequirementValues(group.values);
+  };
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex]!.trim();
+    if (line === "" || line.startsWith("#")) continue;
+
+    if (line.startsWith("[")) {
+      const header = parseTomlTableHeader(line);
+      if (header === null) {
+        complete = false;
+        tablePath = null;
+      } else if (header.array) {
+        if (
+          header.path[0] === "project" ||
+          header.path[0] === "build-system" ||
+          header.path[0] === "dependency-groups"
+        ) {
+          complete = false;
+        }
+        if (isPoetryDependencyPath(header.path)) unresolvedToolDependencies = true;
+        tablePath = null;
+      } else {
+        tablePath = header.path;
+        if (sameTomlPath(header.path, ["project", "dependencies"])) {
+          noteProjectField("dependencies");
+        } else if (sameTomlPath(header.path, ["project", "optional-dependencies"])) {
+          hasStaticOptionalDependencies = true;
+        } else if (sameTomlPath(header.path, ["project", "dynamic"])) {
+          complete = false;
+        } else if (sameTomlPath(header.path, ["build-system"])) {
+          hasBuildSystem = true;
+        } else if (
+          header.path[0] === "build-system" && header.path.length > 1 ||
+          header.path[0] === "dependency-groups" && header.path.length > 1 ||
+          header.path[0] === "project" &&
+            header.path[1] === "optional-dependencies" &&
+            header.path.length > 2
+        ) {
+          complete = false;
+        }
+        if (poetryDependencyNameFromPath(header.path) !== undefined) {
+          unresolvedToolDependencies = true;
+        }
+      }
+      continue;
+    }
+
+    const assignment = parseTomlAssignment(line);
+    if (assignment === null) {
+      if (looksLikeRelevantTomlField(line, tablePath)) complete = false;
+      continue;
+    }
+
+    if (tablePath !== null && isPoetryDependencyPath(tablePath)) {
+      const poetryName = assignment.key.length === 1
+        ? parseRequirementName(assignment.key[0]!)
+        : null;
+      if (poetryName === null || assignment.value.trim() === "") {
+        unresolvedToolDependencies = true;
+      } else if (poetryName !== "python") {
+        names.push(poetryName);
+      }
+      continue;
+    }
+    if (tablePath !== null && sameTomlPath(tablePath, ["project", "dependencies"])) {
+      if (assignment.key.length === 1) names.push(assignment.key[0]!);
+      else complete = false;
+      continue;
+    }
+
+    if (tablePath !== null && sameTomlPath(tablePath, ["project", "optional-dependencies"])) {
+      if (assignment.key.length !== 1) {
+        complete = false;
+        continue;
+      }
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlStringArray(collected.source);
+      noteOptionalGroup({ name: assignment.key[0]!, values: parsedArray.values, includes: [] });
+      complete = complete && parsedArray.complete;
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (tablePath !== null && sameTomlPath(tablePath, ["dependency-groups"])) {
+      if (assignment.key.length !== 1) {
+        complete = false;
+        continue;
+      }
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlDependencyGroupArray(collected.source);
+      noteDependencyGroup({
+        name: assignment.key[0]!,
+        values: parsedArray.values,
+        includes: parsedArray.includes,
+      });
+      complete = complete && parsedArray.complete;
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (tablePath !== null && sameTomlPath(tablePath, ["build-system"])) {
+      if (sameTomlPath(assignment.key, ["requires"])) {
+        const collected = collectTomlArray(lines, lineIndex, assignment.value);
+        const parsedArray = parseTomlStringArray(collected.source);
+        noteBuildRequires(parsedArray.values);
+        complete = complete && parsedArray.complete;
+        lineIndex = collected.endLine;
+      }
+      continue;
+    }
+
+    if (tablePath === null) continue;
+    const fullKey = [...tablePath, ...assignment.key];
+    if (fullKey[0] === "build-system") hasBuildSystem = true;
+
+    const poetryDependencyKey = poetryDependencyNameFromPath(fullKey);
+    if (poetryDependencyKey !== undefined) {
+      const poetryName = parseRequirementName(poetryDependencyKey);
+      if (poetryName === null || assignment.value.trim() === "") {
+        unresolvedToolDependencies = true;
+      } else if (poetryName !== "python") {
+        names.push(poetryName);
+      }
+      continue;
+    }
+    if (isPoetryDependencyPath(fullKey)) {
+      const parsedPoetry = parseInlinePoetryDependencies(assignment.value);
+      names.push(...parsedPoetry.names);
+      unresolvedToolDependencies = unresolvedToolDependencies || !parsedPoetry.complete;
+      continue;
+    }
+    if (
+      sameTomlPath(fullKey, ["tool", "poetry"]) &&
+      /(?:^|[{,])\s*(?:dependencies|dev-dependencies)\s*=/.test(assignment.value)
+    ) {
+      unresolvedToolDependencies = true;
+      continue;
+    }
+    if (
+      fullKey[0] === "tool" &&
+      fullKey[1] === "poetry" &&
+      (fullKey[2] === "dependencies" ||
+        fullKey[2] === "dev-dependencies" ||
+        fullKey[2] === "group" && fullKey[4] === "dependencies")
+    ) {
+      unresolvedToolDependencies = true;
+      continue;
+    }
+
+    if (sameTomlPath(fullKey, ["project"])) {
+      const parsedInline = parseInlineProjectTable(assignment.value);
+      complete = complete && parsedInline.complete;
+      names.push(...parsedInline.names);
+      dynamicRequiredDependencies = dynamicRequiredDependencies ||
+        parsedInline.dynamicRequiredDependencies;
+      dynamicOptionalDependencies = dynamicOptionalDependencies ||
+        parsedInline.dynamicOptionalDependencies;
+      for (const field of parsedInline.seenFields) noteProjectField(field);
+      for (const group of parsedInline.optionalGroups) noteOptionalGroup(group);
+      continue;
+    }
+
+    if (sameTomlPath(fullKey, ["build-system"])) {
+      hasBuildSystem = true;
+      const parsedInline = parseInlineDependencyTable(assignment.value, "build");
+      complete = complete && parsedInline.complete;
+      const requires = parsedInline.groups.filter((group) => group.name === "requires");
+      for (const group of requires) noteBuildRequires(group.values);
+      continue;
+    }
+
+    if (sameTomlPath(fullKey, ["dependency-groups"])) {
+      const parsedInline = parseInlineDependencyTable(assignment.value, "groups");
+      complete = complete && parsedInline.complete;
+      for (const group of parsedInline.groups) noteDependencyGroup(group);
+      continue;
+    }
+
+    const projectField = sameTomlPath(fullKey, ["project", "dependencies"])
+      ? "dependencies"
+      : sameTomlPath(fullKey, ["project", "dynamic"])
+        ? "dynamic"
+        : undefined;
+    if (projectField !== undefined) {
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlStringArray(collected.source);
+      consumeProjectArray(projectField, parsedArray);
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (sameTomlPath(fullKey, ["project", "optional-dependencies"])) {
+      hasStaticOptionalDependencies = true;
+      const parsedInline = parseInlineDependencyTable(assignment.value, "optional");
+      complete = complete && parsedInline.complete;
+      for (const group of parsedInline.groups) noteOptionalGroup(group);
+      continue;
+    }
+
+    if (
+      fullKey.length === 3 &&
+      fullKey[0] === "project" &&
+      fullKey[1] === "optional-dependencies"
+    ) {
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlStringArray(collected.source);
+      noteOptionalGroup({ name: fullKey[2]!, values: parsedArray.values, includes: [] });
+      complete = complete && parsedArray.complete;
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (sameTomlPath(fullKey, ["build-system", "requires"])) {
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlStringArray(collected.source);
+      noteBuildRequires(parsedArray.values);
+      complete = complete && parsedArray.complete;
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (
+      fullKey.length === 2 &&
+      fullKey[0] === "dependency-groups"
+    ) {
+      const collected = collectTomlArray(lines, lineIndex, assignment.value);
+      const parsedArray = parseTomlDependencyGroupArray(collected.source);
+      noteDependencyGroup({
+        name: fullKey[1]!,
+        values: parsedArray.values,
+        includes: parsedArray.includes,
+      });
+      complete = complete && parsedArray.complete;
+      lineIndex = collected.endLine;
+      continue;
+    }
+
+    if (
+      fullKey.length > 2 &&
+      fullKey[0] === "project" &&
+      (fullKey[1] === "dependencies" || fullKey[1] === "dynamic") ||
+      fullKey.length > 3 &&
+      fullKey[0] === "project" &&
+      fullKey[1] === "optional-dependencies" ||
+      fullKey.length > 2 &&
+      fullKey[0] === "build-system" &&
+      fullKey[1] === "requires" ||
+      fullKey.length > 2 &&
+      fullKey[0] === "dependency-groups"
+    ) {
+      complete = false;
+    }
+  }
+
+  if (
+    dynamicRequiredDependencies && seenProjectFields.has("dependencies") ||
+    dynamicOptionalDependencies && hasStaticOptionalDependencies
+  ) {
+    complete = false;
+  }
+  if (hasBuildSystem && !sawBuildRequires) complete = false;
+
+  const indegree = new Map<string, number>();
+  for (const group of dependencyGroups.keys()) indegree.set(group, 0);
+  for (const definition of dependencyGroups.values()) {
+    for (const include of definition.includes) {
+      if (!isValidDependencyGroupName(include)) {
+        unresolvedDependencyGroups = true;
+        continue;
+      }
+      const target = normalizeDependencyGroupName(include);
+      if (!dependencyGroups.has(target)) {
+        unresolvedDependencyGroups = true;
+        continue;
+      }
+      indegree.set(target, (indegree.get(target) ?? 0) + 1);
+    }
+  }
+  const queue = [...indegree.entries()]
+    .filter(([, degree]) => degree === 0)
+    .map(([group]) => group);
+  let visited = 0;
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const group = queue[cursor]!;
+    visited++;
+    for (const include of dependencyGroups.get(group)?.includes ?? []) {
+      const target = normalizeDependencyGroupName(include);
+      const degree = indegree.get(target);
+      if (degree === undefined) continue;
+      const nextDegree = degree - 1;
+      indegree.set(target, nextDegree);
+      if (nextDegree === 0) queue.push(target);
+    }
+  }
+  if (visited !== dependencyGroups.size) unresolvedDependencyGroups = true;
+
+  return {
+    names,
+    complete,
+    unresolvedDynamicDependencies:
+      dynamicRequiredDependencies || dynamicOptionalDependencies,
+    unresolvedDependencyGroups,
+    unresolvedToolDependencies,
+  };
+}
+function recordUnresolvedDynamicDependencies(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "pyproject.toml declares required or optional project dependency metadata as dynamic, so a build backend supplies it from a source this scan did not resolve and dependency-confusion coverage is incomplete.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: "pyproject.toml",
+    match: "dynamic project dependencies",
+    recommendation:
+      "Treat this result as partial, not clean. Resolve the build backend's dependency source into static [project] dependency metadata or scan that source directly, then run the scan again.",
+  });
+}
+function recordUnresolvedDependencyGroups(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "pyproject.toml contains a dependency-group include that is missing, invalid or cyclic, so dependency-confusion coverage is incomplete.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: "pyproject.toml",
+    match: "unresolved dependency groups",
+    recommendation:
+      "Treat this result as partial, not clean. Repair dependency-group includes and cycles, then run the scan again.",
+  });
+}
+
+function recordUnresolvedToolDependencies(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "pyproject.toml declares dependencies in tool-specific Poetry metadata that this scanner did not resolve safely, so dependency-confusion coverage is incomplete.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: "pyproject.toml",
+    match: "unresolved tool-specific dependencies",
+    recommendation:
+      "Treat this result as partial, not clean. Export the Poetry dependency set to standardized project metadata or requirements.txt and scan it directly.",
+  });
+}
+function recordUnresolvedRequirementsInclude(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "requirements.txt delegates dependency declarations to a referenced dependency manifest that was not resolved, so dependency-confusion coverage is incomplete.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: "requirements.txt",
+    match: "unresolved requirements include",
+    recommendation:
+      "Treat this result as partial, not clean. Scan the referenced requirements files directly or consolidate them, then run the scan again.",
+  });
+}
+
+function recordUnresolvedDependencySources(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "requirements.txt contains a dependency-bearing source whose project name could not be resolved safely, so dependency-confusion coverage is incomplete.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: "requirements.txt",
+    match: "unresolved dependency source",
+    recommendation:
+      "Treat this result as partial, not clean. Use an explicit PEP 508 name-at-URL requirement or scan the referenced project metadata directly, then run the scan again.",
+  });
+}
+
+function recordMalformedManifest(
+  findings: Finding[],
+  manifest: PypiManifestName,
+): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "An in-scope dependency manifest was malformed or truncated, so its dependencies could not be fully scanned.",
+    severity: "info",
+    confidence: 1,
+    category: "info",
+    file: manifest,
+    match: "incomplete dependency manifest parse",
+    recommendation:
+      "Treat this result as partial, not clean. Repair the dependency manifest, then run the scan again.",
+  });
 }
 
 /**
@@ -804,36 +2277,66 @@ function parsePyprojectToml(content: string): string[] {
  */
 export async function scanPypiDependencyConfusion(projectDir: string): Promise<Finding[]> {
   const findings: Finding[] = [];
-  const packageNames: string[] = [];
+  const packageReferences: PypiPackageReference[] = [];
 
-  // Collect from requirements.txt
+  // Collect from requirements.txt. Optional absence is normal; an in-scope
+  // manifest that exists but cannot be read or parsed makes coverage partial.
   const reqTxt = path.join(projectDir, "requirements.txt");
-  if (fs.existsSync(reqTxt)) {
-    try {
-      parseRequirementsTxt(fs.readFileSync(reqTxt, "utf-8")).forEach((n) => packageNames.push(n));
-    } catch { /* skip */ }
+  const reqContent = readOptionalUtf8File(
+    projectDir,
+    reqTxt,
+    "requirements.txt",
+    findings,
+  );
+  if (reqContent !== null) {
+    const parsed = parseRequirementsTxt(reqContent);
+    parsed.names.forEach((name) => {
+      packageReferences.push({ name, manifest: "requirements.txt" });
+    });
+    if (!parsed.complete) recordMalformedManifest(findings, "requirements.txt");
+    if (parsed.unresolvedIncludes) recordUnresolvedRequirementsInclude(findings);
+    if (parsed.unresolvedDependencySources) recordUnresolvedDependencySources(findings);
   }
 
-  // Collect from pyproject.toml
+  // Collect from pyproject.toml under the same coverage contract.
   const pyproject = path.join(projectDir, "pyproject.toml");
-  if (fs.existsSync(pyproject)) {
-    try {
-      parsePyprojectToml(fs.readFileSync(pyproject, "utf-8")).forEach((n) => packageNames.push(n));
-    } catch { /* skip */ }
+  const pyprojectContent = readOptionalUtf8File(
+    projectDir,
+    pyproject,
+    "pyproject.toml",
+    findings,
+  );
+  if (pyprojectContent !== null) {
+    const parsed = parsePyprojectToml(pyprojectContent);
+    parsed.names.forEach((name) => {
+      packageReferences.push({ name, manifest: "pyproject.toml" });
+    });
+    if (!parsed.complete) recordMalformedManifest(findings, "pyproject.toml");
+    if (parsed.unresolvedDynamicDependencies) {
+      recordUnresolvedDynamicDependencies(findings);
+    }
+    if (parsed.unresolvedDependencyGroups) {
+      recordUnresolvedDependencyGroups(findings);
+    }
+    if (parsed.unresolvedToolDependencies) {
+      recordUnresolvedToolDependencies(findings);
+    }
   }
-
   const seen = new Set<string>();
-  for (const name of packageNames) {
-    if (seen.has(name.toLowerCase())) continue;
-    seen.add(name.toLowerCase());
+  const pypiInfoRequests = new Map<string, Promise<PypiInfo>>();
+  for (const { name, manifest } of packageReferences) {
+    const normalizedName = normalizePypiProjectName(name);
+    const referenceKey = `${manifest}\0${normalizedName}`;
+    if (seen.has(referenceKey)) continue;
+    seen.add(referenceKey);
 
     // AI-hallucinated PyPI package
-    if (AI_HALLUCINATED_PYPI_PACKAGES.has(name.toLowerCase())) {
+    if (AI_HALLUCINATED_PYPI_PACKAGES.has(normalizedName)) {
       findings.push({
         rule: "DEP_HALLUCINATED_PACKAGE",
         description: `PyPI package "${name}" matches a known AI-hallucinated package name. LLMs frequently suggest this non-existent package — it may be squatted on PyPI.`,
         severity: "high",
-        file: fs.existsSync(reqTxt) ? "requirements.txt" : "pyproject.toml",
+        file: manifest,
         match: name,
         recommendation:
           "Verify this is the correct package. AI-suggested package names that don't exist are frequently registered by attackers.",
@@ -842,10 +2345,15 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
     }
 
     // Internal name pattern
-    const looksInternal = INTERNAL_NAME_PATTERNS.some((p) => p.test(name));
+    const looksInternal = INTERNAL_NAME_PATTERNS.some((p) => p.test(normalizedName));
 
     try {
-      const info = await fetchPypiInfo(name);
+      let infoRequest = pypiInfoRequests.get(normalizedName);
+      if (infoRequest === undefined) {
+        infoRequest = fetchPypiInfo(name);
+        pypiInfoRequests.set(normalizedName, infoRequest);
+      }
+      const info = await infoRequest;
       const hasDescription = !!info.info?.summary && info.info.summary.length > 10;
       const hasHomePage = !!(info.info?.home_page || info.info?.project_url);
       const releaseCount = info.releases ? Object.keys(info.releases).length : 0;
@@ -877,7 +2385,7 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
           rule: "DEP_PYPI_CONFUSION",
           description: `PyPI package "${name}" has suspicious characteristics: ${flags.join(", ")}`,
           severity,
-          file: fs.existsSync(reqTxt) ? "requirements.txt" : "pyproject.toml",
+          file: manifest,
           match: name,
           recommendation: `Verify "${name}" is the legitimate package. Check https://pypi.org/project/${name}/ and compare with your expected dependency.`,
         });
@@ -889,7 +2397,7 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
           rule: "DEPCONF_NOT_ON_REGISTRY",
           description: `PyPI package "${name}" with internal-looking name is not found on PyPI. Private package vulnerable to dependency confusion.`,
           severity: "high",
-          file: fs.existsSync(reqTxt) ? "requirements.txt" : "pyproject.toml",
+          file: manifest,
           match: name,
           recommendation: `Ensure "${name}" is always resolved from your private registry. Configure pip with --index-url pointing to your private registry.`,
         });

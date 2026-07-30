@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { performanceBudget } from "./performance-budget.js";
 import {
   matchPatternInContent,
   validatePatternSet,
@@ -372,7 +373,7 @@ exec(payload)
       ["CODECOV_CURL_BASH", `curl ${long}codecov.io${long}| sh`, "g"],
       ["UAPARSER_MINER", `jsextension${long}curl`, "g"],
       ["BINARY_DIRECT_DOWNLOAD", `curl ${long}.exe `, "i"],
-      ["MINER_POOL_DOMAIN", `pool.${long}.com`, "gi"],
+      ["MINER_POOL_DOMAIN", `${long} stratum pool.worker.example.com`, "gi"],
       ["PROXY_BACKCONNECT", `residential${"x".repeat(500)}proxy${"x".repeat(500)}10.20`, "g"],
       ["PROXY_BACKCONNECT", "socks://proxy.invalid:1080", "g"],
     ];
@@ -399,8 +400,8 @@ exec(payload)
       ["BINARY_DIRECT_DOWNLOAD", "curl x\u2029.exe ", "i", []],
       ["BINARY_DIRECT_DOWNLOAD", "CURL x.EXE ", "i", [1]],
       ["MINER_POOL_DOMAIN", "mine.net", "gi", []],
-      ["MINER_POOL_DOMAIN", "mine.x.net", "gi", [1]],
-      ["MINER_POOL_DOMAIN", "POOL.x.COM", "gi", [1]],
+      ["MINER_POOL_DOMAIN", "stratum mine.x.net", "gi", [1]],
+      ["MINER_POOL_DOMAIN", "xmrig POOL.x.COM", "gi", [1]],
       ["PROXY_BACKCONNECT", "residential\u2028proxy\u202810.20", "g", [1]],
       ["PROXY_BACKCONNECT", "SOCKS5://proxy.invalid", "g", []],
       ["PROXY_BACKCONNECT", "socks://proxy.invalid", "g", [1]],
@@ -423,7 +424,7 @@ exec(payload)
     ["CODECOV_CURL_BASH", "curl curl codecov.io codecov.io | sh tail curl codecov.io | bash", "g"],
     ["UAPARSER_MINER", "curl x jsextension.exe y __package.json", "g"],
     ["BINARY_DIRECT_DOWNLOAD", "curl first.exe second.dll ", "i"],
-    ["MINER_POOL_DOMAIN", "pool.x.com y.net", "gi"],
+    ["MINER_POOL_DOMAIN", "stratum pool.x.com y.net", "gi"],
     ["PROXY_BACKCONNECT", "residential x residential y proxy z 10.20.30.40", "g"],
     ["PROXY_BACKCONNECT", "socks5:12341.2.3.4", "g"],
     ["PROXY_BACKCONNECT", "residentialproxy:12341.2.3.4", "g"],
@@ -471,7 +472,7 @@ exec(payload)
       expect(hits.coverage.complete, rule).toBe(true);
       expect(hits.coverage.regexAttempts, rule).toBe(1);
     }
-    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(Date.now() - started).toBeLessThan(performanceBudget(5_000));
   });
 
   it("keeps exact greedy/lazy endpoints on 5 MiB repeated completions", { timeout: 15_000 }, () => {
@@ -482,7 +483,7 @@ exec(payload)
       ["CODECOV_CURL_BASH", "curl codecov.io | sh ", "sh", 2, "first"],
       ["UAPARSER_MINER", "jsextension curl ", "curl", 4, "last"],
       ["BINARY_DIRECT_DOWNLOAD", "curl x.exe ", ".exe ", 5, "last"],
-      ["MINER_POOL_DOMAIN", "pool.x.com ", ".com", 4, "last"],
+      ["MINER_POOL_DOMAIN", "pool.x.com stratum ", ".com", 4, "first"],
       ["PROXY_BACKCONNECT", "residential proxy 10.20.30.40 ", "10.20", 5, "first"],
     ] as const;
     const started = Date.now();
@@ -511,7 +512,7 @@ exec(payload)
     // instrumentation is materially slower in these branch-heavy loops, so
     // retain a bounded 70 MiB throughput gate without treating coverage-host
     // overhead as an algorithmic regression.
-    expect(Date.now() - started).toBeLessThan(10_000);
+    expect(Date.now() - started).toBeLessThan(performanceBudget(10_000));
   });
 
   it("finds a short multi-line match crossing the 4096-character tile boundary", () => {
@@ -659,7 +660,7 @@ exec(payload)
     expect(hits).toHaveLength(1);
     expect(hits[0]!.line).toBe(11);
     expect(hits.coverage.complete).toBe(true);
-    expect(elapsed).toBeLessThan(5000);
+    expect(elapsed).toBeLessThan(performanceBudget(5000));
   });
 
   it("exports hard caps that keep individual regex work bounded", () => {

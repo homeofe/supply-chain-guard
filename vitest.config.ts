@@ -1,8 +1,11 @@
 import { defineConfig } from "vitest/config";
 
+const coverageRun = process.argv.some((arg) => arg === "--coverage" || arg.startsWith("--coverage."));
+
 export default defineConfig({
   test: {
     include: ["src/__tests__/**/*.test.ts"],
+    env: { SCG_VITEST_COVERAGE: coverageRun ? "1" : "0" },
     coverage: {
       provider: "v8",
       include: ["src/**"],

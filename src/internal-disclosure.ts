@@ -253,6 +253,354 @@ export function classifyIPv4(value: string): IPv4Class {
   return "public";
 }
 
+
+const V8_CONTEXT_MAX_CHARS = 4_096;
+const V8_CONTEXT_MAX_LINES = 32;
+const V8_VALUE_ONLY_PREFIX = /^[\s"'`*|,;:=-]*$/;
+const V8_ARRAY_OWNER_AT_END =
+  /(?:^|[{,;])\s*(?:(?:(?:export\s+)?(?:const|let|var)\s+)([A-Za-z_$][\w$]*)(?:\s*:\s*[^=\r\n]{1,128})?\s*=|(?:([A-Za-z_$][\w$]*)|["'`]([A-Za-z_$][\w$]*)["'`])\s*[:=])\s*$/;
+const V8_VALUE_OWNER_AT_END =
+  /(?:^|[{,;])\s*(?:(?:(?:export\s+)?(?:const|let|var)\s+)([A-Za-z_$][\w$]*)(?:\s*:\s*[^=\r\n]{1,128})?\s*=|(?:([A-Za-z_$][\w$]*)|["'`]([A-Za-z_$][\w$]*)["'`])\s*[:=])\s*(?:\[\s*)?(?:["'`]\s*)?$/;
+const V8_MEMBER_VALUE_OWNER_AT_END =
+  /(?:^|[;{,(])\s*[A-Za-z_$][\w$]*(?:\s*(?:\.\s*[A-Za-z_$][\w$]*|\[\s*(?:[A-Za-z_$][\w$]*|\d+|["'`][A-Za-z_$][\w$]*["'`])\s*\]))*\s*(?:\.\s*([A-Za-z_$][\w$]*)|\[\s*["'`]([A-Za-z_$][\w$]*)["'`]\s*\])\s*=\s*(?:\[\s*)?(?:["'`]\s*)?$/;
+const V8_PRIVATE_VALUE_OWNER_AT_END =
+  /(?:^|[;{])\s*#([A-Za-z_$][\w$]*)(?:\s*:\s*[^=\r\n]{1,128})?\s*=\s*(?:\[\s*)?(?:["'`]\s*)?$/;
+const V8_SAME_LINE_PROSE =
+  /(?:^|[^A-Za-z0-9])v8(?:[\s_-]+engine)?(?:[\s_-]+versions?)?[\s|:=_-]*$/i;
+const V8_PROSE_HEADER =
+  /^\s*(?:[#>*-]+\s*)?\|?\s*v8(?:\s+engine)?\s+versions?\s*(?:[:=|-]\s*)?\|?\s*$/i;
+const V8_PROSE_VERSION_ROW =
+  /^\s*(?:(?:[-*]\s*)|\|\s*)?["'`]?10(?:\.\d{1,3}){3}["'`]?\s*[,;]?\s*\|?\s*$/;
+
+type V8LexicalState = "code" | "single" | "double" | "template" | "line" | "block";
+
+interface V8Owner {
+  name: string;
+  openOffset: number;
+  openLine: number;
+  braceDepth: number;
+  parenDepth: number;
+}
+
+interface V8ArrayFrame {
+  effectiveOwner?: V8Owner;
+}
+
+interface V8ProseContext {
+  headerOffset: number;
+  headerLine: number;
+}
+
+function isV8OwnerName(value: string): boolean {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "v8" ||
+    normalized === "v8version" ||
+    normalized === "v8versions";
+}
+
+function v8MemberOwnerBeforeValue(linePrefix: string): string | undefined {
+  const candidate = V8_MEMBER_VALUE_OWNER_AT_END.exec(linePrefix);
+  return candidate?.[1] ?? candidate?.[2];
+}
+
+function v8PrivateOwnerBeforeValue(rawPrefix: string): string | undefined {
+  return V8_PRIVATE_VALUE_OWNER_AT_END.exec(rawPrefix)?.[1];
+}
+
+function v8OwnerBeforeArray(linePrefix: string): string | undefined {
+  const candidate = V8_ARRAY_OWNER_AT_END.exec(linePrefix);
+  return candidate?.[1] ?? candidate?.[2] ?? candidate?.[3] ??
+    v8MemberOwnerBeforeValue(linePrefix);
+}
+
+function v8OwnerBeforeValue(linePrefix: string): string | undefined {
+  const candidate = V8_VALUE_OWNER_AT_END.exec(linePrefix);
+  return candidate?.[1] ?? candidate?.[2] ?? candidate?.[3] ??
+    v8MemberOwnerBeforeValue(linePrefix);
+}
+
+function isV8ProseContinuation(line: string): boolean {
+  return line.trim() === "" ||
+    /^\s*\|?\s*:?-{3,}:?\s*\|?\s*$/.test(line) ||
+    V8_PROSE_VERSION_ROW.test(line);
+}
+
+/**
+ * Incremental lexical index for four-component V8 versions. Private-address
+ * candidates arrive in source order, so advancing one cursor across the file
+ * makes every lookup O(1) amortized instead of rescanning 4 KiB per match.
+ */
+class V8ContextIndex {
+  private cursor = 0;
+  private lineStart = 0;
+  private lineNo = 0;
+  private state: V8LexicalState = "code";
+  private escaped = false;
+  private lexicalLine = "";
+  private readonly arrays: V8ArrayFrame[] = [];
+  private braceDepth = 0;
+  private parenDepth = 0;
+  private pendingArrayOwner?: V8Owner;
+  private prose?: V8ProseContext;
+
+  constructor(private readonly content: string) {}
+
+  allows(matchStart: number): boolean {
+    // The specialized scanner calls this in source order. Keep the helper safe
+    // for an unexpected out-of-order caller without corrupting index state.
+    if (matchStart < this.cursor) {
+      return new V8ContextIndex(this.content).allows(matchStart);
+    }
+
+    this.advanceTo(matchStart);
+    const rawPrefix = this.content.slice(this.lineStart, matchStart);
+
+    // Same-line prose precedes assignment ownership: the word `version:` in
+    // `V8 engine version: ...` is a label, not a non-V8 object property.
+    if (V8_SAME_LINE_PROSE.test(rawPrefix)) return false;
+
+    const sameLineOwner = v8OwnerBeforeValue(this.lexicalLine);
+    if (sameLineOwner !== undefined) return !isV8OwnerName(sameLineOwner);
+
+    const privateOwner = v8PrivateOwnerBeforeValue(rawPrefix);
+    if (privateOwner !== undefined) return !isV8OwnerName(privateOwner);
+
+    // Comments inside an active array do not terminate its ownership. The
+    // lexical pass removed them from `lexicalLine` and ignored their brackets.
+    const frame = this.arrays[this.arrays.length - 1];
+    const arrayOwner = frame?.effectiveOwner;
+    if (
+      arrayOwner !== undefined &&
+      matchStart - arrayOwner.openOffset <= V8_CONTEXT_MAX_CHARS &&
+      this.lineNo - arrayOwner.openLine <= V8_CONTEXT_MAX_LINES
+    ) {
+      if (
+        this.braceDepth > arrayOwner.braceDepth ||
+        this.parenDepth > arrayOwner.parenDepth
+      ) {
+        return true;
+      }
+      return !isV8OwnerName(arrayOwner.name);
+    }
+
+    // A prose label such as `host:` is not a version-list item and must not
+    // inherit V8 ownership from an earlier line.
+    if (!V8_VALUE_ONLY_PREFIX.test(rawPrefix)) return true;
+
+    return !(
+      this.prose !== undefined &&
+      matchStart - this.prose.headerOffset <= V8_CONTEXT_MAX_CHARS &&
+      this.lineNo - this.prose.headerLine <= V8_CONTEXT_MAX_LINES
+    );
+  }
+
+  private advanceTo(target: number): void {
+    while (this.cursor < target) {
+      const char = this.content[this.cursor]!;
+      const next = this.content[this.cursor + 1];
+
+      if (
+        char === "\n" ||
+        char === "\u2028" ||
+        char === "\u2029" ||
+        (char === "\r" && next !== "\n")
+      ) {
+        this.finishLine(this.cursor);
+        if (this.state === "line") this.state = "code";
+        this.escaped = false;
+        this.cursor++;
+        continue;
+      }
+
+      if (this.state === "line") {
+        this.appendLexical(" ");
+        this.cursor++;
+        continue;
+      }
+
+      if (this.state === "block") {
+        if (char === "*" && next === "/") {
+          this.appendLexical("  ");
+          this.state = "code";
+          this.cursor += 2;
+        } else {
+          this.appendLexical(" ");
+          this.cursor++;
+        }
+        continue;
+      }
+
+      if (this.state !== "code") {
+        this.appendLexical(char);
+        if (this.escaped) {
+          this.escaped = false;
+        } else if (char === "\\") {
+          this.escaped = true;
+        } else if (
+          (this.state === "single" && char === "'") ||
+          (this.state === "double" && char === '"') ||
+          (this.state === "template" && char === "`")
+        ) {
+          this.state = "code";
+        }
+        this.cursor++;
+        continue;
+      }
+
+      if (char === "/" && next === "/") {
+        this.appendLexical("  ");
+        this.state = "line";
+        this.cursor += 2;
+      } else if (char === "/" && next === "*") {
+        this.appendLexical("  ");
+        this.state = "block";
+        this.cursor += 2;
+      } else if (
+        char === "#" &&
+        (this.cursor === 0 || /\s/.test(this.content[this.cursor - 1]!))
+      ) {
+        this.appendLexical(" ");
+        this.state = "line";
+        this.cursor++;
+      } else if (char === "'") {
+        this.appendLexical(char);
+        this.state = "single";
+        this.cursor++;
+      } else if (char === '"') {
+        this.appendLexical(char);
+        this.state = "double";
+        this.cursor++;
+      } else if (char === "`") {
+        this.appendLexical(char);
+        this.state = "template";
+        this.cursor++;
+      } else if (char === "[") {
+        const sameLineOwner = v8OwnerBeforeArray(this.lexicalLine);
+        const pendingOwner =
+          sameLineOwner === undefined &&
+          this.lexicalLine.trim() === "" &&
+          this.pendingArrayOwner !== undefined &&
+          this.cursor - this.pendingArrayOwner.openOffset <= V8_CONTEXT_MAX_CHARS &&
+          this.lineNo - this.pendingArrayOwner.openLine <= V8_CONTEXT_MAX_LINES
+            ? this.pendingArrayOwner.name
+            : undefined;
+        const ownerName = sameLineOwner ?? pendingOwner;
+        const inherited = this.arrays[this.arrays.length - 1]?.effectiveOwner;
+        this.arrays.push({
+          effectiveOwner: ownerName === undefined
+            ? inherited
+            : {
+              name: ownerName,
+              openOffset: this.cursor,
+              openLine: this.lineNo,
+              braceDepth: this.braceDepth,
+              parenDepth: this.parenDepth,
+            },
+        });
+        this.pendingArrayOwner = undefined;
+        this.appendLexical(char);
+        this.cursor++;
+      } else if (char === "]") {
+        this.arrays.pop();
+        this.appendLexical(char);
+        this.cursor++;
+      } else if (char === "{") {
+        this.braceDepth++;
+        this.appendLexical(char);
+        this.cursor++;
+      } else if (char === "}") {
+        this.braceDepth = Math.max(0, this.braceDepth - 1);
+        this.appendLexical(char);
+        this.cursor++;
+      } else if (char === "(") {
+        this.parenDepth++;
+        this.appendLexical(char);
+        this.cursor++;
+      } else if (char === ")") {
+        this.parenDepth = Math.max(0, this.parenDepth - 1);
+        this.appendLexical(char);
+        this.cursor++;
+      } else {
+        this.appendLexical(char);
+        this.cursor++;
+      }
+    }
+  }
+
+  private appendLexical(value: string): void {
+    this.lexicalLine += value;
+    // A candidate on an over-long line is skipped before this index is queried.
+    // Retain a bounded suffix only so crossing generated lines stays linear.
+    if (this.lexicalLine.length > V8_CONTEXT_MAX_CHARS) {
+      this.lexicalLine = this.lexicalLine.slice(-(V8_CONTEXT_MAX_CHARS / 2));
+    }
+  }
+
+  private finishLine(end: number): void {
+    const rawLine = this.content.slice(this.lineStart, end);
+    const pendingOwnerName = v8OwnerBeforeArray(this.lexicalLine);
+    if (pendingOwnerName !== undefined) {
+      this.pendingArrayOwner = {
+        name: pendingOwnerName,
+        openOffset: end,
+        openLine: this.lineNo,
+        braceDepth: this.braceDepth,
+        parenDepth: this.parenDepth,
+      };
+    } else if (this.lexicalLine.trim() !== "") {
+      this.pendingArrayOwner = undefined;
+    }
+
+    if (V8_PROSE_HEADER.test(rawLine)) {
+      this.prose = { headerOffset: this.lineStart, headerLine: this.lineNo };
+    } else if (this.prose !== undefined && !isV8ProseContinuation(rawLine)) {
+      this.prose = undefined;
+    }
+
+    this.lineNo++;
+    this.lineStart = end + 1;
+    this.lexicalLine = "";
+  }
+}
+
+/** Per-file state shared by context filters in the specialized scanner. */
+interface InternalDisclosureScanContext {
+  v8: V8ContextIndex;
+}
+
+/**
+ * Reject dotted numeric V8 engine versions without weakening real address
+ * detection. Same-line ownership is authoritative. Multiline array and prose
+ * ownership is bounded by both characters and physical lines.
+ */
+function isPrivateAddressLexicalContextOkIndexed(
+  content: string,
+  matchStart: number,
+  value: string,
+  v8Context: V8ContextIndex,
+): boolean {
+  // V8 versions that collide with the private-address shape are specifically
+  // 10-major four-component values. Other private ranges, and CIDR-qualified
+  // 10/8 hosts, remain topology findings even when a nearby identifier says V8.
+  if (value.includes("/")) return true;
+  const octets = parseIPv4(value);
+  if (octets === null || octets[0] !== 10) return true;
+
+  return v8Context.allows(matchStart);
+}
+
+export function isPrivateAddressLexicalContextOk(
+  content: string,
+  matchStart: number,
+  value: string,
+): boolean {
+  return isPrivateAddressLexicalContextOkIndexed(
+    content,
+    matchStart,
+    value,
+    new V8ContextIndex(content),
+  );
+}
 /**
  * Value guard for INTERNAL_PRIVATE_IP. The match may carry a CIDR suffix.
  *
@@ -551,7 +899,11 @@ export interface InternalPatternEntry extends PatternEntry {
   /** Severity derived from the matched value (see severityForHost). */
   severityFor?: (match: RegExpExecArray) => Severity;
   /** Guard on the text AROUND the match, not the match itself. */
-  contextFilter?: (content: string, match: RegExpExecArray) => boolean;
+  contextFilter?: (
+    content: string,
+    match: RegExpExecArray,
+    context: InternalDisclosureScanContext,
+  ) => boolean;
 }
 
 /**
@@ -568,6 +920,8 @@ export const INTERNAL_DISCLOSURE_PATTERNS: InternalPatternEntry[] = [
     rule: "INTERNAL_PRIVATE_IP",
     valueGroup: 0,
     valueFilter: isPrivateAddressLeak,
+    contextFilter: (content, match, context) =>
+      isPrivateAddressLexicalContextOkIndexed(content, match.index, match[0], context.v8),
     notFilePattern: MINIFIED_OR_MAP,
     notTestFile: true,
   },
@@ -1503,6 +1857,11 @@ export function scanInternalDisclosure(
   const index = buildLineIndex(content);
   const { lines, starts } = index;
   const codeMap = isMarkdown ? buildMarkdownCodeMap(lines) : null;
+  const scanContext: InternalDisclosureScanContext = {
+    // Construction is constant-time; the index advances lazily only when a
+    // suppressible four-component 10.x candidate reaches its context filter.
+    v8: new V8ContextIndex(content),
+  };
 
   // Computed on demand, once per line, and reused by every match on it.
   const contexts = new Array<LineContext | undefined>(lines.length);
@@ -1573,7 +1932,7 @@ export function scanInternalDisclosure(
         continue;
       }
 
-      if (pattern.contextFilter && !pattern.contextFilter(content, match)) continue;
+      if (pattern.contextFilter && !pattern.contextFilter(content, match, scanContext)) continue;
 
       const column = match.index - starts[lineNo];
       if (

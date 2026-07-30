@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { performanceBudget } from "./performance-budget.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
@@ -130,10 +131,10 @@ describe("Network Beacon and Crypto Miner Detection (T-008)", () => {
       expect(finding!.severity).toBe("critical");
     });
 
-    it("should detect mining pool patterns with pool. prefix", async () => {
+    it("should detect generic pool hostnames in explicit mining context", async () => {
       fs.writeFileSync(
         path.join(tempDir, "pool2.js"),
-        `const url = "pool.example.com";`,
+        `const url = "stratum+tcp://pool.example.com:4444";`,
       );
 
       const report = await scan({ target: tempDir, format: "text" });
@@ -238,6 +239,186 @@ describe("Network Beacon and Crypto Miner Detection (T-008)", () => {
       expect(finding).toBeDefined();
     });
 
+    it.each([
+      [
+        "an Intl-derived alias",
+        [
+          "const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;",
+          "const region = tz;",
+          'if (region === "Europe/Moscow") {',
+          "  fs.rmSync(dataDirectory, { recursive: true, force: true });",
+          "}",
+        ].join("\n"),
+      ],
+      [
+        "an executable country property",
+        [
+          "const country = request.geo.country;",
+          'if (country === "RU") {',
+          "  fs.rmSync(dataDirectory, { recursive: true, force: true });",
+          "}",
+        ].join("\n"),
+      ],
+    ])("should retain multi-line protestware through %s", async (_name, code) => {
+      fs.writeFileSync(path.join(tempDir, "structured-protest.js"), code);
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.some((finding) => finding.rule === "PROTESTWARE_PROXIMITY"),
+      ).toBe(true);
+    });
+
+    it("should not derive locale evidence from quoted comparison data", async () => {
+      const code = [
+        'const kind = "timezone";',
+        'if (kind === "timezone") {',
+        "  fs.rmSync(cacheDirectory, { recursive: true, force: true });",
+        "}",
+      ].join("\n");
+      fs.writeFileSync(path.join(tempDir, "quoted-timezone.js"), code);
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((finding) => finding.rule === "PROTESTWARE_PROXIMITY"),
+      ).toBeUndefined();
+    });
+
+    it("should not treat locale formatting near cache cleanup as protestware", async () => {
+      const code = [
+        "const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;",
+        "const formatter = new Intl.DateTimeFormat(locale, { timeZone: timezone });",
+        "if (cacheExpired === true) {",
+        "  fs.rmSync(cacheDirectory, { recursive: true, force: true });",
+        "}",
+      ].join("\n");
+
+      fs.writeFileSync(path.join(tempDir, "locale-cache.js"), code);
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find(
+          (f) =>
+            f.rule === "PROTESTWARE_LOCALE_DESTRUCT" ||
+            f.rule === "PROTESTWARE_PROXIMITY",
+        ),
+      ).toBeUndefined();
+    });
+
+    it("should clear locale derivation after an ordinary overwrite", async () => {
+      const code = [
+        "let region = Intl.DateTimeFormat().resolvedOptions().timeZone;",
+        'region = "cache"; if (region === "cache") {',
+        "  fs.rmSync(cacheDirectory, { recursive: true, force: true });",
+        "}",
+      ].join("\n");
+
+      fs.writeFileSync(path.join(tempDir, "overwritten-region.js"), code);
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find(
+          (finding) =>
+            finding.rule === "PROTESTWARE_LOCALE_DESTRUCT" ||
+            finding.rule === "PROTESTWARE_PROXIMITY",
+        ),
+      ).toBeUndefined();
+    });
+
+    it("should not correlate cleanup after a closed locale gate", async () => {
+      const code = [
+        "const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;",
+        'if (tz.includes("Europe/Moscow")) {',
+        '  console.log("regional notice");',
+        "}",
+        "fs.rmSync(cacheDirectory, { recursive: true, force: true });",
+      ].join("\n");
+
+      fs.writeFileSync(path.join(tempDir, "closed-locale-gate.js"), code);
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find(
+          (f) =>
+            f.rule === "PROTESTWARE_LOCALE_DESTRUCT" ||
+            f.rule === "PROTESTWARE_PROXIMITY",
+        ),
+      ).toBeUndefined();
+    });
+
+    it("bounds multi-line locale-to-destruction distance at 512 characters", async () => {
+      const localeSource = "const locale=getUserLocale();";
+      const aliasSource = "const region=locale;";
+      const gatePrefix = 'if(region==="RU"){';
+      const destructive = "fs.rmSync(dataDirectory);}";
+      const localeEvidenceEnd =
+        localeSource.length +
+        1 +
+        aliasSource.indexOf("locale") +
+        "locale".length;
+      const fixedDistance =
+        localeSource.length + 1 + aliasSource.length + 1 + gatePrefix.length - localeEvidenceEnd;
+      const sourceAt = (distance: number): string =>
+        localeSource +
+        "\n" +
+        aliasSource +
+        "\n" +
+        " ".repeat(distance - fixedDistance) +
+        gatePrefix +
+        destructive;
+
+      const atBoundary = path.join(tempDir, "at-boundary");
+      const overBoundary = path.join(tempDir, "over-boundary");
+      fs.mkdirSync(atBoundary);
+      fs.mkdirSync(overBoundary);
+      fs.writeFileSync(path.join(atBoundary, "gate.js"), sourceAt(512));
+      fs.writeFileSync(path.join(overBoundary, "gate.js"), sourceAt(513));
+
+      const atReport = await scan({ target: atBoundary, format: "text", noHistory: true });
+      const overReport = await scan({ target: overBoundary, format: "text", noHistory: true });
+      expect(
+        atReport.findings.some((finding) => finding.rule === "PROTESTWARE_PROXIMITY"),
+      ).toBe(true);
+      expect(
+        overReport.findings.some((finding) => finding.rule === "PROTESTWARE_PROXIMITY"),
+      ).toBe(false);
+    });
+
+    it("keeps nested and sequential geo-gate analysis linear on 5 MiB", { timeout: performanceBudget(15_000) }, async () => {
+      const size = 5 * 1024 * 1024;
+      const sourcePrefix =
+        "const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;\n" +
+        "x".repeat(400) +
+        "tz=tz;";
+      const sequentialNearMiss =
+        'if(tz==="Europe/Moscow"){noop();}fs.rmSync(cacheDirectory);tz=tz;'
+          .repeat(12_000);
+      const nearbyNestedSource =
+        "\nlet region=Intl.DateTimeFormat().resolvedOptions().timeZone;\n";
+      const nestedOpen =
+        'region=region;if(region==="Europe/Moscow"){' .repeat(12_000);
+      const nestedClose = "}".repeat(12_000);
+      const destructive = "fs.rmSync(dataDirectory);";
+      const fixedLength =
+        sourcePrefix.length +
+        sequentialNearMiss.length +
+        nearbyNestedSource.length +
+        nestedOpen.length +
+        destructive.length +
+        nestedClose.length;
+      const source =
+        sourcePrefix +
+        sequentialNearMiss +
+        "x".repeat(size - fixedLength) +
+        nearbyNestedSource +
+        nestedOpen +
+        destructive +
+        nestedClose;
+      fs.writeFileSync(path.join(tempDir, "nested-gates.js"), source);
+
+      const started = Date.now();
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(Date.now() - started).toBeLessThan(performanceBudget(10_000));
+      expect(
+        report.findings.some((finding) => finding.rule === "PROTESTWARE_PROXIMITY"),
+      ).toBe(true);
+    });
+
     it("should not flag legitimate timezone usage without destructive code", async () => {
       fs.writeFileSync(
         path.join(tempDir, "legit-tz.js"),
@@ -251,6 +432,18 @@ describe("Network Beacon and Crypto Miner Detection (T-008)", () => {
           f.rule === "PROTESTWARE_PROXIMITY",
       );
       expect(finding).toBeUndefined();
+    });
+
+    it("should not correlate distant events on one minified line", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ordinary-bundle.js"),
+        `const locale = currentLocale;${"x".repeat(2_922)}fs.rmSync(cacheEntry);`,
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "PROTESTWARE_LOCALE_DESTRUCT"),
+      ).toBeUndefined();
     });
   });
 

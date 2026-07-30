@@ -1,4 +1,32 @@
-> Note (2026-07-30, v5.23.2): The threat-intel change below shipped as v5.23.2 (patch,
+> Note (2026-07-30, v5.23.3): The compiled self-scan regression is fixed without
+> excluding `dist/` from protection. Exact package and canonical repository identity
+> are required before suppressing reviewed inert source/generated counterparts or
+> exact path-and-rule pairs. Arbitrary generated payloads and unrelated rules remain
+> detectable.
+>
+> PRECISION: credential theft now requires source-to-network-sink flow with lexical,
+> receiver and shell scope ownership; Vite/Vitest metadata and ordinary Proxy handlers
+> remain clean. Mining, pool-host, protestware, backconnect, character-code execution,
+> V8 ownership and broad-gap rules use bounded structural correlation. Python manifest
+> coverage includes modern requirements and pyproject dependency surfaces while
+> retaining explicit partial verdicts for unresolved intent.
+>
+> RELEASE SURFACE: v5.23.3 is synchronized across governed metadata, the feed and Action
+> pin. The reviewed workflow dependency updates from PRs #94 and #95 are included.
+> CHANGELOG.md records the self-scan policy choice, detector behavior, regressions and
+> trade-offs in detail.
+>
+> VALIDATION: the focused Windows set passed 713 tests in 10 files. The built CLI scanned
+> this checkout at score 3 / low risk with zero high and zero critical findings; its only
+> partial item was the deliberate deep-path fixture. The complete Linux correctness run
+> passed all 2,541 tests in all 106 files. Coverage-sensitive regression groups also pass
+> with an explicit instrumentation multiplier, preserving the real full-suite wall-clock
+> budgets instead of treating V8 coverage as a benchmark.
+>
+> DEFERRED: profile the structural matcher hot paths and remove the coverage multiplier
+> in v5.23.4. That work is recorded in NEXT_ACTIONS.md and is not a correctness or
+> self-scan release blocker.
+>> Note (2026-07-30, v5.23.2): The threat-intel change below shipped as v5.23.2 (patch,
 > matching the threat-intel-only release precedent of v5.18.2 and v5.20.1). It was
 > reviewed and merged as #92 before the release was cut, so the release commit carries
 > only the version bump and the regenerated artifacts.

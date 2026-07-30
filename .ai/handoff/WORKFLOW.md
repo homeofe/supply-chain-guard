@@ -64,13 +64,14 @@ hand-appended (the old append convention drifted across v5.3.0-v5.17.3).
 
 ```
 Does:    (Authoritative, gated process is in the repo-root CLAUDE.md.)
-         Adds a README ## Changelog entry for the new version
-         Bumps the version in package.json, package-lock.json, src/cli.ts, and
-           src/reporter.ts (text header + SARIF + SBOM + HTML footer) -- the
-           check:changelog + check:version-sync prebuild gates enforce this
-         Updates STATUS.md + regenerates MANIFEST.json (AAHP gate)
-         One commit, then git tag vX.Y.Z (after the commit)
-         git push origin main && git push origin vX.Y.Z
+         Adds a Keep a Changelog entry and matching reference link in CHANGELOG.md
+         Bumps every version site governed by aahp.config.json, then resynchronizes
+           package-lock.json with npm install --package-lock-only
+         Updates STATUS.md and runs npm run handoff:refresh (AAHP gate)
+         Creates one commit on a release branch, opens a PR, waits for the
+           protected Build and Test + aahp-verify checks, and squash-merges it
+         Checks out and pulls main, then tags the merged main commit as vX.Y.Z
+         Pushes only the new tag; main was updated through the protected PR
          CI does the rest on the tag: OIDC npm publish (no NPM_TOKEN),
            GitHub Release, and fast-forward of the floating v5 branch
 ```
@@ -84,9 +85,9 @@ Does:    (Authoritative, gated process is in the repo-root CLAUDE.md.)
 - **All tasks blocked** → notify project owner
 - **Notify project owner** only on fully completed tasks (not mid-task)
 - **Never skip tests** -- `npm test` must pass before committing
-- **Main-branch policy:** dependabot uses PRs; day-to-day maintenance (docs, threat-intel
-  IOCs, dependency bumps, releases) commits directly to main per CLAUDE.md. Every commit
-  must still build and pass the AAHP gate.
+- **Main-branch policy:** `main` is protected with admin enforcement. All changes,
+  including releases, dependency updates, documentation and threat-intel work, land
+  through PRs and the required `Build and Test` and `aahp-verify` checks.
 - **Each commit must build** -- broken builds block the CI publish pipeline
 
 ---
@@ -113,10 +114,9 @@ Does:    (Authoritative, gated process is in the repo-root CLAUDE.md.)
 
 See CLAUDE.md for the full mandatory sequence. All version strings move together
 (the `check:version-sync` gate enforces it):
-- `package.json` `"version"` + `package-lock.json`
-- `src/cli.ts` (`.version(...)`)
-- `src/reporter.ts` (text header, SARIF, SBOM, HTML footer)
-- `README.md` `## Changelog` entry (the `check:changelog` gate enforces it)
+- `CHANGELOG.md` release block, reference link, and Unreleased compare base
+- every version site in `aahp.config.json`, including `package.json`,
+  `package-lock.json`, scanner/report metadata, Action/MCP metadata and examples
 - `.ai/handoff/STATUS.md` note + regenerated `MANIFEST.json`
 
 ---

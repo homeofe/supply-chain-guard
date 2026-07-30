@@ -40,7 +40,7 @@ describe("pattern table validation", () => {
       set.filter((entry) => (entry.spansLines ?? 1) > 1),
     );
 
-    expect(multiLine).toHaveLength(9);
+    expect(multiLine).toHaveLength(11);
     expect(multiLine.every((entry) => typeof entry.correlatedMatcher === "function")).toBe(true);
   });
 

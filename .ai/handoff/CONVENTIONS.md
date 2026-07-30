@@ -61,9 +61,9 @@ chore/<short-name>           → build, deps, tooling
 - MAJOR: breaking CLI changes or removed detection rules
 - MINOR: new scanner module or new detection rules
 - PATCH: bug fixes, rule tuning, dependency updates
-- All version bumps move together (enforced by `check:version-sync`): `package.json`,
-  `package-lock.json`, `src/cli.ts`, `src/reporter.ts`, README `## Changelog`, plus
-  STATUS.md + MANIFEST.json. See CLAUDE.md for the authoritative sequence.
+- All version bumps move together (enforced by `check:version-sync`) across every
+  version site in `aahp.config.json`. CHANGELOG.md, STATUS.md and the generated
+  handoff set move with the release. See CLAUDE.md for the authoritative sequence.
 
 ## Release Checklist
 
@@ -73,9 +73,10 @@ The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary
 2. Version bumped everywhere (see Versioning above)
 3. `npm run build` green (prebuild: `check:aahp` = `npx --no-install aahp check .` [changelog + format + version-sync + claims + forbidden-patterns + schema-doc-sync + doc-links] + `check:feed` + `check:handoff`; CI also runs `aahp doctor` for conformance)
 4. `npm test` green
-5. One commit (code + docs + handoff), then `git tag vX.Y.Z` **after** the commit
-6. `git push origin main && git push origin vX.Y.Z`
-7. CI publishes to npm via OIDC, creates the GitHub Release, and fast-forwards the `v5` branch
+5. One commit (code + docs + handoff) on a release branch
+6. Open a PR, wait for protected `Build and Test` and `aahp-verify`, then squash-merge
+7. Pull the merged `main`, tag that exact commit as `vX.Y.Z`, and push the tag
+8. CI publishes to npm via OIDC, creates the GitHub Release, and fast-forwards the `v5` branch
 
 ## Detection Rule Conventions
 

@@ -6,7 +6,12 @@
  */
 
 import type { Finding, PatternEntry, Severity } from "./types.js";
-import { CORRELATED_PATTERN_MATCHERS } from "./correlated-pattern-matchers.js";
+import {
+  CORRELATED_PATTERN_MATCHERS,
+  hasShaiHuludCredentialFlowSignals,
+  maskMixedCommentsPreservingStrings,
+  matchCharacterCodeObfuscation,
+} from "./correlated-pattern-matchers.js";
 import {
   createCoreBroadGapMatchers,
   hasDropperPayloadPreparation,
@@ -916,57 +921,389 @@ const binaryDirectDownloadMatcher: NonNullable<PatternEntry["correlatedMatcher"]
   return results;
 };
 
+const MINER_POOL_LABEL_SOURCE =
+  "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const MINER_POOL_KNOWN_DOMAIN_CORE =
+  `(?:${MINER_POOL_LABEL_SOURCE}\\.)*` +
+  "(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\\.(?:com|org|net|io)";
+const MINER_POOL_GENERIC_DOMAIN_CORE =
+  "(?:pool|mining|mine|hashrate)\\." +
+  `(?:${MINER_POOL_LABEL_SOURCE}\\.)+` +
+  "(?:com|org|net|io)";
+const MINER_POOL_DOMAIN_SOURCE =
+  "(?<![A-Za-z0-9_.-])" +
+  "(?=[A-Za-z0-9.-]{1,253}(?![A-Za-z0-9_.-]))" +
+  `(?:${MINER_POOL_KNOWN_DOMAIN_CORE}|${MINER_POOL_GENERIC_DOMAIN_CORE})` +
+  "(?![A-Za-z0-9_.-])";
+const MINER_POOL_KNOWN_DOMAIN =
+  new RegExp(`^(?:${MINER_POOL_KNOWN_DOMAIN_CORE})$`, "i");
+const MINER_POOL_CONTEXT_SOURCE =
+  "\\b(?:stratum|xmrig|cpuminer|minerd|coinhive|cryptonight|randomx|pool_address|pool_password|mining_address)\\b";
+const MINER_POOL_CONTEXT_MAX_GAP = 512;
+
 const minerPoolDomainMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
-  const token = /(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\.(?:com|org|net|io)|(?:pool|mining|mine|hashrate)\.|(?:com|org|net|io)|\n|[\r\u2028\u2029]/gi;
-  const known = /^(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\./;
-  const prefix = /^(?:pool|mining|mine|hashrate)\.$/;
+  const domain = new RegExp(MINER_POOL_DOMAIN_SOURCE, "gi");
+  const context = new RegExp(MINER_POOL_CONTEXT_SOURCE, "gi");
   const results: StructuralMatch[] = [];
-  let genericPrefix: { start: number; end: number } | undefined;
-  let best: { start: number; end: number } | undefined;
-  const record = (start: number, end: number): void => {
-    if (
-      !best ||
-      start < best.start ||
-      (start === best.start && end > best.end)
-    ) {
-      best = { start, end };
+  const contextContent = maskMixedCommentsPreservingStrings(content);
+  let lineStart = 0;
+
+  while (lineStart <= content.length) {
+    const newline = content.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? content.length : newline;
+    const searchableLine = contextContent.slice(lineStart, lineEnd);
+    domain.lastIndex = 0;
+    context.lastIndex = 0;
+    let contextEvent = context.exec(searchableLine);
+    let latestContextEnd = Number.NEGATIVE_INFINITY;
+
+    let event: RegExpExecArray | null;
+    while ((event = domain.exec(searchableLine)) !== null) {
+      const domainStart = event.index;
+      const domainEnd = domainStart + event[0].length;
+      let hasNearbyMiningContext =
+        domainStart - latestContextEnd <= MINER_POOL_CONTEXT_MAX_GAP;
+
+      while (
+        !hasNearbyMiningContext &&
+        contextEvent !== null &&
+        contextEvent.index <= domainEnd + MINER_POOL_CONTEXT_MAX_GAP
+      ) {
+        const contextStart = contextEvent.index;
+        const contextEnd = contextStart + contextEvent[0].length;
+        const intervalGap = Math.max(
+          domainStart - contextEnd,
+          contextStart - domainEnd,
+          0,
+        );
+        hasNearbyMiningContext = intervalGap <= MINER_POOL_CONTEXT_MAX_GAP;
+        latestContextEnd = Math.max(latestContextEnd, contextEnd);
+        contextEvent = context.exec(searchableLine);
+      }
+
+      if (MINER_POOL_KNOWN_DOMAIN.test(event[0]) || hasNearbyMiningContext) {
+        const start = lineStart + event.index;
+        results.push(
+          makeStructuralMatch(content, start, start + event[0].length),
+        );
+        break;
+      }
     }
-  };
-  const flushPhysicalLine = (): void => {
-    if (best) results.push(makeStructuralMatch(content, best.start, best.end));
-    best = undefined;
-    genericPrefix = undefined;
-  };
-  let event: RegExpExecArray | null;
-  while ((event = token.exec(content)) !== null) {
-    const value = event[0]!;
-    if (value === "\n") {
-      flushPhysicalLine();
-      continue;
-    }
-    if (isDotLineTerminator(value)) {
-      genericPrefix = undefined;
-      continue;
-    }
-    const lower = value.toLowerCase();
-    if (known.test(lower)) {
-      record(event.index, event.index + value.length);
-    } else if (prefix.test(lower)) {
-      genericPrefix ??= { start: event.index, end: event.index + value.length };
-    } else if (
-      genericPrefix &&
-      event.index > genericPrefix.end &&
-      content[event.index - 1] === "."
-    ) {
-      record(genericPrefix.start, event.index + value.length);
-    }
+
+    if (newline === -1) break;
+    lineStart = newline + 1;
   }
-  flushPhysicalLine();
   return results;
 };
 
+const STRONG_MINING_CONFIG_KEYS = new Set([
+  "pool_address",
+  "pool_password",
+  "mining_address",
+]);
+const WEAK_MINING_CONFIG_KEY_BITS = new Map([
+  ["wallet", 1 << 0],
+  ["worker", 1 << 1],
+  ["hashrate", 1 << 2],
+  ["coin", 1 << 3],
+  ["algo", 1 << 4],
+]);
+const MINING_CONFIG_SCOPE_REPORTED = 1 << 8;
+
+interface QuotedMiningConfigToken {
+  end: number;
+  value?: string;
+}
+
+/**
+ * Read one quoted token without interpreting escaped spellings as key names.
+ * The returned end is always monotonic, including for an unclosed string.
+ */
+function readQuotedMiningConfigToken(
+  content: string,
+  start: number,
+  quote: string,
+): QuotedMiningConfigToken {
+  let index = start + 1;
+  let escaped = false;
+  while (index < content.length) {
+    const char = content[index]!;
+    if (char === "\\") {
+      escaped = true;
+      index = Math.min(content.length, index + 2);
+      continue;
+    }
+    if (char === quote) {
+      return {
+        end: index + 1,
+        value: escaped ? undefined : content.slice(start + 1, index),
+      };
+    }
+    index++;
+  }
+  return { end: content.length };
+}
+
+/**
+ * Match mining configuration evidence structurally and in one pass.
+ *
+ * The three mining-specific keys are strong enough to stand alone. Common
+ * vocabulary such as `worker` and `wallet` must contribute three distinct keys
+ * to the same brace-delimited object. Comment and regex text is blanked by the
+ * same-length shared lexical view, while quoted values remain available for
+ * exact key parsing.
+ */
+const miningConfigKeysMatcher: NonNullable<PatternEntry["correlatedMatcher"]> =
+  function* (content) {
+    const searchableContent = maskMixedCommentsPreservingStrings(content);
+    const scopeStates: number[] = [];
+    let previousSignificant = "";
+    let index = 0;
+
+    while (index < searchableContent.length) {
+      const char = searchableContent[index]!;
+      if (/\s/.test(char)) {
+        index++;
+        continue;
+      }
+
+      if (char === "'" || char === '"' || char === "`") {
+        const token = readQuotedMiningConfigToken(
+          searchableContent,
+          index,
+          char,
+        );
+        const tokenStart = index;
+        index = token.end;
+
+        // Template literals are values, not object keys. For ordinary quoted
+        // tokens, require the exact object-key position and a following colon.
+        let colon = index;
+        while (
+          colon < searchableContent.length &&
+          /\s/.test(searchableContent[colon]!)
+        ) {
+          colon++;
+        }
+        const key =
+          char === "`" ||
+            scopeStates.length === 0 ||
+            (previousSignificant !== "{" && previousSignificant !== ",") ||
+            searchableContent[colon] !== ":"
+            ? undefined
+            : token.value?.toLowerCase();
+
+        if (key !== undefined) {
+          const scopeIndex = scopeStates.length - 1;
+          const state = scopeStates[scopeIndex]!;
+          if (STRONG_MINING_CONFIG_KEYS.has(key)) {
+            if ((state & MINING_CONFIG_SCOPE_REPORTED) === 0) {
+              scopeStates[scopeIndex] = state | MINING_CONFIG_SCOPE_REPORTED;
+              yield makeStructuralMatch(content, tokenStart, colon + 1);
+            }
+          } else {
+            const bit = WEAK_MINING_CONFIG_KEY_BITS.get(key);
+            if (bit !== undefined) {
+              const priorWeakKeys = state & ~MINING_CONFIG_SCOPE_REPORTED;
+              let nextState = state | bit;
+              if (
+                (state & MINING_CONFIG_SCOPE_REPORTED) === 0 &&
+                (priorWeakKeys & (priorWeakKeys - 1)) !== 0 &&
+                (priorWeakKeys & bit) === 0
+              ) {
+                nextState |= MINING_CONFIG_SCOPE_REPORTED;
+                scopeStates[scopeIndex] = nextState;
+                yield makeStructuralMatch(content, tokenStart, colon + 1);
+              } else {
+                scopeStates[scopeIndex] = nextState;
+              }
+            }
+          }
+          previousSignificant = ":";
+          index = colon + 1;
+          continue;
+        }
+
+        previousSignificant = "value";
+        continue;
+      }
+
+      if (char === "{") {
+        scopeStates.push(0);
+      } else if (char === "}") {
+        scopeStates.pop();
+      }
+      previousSignificant = char;
+      index++;
+    }
+  };
+
+const CHARCODE_OBFUSCATION_SOURCE =
+  "(?:(?:\\\\x[0-9a-fA-F]{2}){5,}|" +
+  "String\\s*\\.\\s*fromCharCode\\s*\\()";
+const PROXY_REMOTE_SCHEME_SOURCE =
+  "socks[45]?://" +
+  "(?:[^\\s/@]+(?::[^\\s/@]*)?@)?" +
+  "(?:\\[[0-9a-fA-F:.]+\\]|[A-Za-z0-9.-]+)(?::\\d{1,5})?";
+
+function proxyEndpointHost(endpoint: string): string {
+  const schemeEnd = endpoint.indexOf("//");
+  if (schemeEnd === -1) return "";
+  let authority = endpoint.slice(schemeEnd + 2).split(/[\\/\s]/, 1)[0] ?? "";
+  const userInfoEnd = authority.lastIndexOf("@");
+  if (userInfoEnd !== -1) authority = authority.slice(userInfoEnd + 1);
+
+  if (authority.startsWith("[")) {
+    const close = authority.indexOf("]");
+    return close === -1 ? "" : authority.slice(1, close);
+  }
+
+  const colon = authority.lastIndexOf(":");
+  if (colon !== -1 && /^\d{1,5}$/.test(authority.slice(colon + 1))) {
+    return authority.slice(0, colon);
+  }
+  return authority;
+}
+
+function proxyIpv4Component(value: string): number | undefined {
+  let radix = 10;
+  let digits = value;
+  if (/^0x[0-9a-f]+$/i.test(value)) {
+    radix = 16;
+    digits = value.slice(2);
+  } else if (/^0[0-7]+$/.test(value)) {
+    radix = 8;
+    digits = value.slice(1);
+  } else if (!/^\d+$/.test(value)) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(digits || "0", radix);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+/** Normalize the one- through four-component IPv4 forms accepted by inet_aton. */
+function proxyIpv4Value(value: string): number | undefined {
+  const parts = value.split(".");
+  if (parts.length === 0 || parts.length > 4) return undefined;
+  const components = parts.map(proxyIpv4Component);
+  if (components.some((part) => part === undefined)) return undefined;
+  const numbers = components as number[];
+
+  let normalized: number;
+  if (numbers.length === 1) {
+    normalized = numbers[0]!;
+    if (normalized > 0xffff_ffff) return undefined;
+  } else if (numbers.length === 2) {
+    if (numbers[0]! > 0xff || numbers[1]! > 0xff_ffff) return undefined;
+    normalized = numbers[0]! * 0x100_0000 + numbers[1]!;
+  } else if (numbers.length === 3) {
+    if (
+      numbers[0]! > 0xff ||
+      numbers[1]! > 0xff ||
+      numbers[2]! > 0xffff
+    ) {
+      return undefined;
+    }
+    normalized =
+      numbers[0]! * 0x100_0000 +
+      numbers[1]! * 0x1_0000 +
+      numbers[2]!;
+  } else {
+    if (numbers.some((part) => part > 0xff)) return undefined;
+    normalized =
+      numbers[0]! * 0x100_0000 +
+      numbers[1]! * 0x1_0000 +
+      numbers[2]! * 0x100 +
+      numbers[3]!;
+  }
+  return normalized;
+}
+
+function proxyIpv4FirstOctet(value: number): number {
+  return Math.floor(value / 0x100_0000);
+}
+
+function proxyIpv6Words(value: string): number[] | undefined {
+  let address = value;
+  const dottedSuffixStart = address.lastIndexOf(":");
+  if (address.includes(".")) {
+    if (dottedSuffixStart === -1) return undefined;
+    const ipv4 = proxyIpv4Value(address.slice(dottedSuffixStart + 1));
+    if (ipv4 === undefined) return undefined;
+    address =
+      `${address.slice(0, dottedSuffixStart)}:` +
+      `${Math.floor(ipv4 / 0x1_0000).toString(16)}:` +
+      `${(ipv4 % 0x1_0000).toString(16)}`;
+  }
+
+  const halves = address.split("::");
+  if (halves.length > 2) return undefined;
+  const parseHalf = (half: string): number[] | undefined => {
+    if (half === "") return [];
+    const words: number[] = [];
+    for (const part of half.split(":")) {
+      if (!/^[0-9a-f]{1,4}$/i.test(part)) return undefined;
+      words.push(Number.parseInt(part, 16));
+    }
+    return words;
+  };
+
+  const left = parseHalf(halves[0] ?? "");
+  const right = parseHalf(halves[1] ?? "");
+  if (!left || !right) return undefined;
+  if (halves.length === 1) return left.length === 8 ? left : undefined;
+
+  const omitted = 8 - left.length - right.length;
+  if (omitted < 1) return undefined;
+  return [...left, ...new Array<number>(omitted).fill(0), ...right];
+}
+
+function isLoopbackOrWildcardProxyHost(value: string): boolean {
+  const host = value.toLowerCase().replace(/\.$/, "");
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+
+  const ipv4 = proxyIpv4Value(host);
+  if (ipv4 !== undefined) {
+    const firstOctet = proxyIpv4FirstOctet(ipv4);
+    return firstOctet === 0 || firstOctet === 127;
+  }
+
+  const ipv6 = proxyIpv6Words(host);
+  if (!ipv6) return false;
+  const allZero = ipv6.every((word) => word === 0);
+  const loopback =
+    ipv6.slice(0, 7).every((word) => word === 0) && ipv6[7] === 1;
+  if (allZero || loopback) return true;
+
+  const ipv4Compatible = ipv6.slice(0, 6).every((word) => word === 0);
+  const ipv4Mapped =
+    ipv6.slice(0, 5).every((word) => word === 0) && ipv6[5] === 0xffff;
+  if (!ipv4Compatible && !ipv4Mapped) return false;
+
+  const embeddedIpv4 = ipv6[6]! * 0x1_0000 + ipv6[7]!;
+  const firstOctet = proxyIpv4FirstOctet(embeddedIpv4);
+  return firstOctet === 0 || firstOctet === 127;
+}
+
+function isLoopbackOrWildcardIpv4Evidence(
+  content: string,
+  start: number,
+  value: string,
+): boolean {
+  let tokenStart = start;
+  let tokenEnd = start + value.length;
+  while (tokenStart > 0 && /[\d.]/.test(content[tokenStart - 1]!)) tokenStart--;
+  while (tokenEnd < content.length && /[\d.]/.test(content[tokenEnd]!)) tokenEnd++;
+  const ipv4 = proxyIpv4Value(content.slice(tokenStart, tokenEnd));
+  if (ipv4 === undefined) return false;
+  const firstOctet = proxyIpv4FirstOctet(ipv4);
+  return firstOctet === 0 || firstOctet === 127;
+}
+
 const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = (content) => {
   const results: StructuralMatch[] = [];
+  const searchableContent = maskMixedCommentsPreservingStrings(content);
   interface QueueRange { start: number; end: number }
   interface ResidentialProxyRange extends QueueRange { proxyStart: number }
   interface RankedRange extends QueueRange {
@@ -1062,7 +1399,10 @@ const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = 
   // union loses `1.2.3.4` when `:12341` first consumes its leading digit, and
   // it cannot expose the two-octet residential endpoint beside a full IPv4.
   const streams = [
-    { kind: "scheme", regex: /(?=(socks[45]?:\/\/))/g },
+    {
+      kind: "scheme",
+      regex: new RegExp(`(?=(${PROXY_REMOTE_SCHEME_SOURCE}))`, "g"),
+    },
     { kind: "socks", regex: /(?=(\bsocks[45]\b))/g },
     { kind: "back_connect", regex: /(?=(back_connect))/g },
     { kind: "backconnect", regex: /(?=(backconnect))/g },
@@ -1070,15 +1410,18 @@ const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = 
     { kind: "proxy", regex: /(?=(proxy))/g },
     { kind: "checkin", regex: /(?=(checkin))/g },
     { kind: "port", regex: /(?=(:\d{4,5}))/g },
-    { kind: "fullIpv4", regex: /(?=(\d{1,3}(?:\.\d{1,3}){3}))/g },
+    {
+      kind: "fullIpv4",
+      regex: /(?=(\d{1,3}(?:\.\d{1,3}){3}))/g,
+    },
     { kind: "partialIpv4", regex: /(?=(\d{1,3}\.\d{1,3}))/g },
   ] as const;
   const events = streams.map(({ regex }) => {
     regex.lastIndex = 0;
-    return regex.exec(content);
+    return regex.exec(searchableContent);
   });
   const barrier = /[\n\r]/g;
-  let barrierEvent = barrier.exec(content);
+  let barrierEvent = barrier.exec(searchableContent);
 
   while (true) {
     let eventStart = barrierEvent?.index ?? Number.POSITIVE_INFINITY;
@@ -1097,10 +1440,17 @@ const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = 
 
       switch (stream.kind) {
         case "scheme":
-          record(eventStart, end, 0, [eventStart]);
+          if (!isLoopbackOrWildcardProxyHost(proxyEndpointHost(value))) {
+            record(eventStart, end, 0, [eventStart]);
+          }
           break;
         case "socks":
-          socks.push({ start: eventStart, end });
+          // A complete socks:// authority is owned by the scheme branch. Do not
+          // let its protocol token seed the looser same-line fallback after a
+          // local or wildcard endpoint was deliberately rejected.
+          if (searchableContent.slice(end, end + 3) !== "://") {
+            socks.push({ start: eventStart, end });
+          }
           break;
         case "back_connect":
           record(eventStart, end, 4, [eventStart]);
@@ -1135,12 +1485,14 @@ const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = 
         }
         case "fullIpv4": {
           const socksPrefix = socks[socksHead];
-          if (socksPrefix) record(socksPrefix.start, end, 1, [eventStart]);
+          if (socksPrefix && !isLoopbackOrWildcardIpv4Evidence(content, eventStart, value)) {
+            record(socksPrefix.start, end, 1, [eventStart]);
+          }
           break;
         }
         case "partialIpv4": {
           const residentialProxy = residentialProxies[residentialProxyHead];
-          if (residentialProxy) {
+          if (residentialProxy && !isLoopbackOrWildcardIpv4Evidence(content, eventStart, value)) {
             record(
               residentialProxy.start,
               end,
@@ -1153,13 +1505,13 @@ const proxyBackconnectMatcher: NonNullable<PatternEntry["correlatedMatcher"]> = 
       }
 
       stream.regex.lastIndex = eventStart + 1;
-      events[streamIndex] = stream.regex.exec(content);
+      events[streamIndex] = stream.regex.exec(searchableContent);
     }
 
     if (barrierEvent?.index === eventStart) {
       if (barrierEvent[0] === "\n") flushPhysicalLine();
       else resetChains();
-      barrierEvent = barrier.exec(content);
+      barrierEvent = barrier.exec(searchableContent);
     }
   }
   flushPhysicalLine();
@@ -1534,12 +1886,13 @@ export const FILE_PATTERNS: PatternEntry[] = [
   },
   {
     name: "string-char-concat",
-    pattern:
-      "(?:String\\.fromCharCode|\\\\x[0-9a-fA-F]{2}){5,}",
+    pattern: CHARCODE_OBFUSCATION_SOURCE,
     description:
-      "Character code string construction detected (obfuscation technique)",
+      "Encoded character construction flows into a dynamic execution sink",
     severity: "medium",
     rule: "CHARCODE_OBFUSCATION",
+    spansLines: 8,
+    correlatedMatcher: matchCharacterCodeObfuscation,
     notTestFile: true,
   },
 
@@ -2676,8 +3029,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
   },
   {
     name: "mining-pool-domain",
-    pattern:
-      "(?:pool\\.|mining\\.|mine\\.|hashrate\\.).*\\.(?:com|org|net|io)|(?:nanopool|ethermine|f2pool|viabtc|antpool|poolin|slushpool|nicehash|minergate|hashflare|2miners|flexpool|ezil|hiveon)\\.(?:com|org|net|io)",
+    pattern: MINER_POOL_DOMAIN_SOURCE,
     description:
       "Known mining pool domain detected. This package may contain a cryptocurrency miner.",
     severity: "critical",
@@ -2689,11 +3041,12 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
   {
     name: "mining-config-keys",
     pattern:
-      "(?:\"|\\'|`)(?:wallet|worker|pool_address|pool_password|mining_address|hashrate|coin|algo)(?:\"|\\'|`)\\s*:",
+      "(?:^|[,{])\\s*([\"'`])(?:wallet|worker|pool_address|pool_password|mining_address|hashrate|coin|algo)\\1\\s*:",
     description:
-      "Mining configuration keys detected. This may be a cryptocurrency miner configuration.",
+      "Mining-specific configuration keys detected in one object scope. This may be a cryptocurrency miner configuration.",
     severity: "high",
     rule: "MINER_CONFIG_KEYS",
+    correlatedMatcher: miningConfigKeysMatcher,
     notFilePattern: /\.json$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -2725,7 +3078,7 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
   {
     name: "protestware-locale-destructive",
     pattern:
-      "(?:locale|timezone|timeZone|country|getTimezone|Intl\\.DateTimeFormat).*(?:fs\\.(?:rm|rmdir|unlink|writeFile)|process\\.exit|child_process|execSync|rimraf)",
+      "(?:locale|timezone|timeZone|country|getTimezone|Intl\\.DateTimeFormat).*(?:fs\\.(?:rm|rmdir|unlink|truncate|ftruncate)|process\\.exit|child_process|execSync|rimraf)",
     description:
       "Locale/timezone check followed by destructive code. This is a protestware pattern that targets users by geography.",
     severity: "critical",
@@ -2933,21 +3286,21 @@ export const CAMPAIGN_PATTERNS_V2: PatternEntry[] = [
   {
     name: "shai-hulud-npmrc-steal",
     pattern:
-      "\\.npmrc|npm_config_userconfig|NPM_TOKEN|npm-cli-login",
+      "\\.npmrc|npm_config_userconfig|NPM_TOKEN",
     description:
       "npm credentials access pattern. The Shai-Hulud worm steals .npmrc tokens to publish malicious packages.",
     severity: "high",
     rule: "SHAI_HULUD_CRED_STEAL",
+    correlatedMatcher: CORRELATED_PATTERN_MATCHERS.SHAI_HULUD_CRED_STEAL,
+    spansLines: 8,
     onlyExtensions: [".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".py", ".sh", ".bash"],
-    // Touching .npmrc is what every CI publish helper does. STEALING it means
-    // reading it and sending it somewhere, so require a read-and-transmit context
-    // in the same file.
-    requiresInFile:
-      /\b(?:fetch\s*\(|axios|https?\.(?:get|post|request)|XMLHttpRequest|node-fetch|curl\s|wget\s|requests\.|urllib|http\.client|\.post\s*\(|readFileSync|readFile\s*\(|createReadStream)/,
+    requiresInFileMatcher: hasShaiHuludCredentialFlowSignals,
+    // One authoritative structural matcher owns its language-specific linear
+    // branches and source-to-sink decision. A second metadata regex or duplicate
+    // rule entry could silently diverge from that contract.
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
-
   // Expanded protestware
   {
     name: "protestware-ip-geo-destruct",
@@ -2992,7 +3345,7 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
     name: "proxy-handler-trap",
     pattern:
       "new\\s+Proxy\\s*\\([^)]*\\{[^}]*(?:get|set|apply|construct)\\s*:[^}]*?" +
-      "(?:\\beval\\s*\\(|\\bnew\\s+Function\\b|\\bfetch\\s*\\(|\\baxios(?:\\.\\w+)?\\s*\\(|\\bXMLHttpRequest\\s*\\(|\\bchild_process\\.(?:exec(?:File)?(?:Sync)?|spawn(?:Sync)?)\\s*\\(|\\bexecSync\\s*\\(|\\batob\\s*\\(|process\\.env\\s*\\[)",
+      "(?:\\beval\\s*\\(|\\bnew\\s+Function\\b|\\bfetch\\s*\\(|\\baxios(?:\\.\\w+)?\\s*\\(|\\bXMLHttpRequest\\s*\\(|\\bchild_process\\.(?:exec(?:File)?(?:Sync)?|spawn(?:Sync)?)\\s*\\(|\\bexecSync\\s*\\(|\\batob\\s*\\()",
     description:
       "Proxy handler trap detected. Proxy objects can intercept and modify all object operations.",
     severity: "high",
@@ -3004,9 +3357,11 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
     spansLines: 5,
     // new Proxy({}, { get, set }) is a plain ES6 idiom used by prisma, vitest,
     // jiti and playwright-core. It is only interesting when the trap body does
-    // something hostile, so require an exfil / eval / credential-harvest signal.
+    // something hostile, so require an exfil / eval / execution signal. A bare
+    // process.env[key] read is normal in Vitest's import.meta.env proxy and is
+    // not hostile without a sink in the same trap.
     requiresInFile:
-      /\b(?:eval\s*\(|new\s+Function|fetch\s*\(|axios|XMLHttpRequest|child_process|execSync|atob\s*\()|process\.env\s*\[/,
+      /\b(?:eval\s*\(|new\s+Function|fetch\s*\(|axios|XMLHttpRequest|child_process|execSync|atob\s*\()/,
     notFilePattern: /\.min\.(js|css)$|(?:\/static\/js\/|\/vendor\/|\/public\/js\/|\/assets\/js\/).*\.js$|\.(md|markdown|txt|rst)$/i,
     notTestFile: true,
   },
@@ -3213,7 +3568,11 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "proxy-backconnect",
     pattern:
-      "(?:socks[45]?://|\\bsocks[45]\\b[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|backconnect[^\\r\\n]{0,512}?:\\d{4,5}|residential[^\\r\\n]{0,512}?proxy[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}|back_connect|proxy[^\\r\\n]{0,512}?checkin)",
+      "(?:" + PROXY_REMOTE_SCHEME_SOURCE +
+      "|\\bsocks[45]\\b[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}" +
+      "|backconnect[^\\r\\n]{0,512}?:\\d{4,5}" +
+      "|residential[^\\r\\n]{0,512}?proxy[^\\r\\n]{0,512}?\\d{1,3}\\.\\d{1,3}" +
+      "|back_connect|proxy[^\\r\\n]{0,512}?checkin)",
     description:
       "Reverse proxy/backconnect pattern. Infected machines are registered as proxy nodes for criminal infrastructure.",
     severity: "high",

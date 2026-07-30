@@ -10,16 +10,17 @@
 
 | Status | Count |
 |--------|-------|
-| Ready (open follow-ups) | 3 |
+| Ready (open follow-ups) | 4 |
 | Blocked | 0 |
 | Roadmap bets remaining | 0 |
 
-Current version: **v5.23.2**. The 2026-07 ideation roadmap plus the follow-on
+Current version: **v5.23.3**. The 2026-07 ideation roadmap plus the follow-on
 gap-analysis push (v5.12.4-v5.17.x: fresh threat-intel, Rust/Go/Python lockfile
 coverage, product/DX, honest SLSA grading, starjacking, OSV export, MCP-registry
-metadata) are shipped. v5.23.1 repairs the v5.23.0 multi-line engine with exact
-structural correlation, complete guard parity, and explicit partial-scan reporting.
-See CHANGELOG.md for the full per-release history.
+metadata) are shipped. v5.23.3 fixes compiled self-scan false positives while retaining
+full `dist/` protection, and hardens structural matcher precision across bundled code,
+manifest parsing, scope ownership, and bounded correlation. See CHANGELOG.md for the
+full per-release history.
 
 ---
 
@@ -27,7 +28,8 @@ See CHANGELOG.md for the full per-release history.
 
 | Item | Where | Note |
 |------|-------|------|
-| **URGENT (by ~2026-08-01): chunk `BUNDLED_FEED` or the build dies.** `tsc` throws TS2590 on the array literal at exactly 2,243 entries (2,242 is clean; boundary reproduced on TypeScript 7.0.2). main is at 1,197 and the daily import adds 250/day. Fix: split into const arrays of ~1,500 and spread them back (`[...FEED_CHUNK_0, ...]`); verified clean at 30,197 entries in 2.76 s with feed.json byte-identical | src/threat-intel.ts | small; do first |
+| **URGENT (by ~2026-08-01): chunk `BUNDLED_FEED` or the build dies.** `tsc` throws TS2590 on the array literal at exactly 2,243 entries (2,242 is clean; boundary reproduced on TypeScript 7.0.2). the v5.23.3 feed is at 1,807 entries and the daily import adds up to 250/day. Fix: split into const arrays of ~1,500 and spread them back (`[...FEED_CHUNK_0, ...]`); verified clean at 30,197 entries in 2.76 s with feed.json byte-identical | src/threat-intel.ts | small; do first |
+| **v5.23.4: reduce structural-matcher cost under V8 coverage instrumentation.** The real 5 MiB wall-clock gates pass with 10-15 second full-suite budgets, while V8 instrumentation adds roughly 2-4x overhead. v5.23.3 keeps explicit 5x instrumented budgets so CI measures bounded work without pretending coverage is a benchmark; profile credential-flow, protestware, V8 ownership, and broad-gap matchers and remove that multiplier when practical | correlated-pattern-matchers.ts, patterns.ts, internal-disclosure.ts | medium; next patch |
 | Full offline sigstore signature verification (DSSE signature vs Fulcio cert chain + Rekor inclusion proof) on top of v5.15.0's structural validation | src/slsa-verifier.ts | large; documented follow-up |
 | Digest-78 threat cluster (wagni_bot ~30 npm crypto-SDK impersonations, FauxUV PyPI RCE, mcp-server-pg) - needs the same primary-source verification as v5.12.4 before ingest | threat-intel | small-medium; own refresh |
 
@@ -50,6 +52,7 @@ See CHANGELOG.md for the full per-release history.
 
 | Item | Date |
 |------|------|
+| v5.23.3: exact self-recognition, compiled-counterpart suppression, bundle-safe structural correlation, Python manifest completeness, and build-backed self-scan regression | 2026-07-30 |
 | v5.23.1: exact multi-line structural matching, false-positive repairs, complete PatternEntry guard wiring, and transparent partial scans | 2026-07-29 |
 | v5.17.3: ViteVenom malicious @vite* npm IOCs (import-time RAT, blockchain C2) | 2026-07-18 |
 | v5.17.2: self-scan false-positive fix (recognize own repo checkout by package.json identity, not just install path) | 2026-07-17 |
