@@ -66,6 +66,14 @@ function maskLexical(
   mode: LexMode,
   maskStrings: boolean,
 ): string {
+  const hasLexicalDelimiter =
+    mode === "python"
+      ? /['"#]/.test(content)
+      : mode === "javascript"
+        ? /['"`/]/.test(content)
+        : /['"`/#]/.test(content);
+  if (!hasLexicalDelimiter) return content;
+
   const parts: string[] = [];
   let copiedThrough = 0;
 

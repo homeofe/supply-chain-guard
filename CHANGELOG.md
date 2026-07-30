@@ -82,6 +82,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- Lexical masking now returns immediately when content has no
+  language-relevant string or comment delimiters, preserving matcher semantics
+  while avoiding redundant passes over multi-megabyte plain-code inputs.
+
 - Pattern tables are validated at load time for duplicate IDs, invalid spans,
   unsafe broad gaps, and missing structural matchers. AST-based wiring tests,
   differential matcher checks, long-line adversarial cases, late-file fixtures,
