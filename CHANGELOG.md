@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 malicious package IOCs** imported from the GitHub Advisory Database
+  (CWE-506) and corroborated against OSV.dev, covering npm and PyPI advisories
+  published in the 14-day window to 2026-07-31. The batch is dominated by
+  typosquats of `socket.io`, `passport` and `mongoose`, plus several
+  machine-generated throwaway names.
+- **SHA-256 of the malicious `jscrambler@8.20.0` manifest**
+  (`bba32dd...f49f0`) added to the known-malware hash set and the bundled feed.
+  The version pins already covered an install from npm; the hash catches a
+  vendored or mirrored copy of that release where the version metadata is gone.
+  Single-source (Socket), so it carries a reduced feed confidence of 0.85.
+
 ## [5.23.3] - 2026-07-30
 
 ### Fixed

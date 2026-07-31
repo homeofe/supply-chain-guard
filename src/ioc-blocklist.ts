@@ -484,6 +484,11 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "fbbcf4d8f98168f78f5c0c47a9ae56d59ec8ac84a7c9ca6b797fedfb8d62d2bd": "jscrambler compromise infostealer payload (SHA256)",
   "b7ca95d1b23c8e67416a25cedf741de0917c2096bbc9d24649eea7853d054903": "jscrambler compromise infostealer payload (SHA256)",
   "c8fd47d36bdf7c825378593ab82ed8c24d1dc52e26b507812393e24e1d5201fd": "jscrambler compromise infostealer payload (SHA256)",
+  // Manifest of the malicious jscrambler@8.20.0 release (the dropper-in-dist stage,
+  // which carries no preinstall hook). Catches a vendored or mirrored copy of that
+  // release where the version metadata is gone. Single-source (Socket only; Rescana's
+  // IOC set lists the five payload hashes above but not this one).
+  "bba32ddeab075a5e5015eec50f5d2af364c95b848732c714aea6b6baf78f49f0": "jscrambler compromise: package.json of malicious jscrambler@8.20.0 (SHA256)",
 
   // FakeAgent campaign / SectopRAT via fake Claude Desktop app (Huntress / BleepingComputer,
   // July 21-22, 2026) - the trojanized ClaudeDesktop.exe (JetBrains Chromium binary sideloading

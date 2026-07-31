@@ -1,3 +1,30 @@
+> Note (2026-07-31, threat-intel, unreleased): Daily threat-intel update. No version
+> bump - the version belongs to the release Emre cuts.
+>
+> IMPORT: `npm run feed:import` added 250 package IOCs (GitHub Advisory Database CWE-506,
+> corroborated against OSV.dev) for the window from 2026-07-17. Mostly typosquats of
+> socket.io, passport and mongoose plus machine-generated throwaway names. The importer
+> hit its `--limit 250` with 28,662 more entries still ready in the window; that is the
+> benign cap, and the remainder stays available for subsequent runs. No page-cap error,
+> so the window did not need slicing. Skipped: 7 unmappable version ranges, 22 unsafe
+> package names, 1 withdrawn advisory.
+>
+> ENRICHMENT: one hand-added indicator, the SHA-256 of the malicious jscrambler@8.20.0
+> manifest. Single-source (Socket), fed at confidence 0.85. Every other atomic indicator
+> checked this run was already covered: the AsyncAPI compromise (C2 host, C2 IP, both
+> IPFS payload CIDs, the Ethereum dead-drop and all seven artifact hashes), the fake
+> Paysafe/Skrill/Neteller SDK campaign (C2 subdomain plus all 56 published hashes) and
+> the jscrambler payload hashes.
+>
+> DATA-QUALITY NOTE: the fetch-and-summarize path garbled two hashes from Socket's
+> Paysafe IOC list - one came back at 65 characters, the other differed from the shipped
+> value by a single character. Both were already in the blocklist in their correct
+> 64-character form, so nothing was written. Long hex strings from that path are
+> verified against the repo (and by exact-string search) before ingestion rather than
+> trusted; that check is what kept two corrupt hashes out of a public release.
+>
+> Model: claude-opus-5.
+
 > Note (2026-07-30, v5.23.3): The compiled self-scan regression is fixed without
 > excluding `dist/` from protection. Exact package and canonical repository identity
 > are required before suppressing reviewed inert source/generated counterparts or

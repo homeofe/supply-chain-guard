@@ -2902,6 +2902,20 @@ describe("Campaign Signatures", () => {
       expect(finding).toBeDefined();
       expect(finding?.severity).toBe("critical");
     });
+
+    it("should detect the malicious jscrambler@8.20.0 manifest hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest-hash.js"),
+        'const h = "bba32ddeab075a5e5015eec50f5d2af364c95b848732c714aea6b6baf78f49f0";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
   });
 
   // =================================================================
