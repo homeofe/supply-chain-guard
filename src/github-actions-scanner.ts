@@ -157,15 +157,7 @@ export const WORKFLOW_PATTERNS: Array<
     severity: "high",
     rule: "GHA_CACHE_POISONING",
   },
-  // Artifact injection: download-artifact from a PR-triggered workflow used in release/deploy
-  {
-    pattern: "actions/download-artifact",
-    description:
-      "Workflow downloads build artifacts. If artifacts originate from an untrusted PR workflow, " +
-      "they may have been tampered with (artifact injection attack).",
-    severity: "low",
-    rule: "GHA_ARTIFACT_DOWNLOAD",
-  },
+
   // Self-modifying workflow: writing to .github/workflows/
   {
     pattern: "(?:echo|tee|cat|cp|mv|write).*\\.github[\\\\/]workflows[\\\\/]",
@@ -283,8 +275,187 @@ function scanWorkflowContent(
   // line-by-line passes above are blind to.
   checkWorkflowAstRules(content, relativePath, findings);
 
+  // v5.23.4: artifact downloads are findings only when the workflow cannot
+  // prove a trusted current-run producer/consumer relationship.
+  checkArtifactDownloadRules(content, relativePath, findings);
+
   // v5.10: GitLost-class agent-workflow posture (trigger + agent step + token + public post)
   checkAgentWorkflowRules(content, relativePath, findings);
+}
+
+const TRUSTED_ARTIFACT_TRIGGERS = new Set([
+  "push",
+  "workflow_dispatch",
+  "schedule",
+  "release",
+  "repository_dispatch",
+]);
+
+function isArtifactAction(step: WfStep, operation: "upload" | "download"): boolean {
+  return new RegExp(`^actions/${operation}-artifact@`, "i").test(step.uses ?? "");
+}
+
+function hasStableActionRef(step: WfStep): boolean {
+  const ref = (step.uses ?? "").split("@").pop() ?? "";
+  return SHA_PATTERN.test(ref) || /^v?\d+(?:\.\d+){0,2}$/.test(ref);
+}
+
+/** Replace dynamic matrix/expression segments with globs before comparing names. */
+function normalizeArtifactSelector(value: string): string {
+  return value.trim().replace(/\$\{\{.*?\}\}/g, "*");
+}
+
+function globToRegExp(glob: string): RegExp {
+  let source = "^";
+  for (const ch of glob) {
+    if (ch === "*") source += ".*";
+    else if (ch === "?") source += ".";
+    else source += "\\^$.*+?()[]{}|".includes(ch) ? `\\${ch}` : ch;
+  }
+  return new RegExp(`${source}$`, "i");
+}
+
+/**
+ * Prove that two artifact selectors can identify the same name. Returning false
+ * must be exact because it prevents a producer from satisfying the trust proof.
+ */
+function artifactSelectorsOverlap(left: string, right: string): boolean {
+  const a = normalizeArtifactSelector(left);
+  const b = normalizeArtifactSelector(right);
+  const aWild = /[*?]/.test(a);
+  const bWild = /[*?]/.test(b);
+  if (!aWild) return bWild ? globToRegExp(b).test(a) : a.toLowerCase() === b.toLowerCase();
+  if (!bWild) return globToRegExp(a).test(b);
+
+  const fixedPrefix = (value: string): string => value.split(/[*?]/, 1)[0] ?? "";
+  const fixedSuffix = (value: string): string => {
+    const parts = value.split(/[*?]/);
+    return parts[parts.length - 1] ?? "";
+  };
+  const aPrefix = fixedPrefix(a).toLowerCase();
+  const bPrefix = fixedPrefix(b).toLowerCase();
+  const aSuffix = fixedSuffix(a).toLowerCase();
+  const bSuffix = fixedSuffix(b).toLowerCase();
+  const prefixCompatible = aPrefix.startsWith(bPrefix) || bPrefix.startsWith(aPrefix);
+  const suffixCompatible = aSuffix.endsWith(bSuffix) || bSuffix.endsWith(aSuffix);
+  return prefixCompatible && suffixCompatible;
+}
+
+function artifactSelectionMatches(upload: WfStep, download: WfStep): boolean {
+  const uploadName = upload.withName ?? "artifact";
+  if (download.withName) return artifactSelectorsOverlap(uploadName, download.withName);
+  if (download.withPattern) return artifactSelectorsOverlap(uploadName, download.withPattern);
+  return true; // no name or pattern downloads every artifact in the current run
+}
+
+function transitiveNeeds(job: WfJob, jobs: WfJob[]): WfJob[] {
+  const byId = new Map(jobs.map((candidate) => [candidate.id, candidate]));
+  const found: WfJob[] = [];
+  const seen = new Set<string>();
+  const pending = [...job.needs];
+  while (pending.length > 0) {
+    const id = pending.pop()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const dependency = byId.get(id);
+    if (!dependency) continue;
+    found.push(dependency);
+    pending.push(...dependency.needs);
+  }
+  return found;
+}
+
+function checkArtifactDownloadRules(
+  content: string,
+  relativePath: string,
+  findings: Finding[],
+): void {
+  let ast;
+  try {
+    ast = parseWorkflow(content);
+  } catch {
+    ast = undefined;
+  }
+
+  const rawLines = content.replace(/\r/g, "").split("\n");
+  const downloads = ast?.jobs.flatMap((job) =>
+    job.steps
+      .filter((step) => isArtifactAction(step, "download"))
+      .map((step) => ({ job, step })),
+  ) ?? [];
+
+  // Fail closed when the structural parser cannot associate a real action step.
+  if (downloads.length === 0) {
+    for (let i = 0; i < rawLines.length; i++) {
+      const action = /^\s*-?\s*uses:\s*(actions\/download-artifact@[^\s#]+)/i.exec(rawLines[i] ?? "");
+      if (!action) continue;
+      findings.push({
+        rule: "GHA_ARTIFACT_DOWNLOAD",
+        description:
+          "Workflow downloads an artifact, but its producer/run trust relationship could not be established structurally.",
+        severity: "low",
+        file: relativePath,
+        line: i + 1,
+        match: truncateMatch(action[1] ?? "actions/download-artifact"),
+        recommendation: getWorkflowRecommendation("GHA_ARTIFACT_DOWNLOAD"),
+      });
+    }
+    return;
+  }
+
+  const trustedTriggers =
+    ast !== undefined &&
+    ast.triggers.length > 0 &&
+    ast.triggers.every((trigger) => TRUSTED_ARTIFACT_TRIGGERS.has(trigger));
+
+  for (const { job, step } of downloads) {
+    const currentRun = !step.withGithubToken && !step.withRepository && !step.withRunId;
+    const stableDownload = hasStableActionRef(step);
+    const upstream = ast ? transitiveNeeds(job, ast.jobs) : [];
+    const upstreamIds = new Set(upstream.map((producerJob) => producerJob.id));
+    const matchingProducers = ast?.jobs.flatMap((producerJob) =>
+      producerJob.steps
+        .filter(
+          (upload) =>
+            isArtifactAction(upload, "upload") && artifactSelectionMatches(upload, step),
+        )
+        .map((upload) => ({ producerJob, upload })),
+    ) ?? [];
+    const matchingProducer =
+      matchingProducers.length > 0 &&
+      matchingProducers.every(
+        ({ producerJob, upload }) =>
+          upstreamIds.has(producerJob.id) && hasStableActionRef(upload),
+      );
+
+    if (currentRun && trustedTriggers && stableDownload && matchingProducer) continue;
+
+    const reasons: string[] = [];
+    if (!currentRun) reasons.push("the step explicitly enables cross-run or cross-repository access");
+    if (!trustedTriggers) {
+      reasons.push(
+        ast?.triggers.length
+          ? `the workflow has a low-trust or unsupported trigger (${ast.triggers.join(", ")})`
+          : "the workflow trigger could not be established",
+      );
+    }
+    if (!stableDownload) reasons.push("the download action reference is mutable or unrecognized");
+    if (!matchingProducer) {
+      reasons.push("no matching artifact producer is linked through the consumer job's transitive needs graph");
+    }
+
+    findings.push({
+      rule: "GHA_ARTIFACT_DOWNLOAD",
+      description:
+        `Workflow downloads an artifact without a complete trusted current-run handoff: ${reasons.join("; ")}. ` +
+        "Treat the artifact as untrusted until its producer and run identity are verified.",
+      severity: "low",
+      file: relativePath,
+      line: step.line,
+      match: truncateMatch(step.uses ?? "actions/download-artifact"),
+      recommendation: getWorkflowRecommendation("GHA_ARTIFACT_DOWNLOAD"),
+    });
+  }
 }
 
 /**
@@ -1086,8 +1257,8 @@ function getWorkflowRecommendation(rule: string): string {
       "Do not use github.head_ref in cache keys for workflows that can be triggered by untrusted PRs. " +
       "Use github.sha or a hash of locked dependency files instead.",
     GHA_ARTIFACT_DOWNLOAD:
-      "Verify that downloaded artifacts originate only from trusted, protected workflows. " +
-      "Consider adding artifact attestation using actions/attest-build-provenance.",
+      "Keep artifact downloads in the current workflow run, link the consumer to the producer through needs, " +
+      "and use trusted triggers. For cross-run or privileged consumption, verify provenance and never execute untrusted content.",
     GHA_SELF_MODIFY:
       "Workflows must not modify their own or other workflow files. This pattern is used by supply chain worms " +
       "to persist malicious code. Investigate immediately and audit recent workflow file changes.",

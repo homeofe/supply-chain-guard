@@ -35,6 +35,14 @@ export interface WfStep {
   withRef?: string;
   withScript?: string;
   withName?: string;
+  /** artifact glob consumed by actions/download-artifact */
+  withPattern?: string;
+  /** explicit cross-repository artifact source */
+  withRepository?: string;
+  /** explicit cross-run artifact source */
+  withRunId?: string;
+  /** token that enables cross-run/repository artifact access */
+  withGithubToken?: string;
   /** agent prompt text from with.prompt / direct_prompt / override_prompt / user_prompt (joined) */
   withPrompt?: string;
   /** token handed to the step via with.github_token / gh_token / token */
@@ -46,6 +54,8 @@ export interface WfStep {
 export interface WfJob {
   id: string;
   line: number;
+  /** direct job dependencies declared through `needs:` */
+  needs: string[];
   permissions: WfPermissions;
   steps: WfStep[];
   /** job-level `env:` map (in scope for EVERY step of this job) */
@@ -323,6 +333,27 @@ function parseWorkflowRunWorkflows(
   return result;
 }
 
+/** Parse `needs: build`, `needs: [build, test]`, and block-list forms. */
+function parseNeeds(
+  lines: string[],
+  needsIndex: number,
+  needsIndent: number,
+  value: string | null,
+): string[] {
+  if (value) {
+    return value.trim().startsWith("[")
+      ? parseFlowList(value)
+      : [stripQuotes(value)].filter((item) => item !== "");
+  }
+
+  const result: string[] = [];
+  for (const j of blockBody(lines, needsIndex, needsIndent)) {
+    const item = stripComment(lines[j]!).trim();
+    if (item.startsWith("- ")) result.push(stripQuotes(item.slice(2)));
+  }
+  return result.filter((item) => item !== "");
+}
+
 function parseJobs(lines: string[], jobsIndex: number, inner: boolean[]): WfJob[] {
   const jobs: WfJob[] = [];
   const jobsIndent = indentOf(lines[jobsIndex]!);
@@ -354,6 +385,7 @@ function parseJob(
   const job: WfJob = {
     id: jobId,
     line: jobIndex + 1,
+    needs: [],
     permissions: emptyPermissions(),
     steps: [],
   };
@@ -371,6 +403,8 @@ function parseJob(
 
     if (kv.key === "permissions") {
       job.permissions = parsePermissions(lines, j, jobChildIndent, kv.value);
+    } else if (kv.key === "needs") {
+      job.needs = parseNeeds(lines, j, jobChildIndent, kv.value);
     } else if (kv.key === "steps") {
       job.steps = parseSteps(lines, j, jobChildIndent, inner);
     } else if (kv.key === "env") {
@@ -476,6 +510,10 @@ function parseWith(
     if (!kv) continue;
     if (kv.key === "ref" && kv.value) step.withRef = stripQuotes(kv.value);
     else if (kv.key === "name" && kv.value) step.withName = stripQuotes(kv.value);
+    else if (kv.key === "pattern" && kv.value) step.withPattern = stripQuotes(kv.value);
+    else if (kv.key === "repository" && kv.value) step.withRepository = stripQuotes(kv.value);
+    else if (kv.key === "run-id" && kv.value) step.withRunId = stripQuotes(kv.value);
+    else if (kv.key === "github-token" && kv.value) step.withGithubToken = stripQuotes(kv.value);
     else if (kv.key === "script") step.withScript = readScalarOrBlock(lines, j, withChildIndent, kv.value);
     else if (
       (kv.key === "prompt" || kv.key === "direct_prompt" ||

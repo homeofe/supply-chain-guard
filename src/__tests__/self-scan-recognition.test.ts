@@ -227,6 +227,9 @@ describe("built repository self-scan", () => {
     // findings can still inflate the aggregate verdict to high or critical.
     expect(cleanReport.score).toBeLessThanOrEqual(10);
     expect(["clean", "low"]).toContain(cleanReport.riskLevel);
+    expect(
+      cleanReport.findings.some((finding) => finding.rule === "GHA_ARTIFACT_DOWNLOAD"),
+    ).toBe(false);
   });
 
   it("still scans an arbitrary payload under dist", () => {

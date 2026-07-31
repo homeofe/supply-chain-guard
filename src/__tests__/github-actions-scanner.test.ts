@@ -617,3 +617,226 @@ jobs:
     expect(findings.some((f) => f.rule === "GHA_ARTIFACT_DOWNLOAD")).toBe(true);
   });
 });
+
+describe("GHA artifact trust context (v5.23.4)", () => {
+  let tempDir: string;
+  beforeEach(() => { tempDir = fs.mkdtempSync(path.join("/tmp", "scg-gha-artifact-")); });
+  afterEach(() => { fs.rmSync(tempDir, { recursive: true, force: true }); });
+
+  const uploadSha = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a";
+  const downloadSha = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c";
+
+  it("suppresses a trusted, SHA-pinned, current-run handoff through needs", () => {
+    const workflow = [
+      "on:",
+      "  push:",
+      "    tags: ['v*']",
+      "  workflow_dispatch:",
+      "permissions:",
+      "  contents: read",
+      "  packages: write",
+      "jobs:",
+      "  build:",
+      "    strategy:",
+      "      matrix:",
+      "        slug: [amd64, arm64]",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: digest-${{ matrix.slug }}",
+      "          path: /tmp/digests/${{ matrix.slug }}",
+      "  merge:",
+      "    needs: build",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          pattern: digest-*",
+      "          merge-multiple: true",
+    ].join("\n");
+    writeWorkflow(tempDir, "docker.yml", workflow);
+
+    const findings = scanGitHubActionsWorkflows(tempDir);
+    expect(findings.filter((f) => f.rule === "GHA_ARTIFACT_DOWNLOAD")).toEqual([]);
+  });
+
+  it("accepts a matching producer through transitive needs", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  verify:",
+      "    needs: build",
+      "    steps:",
+      "      - run: echo verified",
+      "  deploy:",
+      "    needs: verify",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: package",
+    ].join("\n");
+    writeWorkflow(tempDir, "transitive.yml", workflow);
+
+    const findings = scanGitHubActionsWorkflows(tempDir);
+    expect(findings.some((f) => f.rule === "GHA_ARTIFACT_DOWNLOAD")).toBe(false);
+  });
+
+  it("retains detection for explicit cross-run or cross-repository access", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  consume:",
+      "    needs: build",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: package",
+      "          repository: owner/other",
+      "          run-id: 1234",
+      "          github-token: ${{ secrets.ARTIFACT_TOKEN }}",
+    ].join("\n");
+    writeWorkflow(tempDir, "cross-run.yml", workflow);
+
+    const finding = scanGitHubActionsWorkflows(tempDir).find(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(finding?.description).toContain("cross-run or cross-repository");
+  });
+
+  it("retains detection for pull_request_target artifact flow", () => {
+    const workflow = [
+      "on: pull_request_target",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  deploy:",
+      "    needs: build",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: package",
+    ].join("\n");
+    writeWorkflow(tempDir, "pwn-request.yml", workflow);
+
+    const finding = scanGitHubActionsWorkflows(tempDir).find(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(finding?.description).toContain("pull_request_target");
+  });
+
+  it("retains detection without a producer dependency", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  deploy:",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: package",
+    ].join("\n");
+    writeWorkflow(tempDir, "missing-needs.yml", workflow);
+
+    const finding = scanGitHubActionsWorkflows(tempDir).find(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(finding?.description).toContain("transitive needs graph");
+  });
+
+  it("does not let one safe handoff suppress an unrelated download", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: reviewed",
+      "  consume:",
+      "    needs: build",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: reviewed",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: unrelated",
+    ].join("\n");
+    writeWorkflow(tempDir, "mixed.yml", workflow);
+
+    const findings = scanGitHubActionsWorkflows(tempDir).filter(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.description).toContain("no matching artifact producer");
+  });
+
+  it("retains detection when the download action uses a mutable branch", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  consume:",
+      "    needs: build",
+      "    steps:",
+      "      - uses: actions/download-artifact@main",
+      "        with:",
+      "          name: package",
+    ].join("\n");
+    writeWorkflow(tempDir, "mutable.yml", workflow);
+
+    const finding = scanGitHubActionsWorkflows(tempDir).find(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(finding?.description).toContain("mutable or unrecognized");
+  });
+
+  it("does not trust a matching artifact uploaded by a job outside needs", () => {
+    const workflow = [
+      "on: push",
+      "jobs:",
+      "  reviewed-build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  unlinked-build:",
+      "    steps:",
+      `      - uses: actions/upload-artifact@${uploadSha}`,
+      "        with:",
+      "          name: package",
+      "  consume:",
+      "    needs: reviewed-build",
+      "    steps:",
+      `      - uses: actions/download-artifact@${downloadSha}`,
+      "        with:",
+      "          name: package",
+    ].join("\n");
+    writeWorkflow(tempDir, "unlinked-producer.yml", workflow);
+
+    const finding = scanGitHubActionsWorkflows(tempDir).find(
+      (candidate) => candidate.rule === "GHA_ARTIFACT_DOWNLOAD",
+    );
+    expect(finding?.description).toContain("no matching artifact producer");
+  });
+});

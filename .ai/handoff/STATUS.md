@@ -1,3 +1,25 @@
+> Note (2026-07-31, v5.23.4): Issue #97 replaces the unconditional
+> GHA_ARTIFACT_DOWNLOAD action-name match with a fail-closed structural trust proof.
+> A download is clean only when trusted triggers, stable upload/download refs, matching
+> exact or glob artifact selectors and every matching producer in the consumer's
+> transitive needs closure are all established. Explicit repository/run/token inputs,
+> untrusted or unknown triggers, mutable refs, unlinked producers and parse failures
+> remain low findings; cross-workflow artifact escalation remains independent.
+>
+> PARSER/REGRESSIONS: workflow-ast now captures scalar, flow-list and block-list needs
+> plus artifact pattern/repository/run-id/github-token inputs. Exact Docker multi-arch,
+> transitive-needs, cross-run, pull_request_target, missing/unrelated/unlinked producer
+> and mutable-ref cases are covered. The build-backed self-scan asserts that Issue #97
+> stays absent. Focused local verification is green: 66 workflow AST/scanner/graph tests,
+> 23 build-backed self-scan tests and TypeScript no-emit lint. The governed production
+> build passes all AAHP/feed/handoff gates, and the built v5.23.4 CLI scans the real
+> checkout at score 0 / clean with zero findings at every severity.
+>
+> RELEASE SCOPE: PR #98 was corrected to the real 1,807 -> 2,058 feed transition and
+> merged separately, so v5.23.4 contains 250 package IOCs plus one verified manifest
+> hash without mixing generated data into the scanner patch. Coverage-instrumentation
+> profiling is explicitly moved to v5.23.5; the 28,662-entry importer backlog replaces
+> the stale feed-chunking action in NEXT_ACTIONS.
 > Note (2026-07-31, threat-intel, unreleased): Daily threat-intel update. No version
 > bump - the version belongs to the release Emre cuts.
 >

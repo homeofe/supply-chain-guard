@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.23.4] - 2026-07-31
+
 ### Added
 
 - **250 malicious package IOCs** imported from the GitHub Advisory Database
@@ -19,6 +21,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   The version pins already covered an install from npm; the hash catches a
   vendored or mirrored copy of that release where the version metadata is gone.
   Single-source (Socket), so it carries a reduced feed confidence of 0.85.
+
+### Fixed
+
+- **Trusted same-run GitHub Actions artifact handoffs no longer add a low-risk
+  finding.** `GHA_ARTIFACT_DOWNLOAD` now uses workflow structure instead of a
+  bare action-name match. Suppression requires a trusted trigger, a stable
+  upload and download action reference, an exact or glob-compatible artifact
+  selector, and a producer linked through the consumer job's complete
+  `needs` graph. If multiple jobs can produce the selected artifact, every
+  matching producer must be in that dependency closure. Scalar, flow-list and
+  block-list `needs` forms plus `pattern`, `repository`, `run-id` and
+  `github-token` inputs are parsed without adding a YAML dependency.
+- **Artifact injection coverage remains fail-closed.** Explicit cross-run or
+  cross-repository access, `workflow_run`, `pull_request_target`, mutable action
+  refs, unlinked producers, unrelated artifact names and structurally unknown
+  workflows still report `GHA_ARTIFACT_DOWNLOAD`; the existing cross-workflow
+  graph continues to escalate untrusted producer-to-privileged-consumer chains
+  to medium or critical. Regressions cover the repository's native multi-arch
+  Docker digest handoff, transitive dependencies and malicious controls, and the
+  build-backed self-scan now asserts this contextual false positive is absent.
 
 ## [5.23.3] - 2026-07-30
 
@@ -2581,7 +2603,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.3...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.4...HEAD
+[5.23.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.4
 [5.23.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.3
 [5.23.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.2
 [5.23.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.1

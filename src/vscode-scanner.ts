@@ -28,7 +28,7 @@ import {
   readContainedExtractedUtf8File,
 } from "./extracted-file-walker.js";
 
-const TOOL_VERSION = "5.23.3";
+const TOOL_VERSION = "5.23.4";
 
 // VS Code Marketplace API endpoint
 const MARKETPLACE_API = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";

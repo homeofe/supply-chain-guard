@@ -139,6 +139,55 @@ describe("workflow-ast parseWorkflow", () => {
     expect(step.withName).toBe("build-output");
   });
 
+  it("captures job needs and artifact source inputs", () => {
+    const wf = [
+      "on: workflow_run",
+      "jobs:",
+      "  consume:",
+      "    needs: [build, attest]",
+      "    steps:",
+      "      - uses: actions/download-artifact@v8",
+      "        with:",
+      "          pattern: digest-*",
+      "          repository: owner/other",
+      "          run-id: ${{ github.event.workflow_run.id }}",
+      "          github-token: ${{ secrets.ARTIFACT_TOKEN }}",
+    ].join("\n");
+
+    const ast = parseWorkflow(wf);
+    expect(ast.jobs[0].needs).toEqual(["build", "attest"]);
+    expect(ast.jobs[0].steps[0]).toMatchObject({
+      withPattern: "digest-*",
+      withRepository: "owner/other",
+      withRunId: "${{ github.event.workflow_run.id }}",
+      withGithubToken: "${{ secrets.ARTIFACT_TOKEN }}",
+    });
+  });
+
+  it("parses scalar and block-list needs forms", () => {
+    const scalar = parseWorkflow([
+      "on: push",
+      "jobs:",
+      "  deploy:",
+      "    needs: build",
+      "    steps:",
+      "      - run: echo deploy",
+    ].join("\n"));
+    expect(scalar.jobs[0].needs).toEqual(["build"]);
+
+    const block = parseWorkflow([
+      "on: push",
+      "jobs:",
+      "  deploy:",
+      "    needs:",
+      "      - build",
+      "      - attest",
+      "    steps:",
+      "      - run: echo deploy",
+    ].join("\n"));
+    expect(block.jobs[0].needs).toEqual(["build", "attest"]);
+  });
+
   it("detects permissions: write-all", () => {
     const wf = ["on: push", "permissions: write-all", "jobs:", "  a:", "    steps:", "      - run: echo hi"].join("\n");
     const ast = parseWorkflow(wf);
