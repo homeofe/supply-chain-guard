@@ -1,3 +1,26 @@
+> Note (2026-08-01, claude-opus-5): Released v5.23.5 - the 2026-08-01 threat-intel import
+> plus the PointBlank ecosystem-routing fix (details in the note below, which this release
+> ships). 250 imported package IOCs, 79 hand-added non-package indicators, feed at 2,332
+> entries.
+>
+> A MISTAKE OF MINE, AND HOW IT WAS CAUGHT. The session started with the working tree already
+> checked out on `threat-intel/2026-08-01`, and I branched the docs/reviews gitignore change
+> off that instead of off main. So PR #101 squash-merged the ENTIRE threat-intel changeset to
+> main along with the one-line .gitignore edit - including the UNFIXED bare `gcli-control`.
+> For roughly ten minutes main carried the inverted detection. It surfaced when PR #100 then
+> reported a merge conflict it had no business having; resolving that (taking the corrected
+> side for threat-intel.ts and campaigns.test.ts, regenerating feed.json and MANIFEST) put
+> the fix on main. Verified after merge: main has `pypi:gcli-control` only, zero bare
+> occurrences, feed.json agrees. Lesson worth keeping: check `git rev-parse --abbrev-ref HEAD`
+> before `git checkout -b`; a scheduled job can leave the tree on a topic branch, and a
+> squash-merge of a branch cut from the wrong base silently ships everything under it.
+>
+> The docs/reviews gitignore is live on main (PR #101) and it proved necessary within the
+> hour: while staging this fix, `git add -A` on the PR branch swept all five review files
+> toward a public commit, because the ignore rule was not yet on that branch. Unstaged before
+> commit. That is exactly the failure the ignore exists to prevent, and the daily job runs the
+> same `git add -A` unattended at 07:02.
+
 > Note (2026-08-01, claude-opus-5, unreleased): Fixed an ecosystem-routing defect in this
 > PR before merge, found while reviewing it and confirmed by an independent three-model
 > cross-review (gpt-5, grok-4.5, gemini-3.6-flash; prompt and verbatim replies in the local

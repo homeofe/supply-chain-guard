@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.23.5] - 2026-08-01
+
+### Fixed
+
+- **The PointBlank indicator was routed to the wrong ecosystem.** It was added as the
+  bare value `gcli-control`, and a bare value is the npm namespace, so the detection was
+  inverted: a `poetry.lock` or `requirements.txt` pinning `gcli-control` produced no
+  findings while an npm dependency of that name was flagged critical. Corrected to
+  `pypi:gcli-control`. Two scanner-level tests were added - the existing tests asserted
+  against the pattern constant and never ran a scan, which is how a wrongly-routed entry
+  passed CI.
 ### Added
 
 - **250 malicious package IOCs** imported from the GitHub Advisory Database
@@ -2631,7 +2642,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.4...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.5...HEAD
+[5.23.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.5
 [5.23.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.4
 [5.23.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.3
 [5.23.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.2
