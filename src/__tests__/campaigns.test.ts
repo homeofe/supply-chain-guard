@@ -3376,4 +3376,120 @@ describe("Campaign Signatures", () => {
       expect(finding?.severity).toBe("critical");
     });
   });
+
+  // =================================================================
+  // Joyfill npm compromise / DEV#POPPER (Socket + StepSecurity, July 28, 2026)
+  // =================================================================
+
+  describe("Joyfill npm compromise (July 2026)", () => {
+    it("should flag @joyfill/components@4.0.0-rc24-2773-beta.5 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@joyfill/components": "4.0.0-rc24-2773-beta.5" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag @joyfill/layouts@0.1.2-2773.beta.2 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@joyfill/layouts": "0.1.2-2773.beta.2" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag a clean @joyfill/components release", async () => {
+      // Both @joyfill packages are legitimate and still maintained. Only the
+      // three malicious 2773 beta builds are pinned, so a stable release of the
+      // same package must stay clean.
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@joyfill/components": "4.0.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding).toBeUndefined();
+    });
+
+    it("should detect the Socket.IO RAT payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashes.js"),
+        'const h = "26351aed0397158d3a3b8cc8fd3047d4c015d264c9895f10f20f1521b974ed18";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect a stage-3 C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const host = "166.88.134.62";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag the public blockchain RPC endpoints the loader abuses", async () => {
+      // api.trongrid.io / bsc-dataseed.binance.org / fullnode.mainnet.aptoslabs.com
+      // are shared public infrastructure used by every legitimate web3 project.
+      // Only the attacker-controlled resolver addresses are indicators.
+      fs.writeFileSync(
+        path.join(tempDir, "web3.js"),
+        [
+          'const tron = "https://api.trongrid.io";',
+          'const bsc = "https://bsc-dataseed.binance.org";',
+          'const aptos = "https://fullnode.mainnet.aptoslabs.com";',
+        ].join("\n")
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+  });
+
+  // =================================================================
+  // PointBlank PyPI RAT (Xygeni, July 2026)
+  // =================================================================
+
+  describe("PointBlank PyPI RAT (July 2026)", () => {
+    it("should match gcli-control against the PyPI typosquat patterns", () => {
+      const hit = PYPI_TYPOSQUAT_PATTERNS.some((p) => new RegExp(p).test("gcli-control"));
+      expect(hit).toBe(true);
+    });
+
+    it("does NOT match the generic 'gcli' import name or neighbouring names", () => {
+      // gcli-control installs an import package called "gcli", which is far too
+      // short and generic to pin without colliding with legitimate projects.
+      // The block is anchored, so adjacent names must stay clean too.
+      for (const name of ["gcli", "gcli-controller", "my-gcli-control"]) {
+        const hit = PYPI_TYPOSQUAT_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+  });
 });

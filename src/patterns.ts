@@ -2895,6 +2895,19 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   // 91.132.163.78 (in ioc-blocklist). Bare names - fully malicious with no legitimate history.
   "^(frint|skytext|slogsec|logcrypt\\.cryptography)$",
 
+  // PointBlank RAT (Xygeni, July 21-31 2026). Fully-featured Windows RAT with
+  // keylogging, webcam/mic capture, clipboard monitoring and browser-credential
+  // theft, escalated from 0.1.0 to 0.13.0 across three waves. No install-time
+  // hooks, so it only runs on import - every version is malicious and the name
+  // has no legitimate history, hence a bare name block rather than version pins.
+  // Its C2 relay is a JSON bin on npoint[.]io, a legitimate free JSON-hosting
+  // service that is deliberately NOT blocked; Xygeni published no bin id, so
+  // there is no campaign-specific dead-drop path to ingest. The import package
+  // it installs is the generic name "gcli", which is NOT blocked here - it is
+  // too short and too generic to pin without risking legitimate collisions.
+  // Single-source (Xygeni).
+  "^gcli-control$",
+
   // Very long single-word lowercase names
   "^[a-z]{20,}$",
 ];

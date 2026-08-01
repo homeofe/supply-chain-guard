@@ -297,6 +297,18 @@ export const KNOWN_C2_IPS: string[] = [
   // NeoShadow npm supply-chain attack (Aikido, 2026-01-05). Static fallback C2 used when the
   // Ethereum contract lookup that normally hands out the live address fails. Single-source.
   "80.78.22.206",
+
+  // Joyfill npm compromise / DEV#POPPER (Socket + StepSecurity, July 28 2026).
+  // Stage-3/4 hosts for the Socket.IO RAT and the staged Python credential
+  // stealer; :443 and :80 on the first. The blockchain RPC endpoints the loader
+  // reads its C2 address from (api.trongrid[.]io, fullnode.mainnet.aptoslabs[.]com,
+  // bsc-dataseed.binance[.]org, bsc-rpc.publicnode[.]com) and the ip-api[.]com
+  // geolocation lookup are shared public infrastructure and are intentionally
+  // NOT listed - blocking them would flag every legitimate web3 repository.
+  "166.88.134.62",
+  "23.27.13.43",
+  "198.105.127.210",
+  "23.27.202.27",
 ];
 
 // ---------------------------------------------------------------------------
@@ -603,6 +615,28 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // Single-source (Unit 42; Socket/StepSecurity published only the five tarballs).
   "73b44b8724d31f80859018c988e9b033155c5fd8225205a914eda1a11b78a841": "AsyncAPI compromise: additional campaign artifact (SHA256)",
   "f7367ce5509f536a406deecdbb577c60e8585cb2ab77058a86bde6188a609cfd": "AsyncAPI compromise: additional campaign artifact (SHA256)",
+
+  // Joyfill npm compromise / DEV#POPPER, PolinRider family (Socket + StepSecurity,
+  // July 28 2026). Five-stage chain: in-bundle obfuscated loader -> blockchain C2
+  // resolver -> two staged downloaders -> Socket.IO RAT plus a staged Python
+  // credential stealer. Only the two stages StepSecurity named individually carry
+  // a specific label; the rest are the campaign artifact set Socket published
+  // without per-file names, so they get a campaign-level description.
+  "26351aed0397158d3a3b8cc8fd3047d4c015d264c9895f10f20f1521b974ed18": "Joyfill compromise: Socket.IO RAT final stage (SHA256)",
+  "36ff00b45e67baa7e3674b0c80f48e88737264c61e5c6b3b091200972de8157c": "Joyfill compromise: staged Python credential stealer (SHA256)",
+  "adc4af90540d33cd1e98f44b51482ae9250fbeb97d6f8d7841c81b618cb2c6e6": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "8e8b90dedd456ded0c5748119836e1ca1066112bc569c1b41ca70eb931d1d4dc": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "5f6a92006ca2ea4b464d66fb41af777edce7296939a7c6ee491e2b3cbfe09848": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "bcc93dc55bc7daedf4ca57254f0e7a7f1c40e09851eab98fe10cde801982db17": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "1352ad22c99983d91e600348b7cbf58235131b1ee34cea9f09623206d5b7dea7": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "67c6ef602cc850f10d935fee53fa40440df841adf081563bf4fc2631a71249ce": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "c5742ea1875ecd2360022624149994909cd0546e221e4203dffd01f48de45469": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "cb46f12d70824ea24ed1f8bcf45bf3f86680e02a9089aafc03b27f691be57be3": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "f452f9cfa539f4a1fe25187a99a484391290d5dbaa422ba455edf6b04f81b7d1": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "78f0de8682e0e894a5784eb7e95db4da6088f528918ca3107dd1e76f80a561d8": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "ae7565109fd01b88d82acf7f73ab20709cbc2c9f26fdea13e429ccc87a55d4fb": "Joyfill compromise: DEV#POPPER decoded detached bootstrap (SHA256)",
+  "26e679eaf1e9baeb7c55eb48db482301171d4d26e1728544b23734a90dc70e1b": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+  "2cfede38fb121a71a2f3607474aa8cd588a99f51b37e5e6f0d8cb789fa275032": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -759,6 +793,27 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
     "ViteVenom/ChainVeil Tron tier-2 C2 wallet (July 2026)",
   be037400670fbf1c32364f762975908dc43eeb38759263e7dfcdabc76380811e:
     "ViteVenom/ChainVeil Aptos tier-2 C2 account (July 2026)",
+
+  // Joyfill npm compromise / DEV#POPPER (Socket + StepSecurity, July 28 2026).
+  // Socket designates this wave PolinRider-family and it re-uses the two Tron
+  // tier-2 wallets already pinned above, which independently corroborates the
+  // ViteVenom/ChainVeil linkage. These are the addresses that wave added. The
+  // loader reads its live C2 address out of transactions against them, so the
+  // addresses are the durable indicator while the C2 IPs rotate.
+  TA48dct6rFW8BXsiLAtjFaVFoSuryMjD3v:
+    "Joyfill/DEV#POPPER Tron C2 resolver wallet (July 2026)",
+  "3f0e5781d0855fb460661ac63257376db1941b2bb522499e4757ecb3ebd5dce3":
+    "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
+  "533b2dbcaeff19cd1f799234a27b578d713d8fcaa341b7501e4526106483e0b1":
+    "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
+  "18a8420f727f2405f9d1805ad887b31029b584b2ff5a7ec0f57c72635183e99d":
+    "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
+  "7ffb4efddd96e20aec90724be2ac9a71c138a9af697b9fb8224bbf80ea4f22be":
+    "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
+  b6c725890be6890fd2c735eedc47e24b85a350301f6c19a3864e43c35e470968:
+    "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
+  "9bc1355344b54dedf3e44296916ed15653844509":
+    "Joyfill/DEV#POPPER BNB Smart Chain C2 resolver contract (July 2026)",
 };
 
 /**
@@ -1323,6 +1378,14 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "jscrambler-metro-plugin": {
     versions: ["9.0.2"],
     description: "jscrambler npm compromise: companion build plugin republished with the same native infostealer chain as jscrambler@8.14.0+. Legitimate package - only 9.0.2 is malicious (July 2026)",
+  },
+  "@joyfill/components": {
+    versions: ["4.0.0-rc24-2773-beta.4", "4.0.0-rc24-2773-beta.5", "4.0.0-rc24-2773-beta.6"],
+    description: "Joyfill npm compromise / DEV#POPPER: malicious beta releases ship a five-stage chain ending in a Socket.IO RAT and a Python credential stealer; the loader runs on import, so --ignore-scripts does not stop it. Legitimate package - only these three 2773 betas are malicious (July 28, 2026)",
+  },
+  "@joyfill/layouts": {
+    versions: ["0.1.2-2773.beta.0", "0.1.2-2773.beta.1", "0.1.2-2773.beta.2"],
+    description: "Joyfill npm compromise / DEV#POPPER: malicious beta releases ship a five-stage chain ending in a Socket.IO RAT and a Python credential stealer; the loader runs on import, so --ignore-scripts does not stop it. Legitimate package - only these three 2773 betas are malicious (July 28, 2026)",
   },
 };
 

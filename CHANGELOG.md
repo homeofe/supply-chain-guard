@@ -7,6 +7,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 malicious package IOCs** imported from the GitHub Advisory Database
+  (CWE-506) and corroborated against OSV.dev, covering npm and PyPI advisories
+  published in the 14-day window to 2026-08-01.
+- **Joyfill npm compromise / DEV#POPPER (July 28, 2026).** The advisory
+  databases published only two of the six malicious releases, so the remaining
+  four `@joyfill/components` and `@joyfill/layouts` 2773 beta builds are now
+  pinned, together with four stage-3/4 C2 IPs, 15 payload SHA-256 hashes and
+  seven blockchain C2 resolver addresses. Both packages are legitimate and still
+  maintained, so only the named beta builds are pinned. Corroborated by Socket
+  and StepSecurity; Socket's PolinRider attribution is independently supported by
+  the campaign re-using two Tron resolver wallets already pinned for
+  ViteVenom/ChainVeil.
+- **PointBlank PyPI RAT (July 2026).** `gcli-control` blocked by name - every
+  released version is malicious and the name has no legitimate history.
+  Single-source (Xygeni), so it carries a reduced feed confidence of 0.85.
+
+### Changed
+
+- The public blockchain RPC endpoints the Joyfill loader reads its C2 address
+  from (`api.trongrid[.]io`, `fullnode.mainnet.aptoslabs[.]com`,
+  `bsc-dataseed.binance[.]org`, `bsc-rpc.publicnode[.]com`), the `ip-api[.]com`
+  geolocation lookup and the `npoint[.]io` JSON-bin host used by PointBlank are
+  deliberately NOT ingested. They are shared public infrastructure and blocking
+  them would flag legitimate web3 and developer projects. Regression tests cover
+  this.
+
 ## [5.23.4] - 2026-07-31
 
 ### Added

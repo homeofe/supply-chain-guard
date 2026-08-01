@@ -1,3 +1,38 @@
+> Note (2026-08-01, threat-intel, unreleased): Daily threat-intel update. No version
+> bump - the version belongs to the release Emre cuts.
+>
+> IMPORT: `npm run feed:import` added 250 package IOCs (GitHub Advisory Database CWE-506,
+> corroborated against OSV.dev) for the window from 2026-07-18. 18,649 advisories over
+> 187 pages, under the 200-page cap, so no window slicing and no truncation. Skipped 30:
+> 7 unmappable-version-range (bounded ranges the scanner cannot express), 22
+> unsafe-package-name, 1 withdrawn. None were forced in by hand.
+>
+> ENRICHMENT: two campaigns the advisory databases cannot supply atomic indicators for.
+> Joyfill npm compromise / DEV#POPPER (Socket + StepSecurity, 2026-07-28) was only
+> PARTIALLY covered - the databases published 2 of 6 malicious releases. Added the
+> remaining four @joyfill/components and @joyfill/layouts 2773 betas as version pins
+> (both packages are legitimate and still maintained), 4 stage-3/4 C2 IPs, 15 payload
+> SHA-256 hashes and 7 blockchain C2 resolver addresses. Socket's PolinRider attribution
+> is corroborated independently: the wave re-uses two Tron tier-2 wallets already pinned
+> for ViteVenom/ChainVeil. Every hash was shape-checked and the extraction was verified
+> against an exact-string search before ingest. PointBlank PyPI RAT (Xygeni,
+> 2026-07-21..31): gcli-control blocked by name at feed confidence 0.85, single-source.
+>
+> DELIBERATE NON-INGESTS: api.trongrid[.]io, fullnode.mainnet.aptoslabs[.]com,
+> bsc-dataseed.binance[.]org, bsc-rpc.publicnode[.]com, ip-api[.]com and npoint[.]io are
+> shared public infrastructure that the two loaders abuse rather than own. Blocking any
+> of them would flag legitimate web3 and developer projects, so they are excluded and
+> regression tests assert they stay clean. The generic "gcli" import package name is
+> excluded for the same reason. Xygeni published no npoint[.]io bin id, so there is no
+> campaign-specific dead-drop path to ingest.
+>
+> OPEN FOR EMRE: the importer backlog is structural, not transient. It was 28,662 on
+> 2026-07-31 and is 28,235 after this run - a 250/run cap against a 14-day window that
+> refills faster than it drains, so the oldest slice ages out unimported and is
+> unreachable by any later run. That is a silent false negative by design, and raising
+> --limit is explicitly not the fix (it would push a machine-generated thousand-entry
+> diff into a public repo). This needs a policy decision, not another daily run.
+>
 > Note (2026-07-31, v5.23.4): Issue #97 replaces the unconditional
 > GHA_ARTIFACT_DOWNLOAD action-name match with a fail-closed structural trust proof.
 > A download is clean only when trusted triggers, stable upload/download refs, matching
