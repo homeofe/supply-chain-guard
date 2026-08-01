@@ -2816,7 +2816,10 @@ const FEED_CHUNK_2: FeedIOC[] = [
   // malicious and the name has no legitimate history, so a bare name. C2 is a JSON bin on
   // npoint[.]io, a legitimate free service that is deliberately NOT ingested, and no bin id
   // was published. Confidence 0.85: single-source (Xygeni, two posts, one vendor).
-  { type: "package", value: "gcli-control", severity: "critical", confidence: 0.85, family: "PointBlank", campaign: "PointBlank PyPI RAT", firstSeen: "2026-07-21" },
+  // pypi: prefix is load-bearing. A bare value is the npm namespace, so an unprefixed
+  // entry here would miss poetry.lock/uv.lock/Pipfile.lock (the actual threat) and fire
+  // on an npm dependency of the same name instead.
+  { type: "package", value: "pypi:gcli-control", severity: "critical", confidence: 0.85, family: "PointBlank", campaign: "PointBlank PyPI RAT", firstSeen: "2026-07-21" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

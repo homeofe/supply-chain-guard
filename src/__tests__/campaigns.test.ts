@@ -3491,5 +3491,33 @@ describe("Campaign Signatures", () => {
         expect(hit, name).toBe(false);
       }
     });
+
+    // The two assertions above pass against the pattern CONSTANT and say nothing
+    // about which ecosystem the feed entry lands in. The first draft of this entry
+    // was a bare "gcli-control", which is the npm namespace: a Python project got
+    // ZERO findings while an npm dependency of the same name was flagged critical.
+    // These two go through scan(), which is what actually catches that inversion.
+    it("flags gcli-control through a real scan of a Python lockfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "gcli-control"\nversion = "0.13.0"\ndescription = "rat"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /gcli-control/.test(JSON.stringify(f)));
+      expect(finding, "PyPI lockfile must flag the PointBlank RAT").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag an npm dependency named gcli-control (wrong ecosystem)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { "gcli-control": "0.13.0" } }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /gcli-control/.test(JSON.stringify(f)));
+      expect(finding, "a PyPI IOC must not fire on an npm dependency").toBeUndefined();
+    });
   });
 });

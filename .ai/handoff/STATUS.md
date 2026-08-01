@@ -1,3 +1,44 @@
+> Note (2026-08-01, claude-opus-5, unreleased): Fixed an ecosystem-routing defect in this
+> PR before merge, found while reviewing it and confirmed by an independent three-model
+> cross-review (gpt-5, grok-4.5, gemini-3.6-flash; prompt and verbatim replies in the local
+> docs/reviews/, which is gitignored - see PR #101).
+>
+> THE DEFECT. The PointBlank RAT is a PyPI package, but the hand-added feed entry was the
+> bare value `gcli-control`. A bare value is the NPM namespace, so the detection was
+> inverted: a poetry.lock/requirements.txt pinning gcli-control produced ZERO findings while
+> an npm dependency of that name was flagged CRITICAL. It matters more than a typo because
+> gcli-control is the only new PyPI IOC in this PR still live on the registry (~20 published
+> versions). Fixed to `pypi:gcli-control`, feed.json regenerated. After: poetry.lock ->
+> CRITICAL PYTHON_MALICIOUS_PACKAGE, npm package.json -> clean.
+>
+> WHY CI DID NOT CATCH IT. Both PointBlank tests asserted against the PYPI_TYPOSQUAT_PATTERNS
+> constant and never called scan(), so they passed while the feed routed the entry to the
+> wrong ecosystem. Added two scanner-level tests (poetry.lock positive, npm negative).
+> Mutation-proved: reverting to the bare value fails both and passes everything else.
+>
+> WHAT THE CROSS-REVIEW ADDED beyond the fix, all three independently agreeing:
+> - The misrouting is a CLASS, not one entry. gpt-5 counted 26 misrouted PyPI coordinates
+>   across 20 names already on main; gemini named 10 including `frint`, which is registered
+>   bare (npm) but is a PyPI name, while `frint` is a real npm package with ~89 versions
+>   since 2016 - i.e. a live false positive shipping today. NOT fixed here: a data PR is the
+>   wrong blast radius for it. Own task, own verification.
+> - "Just pass the declared version" for the Finding B wiring gap is NOT safe, unanimously.
+>   A package.json version is usually a RANGE; an IOC names one exact malicious version. All
+>   three say the safe activation surface is the RESOLVED LOCKFILE tree, not manifest ranges,
+>   and that lockfile matching should come first.
+> - `pypi:` is necessary but not sufficient: it reaches poetry/uv/Pipfile lockfiles but not
+>   requirements-only or pyproject-only projects, and PEP 503 normalization (gcli_control,
+>   GCLI-Control) is unhandled.
+> - Backlog policy: all three chose option (d) - fix routing and wiring first, then
+>   re-evaluate the cap. Nobody argued for raising --limit now.
+>
+> A CORRECTION TO MY OWN EARLIER NOTE. I wrote that the 2026-07-28 BACKLOG DECISION "rests on
+> a false premise". Two reviewers pushed back: the premise IS false (bare-name npm entries do
+> fire via matchBareNpmIOC, wired v5.11.0, 19 days before the decision), but the decision did
+> not rest on it alone - it also cited data quality and reviewability, and its own sequence
+> already put "wire the npm dependency check to the feed" ahead of any backfill. So: correct
+> the stated reason, keep the conclusion. Do not backfill yet.
+
 > Note (2026-08-01, threat-intel, unreleased): Daily threat-intel update. No version
 > bump - the version belongs to the release Emre cuts.
 >
