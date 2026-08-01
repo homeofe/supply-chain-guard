@@ -1,3 +1,38 @@
+> Note (2026-08-01, claude-opus-5): Gitignored `docs/reviews/`, a local-only folder for
+> external model cross-reviews (mirrors elvatis/ideabase `docs/reviews/`). Two reasons it
+> must be ignored rather than merely untracked: this repo is PUBLIC and its hard rules
+> forbid AI/tool attribution in published artefacts, and the daily job commits with
+> `git add -A`, so anything left there would be swept into a public commit by the next
+> 07:02 run. Same reasoning as `docs/superpowers/`. Review outputs are working material,
+> not the record: decisions still go to STATUS.md, cross-repo items to elvatis/ideabase.
+>
+> Context - three findings are out for cross-review (prompt in docs/reviews/, not committed):
+> (1) PR #100 registers the PointBlank PyPI RAT as bare `gcli-control`, which is the npm
+> namespace, so a poetry.lock/requirements.txt pinning it yields ZERO findings while a
+> package.json dependency of that name is flagged critical - the detection is inverted, and
+> `gcli-control` is the only new PyPI IOC still live on the registry. Fix is `pypi:` +
+> regenerate feed.json + a scanner-level test; the PR's tests assert against the
+> PYPI_TYPOSQUAT_PATTERNS constant and never call scan(), which is how it passed CI. The same
+> class is already live on main: `frint` is registered bare but is a PyPI name, and `frint`
+> is a real npm package (~89 versions since 2016).
+> (2) scanner.ts builds dependency candidates with `version: undefined`, and matchBareNpmIOC
+> needs exact version equality, so of 2,095 bundled package IOCs only 620 bare npm names fire
+> on the primary path; 1,039 version-pinned npm entries cannot fire from an ordinary
+> package.json dependency. The npm ALIAS form is matched while the ordinary declaration is
+> not, and the package-lock.json path never consults the feed at all.
+> (3) THE 2026-07-28 "BACKLOG DECISION, MADE - do not re-litigate" RESTS ON A FALSE PREMISE.
+> Its load-bearing claim that the main scan path never consults feed package entries for npm
+> is wrong, and was wrong when written: the wiring landed in v5.11.0 on 2026-07-09, 19 days
+> earlier, via checkMaliciousDependencyNames -> matchBareNpmIOC (the analysis searched for
+> matchPackageIOC, the wrong function for the npm namespace). Verified by fixture. Separately,
+> PR #100's claim that the backlog "refills faster than a 250/run cap drains it" is
+> contradicted by the record: 29,246 -> 29,024 -> 28,763 -> 28,662 -> 28,235, shrinking ~253
+> per run. Both that note and the 07-28 note called a trend from two points and reached
+> opposite conclusions. A free falsifiable test lands on the 2026-08-05 run, when the 21 July
+> burst (11,520 advisories) leaves the 14-day window. Do not act on either backlog claim until
+> the wiring in (2) is fixed - importing more version-pinned entries into a path that cannot
+> fire them buys nothing.
+
 > Note (2026-08-01, threat-intel, unreleased): Daily threat-intel update. No version
 > bump - the version belongs to the release Emre cuts.
 >
