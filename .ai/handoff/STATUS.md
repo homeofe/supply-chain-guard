@@ -1,3 +1,38 @@
+> Note (2026-08-02, claude-opus-5): v5.24.0 - fixed the importer backlog defect that the
+> note below flagged for a decision. Root cause was NOT the --limit value. `--limit` is
+> correctly sized for the steady-state flow, which is a median of ~35 advisories/day; the
+> defect was that the report called an over-limit remainder harmless ("stays available to
+> the next run"), which is only true while the remainder can drain before --days slides
+> past it.
+>
+> Evidence, because the headline number is misleading. The 14-day window held 15,122
+> advisories, but per-day it is 4-480 on twelve of fourteen days and two bulk-publication
+> spikes carry the rest: 2026-07-21 landed 11,520 advisories (11,512 PyPI) and 2026-07-27
+> landed 2,262 (all npm). Version-row explosion is a real but secondary effect - one NuGet
+> advisory (GHSA-v22p-9fwv-76r7, stripeapi.net) alone carries 506 version rows - yet the
+> 73 packages with >=20 versions hold only 18% of rows. There are 15,070 DISTINCT packages,
+> so the volume is genuine.
+>
+> A hypothesis I had to discard, recorded because it is tempting and wrong: collapsing
+> "no safe version exists" advisories to a bare-name block. `first_patched_version` is null
+> for essentially every malware advisory, including `@ctrl/plex` (GHSA-qj23-4w47-prcr),
+> which is a LEGITIMATE package with one hijacked release. Collapsing on that signal would
+> bare-name-block real packages and flag every legitimate user. Checked before implementing.
+>
+> Triage used registry liveness, sampled 25 packages per spike: npm 2026-07-27 is 19/25
+> still installable (live threats), PyPI 2026-07-21 is 0/25, NuGet 2026-07-20 is 2/25.
+> So the npm slices were imported (3,569 entries, feed 2,592 -> 6,161) and the PyPI and
+> NuGet floods were deliberately NOT - roughly 21k rows for a handful of live packages.
+> That is now a VISIBLE decision rather than a silent loss, which is the point of the fix.
+>
+> The fix itself: `countUndrainable()` computes, per entry, whether its queue position
+> (floor(index/limit) runs away) outlives its remaining window (days - age). Deliberately
+> optimistic - it assumes zero future inflow, so it is a lower bound. Non-zero prints the
+> recovering slice command and exits 2, distinct from exit 1 ("failed, nothing written");
+> the selected entries are still written. Explicit --since/--until is exempt because
+> slicing IS the recovery. `--allow-backlog` suppresses it. Four unit tests, written
+> failing first.
+>
 > Note (2026-08-02, claude-opus-5, unreleased): Daily threat-intel run. Importer took 250
 > package IOCs (GitHub Advisory Database CWE-506, 164 OSV-corroborated) out of a 14-day
 > window that held 24,484 more behind the --limit; no page cap, no unmappable entries, so

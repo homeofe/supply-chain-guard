@@ -331,6 +331,44 @@ export function dedupe(existing, incoming) {
   return { added, duplicates, covered };
 }
 
+/**
+ * Count entries that --limit will never reach before they age out of --days.
+ *
+ * --limit is a steady-state budget, and it is correctly sized for the normal
+ * flow (median ~35 advisories/day). But the advisory database periodically
+ * bulk-publishes retrospective malware datasets - 11,512 PyPI advisories on
+ * 2026-07-21, 2,262 npm ones on 2026-07-27 - and a spike leaves a remainder
+ * far larger than any future run can drain before the window slides past it.
+ *
+ * `added` is newest-first, so the entry at index `i` is reached on run
+ * `floor(i / limit)`, i.e. that many days from now at one run per day. It
+ * leaves the window `days - age` days from now. When the first number exceeds
+ * the second, that entry is lost for good.
+ *
+ * Deliberately OPTIMISTIC: it assumes zero new advisories arrive in the
+ * meantime, so real inflow only makes the loss worse. The result is a lower
+ * bound, which is the right direction for a security tool.
+ *
+ * Entries with no firstSeen are skipped rather than guessed at - the field
+ * comes straight from the advisory's published_at and is almost always set.
+ */
+export function countUndrainable(added, { limit, days, now = new Date() } = {}) {
+  if (!Number.isFinite(limit) || limit <= 0 || !Number.isFinite(days)) return 0;
+  const today = Date.parse(`${now.toISOString().slice(0, 10)}T00:00:00Z`);
+  let count = 0;
+  for (let i = limit; i < added.length; i++) {
+    const firstSeen = added[i]?.firstSeen;
+    if (!firstSeen) continue;
+    const published = Date.parse(`${firstSeen}T00:00:00Z`);
+    if (Number.isNaN(published)) continue;
+    const ageDays = Math.floor((today - published) / 86400000);
+    const daysLeftInWindow = days - ageDays;
+    const runsAway = Math.floor(i / limit);
+    if (runsAway > daysLeftInWindow) count++;
+  }
+  return count;
+}
+
 // ---------------------------------------------------------------------------
 // Upstream fetch (bounded, explicit timeout, optional token)
 // ---------------------------------------------------------------------------
@@ -733,10 +771,21 @@ export async function importUpstreamFeed({
     added: selected.length,
     capped,
     limitApplied: limit,
-    // How many mappable, non-duplicate IOCs were left behind by --limit. These
-    // ARE recoverable by a later run (they stay in the window until --days
-    // expires), unlike anything lost to a page cap.
+    daysApplied: days,
+    // How many mappable, non-duplicate IOCs were left behind by --limit. Most
+    // of these are picked up by later runs, because the fetch is newest-first
+    // and dedupe removes what has already been taken, so each run advances into
+    // the remainder. That is only true while the remainder is small enough to
+    // drain before --days slides past it - see `undrainable`.
     remaining: capped ? added.length - limit : 0,
+    // How many of `remaining` will age out of the window before any future run
+    // can reach them. Non-zero means this run is silently dropping real malware
+    // IOCs, which is the same failure the page-cap guard treats as fatal, so the
+    // CLI refuses to exit clean on it.
+    // Only meaningful for the rolling --days window. An explicit --since/--until
+    // IS the slicing recovery, so it is deliberately exempt.
+    undrainable:
+      capped && !since && !until ? countUndrainable(added, { limit, days, now }) : 0,
     entries: selected.map(publicEntry),
     dryRun,
     written: false,
@@ -815,6 +864,7 @@ export function parseArgs(argv) {
     else if (arg === "--limit") opts.limit = positiveInt(arg, next());
     else if (arg === "--max-pages") opts.maxPages = positiveInt(arg, next());
     else if (arg === "--allow-truncated") opts.allowTruncated = true;
+    else if (arg === "--allow-backlog") opts.allowBacklog = true;
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
@@ -832,7 +882,14 @@ const USAGE = `
     --until <date>      Explicit end date (YYYY-MM-DD)
     --limit <n>         Maximum new entries to add in one run (default 250).
                         Anything over the limit stays available to the next run
-                        until it ages out of the --days window.
+                        until it ages out of the --days window. If the remainder
+                        is too large to drain before it ages out (a bulk-
+                        publication spike), the run exits 2 - see
+                        --allow-backlog.
+    --allow-backlog     Exit clean even though part of the remainder will age
+                        out unreached. The entries this run selected are written
+                        either way; the non-zero exit only flags that a slice
+                        import is needed to recover the rest.
     --max-pages <n>     Maximum upstream pages to fetch (default 750). Pagination
                         stops early when there is no rel="next", so a quiet window
                         still costs about 3 requests. Hitting this cap is FATAL:
@@ -890,6 +947,19 @@ if (isMain) {
           : ""
       }`,
     );
+    if (report.undrainable > 0) {
+      console.log(
+        `\n  WARNING: ${report.undrainable} of those ${report.remaining} will AGE OUT before any\n` +
+          `  future run can reach them. At --limit ${report.limitApplied} the tail of the queue is more runs\n` +
+          `  away than it has days left in the --days ${report.daysApplied} window, so re-running does NOT\n` +
+          `  recover them - they are a silent false negative, the same failure the page\n` +
+          `  cap treats as fatal.\n\n` +
+          `  This is what a bulk-publication spike looks like. Recover by importing the\n` +
+          `  busy day(s) as explicit slices, which are exempt from this check:\n` +
+          `    npm run feed:import -- --since <YYYY-MM-DD> --until <YYYY-MM-DD> --limit 100000\n\n` +
+          `  Pass --allow-backlog to accept the loss and exit clean.`,
+      );
+    }
     for (const entry of report.entries.slice(0, 20)) {
       console.log(`    ${entry.value}  [${entry.source}]`);
     }
@@ -899,5 +969,13 @@ if (isMain) {
         ? `\n  Written: src/threat-intel.ts + feed.json. Review the diff before committing.\n`
         : `\n  Nothing written${report.dryRun ? " (--dry-run)" : ""}.\n`,
     );
+  }
+
+  // Exit 2, distinct from the exit 1 that means "failed, nothing written". The
+  // selected entries HAVE been written; this only signals that the rest of the
+  // remainder needs a slice import before it ages out. Suppressed by
+  // --allow-backlog, and never fires on --dry-run or an explicit slice.
+  if (report.undrainable > 0 && !process.argv.includes("--allow-backlog") && !report.dryRun) {
+    process.exit(2);
   }
 }

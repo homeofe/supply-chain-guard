@@ -267,6 +267,61 @@ describe("mapAdvisory", () => {
 // Deduplication
 // ---------------------------------------------------------------------------
 
+describe("countUndrainable", () => {
+  // The advisory database bulk-publishes retrospective malware datasets: on
+  // 2026-07-21 it landed 11,512 PyPI advisories in one day, and on 2026-07-27
+  // it landed 2,262 npm ones. --limit is sized for the steady-state flow
+  // (median ~35 advisories/day), so a spike leaves a remainder far larger than
+  // any future run can take before --days slides past it. Those entries are
+  // then lost for good, which is a silent false negative - the exact failure
+  // the page-cap guard already treats as fatal.
+  const now = new Date("2026-08-02T00:00:00Z");
+  const entry = (firstSeen: string) => ({
+    type: "package",
+    value: `pkg-${firstSeen}-${Math.random()}`,
+    severity: "critical",
+    confidence: 1,
+    firstSeen,
+  });
+
+  it("reports nothing undrainable when the remainder fits in the window", async () => {
+    const { countUndrainable } = await load();
+    // 30 entries, all published today, limit 10 -> reached within 3 runs, and
+    // they have the full 14 days of window left.
+    const added = Array.from({ length: 30 }, () => entry("2026-08-02"));
+    expect(countUndrainable(added, { limit: 10, days: 14, now })).toBe(0);
+  });
+
+  it("counts entries whose queue position outlives their window", async () => {
+    const { countUndrainable } = await load();
+    // 500 entries published 13 days ago: they leave the window tomorrow, but at
+    // limit 10 the tail is ~50 runs away. Everything past the first two batches
+    // ages out.
+    const added = Array.from({ length: 500 }, () => entry("2026-07-20"));
+    const undrainable = countUndrainable(added, { limit: 10, days: 14, now });
+    expect(undrainable).toBeGreaterThan(0);
+    expect(undrainable).toBe(480);
+  });
+
+  it("ignores entries taken by the current run", async () => {
+    const { countUndrainable } = await load();
+    const added = Array.from({ length: 5 }, () => entry("2026-07-19"));
+    // All 5 are inside limit=10, so this run takes them; nothing is left behind.
+    expect(countUndrainable(added, { limit: 10, days: 14, now })).toBe(0);
+  });
+
+  it("skips entries with no firstSeen rather than guessing their age", async () => {
+    const { countUndrainable } = await load();
+    const added = Array.from({ length: 500 }, () => ({
+      type: "package",
+      value: `no-date-${Math.random()}`,
+      severity: "critical",
+      confidence: 1,
+    }));
+    expect(countUndrainable(added, { limit: 10, days: 14, now })).toBe(0);
+  });
+});
+
 describe("dedupe", () => {
   const existing: FeedIOC[] = [
     { type: "package", value: "already-there@1.0.0", severity: "critical", confidence: 1 },

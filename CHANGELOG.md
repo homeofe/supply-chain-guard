@@ -7,8 +7,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.24.0] - 2026-08-02
+
+### Fixed
+
+- **The feed importer reported an undrainable backlog as harmless, which made a
+  bulk-publication spike a silent false negative.** `--limit` is sized for the
+  steady-state flow (median ~35 advisories/day), and the report claimed anything
+  over it "stays available to the next run". That is only true while the
+  remainder is small enough to drain before `--days` slides past it. The advisory
+  database periodically bulk-publishes retrospective malware datasets - 11,512
+  PyPI advisories on 2026-07-21, 2,262 npm ones on 2026-07-27 - and the resulting
+  remainder is tens of thousands of entries against a 250/day drain rate, so most
+  of it aged out unreached while the run exited clean. The importer now computes
+  how many entries are provably unreachable before they age out (`undrainable` in
+  the JSON report), prints the slice command that recovers them, and exits 2. The
+  entries the run selected are still written - exit 2 means "written, but a slice
+  import is needed", distinct from exit 1 "failed, nothing written". Explicit
+  `--since`/`--until` slices are exempt, since slicing IS the recovery. Suppress
+  with the new `--allow-backlog`.
+
 ### Added
 
+- **3,569 additional npm package IOCs** recovered from the 2026-07-26 and
+  2026-07-27 bulk-publication spike by slice import. A 25-package sample of that
+  spike found 19 still installable on npm, so these are live threats the scanner
+  previously missed rather than historical record.
+- **`--allow-backlog`** flag for `scripts/import-threat-feed.mjs`, to accept an
+  ageing-out remainder and exit clean.
 - **250 malicious package IOCs** imported from the GitHub Advisory Database
   (CWE-506) and corroborated against OSV.dev, covering npm and PyPI advisories
   published in the 14-day window to 2026-08-02.
@@ -2661,7 +2687,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.23.5...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.24.0...HEAD
+[5.24.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.24.0
 [5.23.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.5
 [5.23.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.4
 [5.23.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.3
