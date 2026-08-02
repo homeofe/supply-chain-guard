@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.23.5",
-  "entryCount": 2332,
+  "entryCount": 2592,
   "entries": [
     {
       "type": "domain",
@@ -19340,6 +19340,2096 @@
       "family": "PointBlank",
       "campaign": "PointBlank PyPI RAT",
       "firstSeen": "2026-07-21"
+    },
+    {
+      "type": "package",
+      "value": "pp-react-worldready@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4g95-5h46-4643, MAL-2026-11427",
+      "firstSeen": "2026-08-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:trtllm-subdir-test@99999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2fm3-ggxx-45vm, MAL-2026-11426",
+      "firstSeen": "2026-08-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:trtllm-subdir-test@99999.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2fm3-ggxx-45vm, MAL-2026-11426",
+      "firstSeen": "2026-08-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:nvtorch-oot-nightly@99999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5g9f-m99h-h89p, MAL-2026-11425",
+      "firstSeen": "2026-08-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:nvtorch-oot-nightly@99999.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5g9f-m99h-h89p, MAL-2026-11425",
+      "firstSeen": "2026-08-01"
+    },
+    {
+      "type": "package",
+      "value": "@flowselections/core@1.0.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-chfj-c5mp-w62x",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@flowselections/core@1.0.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-chfj-c5mp-w62x",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@hanssoft/baileys@10.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-pjp3-49r2-f634",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@ctrl/plex@6.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-qj23-4w47-prcr",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@devcarron/clob@2.73.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-563r-8vhp-g4x4, MAL-2026-4347",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@amswf/huoke@1.9.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-39xc-cwc4-jf39",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@amswf/huoke@1.9.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-39xc-cwc4-jf39",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@digicroz/typed-api-kit@1.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-h34f-78rq-9frr",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@digicroz/typed-api-kit@1.0.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-h34f-78rq-9frr",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@audience-common-ui/components@99.99.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qhwj-p5wc-gfhm, MAL-2026-4287",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@onerjs/smart-filters-blocks@8.51.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-7mfm-9rf6-p7mh",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@onerjs/smart-filters-blocks@8.52.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-7mfm-9rf6-p7mh",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "react-cleaner@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fpg-gq2w-8hfg, MAL-2026-4791",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "react-cleaner@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fpg-gq2w-8hfg, MAL-2026-4791",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "reasonix-plugmem@3.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7333-q4v5-9j7h, MAL-2026-4780",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@aswinsparky/api@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3pxh-g7ch-wxxg",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@asavie/i18n@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-376j-c53c-f3vh, MAL-2026-4265",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@asavie/i18n@99.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-376j-c53c-f3vh, MAL-2026-4265",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@asavie/i18n@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-376j-c53c-f3vh, MAL-2026-4265",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@budetzz/libsignal-node@2.0.15",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5xh5-p7g7-655g",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@dekuzxc/nexca@1.4.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-9c97-27gq-53g6",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@dekuzxc/nexca@1.2.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-9c97-27gq-53g6",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@dekuzxc/nexca@1.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-9c97-27gq-53g6",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@blckrose/baileys@2.0.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-rmpq-225g-5384",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@blckrose/baileys@2.0.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-rmpq-225g-5384",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@asura21232/fca-unofficial-nextgen@2.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-qrgf-wfjj-hh79",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@aledan007/tester@0.4.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-q42h-54cw-g3fj",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@euqns/nudge-mcp@0.2.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3rjv-mr8w-hmh8",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@euqns/nudge-mcp@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3rjv-mr8w-hmh8",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@euqns/nudge-mcp@0.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3rjv-mr8w-hmh8",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@euqns/nudge-mcp@0.2.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3rjv-mr8w-hmh8",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@bonsai-ai/claude-code-win32-x64@2.1.141",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-rh4j-vfg5-cggc",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@elvatis_com/openclaw-cli-bridge-elvatis@3.11.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-572g-667h-f7mc",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@budetzzgantenk/baileys@2.0.17",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-49w6-v3rw-q29c",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@citely/mcp-server@0.9.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jgqq-q924-gxr6",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@citely/mcp-server@0.10.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jgqq-q924-gxr6",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@dreamlake/lakeshore@0.1.17",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-v47c-hr3p-rhjp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@dreamlake/lakeshore@0.1.16",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-v47c-hr3p-rhjp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@beyondbday/vibe-terminal@1.1.14",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3m63-xmr6-7r2f",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@beyondbday/vibe-terminal@1.1.21",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3m63-xmr6-7r2f",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@beyondbday/vibe-terminal@1.1.16",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3m63-xmr6-7r2f",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@beyondbday/vibe-terminal@1.1.17",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-3m63-xmr6-7r2f",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@djessicatony/folk-mcp-canary@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-65rf-6m5c-24p5, MAL-2026-4382",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cometix/claude-code@2.1.143",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xc56-6g8x-wv94",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cometix/claude-code@2.1.147",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xc56-6g8x-wv94",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@bonsai-ai/claude-code@2.1.141-1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-r7ww-q4rx-v4wp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@bonsai-ai/claude-code@2.1.141",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-r7ww-q4rx-v4wp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@agora-sdk/react-js@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jgh4-w9j2-f3qm",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@agora-sdk/react-js@1.0.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jgh4-w9j2-f3qm",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@autoheal/setup@1.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xg96-hgh2-9j3m",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@atlisp/mcp@1.6.10",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-vxmr-xfv2-w64r",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@bcrumbs.net/bc-chat@1.0.87",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-4gcv-3hj2-4qwc",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@0.0.546",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@2.2.168",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@2.2.169",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@2.2.164",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@2.2.172",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@pisell/pisellos@2.2.173",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-68pw-ccx8-rmjq",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@iola_adm/iola-cli@0.1.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-v5fg-qmg6-8g3j",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "metricflow-tracker@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4q7q-xg74-jvp8, MAL-2026-4805",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@slipless/sdk@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-876c-h9wj-566x, MAL-2026-4815",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@leviyuan/lodestar@0.4.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-q47c-x8cr-2m4g",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "vue-compiler-sfc-plugin@3.5.25",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wwv7-278j-rp8x, MAL-2026-4707",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "vue-compiler-sfc-plugin@3.5.26",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wwv7-278j-rp8x, MAL-2026-4707",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "msc-terminal@3.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9wm7-5vxw-g9wj, MAL-2026-4823",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@luke-101141/nobody@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gfx4-7c5m-3cmg, MAL-2026-4229",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/experiments",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6r7m-2q92-x76q, MAL-2026-5018",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "token-me-uk@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-whqq-h6wq-5cm4, MAL-2026-4819",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/model-registry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3ggh-c6gm-ww7w, MAL-2026-5024",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "wallet-agent-ai-radix@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9g2w-6rhc-7gfr, MAL-2026-4709",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/env-jupyter-server",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8gqj-p3hr-2p3q, MAL-2026-5017",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/profile",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-569j-3q44-f3mx, MAL-2026-5025",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "fe-utils-core@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-797r-mj8p-wmxc, MAL-2026-4561",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "fe-utils-core@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-797r-mj8p-wmxc, MAL-2026-4561",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.13",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.10",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.15",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@arbocollab/arbo-web-people@0.26.3-alpha.14",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-5r3m-xqh5-pqv4",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "loadtest-browser-lib@1.31.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m7f7-5mp6-7558, MAL-2026-4822",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/inference-build",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-98f6-3rqp-59p2, MAL-2026-5021",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "editorial-mse-authentication-ui@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gv76-fjmh-vqxh, MAL-2026-4831",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "editorial-code@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5cgg-c733-v5rq, MAL-2026-4830",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/connectors",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v5q3-48j4-cwmc, MAL-2026-5011",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "justsaying-docs@2.4.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qw3w-rfqg-77q4, MAL-2026-4838",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/env-gitlab",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ffm2-vc93-55ph, MAL-2026-5015",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@autofleet/rabbit@1.3.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-279x-3p27-fv9v",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "makecoder@4.0.54",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-8gx8-pvcf-63h5",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "makecoder@4.0.57",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-8gx8-pvcf-63h5",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "makecoder@4.0.56",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-8gx8-pvcf-63h5",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "mse-authentication@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4j2f-mchw-2434, MAL-2026-4832",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/env-jobs",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-35pc-rfw7-3q45, MAL-2026-5016",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.85.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.85.21",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.83.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.85.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.85.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.85.20",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.86.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.86.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@kmmao/happy-coder@0.86.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-c49v-fqfg-578h",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@godscene/web@1.7.22",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-rjvg-g569-6q3j",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/docker-registry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q5w4-ggfh-vwh4, MAL-2026-5012",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@refactco/refact-os@1.5.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-6v88-pvqq-r287",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@refactco/refact-os@1.5.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-6v88-pvqq-r287",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@refactco/refact-os@1.6.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-6v88-pvqq-r287",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@refactco/refact-os@1.6.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-6v88-pvqq-r287",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/shared-storage",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w8q3-37qh-6j45, MAL-2026-5026",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/model-monitoring",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qxjv-779j-qc38, MAL-2026-5023",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/inference-deploy",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f3c7-545q-fw2r, MAL-2026-5022",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "shizukyu@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fm59-95v2-4jcf, MAL-2026-4806",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "saturn-bail@1.1.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7gf9-wrv9-x42c, MAL-2026-4818",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "amaco-os@0.1.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-mmxq-6p4w-x3hp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "amaco-os@0.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-mmxq-6p4w-x3hp",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/dtransfer-history",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-534h-48cc-2888, MAL-2026-5014",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/file-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hrp7-xwwf-98mv, MAL-2026-5020",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/experiments-monitoring",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3cg4-g9w6-p6pf, MAL-2026-5019",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/allocations",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w42q-5j6x-wqx5, MAL-2026-5010",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@catclaw/message-logger-plugin@0.2.9-beta.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-x9xj-c8fg-h3fr",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "wm-idp-sdk@1.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-46r6-f54w-9x69, MAL-2026-4808",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@mlspace/dtransfer",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mm68-w4cr-4h2w, MAL-2026-5013",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@fb-deposit/form-deposit-auth",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r73x-5h25-r2mr, MAL-2026-5007",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@fb-deposit/form-savings-account",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7m7f-jhxp-jwf3, MAL-2026-5009",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vpc-endpoint",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xgpx-62gp-254p, MAL-2026-5002",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vmware-draas",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fwmr-33c5-2pw6, MAL-2026-5000",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-gitaas",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x6v5-4g3j-28qr, MAL-2026-4982",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-lbaas",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qqg2-74qp-qvg6, MAL-2026-4985",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@fb-deposit/form-deposit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2c7x-8vpc-2rp9, MAL-2026-5006",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-vdi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9p2p-5vw3-hr59, MAL-2026-4991",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@debit-ib/desktop-debit-ib-additional-card-form",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23f9-rrgf-xjp4, MAL-2026-5004",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/serverless-containers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-593p-32qx-5rrv, MAL-2026-4969",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@debit-ib/mobile-debit-ib-additional-card-form",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mwj5-cfw9-3w4h, MAL-2026-5005",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-draas",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4423-p2qr-56qm, MAL-2026-4980",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-agent-backup",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-37wj-vvcq-mm57, MAL-2026-4976",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@fb-deposit/form-deposit-calc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c8g5-xh77-cwf9, MAL-2026-5008",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vpc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-whm5-xqwc-wp66, MAL-2026-5001",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vdi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23pv-c9h6-frwr, MAL-2026-4996",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/virtual-machines",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9c3p-8mq5-vjgw, MAL-2026-4998",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/virtual-ip",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ch3c-rvw4-mcq4, MAL-2026-4997",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/subnets",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvh5-qppc-2284, MAL-2026-4974",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-images",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gwj6-ff4m-6j8p, MAL-2026-4983",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/self-service",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2vq8-9hpg-9gqq, MAL-2026-4968",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-anti-affinity",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hwp7-jffv-f774, MAL-2026-4977",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-vm-migration",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2ccm-38qw-6r8c, MAL-2026-4992",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vcenter-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x3hf-jjq4-qc58, MAL-2026-4994",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-bare-metal-servers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8fx8-h468-p7ph, MAL-2026-4979",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vmmanager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7mvp-54x7-q9hc, MAL-2026-4999",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/timescale-db",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rhc8-7f3r-3qc3, MAL-2026-4993",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-tasks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r9gf-pv79-x269, MAL-2026-4990",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/static-page",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9f99-2r3v-49g7, MAL-2026-4973",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-gateways",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8c3-3xvw-fc65, MAL-2026-4981",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/vcenter-virtual-machines",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-25jx-4hf7-pp22, MAL-2026-4995",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-tags",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5xhf-9w8v-rh5w, MAL-2026-4989",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-pipeline",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w22j-3x7m-28vv, MAL-2026-4987",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/svp-managed-kubernetes",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rvjf-5hmg-4pvg, MAL-2026-4986",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/smk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5gvw-r2qm-6jv3, MAL-2026-4970",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/solutions",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-45v5-gqqh-w6pv, MAL-2026-4971",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/search",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-52mj-5qcv-3pfv, MAL-2026-4965",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/secret-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5x6r-27q2-2rh8, MAL-2026-4966",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/profile",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pmc5-q9xf-hfvw, MAL-2026-4961",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-finetuning",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-374f-m669-gh5h, MAL-2026-4941",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-system-prompt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2mpj-244p-9g7h, MAL-2026-4939",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/onboarding",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p7fm-98q7-pr2x, MAL-2026-4955",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/rabbitmq",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wpgr-2h96-x795, MAL-2026-4962",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-evo-claw",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xrc4-p5g4-4q86, MAL-2026-4935",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/marketplace-main",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gjrg-xc2p-jrxr, MAL-2026-4932",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/key-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mh7g-52cg-r4q5, MAL-2026-4925",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/magic-router",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-88wj-pxqm-qvjq, MAL-2026-4928",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dns",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vmv3-hf6c-547w, MAL-2026-4914",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-rag",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrxc-qq5w-92f2, MAL-2026-4949",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference-comfy-run",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r7m3-jmmc-fqx5, MAL-2026-4944",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-ide",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ghw9-qv45-xjf2, MAL-2026-4936",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/postgre",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5ppv-m7cc-jhf5, MAL-2026-4960",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/document-db",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gv3x-c9q9-fcq5, MAL-2026-4915",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-mcp-server",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-36cm-hj6r-x979, MAL-2026-4938",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/mlspace-access-request",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mxqv-5wf2-7743, MAL-2026-4950",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference-docker-run",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x66m-mxh4-qgfc, MAL-2026-4945",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-trigger",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ccqr-4g6v-x2g4, MAL-2026-4940",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/resource-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cqmr-vxwx-c39x, MAL-2026-4964",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/paas-redis",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6m48-5jm6-4r9r, MAL-2026-4958",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/observability",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wv26-gr53-8jmc, MAL-2026-4954",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/paas-kafka",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8xc2-2gfh-qjp4, MAL-2026-4957",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/monaas-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-76jj-jp2c-w5gr, MAL-2026-4951",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/marketplace-apps",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6cxw-fvr6-mmjj, MAL-2026-4930",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/iam",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h55p-hxwj-mjf6, MAL-2026-4923",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/magic-bridge",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7pr2-9fpm-vvhw, MAL-2026-4927",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gfr3-mg8q-rw68, MAL-2026-4943",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/pangolin",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r234-2v57-v3h6, MAL-2026-4959",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-ai-agents-marketplace",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fjp6-mf7r-7mqf, MAL-2026-4937",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/evolution",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-68w3-9m45-6gwj, MAL-2026-4921",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/opensearch",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7vfq-35p2-gxf6, MAL-2026-4956",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/redirect",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m4qq-w775-cx7v, MAL-2026-4963",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference-marketplace",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v436-6vjq-p59g, MAL-2026-4946",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/notification-gateway",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m8rr-qcq3-7mqj, MAL-2026-4953",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-foundation-models",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-58xq-r5cx-c25c, MAL-2026-4942",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/managed-identities",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q6vf-92fv-q3mr, MAL-2026-4929",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference-router",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xv8g-72mm-35v8, MAL-2026-4948",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/ml-inference-model-run",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qxx9-vf5g-2j78, MAL-2026-4947",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/evocs",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ccxh-2vhq-vwm7, MAL-2026-4920",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-nessie",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vpfg-4q9w-fwrv, MAL-2026-4910",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/disks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f28f-r6jr-378f, MAL-2026-4913",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-spark",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gq63-jxfq-9rw9, MAL-2026-4911",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/show-car-year-module",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r8v9-88j4-w258, MAL-2026-4880",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/wait-task-props",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5gph-jc3w-22cq, MAL-2026-4881",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/advanced",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r5m7-37fm-92gv, MAL-2026-4883",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/agreements",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fjvv-5wx8-wq7h, MAL-2026-4884",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/certificate-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v84v-jrvm-pg96, MAL-2026-4894",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/audit-log",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vjqv-m8x9-r9hp, MAL-2026-4889",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/airflow",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6mm4-9jmj-5x39, MAL-2026-4886",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-clusters",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4735-q928-2642, MAL-2026-4906",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/bare-metal-servers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mg55-85jj-g2gq, MAL-2026-4890",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/safe-storage-module",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j933-r23j-j4w2, MAL-2026-4878",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/save",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vvvw-9cvx-hcx9, MAL-2026-4879",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/installations",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6vcv-q3xf-h6ff, MAL-2026-4924",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/event-bus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-94ch-m95r-j5qc, MAL-2026-4919",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-cloudberry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mprw-fpr5-596c, MAL-2026-4905",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/container-registry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mpw9-h6x8-j6h6, MAL-2026-4899",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/anti-ddos",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5frr-w8q3-jh25, MAL-2026-4887",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/referrer-module",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-774h-hf62-fr5w, MAL-2026-4876",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/mobile-car-loans-application",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9v74-mxc5-88fv, MAL-2026-4873",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-bi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7h3r-3273-qxx7, MAL-2026-4904",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/clickhouse",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2724-2wvh-8cxh, MAL-2026-4895",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/billing",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p8v5-hv7c-46q7, MAL-2026-4892",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-connections",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-673g-vwch-hmph, MAL-2026-4907",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/corax",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-73rx-mw9g-xmm5, MAL-2026-4900",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/cloudia",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2p3-c2p8-c746, MAL-2026-4897",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/restore",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v9qv-p573-v55g, MAL-2026-4877",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/online-sign-aff",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hcpr-q3qr-49w5, MAL-2026-4875",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/gus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ghj6-97xx-547j, MAL-2026-4872",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/online-scoring-aff",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pwj4-mh83-gmxf, MAL-2026-4874",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/edge-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v9f2-mhj5-8hm5, MAL-2026-4916",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/dataplatform-flink",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cgvw-4fgp-q2gh, MAL-2026-4908",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@cloudplatform-single-spa/aifactory-notebooks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6x9-4f7w-cr38, MAL-2026-4885",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@customer-threesixty/assets",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6m7x-6v3r-8hvf, MAL-2026-5154",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/general-analytics",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-792r-53q6-93jv, MAL-2026-4870",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@ownit/core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9hgp-f3m4-mc93, MAL-2026-5155",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/desktop-car-loans-application",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wx78-r43h-3r63, MAL-2026-4868",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/applicaion-aff",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qv7m-5rvr-prp4, MAL-2026-4863",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "retail-location-strategy-frontend@1.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8wjq-72f6-q4vc, MAL-2026-5092",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "retail-location-strategy-frontend@1.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8wjq-72f6-q4vc, MAL-2026-5092",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/feature-toggles-module",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vcr4-g6v2-wxvh, MAL-2026-4869",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/general-feature-toggles",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wx4j-4q8w-9fgx, MAL-2026-4871",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "@car-loans/application-aff",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5hh9-h2f5-c24f, MAL-2026-4864",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "package",
+      "value": "picnic-react-mise-en-place@9999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r3jw-cfm4-jmf9, MAL-2026-5122",
+      "firstSeen": "2026-07-27"
+    },
+    {
+      "type": "domain",
+      "value": "corepack.org",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul, iTnews",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "moonlighthathel.org",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "aifpleasurebeh.org",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "ghabovethec.info",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "ukankingwithea.com",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "beadpie.xyz",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "yakteam.xyz",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "openshield.canatrace.com",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "domain",
+      "value": "nostop.go2cloud.org",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket, Gurucul",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "url",
+      "value": "freevpn.win/lps/gbox-lp/index.html",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "Fake Corepack Site",
+      "source": "Socket",
+      "firstSeen": "2026-07-24"
     }
   ]
 }

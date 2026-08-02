@@ -7,6 +7,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 malicious package IOCs** imported from the GitHub Advisory Database
+  (CWE-506) and corroborated against OSV.dev, covering npm and PyPI advisories
+  published in the 14-day window to 2026-08-02.
+- **Fake Corepack install site (July 24, 2026).** Node.js 25 stopped bundling
+  Corepack, so developers began installing it by hand and an attacker registered
+  an impersonation site at `corepack[.]org`. There has never been an official
+  Corepack website, so the domain itself is the indicator, and it is a plausible
+  thing to find pasted into a README, Dockerfile or CI install step. The download
+  button funnels through a malvertising redirect chain into a fake VPN installer
+  that steals browser profile data and SSH keys, then enrols the host in a
+  bandwidth-sharing proxy network. Nine domains and one dead-drop URL added.
+  The landing and affiliate hops are pinned to their specific subdomains only:
+  `go2cloud[.]org` is the shared Tune/HasOffers affiliate-tracking apex and
+  `canatrace[.]com` is not attacker-owned as a whole, so neither parent host is
+  listed, and the fake VPN page is path-scoped rather than blocking
+  `freevpn[.]win` outright.
+
 ## [5.23.5] - 2026-08-01
 
 ### Fixed

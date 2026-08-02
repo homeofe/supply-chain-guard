@@ -3353,6 +3353,70 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Fake Corepack install site: infostealer + proxyware
+  // (Socket / Gurucul / iTnews, July 24, 2026)
+  // =================================================================
+
+  describe("Fake Corepack install site (July 2026)", () => {
+    it("should detect the impersonation domain in an install step", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.js"),
+        'const installer = "https://corepack.org/download";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect a redirect-chain infostealer domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "chain.js"),
+        'location.href = "https://moonlighthathel.org/r";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the fake VPN landing page dead drop", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "drop.js"),
+        'const lp = "https://freevpn.win/lps/gbox-lp/index.html";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag legitimate Corepack usage", async () => {
+      // Corepack is a real Node.js tool. Only the impersonation domain is an
+      // indicator; the tool name and its actual repository must stay clean.
+      fs.writeFileSync(
+        path.join(tempDir, "legit.js"),
+        'const docs = "https://github.com/nodejs/corepack"; run("corepack enable");'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+
+    it("should NOT flag the shared go2cloud.org affiliate-tracking apex", async () => {
+      // go2cloud[.]org is the Tune/HasOffers tracking apex used by many legitimate
+      // affiliate programs. Only the campaign's specific subdomain is an indicator.
+      fs.writeFileSync(
+        path.join(tempDir, "tracking.js"),
+        'const t = "https://partner.go2cloud.org/aff_c?offer_id=1";'
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding).toBeUndefined();
+    });
+  });
+
   describe("Fake Payment SDK typosquats (July 2026)", () => {
     it("should detect a malicious npm index.js hash", async () => {
       fs.writeFileSync(

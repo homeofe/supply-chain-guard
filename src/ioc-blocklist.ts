@@ -192,6 +192,28 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // ai-app.pub is shared app hosting, so neither parent host is listed.
   "xemzqli2vu.ai-app.pub",
   "diamond-cli-znsxphqell.cn-shanghai.fcapp.run",
+
+  // Fake Corepack install site / infostealer + proxyware (Socket + Gurucul + iTnews,
+  // July 2026). Node.js 25 stopped bundling Corepack, so developers started installing
+  // it by hand and an attacker registered an impersonation site. There has never been an
+  // official Corepack website - the project ships from github.com/nodejs/corepack - so
+  // the domain itself is the indicator, and it is a plausible thing to find pasted into
+  // a README, Dockerfile or CI install step. The download button funnels through a
+  // malvertising redirect chain into a fake VPN installer that steals browser profile
+  // data and SSH keys, then enrols the host in a bandwidth-sharing proxy network.
+  "corepack.org",
+  // Redirect chain and infostealer infrastructure, all attacker-registered apexes.
+  "moonlighthathel.org",
+  "aifpleasurebeh.org",
+  "ghabovethec.info",
+  "ukankingwithea.com",
+  "beadpie.xyz",
+  "yakteam.xyz",
+  // Landing and affiliate hops. Specific subdomains only: go2cloud[.]org is the shared
+  // Tune/HasOffers affiliate-tracking apex, and canatrace[.]com is not attacker-owned as
+  // a whole, so neither parent host is listed.
+  "openshield.canatrace.com",
+  "nostop.go2cloud.org",
 ];
 
 // ---------------------------------------------------------------------------
@@ -364,6 +386,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // account/repo paths only - never the github.com apex.
   "github.com/smi1e2u/fast-transform-pipeline",
   "github.com/smi1e2u/smart-config-manager",
+
+  // Fake Corepack install site (Socket + Gurucul, July 2026). The fake VPN landing page
+  // the "Download Free" button redirects into, serving
+  // vpnsetup_d9gfqvs3dsic73fcvi90.exe. Path-scoped on purpose: the campaign path is
+  // listed, never the freevpn[.]win host on its own.
+  "freevpn.win/lps/gbox-lp/index.html",
 ];
 
 // ---------------------------------------------------------------------------

@@ -1,3 +1,25 @@
+> Note (2026-08-02, claude-opus-5, unreleased): Daily threat-intel run. Importer took 250
+> package IOCs (GitHub Advisory Database CWE-506, 164 OSV-corroborated) out of a 14-day
+> window that held 24,484 more behind the --limit; no page cap, no unmappable entries, so
+> the window did not need slicing. That backlog is unusually large and will not drain at
+> 250/day before entries age out - flagged for Emre in the PR, not decided here.
+>
+> Hand-added one campaign: the fake Corepack install site (Socket + Gurucul + iTnews),
+> nine domains and one dead-drop URL. Discipline calls worth recording: only the specific
+> subdomains of `go2cloud[.]org` and `canatrace[.]com` are listed (shared affiliate/tracking
+> infrastructure), and the fake VPN landing page is path-scoped instead of blocking
+> `freevpn[.]win` as a host. A negative test asserts legitimate Corepack usage
+> (`github.com/nodejs/corepack`, `corepack enable`) stays clean, since the tool name is real.
+>
+> Two other campaigns were investigated and deliberately produced NO change. The Alibaba
+> developer toolchain RAT was already fully covered, all eight hashes included. The GitHub
+> Actions cPanel/WHM campaign was already covered too - I added its IP, dnshook subdomain
+> and payload hash before noticing, and reverted them; the working tree is back at parity
+> with main for that campaign. Its victim identifiers stay excluded on purpose: the
+> maintainer `dinushchathurya` is a victim, not the actor, and the ten Composer packages
+> contain benign PHP - only the `.github/workflows/` files were malicious, and installing
+> the packages never executed them.
+
 > Note (2026-08-01, claude-opus-5): Released v5.23.5 - the 2026-08-01 threat-intel import
 > plus the PointBlank ecosystem-routing fix (details in the note below, which this release
 > ships). 250 imported package IOCs, 79 hand-added non-package indicators, feed at 2,332
