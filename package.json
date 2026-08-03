@@ -71,7 +71,7 @@
     "commander": "^14.0.3"
   },
   "devDependencies": {
-    "@babel/parser": "^7.29.7",
+    "@babel/parser": "^8.0.4",
     "@elvatis_com/aahp": "3.9.0",
     "@types/node": "^26.1.1",
     "@vitest/coverage-v8": "^4.1.10",
