@@ -1,3 +1,22 @@
+> Note (2026-08-03, claude-opus-5, unreleased): Added `--ecosystem` to the feed importer,
+> which is the follow-up the note below flagged for a decision. Emre approved building it
+> as its own PR after #105 merged.
+>
+> Scope was deliberately narrow. The flag filters by ecosystem and nothing else; it does
+> NOT automate the liveness check that motivated it. A package removed from its registry
+> can still sit in a lockfile, a vendored directory or a mirror, so "dead on the registry"
+> is not "safe to skip" - it trades a little coverage for feed size, which is a judgement
+> call about a specific spike and should stay with the operator. Automating it would bury
+> that trade behind a flag. Recorded because the tempting next step is a `--skip-dead`
+> flag, and it should not be built without arguing past this.
+>
+> Nine tests written failing first (mapAdvisory filtering, the ecosystem-filtered skip
+> reason, multi-select, the no-filter regression guard, end-to-end import, comma-separated
+> and repeated parsing, and two on rejecting an unknown name). Verified against the real
+> spike, not just fixtures: `--since 2026-07-20 --until 2026-07-21 --ecosystem npm` maps
+> exactly 153 rows, the same number the hand-rolled fetch proxy produced, and reports
+> 21,014 as ecosystem-filtered. Suite 373 -> 382.
+>
 > Note (2026-08-03, claude-opus-5, unreleased): Daily threat-intel run. 133 package IOCs
 > imported (131 npm, 2 PyPI), feed 6,161 -> 6,294. 132 of 133 are corroborated by both
 > GHSA and OSV. No version bump; Emre cuts the release.

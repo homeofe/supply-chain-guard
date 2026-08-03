@@ -988,6 +988,125 @@ describe("importUpstreamFeed failure mode", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Ecosystem filter
+//
+// A bulk-publication spike is routinely mixed: 2026-07-20/21 carried 104 live
+// npm advisories alongside ~11,800 PyPI/NuGet ones that no longer resolve on
+// their registries. Taking only the live half was a real need twice, and with
+// no flag for it the only way through was a hand-rolled fetch proxy that
+// stripped vulnerabilities before mapping - an unreviewed script standing in
+// for a tool. These tests pin the supported way to do it.
+// ---------------------------------------------------------------------------
+
+describe("ecosystem filter", () => {
+  const mixed = {
+    ghsa_id: "GHSA-eeee-ffff-0000",
+    type: "malware",
+    severity: "critical",
+    published_at: "2026-07-21T09:00:00Z",
+    withdrawn_at: null,
+    vulnerabilities: [
+      { package: { ecosystem: "npm", name: "scg-fixture-live" }, vulnerable_version_range: ">= 0" },
+      { package: { ecosystem: "pip", name: "scg-fixture-dead" }, vulnerable_version_range: ">= 0" },
+      { package: { ecosystem: "nuget", name: "Scg.Fixture.Dead" }, vulnerable_version_range: ">= 0" },
+    ],
+  };
+
+  it("maps only the selected ecosystem", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(mixed, { ecosystems: ["npm"] });
+    expect(entries.map((e: FeedIOC) => e.value)).toEqual(["scg-fixture-live"]);
+  });
+
+  it("records what the filter excluded rather than dropping it silently", async () => {
+    const { mapAdvisory } = await load();
+    const { skipped } = mapAdvisory(mixed, { ecosystems: ["npm"] });
+    expect(skipped.map((s: { reason: string }) => s.reason)).toEqual([
+      "ecosystem-filtered",
+      "ecosystem-filtered",
+    ]);
+  });
+
+  it("selects several ecosystems at once", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(mixed, { ecosystems: ["npm", "nuget"] });
+    expect(entries.map((e: FeedIOC) => e.value)).toEqual([
+      "scg-fixture-live",
+      "nuget:Scg.Fixture.Dead",
+    ]);
+  });
+
+  it("maps every supported ecosystem when no filter is given", async () => {
+    const { mapAdvisory } = await load();
+    const { entries } = mapAdvisory(mixed);
+    expect(entries).toHaveLength(3);
+  });
+
+  it("imports only the selected ecosystem end to end", async () => {
+    const { importUpstreamFeed } = await load();
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scg-eco-"));
+    try {
+      fs.mkdirSync(path.join(tmpRoot, "src"));
+      fs.writeFileSync(
+        path.join(tmpRoot, "src", "threat-intel.ts"),
+        [
+          "export interface FeedIOC { type: string }",
+          "const BUNDLED_FEED: FeedIOC[] = [",
+          '  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },',
+          "];",
+          "",
+        ].join("\n"),
+      );
+      fs.writeFileSync(path.join(tmpRoot, "package.json"), JSON.stringify({ version: "9.9.9" }));
+      fs.writeFileSync(
+        path.join(tmpRoot, "feed.json"),
+        '{"schema":1,"entries":[{"type":"domain","value":"existing.example"}]}\n',
+      );
+
+      const report = await importUpstreamFeed({
+        root: tmpRoot,
+        useOsv: false,
+        ecosystems: ["npm"],
+        fetchImpl: singlePage([mixed]),
+      });
+
+      expect(report.added).toBe(1);
+      expect(report.entries[0].value).toBe("scg-fixture-live");
+      expect(report.ecosystems).toEqual(["npm"]);
+      const source = fs.readFileSync(path.join(tmpRoot, "src", "threat-intel.ts"), "utf8");
+      expect(source).not.toContain("scg-fixture-dead");
+    } finally {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("parses --ecosystem as a comma-separated list", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--ecosystem", "npm,pip"]).ecosystems).toEqual(["npm", "pip"]);
+  });
+
+  it("accumulates a repeated --ecosystem flag", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--ecosystem", "npm", "--ecosystem", "nuget"]).ecosystems).toEqual([
+      "npm",
+      "nuget",
+    ]);
+  });
+
+  // A typo here would silently import nothing, which in a threat-feed importer
+  // is the same silent false negative the page-cap guard is fatal about.
+  it("rejects an unknown ecosystem instead of importing nothing", async () => {
+    const { parseArgs } = await load();
+    expect(() => parseArgs(["--ecosystem", "npmm"])).toThrow(/unknown ecosystem/);
+  });
+
+  it("names the valid ecosystems in the rejection", async () => {
+    const { parseArgs } = await load();
+    expect(() => parseArgs(["--ecosystem", "maven"])).toThrow(/nuget/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 

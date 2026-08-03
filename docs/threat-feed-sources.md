@@ -127,6 +127,7 @@ npm run feed:import -- --dry-run          # report only, writes nothing
 npm run feed:import                       # last 14 days, max 250 new entries
 npm run feed:import -- --days 30 --limit 500
 npm run feed:import -- --json             # machine-readable report
+npm run feed:import -- --since 2026-07-20 --until 2026-07-21 --ecosystem npm --limit 100000
 ```
 
 | Option | Default | Purpose |
@@ -134,6 +135,7 @@ npm run feed:import -- --json             # machine-readable report
 | `--days <n>` | 14 | Look-back window |
 | `--since <YYYY-MM-DD>` | - | Explicit start date, overrides `--days` |
 | `--until <YYYY-MM-DD>` | - | Explicit end date |
+| `--ecosystem <list>` | all | Import only these ecosystems (comma-separated, repeatable) |
 | `--limit <n>` | 250 | Maximum new entries added in one run |
 | `--max-pages <n>` | 750 | Hard cap on upstream pages fetched; hitting it is fatal |
 | `--allow-truncated` | off | Import anyway when the page cap was hit |
@@ -170,6 +172,36 @@ scanner means a silent false negative. Truncation consequently **aborts the impo
 and exits non-zero** rather than writing a knowingly partial window. Recover by
 raising `--max-pages`, or by slicing the window with `--since`/`--until`. Only
 pass `--allow-truncated` when a partial import is genuinely what you want.
+
+### Why a spike may be worth taking only in part
+
+A bulk-publication spike is routinely mixed, and the halves are not equally
+useful. On 2026-07-20/21 the window carried 104 npm advisories alongside roughly
+11,800 PyPI and NuGet ones. Sampling 25 distinct packages per ecosystem against
+the registries: npm was 25/25 still installable, PyPI 0/25, NuGet 2/25. The npm
+half was live threat data; the rest was historical record that would have taken
+the bundled feed from 6,294 to about 27,000 entries to cover packages nobody can
+install.
+
+`--ecosystem` is how that split is taken. Everything outside the selection is
+counted under `ecosystem-filtered` in the skip report rather than quietly
+omitted, so the decision stays visible in the run output:
+
+```
+Ecosystem filter:     npm only
+Mapped to IOCs:       153
+Skipped:              21014 {"ecosystem-filtered":21014}
+```
+
+An unknown ecosystem name is rejected instead of ignored. A silently ignored
+typo would filter every advisory out and import zero IOCs while exiting 0, which
+is the same silent false negative the page cap is fatal about.
+
+Liveness itself is deliberately **not** automated. A package removed from its
+registry can still sit in a lockfile, a vendored directory or a mirror, so
+skipping dead packages trades a small amount of coverage for feed size. That is
+a judgement call about a specific spike, and it belongs with the operator rather
+than buried behind a flag.
 
 Because a busy window can need hundreds of requests, `GITHUB_TOKEN` is optional
 for a small window but effectively required for a large one: the anonymous REST

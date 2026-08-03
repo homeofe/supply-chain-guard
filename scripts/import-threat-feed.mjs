@@ -188,10 +188,11 @@ export function feedValue(prefix, name, version) {
  *
  * @returns {{entries: Array<object>, skipped: Array<{reason: string, detail: string}>}}
  */
-export function mapAdvisory(advisory) {
+export function mapAdvisory(advisory, { ecosystems } = {}) {
   const entries = [];
   const skipped = [];
   const id = advisory?.ghsa_id;
+  const selected = ecosystems?.length ? new Set(ecosystems) : null;
 
   if (!id || !SAFE_ADVISORY_ID.test(id)) {
     return { entries, skipped: [{ reason: "unusable-advisory-id", detail: String(id) }] };
@@ -219,6 +220,13 @@ export function mapAdvisory(advisory) {
     const name = vuln?.package?.name;
     const prefix = ECOSYSTEM_PREFIX[ecosystem];
 
+    // Deliberate exclusion, checked before support: --ecosystem npm on a mixed
+    // window should report "you asked for npm" for every other row, rather than
+    // splitting the same rows across "filtered" and "unsupported".
+    if (selected && !selected.has(ecosystem)) {
+      skipped.push({ reason: "ecosystem-filtered", detail: `${id} (${ecosystem || "none"})` });
+      continue;
+    }
     if (prefix === undefined) {
       skipped.push({ reason: "unsupported-ecosystem", detail: `${id} (${ecosystem || "none"})` });
       continue;
@@ -260,11 +268,11 @@ export function mapAdvisory(advisory) {
 }
 
 /** Map a page (or several) of advisories. */
-export function mapAdvisories(advisories) {
+export function mapAdvisories(advisories, { ecosystems } = {}) {
   const entries = [];
   const skipped = [];
   for (const advisory of advisories) {
-    const result = mapAdvisory(advisory);
+    const result = mapAdvisory(advisory, { ecosystems });
     entries.push(...result.entries);
     skipped.push(...result.skipped);
   }
@@ -679,6 +687,7 @@ export async function importUpstreamFeed({
   useOsv = true,
   dryRun = false,
   allowTruncated = false,
+  ecosystems,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -730,7 +739,7 @@ export async function importUpstreamFeed({
   }
 
   // 2. Map (pure).
-  const { entries: mapped, skipped } = mapAdvisories(advisories);
+  const { entries: mapped, skipped } = mapAdvisories(advisories, { ecosystems });
 
   // 3. Dedupe against the feed that is actually committed.
   const existing = extractBundledEntries(root);
@@ -772,6 +781,9 @@ export async function importUpstreamFeed({
     capped,
     limitApplied: limit,
     daysApplied: days,
+    // Which ecosystems this run was restricted to, or null for "all supported".
+    // Recorded so a slice import is self-describing in the JSON report.
+    ecosystems: ecosystems?.length ? [...ecosystems] : null,
     // How many mappable, non-duplicate IOCs were left behind by --limit. Most
     // of these are picked up by later runs, because the fetch is newest-first
     // and dedupe removes what has already been taken, so each run advances into
@@ -850,6 +862,30 @@ function positiveInt(flag, raw) {
   return value;
 }
 
+/**
+ * Parse a comma-separated `--ecosystem` value into validated upstream names.
+ *
+ * Unknown names are rejected rather than ignored. An ignored typo would filter
+ * every advisory out and import ZERO IOCs while exiting 0, which in a threat-feed
+ * importer is the same silent false negative the page-cap guard is fatal about.
+ */
+function ecosystemList(raw) {
+  const valid = Object.keys(ECOSYSTEM_PREFIX);
+  const names = String(raw ?? "")
+    .split(",")
+    .map((n) => n.trim().toLowerCase())
+    .filter(Boolean);
+  if (names.length === 0) {
+    throw new Error(`--ecosystem expects at least one name; valid values are ${valid.join(", ")}.`);
+  }
+  for (const name of names) {
+    if (!valid.includes(name)) {
+      throw new Error(`unknown ecosystem ${JSON.stringify(name)}; valid values are ${valid.join(", ")}.`);
+    }
+  }
+  return names;
+}
+
 export function parseArgs(argv) {
   const opts = { dryRun: false, json: false, useOsv: true };
   for (let i = 0; i < argv.length; i++) {
@@ -863,6 +899,7 @@ export function parseArgs(argv) {
     else if (arg === "--until") opts.until = next();
     else if (arg === "--limit") opts.limit = positiveInt(arg, next());
     else if (arg === "--max-pages") opts.maxPages = positiveInt(arg, next());
+    else if (arg === "--ecosystem") opts.ecosystems = [...(opts.ecosystems ?? []), ...ecosystemList(next())];
     else if (arg === "--allow-truncated") opts.allowTruncated = true;
     else if (arg === "--allow-backlog") opts.allowBacklog = true;
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
@@ -899,6 +936,13 @@ const USAGE = `
                         of the window and no later run can reach it - it ages out
                         for good. Only pass this when a knowingly partial import
                         is what you want.
+    --ecosystem <list>  Import only these ecosystems (comma-separated, repeatable).
+                        One of ${Object.keys(ECOSYSTEM_PREFIX).join(", ")}. Everything
+                        else in the window is reported as ecosystem-filtered rather
+                        than imported. Use this when a bulk-publication spike is
+                        mixed and only part of it is worth taking - see the
+                        2026-07-20/21 spike, where the npm half sampled 25/25 still
+                        installable and the PyPI/NuGet halves 0/25 and 2/25.
     --timeout <ms>      Per-request timeout (default 15000)
     --no-osv            Skip the OSV.dev corroboration query
     --dry-run           Report only; write nothing
@@ -935,6 +979,9 @@ if (isMain) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.log(`\n  Upstream feed import (published >= ${report.since})\n`);
+    if (report.ecosystems) {
+      console.log(`  Ecosystem filter:     ${report.ecosystems.join(", ")} only`);
+    }
     console.log(`  Advisories fetched:   ${report.advisoriesFetched} (${report.pages} page(s)${report.truncated ? ", page cap reached" : ""})`);
     console.log(`  Mapped to IOCs:       ${report.mapped}`);
     console.log(`  Already in the feed:  ${report.duplicates} duplicate, ${report.covered} covered by a bare-name IOC`);
