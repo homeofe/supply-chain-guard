@@ -7,6 +7,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **133 malicious package IOCs** imported from the GitHub Advisory Database
+  (CWE-506) and corroborated against OSV.dev: 131 npm and 2 PyPI, covering the
+  14-day window to 2026-08-03. 132 of the 133 are confirmed by both databases
+  (confidence 1.0). 117 of them come from the 2026-07-20/21 bulk-publication
+  spike, whose npm slice had never been imported: a 25-package liveness sample
+  found 25/25 still installable on the registry, so these are live threats
+  rather than historical record. 82 of the new entries are vendor scanner
+  testbed corpora published as malware on purpose (`@gocortexio/npmgremlinbox-*`,
+  `vybscan-testbed-*`) and are flagged as such by the advisory database.
+
+### Changed
+
+- The PyPI and NuGet halves of the 2026-07-20/21 spike remain deliberately
+  un-imported, re-confirming the v5.24.0 decision against a fresh sample: PyPI
+  is 0/25 and NuGet 2/25 still installable, so roughly 20,800 rows would buy
+  detection for a handful of live packages while quadrupling the bundled feed.
+  The npm half of the same spike samples 25/25 live, which is why it was taken.
+
 ## [5.24.0] - 2026-08-02
 
 ### Fixed

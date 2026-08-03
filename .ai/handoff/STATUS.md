@@ -1,3 +1,42 @@
+> Note (2026-08-03, claude-opus-5, unreleased): Daily threat-intel run. 133 package IOCs
+> imported (131 npm, 2 PyPI), feed 6,161 -> 6,294. 132 of 133 are corroborated by both
+> GHSA and OSV. No version bump; Emre cuts the release.
+>
+> The substance of this run was NOT the 16 entries from the current quiet days, it was
+> the 117 npm entries from the 2026-07-20/21 spike that had never been imported. The
+> v5.24.0 note below recorded importing "the npm slices" of the spike, but that covered
+> 2026-07-26/27 only - the npm half of 2026-07-20/21 (104 advisories, 100 distinct
+> packages) was still missing while the PyPI and NuGet halves of those same days were
+> correctly skipped. So the standing decision was right in substance and incomplete in
+> execution; this run closes that gap.
+>
+> The skip decision itself was re-verified rather than assumed, on a fresh 25-package
+> liveness sample per ecosystem: PyPI 2026-07-21 is 0/25 still installable, NuGet
+> 2026-07-20 is 2/25, npm on the same days is 25/25. That reproduces the v5.24.0 sample
+> exactly, so the ~20,800 PyPI/NuGet rows stay out - they are historical record, and
+> importing them would quadruple the bundled feed (6,161 -> 27,088, feed.json 1.4 MB ->
+> 5.9 MB) to cover packages no one can install. This was measured, not estimated: the
+> full flood was imported, sized, typechecked green, and then reverted.
+>
+> Trap worth recording for the next run: the importer has no ecosystem filter, so there
+> is no supported way to take the npm half of a mixed spike day. This run drove the
+> shipped `importUpstreamFeed()` through a `fetchImpl` proxy that strips non-npm
+> vulnerabilities out of each advisory before mapping, which keeps dedupe, OSV
+> corroboration, `applyEntries`, the re-parse proof and feed.json regeneration on the
+> shipped code path. If mixed-ecosystem spikes keep recurring, an `--ecosystem` flag is
+> the real fix - flagged in the PR, not decided here.
+>
+> 82 of the 133 new entries are deliberate scanner-testbed corpora
+> (`@gocortexio/npmgremlinbox-*`, `vybscan-testbed-*`) - packages published AS malware to
+> test scanners. They are genuinely GHSA-listed malware and live on npm, so they are
+> ingested rather than filtered, but they are not an active campaign and should not be
+> read as one in the release body.
+>
+> STEP 1b (non-package enrichment) yielded nothing addable. The one campaign with a fresh
+> full IOC set in reach was the Fake Payment SDK typosquat (Socket, 2026-07-07), and it is
+> already fully enriched here - C2 subdomain and all 56 hashes present from an earlier run.
+> Nothing new with atomic indicators was published in the 2026-08-01..03 window.
+>
 > Note (2026-08-02, claude-opus-5): v5.24.0 - fixed the importer backlog defect that the
 > note below flagged for a decision. Root cause was NOT the --limit value. `--limit` is
 > correctly sized for the steady-state flow, which is a median of ~35 advisories/day; the
