@@ -9,10 +9,11 @@
 
 ---
 
-## Releases (115, newest first)
+## Releases (116, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.25.0 | 2026-08-03 | ### Added |
 | v5.24.0 | 2026-08-02 | ### Fixed |
 | v5.23.5 | 2026-08-01 | ### Fixed |
 | v5.23.4 | 2026-07-31 | ### Added |

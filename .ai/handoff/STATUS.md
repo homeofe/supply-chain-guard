@@ -1,3 +1,35 @@
+> Note (2026-08-03, claude-opus-5): Released v5.25.0. Minor, not a patch: `--ecosystem` is
+> a new user-facing CLI flag on the importer. Ships that flag plus the 133 package IOCs from
+> PR #105; feed at 6,294 entries. PR #106 was merged first so the release met the zero-open-PR
+> invariant.
+>
+> RELEASE-BODY ACCURACY, verified rather than repeated. The incoming handoff warned that 82 of
+> the 133 new IOCs are vendor scanner-testbed corpora published as malware on purpose
+> (`@gocortexio/npmgremlinbox-*`, `vybscan-testbed-*`), so a "133 new threats" headline would
+> overstate it. Counted against the actual diff: 133 new `type: "package"` entries, of which 82
+> match those two testbed prefixes, leaving 51 real-world. The handoff's numbers are exact, and
+> the CHANGELOG already said so in its own words, so nothing needed rewording - but the count
+> was checked before publishing rather than taken on trust.
+>
+> Version bump read from `aahp.config.json` versionSites (14 sites), not from any checklist,
+> then `npm install --package-lock-only` for the two lockfile fields a sed bump misses. Both
+> habits exist because each failed a release before.
+>
+> DECISIONS CARRIED FORWARD, not re-litigated: the PyPI and NuGet halves of the 2026-07-20/21
+> spike (~20,800 rows) stay out, re-confirmed 2026-08-03 on a fresh 25-package sample (PyPI
+> 0/25 and NuGet 2/25 installable, npm 25/25). Liveness stays un-automated behind `--ecosystem`:
+> a package removed from its registry can still sit in a lockfile, a vendored directory or a
+> mirror, so "dead on the registry" is not "safe to skip". Reasoning lives in
+> docs/threat-feed-sources.md.
+>
+> STILL OPEN, both need Emre's judgement and neither is a release task:
+> - Whether known scanner-testbed corpora should be ingested at all. Current answer is yes,
+>   because filtering them means maintaining a list of "malware we choose not to flag". Worth
+>   deciding deliberately rather than letting it drift.
+> - The vscode-scanner is purely behavioural, so a known-bad extension ID has nowhere to live
+>   in the IOC model. The reported IoliteLabs `solidity-*` set has no home today. That is a
+>   data-model change, not a release task.
+
 > Note (2026-08-03, claude-opus-5, unreleased): Added `--ecosystem` to the feed importer,
 > which is the follow-up the note below flagged for a decision. Emre approved building it
 > as its own PR after #105 merged.
