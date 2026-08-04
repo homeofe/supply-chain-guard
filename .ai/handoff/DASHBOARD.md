@@ -11,7 +11,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.25.0 |
+| Version | 5.25.1 |
 | Node engines | >=20.0.0 |
 | Source modules | 73 under `src/` |
 | Test files | 106 under `src/__tests__/` |
@@ -31,7 +31,7 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 |---------|-------|
 | @babel/parser | ^7.29.7 |
 | @elvatis_com/aahp | 3.9.0 |
-| @types/node | ^26.1.1 |
+| @types/node | ^26.1.2 |
 | @vitest/coverage-v8 | ^4.1.10 |
 | commander | ^14.0.3 |
 | typescript | ^7.0.2 |

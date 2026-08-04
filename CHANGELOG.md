@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.25.1] - 2026-08-04
+
 ### Added
 
 - **16 malicious package IOCs** imported from the GitHub Advisory Database
@@ -45,6 +47,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   2026): the native second-stage binary staged in the attacker's OSS bucket
   alongside the eight paths already shipped in v5.24.0. Scoped to the full bucket
   path, never the shared `oss-cn-beijing[.]aliyuncs[.]com` gateway.
+
+### Changed
+
+- Bumped the `node:22-alpine` base image digest in the `Dockerfile` and
+  `@types/node` to 26.1.2 (both dev/build-time only; the sole runtime dependency
+  remains `commander`).
 
 ## [5.25.0] - 2026-08-03
 
@@ -2760,7 +2768,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.25.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.25.1...HEAD
+[5.25.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.1
 [5.25.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.0
 [5.24.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.24.0
 [5.23.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.23.5

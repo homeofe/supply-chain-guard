@@ -66,7 +66,7 @@ runs:
 
     - name: Install supply-chain-guard
       shell: bash
-      run: npm install -g supply-chain-guard@5.25.0 --ignore-scripts --no-audit --no-fund
+      run: npm install -g supply-chain-guard@5.25.1 --ignore-scripts --no-audit --no-fund
 
     - name: Run scan
       id: scan

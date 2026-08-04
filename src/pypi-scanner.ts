@@ -29,7 +29,7 @@ import {
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
 
-const TOOL_VERSION = "5.25.0";
+const TOOL_VERSION = "5.25.1";
 const PYPI_API = "https://pypi.org/pypi";
 
 interface PyPIPackageResponse {

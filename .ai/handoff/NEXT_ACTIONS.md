@@ -14,7 +14,7 @@
 | Blocked | 0 |
 | Roadmap bets remaining | 0 |
 
-Current version: **v5.25.0**. The 2026-07 ideation roadmap plus the follow-on
+Current version: **v5.25.1**. The 2026-07 ideation roadmap plus the follow-on
 gap-analysis push (v5.12.4-v5.17.x: fresh threat-intel, Rust/Go/Python lockfile
 coverage, product/DX, honest SLSA grading, starjacking, OSV export, MCP-registry
 metadata) are shipped. v5.23.4 adds the 2026-07-31 threat-intelligence refresh and

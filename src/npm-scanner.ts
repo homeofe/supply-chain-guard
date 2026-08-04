@@ -27,7 +27,7 @@ import { collectExtractedFiles } from "./extracted-file-walker.js";
 import { getBundledFeed } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
 
-const TOOL_VERSION = "5.25.0";
+const TOOL_VERSION = "5.25.1";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 
 interface NpmRegistryResponse {

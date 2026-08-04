@@ -1,6 +1,28 @@
-> Note (2026-08-04, claude-opus-5, unreleased): Daily threat-intel run. 16 package IOCs
-> imported (15 npm, 1 PyPI) plus 6 non-package IOCs added by hand. No version bump; Emre
-> cuts the release.
+> Note (2026-08-04, claude-opus-5): Released v5.25.1. Patch, not a minor: the release is
+> IOC data plus two dev/build-time dependency bumps, with no new flag or user-facing
+> behaviour. Precedent checked rather than assumed - v5.23.5 shipped 250 package IOCs AND a
+> full campaign (hashes, C2 IPs, version pins) as a patch, so campaign data alone does not
+> make a minor. Ships PR #111; feed at 6,315 entries.
+>
+> ZERO-OPEN-PR INVARIANT MET, but one dependabot PR was CLOSED rather than merged, and that
+> is a real decision: #109 bumps `@babel/parser` 7.29.7 -> 8.0.4, and babel 8 declares
+> `engines.node ^22.18.0 || >=24.11.0` while CI pins Node 20 and package.json declares
+> `>=20.0.0`. Merging it would have reproduced the EBADENGINE class of failure that broke
+> the v5.11.0 publish. Verified against the npm registry's own metadata for both versions,
+> not from the dependabot diff alone. The dependency is a devDependency reached by exactly
+> one test file (`pattern-guard-wiring.test.ts`) and the only runtime dependency is
+> `commander`, so nothing shipped is affected either way. #108 (node base-image digest) and
+> #110 (`@types/node` 26.1.2) were folded into this release and their PRs closed, per the
+> standing pattern that dependabot PRs cannot go green on `check:handoff` alone.
+>
+> OPEN FOR EMRE: taking babel 8 requires raising the Node floor (CI `node-version: '20'` in
+> both jobs, plus `engines`). That is a deliberate support-matrix change, not a dependency
+> bump, so it was not done as a side effect of a patch release. Until then dependabot will
+> keep re-opening that PR.
+
+> Note (2026-08-04, claude-opus-5): Daily threat-intel run. 16 package IOCs
+> imported (15 npm, 1 PyPI) plus 6 non-package IOCs added by hand. Released as
+> v5.25.1.
 >
 > THE IMPORT NEEDED A SLICE, and the reason matters more than the number. A default run
 > reports 250 new entries and a 16,006-entry remainder, with the drain-aware cap correctly
