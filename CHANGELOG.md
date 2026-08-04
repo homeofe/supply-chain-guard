@@ -7,6 +7,45 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **16 malicious package IOCs** imported from the GitHub Advisory Database
+  (CWE-506) and corroborated against OSV.dev: 15 npm and 1 PyPI, covering
+  2026-07-22 to 2026-08-04. 15 of the 16 are confirmed by both databases
+  (confidence 1.0). The window was sliced to start at 2026-07-22 on purpose: the
+  default 14-day window reaches back into the 2026-07-21 bulk-publication spike
+  and the importer reported a 16,006-entry remainder that cannot be drained
+  before it ages out. All 16,006 are the PyPI and NuGet halves of that spike,
+  which are already excluded by a standing, re-verified decision, and the slice
+  loses no npm coverage: an `--ecosystem npm` run over the full window returns
+  the same 15 npm entries.
+
+- **5 non-package IOCs for the mrmustard PyPI compromise** (StepSecurity +
+  safedep, July 2026), a campaign the advisory databases only describe as a
+  package version. An attacker took over a maintainer's GitHub account, probed
+  the project's self-hosted CI runners to steal its PyPI publishing token, and
+  published a poisoned `0.7.4` of XanaduAI's photonic quantum library. The
+  payload runs on every `import mrmustard`, harvests SSH private keys, AWS
+  credentials, Kubernetes configs, SLURM job queues and GPU inventories, and
+  installs three persistence mechanisms that survive `pip uninstall`. Added: the
+  exfiltration host `metrics[.]femboy[.]energy`, the `webhook[.]site` bin that
+  received the stolen CI secrets, the two poisoned 0.7.4 artifact hashes, and a
+  `0.7.4` version pin. The malicious code was injected into the published
+  artifacts only - the GitHub source was left clean - so the artifact hash is the
+  indicator the repository cannot provide. The breached maintainer account is
+  deliberately **not** blocked: that account is a victim of the takeover, not an
+  indicator. The `webhook[.]site` apex is not listed either - it is an ordinary
+  development tool, so only the attacker's specific bin id is an indicator. Both
+  artifact hashes were checked against every artifact of every mrmustard release
+  still on PyPI (24 files across 13 versions) and collide with none, so a clean
+  install cannot trip them, and only `0.7.4` is pinned: `0.7.3` and earlier and
+  the `1.0.0a` pre-releases stay clean.
+
+- **1 non-package IOC for the Alibaba developer toolchain RAT** (Socket, July
+  2026): the native second-stage binary staged in the attacker's OSS bucket
+  alongside the eight paths already shipped in v5.24.0. Scoped to the full bucket
+  path, never the shared `oss-cn-beijing[.]aliyuncs[.]com` gateway.
+
 ## [5.25.0] - 2026-08-03
 
 ### Added

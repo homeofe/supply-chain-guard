@@ -3584,4 +3584,72 @@ describe("Campaign Signatures", () => {
       expect(finding, "a PyPI IOC must not fire on an npm dependency").toBeUndefined();
     });
   });
+
+  // =================================================================
+  // mrmustard PyPI compromise (July 2026)
+  // =================================================================
+
+  describe("mrmustard PyPI compromise (July 2026)", () => {
+    // mrmustard is a REAL XanaduAI library with a long clean history, so this is a
+    // version pin, not a name block. The negative test below is the one that matters:
+    // blocking the name would fire on every clean install of a legitimate project.
+    it("flags the poisoned 0.7.4 through a real scan of a Python lockfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "mrmustard"\nversion = "0.7.4"\ndescription = "quantum"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /mrmustard/.test(JSON.stringify(f)));
+      expect(finding, "PyPI lockfile must flag the poisoned mrmustard release").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the clean 0.7.3 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "mrmustard"\nversion = "0.7.3"\ndescription = "quantum"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /mrmustard/.test(JSON.stringify(f)));
+      expect(finding, "only 0.7.4 is malicious - 0.7.3 must stay clean").toBeUndefined();
+    });
+
+    it("flags the credential exfiltration C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "probe.js"),
+        'const endpoint = "https://metrics.femboy.energy/v1/collect";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the mrmustard exfil host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the poisoned 0.7.4 artifact hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "lock.js"),
+        'const sha = "0404f8590fdaef95280c1d908068f31bf2321fe887faabf0c2329ba67c7203cb";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the poisoned sdist hash must be flagged").toBeDefined();
+    });
+
+    // webhook.site is an ordinary development tool. Only the attacker's bin id is an
+    // indicator, so an unrelated bin must not trip the scanner.
+    it("does NOT flag an unrelated webhook.site bin", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "debug.js"),
+        'const hook = "https://webhook.site/00000000-1111-2222-3333-444444444444";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /webhook\.site/.test(JSON.stringify(f)));
+      expect(finding, "the webhook.site apex must not be blocked").toBeUndefined();
+    });
+  });
 });

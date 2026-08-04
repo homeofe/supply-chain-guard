@@ -214,6 +214,15 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // a whole, so neither parent host is listed.
   "openshield.canatrace.com",
   "nostop.go2cloud.org",
+
+  // mrmustard PyPI compromise (StepSecurity + safedep, July 2026). An attacker took over
+  // a maintainer's GitHub account, used the project's own self-hosted CI runners to steal
+  // its PyPI publishing token, and pushed a poisoned 0.7.4 whose payload runs on every
+  // `import mrmustard`. It collects SSH private keys, AWS credentials and Kubernetes
+  // configs - plus SLURM job queues and GPU inventories, so the target is research and HPC
+  // estates - and POSTs them here. Attacker subdomain only: femboy[.]energy is not listed
+  // on its own, and the exfil path /v1/collect is covered by the host entry.
+  "metrics.femboy.energy",
 ];
 
 // ---------------------------------------------------------------------------
@@ -381,6 +390,7 @@ export const KNOWN_DEAD_DROPS: string[] = [
   "aone-kit.oss-cn-beijing.aliyuncs.com/plugins/crypto.js",
   "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/aone-kit.js",
   "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/app.asar",
+  "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/aone-kit-update",
   // Config dead-drops under the attacker GitHub account, saved locally as
   // .cloud-preferences.json and then evaluated by local-config-parser. Specific
   // account/repo paths only - never the github.com apex.
@@ -392,6 +402,13 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // vpnsetup_d9gfqvs3dsic73fcvi90.exe. Path-scoped on purpose: the campaign path is
   // listed, never the freevpn[.]win host on its own.
   "freevpn.win/lps/gbox-lp/index.html",
+
+  // mrmustard PyPI compromise (StepSecurity + safedep, July 2026). The CI workflow the
+  // attacker pushed from the breached maintainer account dumped the repository secrets,
+  // including the PyPI publishing token, to this collector. Scoped to the single attacker
+  // bin: webhook[.]site is a legitimate request-inspection service used constantly in
+  // ordinary development, so the apex is deliberately NOT listed - only this bin id.
+  "webhook.site/710babde-6ace-47fe-83f4-9688e6548df9",
 ];
 
 // ---------------------------------------------------------------------------
@@ -665,6 +682,14 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "ae7565109fd01b88d82acf7f73ab20709cbc2c9f26fdea13e429ccc87a55d4fb": "Joyfill compromise: DEV#POPPER decoded detached bootstrap (SHA256)",
   "26e679eaf1e9baeb7c55eb48db482301171d4d26e1728544b23734a90dc70e1b": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
   "2cfede38fb121a71a2f3607474aa8cd588a99f51b37e5e6f0d8cb789fa275032": "Joyfill compromise: DEV#POPPER campaign artifact (SHA256)",
+
+  // mrmustard PyPI compromise (safedep, July 2026). The two poisoned 0.7.4 artifacts. The
+  // malicious code was injected into the published artifacts only - the GitHub source was
+  // left clean - so the release hash is the indicator that the repository cannot give you.
+  // Both were checked against every artifact of every mrmustard release still on PyPI (24
+  // files, 13 versions) and collide with none, so a clean install cannot trip these.
+  "0404f8590fdaef95280c1d908068f31bf2321fe887faabf0c2329ba67c7203cb": "mrmustard 0.7.4 poisoned sdist (SHA256)",
+  "81f0d1291a975d012d1b892cf9967557fdbb1ad4e1ac0545702ad235ace1cac5": "mrmustard 0.7.4 poisoned wheel (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1449,6 +1474,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "litellm": {
     versions: ["1.82.7", "1.82.8"],
     description: "LiteLLM PyPI compromise (TeamPCP): litellm_init.pth auto-runs on Python startup; RSA-4096+AES-256 credential exfil to models.litellm.cloud; persistent backdoor polling checkmarx.zone every 50min (March 24, 2026; Trail of Bits write-up May 22, 2026)",
+  },
+  "mrmustard": {
+    versions: ["0.7.4"],
+    description: "mrmustard PyPI compromise: XanaduAI photonic quantum library; a breached maintainer GitHub account was used to steal the PyPI token via the project's self-hosted CI runners and publish a poisoned 0.7.4. A 258-line _check_tf_compatibility() in __init__.py runs on every import, steals SSH keys, AWS credentials, Kubernetes configs, SLURM queues and GPU inventories to metrics.femboy.energy, and installs three persistence mechanisms (a mmcompat.pth site-packages hook, a 15-minute cron entry and a shell rc hook) that survive pip uninstall. Legitimate package - only 0.7.4 is malicious; 0.7.3 and earlier and the 1.0.0a pre-releases are clean (StepSecurity + safedep, July 2026)",
   },
 };
 

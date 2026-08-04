@@ -1,3 +1,53 @@
+> Note (2026-08-04, claude-opus-5, unreleased): Daily threat-intel run. 16 package IOCs
+> imported (15 npm, 1 PyPI) plus 6 non-package IOCs added by hand. No version bump; Emre
+> cuts the release.
+>
+> THE IMPORT NEEDED A SLICE, and the reason matters more than the number. A default run
+> reports 250 new entries and a 16,006-entry remainder, with the drain-aware cap correctly
+> calling that remainder unreachable before it ages out. It is not a new flood: all 16,006
+> are the PyPI and NuGet halves of the 2026-07-21 spike, which the standing decision (v5.24.0,
+> re-verified 2026-08-03 on a 25-package liveness sample) already excludes. Verified rather
+> than assumed, two ways: `--ecosystem npm` over the full window yields exactly the same 15
+> npm entries, and `--since 2026-07-22` over ALL ecosystems yields those 15 plus one genuine
+> PyPI entry. So the slice is strictly better than the ecosystem filter here - it keeps the
+> one real non-npm entry (`pypi:instalogin1234@0.0.1`) that `--ecosystem npm` would have
+> dropped. Nothing was left waiting behind `--limit`, and `--allow-backlog` was not used.
+>
+> THE SUBSTANCE OF THE RUN was the manual enrichment, not the import. The mrmustard PyPI
+> compromise is the kind of campaign the advisory databases reduce to a version string:
+> GHSA/OSV had `pypi:mrmustard@0.7.4` (already in the feed since the 2026-08-03 run), and
+> nothing else. The atomic indicators - exfil host, the CI-secret dead drop, the two poisoned
+> artifact hashes - exist only in the vendor write-ups. Both StepSecurity and safedep were
+> read, they agree, hence confidence 1.0.
+>
+> TWO DISCIPLINE CALLS, both deliberate and both worth not re-litigating:
+> - The breached maintainer's GitHub account is NOT blocked. The account was taken over; the
+>   human is a victim. A first pass over a Hacker News roundup surfaced a different handle
+>   for the same role, which is a second reason to keep maintainer handles out of this: the
+>   secondary sources do not even agree on which victim to name.
+> - `webhook[.]site` is listed only as the attacker's specific bin id, never the apex. It is
+>   a routine development tool; blocking the host would fire on ordinary debugging code.
+>   Same reasoning already applied to `oss-cn-beijing[.]aliyuncs[.]com` and `github[.]com`.
+>
+> HASH VERIFICATION, because WebFetch mangles long hex and a bad hash is unfalsifiable once
+> shipped. A web search summary asserted that one of the two hashes was the CLEAN 0.7.3
+> sdist, which would have been a false positive on every clean install. That claim was wrong,
+> and it was settled against PyPI's own JSON API rather than by re-reading the vendor page:
+> 0.7.4 is gone from PyPI (expected for malware), 0.7.3's real digests are different, and
+> neither vendor hash collides with any of the 24 artifacts across the 13 surviving releases.
+> Both hashes are also well-formed 64-char hex. Recorded because the search summary was
+> confident and wrong, and the registry is the authority here.
+>
+> ALSO CLOSED a one-line gap found while cross-referencing: the Alibaba dev-toolchain RAT
+> shipped 8 of its 9 OSS bucket paths in v5.24.0. The missing one is the native second-stage
+> binary (`.../aone-kit-update/aone-kit-update`), now added. Everything else in that campaign
+> - all 8 hashes, both C2 subdomains, the attacker GitHub account, all 18 packages - was
+> already covered.
+>
+> Five tests added to `campaigns.test.ts`, all through `scan()` rather than against pattern
+> constants: the 0.7.4 lockfile hit, the clean-0.7.3 negative, the C2 domain, the artifact
+> hash, and an unrelated-webhook.site-bin negative. Full-suite verdict comes from CI.
+
 > Note (2026-08-03, claude-opus-5): Released v5.25.0. Minor, not a patch: `--ecosystem` is
 > a new user-facing CLI flag on the importer. Ships that flag plus the 133 package IOCs from
 > PR #105; feed at 6,294 entries. PR #106 was merged first so the release met the zero-open-PR

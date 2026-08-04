@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.25.0",
-  "entryCount": 6294,
+  "entryCount": 6315,
   "entries": [
     {
       "type": "domain",
@@ -51046,6 +51046,180 @@
       "confidence": 1,
       "source": "GHSA-6wp2-7xxw-m8c6, MAL-2026-11428",
       "firstSeen": "2026-08-02"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v688",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-jvmj-rg3h-c654",
+      "firstSeen": "2026-08-04"
+    },
+    {
+      "type": "package",
+      "value": "pypi:instalogin1234@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7929-ff6q-qmmh, MAL-2026-11503",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v524",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2wgh-22xm-wp5f, MAL-2026-11512",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-1@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-83gm-93p7-wh7r, MAL-2026-11502",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "internallib_v568",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f4rq-x75f-gx73, MAL-2026-11513",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "beaver-ui-header",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qm7r-x5cp-5wc2, MAL-2026-11508",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "beaver-ui-items-with-more",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qq8g-w3r7-rqp8, MAL-2026-11509",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "bigops-chat-messages",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7fcf-754p-pfhv, MAL-2026-11511",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "beaver-ui-date-range-picker",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x5q8-8mg7-8jvg, MAL-2026-11506",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "accounts-final-form",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2rrw-8g3r-w44h, MAL-2026-11504",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "fluid-type-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4w4v-pw3v-q85q, MAL-2026-11136",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "accounts-loading-state",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9pwq-f6rq-8q69, MAL-2026-11505",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "beaver-ui-layout",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w259-8g6c-8ppr, MAL-2026-11510",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "lifestyle-test-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5f9f-jfwr-xxvp, MAL-2026-11514",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "beaver-ui-grid",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xjhx-6v3c-9cqp, MAL-2026-11507",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-util-5@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rhm2-fwx3-922c, MAL-2026-11501",
+      "firstSeen": "2026-08-03"
+    },
+    {
+      "type": "domain",
+      "value": "metrics.femboy.energy",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "mrmustard PyPI Compromise",
+      "source": "StepSecurity, safedep",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "url",
+      "value": "webhook.site/710babde-6ace-47fe-83f4-9688e6548df9",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "mrmustard PyPI Compromise",
+      "source": "StepSecurity, safedep",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "hash",
+      "value": "0404f8590fdaef95280c1d908068f31bf2321fe887faabf0c2329ba67c7203cb",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "mrmustard PyPI Compromise",
+      "source": "safedep",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "hash",
+      "value": "81f0d1291a975d012d1b892cf9967557fdbb1ad4e1ac0545702ad235ace1cac5",
+      "severity": "critical",
+      "confidence": 1,
+      "campaign": "mrmustard PyPI Compromise",
+      "source": "safedep",
+      "firstSeen": "2026-07-24"
+    },
+    {
+      "type": "url",
+      "value": "aone-kit.oss-cn-beijing.aliyuncs.com/aone-kit-update/aone-kit-update",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "AlibabaDevRAT",
+      "campaign": "Alibaba Dev Toolchain RAT",
+      "source": "Socket",
+      "firstSeen": "2026-07-29"
     }
   ]
 }
