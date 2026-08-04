@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1785834419",
-    "timestamp": "2026-08-04T09:06:59Z",
-    "commit": "23f2cb5",
+    "session_id": "cli-1785836331",
+    "timestamp": "2026-08-04T09:38:51Z",
+    "commit": "0e68fef",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:230f880eae3a6172735cde4098ce90c008914a57c265b004a5b728dd1dce8ceb",
-      "updated": "2026-08-04T08:59:07Z",
-      "lines": 125,
-      "summary": "PR #114 merged the AAHP 3.9.1 adoption and reviewed hardening into `main`."
+      "checksum": "sha256:fb9bb6f39592c3198bee66b6ca7d14b869d0c302678207b749d40ebd00bed356",
+      "updated": "2026-08-04T09:38:34Z",
+      "lines": 128,
+      "summary": "v5.25.2 was published from 0e68fef after all release workflows passed."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:661617681be7cad7622627c8bb41472ad5057c60483a5448b5e26aef747e0694",
-      "updated": "2026-08-04T08:59:21Z",
-      "lines": 150,
-      "summary": "Five tasks are ready, one owner decision is blocked, and T-008 is complete."
+      "checksum": "sha256:b89daffa18c66f983168e803f10ca95fbe0a0378dc67c172680dbf303982b8e1",
+      "updated": "2026-08-04T09:34:22Z",
+      "lines": 164,
+      "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:bccda265edee6f5739fe81f5d5034d44368c2ac4a5036c5c49cc0ff90f8001b7",
-      "updated": "2026-08-04T09:06:59Z",
-      "lines": 135,
+      "checksum": "sha256:0a90ea6086462169dac70703d0ca41c1f5284ab6f65d6de4d9b6ec0f68c987ea",
+      "updated": "2026-08-04T09:38:51Z",
+      "lines": 136,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,15 +41,15 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:a980055d3ff3fe339aff01b7f4b1d9bcee4357a00292eb2967e979e98294b6a6",
-      "updated": "2026-08-04T09:06:59Z",
+      "checksum": "sha256:7de9c605d4f24dbfc64e38db8920da9f22378391e44af363409c40ff763416c4",
+      "updated": "2026-08-04T09:38:51Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:e8e22bf6536897889d5d513ba394ad6672e71b411096f99efb477ee8255f17af",
-      "updated": "2026-08-04T09:06:59Z",
-      "lines": 60,
+      "checksum": "sha256:063f0894987a70dc14df6a0445476a52d677a206eadc6fb338e420ccfa672793",
+      "updated": "2026-08-04T09:38:51Z",
+      "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
@@ -77,12 +77,12 @@
       "summary": "{"
     }
   },
-  "quick_context": "PR #114 merged the AAHP 3.9.1 adoption and reviewed hardening into `main`. Five tasks are ready, one owner decision is blocked, and T-008 is complete. ",
+  "quick_context": "v5.25.2 was published from 0e68fef after all release workflows passed. Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 2433,
-    "full_read": 12073
+    "manifest_plus_core": 2614,
+    "full_read": 12447
   }
-  ,"next_task_id": 15
-  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"}}
+  ,"next_task_id": 16
+  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"}}
 }

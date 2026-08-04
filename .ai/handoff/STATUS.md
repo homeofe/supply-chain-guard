@@ -8,17 +8,17 @@
 
 ## At a Glance
 
-PR #114 merged the AAHP 3.9.1 adoption and reviewed hardening into `main`.
-Branch `codex/release-v5.25.2` contains only the metadata for the next patch
-release; v5.25.1 remains published until the immutable v5.25.2 tag completes CI.
+v5.25.2 was published from 0e68fef after all release workflows passed.
+A live install smoke then exposed one critical own-definition false positive.
+Branch `codex/release-v5.25.3` carries the narrow packaged self-scan fix.
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.1 on npm |
-| Release commit | 28bbd9f |
-| Release target | v5.25.2 |
+| Released package | v5.25.2 on npm |
+| Release commit | 0e68fef |
+| Release target | v5.25.3 |
 | Merged implementation | 7481d63, PR #114 |
-| Working branch base | 7481d63 |
+| Working branch base | 0e68fef |
 | Threat feed | 6,315 entries |
 | AAHP dependency | 3.9.1, exact pin |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
@@ -56,6 +56,8 @@ does not overwrite or silently discard that consumer state.
   pin download hosts, use a fixed temporary filename, and clean acquisition failures.
 - Self-scan suppression recognizes only the running package's physical root or
   a scanner-created clone of the exact canonical HTTPS repository.
+- Package-shaped regressions include compiled `dist/` output without source or
+  `.gitignore`, while an untrusted copy still receives the same rule finding.
 - Domain IOCs use hostname boundaries. Remote feed metadata, dates, confidence,
   and unknown fields are validated and normalized before scan-time scoring.
 - Solana webhooks select HTTP versus HTTPS correctly, reject other schemes,
@@ -86,10 +88,11 @@ does not overwrite or silently discard that consumer state.
 | Archive hardening subset | 46 tests passed; independent backend re-audit found no remaining actionable mismatch |
 | TypeScript `tsc --noEmit` | passed |
 | `npm run build` | passed, including governance, feed, handoff, and TypeScript gates |
-| AAHP acceptance report | 7 task-bound sections, no actionable findings |
+| AAHP acceptance report | 8 task-bound sections, no actionable findings |
 | AAHP lint / doctor / prepush | passed after regeneration |
-| Full Vitest suite | passed in required Ubuntu CI for PR #114 and merged `main` |
-| Linux AAHP Verify | passed for PR #114 and merged `main` |
+| Packaged self-scan regression | 16 tests plus installed candidate tarball: zero critical/high; untrusted copy detected |
+| Full Vitest suite | 2,644 tests passed in PR #115 and v5.25.2 release CI |
+| Linux AAHP Verify | passed for PR #115 and the v5.25.2 release |
 
 The Windows workstation lacks the external `zip` executable used only to build
 fixtures for 14 VS Code tests. Do not describe that prerequisite as a product

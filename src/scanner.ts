@@ -104,7 +104,7 @@ import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
 
-const TOOL_VERSION = "5.25.2";
+const TOOL_VERSION = "5.25.3";
 
 /**
  * Exact files that contain this package's own inert detector definitions or
@@ -195,6 +195,7 @@ const SELF_SCAN_INERT_PATTERN_RULES = new Map<string, ReadonlySet<string>>([
       "CODECOV_EXFIL",
       "VIDAR_WALLET_THEFT",
       "DROPPER_ANTIVM",
+      "SHAI_HULUD_WORM",
     ]),
   ],
   [
@@ -204,6 +205,7 @@ const SELF_SCAN_INERT_PATTERN_RULES = new Map<string, ReadonlySet<string>>([
       "CODECOV_EXFIL",
       "VIDAR_WALLET_THEFT",
       "DROPPER_ANTIVM",
+      "SHAI_HULUD_WORM",
     ]),
   ],
 ]);

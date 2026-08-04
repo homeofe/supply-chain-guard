@@ -200,6 +200,7 @@ describe("built repository self-scan", () => {
   let checkout: string;
   let cleanReport: ScanReport;
   let payloadReport: ScanReport;
+  let untrustedPackageReport: ScanReport;
 
   beforeAll(async () => {
     workdir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-built-selfscan-"));
@@ -231,8 +232,29 @@ describe("built repository self-scan", () => {
       [TSC, "-p", path.join(ROOT, "tsconfig.json"), "--outDir", path.join(checkout, "dist")],
       { cwd: ROOT, stdio: "pipe" },
     );
+    // Model the published npm package, where dist is included and .gitignore
+    // and the TypeScript sources are absent.
+    const publishedRootEntries = new Set([
+      "LICENSE",
+      "README.md",
+      "action.yml",
+      "dist",
+      "package.json",
+      "policy-schema.json",
+      "socket.yml",
+    ]);
+    for (const entry of fs.readdirSync(checkout)) {
+      if (!publishedRootEntries.has(entry)) {
+        fs.rmSync(path.join(checkout, entry), { recursive: true, force: true });
+      }
+    }
 
     cleanReport = await scanScannerInitiatedClone(checkout, CANONICAL_CLONE_TARGET, "json");
+    untrustedPackageReport = await scan({
+      target: checkout,
+      format: "json",
+      noHistory: true,
+    });
 
     // dist remains globally scannable: an arbitrary built payload does not
     // inherit suppression merely because this is supply-chain-guard.
@@ -268,6 +290,22 @@ describe("built repository self-scan", () => {
     expect(
       cleanReport.findings.some((finding) => finding.rule === "GHA_ARTIFACT_DOWNLOAD"),
     ).toBe(false);
+    expect(
+      cleanReport.findings.some(
+        (finding) =>
+          finding.rule === "SHAI_HULUD_WORM" &&
+          finding.file === "dist/broad-gap-pattern-matchers.js",
+      ),
+    ).toBe(false);
+  });
+  it("does not grant packaged-artifact suppression to an untrusted local copy", () => {
+    expect(
+      untrustedPackageReport.findings.some(
+        (finding) =>
+          finding.rule === "SHAI_HULUD_WORM" &&
+          finding.file === "dist/broad-gap-pattern-matchers.js",
+      ),
+    ).toBe(true);
   });
 
   it("still scans an arbitrary payload under dist", () => {

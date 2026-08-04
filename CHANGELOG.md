@@ -7,6 +7,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.25.3] - 2026-08-04
+
+### Fixed
+
+- Installed package self-scans no longer treat the compiled Shai-Hulud matcher
+  definition as executable worm behavior. The package-shaped regression now
+  includes `dist/` without source or `.gitignore`, while an untrusted copy still
+  triggers the same rule.
+
 ## [5.25.2] - 2026-08-04
 
 ### Changed
@@ -2822,7 +2831,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.25.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.25.3...HEAD
+[5.25.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.3
 [5.25.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.2
 [5.25.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.1
 [5.25.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.25.0

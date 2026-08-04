@@ -6,9 +6,9 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, one owner decision is blocked, and T-008 is complete.
+Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete.
 
-Current version: **v5.25.2**
+Current version: **v5.25.3**
 
 ---
 
@@ -22,8 +22,8 @@ follow-ups are ready, and the Node/Babel support-matrix decision is owner-blocke
 | Ready | 5 |
 | Blocked | 1 |
 
-The published package remains v5.25.1. Release metadata for v5.25.2 is
-unreleased on `codex/release-v5.25.2`.
+The published package is v5.25.2. Its packaged self-scan fix and v5.25.3
+release metadata are unreleased on `codex/release-v5.25.3`.
 
 ---
 
@@ -130,11 +130,25 @@ do not merge Babel 8 alone.
 
 | Item | Resolution |
 |------|------------|
-| T-008: AAHP 3.9.1 adoption and verified hardening | 247 focused tests, build, audit, AAHP lint/doctor/prepush, independent review, and PR #114 Linux CI passed |
+| T-015: packaged self-scan own-definition false positive | Package-shaped trusted/untrusted regressions pass; v5.25.3 is the recovery release |
+| v5.25.2: AAHP 3.9.1 and security hardening | Released 2026-08-04; live install smoke exposed the T-015 packaged self-scan gap |
+| T-008: AAHP 3.9.1 adoption and verified hardening | 247 focused tests, build, audit, independent review, and PR #114 Linux CI passed |
 | v5.25.1: campaign and package IOC update | Released 2026-08-04; feed generation and release gates passed |
 | v5.25.0: ecosystem-scoped importer recovery | Released 2026-08-03; importer and feed regressions passed |
-| v5.24.0: drain-aware backlog accounting | Released 2026-08-02; recovery-slice tests passed |
-| v5.23.5: PointBlank routing and intelligence | Released 2026-08-01; ecosystem routing regressions passed |
+
+### T-015: Fix packaged self-scan own-definition false positive
+
+**Acceptance criteria:**
+- [x] The fixture mirrors npm package contents: compiled `dist/` included, source
+  and `.gitignore` absent.
+- [x] A trusted own-package scan suppresses only the exact matcher definition;
+  an untrusted copy and injected executable payloads still trigger.
+- [x] Sixteen focused self-scan tests, build, audit, and AAHP gates pass; required
+  Linux PR CI remains the release gate.
+
+**Resolution:** Completed 2026-08-04 from the published v5.25.2 reproduction,
+an exact path/rule exemption, package-shaped trusted/untrusted regressions, and
+an installed candidate tarball self-scan with zero critical/high findings.
 
 ### T-008: Adopt AAHP 3.9.1 and close verified scanner and CI defects
 
