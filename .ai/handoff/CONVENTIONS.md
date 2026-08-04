@@ -85,13 +85,36 @@ The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary
 - Severity levels: `critical`, `high`, `medium`, `low`, `info`
 - Every rule must have a corresponding test case (positive + negative)
 
+## Acceptance Criteria Lifecycle
+
+Every implementation task, and every issue an adapter links to one, carries one
+canonical **Acceptance criteria** section written as task boxes.
+
+1. Use exactly `Acceptance criteria` as a Markdown heading or bold label.
+   `Completion criteria` and `Definition of done` are legacy aliases only.
+2. Use `- [ ]` while a criterion is unresolved. Plain bullets are not criteria.
+3. Change a box to `- [x]` only when a commit, PR, test run, or live
+   verification supplies evidence.
+4. Before a task becomes `done`, every criterion is checked, explicitly waived
+   as `(waived: rationale)`, or moved to an open linked follow-up such as
+   `(follow-up: T-042)` or `(follow-up: #123)`.
+5. Record closure evidence in NEXT_ACTIONS.md's Recently Completed Resolution
+   field, including any waiver or follow-up.
+6. When tasks are mirrored to GitHub issues, reconcile the same boxes before
+   closing the issue and record the closing evidence.
+7. `aahp criteria` is an advisory report that always exits zero for findings.
+   Review upholds the lifecycle; a clean report is not proof of completion.
+
 ## Handoff Protocol
 
-Doc roles: **STATUS.md** is the hand-maintained living state doc + decision log
-(append a note). **DASHBOARD.md, TRUST.md and LOG.md are GENERATED** and must never be
-hand-edited - DASHBOARD/TRUST from package.json + tsconfig + the src/ file list, LOG.md
-(the release journal) from CHANGELOG.md. **NEXT_ACTIONS.md** is the one hand-curated
-backlog; its "Current version" header must equal package.json.
+Doc roles: **STATUS.md** is one hand-maintained snapshot of current state. Rewrite
+stale facts in place; do not append session notes or use it as a history log.
+**MANIFEST.json tasks** is the authoritative machine-readable task graph.
+**NEXT_ACTIONS.md** is its concise hand-curated backlog view and its "Current
+version" header must equal package.json. **DASHBOARD.md, TRUST.md and LOG.md are
+GENERATED** and must never be hand-edited. DASHBOARD/TRUST come from committed
+repository inputs plus explicit time-bound verification records in the generator;
+LOG.md is the release journal from CHANGELOG.md.
 
 Enforcement (nothing here relies on remembering): the AAHP content-drift gate forces
 STATUS.md + MANIFEST.json on every code change, and `check:handoff` (prebuild) regenerates
@@ -99,11 +122,13 @@ and diffs DASHBOARD/TRUST/LOG **and** fails if NEXT_ACTIONS.md's version header 
 
 After completing any task:
 
-1. Add a note to `STATUS.md` (what changed, why) - this is the decision log
-2. `npm run handoff:refresh` - regenerates DASHBOARD.md + TRUST.md + LOG.md + MANIFEST.json
-3. Update `NEXT_ACTIONS.md` only if the backlog changed (keep its version header current)
+1. Rewrite STATUS.md so it contains only the current snapshot and live decisions.
+2. Update MANIFEST.json tasks and NEXT_ACTIONS.md when task state or backlog changed.
+3. Run `npm run handoff:refresh` to regenerate DASHBOARD.md, TRUST.md, LOG.md and
+   MANIFEST.json metadata.
 
 LOG.md is NO LONGER hand-appended. It is a generated release journal derived from
 CHANGELOG.md, so it cannot silently drift - the old "append every session" convention
 lapsed unnoticed across v5.3.0-v5.17.3; the pre-generation hand-authored entries are
-preserved in LOG-ARCHIVE.md.
+preserved in LOG-ARCHIVE.md. Detailed rationale remains recoverable from CHANGELOG.md,
+LOG-ARCHIVE.md and git history.

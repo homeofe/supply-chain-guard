@@ -8,7 +8,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as https from "node:https";
 
 import { createHash } from "node:crypto";
 import type { Finding, ScanReport, ScanOptions } from "./types.js";
@@ -28,9 +27,46 @@ import {
 } from "./patterns.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
+import {
+  downloadHttpsFile,
+  fetchHttpsBuffer,
+  RemoteHttpStatusError,
+} from "./remote-download.js";
 
 const TOOL_VERSION = "5.25.1";
 const PYPI_API = "https://pypi.org/pypi";
+const PYPI_METADATA_HOST = "pypi.org";
+const PYPI_ARTIFACT_HOST = "files.pythonhosted.org";
+
+function assertAllowedPyPIUrl(
+  rawUrl: string,
+  expectedHost: string,
+  requestKind: "metadata" | "artifact",
+): void {
+  const url = new URL(rawUrl);
+  if (url.hostname.toLowerCase() !== expectedHost || url.port !== "") {
+    throw new Error(
+      `PyPI ${requestKind} request refused non-official host "${url.host}"; ` +
+        `allowed host: ${expectedHost}`,
+    );
+  }
+}
+
+function assertAllowedPyPIMetadataUrl(rawUrl: string): void {
+  assertAllowedPyPIUrl(rawUrl, PYPI_METADATA_HOST, "metadata");
+}
+
+function assertAllowedPyPIArtifactUrl(rawUrl: string): void {
+  assertAllowedPyPIUrl(rawUrl, PYPI_ARTIFACT_HOST, "artifact");
+}
+
+/** Public and testable acquisition bounds for PyPI registry data. */
+export const PYPI_REMOTE_LIMITS = Object.freeze({
+  metadataBytes: 8 * 1024 * 1024,
+  artifactBytes: 256 * 1024 * 1024,
+  timeoutMs: 30_000,
+  maxRedirects: 5,
+});
 
 interface PyPIPackageResponse {
   info?: {
@@ -165,37 +201,32 @@ async function fetchPyPIMetadata(
   packageName: string,
 ): Promise<PyPIPackageResponse> {
   const url = `${PYPI_API}/${encodeURIComponent(packageName)}/json`;
+  let response;
+  try {
+    response = await fetchHttpsBuffer(url, {
+      maxBytes: PYPI_REMOTE_LIMITS.metadataBytes,
+      timeoutMs: PYPI_REMOTE_LIMITS.timeoutMs,
+      maxRedirects: PYPI_REMOTE_LIMITS.maxRedirects,
+      headers: { Accept: "application/json", "User-Agent": "supply-chain-guard" },
+      validateUrl: assertAllowedPyPIMetadataUrl,
+    });
+  } catch (error) {
+    if (error instanceof RemoteHttpStatusError) {
+      if (error.statusCode === 404) {
+        throw new Error(`Package not found on PyPI: ${packageName}`);
+      }
+      throw new Error(
+        `PyPI API returned status ${error.statusCode ?? "unknown"} for ${packageName}`,
+      );
+    }
+    throw error;
+  }
 
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, { headers: { Accept: "application/json" } }, (res) => {
-        if (res.statusCode === 404) {
-          reject(new Error(`Package not found on PyPI: ${packageName}`));
-          return;
-        }
-        if (res.statusCode !== 200) {
-          reject(
-            new Error(
-              `PyPI API returned status ${res.statusCode} for ${packageName}`,
-            ),
-          );
-          return;
-        }
-
-        let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data) as PyPIPackageResponse);
-          } catch {
-            reject(new Error("Failed to parse PyPI API response"));
-          }
-        });
-      })
-      .on("error", reject);
-  });
+  try {
+    return JSON.parse(response.body.toString("utf8")) as PyPIPackageResponse;
+  } catch {
+    throw new Error("Failed to parse PyPI API response");
+  }
 }
 
 /**
@@ -498,7 +529,16 @@ async function downloadAndScanSdist(
   try {
     const extractDir = path.join(tempDir, "extracted");
     try {
-      await downloadFile(artifact.url, archivePath);
+      await downloadHttpsFile(artifact.url, archivePath, {
+        maxBytes: PYPI_REMOTE_LIMITS.artifactBytes,
+        timeoutMs: PYPI_REMOTE_LIMITS.timeoutMs,
+        maxRedirects: PYPI_REMOTE_LIMITS.maxRedirects,
+        headers: {
+          Accept: "application/octet-stream",
+          "User-Agent": "supply-chain-guard",
+        },
+        validateUrl: assertAllowedPyPIArtifactUrl,
+      });
       if (
         expectedSha256 !== undefined &&
         !(await verifyArtifactSha256(archivePath, expectedSha256))
@@ -536,7 +576,16 @@ async function downloadAndScanWheel(
   try {
     const extractDir = path.join(tempDir, "extracted");
     try {
-      await downloadFile(artifact.url, wheelPath);
+      await downloadHttpsFile(artifact.url, wheelPath, {
+        maxBytes: PYPI_REMOTE_LIMITS.artifactBytes,
+        timeoutMs: PYPI_REMOTE_LIMITS.timeoutMs,
+        maxRedirects: PYPI_REMOTE_LIMITS.maxRedirects,
+        headers: {
+          Accept: "application/octet-stream",
+          "User-Agent": "supply-chain-guard",
+        },
+        validateUrl: assertAllowedPyPIArtifactUrl,
+      });
       if (
         expectedSha256 !== undefined &&
         !(await verifyArtifactSha256(wheelPath, expectedSha256))
@@ -801,66 +850,6 @@ export function checkInstallRequires(
       }
     }
   }
-}
-
-/**
- * Download a file from a URL, following redirects.
- */
-function downloadFile(url: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const makeRequest = (requestUrl: string, redirectCount: number): void => {
-      if (redirectCount > 5) {
-        reject(new Error("Too many redirects"));
-        return;
-      }
-
-      const protocol = requestUrl.startsWith("https") ? https : https;
-      const file = fs.createWriteStream(dest);
-
-      protocol
-        .get(requestUrl, (response) => {
-          if (
-            response.statusCode === 302 ||
-            response.statusCode === 301 ||
-            response.statusCode === 307
-          ) {
-            const redirectUrl = response.headers.location;
-            file.close();
-            if (redirectUrl) {
-              makeRequest(redirectUrl, redirectCount + 1);
-            } else {
-              reject(new Error("Redirect without location header"));
-            }
-            return;
-          }
-
-          if (response.statusCode !== 200) {
-            file.close();
-            reject(
-              new Error(`Download failed with status ${response.statusCode}`),
-            );
-            return;
-          }
-
-          response.pipe(file);
-          file.on("finish", () => {
-            file.close();
-            resolve();
-          });
-        })
-        .on("error", (err) => {
-          file.close();
-          try {
-            fs.unlinkSync(dest);
-          } catch {
-            // ignore cleanup errors
-          }
-          reject(err);
-        });
-    };
-
-    makeRequest(url, 0);
-  });
 }
 
 /**

@@ -6,6 +6,7 @@
  * making the blockchain an uncensorable command-and-control channel.
  */
 
+import * as http from "node:http";
 import * as https from "node:https";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -27,6 +28,7 @@ const RPC_MAX_RETRIES = 5;
 const RPC_BASE_BACKOFF_MS = 1_000;
 const RPC_MAX_BACKOFF_MS = 32_000;
 const RPC_JITTER_RATIO = 0.25;
+const WEBHOOK_TIMEOUT_MS = 10_000;
 
 // Sleep helper exposed as a module-level binding so tests can stub it without
 // having to mock global timers.
@@ -467,31 +469,96 @@ export function listWatchlist(): WatchlistEntry[] {
 /**
  * Send an alert payload to a webhook URL via HTTP POST.
  */
-function sendWebhookAlert(webhookUrl: string, payload: WatchlistAlert): Promise<void> {
+export function sendWebhookAlert(webhookUrl: string, payload: WatchlistAlert): Promise<void> {
   const body = JSON.stringify(payload);
   return new Promise((resolve, reject) => {
-    const url = new URL(webhookUrl);
-    const transport = url.protocol === "https:" ? https : https;
-    const req = transport.request(
-      {
-        hostname: url.hostname,
-        port: url.port || (url.protocol === "https:" ? 443 : 80),
-        path: url.pathname + url.search,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body),
+    let settled = false;
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    let request: http.ClientRequest | undefined;
+    let response: http.IncomingMessage | undefined;
+
+    const settle = (error?: Error): boolean => {
+      if (settled) return false;
+      settled = true;
+      if (deadline !== undefined) clearTimeout(deadline);
+      if (error) reject(error);
+      else resolve();
+      return true;
+    };
+
+    try {
+      const url = new URL(webhookUrl);
+      if (url.protocol !== "http:" && url.protocol !== "https:") {
+        settle(new Error(`Unsupported webhook protocol: ${url.protocol}`));
+        return;
+      }
+
+      // ClientRequest.setTimeout() is only an inactivity timeout after socket
+      // connection. This absolute deadline also covers DNS/connect stalls and
+      // peers that keep a response alive by continuously trickling bytes.
+      deadline = setTimeout(() => {
+        const error = new Error(
+          `Webhook request timed out after ${WEBHOOK_TIMEOUT_MS}ms`,
+        );
+        if (!settle(error)) return;
+        response?.destroy();
+        request?.destroy(error);
+      }, WEBHOOK_TIMEOUT_MS);
+
+      const transport = url.protocol === "https:" ? https : http;
+      request = transport.request(
+        {
+          hostname: url.hostname,
+          port: url.port || (url.protocol === "https:" ? 443 : 80),
+          path: url.pathname + url.search,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
         },
-      },
-      (res) => {
-        // Consume response data to free up memory
-        res.on("data", () => {});
-        res.on("end", () => resolve());
-      },
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
+        (incoming) => {
+          response = incoming;
+          // Absorb late stream failures after header-time settlement so a
+          // destroy/aborted race can never become an unhandled error.
+          incoming.on("error", (error) => { settle(error); });
+          incoming.on("aborted", () => {
+            settle(new Error("Webhook response aborted"));
+          });
+
+          if (settled) {
+            incoming.destroy();
+            return;
+          }
+
+          const status = incoming.statusCode ?? 0;
+          settle(
+            status >= 200 && status < 300
+              ? undefined
+              : new Error(`Webhook request failed with HTTP ${status}`),
+          );
+          // The response body is unused. Closing it at header time prevents an
+          // endless or trickling body from retaining the socket/process.
+          incoming.destroy();
+        },
+      );
+      request.on("error", (error) => { settle(error); });
+
+      // Defensive support for test doubles or future transports that invoke
+      // the response callback synchronously.
+      if (settled) {
+        request.destroy();
+        return;
+      }
+
+      request.write(body);
+      request.end();
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      if (!settle(normalized)) return;
+      response?.destroy();
+      request?.destroy(normalized);
+    }
   });
 }
 

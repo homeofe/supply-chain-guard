@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as https from "node:https";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { Finding, NpmPackageInfo, ScanReport, ScanOptions } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { extractTarGz } from "./archive-extractor.js";
@@ -26,9 +26,45 @@ import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from 
 import { collectExtractedFiles } from "./extracted-file-walker.js";
 import { getBundledFeed } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
+import {
+  downloadHttpsFile,
+  fetchHttpsBuffer,
+  RemoteHttpStatusError,
+} from "./remote-download.js";
 
 const TOOL_VERSION = "5.25.1";
 const NPM_REGISTRY = "https://registry.npmjs.org";
+const NPM_REGISTRY_HOST = "registry.npmjs.org";
+const RAW_GITHUB_HOST = "raw.githubusercontent.com";
+const RAW_GITHUB_TIMEOUT_MS = 10_000;
+
+function assertAllowedNpmRegistryUrl(rawUrl: string): void {
+  const url = new URL(rawUrl);
+  if (url.hostname.toLowerCase() !== NPM_REGISTRY_HOST || url.port !== "") {
+    throw new Error(
+      `npm registry request refused non-official host "${url.host}"; ` +
+        `allowed host: ${NPM_REGISTRY_HOST}`,
+    );
+  }
+}
+
+function assertAllowedRawGitHubUrl(rawUrl: string): void {
+  const url = new URL(rawUrl);
+  if (url.hostname.toLowerCase() !== RAW_GITHUB_HOST || url.port !== "") {
+    throw new Error(
+      `GitHub repository corroboration refused non-official host "${url.host}"; ` +
+        `allowed host: ${RAW_GITHUB_HOST}`,
+    );
+  }
+}
+
+/** Public and testable acquisition bounds for npm registry data. */
+export const NPM_REMOTE_LIMITS = Object.freeze({
+  metadataBytes: 32 * 1024 * 1024,
+  artifactBytes: 256 * 1024 * 1024,
+  timeoutMs: 30_000,
+  maxRedirects: 5,
+});
 
 interface NpmRegistryResponse {
   "dist-tags"?: { latest?: string; [key: string]: string | undefined };
@@ -39,9 +75,15 @@ interface NpmVersionData {
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
-  dist?: { tarball?: string };
+  dist?: NpmDistInfo;
   repository?: unknown;
   [key: string]: unknown;
+}
+
+export interface NpmDistInfo {
+  tarball?: string;
+  integrity?: string;
+  shasum?: string;
 }
 
 /** Testable package-coverage contract shared by the network scan path. */
@@ -53,6 +95,18 @@ export function recordNpmNoArtifact(findings: Finding[]): void {
     severity: "info",
     recommendation:
       "Treat this result as partial and inspect a trustworthy package artifact before use.",
+  });
+}
+
+/** Record that bytes were scanned but registry metadata could not authenticate them. */
+export function recordNpmUnverifiedArtifact(findings: Finding[]): void {
+  findings.push({
+    rule: "PATH_SCAN_INCOMPLETE",
+    description:
+      "The npm tarball was scanned, but registry metadata supplied neither dist.integrity nor dist.shasum, so the downloaded bytes could not be authenticated.",
+    severity: "info",
+    recommendation:
+      "Verify the package artifact independently before treating this scan as complete.",
   });
 }
 
@@ -115,9 +169,10 @@ export async function scanNpmPackage(
 
   // Download and scan tarball
   let fileCounts = { totalFiles: 0, filesScanned: 0 };
-  const tarballUrl = (versionData as NpmVersionData).dist?.tarball;
+  const dist = (versionData as NpmVersionData).dist;
+  const tarballUrl = dist?.tarball;
   if (tarballUrl) {
-    fileCounts = await downloadAndScanTarball(tarballUrl, findings);
+    fileCounts = await downloadAndScanTarball(tarballUrl, findings, dist);
   } else {
     recordNpmNoArtifact(findings);
   }
@@ -352,37 +407,20 @@ export function parseRepositoryField(
   return parsed ? { ...parsed, directory } : null;
 }
 
-/** GET a URL over HTTPS, resolving null on any non-200 / error (never throws). */
-function httpsGetTextOrNull(url: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const done = (v: string | null): void => {
-      if (!settled) { settled = true; resolve(v); }
-    };
-    try {
-      const req = https.get(url, { headers: { Accept: "application/json", "User-Agent": "supply-chain-guard" } }, (res) => {
-        if (res.statusCode !== 200) {
-          res.resume?.();
-          done(null);
-          return;
-        }
-        let data = "";
-        let size = 0;
-        res.on("data", (chunk: Buffer) => {
-          size += chunk.length;
-          if (size > MAX_FILE_SIZE) { done(null); req.destroy?.(); return; }
-          data += chunk.toString();
-        });
-        res.on("end", () => done(data));
-        res.on("error", () => done(null));
-      });
-      // Bound the wait so a hung/slow host cannot stall the whole npm scan.
-      req.setTimeout?.(10_000, () => { done(null); req.destroy?.(); });
-      req.on("error", () => done(null));
-    } catch {
-      done(null);
-    }
-  });
+/** Fetch a raw GitHub manifest within the same bounded transport policy. */
+async function fetchRawGitHubTextOrNull(url: string): Promise<string | null> {
+  try {
+    const response = await fetchHttpsBuffer(url, {
+      maxBytes: MAX_FILE_SIZE,
+      timeoutMs: RAW_GITHUB_TIMEOUT_MS,
+      maxRedirects: NPM_REMOTE_LIMITS.maxRedirects,
+      headers: { Accept: "application/json", "User-Agent": "supply-chain-guard" },
+      validateUrl: assertAllowedRawGitHubUrl,
+    });
+    return response.body.toString("utf8");
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -423,7 +461,7 @@ export async function checkRepositoryClaim(
   // rather than emit a maximally-FP-prone flag (v5.16.0 gate finding).
   if (significantTokens(packageName).size === 0) return;
 
-  const body = await httpsGetTextOrNull(
+  const body = await fetchRawGitHubTextOrNull(
     `https://raw.githubusercontent.com/${claim.owner}/${claim.repo}/HEAD/package.json`,
   );
   if (body === null) return; // unfetchable: too benign to flag
@@ -450,7 +488,7 @@ export async function checkRepositoryClaim(
   // the common case): pnpm/lerna monorepos leave the package.json workspaces key
   // empty. If a workspace manifest exists in the repo, treat it as a monorepo.
   for (const manifest of ["pnpm-workspace.yaml", "lerna.json"]) {
-    const m = await httpsGetTextOrNull(
+    const m = await fetchRawGitHubTextOrNull(
       `https://raw.githubusercontent.com/${claim.owner}/${claim.repo}/HEAD/${manifest}`,
     );
     if (m !== null) return;
@@ -480,37 +518,32 @@ async function fetchPackageMetadata(
   packageName: string,
 ): Promise<NpmRegistryResponse> {
   const url = `${NPM_REGISTRY}/${encodeURIComponent(packageName)}`;
+  let response;
+  try {
+    response = await fetchHttpsBuffer(url, {
+      maxBytes: NPM_REMOTE_LIMITS.metadataBytes,
+      timeoutMs: NPM_REMOTE_LIMITS.timeoutMs,
+      maxRedirects: NPM_REMOTE_LIMITS.maxRedirects,
+      headers: { Accept: "application/json", "User-Agent": "supply-chain-guard" },
+      validateUrl: assertAllowedNpmRegistryUrl,
+    });
+  } catch (error) {
+    if (error instanceof RemoteHttpStatusError) {
+      if (error.statusCode === 404) {
+        throw new Error(`Package not found: ${packageName}`);
+      }
+      throw new Error(
+        `npm registry returned status ${error.statusCode ?? "unknown"} for ${packageName}`,
+      );
+    }
+    throw error;
+  }
 
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, { headers: { Accept: "application/json" } }, (res) => {
-        if (res.statusCode === 404) {
-          reject(new Error(`Package not found: ${packageName}`));
-          return;
-        }
-        if (res.statusCode !== 200) {
-          reject(
-            new Error(
-              `npm registry returned status ${res.statusCode} for ${packageName}`,
-            ),
-          );
-          return;
-        }
-
-        let data = "";
-        res.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data) as NpmRegistryResponse);
-          } catch {
-            reject(new Error("Failed to parse npm registry response"));
-          }
-        });
-      })
-      .on("error", reject);
-  });
+  try {
+    return JSON.parse(response.body.toString("utf8")) as NpmRegistryResponse;
+  } catch {
+    throw new Error("Failed to parse npm registry response");
+  }
 }
 
 /**
@@ -519,13 +552,33 @@ async function fetchPackageMetadata(
 async function downloadAndScanTarball(
   tarballUrl: string,
   findings: Finding[],
+  dist: NpmDistInfo,
 ): Promise<{ totalFiles: number; filesScanned: number }> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-"));
   const tarballPath = path.join(tempDir, "package.tgz");
 
   try {
     // Download tarball
-    await downloadFile(tarballUrl, tarballPath);
+    await downloadHttpsFile(tarballUrl, tarballPath, {
+      maxBytes: NPM_REMOTE_LIMITS.artifactBytes,
+      timeoutMs: NPM_REMOTE_LIMITS.timeoutMs,
+      maxRedirects: NPM_REMOTE_LIMITS.maxRedirects,
+      headers: {
+        Accept: "application/octet-stream",
+        "User-Agent": "supply-chain-guard",
+      },
+      validateUrl: assertAllowedNpmRegistryUrl,
+    });
+    if (!(await verifyNpmDistIntegrity(tarballPath, dist))) {
+      throw new Error("Downloaded npm tarball does not match dist.integrity/dist.shasum");
+    }
+
+    if (
+      typeof dist.integrity !== "string" &&
+      typeof dist.shasum !== "string"
+    ) {
+      recordNpmUnverifiedArtifact(findings);
+    }
 
     // Extract tarball
     const extractDir = path.join(tempDir, "extracted");
@@ -538,6 +591,91 @@ async function downloadAndScanTarball(
     // Cleanup
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
+}
+
+const SRI_ALGORITHM_STRENGTH = {
+  sha256: 1,
+  sha384: 2,
+  sha512: 3,
+} as const;
+
+type SriAlgorithm = keyof typeof SRI_ALGORITHM_STRENGTH;
+
+interface SriDigest {
+  algorithm: SriAlgorithm;
+  digest: Buffer;
+}
+
+function parseStrongestSriDigests(integrity: string): SriDigest[] {
+  const parsed: SriDigest[] = [];
+  for (const token of integrity.trim().split(/\s+/)) {
+    const match = token.match(/^(sha256|sha384|sha512)-([^?]+)(?:\?.*)?$/i);
+    if (!match) continue;
+    const algorithm = match[1]!.toLowerCase() as SriAlgorithm;
+    const encoded = match[2]!.replace(/-/g, "+").replace(/_/g, "/");
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) continue;
+    const digest = Buffer.from(encoded, "base64");
+    const expectedLength = algorithm === "sha256" ? 32 : algorithm === "sha384" ? 48 : 64;
+    if (digest.length !== expectedLength) continue;
+    parsed.push({ algorithm, digest });
+  }
+  const strongest = parsed.reduce(
+    (max, entry) => Math.max(max, SRI_ALGORITHM_STRENGTH[entry.algorithm]),
+    0,
+  );
+  return parsed.filter(
+    (entry) => SRI_ALGORITHM_STRENGTH[entry.algorithm] === strongest,
+  );
+}
+
+function hashFile(
+  filePath: string,
+  algorithms: ReadonlySet<string>,
+): Promise<Map<string, Buffer>> {
+  return new Promise((resolve, reject) => {
+    const hashes = new Map(
+      [...algorithms].map((algorithm) => [algorithm, createHash(algorithm)]),
+    );
+    const stream = fs.createReadStream(filePath);
+    stream.on("data", (chunk: Buffer) => {
+      for (const hash of hashes.values()) hash.update(chunk);
+    });
+    stream.on("error", reject);
+    stream.on("end", () => {
+      resolve(new Map([...hashes].map(([algorithm, hash]) => [algorithm, hash.digest()])));
+    });
+  });
+}
+
+/** Verify every npm registry digest that is present, strongest SRI algorithm first. */
+export async function verifyNpmDistIntegrity(
+  tarballPath: string,
+  dist: Pick<NpmDistInfo, "integrity" | "shasum">,
+): Promise<boolean> {
+  const integrityPresent = typeof dist.integrity === "string";
+  const shasumPresent = typeof dist.shasum === "string";
+  if (!integrityPresent && !shasumPresent) return true;
+
+  const sri = integrityPresent ? parseStrongestSriDigests(dist.integrity!) : [];
+  if (integrityPresent && sri.length === 0) return false;
+  if (shasumPresent && !/^[a-f0-9]{40}$/i.test(dist.shasum!)) return false;
+
+  const algorithms = new Set<string>(sri.map((entry) => entry.algorithm));
+  if (shasumPresent) algorithms.add("sha1");
+  const actual = await hashFile(tarballPath, algorithms);
+
+  if (sri.length > 0) {
+    const sriMatches = sri.some((entry) => {
+      const digest = actual.get(entry.algorithm);
+      return digest !== undefined && timingSafeEqual(digest, entry.digest);
+    });
+    if (!sriMatches) return false;
+  }
+  if (shasumPresent) {
+    const sha1 = actual.get("sha1");
+    if (!sha1 || sha1.toString("hex") !== dist.shasum!.toLowerCase()) return false;
+  }
+  return true;
 }
 
 /**
@@ -600,36 +738,6 @@ export function scanExtractedNpmFiles(
     }
   }
   return { totalFiles: files.length, filesScanned };
-}
-
-/**
- * Download a file from a URL.
- */
-function downloadFile(url: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https
-      .get(url, (response) => {
-        // Handle redirects
-        if (response.statusCode === 302 || response.statusCode === 301) {
-          const redirectUrl = response.headers.location;
-          if (redirectUrl) {
-            file.close();
-            downloadFile(redirectUrl, dest).then(resolve, reject);
-            return;
-          }
-        }
-        response.pipe(file);
-        file.on("finish", () => {
-          file.close();
-          resolve();
-        });
-      })
-      .on("error", (err) => {
-        fs.unlinkSync(dest);
-        reject(err);
-      });
-  });
 }
 
 /**

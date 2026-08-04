@@ -10,7 +10,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as https from "node:https";
 import type { Finding, PatternEntry, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { ArchiveSecurityError, extractZip } from "./archive-extractor.js";
@@ -27,8 +26,21 @@ import {
   collectExtractedFiles,
   readContainedExtractedUtf8File,
 } from "./extracted-file-walker.js";
+import {
+  downloadHttpsFile,
+  fetchHttpsBuffer,
+  RemoteHttpStatusError,
+} from "./remote-download.js";
 
 const TOOL_VERSION = "5.25.1";
+
+/** Public and testable acquisition bounds for extension registry data. */
+export const VSCODE_REMOTE_LIMITS = Object.freeze({
+  metadataBytes: 2 * 1024 * 1024,
+  artifactBytes: 256 * 1024 * 1024,
+  timeoutMs: 30_000,
+  maxRedirects: 5,
+});
 
 // VS Code Marketplace API endpoint
 const MARKETPLACE_API = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
@@ -48,12 +60,70 @@ const OPENVSX_ALLOWED_HOSTS = [
   "openvsxorg.blob.core.windows.net",
 ];
 
+interface ParsedVscodeExtensionId {
+  publisher: string;
+  name: string;
+}
+
+// Registry IDs are identifiers, never URL or filesystem syntax. Keeping both
+// segments ASCII-only also makes the publisher safe to use as a DNS label.
+const VSCODE_EXTENSION_ID_PATTERN =
+  /^([A-Za-z0-9][A-Za-z0-9_-]{0,127})\.([A-Za-z0-9][A-Za-z0-9_-]{0,127})$/;
+
+function parseVscodeExtensionId(extensionId: string): ParsedVscodeExtensionId {
+  const match = extensionId.match(VSCODE_EXTENSION_ID_PATTERN);
+  if (!match) {
+    throw new Error(
+      `Invalid extension ID format: "${extensionId}". Expected format: publisher.extensionName using only letters, numbers, hyphens, and underscores`,
+    );
+  }
+  return { publisher: match[1]!, name: match[2]! };
+}
+
+/** Pin Marketplace downloads to the publisher endpoint and Microsoft's documented CDN. */
+function assertAllowedMarketplaceUrl(
+  rawUrl: string,
+  publisher: string,
+  context: string,
+): void {
+  let urlObj: URL;
+  try {
+    urlObj = new URL(rawUrl);
+  } catch {
+    throw new Error(`VS Code Marketplace ${context} is not a valid URL: ${rawUrl}`);
+  }
+
+  if (urlObj.protocol !== "https:") {
+    throw new Error(
+      `VS Code Marketplace ${context} must use https:, got "${urlObj.protocol}" (${rawUrl}). Refusing to fetch.`,
+    );
+  }
+  if (urlObj.username || urlObj.password || urlObj.port) {
+    throw new Error(
+      `VS Code Marketplace ${context} has unexpected credentials or port (${rawUrl}). Refusing to fetch.`,
+    );
+  }
+
+  const hostname = urlObj.hostname.toLowerCase();
+  const publisherHost = `${publisher.toLowerCase()}.gallery.vsassets.io`;
+  const marketplaceCdnSuffix = ".gallerycdn.vsassets.io";
+  const allowed =
+    hostname === publisherHost ||
+    (hostname.endsWith(marketplaceCdnSuffix) &&
+      hostname.length > marketplaceCdnSuffix.length);
+  if (!allowed) {
+    throw new Error(
+      `VS Code Marketplace ${context} points at non-allowlisted host "${hostname}" (${rawUrl}). Refusing to fetch.`,
+    );
+  }
+}
+
 /**
- * Validate that an Open VSX related URL is https: and points at an
- * allowlisted host (exact match or subdomain). Throws a descriptive error
+ * Validate that an Open VSX related URL is https: and points at an exact
+ * allowlisted host. Throws a descriptive error
  * otherwise. Applied to the files.download URL from the metadata response
  * and re-applied on every redirect hop of the Open VSX download path.
- * The marketplace path is intentionally not affected.
+ * Marketplace downloads use their own Microsoft-host allowlist above.
  */
 function assertAllowedOpenVsxUrl(rawUrl: string, context: string): void {
   let urlObj: URL;
@@ -68,15 +138,23 @@ function assertAllowedOpenVsxUrl(rawUrl: string, context: string): void {
       `Open VSX ${context} must use https:, got "${urlObj.protocol}" (${rawUrl}). Refusing to fetch.`,
     );
   }
+  if (urlObj.username || urlObj.password) {
+    throw new Error(
+      `Open VSX ${context} must not contain credentials (${rawUrl}). Refusing to fetch.`,
+    );
+  }
+  if (urlObj.port) {
+    throw new Error(
+      `Open VSX ${context} must use the default HTTPS port (${rawUrl}). Refusing to fetch.`,
+    );
+  }
 
   const hostname = urlObj.hostname.toLowerCase();
-  const allowed = OPENVSX_ALLOWED_HOSTS.some(
-    (host) => hostname === host || hostname.endsWith(`.${host}`),
-  );
+  const allowed = OPENVSX_ALLOWED_HOSTS.includes(hostname);
   if (!allowed) {
     throw new Error(
       `Open VSX ${context} points at non-allowlisted host "${hostname}" (${rawUrl}). ` +
-        `Allowed hosts: ${OPENVSX_ALLOWED_HOSTS.join(", ")} (and subdomains). Refusing to fetch.`,
+        `Allowed hosts: ${OPENVSX_ALLOWED_HOSTS.join(", ")}. Refusing to fetch.`,
     );
   }
 }
@@ -376,25 +454,28 @@ export async function scanVscodeExtension(
   let tempDownload: string | null = null;
 
   const registry: VscodeRegistry = options.registry ?? "marketplace";
-
-  // If target looks like an extension ID (publisher.name), download from the registry
-  if (!vsixPath.endsWith(".vsix") && vsixPath.includes(".")) {
-    const registryLabel = registry === "openvsx" ? "Open VSX" : "VS Code Marketplace";
-    console.error(`  Downloading extension ${vsixPath} from ${registryLabel}...`);
-    const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-dl-"));
-    tempDownload = downloadDir;
-    vsixPath = await downloadVsix(vsixPath, downloadDir, registry);
-  }
-
-  // Validate the .vsix file exists
-  if (!fs.existsSync(vsixPath)) {
-    throw new Error(`VSIX file not found: ${vsixPath}`);
-  }
-
-  // Extract and scan the vsix (it's a zip)
-  const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-"));
+  let extractDir: string | null = null;
 
   try {
+    // If target looks like an extension ID (publisher.name), download from the registry
+    if (!vsixPath.endsWith(".vsix") && vsixPath.includes(".")) {
+      // Reject URL and path syntax before the identifier is logged or used.
+      parseVscodeExtensionId(vsixPath);
+      const registryLabel = registry === "openvsx" ? "Open VSX" : "VS Code Marketplace";
+      console.error(`  Downloading extension ${vsixPath} from ${registryLabel}...`);
+      const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-dl-"));
+      tempDownload = downloadDir;
+      vsixPath = await downloadVsix(vsixPath, downloadDir, registry);
+    }
+
+    // Validate the .vsix file exists
+    if (!fs.existsSync(vsixPath)) {
+      throw new Error(`VSIX file not found: ${vsixPath}`);
+    }
+
+    // Extract and scan the vsix (it's a zip)
+    extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-"));
+
     // VSIX is a zip file. The helper uses an argv array so metacharacters in a
     // user-supplied path are never interpreted by a command shell.
     let archiveExtracted = false;
@@ -452,7 +533,9 @@ export async function scanVscodeExtension(
     };
   } finally {
     // Cleanup
-    fs.rmSync(extractDir, { recursive: true, force: true });
+    if (extractDir) {
+      fs.rmSync(extractDir, { recursive: true, force: true });
+    }
     if (tempDownload) {
       fs.rmSync(tempDownload, { recursive: true, force: true });
     }
@@ -467,15 +550,18 @@ async function downloadVsix(
   destDir: string,
   registry: VscodeRegistry,
 ): Promise<string> {
+  const { publisher } = parseVscodeExtensionId(extensionId);
   const downloadUrl = await resolveVsixDownloadUrl(extensionId, registry);
 
-  const vsixPath = path.join(destDir, `${extensionId}.vsix`);
-  // Open VSX only: re-validate every hop (initial URL and each redirect)
-  // against the host allowlist. The marketplace path stays unchanged.
+  // Each acquisition has a private temp directory. A constant basename keeps
+  // registry-controlled text out of filesystem path resolution on every OS.
+  const vsixPath = path.join(destDir, "extension.vsix");
+  // Re-validate the initial URL and every redirect before requesting it.
   const validateHop =
     registry === "openvsx"
       ? (hopUrl: string): void => assertAllowedOpenVsxUrl(hopUrl, "download hop")
-      : undefined;
+      : (hopUrl: string): void =>
+          assertAllowedMarketplaceUrl(hopUrl, publisher, "download hop");
   await downloadFile(downloadUrl, vsixPath, validateHop);
 
   // Verify it's a valid file (at least check size)
@@ -502,12 +588,7 @@ export async function resolveVsixDownloadUrl(
   extensionId: string,
   registry: VscodeRegistry = "marketplace",
 ): Promise<string> {
-  const [publisher, name] = extensionId.split(".");
-  if (!publisher || !name) {
-    throw new Error(
-      `Invalid extension ID format: "${extensionId}". Expected format: publisher.extensionName`,
-    );
-  }
+  const { publisher, name } = parseVscodeExtensionId(extensionId);
 
   if (registry === "openvsx") {
     const metadata = await fetchOpenVsxMetadata(publisher, name);
@@ -522,8 +603,14 @@ export async function resolveVsixDownloadUrl(
     return download;
   }
 
-  // Use the direct download URL pattern
-  return `https://${publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/${publisher}/extension/${name}/latest/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`;
+  // Use the direct download URL pattern. Identifier parsing excludes URL
+  // syntax, and the path segments remain explicitly encoded.
+  const marketplaceUrl = new URL(`https://${publisher}.gallery.vsassets.io/`);
+  marketplaceUrl.pathname =
+    `/_apis/public/gallery/publisher/${encodeURIComponent(publisher)}` +
+    `/extension/${encodeURIComponent(name)}` +
+    "/latest/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage";
+  return marketplaceUrl.toString();
 }
 
 /**
@@ -534,77 +621,38 @@ function fetchOpenVsxMetadata(
   name: string,
 ): Promise<Record<string, unknown>> {
   const metadataUrl = `${OPENVSX_API_BASE}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`;
-
-  return new Promise((resolve, reject) => {
-    const doRequest = (requestUrl: string, redirects = 0): void => {
-      if (redirects > 5) {
-        reject(new Error("Too many redirects"));
-        return;
+  return fetchHttpsBuffer(metadataUrl, {
+    maxBytes: VSCODE_REMOTE_LIMITS.metadataBytes,
+    timeoutMs: VSCODE_REMOTE_LIMITS.timeoutMs,
+    maxRedirects: VSCODE_REMOTE_LIMITS.maxRedirects,
+    headers: {
+      "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
+      Accept: "application/json",
+    },
+    validateUrl: (hopUrl, { redirectCount }) => {
+      assertAllowedOpenVsxUrl(
+        hopUrl,
+        redirectCount === 0 ? "metadata URL" : "metadata redirect",
+      );
+    },
+  }).then((response) => {
+    try {
+      return JSON.parse(response.body.toString("utf8")) as Record<string, unknown>;
+    } catch {
+      throw new Error(`Open VSX returned invalid JSON for ${response.finalUrl}`);
+    }
+  }).catch((error: unknown) => {
+    if (error instanceof RemoteHttpStatusError) {
+      if (error.statusCode === 404) {
+        throw new Error(
+          `Extension "${namespace}.${name}" not found on Open VSX (HTTP 404). Check the extension ID or try --registry marketplace.`,
+        );
       }
-
-      const urlObj = new URL(requestUrl);
-      const options = {
-        hostname: urlObj.hostname,
-        port: urlObj.port || 443,
-        path: urlObj.pathname + urlObj.search,
-        method: "GET",
-        headers: {
-          "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
-          Accept: "application/json",
-        },
-      };
-
-      https
-        .get(options, (response) => {
-          if (
-            (response.statusCode === 302 || response.statusCode === 301) &&
-            response.headers.location
-          ) {
-            // Metadata redirects must stay on allowlisted Open VSX hosts too.
-            try {
-              assertAllowedOpenVsxUrl(response.headers.location, "metadata redirect");
-            } catch (err) {
-              reject(err instanceof Error ? err : new Error(String(err)));
-              return;
-            }
-            doRequest(response.headers.location, redirects + 1);
-            return;
-          }
-          if (response.statusCode === 404) {
-            reject(
-              new Error(
-                `Extension "${namespace}.${name}" not found on Open VSX (HTTP 404). Check the extension ID or try --registry marketplace.`,
-              ),
-            );
-            return;
-          }
-          if (response.statusCode !== 200) {
-            reject(
-              new Error(
-                `Open VSX metadata request failed with status ${response.statusCode} for ${requestUrl}`,
-              ),
-            );
-            return;
-          }
-
-          let body = "";
-          response.on("data", (chunk: Buffer) => {
-            body += chunk.toString();
-          });
-          response.on("end", () => {
-            try {
-              resolve(JSON.parse(body) as Record<string, unknown>);
-            } catch {
-              reject(new Error(`Open VSX returned invalid JSON for ${requestUrl}`));
-            }
-          });
-        })
-        .on("error", (err) => {
-          reject(err);
-        });
-    };
-
-    doRequest(metadataUrl);
+      throw new Error(
+        `Open VSX metadata request failed with status ${error.statusCode ?? "unknown"} for ${error.url}`,
+      );
+    }
+    throw error;
   });
 }
 
@@ -1019,67 +1067,24 @@ function downloadFile(
   dest: string,
   validateHop?: (hopUrl: string) => void,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    const doRequest = (requestUrl: string, redirects = 0): void => {
-      if (redirects > 5) {
-        reject(new Error("Too many redirects"));
-        return;
-      }
-
-      if (validateHop) {
-        try {
-          validateHop(requestUrl);
-        } catch (err) {
-          file.close();
-          reject(err instanceof Error ? err : new Error(String(err)));
-          return;
-        }
-      }
-
-      const urlObj = new URL(requestUrl);
-      const options = {
-        hostname: urlObj.hostname,
-        port: urlObj.port || 443,
-        path: urlObj.pathname + urlObj.search,
-        method: "GET",
-        headers: {
-          "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
-          Accept: "application/octet-stream",
-        },
-      };
-
-      https
-        .get(options, (response) => {
-          if (
-            (response.statusCode === 302 || response.statusCode === 301) &&
-            response.headers.location
-          ) {
-            doRequest(response.headers.location, redirects + 1);
-            return;
-          }
-          if (response.statusCode !== 200) {
-            reject(
-              new Error(
-                `Download failed with status ${response.statusCode} for ${requestUrl}`,
-              ),
-            );
-            return;
-          }
-          response.pipe(file);
-          file.on("finish", () => {
-            file.close();
-            resolve();
-          });
-        })
-        .on("error", (err) => {
-          file.close();
-          fs.unlinkSync(dest);
-          reject(err);
-        });
-    };
-
-    doRequest(url);
+  return downloadHttpsFile(url, dest, {
+    maxBytes: VSCODE_REMOTE_LIMITS.artifactBytes,
+    timeoutMs: VSCODE_REMOTE_LIMITS.timeoutMs,
+    maxRedirects: VSCODE_REMOTE_LIMITS.maxRedirects,
+    headers: {
+      "User-Agent": `supply-chain-guard/${TOOL_VERSION}`,
+      Accept: "application/octet-stream",
+    },
+    validateUrl: validateHop
+      ? (hopUrl): void => validateHop(hopUrl)
+      : undefined,
+  }).then(() => undefined).catch((error: unknown) => {
+    if (error instanceof RemoteHttpStatusError) {
+      throw new Error(
+        `Download failed with status ${error.statusCode ?? "unknown"} for ${error.url}`,
+      );
+    }
+    throw error;
   });
 }
 

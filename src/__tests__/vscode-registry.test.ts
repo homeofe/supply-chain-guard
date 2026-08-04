@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 // Mock node:https before importing the module (see solana-monitor.test.ts)
 vi.mock("node:https", () => {
@@ -67,6 +70,14 @@ function mockHttpResponses(responses: MockResponseSpec[]): void {
 function requestOptions(callIndex: number): CapturedRequestOptions {
   const mockedGet = https.get as unknown as ReturnType<typeof vi.fn>;
   return mockedGet.mock.calls[callIndex]?.[0] as CapturedRequestOptions;
+}
+
+function vscodeDownloadTempDirs(): Set<string> {
+  return new Set(
+    fs.readdirSync(os.tmpdir(), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("scg-vscode-dl-"))
+      .map((entry) => entry.name),
+  );
 }
 
 describe("VS Code Extension Scanner - registry support", () => {
@@ -179,6 +190,35 @@ describe("VS Code Extension Scanner - registry support", () => {
       );
       expect(https.get).not.toHaveBeenCalled();
     });
+
+    it("rejects URL syntax, private-host pivots, and extra ID segments", async () => {
+      for (const extensionId of [
+        "localhost#.x",
+        "localhost?.x",
+        "2130706433#.x",
+        "[::1]#.x",
+        "testpub.testext/../../victim",
+        "testpub.testext\\..\\..\\victim",
+        "testpub.testext.extra",
+      ]) {
+        await expect(
+          resolveVsixDownloadUrl(extensionId, "marketplace"),
+          extensionId,
+        ).rejects.toThrow("Invalid extension ID format");
+      }
+      expect(https.get).not.toHaveBeenCalled();
+    });
+
+    it("rejects an ID that would escape a Windows download directory", async () => {
+      const downloadRoot = "C:\\Temp\\scg-vscode-dl-token";
+      const hostileId = "testpub.testext\\..\\..\\victim";
+      const legacyDestination = path.win32.join(downloadRoot, `${hostileId}.vsix`);
+
+      expect(path.win32.relative(downloadRoot, legacyDestination).startsWith("..")).toBe(true);
+      await expect(
+        resolveVsixDownloadUrl(hostileId, "marketplace"),
+      ).rejects.toThrow("Invalid extension ID format");
+    });
   });
 
   describe("scanVscodeExtension registry threading", () => {
@@ -206,6 +246,17 @@ describe("VS Code Extension Scanner - registry support", () => {
 
       expect(https.get).toHaveBeenCalledTimes(1);
       expect(requestOptions(0).hostname).toBe("testpub.gallery.vsassets.io");
+    });
+
+    it("removes its download temp directory when acquisition fails", async () => {
+      const before = vscodeDownloadTempDirs();
+      mockHttpResponses([{ status: 404 }]);
+
+      await expect(
+        scanVscodeExtension({ target: "testpub.testext", format: "text" }),
+      ).rejects.toThrow("Download failed with status 404");
+
+      expect(vscodeDownloadTempDirs()).toEqual(before);
     });
 
     it("queries Open VSX when registry is openvsx", async () => {
@@ -265,16 +316,16 @@ describe("VS Code Extension Scanner - registry support", () => {
       expect(url).toBe(downloadUrl);
     });
 
-    it("accepts a files.download URL on a subdomain of open-vsx.org", async () => {
+    it("rejects an unlisted subdomain of open-vsx.org", async () => {
       const downloadUrl =
         "https://files.open-vsx.org/testpub/testext/1.0.0/testpub.testext-1.0.0.vsix";
       mockHttpResponses([
         { status: 200, body: JSON.stringify({ files: { download: downloadUrl } }) },
       ]);
 
-      const url = await resolveVsixDownloadUrl("testpub.testext", "openvsx");
-
-      expect(url).toBe(downloadUrl);
+      await expect(
+        resolveVsixDownloadUrl("testpub.testext", "openvsx"),
+      ).rejects.toThrow('non-allowlisted host "files.open-vsx.org"');
     });
 
     it("rejects a files.download URL using http:", async () => {
@@ -290,6 +341,31 @@ describe("VS Code Extension Scanner - registry support", () => {
       await expect(
         resolveVsixDownloadUrl("testpub.testext", "openvsx"),
       ).rejects.toThrow("must use https:");
+    });
+
+    it.each([
+      [
+        "embedded credentials",
+        "https://user:pass@open-vsx.org/api/testpub/testext/file/x.vsix",
+        "must not contain credentials",
+      ],
+      [
+        "a non-default port",
+        "https://open-vsx.org:8443/api/testpub/testext/file/x.vsix",
+        "must use the default HTTPS port",
+      ],
+    ])("rejects a files.download URL with %s", async (_label, downloadUrl, message) => {
+      mockHttpResponses([
+        {
+          status: 200,
+          body: JSON.stringify({ files: { download: downloadUrl } }),
+        },
+      ]);
+
+      await expect(
+        resolveVsixDownloadUrl("testpub.testext", "openvsx"),
+      ).rejects.toThrow(message);
+      expect(https.get).toHaveBeenCalledTimes(1);
     });
 
     it("rejects a files.download URL on a foreign host", async () => {
@@ -405,11 +481,28 @@ describe("VS Code Extension Scanner - registry support", () => {
       expect(https.get).toHaveBeenCalledTimes(1);
     });
 
-    it("leaves the marketplace download path unconstrained", async () => {
+    it("rejects a marketplace redirect to a foreign or private host", async () => {
       mockHttpResponses([
         {
           status: 302,
-          headers: { location: "https://cdn.example.net/some/marketplace/mirror.vsix" },
+          headers: { location: "https://localhost/private.vsix" },
+        },
+      ]);
+
+      await expect(
+        scanVscodeExtension({ target: "testpub.testext", format: "text" }),
+      ).rejects.toThrow('non-allowlisted host "localhost"');
+
+      expect(https.get).toHaveBeenCalledTimes(1);
+    });
+
+    it("follows a marketplace redirect to Microsoft's documented gallery CDN", async () => {
+      mockHttpResponses([
+        {
+          status: 302,
+          headers: {
+            location: "https://testpub.gallerycdn.vsassets.io/extensions/testext.vsix",
+          },
         },
         { status: 404 },
       ]);
@@ -418,9 +511,8 @@ describe("VS Code Extension Scanner - registry support", () => {
         scanVscodeExtension({ target: "testpub.testext", format: "text" }),
       ).rejects.toThrow("Download failed with status 404");
 
-      // The redirect to the non-Open-VSX CDN host was followed, not rejected.
       expect(https.get).toHaveBeenCalledTimes(2);
-      expect(requestOptions(1).hostname).toBe("cdn.example.net");
+      expect(requestOptions(1).hostname).toBe("testpub.gallerycdn.vsassets.io");
     });
   });
 });

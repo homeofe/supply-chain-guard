@@ -38,6 +38,18 @@ function respondWith(body: Buffer): ResponseLike {
   return response;
 }
 
+function requestedUrl(input: unknown): string {
+  if (typeof input === "string") return input;
+  const options = input as {
+    protocol?: string;
+    hostname?: string;
+    port?: string;
+    path?: string;
+  };
+  const port = options.port ? `:${options.port}` : "";
+  return `${options.protocol ?? "https:"}//${options.hostname}${port}${options.path ?? "/"}`;
+}
+
 describe("PyPI real digest and alias retry chain", () => {
   beforeEach(() => {
     httpsMock.get.mockReset();
@@ -50,8 +62,8 @@ describe("PyPI real digest and alias retry chain", () => {
     const expectedSha256 = createHash("sha256")
       .update(verifiedBytes)
       .digest("hex");
-    const firstUrl = "https://first.example.test/shared.whl";
-    const verifiedUrl = "https://second.example.test/shared.whl";
+    const firstUrl = "https://files.pythonhosted.org/packages/aa/shared.whl";
+    const verifiedUrl = "https://files.pythonhosted.org/packages/bb/shared.whl";
     const artifacts: PyPIReleaseFile[] = [
       {
         filename: "tampered.whl",
@@ -72,9 +84,10 @@ describe("PyPI real digest and alias retry chain", () => {
 
     httpsMock.get.mockImplementation(
       (
-        url: string,
+        input: unknown,
         callback: (response: ResponseLike) => void,
       ) => {
+        const url = requestedUrl(input);
         requestedUrls.push(url);
         const request = new EventEmitter();
         const body = url === firstUrl ? tamperedBytes : verifiedBytes;

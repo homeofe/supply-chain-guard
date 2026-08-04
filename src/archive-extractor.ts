@@ -19,6 +19,11 @@ const ZIP_CENTRAL_HEADER_SIZE = 46;
 const ZIP_LOCAL_HEADER_SIZE = 30;
 const TAR_BLOCK_SIZE = 512;
 const ARCHIVE_MAX_RESOLUTION_WORK = ARCHIVE_MAX_ENTRIES * 16;
+const WINDOWS_FORBIDDEN_COMPONENT_CHARS = /[<>:"|?*\u0001-\u001f]/u;
+const WINDOWS_RESERVED_COMPONENT =
+  /^(?:con|prn|aux|nul|clock\$|conin\$|conout\$|com[1-9\u00b9\u00b2\u00b3]|lpt[1-9\u00b9\u00b2\u00b3])(?:\.|$)/iu;
+const WINDOWS_SHORT_NAME_ALIAS = /~[1-9][0-9]*(?:\.|$)/u;
+const UNICODE_DEFAULT_IGNORABLE = /\p{Default_Ignorable_Code_Point}/u;
 
 type ArchiveEntryKind = "file" | "directory" | "symlink" | "hardlink";
 interface ArchiveEntry { path: string; kind: ArchiveEntryKind; target?: string }
@@ -73,6 +78,46 @@ function readBoundedArchive(archivePath: string): Buffer {
   return content;
 }
 
+/**
+ * Reject member components whose on-disk identity can differ across supported
+ * extractors. Windows bsdtar sanitizes reserved punctuation, Win32 trims final
+ * dots/spaces, DOS device names bypass ordinary filename semantics, 8.3 aliases
+ * can collide with a different long name, and case-insensitive HFS+ ignores
+ * Unicode formatting code points during comparison. Reject the full Unicode
+ * Default_Ignorable set rather than maintaining an incomplete HFS-era subset.
+ * A partial scan is safer than validating one name and scanning bytes extracted
+ * under another.
+ */
+function validatePortableMemberComponent(component: string, label: string): void {
+  if (WINDOWS_FORBIDDEN_COMPONENT_CHARS.test(component)) {
+    unsafe(`${label} contains Windows-special filename syntax`);
+  }
+  if (/[. ]$/u.test(component)) {
+    unsafe(`${label} ends with a dot or space`);
+  }
+  if (WINDOWS_RESERVED_COMPONENT.test(component)) {
+    unsafe(`${label} uses a reserved Windows device name`);
+  }
+  if (WINDOWS_SHORT_NAME_ALIAS.test(component)) {
+    unsafe(`${label} can alias a Windows 8.3 short name`);
+  }
+  if (UNICODE_DEFAULT_IGNORABLE.test(component)) {
+    unsafe(`${label} contains a Unicode default-ignorable filename character`);
+  }
+}
+
+/** Key paths the way the case-insensitive Windows extraction backend sees them. */
+function portableMemberPathKey(memberPath: string): string {
+  return memberPath
+    .split("/")
+    // Windows compares filenames through an invariant uppercase table. Using
+    // lowercase misses aliases such as Greek sigma/final-sigma and long-s.
+    .map((component) =>
+      component.normalize("NFC").toUpperCase().normalize("NFC")
+    )
+    .join("/");
+}
+
 /** Normalize using POSIX semantics; reject host-dependent backslash handling. */
 function normalizeMemberPath(rawPath: string, label = "entry path", allowRoot = false): string {
   if (rawPath.length === 0 || rawPath.includes("\0")) unsafe(`${label} is empty or contains NUL`);
@@ -82,6 +127,7 @@ function normalizeMemberPath(rawPath: string, label = "entry path", allowRoot = 
   for (const component of rawPath.split("/")) {
     if (component === "" || component === ".") continue;
     if (component === "..") unsafe(`${label} traverses outside the extraction root`);
+    validatePortableMemberComponent(component, label);
     normalized.push(component);
   }
   if (normalized.length === 0 && !allowRoot) unsafe(`${label} does not name an archive member`);
@@ -99,7 +145,10 @@ function resolveRelativeTarget(linkPath: string, rawTarget: string): string {
     if (component === "..") {
       if (components.length === 0) unsafe(`link "${linkPath}" escapes the extraction root`);
       components.pop();
-    } else components.push(component);
+    } else {
+      validatePortableMemberComponent(component, `link "${linkPath}" target`);
+      components.push(component);
+    }
   }
 
   return components.join("/");
@@ -122,7 +171,8 @@ function resolveVirtualPath(
 
   for (let hops = 0; hops <= ARCHIVE_MAX_ENTRIES; hops++) {
     const currentPath = components.join("/");
-    const cacheKey = `${followFinal ? "follow" : "preserve"}\0${currentPath}`;
+    const cacheKey =
+      `${followFinal ? "follow" : "preserve"}\0${portableMemberPathKey(currentPath)}`;
     const cached = context.resolvedPaths.get(cacheKey);
     if (cached !== undefined) {
       for (const trailKey of cacheTrail) context.resolvedPaths.set(trailKey, cached);
@@ -140,13 +190,14 @@ function resolveVirtualPath(
 
       prefix.push(components[index]!);
       const current = prefix.join("/");
-      const entry = entries.get(current);
+      const currentKey = portableMemberPathKey(current);
+      const entry = entries.get(currentKey);
       const isFinal = index === components.length - 1;
       if (entry?.kind !== "symlink" || (isFinal && !followFinal)) continue;
       // Seeing the same link twice while resolving one path is a cycle even
       // when each pass grows or otherwise changes the remaining suffix.
-      if (visitedLinks.has(current)) unsafe(`link cycle passes through "${current}"`);
-      visitedLinks.add(current);
+      if (visitedLinks.has(currentKey)) unsafe(`link cycle passes through "${current}"`);
+      visitedLinks.add(currentKey);
       if (entry.target === undefined) unsafe(`link "${current}" has no target`);
       const targetComponents = entry.target === "" ? [] : entry.target.split("/");
       components = [...targetComponents, ...components.slice(index + 1)];
@@ -165,8 +216,11 @@ function resolveVirtualPath(
 function validateArchiveGraph(entries: ArchiveEntry[]): void {
   const byPath = new Map<string, ArchiveEntry>();
   for (const entry of entries) {
-    if (byPath.has(entry.path)) unsafe(`duplicate member path "${entry.path}"`);
-    byPath.set(entry.path, entry);
+    const entryKey = portableMemberPathKey(entry.path);
+    if (byPath.has(entryKey)) {
+      unsafe(`duplicate or case-aliased member path "${entry.path}"`);
+    }
+    byPath.set(entryKey, entry);
   }
   const resolutionContext: ArchiveResolutionContext = {
     resolvedPaths: new Map(),
@@ -176,7 +230,7 @@ function validateArchiveGraph(entries: ArchiveEntry[]): void {
     const components = entry.path.split("/");
     for (let length = 1; length < components.length; length++) {
       const ancestorPath = components.slice(0, length).join("/");
-      const ancestor = byPath.get(ancestorPath);
+      const ancestor = byPath.get(portableMemberPathKey(ancestorPath));
       if (ancestor !== undefined && ancestor.kind !== "directory" && ancestor.kind !== "symlink") {
         unsafe(`member "${entry.path}" is nested below non-directory "${ancestorPath}"`);
       }
@@ -189,7 +243,7 @@ function validateArchiveGraph(entries: ArchiveEntry[]): void {
     if (entry.kind !== "hardlink") continue;
     if (entry.target === undefined) unsafe(`hardlink "${entry.path}" has no target`);
     const resolved = resolveVirtualPath(entry.target, byPath, true, resolutionContext);
-    const targetEntry = byPath.get(resolved);
+    const targetEntry = byPath.get(portableMemberPathKey(resolved));
     if (targetEntry === undefined || targetEntry.kind !== "file") {
       unsafe(`hardlink "${entry.path}" does not target a regular archive member`);
     }
@@ -217,6 +271,13 @@ function validateZipExtraFields(extra: Buffer, label: string): void {
     // Info-ZIP's Unicode Path field can override the header filename. Reject it
     // so unzip cannot extract a path other than the one validated here.
     if (id === 0x7075) unsafe(`${label} contains a path-overriding Unicode extra field`);
+    // Info-ZIP's ASi Unix field can override the central Unix mode, including
+    // changing a preflighted regular file into a symlink during extraction.
+    if (id === 0x756e) unsafe(`${label} contains an ASi Unix type-overriding extra field`);
+    // Libarchive's experimental xl field can copy made-by and external mode
+    // attributes into a local header, changing the entry type after the central
+    // directory was preflighted.
+    if (id === 0x6c78) unsafe(`${label} contains an xl type-overriding extra field`);
     cursor += size;
   }
 }
@@ -281,6 +342,17 @@ function decodeArchiveString(value: Buffer, label: string): string {
   const decoded = value.toString("utf8");
   if (decoded.includes("\ufffd")) unsafe(`${label} is not valid UTF-8`);
   return decoded;
+}
+
+function decodeZipPortableString(value: Buffer, flags: number, label: string): string {
+  // ZIP bit 11 is the only portable promise that a filename is UTF-8. Without
+  // it, extractors interpret high bytes through legacy encodings such as CP437,
+  // so validating them as UTF-8 can inspect a different name than is written.
+  // ASCII is invariant across those encodings and remains safe.
+  if ((flags & 0x0800) === 0 && value.some((byte) => byte >= 0x80)) {
+    unsafe(`legacy-encoded ${label} must be ASCII`);
+  }
+  return decodeArchiveString(value, label);
 }
 
 interface ZipLocalPayload {
@@ -395,11 +467,14 @@ export function preflightZipArchive(archivePath: string): void {
     if (zip64.compressedSize !== undefined) compressedSize = zip64.compressedSize;
     if (zip64.localOffset !== undefined) localHeaderOffset = zip64.localOffset;
     expandedBytes = addExpandedBytes(expandedBytes, uncompressedSize);
-    const rawName = decodeArchiveString(filenameBytes, "ZIP member name");
+    const rawName = decodeZipPortableString(filenameBytes, flags, "ZIP member name");
 
     const hostSystem = madeBy >>> 8;
     const unixType = (externalAttributes >>> 16) & 0o170000;
     let kind: ArchiveEntryKind;
+    if (hostSystem !== 3 && unixType !== 0) {
+      unsafe(`member "${rawName}" has ambiguous Unix type bits from ZIP host ${hostSystem}`);
+    }
     if (hostSystem === 3 && unixType !== 0) {
       if (unixType === 0o040000) kind = "directory";
       else if (unixType === 0o100000) kind = "file";
@@ -419,7 +494,10 @@ export function preflightZipArchive(archivePath: string): void {
     if (entry.kind === "directory" && expanded.length !== 0) unsafe(`directory "${entry.path || "."}" has a payload`);
     if (entry.kind === "symlink") {
       if (expanded.length > MAX_LINK_TARGET_BYTES) unsafe(`link "${entry.path}" target is too large`);
-      entry.target = resolveRelativeTarget(entry.path, decodeArchiveString(expanded, `link "${entry.path}" target`));
+      entry.target = resolveRelativeTarget(
+        entry.path,
+        decodeZipPortableString(expanded, entry.flags, `ZIP link "${entry.path}" target`),
+      );
     }
     localRegions.push({ start: local.start, end: local.end, path: entry.path || "." });
   }
@@ -449,10 +527,17 @@ function parseTarNumber(field: Buffer, label: string): number {
   return checkedSafeInteger(BigInt(`0o${raw}`), label);
 }
 
-function tarField(header: Buffer, start: number, length: number): string {
+function decodeLegacyTarString(value: Buffer, label: string): string {
+  if (value.some((byte) => byte >= 0x80)) {
+    unsafe(`${label} must be ASCII; use a UTF-8 PAX path or linkpath record`);
+  }
+  return value.toString("ascii");
+}
+
+function tarFieldBytes(header: Buffer, start: number, length: number): Buffer {
   const field = header.subarray(start, start + length);
   const nul = field.indexOf(0);
-  return decodeArchiveString(nul === -1 ? field : field.subarray(0, nul), "tar header string");
+  return nul === -1 ? field : field.subarray(0, nul);
 }
 
 function verifyTarChecksum(header: Buffer): void {
@@ -524,8 +609,6 @@ export function preflightTarArchive(archivePath: string): void {
   let sawEndMarker = false;
   let nextOverrides: TarOverrides = {};
   let globalOverrides: TarOverrides = {};
-  let gnuLongPath: string | undefined;
-  let gnuLongLink: string | undefined;
   while (cursor + TAR_BLOCK_SIZE <= content.length) {
     const header = content.subarray(cursor, cursor + TAR_BLOCK_SIZE);
     if (header.every((byte) => byte === 0)) {
@@ -537,15 +620,28 @@ export function preflightTarArchive(archivePath: string): void {
     headerCount++;
     if (headerCount > ARCHIVE_MAX_ENTRIES) unsafe(`entry count exceeds ${ARCHIVE_MAX_ENTRIES}`);
     verifyTarChecksum(header);
-    const headerName = tarField(header, 0, 100);
-    const prefix = tarField(header, 345, 155);
-    const rawHeaderPath = prefix ? `${prefix}/${headerName}` : headerName;
-    const rawHeaderLink = tarField(header, 157, 100);
+    const headerNameBytes = tarFieldBytes(header, 0, 100);
+    const posixUstar =
+      header.subarray(257, 263).equals(Buffer.from([0x75, 0x73, 0x74, 0x61, 0x72, 0x00])) &&
+      header[263] === 0x30 &&
+      header[264] === 0x30;
+    // Bytes 345..499 are a pathname prefix only in POSIX ustar/PAX. Old-GNU
+    // uses the same region for timestamps and sparse metadata; V7 leaves it
+    // outside the header. Treating either as a prefix validates a path that the
+    // extractor never writes.
+    const prefixBytes = posixUstar
+      ? tarFieldBytes(header, 345, 155)
+      : Buffer.alloc(0);
+    const rawHeaderLinkBytes = tarFieldBytes(header, 157, 100);
     const typeFlag = header[156] === 0 ? "0" : String.fromCharCode(header[156]!);
     const headerSize = parseTarNumber(header.subarray(124, 136), "tar entry size");
     const overrides = { ...globalOverrides, ...nextOverrides };
-    const size = overrides.size ?? headerSize;
-    if (overrides.sparse || typeFlag === "S") unsafe("sparse tar entries are not supported");
+    const metadataRecord = typeFlag === "x" || typeFlag === "g" ||
+      typeFlag === "L" || typeFlag === "K";
+    const size = metadataRecord ? headerSize : (overrides.size ?? headerSize);
+    if ((!metadataRecord && overrides.sparse) || typeFlag === "S") {
+      unsafe("sparse tar entries are not supported");
+    }
     const dataStart = cursor + TAR_BLOCK_SIZE;
     expandedBytes = addExpandedBytes(expandedBytes, size);
     const payload = readTarPayload(content, dataStart, size);
@@ -554,23 +650,36 @@ export function preflightTarArchive(archivePath: string): void {
     if (typeFlag === "x" || typeFlag === "g") {
       const parsed = parsePax(payload);
       if (typeFlag === "g") globalOverrides = { ...globalOverrides, ...parsed };
-      else nextOverrides = parsed;
+      else nextOverrides = { ...nextOverrides, ...parsed };
       cursor = nextCursor;
       continue;
     }
     if (typeFlag === "L" || typeFlag === "K") {
       if (size > MAX_LINK_TARGET_BYTES) unsafe("GNU tar long-name record is too large");
       const nul = payload.indexOf(0);
-      const value = decodeArchiveString(nul === -1 ? payload : payload.subarray(0, nul), "GNU tar long-name record");
-      if (typeFlag === "L") gnuLongPath = value; else gnuLongLink = value;
+      const value = decodeLegacyTarString(
+        nul === -1 ? payload : payload.subarray(0, nul),
+        "GNU tar long-name record",
+      );
+      nextOverrides = typeFlag === "L"
+        ? { ...nextOverrides, path: value }
+        : { ...nextOverrides, linkpath: value };
       cursor = nextCursor;
       continue;
     }
-    const rawPath = overrides.path ?? gnuLongPath ?? rawHeaderPath;
-    const rawLink = overrides.linkpath ?? gnuLongLink ?? rawHeaderLink;
+    const selectedOverrides = { ...globalOverrides, ...nextOverrides };
+    let rawPath = selectedOverrides.path;
+    if (rawPath === undefined) {
+      const headerName = decodeLegacyTarString(headerNameBytes, "tar header name");
+      const prefix = decodeLegacyTarString(prefixBytes, "tar header prefix");
+      rawPath = prefix ? `${prefix}/${headerName}` : headerName;
+    }
+    let rawLink = selectedOverrides.linkpath;
+    if (rawLink === undefined && (typeFlag === "1" || typeFlag === "2")) {
+      rawLink = decodeLegacyTarString(rawHeaderLinkBytes, "tar header link target");
+    }
+    rawLink ??= "";
     nextOverrides = {};
-    gnuLongPath = undefined;
-    gnuLongLink = undefined;
     const normalizedPath = normalizeMemberPath(rawPath, "entry path", typeFlag === "5");
     let entry: ArchiveEntry;
     if (typeFlag === "0" || typeFlag === "7") entry = { path: normalizedPath, kind: "file" };
@@ -590,7 +699,7 @@ export function preflightTarArchive(archivePath: string): void {
   }
   if (!sawEndMarker) unsafe("tar end marker is missing");
   if (!content.subarray(cursor).every((byte) => byte === 0)) unsafe("tar contains non-zero data after its end marker");
-  if (Object.keys(nextOverrides).length > 0 || gnuLongPath !== undefined || gnuLongLink !== undefined) unsafe("tar ends with metadata that does not describe a member");
+  if (Object.keys(nextOverrides).length > 0) unsafe("tar ends with metadata that does not describe a member");
   validateArchiveGraph(entries.filter((entry) => entry.path.length > 0));
 }
 
@@ -598,6 +707,25 @@ export function extractZip(archivePath: string, extractDir: string, overwrite = 
   const resolvedArchivePath = path.resolve(archivePath);
   const resolvedExtractDir = path.resolve(extractDir);
   preflightZipArchive(resolvedArchivePath);
+  fs.mkdirSync(resolvedExtractDir, { recursive: true });
+
+  if (process.platform === "win32") {
+    // Modern Windows ships bsdtar in System32. It auto-detects ZIP and avoids
+    // making runtime extraction depend on a separately installed Info-ZIP.
+    const windowsRoot = process.env.SystemRoot || "C:\\Windows";
+    const tarPath = path.win32.join(windowsRoot, "System32", "tar.exe");
+    if (!fs.existsSync(tarPath)) {
+      throw new Error(
+        `ZIP extraction backend is unavailable: expected Windows bsdtar at ${tarPath}`,
+      );
+    }
+    const args = ["-x"];
+    if (!overwrite) args.push("-k");
+    args.push("-f", resolvedArchivePath, "-C", resolvedExtractDir);
+    execFileSync(tarPath, args, { stdio: "pipe" });
+    return;
+  }
+
   const args = ["-q"];
   if (overwrite) args.push("-o");
   args.push(resolvedArchivePath, "-d", resolvedExtractDir);

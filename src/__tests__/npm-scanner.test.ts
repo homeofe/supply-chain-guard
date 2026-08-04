@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import {
   FILE_PATTERNS,
   MALICIOUS_PACKAGE_PATTERNS,
@@ -10,11 +11,46 @@ import {
 import {
   filterNpmFindings,
   recordNpmNoArtifact,
+  recordNpmUnverifiedArtifact,
   scanExtractedNpmFiles,
+  verifyNpmDistIntegrity,
 } from "../npm-scanner.js";
 import type { Finding } from "../types.js";
 
 describe("npm Scanner Patterns", () => {
+  it("verifies dist.integrity and dist.shasum before extraction", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-integrity-"));
+    const tarballPath = path.join(tempDir, "package.tgz");
+    const payload = Buffer.from("bounded npm tarball fixture");
+    fs.writeFileSync(tarballPath, payload);
+    const sha512 = createHash("sha512").update(payload).digest("base64");
+    const sha256 = createHash("sha256").update(payload).digest("base64");
+    const sha1 = createHash("sha1").update(payload).digest("hex");
+
+    try {
+      expect(await verifyNpmDistIntegrity(tarballPath, {
+        integrity: `sha512-${sha512}`,
+        shasum: sha1,
+      })).toBe(true);
+      expect(await verifyNpmDistIntegrity(tarballPath, {
+        integrity: `sha256-${sha256} sha512-${sha512}?purpose=test`,
+      })).toBe(true);
+      expect(await verifyNpmDistIntegrity(tarballPath, {
+        integrity: `sha256-${sha256} sha512-${Buffer.alloc(64, 0x62).toString("base64")}`,
+      })).toBe(false);
+      expect(await verifyNpmDistIntegrity(tarballPath, {
+        integrity: `sha512-${sha512}`,
+        shasum: "0".repeat(40),
+      })).toBe(false);
+      expect(await verifyNpmDistIntegrity(tarballPath, {
+        integrity: "not-valid-sri",
+      })).toBe(false);
+      expect(await verifyNpmDistIntegrity(tarballPath, {})).toBe(true);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("scans bundled dependencies shipped inside an npm tarball", () => {
     const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-npm-bundled-"));
     try {
@@ -59,6 +95,15 @@ describe("npm Scanner Patterns", () => {
   });
 
   it("applies npm minSeverity to reportable findings", () => {
+    const digestlessFindings: Finding[] = [];
+    recordNpmUnverifiedArtifact(digestlessFindings);
+    const digestlessResult = filterNpmFindings(digestlessFindings, "critical");
+    expect(digestlessFindings).toEqual([
+      expect.objectContaining({ rule: "PATH_SCAN_INCOMPLETE", severity: "info" }),
+    ]);
+    expect(digestlessResult.filteredFindings).toEqual([]);
+    expect(digestlessResult.partialScan).toBe(true);
+
     const findings: Finding[] = [
       { rule: "LOW", description: "low", severity: "low", recommendation: "review" },
       { rule: "HIGH", description: "high", severity: "high", recommendation: "review" },

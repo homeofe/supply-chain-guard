@@ -23,7 +23,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as https from "node:https";
-import { CACHE_DIR, FEED_CACHE_FILE, isValidFeedIOC, type FeedIOC } from "./threat-intel.js";
+import {
+  CACHE_DIR,
+  FEED_CACHE_FILE,
+  isValidFeedIOC,
+  normalizeFeedIOC,
+  type FeedIOC,
+} from "./threat-intel.js";
 
 /** Published feed location: the committed feed.json on the main branch. */
 export const DEFAULT_FEED_URL =
@@ -85,6 +91,7 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
     throw new Error("invalid feed format: missing non-empty entries array");
   }
 
+  const normalizedEntries: FeedIOC[] = [];
   for (const entry of entries) {
     const e = entry as Partial<FeedIOC> | null;
     if (
@@ -107,9 +114,10 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
         `invalid feed entry (type ${JSON.stringify(e.type).slice(0, 32)}, value ${JSON.stringify(e.value).slice(0, 80)}): type must be one of domain/ip/url/hash/package and the value must be a literal indicator matching that type's shape (max 2048 chars)`,
       );
     }
+    normalizedEntries.push(normalizeFeedIOC(e));
   }
 
-  return entries as FeedIOC[];
+  return normalizedEntries;
 }
 
 /** Download a URL over HTTPS and resolve with the response body. */

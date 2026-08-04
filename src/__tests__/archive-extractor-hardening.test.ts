@@ -20,6 +20,9 @@ import {
 
 type ZipFixtureEntry = {
   name: string;
+  nameBytes?: Buffer;
+  flags?: number;
+  hostSystem?: number;
   data?: Buffer | string;
   mode?: number;
   centralExtra?: Buffer;
@@ -31,9 +34,13 @@ type ZipFixtureEntry = {
 
 type TarFixtureEntry = {
   name: string;
+  nameBytes?: Buffer;
+  format?: "posix" | "gnu" | "v7";
+  gnuAtime?: number;
   type?: string;
   data?: Buffer | string;
   link?: string;
+  linkBytes?: Buffer;
   declaredSize?: number;
   omitPayload?: boolean;
 };
@@ -43,7 +50,8 @@ function makeZip(entries: ZipFixtureEntry[]): Buffer {
   const centralRecords: Buffer[] = [];
   let localOffset = 0;
   for (const fixture of entries) {
-    const name = Buffer.from(fixture.name);
+    const name = fixture.nameBytes ?? Buffer.from(fixture.name);
+    const flags = fixture.flags ?? 0x0800;
     const data = Buffer.isBuffer(fixture.data) ? fixture.data : Buffer.from(fixture.data ?? "");
     const compressionMethod = fixture.compressionMethod ?? 0;
     const compressed = compressionMethod === 8 ? deflateRawSync(data) : data;
@@ -53,7 +61,7 @@ function makeZip(entries: ZipFixtureEntry[]): Buffer {
     const local = Buffer.alloc(30 + name.length + localExtra.length + compressed.length);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
-    local.writeUInt16LE(0x0800, 6);
+    local.writeUInt16LE(flags, 6);
     local.writeUInt16LE(compressionMethod, 8);
     local.writeUInt32LE(0, 14);
     local.writeUInt32LE(compressed.length, 18);
@@ -67,9 +75,9 @@ function makeZip(entries: ZipFixtureEntry[]): Buffer {
 
     const central = Buffer.alloc(46 + name.length + centralExtra.length);
     central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE((3 << 8) | 20, 4);
+    central.writeUInt16LE(((fixture.hostSystem ?? 3) << 8) | 20, 4);
     central.writeUInt16LE(20, 6);
-    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(flags, 8);
     central.writeUInt16LE(compressionMethod, 10);
     central.writeUInt32LE(0, 16);
     central.writeUInt32LE(compressed.length, 20);
@@ -101,7 +109,8 @@ function writeOctal(target: Buffer, offset: number, length: number, value: numbe
 
 function makeTarHeader(fixture: TarFixtureEntry): Buffer {
   const header = Buffer.alloc(512);
-  header.write(fixture.name, 0, 100, "utf8");
+  if (fixture.nameBytes) fixture.nameBytes.copy(header, 0, 0, 100);
+  else header.write(fixture.name, 0, 100, "utf8");
   writeOctal(header, 100, 8, 0o644);
   writeOctal(header, 108, 8, 0);
   writeOctal(header, 116, 8, 0);
@@ -110,9 +119,16 @@ function makeTarHeader(fixture: TarFixtureEntry): Buffer {
   writeOctal(header, 136, 12, 0);
   header.fill(0x20, 148, 156);
   header.write(fixture.type ?? "0", 156, 1, "ascii");
-  if (fixture.link) header.write(fixture.link, 157, 100, "utf8");
-  header.write("ustar\0", 257, 6, "ascii");
-  header.write("00", 263, 2, "ascii");
+  if (fixture.linkBytes) fixture.linkBytes.copy(header, 157, 0, 100);
+  else if (fixture.link) header.write(fixture.link, 157, 100, "utf8");
+  if (fixture.format === "gnu") {
+    header.write("ustar  ", 257, 7, "ascii");
+    header[264] = 0;
+    writeOctal(header, 345, 12, fixture.gnuAtime ?? 0);
+  } else if (fixture.format !== "v7") {
+    header.write("ustar\0", 257, 6, "ascii");
+    header.write("00", 263, 2, "ascii");
+  }
   let checksum = 0;
   for (const byte of header) checksum += byte;
   header.write(`${checksum.toString(8).padStart(6, "0")}\0 `, 148, 8, "ascii");
@@ -133,6 +149,15 @@ function makeTar(entries: TarFixtureEntry[], gzip = false): Buffer {
   return gzip ? gzipSync(tar) : tar;
 }
 
+function paxRecord(key: string, value: string): Buffer {
+  const body = `${key}=${value}\n`;
+  let length = Buffer.byteLength(body) + 2;
+  while (Buffer.byteLength(`${length} ${body}`) !== length) {
+    length = Buffer.byteLength(`${length} ${body}`);
+  }
+  return Buffer.from(`${length} ${body}`);
+}
+
 function unicodePathExtra(pathname: string): Buffer {
   const name = Buffer.from(pathname);
   const extra = Buffer.alloc(4 + 5 + name.length);
@@ -140,6 +165,24 @@ function unicodePathExtra(pathname: string): Buffer {
   extra.writeUInt16LE(5 + name.length, 2);
   extra[4] = 1;
   name.copy(extra, 9);
+  return extra;
+}
+
+function asiUnixExtra(mode: number): Buffer {
+  const extra = Buffer.alloc(4 + 14);
+  extra.writeUInt16LE(0x756e, 0);
+  extra.writeUInt16LE(14, 2);
+  extra.writeUInt16LE(mode, 8);
+  return extra;
+}
+
+function xlTypeExtra(mode: number): Buffer {
+  const extra = Buffer.alloc(4 + 7);
+  extra.writeUInt16LE(0x6c78, 0);
+  extra.writeUInt16LE(7, 2);
+  extra[4] = 0x05;
+  extra.writeUInt16LE((3 << 8) | 20, 5);
+  extra.writeUInt32LE((mode << 16) >>> 0, 7);
   return extra;
 }
 
@@ -195,12 +238,49 @@ describe("archive extraction preflight hardening", () => {
     extractZip(zipPath, extractDir, true);
     extractTarGz(tarPath, extractDir);
 
+    const windowsTar = path.win32.join(
+      process.env.SystemRoot || "C:\\Windows",
+      "System32",
+      "tar.exe",
+    );
     expect(childProcess.execFileSync).toHaveBeenNthCalledWith(
-      1, "unzip", ["-q", "-o", zipPath, "-d", extractDir], { stdio: "pipe" },
+      1,
+      process.platform === "win32" ? windowsTar : "unzip",
+      process.platform === "win32"
+        ? ["-x", "-f", zipPath, "-C", extractDir]
+        : ["-q", "-o", zipPath, "-d", extractDir],
+      { stdio: "pipe" },
     );
     expect(childProcess.execFileSync).toHaveBeenNthCalledWith(
       2, "tar", ["xzf", tarPath, "-C", extractDir], { stdio: "pipe" },
     );
+  });
+
+  it("keeps existing ZIP files unless overwrite is explicitly enabled", () => {
+    const zipPath = fixture("payload.zip", makeZip([{ name: "payload.txt", data: "safe" }]));
+    const extractDir = path.join(root, "keep-existing");
+
+    extractZip(zipPath, extractDir);
+
+    if (process.platform === "win32") {
+      const windowsTar = path.win32.join(
+        process.env.SystemRoot || "C:\\Windows",
+        "System32",
+        "tar.exe",
+      );
+      expect(childProcess.execFileSync).toHaveBeenCalledWith(
+        windowsTar,
+        ["-x", "-k", "-f", zipPath, "-C", extractDir],
+        { stdio: "pipe" },
+      );
+    } else {
+      expect(childProcess.execFileSync).toHaveBeenCalledWith(
+        "unzip",
+        ["-q", zipPath, "-d", extractDir],
+        { stdio: "pipe" },
+      );
+    }
+    expect(fs.statSync(extractDir).isDirectory()).toBe(true);
   });
 
   it("keeps generic tar autodetection on an argv array for PyPI sdists", () => {
@@ -229,6 +309,192 @@ describe("archive extraction preflight hardening", () => {
       expect(childProcess.execFileSync).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    "extension/main.js:payload.js",
+    "extension/bad?.js",
+    "extension/trailing.",
+    "extension/trailing ",
+    "extension/NUL.txt",
+    "extension/COM\u00b9.log",
+    "extension/LONGFI~1.JS",
+  ])("rejects non-portable archive member path %s", (name) => {
+    const zip = fixture("windows-alias.zip", makeZip([{ name }]));
+    const tar = fixture("windows-alias.tar", makeTar([{ name }]));
+
+    expect(() => preflightZipArchive(zip)).toThrow(ArchiveSecurityError);
+    expect(() => preflightTarArchive(tar)).toThrow(ArchiveSecurityError);
+  });
+
+  it.each([
+    ["ASCII case", "Extension/Main.js", "extension/main.js"],
+    ["Unicode case", "extension/\u03c3.js", "extension/\u03c2.js"],
+  ])("rejects %s member aliases before extraction", (_kind, first, second) => {
+    const zip = fixture("case-alias.zip", makeZip([
+      { name: first, data: "first" },
+      { name: second, data: "second" },
+    ]));
+    const tar = fixture("case-alias.tar", makeTar([
+      { name: "PaxHeader-1", type: "x", data: paxRecord("path", first) },
+      { name: "placeholder-1", data: "first" },
+      { name: "PaxHeader-2", type: "x", data: paxRecord("path", second) },
+      { name: "placeholder-2", data: "second" },
+    ]));
+
+    expect(() => preflightZipArchive(zip)).toThrow(/case-aliased/);
+    expect(() => preflightTarArchive(tar)).toThrow(/case-aliased/);
+  });
+
+  it("rejects HFS-ignorable member aliases before ZIP or tar extraction", () => {
+    for (const ignorable of ["\u200c", "\u202e", "\u206a", "\ufeff", "\ufe0f"]) {
+      const first = "extension/payload.js";
+      const second = `extension/pay${ignorable}load.js`;
+      const zip = fixture("hfs-alias.zip", makeZip([
+        { name: first, data: "first" },
+        { name: second, data: "second" },
+      ]));
+      const tar = fixture("hfs-alias.tar", makeTar([
+        { name: "PaxHeader-1", type: "x", data: paxRecord("path", first) },
+        { name: "placeholder-1", data: "first" },
+        { name: "PaxHeader-2", type: "x", data: paxRecord("path", second) },
+        { name: "placeholder-2", data: "second" },
+      ]));
+
+      expect(() => preflightZipArchive(zip)).toThrow(/default-ignorable/);
+      expect(() => preflightTarArchive(tar)).toThrow(/default-ignorable/);
+    }
+  });
+
+  it("rejects mixed legacy and UTF-8 ZIP names that extract to one path", () => {
+    const legacyName = Buffer.concat([
+      Buffer.from("extension/"),
+      Buffer.from([0xc3, 0xa9]),
+      Buffer.from(".js"),
+    ]);
+    const zip = fixture("legacy-alias.zip", makeZip([
+      { name: "unused", nameBytes: legacyName, flags: 0, data: "legacy" },
+      { name: "extension/\u251c\u2310.js", data: "utf8" },
+    ]));
+
+    expect(() => preflightZipArchive(zip)).toThrow(/legacy-encoded.*ASCII/);
+  });
+
+  it("rejects non-ASCII targets in legacy-encoded ZIP symlinks", () => {
+    const zip = fixture("legacy-link.zip", makeZip([{
+      name: "extension/link",
+      flags: 0,
+      mode: 0o120777,
+      data: Buffer.from([0xc3, 0xa9]),
+    }]));
+
+    expect(() => preflightZipArchive(zip)).toThrow(/legacy-encoded ZIP link.*ASCII/);
+  });
+
+  it("rejects raw tar names whose OEM decoding can case-alias on Windows", () => {
+    const prefix = Buffer.from("extension/pay");
+    const suffix = Buffer.from(".js");
+    const first = Buffer.concat([prefix, Buffer.from([0xc2, 0x81]), suffix]);
+    const second = Buffer.concat([prefix, Buffer.from([0xc2, 0x9a]), suffix]);
+    const tar = fixture("legacy-tar-alias.tar", makeTar([
+      { name: "unused-1", nameBytes: first, data: "first" },
+      { name: "unused-2", nameBytes: second, data: "second" },
+    ]));
+
+    expect(() => preflightTarArchive(tar)).toThrow(/tar header name must be ASCII/);
+  });
+
+  it("rejects non-ASCII legacy tar link fields and GNU long-name records", () => {
+    const rawLink = fixture("legacy-tar-link.tar", makeTar([{
+      name: "link",
+      type: "2",
+      linkBytes: Buffer.from([0xc3, 0xa9]),
+    }]));
+    const gnuLongName = fixture("legacy-gnu-long-name.tar", makeTar([
+      { name: "././@LongLink", type: "L", data: Buffer.from([0xc3, 0xa9, 0]) },
+      { name: "placeholder", data: "payload" },
+    ]));
+
+    expect(() => preflightTarArchive(rawLink)).toThrow(/tar header link target must be ASCII/);
+    expect(() => preflightTarArchive(gnuLongName)).toThrow(/GNU tar long-name record must be ASCII/);
+  });
+
+  it("allows Unicode PAX paths even when the metadata header placeholder is non-ASCII", () => {
+    const unicodePath = "extension/\u00e9.js";
+    const tar = fixture("unicode-pax.tar", makeTar([
+      {
+        name: "unused-pax-header",
+        nameBytes: Buffer.from("PaxHeader/\u00e9.js"),
+        type: "x",
+        data: paxRecord("path", unicodePath),
+      },
+      { name: "placeholder", data: "payload" },
+    ]));
+
+    expect(() => preflightTarArchive(tar)).not.toThrow();
+  });
+
+  it("uses stream order when PAX and GNU path overrides are mixed", () => {
+    const paxThenGnu = fixture("pax-then-gnu.tar", makeTar([
+      { name: "PaxHeader", type: "x", data: paxRecord("path", "../discarded") },
+      { name: "././@LongLink", type: "L", data: "safe.txt\0" },
+      { name: "placeholder", data: "payload" },
+    ]));
+    const gnuThenPax = fixture("gnu-then-pax.tar", makeTar([
+      { name: "././@LongLink", type: "L", data: "safe.txt\0" },
+      { name: "PaxHeader", type: "x", data: paxRecord("path", "../selected") },
+      { name: "placeholder", data: "payload" },
+    ]));
+
+    expect(() => preflightTarArchive(paxThenGnu)).not.toThrow();
+    expect(() => preflightTarArchive(gnuThenPax)).toThrow(/traverses outside/);
+  });
+
+  it("uses stream order when PAX and GNU link overrides are mixed", () => {
+    const paxThenGnu = fixture("pax-then-gnu-link.tar", makeTar([
+      { name: "PaxHeader", type: "x", data: paxRecord("linkpath", "../discarded") },
+      { name: "././@LongLink", type: "K", data: "safe-target\0" },
+      { name: "link", type: "2" },
+    ]));
+    const gnuThenPax = fixture("gnu-then-pax-link.tar", makeTar([
+      { name: "././@LongLink", type: "K", data: "safe-target\0" },
+      { name: "PaxHeader", type: "x", data: paxRecord("linkpath", "../selected") },
+      { name: "link", type: "2" },
+    ]));
+
+    expect(() => preflightTarArchive(paxThenGnu)).not.toThrow();
+    expect(() => preflightTarArchive(gnuThenPax)).toThrow(/escapes the extraction root/);
+  });
+
+  it("merges consecutive per-file PAX records with later keys winning", () => {
+    const tar = fixture("merged-pax.tar", makeTar([
+      { name: "PaxHeader-1", type: "x", data: paxRecord("path", "../selected") },
+      { name: "PaxHeader-2", type: "x", data: paxRecord("size", "0") },
+      { name: "placeholder" },
+    ]));
+
+    expect(() => preflightTarArchive(tar)).toThrow(/traverses outside/);
+  });
+
+  it("does not interpret old-GNU timestamp bytes as a POSIX pathname prefix", () => {
+    const tar = fixture("old-gnu-prefix-alias.tar", makeTar([
+      { name: "payload", format: "gnu", gnuAtime: 1, data: "first" },
+      { name: "payload", data: "second" },
+    ]));
+
+    expect(() => preflightTarArchive(tar)).toThrow(/duplicate or case-aliased/);
+  });
+
+  it("rejects non-portable syntax in link targets", () => {
+    const zip = fixture("link-alias.zip", makeZip([
+      { name: "link", data: "payload:stream", mode: 0o120777 },
+    ]));
+    const tar = fixture("link-alias.tar", makeTar([
+      { name: "link", type: "2", link: "payload:stream" },
+    ]));
+
+    expect(() => preflightZipArchive(zip)).toThrow(/Windows-special/);
+    expect(() => preflightTarArchive(tar)).toThrow(/Windows-special/);
+  });
 
   it("rejects unsafe ZIP and tar links, including symlink-then-child structures", () => {
     const zip = fixture("link.zip", makeZip([
@@ -336,6 +602,46 @@ describe("archive extraction preflight hardening", () => {
     expect(() => preflightZipArchive(unicode)).toThrow(/path-overriding Unicode/);
     expect(() => preflightZipArchive(localUnicode)).toThrow(/path-overriding Unicode/);
     expect(() => preflightZipArchive(overlap)).toThrow(/overlap/);
+  });
+
+  it("rejects ASi Unix extra fields that can override a ZIP member type", () => {
+    const archive = fixture("asi-symlink.zip", makeZip([{
+      name: "looks-like-a-file",
+      mode: 0,
+      centralExtra: asiUnixExtra(0o120777),
+      data: "../outside",
+    }]));
+
+    expect(() => preflightZipArchive(archive)).toThrow(/ASi Unix type-overriding/);
+  });
+
+  it("rejects local or central xl fields that can override a ZIP member type", () => {
+    const local = fixture("local-xl-symlink.zip", makeZip([{
+      name: "looks-like-a-file",
+      mode: 0o100644,
+      localExtra: xlTypeExtra(0o120777),
+      data: "../outside",
+    }]));
+    const central = fixture("central-xl-symlink.zip", makeZip([{
+      name: "looks-like-a-file",
+      mode: 0o100644,
+      centralExtra: xlTypeExtra(0o120777),
+      data: "../outside",
+    }]));
+
+    expect(() => preflightZipArchive(local)).toThrow(/xl type-overriding/);
+    expect(() => preflightZipArchive(central)).toThrow(/xl type-overriding/);
+  });
+
+  it("rejects Unix type bits from non-Unix ZIP hosts", () => {
+    const archive = fixture("foreign-host-symlink.zip", makeZip([{
+      name: "looks-like-a-file",
+      hostSystem: 5,
+      mode: 0o120777,
+      data: "../outside",
+    }]));
+
+    expect(() => preflightZipArchive(archive)).toThrow(/ambiguous Unix type bits/);
   });
 
   it("rejects malformed archive structure before invoking an extractor", () => {

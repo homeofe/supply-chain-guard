@@ -15,11 +15,12 @@ on:
     # opened/synchronize/reopened, none of which fire on a title or body edit, so
     # without it a PR can go green and then have the footer pasted into the body.
     types: [opened, synchronize, reopened, edited]
+  # Manual runs are build-only. Publishing is possible only from an immutable
+  # semver tag delivered by the push trigger above.
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to publish (e.g. v5.0.0)'
-        required: false
+
+permissions:
+  contents: read
 
 # Adding `edited` to the PR triggers means title/body edits now spawn runs on the same
 # head sha. Without a concurrency group a run started before a body fix can finish after
@@ -46,7 +47,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
 
       - name: Build
         run: npm run build
@@ -173,14 +177,21 @@ jobs:
     name: Publish to npm
     needs: build
     runs-on: ubuntu-latest
-    # Full semver tag (contains a dot) or manual dispatch. A major-only ref
-    # like refs/tags/v5 has no dot and must never reach publish.
-    if: (startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')) || github.event_name == 'workflow_dispatch'
+    # Only a pushed full-semver tag can publish. Manual dispatch is build-only,
+    # and a major-only ref such as refs/tags/v5 must never reach this job.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate immutable release tag
+        run: |
+          if ! node -e 'const v=require("./package.json").version; const t=process.env.GITHUB_REF_NAME; if (t !== `v${v}` || !/^v\d+\.\d+\.\d+$/.test(t)) process.exit(1)'; then
+            echo "::error title=Invalid release tag::Tag must be exact vMAJOR.MINOR.PATCH and equal package.json version."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -190,7 +201,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build
         run: npm run build
@@ -199,13 +210,15 @@ jobs:
       # LTS bundles npm 10.x, which silently falls back to classic
       # token auth even when id-token: write is granted. Upgrade
       # explicitly so OIDC kicks in.
-      # Pin to the 11.x line: npm@latest is now npm 12, which requires
+      # Pin an exact reviewed npm 11 release: npm@latest is now npm 12, which requires
       # Node >=22 and hard-fails EBADENGINE on this Node 20 runner (broke
-      # the v5.11.0 publish on 2026-07-09). npm 11.x is OIDC-capable AND
-      # Node-20-compatible. Bump this (and node-version) together if the
-      # publish runner ever moves to Node 22+.
+      # the v5.11.0 publish on 2026-07-09). npm 11.18.0 is OIDC-capable and
+      # compatible with the latest Node 20 runner. Re-review its engine range
+      # before changing either version.
       - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@11
+        run: |
+          npm install --global --ignore-scripts npm@11.18.0
+          test "$(npm --version)" = "11.18.0"
 
       # Auth happens via OIDC against the npmjs Trusted Publisher
       # configured for this package + this workflow. No NPM_TOKEN

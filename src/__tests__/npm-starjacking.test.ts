@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+import { Readable } from "node:stream";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock node:https before importing the module (see vscode-registry.test.ts).
@@ -15,21 +17,51 @@ import type { Finding } from "../types.js";
  * response for that URL; default 404. The flag path fetches package.json AND
  * the workspace manifests, so tests must answer per-URL.
  */
-function mockHttp(router: (url: string) => { status: number; body?: string }): void {
+type ResponseSpec = { status: number; body?: string; location?: string };
+
+function requestedUrl(input: unknown): string {
+  if (typeof input === "string") return input;
+  const options = input as {
+    protocol?: string;
+    hostname?: string;
+    port?: string;
+    path?: string;
+  };
+  const port = options.port ? `:${options.port}` : "";
+  return `${options.protocol ?? "https:"}//${options.hostname}${port}${options.path ?? "/"}`;
+}
+
+function mockHttp(router: (url: string) => ResponseSpec): void {
   const mockedGet = https.get as unknown as ReturnType<typeof vi.fn>;
-  mockedGet.mockImplementation((url: unknown, _opts: unknown, cb: (res: unknown) => void) => {
-    const spec = router(String(url));
-    const res = {
-      statusCode: spec.status,
-      resume: () => {},
-      on: (event: string, handler: (chunk?: Buffer) => void) => {
-        if (event === "data" && spec.status === 200 && spec.body !== undefined) handler(Buffer.from(spec.body));
-        if (event === "end" && spec.status === 200) handler();
-        return res;
-      },
+  mockedGet.mockImplementation((...args: unknown[]) => {
+    const callback = (typeof args[1] === "function" ? args[1] : args[2]) as
+      (response: Readable & {
+        statusCode: number;
+        headers: Record<string, string>;
+      }) => void;
+    const spec = router(requestedUrl(args[0]));
+    const response = Readable.from(
+      spec.status === 200 && spec.body !== undefined
+        ? [Buffer.from(spec.body)]
+        : [],
+    ) as Readable & {
+      statusCode: number;
+      headers: Record<string, string>;
     };
-    cb(res);
-    return { on: () => {}, destroy: () => {}, setTimeout: () => {} };
+    response.statusCode = spec.status;
+    response.headers = spec.location === undefined
+      ? {}
+      : { location: spec.location };
+    const request = new EventEmitter() as EventEmitter & {
+      destroy: (error?: Error) => void;
+      setTimeout: () => void;
+    };
+    request.setTimeout = vi.fn();
+    request.destroy = (error?: Error) => {
+      if (error) request.emit("error", error);
+    };
+    process.nextTick(() => callback(response));
+    return request;
   });
 }
 
@@ -129,6 +161,22 @@ describe("checkRepositoryClaim (starjacking)", () => {
     mockHttp(() => ({ status: 404 }));
     await checkRepositoryClaim("some-widget", { repository: "https://github.com/ghost/repo" }, findings);
     expect(findings).toHaveLength(0);
+  });
+
+  it("does NOT follow a raw GitHub redirect to a foreign host", async () => {
+    mockHttp(() => ({
+      status: 302,
+      location: "https://raw.githubusercontent.com.attacker.example/package.json",
+    }));
+
+    await checkRepositoryClaim(
+      "some-widget",
+      { repository: "https://github.com/ghost/repo" },
+      findings,
+    );
+
+    expect(findings).toHaveLength(0);
+    expect(https.get).toHaveBeenCalledOnce();
   });
 
   it("does NOT flag a non-GitHub repository host", async () => {

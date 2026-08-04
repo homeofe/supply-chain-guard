@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:https", () => {
@@ -13,20 +14,24 @@ import * as https from "node:https";
 import { scanPypiPackage } from "../pypi-scanner.js";
 import { formatReport, getReportExitCode } from "../reporter.js";
 
-type ResponseLike = EventEmitter & { statusCode?: number };
+type ResponseLike = Readable & {
+  statusCode?: number;
+  headers: Record<string, string>;
+};
 type MockedGet = ReturnType<typeof vi.fn>;
 
 function mockMetadataResponse(body: unknown): void {
   (https.get as unknown as MockedGet).mockImplementation(
-    (_url: unknown, _options: unknown, callback: (response: ResponseLike) => void) => {
-      const response = new EventEmitter() as ResponseLike;
+    (...args: unknown[]) => {
+      const callback = (typeof args[1] === "function" ? args[1] : args[2]) as
+        (response: ResponseLike) => void;
+      const response = Readable.from([Buffer.from(JSON.stringify(body))]) as ResponseLike;
       response.statusCode = 200;
+      response.headers = {};
       const request = new EventEmitter();
 
       process.nextTick(() => {
         callback(response);
-        response.emit("data", Buffer.from(JSON.stringify(body)));
-        response.emit("end");
       });
 
       return request;

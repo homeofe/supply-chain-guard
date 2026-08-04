@@ -28,6 +28,7 @@ import {
   loadThreatIntel,
   updateThreatFeed,
   isValidFeedIOC,
+  normalizeFeedIOC,
   type FeedIOC,
 } from "../threat-intel.js";
 import { parseFeedPayload } from "../feed.js";
@@ -242,6 +243,42 @@ describe("issue #54: threat-intel indicator hardening", () => {
     expect(isValidFeedIOC({ type: "url", value: "216.126.225.243:8087/api/notify", severity: "critical" })).toBe(true);
   });
 
+  it("rejects structurally implausible domain indicators", () => {
+    for (const value of ["e.g", "a.1", "example.c", `${"a".repeat(64)}.example`]) {
+      expect(isValidFeedIOC({ type: "domain", value, severity: "critical" }), value).toBe(false);
+    }
+
+    for (const value of ["a.co", "c2.example", "api.evil.xn--p1ai"]) {
+      expect(isValidFeedIOC({ type: "domain", value, severity: "critical" }), value).toBe(true);
+    }
+  });
+
+  it("matches domain IOCs only at hostname boundaries", () => {
+    const domain: FeedIOC = {
+      type: "domain",
+      value: "example.com",
+      severity: "critical",
+      confidence: 0.9,
+    };
+
+    for (const content of [
+      "example.com",
+      'fetch("https://example.com/beacon")',
+      'fetch("https://api.example.com/beacon")',
+      'const host = "example.com.";',
+    ]) {
+      expect(checkThreatIntel(content, "payload.js", [domain]), content).toHaveLength(1);
+    }
+
+    for (const content of [
+      'fetch("https://notexample.com/beacon")',
+      'fetch("https://example.com.attacker.test/beacon")',
+      'const packageName = "example.com-client";',
+    ]) {
+      expect(checkThreatIntel(content, "clean.js", [domain]), content).toHaveLength(0);
+    }
+  });
+
   it("rejects ordinary code tokens as url indicators", () => {
     // A charset+length floor is not enough. Every type:"url" entry is
     // substring-matched against whole file contents at its own severity, so a
@@ -305,6 +342,67 @@ describe("issue #54: threat-intel indicator hardening", () => {
     // Falsy/NaN traps: 0 is a valid number, NaN is not.
     expect(isValidFeedIOC({ type: "domain", value: "a.example", severity: "critical", confidence: 0 })).toBe(true);
     expect(isValidFeedIOC({ type: "domain", value: "a.example", severity: "critical", confidence: NaN })).toBe(false);
+  });
+
+  it("normalizes missing confidence before firstSeen decay", () => {
+    const [normalized] = parseFeedPayload(JSON.stringify({
+      schema: 1,
+      entries: [{
+        type: "domain",
+        value: "missing-confidence.example",
+        severity: "high",
+        firstSeen: "2026-01-01",
+        unexpected: { attackerControlled: true },
+      }],
+    }));
+
+    expect(normalized.confidence).toBe(0.95);
+    expect(normalized).not.toHaveProperty("unexpected");
+    const findings = checkThreatIntel(
+      "https://missing-confidence.example/payload",
+      "payload.js",
+      [normalized],
+    );
+    expect(findings).toHaveLength(1);
+    expect(Number.isFinite(findings[0].confidence)).toBe(true);
+    expect(findings[0].confidence).toBeGreaterThanOrEqual(0);
+    expect(findings[0].confidence).toBeLessThanOrEqual(0.95);
+  });
+
+  it("does not let future firstSeen dates increase confidence", () => {
+    const normalized = normalizeFeedIOC({
+      type: "domain",
+      value: "future.example",
+      severity: "high",
+      confidence: 0.95,
+      firstSeen: "2999-01-01",
+    });
+
+    const findings = checkThreatIntel("future.example", "payload.js", [normalized]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].confidence).toBe(0.95);
+  });
+
+  it("rejects malformed feed dates and metadata", () => {
+    const base = { type: "domain", value: "a.example", severity: "critical" } as const;
+
+    for (const invalid of [
+      { ...base, firstSeen: "not-a-date" },
+      { ...base, firstSeen: "2026-02-30" },
+      { ...base, firstSeen: "2026-01-02", lastSeen: "2026-01-01" },
+      { ...base, family: 42 },
+      { ...base, campaign: "bad\nmetadata" },
+      { ...base, source: "x".repeat(513) },
+    ]) {
+      expect(isValidFeedIOC(invalid), JSON.stringify(invalid)).toBe(false);
+    }
+
+    expect(isValidFeedIOC({
+      ...base,
+      firstSeen: "2026-01-01T12:30:45Z",
+      lastSeen: "2026-01-02T00:00:00+01:00",
+      source: "curated-feed",
+    })).toBe(true);
   });
 
   it("skills-scanner surfaces an oversized agent-rules file (parity with the 4 main families)", async () => {

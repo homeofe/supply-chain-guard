@@ -27,6 +27,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # Compute SHA-256 checksum for a file, output as "sha256:<hash>"
+#
+# Returns non-zero when no digest could be produced. An empty digest must
+# never be reported as success: callers write the result into MANIFEST.json or
+# compare it against a recorded checksum, and "sha256:" with nothing after it
+# would be baked in as if it were a real hash.
 aahp_checksum() {
     local filepath="$1"
     local hash
@@ -39,6 +44,10 @@ aahp_checksum() {
         hash=$(tr -d '\r' < "$filepath" | shasum -a 256 | awk '{print $1}')
     else
         echo "ERROR: No SHA-256 tool found (need sha256sum or shasum)" >&2
+        return 1
+    fi
+    if [ -z "$hash" ]; then
+        echo "ERROR: Could not compute a checksum for: $filepath" >&2
         return 1
     fi
     echo "sha256:$hash"
@@ -63,9 +72,12 @@ aahp_auto_summary() {
     # Strip CR so a CRLF working tree (Windows) yields the same summary as an
     # LF checkout (Linux CI). The summary is written to the non-checksummed
     # "summary" field, so this is a cosmetic robustness fix, not a gate change.
-    summary=$(head -5 "$filepath" \
+    # Look past title/blockquote/header chrome (handoff files often start with
+    # # headings and > rules). First 40 content lines is enough for a one-liner.
+    summary=$(head -40 "$filepath" \
         | tr -d '\r' \
         | grep -v '^#' | grep -v '^>' | grep -v '^---' | grep -v '^$' \
+        | grep -v '^<!--' | grep -v '^|.*|$' \
         | head -1 | cut -c1-150 || true)
     [ -z "$summary" ] && summary="(no summary available)"
     # Escape double quotes and backslashes for JSON safety

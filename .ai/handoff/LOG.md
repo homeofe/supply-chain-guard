@@ -9,32 +9,34 @@
 
 ---
 
+This generated journal lists every release derived from CHANGELOG.md, newest first.
+
 ## Releases (117, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
-| v5.25.1 | 2026-08-04 | ### Added |
-| v5.25.0 | 2026-08-03 | ### Added |
-| v5.24.0 | 2026-08-02 | ### Fixed |
-| v5.23.5 | 2026-08-01 | ### Fixed |
-| v5.23.4 | 2026-07-31 | ### Added |
-| v5.23.3 | 2026-07-30 | ### Fixed |
-| v5.23.2 | 2026-07-30 | ### Added |
-| v5.23.1 | 2026-07-30 | ### Fixed |
-| v5.23.0 | 2026-07-29 | ### Added |
-| v5.22.0 | 2026-07-29 | ### Fixed |
-| v5.21.0 | 2026-07-29 | ### Added |
-| v5.20.2 | 2026-07-28 | ### Fixed |
-| v5.20.1 | 2026-07-28 | ### Added |
-| v5.20.0 | 2026-07-27 | ### Added |
-| v5.19.0 | 2026-07-26 | ### Fixed |
-| v5.18.2 | 2026-07-26 | ### Added |
-| v5.18.1 | 2026-07-25 | ### Fixed |
-| v5.18.0 | 2026-07-25 | ### Added |
+| v5.25.1 | 2026-08-04 | 16 malicious package IOCs imported from the GitHub Advisory Database |
+| v5.25.0 | 2026-08-03 | --ecosystem <list> for scripts/import-threat-feed.mjs, to import only |
+| v5.24.0 | 2026-08-02 | The feed importer reported an undrainable backlog as harmless, which made a |
+| v5.23.5 | 2026-08-01 | The PointBlank indicator was routed to the wrong ecosystem. It was added as the |
+| v5.23.4 | 2026-07-31 | 250 malicious package IOCs imported from the GitHub Advisory Database |
+| v5.23.3 | 2026-07-30 | A built release no longer reports itself as critically compromised. On the |
+| v5.23.2 | 2026-07-30 | Threat intel: 250 malicious package IOCs imported from the GitHub Advisory |
+| v5.23.1 | 2026-07-30 | Pattern evaluation no longer silently stops on ordinary source files. The |
+| v5.23.0 | 2026-07-29 | Bounded multi-line pattern matching (spansLines). The pattern engine |
+| v5.22.0 | 2026-07-29 | Nine detection rules fired on ordinary source code. Measured on a corpus of |
+| v5.21.0 | 2026-07-29 | Daily threat-intel import (2026-07-29): 250 malware package IOCs from the GitHub Advisory |
+| v5.20.2 | 2026-07-28 | The bundled feed was one import away from breaking the build. tsc reports |
+| v5.20.1 | 2026-07-28 | 258 new threat indicators. 250 malicious-package IOCs imported from the |
+| v5.20.0 | 2026-07-27 | 259 new threat indicators. 250 malicious-package IOCs imported from the |
+| v5.19.0 | 2026-07-26 | The threat-feed importer no longer loses advisories silently. Its page cap |
+| v5.18.2 | 2026-07-26 | Threat-feed import 2026-07-26. Imported 250 malicious-package IOCs from |
+| v5.18.1 | 2026-07-25 | The scanner's state directory now ignores itself. .scg-history/ holds |
+| v5.18.0 | 2026-07-25 | Internal-disclosure rule family (INTERNAL_*), a new detection axis. |
 | v5.17.10 | 2026-07-25 | Rule precision: five rules narrowed with context, none weakened |
 | v5.17.9 | 2026-07-25 | Threat intel: FakeAgent / SectopRAT fake Claude Desktop malvertising |
 | v5.17.8 | 2026-07-24 | Threat intel: jscrambler npm compromise, cPanel/WHM GitHub Actions abuse, and the Apex macOS infostealer |
-| v5.17.7 | 2026-07-21 | ### Fixed |
+| v5.17.7 | 2026-07-21 | scan now self-terminates after a clean or low-only scan instead of hanging. |
 | v5.17.6 | 2026-07-20 | Threat intel: SleeperGem - three malicious RubyGems releases backdoor developer machines |
 | v5.17.5 | 2026-07-19 | Threat intel: NadMesh botnet - Go-based botnet hunting exposed AI services |
 | v5.17.4 | 2026-07-18 | Fix: scan --format json and risk-history reported a stale tool version (v5.2.0) |

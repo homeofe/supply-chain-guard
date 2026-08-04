@@ -28,9 +28,9 @@ jobs:
 
       - name: Build and link the CLI from this checkout
         run: |
-          npm ci
+          npm ci --ignore-scripts
           npm run build
-          npm link
+          npm link --ignore-scripts
 
       - name: Stage the demo target (malicious test fixture)
         run: cp -r src/__tests__/fixtures/malicious-npm-pkg ./suspicious-package

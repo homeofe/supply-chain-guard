@@ -1,4 +1,34 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
+
+const cloneHarness = vi.hoisted(() => ({
+  sourceDir: null as string | null,
+}));
+
+// Exercise the production GitHub-target path without network access. Only the
+// clone operation is substituted; every other child-process call stays real.
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  const fsModule = await import("node:fs");
+  const realExecFileSync = actual.execFileSync as (
+    file: string,
+    args?: readonly string[],
+    options?: unknown,
+  ) => unknown;
+
+  return {
+    ...actual,
+    execFileSync: (file: string, args?: readonly string[], options?: unknown): unknown => {
+      if (file === "git" && args?.[0] === "clone" && cloneHarness.sourceDir) {
+        const destination = args.at(-1);
+        if (!destination) throw new Error("Missing clone destination");
+        fsModule.cpSync(cloneHarness.sourceDir, destination, { recursive: true });
+        return Buffer.alloc(0);
+      }
+      return realExecFileSync(file, args, options);
+    },
+  };
+});
+
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -10,13 +40,12 @@ import type { ScanReport } from "../types.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
 const TSC = path.join(ROOT, "node_modules", "typescript", "bin", "tsc");
+const CANONICAL_CLONE_TARGET = "https://github.com/homeofe/supply-chain-guard.git";
 
 /**
- * Regression for the "globally-installed binary flags supply-chain-guard's own
- * repo" false positive: a checkout of the tool's own source tree (full of
- * malicious IOC strings by design) must be recognized as own-source by its
- * package.json identity, independent of where the running binary is installed -
- * not only when the scanned path equals the installed package root.
+ * Self-scan suppression is a trust decision. Local package.json and .git data
+ * are target-controlled, so only the running package's physical root or a clone
+ * initiated by scan() from the canonical HTTPS URL may receive it.
  *
  * Uses a real bundled feed IOC to exercise the suppression, so this file is
  * itself listed in SELF_SCAN_INERT_FILES.
@@ -31,8 +60,29 @@ function writeCheckout(dir: string, pkg: Record<string, unknown>): void {
   fs.writeFileSync(path.join(dir, "src", "threat-intel.ts"), `const c2 = "${FEED_DOMAIN}";\n`);
 }
 
+function initializeGitCheckout(
+  dir: string,
+  origin = "https://github.com/homeofe/supply-chain-guard.git",
+): void {
+  execFileSync("git", ["init", "--quiet", dir], { stdio: "pipe" });
+  execFileSync("git", ["-C", dir, "remote", "add", "origin", origin], { stdio: "pipe" });
+}
+
 const iocFired = (findings: { rule: string }[]): boolean =>
   findings.some((f) => f.rule === "THREAT_INTEL_MATCH" || f.rule === "IOC_KNOWN_C2_DOMAIN");
+
+async function scanScannerInitiatedClone(
+  sourceDir: string,
+  target = CANONICAL_CLONE_TARGET,
+  format: "text" | "json" = "text",
+): Promise<ScanReport> {
+  cloneHarness.sourceDir = sourceDir;
+  try {
+    return await scan({ target, format, noHistory: true });
+  } finally {
+    cloneHarness.sourceDir = null;
+  }
+}
 
 const OWN_PACKAGE = {
   name: "supply-chain-guard",
@@ -52,9 +102,14 @@ describe("self-scan recognition (own source checkout)", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("suppresses own IOC files when the checkout IS supply-chain-guard, regardless of install path", async () => {
+  it.each([
+    "https://github.com/homeofe/supply-chain-guard",
+    "https://github.com/homeofe/supply-chain-guard.git",
+    "https://github.com/homeofe/supply-chain-guard/",
+    "https://github.com/homeofe/supply-chain-guard.git/",
+  ])("suppresses own IOC files for a scanner-initiated canonical clone: %s", async (target) => {
     writeCheckout(dir, OWN_PACKAGE);
-    const report = await scan({ target: dir, format: "text", noHistory: true });
+    const report = await scanScannerInitiatedClone(dir, target);
     expect(iocFired(report.findings)).toBe(false);
   });
 
@@ -64,40 +119,23 @@ describe("self-scan recognition (own source checkout)", () => {
     expect(iocFired(report.findings)).toBe(true);
   });
 
-  it("does not let a hostile project spoof the suppression by forging only the name", async () => {
-    // name matches but the repository does not point at homeofe/supply-chain-guard
-    writeCheckout(dir, {
-      name: "supply-chain-guard",
-      version: "1.0.0",
-      repository: { url: "https://github.com/attacker/evil" },
-    });
+  it("does not trust a local checkout with forged metadata and canonical Git origin", async () => {
+    writeCheckout(dir, OWN_PACKAGE);
+    initializeGitCheckout(dir);
+    fs.appendFileSync(
+      path.join(dir, "src", "threat-intel.ts"),
+      `const attackerC2 = "${FEED_DOMAIN}";\n`,
+    );
     const report = await scan({ target: dir, format: "text", noHistory: true });
     expect(iocFired(report.findings)).toBe(true);
   });
-  it.each([
-    "https://github.com/homeofe/supply-chain-guard",
-    "https://github.com/homeofe/supply-chain-guard.git",
-    "git+https://github.com/homeofe/supply-chain-guard.git",
-    "git://github.com/homeofe/supply-chain-guard.git",
-    "ssh://git@github.com/homeofe/supply-chain-guard.git",
-    "git+ssh://git@github.com/homeofe/supply-chain-guard.git",
-    "git@github.com:homeofe/supply-chain-guard.git",
-  ])("accepts the exact canonical repository identity: %s", async (repository) => {
-    writeCheckout(dir, { ...OWN_PACKAGE, repository });
-    const report = await scan({ target: dir, format: "text", noHistory: true });
-    expect(iocFired(report.findings)).toBe(false);
-  });
 
   it.each([
-    "https://attacker.invalid/homeofe/supply-chain-guard",
     "https://github.com/attacker/supply-chain-guard",
     "https://github.com/homeofe/supply-chain-guard-mirror",
-    "https://github.com/homeofe/supply-chain-guard?mirror=1",
-    "https://github.com/homeofe/supply-chain-guard#mirror",
-    "https://github.com/homeofe/supply-chain-guard/extra",
-  ])("rejects repository identity lookalikes: %s", async (repository) => {
-    writeCheckout(dir, { ...OWN_PACKAGE, repository });
-    const report = await scan({ target: dir, format: "text", noHistory: true });
+  ])("does not trust a scanner-initiated lookalike clone target: %s", async (target) => {
+    writeCheckout(dir, OWN_PACKAGE);
+    const report = await scanScannerInitiatedClone(dir, target);
     expect(iocFired(report.findings)).toBe(true);
   });
 
@@ -113,7 +151,7 @@ describe("self-scan recognition (own source checkout)", () => {
       "gl_cv_host_cpu_c_abi = configure.ac; const lzcdrtfxyqiplpd = true;\n",
     );
 
-    const report = await scan({ target: dir, format: "text", noHistory: true });
+    const report = await scanScannerInitiatedClone(dir);
     expect(
       report.findings.some(
         (finding) => finding.file === relativePath && finding.rule === "XZ_BUILD_INJECT",
@@ -133,7 +171,7 @@ describe("self-scan recognition (own source checkout)", () => {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, "declare const xz: 'gl_cv_host_cpu_c_abi = configure.ac';\n");
 
-    const report = await scan({ target: dir, format: "text", noHistory: true });
+    const report = await scanScannerInitiatedClone(dir);
     expect(
       report.findings.some(
         (finding) => finding.file === relativePath && finding.rule === "XZ_BUILD_INJECT",
@@ -194,7 +232,7 @@ describe("built repository self-scan", () => {
       { cwd: ROOT, stdio: "pipe" },
     );
 
-    cleanReport = await scan({ target: checkout, format: "json", noHistory: true });
+    cleanReport = await scanScannerInitiatedClone(checkout, CANONICAL_CLONE_TARGET, "json");
 
     // dist remains globally scannable: an arbitrary built payload does not
     // inherit suppression merely because this is supply-chain-guard.
@@ -209,7 +247,7 @@ describe("built repository self-scan", () => {
       path.join(checkout, "dist", "threat-intel.js"),
       '\neval(atob("ZXZhbA=="));\n',
     );
-    payloadReport = await scan({ target: checkout, format: "json", noHistory: true });
+    payloadReport = await scanScannerInitiatedClone(checkout, CANONICAL_CLONE_TARGET, "json");
   }, 60_000);
 
   afterAll(() => {

@@ -5,8 +5,8 @@
 > (README section 2.10). Complements TRUST.md.
 > Draft v0.1 - proposed.
 
-This register EXTENDS existing AAHP machinery; it does not fork or replace it. It
-reuses the confidence register in TRUST.md, the Trust Decay rule (README section
+This register extends AAHP machinery without replacing it.
+It reuses the confidence register in TRUST.md, the Trust Decay rule (README section
 2.5), Agent Identity and Provenance (README section 2.4), and the Verify Gate
 (README section 2.8). Where those already define a mechanism, this file points to
 them instead of restating it.

@@ -7,6 +7,58 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- Adopted `@elvatis_com/aahp` 3.9.1 and migrated the existing handoff state to
+  its current-snapshot and MANIFEST-authoritative task rules. Local manifest
+  summaries now scan past Markdown header and table chrome, checksums fail
+  closed on empty tool output, acceptance criteria use evidence-bound task
+  boxes, trust records carry provenance and expiry, generated release headlines
+  skip subsection labels, workflow model routing is harness-owned, and the
+  optional Phase 4.5 grounding verdict is explicit.
+
+### Fixed
+
+- Solana webhook delivery now uses the HTTP transport for `http:` URLs and
+  HTTPS for `https:` URLs, rejects unsupported schemes and non-2xx responses,
+  settles at response headers, discards unused bodies, and enforces one absolute
+  deadline across DNS, connection, and response handling.
+- ZIP extraction uses the inbox System32 bsdtar backend on Windows after the
+  existing security preflight, so runtime VSIX and wheel scans no longer require
+  a separately installed Info-ZIP executable. Preflight now rejects portable-name
+  mismatches including Windows-special syntax, device and 8.3 aliases, trailing
+  dot/space, invariant-case and HFS-ignorable collisions, ambiguous legacy
+  filename encodings, type-overriding ZIP metadata, and mixed PAX/GNU ordering
+  mismatches before any extractor runs.
+- Domain threat indicators now require plausible DNS structure and match exact
+  hosts or subdomains at hostname boundaries. Tiny code-shaped values and
+  parent-domain lookalikes no longer create repository-wide false positives.
+- VS Code registry targets now require one strict `publisher.name` identifier,
+  use encoded URL components and a fixed temporary filename, validate every
+  Marketplace and Open VSX download hop, and clean temporary downloads after
+  acquisition failures.
+
+### Security
+
+- Registry metadata and npm, PyPI, and VS Code artifacts now use a shared
+  HTTPS-only downloader with credential rejection, bounded redirects, total
+  timeouts, streaming byte limits, final-status validation, and partial-file
+  cleanup. Every hop is pinned to the official registry or artifact host, and
+  npm tarballs are verified against `dist.integrity` and `dist.shasum` before
+  extraction when those digests are present. A digestless npm artifact is still
+  scanned but now makes the report explicitly partial.
+- Self-scan IOC suppression now trusts only the running package's physical root
+  or a scanner-initiated clone of the exact canonical HTTPS repository URL.
+  Local package metadata and Git remotes cannot grant suppression.
+- Remote threat-feed entries now validate optional metadata and calendar dates,
+  normalize absent confidence before use, and clamp future-date decay so
+  malformed or future-dated entries cannot create non-finite or inflated scores.
+- CI now defaults to read-only repository permissions, pins the AAHP workflow
+  actions to immutable revisions, installs with lifecycle scripts disabled,
+  enforces `npm audit --audit-level=high`, keeps the npm release workflow's
+  manual dispatch build-only, requires a release tag to exactly match the
+  package version, and exact-pins the OIDC-capable npm CLI used for publishing.
+
 ## [5.25.1] - 2026-08-04
 
 ### Added

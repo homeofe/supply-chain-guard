@@ -16,7 +16,7 @@ import type { Finding, ThreatIntelSource } from "./types.js";
 export interface FeedIOC {
   type: "domain" | "ip" | "url" | "hash" | "package";
   value: string;
-  severity: "critical" | "high" | "medium";
+  severity: "critical" | "high" | "medium" | "low" | "info";
   confidence: number;
   family?: string;
   campaign?: string;
@@ -24,6 +24,11 @@ export interface FeedIOC {
   firstSeen?: string;
   lastSeen?: string;
 }
+
+/** Runtime-valid remote shape before its optional confidence is normalized. */
+export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
+  confidence?: number;
+};
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -6951,7 +6956,10 @@ export function loadThreatIntel(
         // Quarantine invalid entries instead of trusting the cast: cached
         // remote data reaches the per-file scan loop, so a malformed entry
         // must never leave this function (issue #54).
-        feed = mergeFeeds(feed, cached.entries.filter(isValidFeedIOC));
+        const remoteEntries = cached.entries
+          .filter(isValidFeedIOC)
+          .map(normalizeFeedIOC);
+        feed = mergeFeeds(feed, remoteEntries);
       }
     } catch { /* ignore corrupt cache */ }
   }
@@ -6978,7 +6986,7 @@ export async function updateThreatFeed(
     // Validate BEFORE caching: entries failing the indicator contract
     // (unknown type, non-string/empty/oversized value) are quarantined so
     // they can never reach a scan via the cache (issue #54).
-    const entries = raw.filter(isValidFeedIOC);
+    const entries = raw.filter(isValidFeedIOC).map(normalizeFeedIOC);
 
     fs.mkdirSync(cacheBase, { recursive: true });
     fs.writeFileSync(
@@ -7081,14 +7089,59 @@ function escapeRegExp(value: string): string {
 // legitimate values are URLs; hashes are 64 chars, domains max 253). Entries
 // above the cap are quarantined on load, not compiled or compared.
 const MAX_IOC_VALUE_LENGTH = 2048;
+const MAX_IOC_METADATA_LENGTH = 512;
+const DEFAULT_IOC_CONFIDENCE = 0.95;
+const IOC_METADATA_FIELDS = ["family", "campaign", "source"] as const;
+const IOC_DATE_FIELDS = ["firstSeen", "lastSeen"] as const;
+const IOC_DATE_SHAPE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-](\d{2}):(\d{2})))?$/;
+const IOC_METADATA_CONTROL_CHARS = /[\u0000-\u001f\u007f]/u;
+
+function isValidIocDate(value: string): boolean {
+  const match = value.match(IOC_DATE_SHAPE);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return false;
+  }
+  if (match[4] !== undefined) {
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const second = Number(match[6]);
+    const offsetHour = Number(match[7] ?? 0);
+    const offsetMinute = Number(match[8] ?? 0);
+    if (
+      hour > 23 ||
+      minute > 59 ||
+      second > 59 ||
+      offsetHour > 23 ||
+      offsetMinute > 59
+    ) {
+      return false;
+    }
+  }
+  return Number.isFinite(Date.parse(value));
+}
 
 // Type-aware value shapes: a structurally "valid string" is not enough - a
 // domain entry of "(" would (post-escaping) literal-match every file that
 // contains a parenthesis, turning a hostile feed into a false-positive
 // generator instead of a crash. Each indicator type has a narrow charset.
 const IOC_VALUE_SHAPES: Record<string, RegExp> = {
-  // RFC-ish hostname: labels of letters/digits/hyphen/underscore joined by dots.
-  domain: /^[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)+$/i,
+  // RFC-ish hostname: 1..63-character labels joined by dots, a DNS-sized
+  // overall value, and a plausible final label (2..63 letters or punycode).
+  // The final-label floor rejects tiny code-shaped values such as "e.g",
+  // which would otherwise match ordinary property access throughout a repo.
+  domain: /^(?=.{4,253}$)(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i,
   // Structural IPv4 (four dotted decimal groups) or IPv6 (>=2 colons, >=1 hex
   // digit, >=7 chars). Charset alone is NOT enough: non-domain values are
   // substring-matched, so a degenerate "." or "e" that passed a charset-only
@@ -7143,7 +7196,7 @@ const VALID_IOC_SEVERITIES = new Set(["critical", "high", "medium", "low", "info
  * quarantined (dropped) deterministically instead of crashing a scan or
  * flooding it with garbage-literal matches.
  */
-export function isValidFeedIOC(entry: unknown): entry is FeedIOC {
+export function isValidFeedIOC(entry: unknown): entry is FeedIOCInput {
   if (entry === null || typeof entry !== "object") return false;
   const e = entry as Partial<FeedIOC>;
   if (
@@ -7160,14 +7213,60 @@ export function isValidFeedIOC(entry: unknown): entry is FeedIOC {
   if (e.confidence !== undefined && (typeof e.confidence !== "number" || !(e.confidence >= 0 && e.confidence <= 1))) {
     return false;
   }
+  for (const field of IOC_METADATA_FIELDS) {
+    const value = e[field];
+    if (
+      value !== undefined &&
+      (typeof value !== "string" ||
+        value.length === 0 ||
+        value.length > MAX_IOC_METADATA_LENGTH ||
+        IOC_METADATA_CONTROL_CHARS.test(value))
+    ) {
+      return false;
+    }
+  }
+  for (const field of IOC_DATE_FIELDS) {
+    const value = e[field];
+    if (
+      value !== undefined &&
+      (typeof value !== "string" ||
+        !isValidIocDate(value))
+    ) {
+      return false;
+    }
+  }
+  if (
+    e.firstSeen !== undefined &&
+    e.lastSeen !== undefined &&
+    Date.parse(e.lastSeen) < Date.parse(e.firstSeen)
+  ) {
+    return false;
+  }
   const shape = IOC_VALUE_SHAPES[e.type];
   return shape !== undefined && shape.test(e.value);
+}
+
+/** Convert a runtime-valid remote entry into the internal total FeedIOC shape. */
+export function normalizeFeedIOC(entry: FeedIOCInput): FeedIOC {
+  const normalized: FeedIOC = {
+    type: entry.type,
+    value: entry.value,
+    severity: entry.severity,
+    confidence: entry.confidence ?? DEFAULT_IOC_CONFIDENCE,
+  };
+  if (entry.family !== undefined) normalized.family = entry.family;
+  if (entry.campaign !== undefined) normalized.campaign = entry.campaign;
+  if (entry.source !== undefined) normalized.source = entry.source;
+  if (entry.firstSeen !== undefined) normalized.firstSeen = entry.firstSeen;
+  if (entry.lastSeen !== undefined) normalized.lastSeen = entry.lastSeen;
+  return normalized;
 }
 
 // Domain regexes are compiled once per unique value, not per scanned file
 // (checkThreatIntel runs for every file with the same feed array). A null
 // entry records a value whose compilation failed (unreachable after full
-// escaping, kept as belt and braces) - matched via substring fallback.
+// escaping, kept as belt and braces) and fails closed rather than falling back
+// to unsafe substring matching.
 const domainRegexCache = new Map<string, RegExp | null>();
 
 export function checkThreatIntel(
@@ -7193,9 +7292,14 @@ export function checkThreatIntel(
         // not grow process memory monotonically (v5.12.0 gate finding).
         if (domainRegexCache.size >= 10_000) domainRegexCache.clear();
         try {
-          // Full metacharacter escaping: the value is a literal indicator,
-          // so the compiled regex must match exactly it and nothing else.
-          regex = new RegExp(escapeRegExp(ioc.value), "i");
+          // A domain IOC matches the exact hostname and its subdomains, but not
+          // a longer label ("notexample.com") or a parent-domain lookalike
+          // ("example.com.attacker.test"). The leading boundary deliberately
+          // permits a dot so "api.example.com" still matches "example.com".
+          regex = new RegExp(
+            `(?:^|[^a-z0-9_-])${escapeRegExp(ioc.value)}(?![a-z0-9_-]|\\.[a-z0-9_-])`,
+            "i",
+          );
         } catch {
           // Cannot throw after full escaping; belt and braces so a future
           // edit can never re-introduce the scan-degrading SyntaxError.
@@ -7203,7 +7307,7 @@ export function checkThreatIntel(
         }
         domainRegexCache.set(ioc.value, regex);
       }
-      matched = regex ? regex.test(content) : contentLower.includes(valueLower);
+      matched = regex ? regex.test(content) : false;
     } else {
       matched = contentLower.includes(valueLower);
     }
@@ -7212,8 +7316,12 @@ export function checkThreatIntel(
       // Apply confidence decay (reduce by 10% per 90 days since firstSeen)
       let confidence = ioc.confidence;
       if (ioc.firstSeen) {
-        const ageDays = (Date.now() - new Date(ioc.firstSeen).getTime()) / (1000 * 60 * 60 * 24);
-        const decayFactor = Math.max(0.3, 1 - (ageDays / 900));
+        const ageDays = Math.max(
+          0,
+          (Date.now() - new Date(ioc.firstSeen).getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+        const decayFactor = Math.max(0.3, Math.min(1, 1 - (ageDays / 900)));
         confidence = Math.round(confidence * decayFactor * 100) / 100;
       }
 

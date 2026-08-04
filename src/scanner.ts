@@ -109,9 +109,10 @@ const TOOL_VERSION = "5.25.1";
 /**
  * Exact files that contain this package's own inert detector definitions or
  * regression fixtures.
- * This allowlist is consulted only when the target is this package or a
- * checkout with its exact package identity. Basenames, suffixes, and
- * test-directory patterns are never exclusion boundaries.
+ * This allowlist is consulted only when the target is this package's physical
+ * install root or a clone that this scanner initiated from the exact canonical
+ * HTTPS repository URL. Basenames, suffixes, package metadata, and Git config
+ * are never trust boundaries.
  */
 const SELF_SCAN_INERT_FILES = new Set([
   "src/active-validation.ts",
@@ -183,7 +184,7 @@ function isSelfScanInertFile(relativePath: string): boolean {
 /**
  * Pattern literals in this matcher module deliberately spell out signatures
  * that the public scanner detects. Suppress only those exact rule definitions
- * in an identity-verified own checkout. A same-named third-party file, or any
+ * in a scanner-trusted own checkout. A same-named third-party file, or any
  * unrelated rule in this file, remains fully scannable.
  */
 const SELF_SCAN_INERT_PATTERN_RULES = new Map<string, ReadonlySet<string>>([
@@ -229,69 +230,13 @@ function isOwnPackageRoot(scanDir: string): boolean {
 }
 
 /**
- * Recognize a checkout of supply-chain-guard's OWN source tree by its
- * package.json identity, independent of where the running binary is installed.
- *
- * The self-scan IOC suppression previously keyed only on isOwnPackageRoot (the
- * scanned dir's realpath equalling the running binary's package root). That
- * holds for `node dist/cli.js` run from the repo, but NOT for a globally
- * installed binary (`npm install -g`) scanning a separate checkout - so the
- * scanner flagged its own threat database (600+ THREAT_INTEL / IOC matches on
- * threat-intel.ts, ioc-blocklist.ts and test fixtures). This makes the
- * recognition content-based so any checkout is handled the same way.
- *
- * Gated against spoofing: it matches only when the scanned package.json is BOTH
- * named "supply-chain-guard" (an npm name we own) AND points its repository at
- * homeofe/supply-chain-guard. Even if a hostile project forged both, the
- * suppression it unlocks is narrow: IOC-string matching is skipped only for
- * exact reviewed inert files, and pattern suppression is limited to explicit
- * path-and-rule pairs in SELF_SCAN_INERT_PATTERN_RULES. Every unrelated rule
- * still runs, including on those same source and compiled files.
+ * Only the original target supplied to this scanner can establish trust for a
+ * separate checkout. package.json and .git/config both live inside the scanned
+ * trust boundary and are therefore forgeable. The clone path reaches this
+ * predicate only after the generic GitHub URL validator has accepted it.
  */
-function isCanonicalOwnRepositoryUrl(value: string): boolean {
-  let normalized = value.trim();
-  if (
-    normalized.length === 0 ||
-    normalized.includes("?") ||
-    normalized.includes("#")
-  ) {
-    return false;
-  }
-
-  normalized = normalized.replace(/\/$/, "").replace(/\.git$/i, "");
-  normalized = normalized
-    .replace(/^git\+https:\/\//i, "https://")
-    .replace(/^git:\/\//i, "https://")
-    .replace(/^git\+ssh:\/\/git@github\.com\//i, "https://github.com/")
-    .replace(/^ssh:\/\/git@github\.com\//i, "https://github.com/")
-    .replace(/^git@github\.com:/i, "https://github.com/");
-
-  return (
-    normalized.toLowerCase() ===
-    "https://github.com/homeofe/supply-chain-guard"
-  );
-}
-
-function isOwnSourceCheckout(scanDir: string): boolean {
-  try {
-    const pkgPath = path.join(scanDir, "package.json");
-    if (!fs.existsSync(pkgPath)) return false;
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
-      name?: unknown;
-      repository?: unknown;
-    };
-    if (pkg.name !== "supply-chain-guard") return false;
-    const repoUrl =
-      typeof pkg.repository === "string"
-        ? pkg.repository
-        : (pkg.repository as { url?: unknown } | undefined)?.url;
-    return (
-      typeof repoUrl === "string" &&
-      isCanonicalOwnRepositoryUrl(repoUrl)
-    );
-  } catch {
-    return false;
-  }
+function isCanonicalOwnCloneTarget(target: string): boolean {
+  return /^https:\/\/github\.com\/homeofe\/supply-chain-guard(?:\.git)?\/?$/.test(target);
 }
 
 /**
@@ -303,6 +248,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   let scanDir = target;
   let scanType: ScanReport["scanType"] = "directory";
   let tempDir: string | null = null;
+  let scannerInitiatedOwnClone = false;
 
   // If target is a GitHub URL, clone it
   if (target.startsWith("https://github.com/")) {
@@ -318,6 +264,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         `Refusing to clone: not a valid GitHub repository URL: ${target}`,
       );
     }
+    scannerInitiatedOwnClone = isCanonicalOwnCloneTarget(target);
     scanType = "github";
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-"));
     const cloneDir = path.join(tempDir, "repo");
@@ -343,7 +290,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     throw new Error(`Target is not a directory: ${scanDir}`);
   }
 
-  const scanningOwnPackage = isOwnPackageRoot(scanDir) || isOwnSourceCheckout(scanDir);
+  const scanningOwnPackage = isOwnPackageRoot(scanDir) || scannerInitiatedOwnClone;
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
