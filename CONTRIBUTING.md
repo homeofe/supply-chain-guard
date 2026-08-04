@@ -108,6 +108,7 @@ src/
   regex-complexity.ts     # Regex safety and complexity validation
   patterns.ts             # Detection pattern database
   extracted-file-walker.ts # Containment-aware extracted-tree traversal
+  remote-download.ts      # Bounded HTTPS registry artifact downloads
   ioc-blocklist.ts        # Known IOC database
   correlation-engine.ts   # Incident clustering
   trust-breakdown.ts      # Trust scoring

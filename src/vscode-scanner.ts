@@ -32,7 +32,7 @@ import {
   RemoteHttpStatusError,
 } from "./remote-download.js";
 
-const TOOL_VERSION = "5.25.1";
+const TOOL_VERSION = "5.25.2";
 
 /** Public and testable acquisition bounds for extension registry data. */
 export const VSCODE_REMOTE_LIMITS = Object.freeze({

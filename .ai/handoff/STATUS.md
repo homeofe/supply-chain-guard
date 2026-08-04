@@ -8,15 +8,17 @@
 
 ## At a Glance
 
-Released v5.25.1 is unchanged; AAHP 3.9.1 adoption and reviewed hardening are complete.
-Branch `codex/aahp-3.9.1-integration` contains the unreleased security,
-portability, and CI changes for the next patch release.
+PR #114 merged the AAHP 3.9.1 adoption and reviewed hardening into `main`.
+Branch `codex/release-v5.25.2` contains only the metadata for the next patch
+release; v5.25.1 remains published until the immutable v5.25.2 tag completes CI.
 
 | Field | Current state |
 |-------|---------------|
 | Released package | v5.25.1 on npm |
 | Release commit | 28bbd9f |
-| Working branch base | 1aabd0e |
+| Release target | v5.25.2 |
+| Merged implementation | 7481d63, PR #114 |
+| Working branch base | 7481d63 |
 | Threat feed | 6,315 entries |
 | AAHP dependency | 3.9.1, exact pin |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
@@ -86,7 +88,8 @@ does not overwrite or silently discard that consumer state.
 | `npm run build` | passed, including governance, feed, handoff, and TypeScript gates |
 | AAHP acceptance report | 7 task-bound sections, no actionable findings |
 | AAHP lint / doctor / prepush | passed after regeneration |
-| Full Vitest suite | not run on Windows; required Linux CI is authoritative |
+| Full Vitest suite | passed in required Ubuntu CI for PR #114 and merged `main` |
+| Linux AAHP Verify | passed for PR #114 and merged `main` |
 
 The Windows workstation lacks the external `zip` executable used only to build
 fixtures for 14 VS Code tests. Do not describe that prerequisite as a product

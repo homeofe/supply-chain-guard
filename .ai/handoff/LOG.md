@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (117, newest first)
+## Releases (118, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.25.2 | 2026-08-04 | Adopted @elvatis_com/aahp 3.9.1 and migrated the existing handoff state to |
 | v5.25.1 | 2026-08-04 | 16 malicious package IOCs imported from the GitHub Advisory Database |
 | v5.25.0 | 2026-08-03 | --ecosystem <list> for scripts/import-threat-feed.mjs, to import only |
 | v5.24.0 | 2026-08-02 | The feed importer reported an undrainable backlog as harmless, which made a |

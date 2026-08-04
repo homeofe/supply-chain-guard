@@ -8,7 +8,7 @@
 
 Five tasks are ready, one owner decision is blocked, and T-008 is complete.
 
-Current version: **v5.25.1**
+Current version: **v5.25.2**
 
 ---
 
@@ -22,8 +22,8 @@ follow-ups are ready, and the Node/Babel support-matrix decision is owner-blocke
 | Ready | 5 |
 | Blocked | 1 |
 
-The released package is unchanged. Current work is unreleased on
-`codex/aahp-3.9.1-integration`.
+The published package remains v5.25.1. Release metadata for v5.25.2 is
+unreleased on `codex/release-v5.25.2`.
 
 ---
 
@@ -130,7 +130,7 @@ do not merge Babel 8 alone.
 
 | Item | Resolution |
 |------|------------|
-| T-008: AAHP 3.9.1 adoption and verified hardening | 247 focused tests, build, audit, AAHP lint/doctor/prepush, and independent review passed; Linux full suite remains required CI evidence |
+| T-008: AAHP 3.9.1 adoption and verified hardening | 247 focused tests, build, audit, AAHP lint/doctor/prepush, independent review, and PR #114 Linux CI passed |
 | v5.25.1: campaign and package IOC update | Released 2026-08-04; feed generation and release gates passed |
 | v5.25.0: ecosystem-scoped importer recovery | Released 2026-08-03; importer and feed regressions passed |
 | v5.24.0: drain-aware backlog accounting | Released 2026-08-02; recovery-slice tests passed |
@@ -143,8 +143,8 @@ do not merge Babel 8 alone.
 - [x] Registry downloads, artifact integrity, self-scan identity, domain IOCs, VS Code identifiers, Solana webhooks, and archive extraction have positive and adversarial focused regressions.
 - [x] TypeScript build and the final focused Windows-safe regression set pass.
 - [x] AAHP lint, doctor, and pre-push verification pass after regeneration; the advisory criteria report runs with no actionable findings.
-- [x] STATUS.md records the exact local evidence and leaves the Linux full suite for required CI.
+- [x] STATUS.md records the exact local and required Linux CI evidence.
 
 **Resolution:** Completed 2026-08-04 with 13 focused files / 247 tests,
 `npm run build`, zero high-severity audit findings, AAHP 3.9.1 lint/doctor/prepush,
-and a bounded independent review. Required Linux CI remains the full-suite anchor.
+a bounded independent review, and the required PR #114 Linux full suite and AAHP gates.
