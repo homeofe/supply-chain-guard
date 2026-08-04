@@ -1,3 +1,44 @@
+> HANDOFF (2026-08-04, claude-opus-5). Read this first; the note below has the reasoning
+> behind each decision.
+>
+> STATE: clean. `main` == tag `v5.25.1` == `v5` branch == npm `latest`. Zero open PRs, zero
+> open issues. Nothing is half-finished and nothing needs picking up.
+>
+> THE RELEASE WAS VERIFIED AGAINST npm, NOT AGAINST THE GREEN PIPELINE. A passing CI run
+> only proves the workflow ran. What was actually checked: the published tarball was
+> installed from the registry and pointed at real fixtures. `mrmustard@0.7.4` in a
+> `poetry.lock` is flagged CRITICAL through BOTH paths (`IOC_KNOWN_BAD_VERSION` from the
+> blocklist pin and `PYTHON_MALICIOUS_PACKAGE` from the bundled feed), and clean `0.7.3`
+> produces zero mentions. Worth repeating on future releases: it costs about a minute and it
+> is the only check that proves the shipped artifact detects what the changelog claims.
+>
+> ONE LIVE DECISION FOR EMRE, and it will come back on its own: `@babel/parser` 8 cannot be
+> merged while CI pins Node 20 (babel 8 wants `^22.18.0 || >=24.11.0`). Dependabot PR #109
+> was closed with that reasoning, and dependabot WILL reopen it. Do not merge it on sight.
+> Taking it means raising `node-version` in both `ci.yml` jobs AND `engines` in
+> `package.json` together, which is a support-matrix change and Emre's call. Details in the
+> note below and in the closing comment on #109.
+>
+> FOR THE NEXT DAILY RUN, one prediction worth checking rather than trusting: the 2026-07-21
+> bulk-publication spike should fall out of the default `--days 14` window on 2026-08-05, so
+> the 16,006-entry backlog and the drain-aware cap error should simply stop appearing and no
+> slicing should be needed. If a default `npm run feed:import -- --dry-run` still reports a
+> five-figure remainder after that date, it is a NEW spike and not this one, so re-verify
+> before reusing the standing exclusion. Either way: never pass `--allow-backlog` or
+> `--allow-truncated` to make the run exit clean, and never raise `--limit` to force a
+> machine-generated four-figure diff into a public repo.
+>
+> STANDING DECISIONS CARRIED FORWARD, do not re-litigate without new evidence: the PyPI and
+> NuGet halves of the 2026-07-20/21 spike (~20,800 rows) stay out, and known scanner-testbed
+> corpora (`@gocortexio/npmgremlinbox-*`, `vybscan-testbed-*`) are still ingested on purpose.
+> The second one is the only open question of substance and it is a judgement call for Emre,
+> not a release task: filtering testbeds means maintaining a list of "malware we choose not
+> to flag". None of v5.25.1's entries were testbed corpora.
+>
+> ALSO STILL OPEN, unchanged and not a release task: the vscode-scanner is purely
+> behavioural, so a known-bad extension ID has nowhere to live in the IOC model. That is a
+> data-model change.
+
 > Note (2026-08-04, claude-opus-5): Released v5.25.1. Patch, not a minor: the release is
 > IOC data plus two dev/build-time dependency bumps, with no new flag or user-facing
 > behaviour. Precedent checked rather than assumed - v5.23.5 shipped 250 package IOCs AND a
