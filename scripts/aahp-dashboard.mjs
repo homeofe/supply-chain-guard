@@ -344,12 +344,43 @@ if (process.argv.includes("--check")) {
   // Delegate to the canonical writer (keeps token budget / context / last
   // session authoritative and re-checksums every tracked file, not only these
   // two). Override the interpreter with AAHP_BASH if `bash` is not on PATH.
+  // Git-Bash (MSYS) re-parses the Windows command line it is handed and treats
+  // backslashes as escapes, so a native `C:\repo\scripts\aahp-manifest.sh` arrives as
+  // `C:reposcriptsaahp-manifest.sh` and dies with "No such file or directory" - even
+  // though execFileSync passes an argv array and never involves a shell. Forward
+  // slashes survive that round trip and are accepted by bash and by Windows itself.
+  // Scoped to win32 so POSIX paths, where a backslash is a legal filename character,
+  // are passed through byte-for-byte.
+  const forBash = (p) => (process.platform === "win32" ? p.replace(/\\/g, "/") : p);
+  // Picking the interpreter matters as much as the path shape. On Windows, plain
+  // `bash` normally resolves to C:\Windows\System32\bash.exe, which is the WSL
+  // launcher, and WSL has no C: drive - it mounts the host at /mnt/c. A perfectly
+  // valid Windows path therefore arrives unresolvable and WSL reports "No such file
+  // or directory" for a script that plainly exists, which reads as a missing file
+  // rather than the wrong interpreter. Git-Bash (MSYS) does understand drive-letter
+  // paths, so prefer it explicitly and fall back to PATH only when it is absent.
+  // AAHP_BASH still wins, so an unusual install can override the whole search.
+  const resolveBash = () => {
+    if (process.env.AAHP_BASH) return process.env.AAHP_BASH;
+    if (process.platform !== "win32") return "bash";
+    const candidates = [
+      join(process.env.ProgramFiles || "C:\\Program Files", "Git", "bin", "bash.exe"),
+      join(
+        process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)",
+        "Git",
+        "bin",
+        "bash.exe",
+      ),
+      join(process.env.LOCALAPPDATA || "", "Programs", "Git", "bin", "bash.exe"),
+    ];
+    return candidates.find((c) => existsSync(c)) || "bash";
+  };
   try {
     execFileSync(
-      process.env.AAHP_BASH || "bash",
+      resolveBash(),
       [
-        join(repoRoot, "scripts", "aahp-manifest.sh"),
-        repoRoot,
+        forBash(join(repoRoot, "scripts", "aahp-manifest.sh")),
+        forBash(repoRoot),
         "--agent",
         "handoff-refresh",
         "--phase",

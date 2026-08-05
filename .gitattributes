@@ -1,2 +1,10 @@
 # Keep ESM scripts LF so vitest can import them on Windows checkouts
 *.mjs text eol=lf
+
+# Same reason, for shell: with core.autocrlf=true a Windows checkout rewrites these
+# to CRLF, and bash then fails on the stray carriage return with
+# "$'\r': command not found" plus "set: pipefail: invalid option name". That breaks
+# `npm run handoff:refresh`, which shells out to scripts/aahp-manifest.sh to
+# regenerate MANIFEST.json - a required gate for every code commit - so on Windows
+# the handoff check could not be satisfied at all.
+*.sh text eol=lf

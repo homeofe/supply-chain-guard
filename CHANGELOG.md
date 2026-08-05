@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 251 malicious-package IOCs imported from the GitHub Advisory
+  Database with OSV.dev corroboration. The bulk is a mass dependency-confusion
+  wave squatting internal namespaces of Tinkoff/T-Bank (`tinkoff-*`, `tramvai-*`,
+  `tui-react-*`, `platform-ui-*`, `beaver-ui-*`), ServiceTitan (`@servicetitan/*`)
+  and OneReach (`@onereach/*`).
+- ChainDrop npm worm / "Mini Shai-Hulud" (August 4, 2026): 22 hand-added
+  indicators for the keyv and cacheable compromise, covering the exfil host
+  `npm-cache[.]com`, the Ethereum mainnet dead-drop C2 resolver contract, the two
+  `setup.mjs` preinstall dropper hashes, the stage-2 credential stealer hash, and
+  18 hijacked packages pinned to their single malicious version. Reported
+  independently by StepSecurity, Aikido, Socket and Endor Labs. The compromised
+  publisher accounts are victims and are deliberately not listed, and the cloud
+  metadata addresses the payload queries are excluded as legitimate
+  infrastructure.
+
+### Fixed
+
+- `npm run handoff:refresh` now regenerates `MANIFEST.json` on Windows. Three
+  independent defects blocked it, so the required handoff gate could not be
+  satisfied from a Windows checkout at all. `scripts/aahp-dashboard.mjs` passed
+  a native `C:\...` path to bash, where MSYS re-parses backslashes as escapes and
+  reports a missing file; path arguments are now forward-slashed on win32 only,
+  leaving POSIX behavior byte-for-byte unchanged. The same call also trusted
+  whatever `bash` PATH resolved to, which on Windows is normally the WSL launcher
+  in System32 - WSL mounts the host at `/mnt/c` and has no `C:` drive, so even a
+  well-formed Windows path is unresolvable there; Git-Bash is now preferred
+  explicitly, with `AAHP_BASH` still overriding. Separately, `.gitattributes`
+  pinned `*.mjs` to LF but not `*.sh`, so with `core.autocrlf=true` both shell
+  scripts were checked out CRLF and bash failed on the stray carriage return.
+
 ## [5.25.3] - 2026-08-04
 
 ### Fixed

@@ -223,6 +223,18 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // estates - and POSTs them here. Attacker subdomain only: femboy[.]energy is not listed
   // on its own, and the exfil path /v1/collect is covered by the host entry.
   "metrics.femboy.energy",
+
+  // ChainDrop npm worm / "Mini Shai-Hulud" (StepSecurity + Aikido + Socket + Endor Labs,
+  // August 4 2026). A takeover of the jaredwray npm/GitHub account seeded keyv@6.0.0 and
+  // the cacheable family, then a self-replicating worm republished the same preinstall
+  // dropper across hundreds of packages in under four hours. Stage 2 harvests .npmrc and
+  // GitHub CLI tokens, AWS and Vault credentials, kubeconfigs and crypto wallets, and
+  // POSTs them to hxxps://npm-cache[.]com:443/router. Attacker-registered lookalike of the
+  // npm cache endpoint, so the apex is safe to list; the /router path is covered by the
+  // host entry. The cloud metadata addresses (169.254.169.254, 169.254.170.2) the stage-2
+  // payload queries are deliberately NOT listed - they are legitimate link-local endpoints
+  // present in ordinary infrastructure code, and blocking them would flag every repo.
+  "npm-cache.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -690,6 +702,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // files, 13 versions) and collide with none, so a clean install cannot trip these.
   "0404f8590fdaef95280c1d908068f31bf2321fe887faabf0c2329ba67c7203cb": "mrmustard 0.7.4 poisoned sdist (SHA256)",
   "81f0d1291a975d012d1b892cf9967557fdbb1ad4e1ac0545702ad235ace1cac5": "mrmustard 0.7.4 poisoned wheel (SHA256)",
+
+  // ChainDrop npm worm / "Mini Shai-Hulud" (August 4 2026). The two dropper hashes are the
+  // setup.mjs run by the injected `"preinstall": "node setup.mjs"` hook - one per wave, the
+  // second appearing once the worm started republishing from other accounts. The stage-2
+  // hash covers the 727,680-byte payload shipped under two names (Math_Symbol.js and
+  // math_init.js), which are byte-identical, so one hash catches both. All three were
+  // published identically by StepSecurity, Aikido, Socket and Endor Labs.
+  "54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668": "ChainDrop setup.mjs preinstall dropper, wave 1 (SHA256)",
+  "fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb": "ChainDrop setup.mjs preinstall dropper, later waves (SHA256)",
+  "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc": "ChainDrop stage-2 credential stealer, Math_Symbol.js / math_init.js (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -867,6 +889,14 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
     "Joyfill/DEV#POPPER Aptos C2 resolver account (July 2026)",
   "9bc1355344b54dedf3e44296916ed15653844509":
     "Joyfill/DEV#POPPER BNB Smart Chain C2 resolver contract (July 2026)",
+
+  // ChainDrop npm worm / "Mini Shai-Hulud" (August 4 2026). Ethereum mainnet contract the
+  // stage-2 payload reads (function selector 0x53ed5143) to resolve its current exfil
+  // domain, so the C2 host can be rotated without republishing the package. The RPC
+  // provider the payload reaches it through is a legitimate public Ethereum endpoint and is
+  // deliberately NOT listed - only the attacker's own contract is.
+  "0xE1f2395ee43e45A1556EC6438a88c31B83493103":
+    "ChainDrop Ethereum mainnet dead-drop C2 resolver contract (August 2026)",
 };
 
 /**
@@ -1439,6 +1469,86 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@joyfill/layouts": {
     versions: ["0.1.2-2773.beta.0", "0.1.2-2773.beta.1", "0.1.2-2773.beta.2"],
     description: "Joyfill npm compromise / DEV#POPPER: malicious beta releases ship a five-stage chain ending in a Socket.IO RAT and a Python credential stealer; the loader runs on import, so --ignore-scripts does not stop it. Legitimate package - only these three 2773 betas are malicious (July 28, 2026)",
+  },
+
+  // ChainDrop npm worm / "Mini Shai-Hulud" (August 4 2026). Every package below is a
+  // LEGITIMATE, long-standing project whose maintainer account was taken over, so each is
+  // version-pinned to the single hijacked release rather than blocked by name. All of these
+  // versions were published inside one 75-minute burst (09:31-10:45 UTC on 2026-08-04),
+  // which is the worm's propagation window; each was confirmed to exist on the registry
+  // with that publish timestamp before being ingested. Note keyv's "latest" tag still
+  // points at 5.6.0 - the malicious 6.0.0 was never the default install.
+  "keyv": {
+    versions: ["6.0.0"],
+    description: "ChainDrop npm worm: preinstall dropper fetches a Bun runtime and runs a 727KB credential stealer targeting npm/GitHub/AWS/Vault tokens, kubeconfigs and crypto wallets. Legitimate package (127M+ weekly downloads) - only 6.0.0 is malicious, latest remains 5.6.0 (August 4, 2026)",
+  },
+  "@keyv/redis": {
+    versions: ["6.0.0"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 6.0.0 is malicious (August 4, 2026)",
+  },
+  "@keyv/sqlite": {
+    versions: ["6.0.0"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 6.0.0 is malicious (August 4, 2026)",
+  },
+  "@keyv/mongo": {
+    versions: ["6.0.0"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 6.0.0 is malicious (August 4, 2026)",
+  },
+  "cacheable": {
+    versions: ["2.5.1"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 2.5.1 is malicious (August 4, 2026)",
+  },
+  "cacheable-request": {
+    versions: ["13.0.20"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 13.0.20 is malicious (August 4, 2026)",
+  },
+  "cache-manager": {
+    versions: ["7.2.10"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 7.2.10 is malicious (August 4, 2026)",
+  },
+  "@cacheable/memory": {
+    versions: ["2.2.1"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 2.2.1 is malicious (August 4, 2026)",
+  },
+  "@cacheable/node-cache": {
+    versions: ["3.1.2"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 3.1.2 is malicious (August 4, 2026)",
+  },
+  "@cacheable/utils": {
+    versions: ["2.5.1"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 2.5.1 is malicious (August 4, 2026)",
+  },
+  "@cacheable/net": {
+    versions: ["2.1.1"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 2.1.1 is malicious (August 4, 2026)",
+  },
+  "flat-cache": {
+    versions: ["6.1.24"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 6.1.24 is malicious (August 4, 2026)",
+  },
+  "file-entry-cache": {
+    versions: ["11.1.6"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 11.1.6 is malicious; one vendor reported 11.1.7, which does not exist on the registry (August 4, 2026)",
+  },
+  "ecto": {
+    versions: ["5.0.1"],
+    description: "ChainDrop npm worm: same preinstall dropper as keyv@6.0.0, published from the compromised maintainer account. Legitimate package - only 5.0.1 is malicious (August 4, 2026)",
+  },
+  "@thiennq/docs-viewer": {
+    versions: ["1.6.2"],
+    description: "ChainDrop npm worm: republished by the worm from a second compromised publisher account. Legitimate package - only 1.6.2 is malicious (August 4, 2026)",
+  },
+  "@deliveroo/reevent": {
+    versions: ["1.0.1"],
+    description: "ChainDrop npm worm: republished by the worm from a second compromised publisher account. Legitimate package - only 1.0.1 is malicious (August 4, 2026)",
+  },
+  "@or-sdk/invitations": {
+    versions: ["1.4.9"],
+    description: "ChainDrop npm worm: republished by the worm from a second compromised publisher account. Legitimate package - only 1.4.9 is malicious (August 4, 2026)",
+  },
+  "@picsart/ai-sdk": {
+    versions: ["3.32.2"],
+    description: "ChainDrop npm worm: republished by the worm from a second compromised publisher account. Legitimate package - only 3.32.2 is malicious (August 4, 2026)",
   },
 };
 

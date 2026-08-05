@@ -3652,4 +3652,133 @@ describe("Campaign Signatures", () => {
       expect(finding, "the webhook.site apex must not be blocked").toBeUndefined();
     });
   });
+
+  // =================================================================
+  // ChainDrop npm worm / "Mini Shai-Hulud" (August 2026)
+  // =================================================================
+
+  describe("ChainDrop npm worm (August 2026)", () => {
+    // Every package in this campaign is a legitimate, heavily-depended-on project whose
+    // publisher account was taken over, so these are version pins rather than name blocks.
+    // keyv alone carries 127M+ weekly downloads, which makes the negative tests below the
+    // load-bearing ones: a name block here would fire on a large share of the ecosystem.
+    it("flags the hijacked keyv@6.0.0 through a real scan", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { keyv: "6.0.0" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding, "the hijacked keyv release must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the clean keyv@5.6.0 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { keyv: "5.6.0" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /keyv/.test(JSON.stringify(f)));
+      expect(
+        finding,
+        "only 6.0.0 is malicious - 5.6.0 is still the latest tag and must stay clean",
+      ).toBeUndefined();
+    });
+
+    it("flags the hijacked flat-cache@6.1.24 through a real scan", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "flat-cache": "6.1.24" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding, "the hijacked flat-cache release must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the clean flat-cache@6.1.5 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "flat-cache": "6.1.5" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /flat-cache/.test(JSON.stringify(f)));
+      expect(finding, "only 6.1.24 is malicious - 6.1.5 must stay clean").toBeUndefined();
+    });
+
+    it("flags the credential exfiltration C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.mjs"),
+        'const c2 = "https://npm-cache.com:443/router";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the ChainDrop exfil host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the stage-2 credential stealer hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest.js"),
+        'const sha = "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the stage-2 payload hash must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the Ethereum dead-drop C2 resolver contract", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "resolver.js"),
+        'const contract = "0xE1f2395ee43e45A1556EC6438a88c31B83493103";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_WALLET");
+      expect(finding, "the on-chain dead-drop contract must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The stage-2 payload queries the cloud metadata service, but those addresses are
+    // legitimate link-local endpoints that appear in ordinary infrastructure code. They
+    // are targets of the malware, not indicators of it, and must never be ingested.
+    it("does NOT flag the cloud metadata addresses the payload queries", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "imds.js"),
+        'const imds = "http://169.254.169.254/latest/meta-data/";\n' +
+          'const ecs = "http://169.254.170.2/v2/credentials";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /169\.254\./.test(JSON.stringify(f)));
+      expect(
+        finding,
+        "cloud metadata endpoints are legitimate infrastructure and must not be blocked",
+      ).toBeUndefined();
+    });
+  });
 });

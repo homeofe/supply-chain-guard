@@ -19,7 +19,7 @@ Branch `codex/release-v5.25.3` carries the narrow packaged self-scan fix.
 | Release target | v5.25.3 |
 | Merged implementation | 7481d63, PR #114 |
 | Working branch base | 0e68fef |
-| Threat feed | 6,315 entries |
+| Threat feed | 6,588 entries, feed.json regeneration pending |
 | AAHP dependency | 3.9.1, exact pin |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |
@@ -27,6 +27,78 @@ Branch `codex/release-v5.25.3` carries the narrow packaged self-scan fix.
 AAHP 3.9.1 is the installed consumer artifact. The repository keeps its own
 handoff state and a narrow local script customization; upgrading the package
 does not overwrite or silently discard that consumer state.
+
+---
+
+## Threat-Intel Run 2026-08-05 (INCOMPLETE - gates not run)
+
+Model: claude-opus-5. Working tree carries an unfinished threat-intel change.
+It is NOT committed, NOT pushed, and NO pull request was opened, because the
+environment blocked all Node execution partway through the run.
+
+### What landed in the working tree
+
+- `src/threat-intel.ts`: +251 imported package IOCs, +22 hand-added ChainDrop
+  entries. Feed now holds 6,588 entries, up from 6,315.
+- `src/ioc-blocklist.ts`: ChainDrop exfil host, Ethereum dead-drop C2 resolver
+  contract, three payload hashes, 18 version-pinned hijacked packages.
+- `src/__tests__/campaigns.test.ts`: ChainDrop describe block, 8 cases, with
+  clean-version and cloud-metadata negatives.
+- `CHANGELOG.md`: entry under `## [Unreleased]`. No version bump, by design.
+
+### Import accounting
+
+The default run reported 2,338 entries still behind `--limit 250`, and flagged
+exactly one as undrainable: it would have aged out of the 14-day window before
+any future run could reach it. That entry, `n8n-nodes-probe@1.0.4`
+(GHSA-v527-x59j-frgj), was recovered first with an explicit exempt slice
+`--since 2026-07-22 --until 2026-07-28`, after which the default run exited
+clean with no backlog warning. No override flag was used. The remaining 2,337
+are all recent and stay reachable by the next scheduled run.
+
+### Windows handoff-gate fixes, found while running STEP 4e
+
+`npm run handoff:refresh` could not regenerate MANIFEST.json from a Windows
+checkout. Two independent defects, both pre-existing and neither caused by the
+threat-intel change; CI on Linux was unaffected, which is why they went unseen.
+
+- `scripts/aahp-dashboard.mjs` passed a native `C:\...` path to bash. MSYS
+  re-parses the Windows command line and treats backslashes as escapes, so bash
+  received `C:reposcriptsaahp-manifest.sh` and reported it missing - even though
+  execFileSync uses an argv array and no shell. Path arguments are now
+  forward-slashed on win32 only.
+- The same call trusted whatever `bash` resolved to on PATH. On Windows that is
+  normally `C:\Windows\System32\bash.exe`, the WSL launcher, and WSL mounts the
+  host at `/mnt/c` with no `C:` drive - so once the path was well-formed it still
+  failed, now with "No such file or directory" for a file that demonstrably
+  exists. That symptom reads as a missing script rather than a wrong interpreter,
+  which is what made this worth writing down. Git-Bash is now preferred
+  explicitly on win32; `AAHP_BASH` still overrides.
+- `.gitattributes` pinned `*.mjs` to LF but not `*.sh`. With `core.autocrlf=true`
+  both `scripts/aahp-manifest.sh` and `scripts/_aahp-lib.sh` were checked out
+  CRLF, and bash failed with `$'\r': command not found` and
+  `set: pipefail: invalid option name`. Now pinned to LF.
+
+The `.gitattributes` rule only governs future checkouts. The two working-tree
+copies are still CRLF and must be renormalized once:
+`git checkout-index -f -- scripts/aahp-manifest.sh scripts/_aahp-lib.sh`
+
+### Blocked steps, in order
+
+`npm run feed:generate` has since been run and succeeded (6,588 entries), so
+feed.json is current. Still outstanding:
+
+1. Renormalize the two shell scripts, per the command above.
+2. `npm run handoff:refresh` - DASHBOARD/TRUST/LOG and MANIFEST checksums are
+   stale, including from this very edit. `check:handoff` stays red until it runs,
+   and it cannot succeed before step 1.
+3. `npm run build` and the targeted vitest suites (`feed`, `threat-intel`,
+   `campaigns`, `ioc-blocklist`, `feed-import`). No pattern table was modified,
+   so the regex-shape validator is not implicated, but nothing here has been
+   executed and the new tests have never run.
+
+Do not open the pull request until 1-3 are green. Nothing was committed, so
+discarding the working tree is a clean reset if the change is not wanted.
 
 ---
 
