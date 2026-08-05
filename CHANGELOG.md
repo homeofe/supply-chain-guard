@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- The Action's PR comment now explains a recovered clean scan instead of posting a
+  blank line. `reportForComment` was guarded on its own indented value, and indenting
+  an empty report yields four spaces, which is truthy - so the clean-scan fallback was
+  unreachable and every `if (reportForComment)` guard always fired. It surfaced only
+  when a stale findings or partial comment was replaced on the return to clean, which
+  is exactly when the reader needs to be told the run came back clean. An empty report
+  is reachable through a failed report read or an empty report file. The verdict line
+  was never affected, so no comment ever claimed clean when it was not.
+
 ## [5.25.4] - 2026-08-05
 
 ### Added

@@ -16,7 +16,7 @@ ChainDrop indicators, and three Windows-only handoff-gate fixes.
 |-------|---------------|
 | Released package | v5.25.3 on npm |
 | Release commit | 56137d4 |
-| Release target | v5.25.4 |
+| Release target | v5.25.4 released; next is unreleased Action comment fix |
 | Merged implementation | 74830f2, PR #117 |
 | Working branch base | 74830f2 |
 | Threat feed | 6,588 entries, feed.json current |
@@ -170,6 +170,21 @@ the tool and owns the full-suite result.
 ---
 
 ## Live Decisions and Remaining Work
+
+### Action PR-comment fallback (fixed, unreleased)
+
+`action.yml` guarded `reportForComment` on its own indented value. Indenting an empty
+report produces four spaces, which is truthy, so the clean-scan fallback at the end of
+the detail chain was unreachable and the three `if (reportForComment)` guards always
+fired. Verified by execution, not by reading: an empty report is reachable through a
+failed report read or an empty file, and the visible effect is a blank indented line
+where the clean explanation belongs. The verdict line is separate, so no comment ever
+claimed clean when it was not - degraded, never falsely reassuring.
+
+Reachability is narrower than it first looked: a first clean scan posts no comment at
+all, so this only appeared when a stale findings or partial comment was replaced on the
+return to clean. Two scanner-level tests now drive the real comment script through the
+update path; both fail against the previous guard.
 
 - T-009: implement cryptographic offline DSSE, Fulcio-chain, and Rekor inclusion
   verification.

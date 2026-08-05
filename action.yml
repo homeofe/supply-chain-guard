@@ -417,10 +417,17 @@ runs:
           // Treat every scanner-rendered line as inert code. Even the Markdown
           // formatter contains package-controlled text, which must not create
           // links, images, headings, mentions, or other active PR content.
+          // Guard on the SOURCE, not the indented result. Indenting an empty
+          // report yields '    ', which is truthy, so every `if (reportForComment)`
+          // below would fire and the clean-scan fallback would be unreachable -
+          // a run that recovered to clean would replace a stale warning comment
+          // with a blank indented line instead of saying so.
           let reportForComment = escapedReport
-            .split(/\r?\n/)
-            .map((line) => `    ${line}`)
-            .join('\n');
+            ? escapedReport
+                .split(/\r?\n/)
+                .map((line) => `    ${line}`)
+                .join('\n')
+            : '';
           if (reportReadTruncated && reportForComment) {
             reportForComment += '\n\n> Report excerpt truncated before comment construction.';
           }

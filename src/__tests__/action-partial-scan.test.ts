@@ -313,6 +313,35 @@ describe("Marketplace Action fail-closed contract", () => {
     expect(calls.created?.body).not.toContain("no reportable malicious indicators detected");
   });
 
+  // An empty report indents to "    " (four spaces), which is truthy. Guarding on
+  // the indented string instead of the source made the clean-scan fallback
+  // unreachable and every `if (reportForComment)` guard always true. A first clean
+  // scan posts nothing at all, so this only surfaces when a stale finding or
+  // partial comment is replaced on the return to clean - which is exactly when the
+  // reader most needs to be told the run came back clean.
+  it("explains the clean result when replacing a stale comment and the report cannot be read", async () => {
+    const calls = await runCommentScenario({
+      reportValid: true,
+      findingsCount: 0,
+      outcome: "success",
+      existingBody: "## supply-chain-guard Scan Report\n\n> WARNING: Findings were detected.",
+      // report omitted: the file is never written, so the read throws and the
+      // script falls back to an empty report string.
+    });
+    expect(calls.updated?.body).toContain("no reportable malicious indicators detected");
+  });
+
+  it("explains the clean result when replacing a stale comment and the report is empty", async () => {
+    const calls = await runCommentScenario({
+      report: "   \n  ",
+      reportValid: true,
+      findingsCount: 0,
+      outcome: "success",
+      existingBody: "## supply-chain-guard Scan Report\n\n> WARNING: Scan incomplete.",
+    });
+    expect(calls.updated?.body).toContain("no reportable malicious indicators detected");
+  });
+
   it("lets canonical partial metadata override a contradictory formatted report", async () => {
     const calls = await runCommentScenario({
       report: "Formatter claimed clean",

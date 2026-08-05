@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1785918704",
-    "timestamp": "2026-08-05T08:31:44Z",
-    "commit": "74830f2",
+    "session_id": "cli-1785919908",
+    "timestamp": "2026-08-05T08:51:48Z",
+    "commit": "e7effc4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:cb92ba8469ed258958196b0133706d9b95e2a48225611c344fbf7032dba14bc6",
-      "updated": "2026-08-05T08:31:30Z",
-      "lines": 196,
+      "checksum": "sha256:cd280117150cc66bf3837d375c27dac20d0ad60bce6af3286a9c33ba51f39937",
+      "updated": "2026-08-05T08:51:34Z",
+      "lines": 211,
       "summary": "v5.25.3 was published and the 2026-08-05 threat-intel run has since landed on"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3709f6c26a406d7db4bdd36349b4f6abab1d97167b867ec90087f2696f61ca7c",
-      "updated": "2026-08-05T08:30:27Z",
+      "updated": "2026-08-05T08:35:30Z",
       "lines": 164,
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:4c7c05f75679c8ba2641519b0cf8a7ffb4ccbd2f11b9ac22e197b5410acaefe9",
-      "updated": "2026-08-05T08:31:44Z",
+      "updated": "2026-08-05T08:51:47Z",
       "lines": 137,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:5dfa918495471b0ffee209970cb897731446793ece4dd2dd99141cd620192b2b",
-      "updated": "2026-08-05T08:31:44Z",
+      "updated": "2026-08-05T08:51:47Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:561b706dd7252b5bd815a6619e4360fcecf309833defcbd75b095df85debd6db",
-      "updated": "2026-08-05T08:31:44Z",
+      "updated": "2026-08-05T08:51:47Z",
       "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,8 +80,8 @@
   "quick_context": "v5.25.3 was published and the 2026-08-05 threat-intel run has since landed on Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 3346,
-    "full_read": 13200
+    "manifest_plus_core": 3553,
+    "full_read": 13407
   }
   ,"next_task_id": 16
   ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"}}
