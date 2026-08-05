@@ -10,7 +10,9 @@
 
 v5.25.3 was published and the 2026-08-05 threat-intel run has since landed on
 main (PR #117). v5.25.4 is being cut from it: 251 imported IOCs, 22 hand-added
-ChainDrop indicators, and three Windows-only handoff-gate fixes.
+ChainDrop indicators, and three Windows-only handoff-gate fixes. A second,
+unreleased branch converges this repo's AAHP-adjacent tooling with upstream -
+see "AAHP convergence" below.
 
 | Field | Current state |
 |-------|---------------|
@@ -20,13 +22,86 @@ ChainDrop indicators, and three Windows-only handoff-gate fixes.
 | Merged implementation | 74830f2, PR #117 |
 | Working branch base | 74830f2 |
 | Threat feed | 6,588 entries, feed.json current |
-| AAHP dependency | 3.9.1, exact pin |
+| AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 on the convergence branch) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |
 
-AAHP 3.9.1 is the installed consumer artifact. The repository keeps its own
-handoff state and a narrow local script customization; upgrading the package
-does not overwrite or silently discard that consumer state.
+AAHP 3.9.2 is the installed consumer artifact. `scripts/scg-handoff-docs.mjs`
+(renamed from `aahp-dashboard.mjs`) is this repo's own project-specific
+handoff-doc generator - it is not, and never was, an AAHP tool, despite the
+former name suggesting otherwise. It now imports AAHP's shared bash-resolution,
+Windows-path-conversion, and changelog-grammar primitives instead of vendoring
+private copies of them.
+
+---
+
+## AAHP convergence (2026-08-05, unreleased, branch chore/aahp-converge-shared-primitives)
+
+Emre's instruction: no divergence between this repo and AAHP. Prior state
+(audited this session, by execution not by reading): this repo vendored local
+copies of `_aahp-lib.sh` and `aahp-manifest.sh` purely because its own fork
+dashboard (`aahp-dashboard.mjs`) called them locally rather than importing
+AAHP's package. `_aahp-lib.sh` was purely stale (missing `aahp_manifest_index`
+and a since-fixed table-separator regex); `aahp-manifest.sh` was actually AHEAD
+of AAHP on one point (it preserved MANIFEST `project` on regeneration; AAHP
+clobbered it) - that fix was upstreamed into AAHP 3.9.2 first (AAHP PR #64),
+removing the only reason this repo's copy was ever ahead.
+
+What changed on this branch:
+
+- Bumped `@elvatis_com/aahp` 3.9.1 -> 3.9.2 (exact pin, `pinnedDep.allowRange: false`).
+- `aahp-dashboard.mjs` renamed to `scripts/scg-handoff-docs.mjs` (`git mv`, history preserved).
+  Its own header comment now explicitly disclaims being an AAHP tool.
+- Deleted the two locally-vendored `scripts/_aahp-lib.sh` and `scripts/aahp-manifest.sh`.
+  The renamed generator now imports `resolveBash`/`toBashPath` from
+  `@elvatis_com/aahp/scripts/aahp-config.mjs` and `RELEASE_RE` from
+  `@elvatis_com/aahp/scripts/changelog-grammar.mjs` (deep import; the package
+  ships `scripts/` with no `exports` map restricting it), and resolves the
+  packaged `aahp-manifest.sh` via `createRequire(...).resolve(...)` instead of
+  a local sibling file.
+- This closes a real bug for free: the local heading regex
+  (`/^## \[(\d+\.\d+\.\d+)\] - .../`) silently dropped SemVer pre-release
+  headings from the generated LOG.md table with no error. `RELEASE_RE` is a
+  strict superset (adds an optional `-[0-9A-Za-z.-]+` group), so every
+  currently-committed CHANGELOG heading produces byte-identical output; only
+  a future pre-release heading behaves differently (correctly, now).
+- `src/__tests__/handoff-gate.test.ts` (13 tests, unchanged behavioral
+  coverage) updated: its isolated tmp fixture can no longer copy the two bash
+  files from this repo's own `scripts/` (they are gone), so it now stubs
+  `node_modules/@elvatis_com/aahp/` inside the fixture, copied from whatever
+  is actually installed - the fixture can never silently drift from the real
+  pin. One test's expected value changed to match AAHP's own (correct, already
+  released) `_aahp-lib.sh` summary-filter behavior: a table header row is real
+  content, not header chrome, so it is the correct one-line summary, not a
+  later prose line the old, narrower SCG-local filter used to expose instead.
+  Two tests that call `refresh()` twice needed a longer timeout (subprocess
+  spawn on Windows measured ~6s/call; confirmed this is pre-existing behavior
+  identical on the pre-rename script, not a regression from this change).
+- Regenerated DASHBOARD.md/TRUST.md/LOG.md/MANIFEST.json. Diff is minimal and
+  expected: the AUTO-GENERATED banner's filename, and the truthfully-written
+  (but ungated) `@elvatis_com/aahp` row in the Toolchain table.
+
+Verified this session: `npm run build` (governance + feed + handoff gates +
+tsc) green; `npx aahp check .` 7/7 gates pass (handoff sub-check correctly
+skipped per `config.check.skip`, NOT the full protocol - see below);
+`src/__tests__/handoff-gate.test.ts` 13/13 green.
+
+Not yet done: `npx aahp verify . --level ci` correctly fails Layer 2 until
+this STATUS.md + MANIFEST.json update lands in the same commit (in progress).
+Full Vitest suite not yet re-run this session (targeted file only, per this
+project's own "do not run the full suite carelessly" convention - confirm
+timing before deciding local vs. openclaw). Not merged: this is a second
+public repo with a floating `v5` Action branch; PR pending explicit go-ahead
+before merge, per standing instruction.
+
+Correction to a claim from AAHP's own audit of this repo: `.supply-chain-guard.yml`'s
+SHAI_HULUD_WORM/SHAI_HULUD_CRED_STEAL suppressions are NOT path-scoped to the
+generator file (no `path:` key is set in the actual YAML, despite the
+schema supporting one) - they suppress repo-wide. The `reason:` text merely
+explains why the trigger comes from that file. Filename references in the
+`reason:` text updated for the rename; suppression scope unchanged (tightening
+it to a real `path:` scope would be a separate, deliberate improvement, not
+folded into this rename).
 
 ---
 
@@ -194,8 +269,9 @@ update path; both fail against the previous guard.
 - T-014: replace the external zip test-fixture dependency and add Windows coverage.
 - T-013 remains blocked on an owner decision to raise package engines and both
   CI Node jobs together for Babel 8. Do not merge Babel 8 alone.
-- AAHP 3.9.1 detects a canonical file present on disk but missing from the
-  manifest; deleting both the file and its entry remains an upstream required-set gap.
+- AAHP (3.9.2, still true) detects a canonical file present on disk but missing
+  from the manifest; deleting both the file and its entry remains an upstream
+  required-set gap.
 
 Threat-feed imports remain review-sliced. Never use backlog/truncation overrides
 merely to make an import exit clean; retain explicit ecosystem/date coverage and

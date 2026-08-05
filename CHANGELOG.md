@@ -18,6 +18,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   is reachable through a failed report read or an empty report file. The verdict line
   was never affected, so no comment ever claimed clean when it was not.
 
+### Changed
+
+- Bumped `@elvatis_com/aahp` 3.9.1 -> 3.9.2 (exact pin), and converged this repo's own
+  handoff-doc generator with it: renamed `scripts/aahp-dashboard.mjs` to
+  `scripts/scg-handoff-docs.mjs` (it is a project-specific generator, not an AAHP tool,
+  despite the former name), deleted the two locally-vendored copies of AAHP's
+  `_aahp-lib.sh`/`aahp-manifest.sh`, and imported AAHP's shared bash-resolution,
+  Windows-path-conversion, and changelog-grammar primitives from the installed package
+  instead. Closes a latent bug for free: the local CHANGELOG heading regex silently
+  dropped SemVer pre-release headings from the generated LOG.md table.
+
 ## [5.25.4] - 2026-08-05
 
 ### Added
