@@ -8,7 +8,7 @@
 
 Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete.
 
-Current version: **v5.25.4**
+Current version: **v5.25.5**
 
 ---
 
@@ -22,8 +22,7 @@ follow-ups are ready, and the Node/Babel support-matrix decision is owner-blocke
 | Ready | 5 |
 | Blocked | 1 |
 
-The published package is v5.25.2. Its packaged self-scan fix and v5.25.3
-release metadata are unreleased on `codex/release-v5.25.3`.
+The published package is v5.25.5.
 
 ---
 
@@ -130,6 +129,7 @@ do not merge Babel 8 alone.
 
 | Item | Resolution |
 |------|------------|
+| v5.25.5: AAHP shared-primitive convergence | PR #120 merged: AAHP bumped 3.9.1->3.9.2, `aahp-dashboard.mjs` renamed to `scg-handoff-docs.mjs`, two vendored bash files deleted, shared primitives imported instead; PR #119 Action comment fix also included |
 | T-015: packaged self-scan own-definition false positive | Package-shaped trusted/untrusted regressions pass; v5.25.3 is the recovery release |
 | v5.25.2: AAHP 3.9.1 and security hardening | Released 2026-08-04; live install smoke exposed the T-015 packaged self-scan gap |
 | T-008: AAHP 3.9.1 adoption and verified hardening | 247 focused tests, build, audit, independent review, and PR #114 Linux CI passed |

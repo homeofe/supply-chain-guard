@@ -8,21 +8,20 @@
 
 ## At a Glance
 
-v5.25.3 was published and the 2026-08-05 threat-intel run has since landed on
-main (PR #117). v5.25.4 is being cut from it: 251 imported IOCs, 22 hand-added
-ChainDrop indicators, and three Windows-only handoff-gate fixes. A second,
-unreleased branch converges this repo's AAHP-adjacent tooling with upstream -
-see "AAHP convergence" below.
+v5.25.4 was published (2026-08-05 threat-intel run: 251 imported IOCs, 22
+hand-added ChainDrop indicators, three Windows-only handoff-gate fixes).
+v5.25.5 is being cut from it: the Action PR-comment fallback fix (#119) and
+the AAHP shared-primitive convergence (#120, merged 9f5e01a) - see "AAHP
+convergence" below for the latter's detail.
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.3 on npm |
-| Release commit | 56137d4 |
-| Release target | v5.25.4 released; next is unreleased Action comment fix |
-| Merged implementation | 74830f2, PR #117 |
-| Working branch base | 74830f2 |
-| Threat feed | 6,588 entries, feed.json current |
-| AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 on the convergence branch) |
+| Released package | v5.25.4 on npm |
+| Release target | v5.25.5, this branch (chore/release-v5.25.5) |
+| Merged since v5.25.4 | #119 (Action comment fix), #120 (AAHP convergence) |
+| Working branch base | 9f5e01a (main, post-#120) |
+| Threat feed | 6,588 entries, feed.json regenerated at v5.25.5 |
+| AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |
 
@@ -81,18 +80,19 @@ What changed on this branch:
   expected: the AUTO-GENERATED banner's filename, and the truthfully-written
   (but ungated) `@elvatis_com/aahp` row in the Toolchain table.
 
-Verified this session: `npm run build` (governance + feed + handoff gates +
-tsc) green; `npx aahp check .` 7/7 gates pass (handoff sub-check correctly
-skipped per `config.check.skip`, NOT the full protocol - see below);
-`src/__tests__/handoff-gate.test.ts` 13/13 green.
+Verified: `npm run build` (governance + feed + handoff gates + tsc) green;
+`npx aahp check .` 7/7 gates pass (handoff sub-check correctly skipped per
+`config.check.skip`, NOT the full protocol - see below); `npx aahp verify .
+--level ci` all 4 layers green; `src/__tests__/handoff-gate.test.ts` 13/13
+green locally, twice. Full Vitest suite not run locally (Windows subprocess
+spawning is disproportionately slow for the one handoff-gate file alone) but
+confirmed via PR #120's own required Linux CI: `Build and Test` ran all 108
+files / 2,655 tests, all passed, 64s.
 
-Not yet done: `npx aahp verify . --level ci` correctly fails Layer 2 until
-this STATUS.md + MANIFEST.json update lands in the same commit (in progress).
-Full Vitest suite not yet re-run this session (targeted file only, per this
-project's own "do not run the full suite carelessly" convention - confirm
-timing before deciding local vs. openclaw). Not merged: this is a second
-public repo with a floating `v5` Action branch; PR pending explicit go-ahead
-before merge, per standing instruction.
+Merged 2026-08-05 as PR #120 (9f5e01a), with explicit go-ahead - a second
+public repo with a floating `v5` Action branch. Release v5.25.5 (this branch,
+chore/release-v5.25.5) bundles this convergence with the already-merged #119
+Action comment fix.
 
 Correction to a claim from AAHP's own audit of this repo: `.supply-chain-guard.yml`'s
 SHAI_HULUD_WORM/SHAI_HULUD_CRED_STEAL suppressions are NOT path-scoped to the
