@@ -712,6 +712,14 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668": "ChainDrop setup.mjs preinstall dropper, wave 1 (SHA256)",
   "fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb": "ChainDrop setup.mjs preinstall dropper, later waves (SHA256)",
   "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc": "ChainDrop stage-2 credential stealer, Math_Symbol.js / math_init.js (SHA256)",
+  // Distribution artefact rather than a payload file: the hash of the published
+  // keyv-6.0.0.tgz itself. keyv@6.0.0 is already version-pinned in
+  // KNOWN_BAD_NPM_VERSIONS, so this only adds a second detection path for the
+  // same release - it fires where the tarball digest is recorded as text (mirror
+  // manifests, vendoring scripts, incident notes). Single-source: only Snyk
+  // published it, and the two hashes above round-tripped byte-identical from the
+  // same write-up, which is what corroborates the fetch.
+  "d584f9b6af48b7ed1f93713944f033783bf149e1c25e1643eb8c0e9df5dc7782": "ChainDrop poisoned keyv-6.0.0.tgz distribution tarball (SHA256)",
 };
 
 // ---------------------------------------------------------------------------

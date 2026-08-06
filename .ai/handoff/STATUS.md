@@ -1,6 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-05. This is one current snapshot, not a session log.
+> Updated 2026-08-06. This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
@@ -31,6 +31,66 @@ handoff-doc generator - it is not, and never was, an AAHP tool, despite the
 former name suggesting otherwise. It now imports AAHP's shared bash-resolution,
 Windows-path-conversion, and changelog-grammar primitives instead of vendoring
 private copies of them.
+
+---
+
+## Threat-intel run (2026-08-06, unreleased, branch threat-intel/2026-08-06)
+
+Model: claude-opus-5. No version bump - the version belongs to Emre's release.
+
+Imported 358 package IOCs (250 standard batch + a 108-entry explicit slice) and
+hand-added 2 non-package indicators. Detail is in the CHANGELOG `[Unreleased]`
+block; what follows is the part that needs a human decision.
+
+**The `--days 14` window holds a backlog of 2,683 unimported entries, and it is
+not ordinary backlog.** The importer's undrainable check fired on the first run
+of this session: 108 entries in `2026-07-26..2026-07-28` were already more runs
+away than they had days left in the window, so no future capped run could ever
+have reached them. They were recovered here with an explicit
+`--since 2026-07-26 --until 2026-07-28 --limit 100000` slice, which is the
+remedy the importer itself prescribes, and the warning is gone on re-run.
+
+What remains is a bulk-publication spike concentrated on two days:
+
+| Day | New entries |
+|-----|-------------|
+| 2026-08-04 | 2,320 |
+| 2026-08-05 | 552 |
+| 2026-08-06 | 61 |
+
+The arithmetic currently says these are drainable at `--limit 250` (the
+importer reports 0 undrainable after the slice), but only just: 2,683 entries
+is roughly eleven more daily runs, and the 08-04 slice ages out of the window in
+twelve days. That margin assumes exactly one run per day and no new arrivals,
+and the fetch is newest-first, so every new advisory pushes the 08-04 tail
+further back. It is likely to go undrainable on its own.
+
+The content raises the stakes. Cross-referencing the 2026-08-04 spike against
+the safedep write-up of the ChainDrop / Shai-Hulud wave (2,234 poisoned versions
+across 444 package names, twelve organisations) shows the repo currently has
+**zero** feed coverage for two of the named scopes, `@hubsync` and `@ornikar`,
+while the other twelve scopes are partially covered. Those advisories are in
+the undrained remainder.
+
+Deliberately NOT done here, both recorded so they are not re-derived:
+
+- Not force-importing the remainder. The scheduled task is explicit that a
+  thousand-entry machine-generated diff must not be pushed into a public repo on
+  the agent's own initiative. Scope is Emre's call - see the PR body.
+- Not hand-adding the `@hubsync` / `@ornikar` versions. No source publishes the
+  per-scope version lists, and inventing version pins is the one thing the
+  enrichment step forbids.
+
+Two indicators were also deliberately rejected rather than ingested:
+
+- `ch4ce`, the attacker npm maintainer alias for the Alibaba RAT campaign.
+  `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` matches only the literal `github.com/<account>`,
+  so an npm-only alias can never fire there, and it would risk a false positive
+  against an unrelated GitHub user of the same name.
+- `jaredwray`, which safedep's IOC table lists under "attacker-controlled
+  accounts". That is a mis-framing: jaredwray is the compromised maintainer, the
+  victim. The repo already treats it correctly (named in a comment, absent from
+  the accounts blocklist) and that must stay the case.
 
 ---
 

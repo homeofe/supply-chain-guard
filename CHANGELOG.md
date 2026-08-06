@@ -7,6 +7,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 358 malicious-package IOCs imported from the GitHub Advisory Database
+  with OSV.dev corroboration. 250 are this run's standard batch; the other 108 are an
+  explicit `2026-07-26..2026-07-28` slice, imported because the importer's undrainable
+  check flagged them as about to age out of the `--days 14` window before any future
+  capped run could reach them. The bulk continues the dependency-confusion wave against
+  Tinkoff/T-Bank internal namespaces (`bigops-*`, `dolyame-boxy-*`, `bnpl-blocks-*`,
+  `statist-browser-typed-client-*`), which publishes with inflated version markers such
+  as `kepler@5.999.999`, alongside an AI-agent impersonation cluster
+  (`@agenthub-ai/agent`, `claw-subagent-service`, `llm-interceptor`), a fintech
+  `@scope/checkout` cluster, and three PyPI crypto stealers (`eth-account-wallet`,
+  `solana-sniper-bot`, `uncrypt`).
+- IOC blocklist: `fast-transform-pipeline` (npm) for the Alibaba developer toolchain RAT.
+  The repo already tracked the campaign's GitHub dead-drop repo of the same name, but the
+  npm package it was published as had no IOC, while its other 17 siblings were covered.
+  Bare name, no version pin: the source publishes no versions. Single-source (Socket),
+  so confidence 0.85.
+- IOC blocklist: SHA-256 of the poisoned `keyv-6.0.0.tgz` distribution tarball for the
+  ChainDrop npm worm. `keyv@6.0.0` is already version-pinned, so this adds a second
+  detection path for the same release where the tarball digest is recorded as text.
+  Single-source (Snyk), so confidence 0.85.
+
 ## [5.25.5] - 2026-08-05
 
 ### Fixed
