@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (121, newest first)
+## Releases (122, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.25.6 | 2026-08-06 | Threat feed: 358 malicious-package IOCs imported from the GitHub Advisory Database |
 | v5.25.5 | 2026-08-05 | The Action's PR comment now explains a recovered clean scan instead of posting a |
 | v5.25.4 | 2026-08-05 | Threat feed: 251 malicious-package IOCs imported from the GitHub Advisory |
 | v5.25.3 | 2026-08-04 | Installed package self-scans no longer treat the compiled Shai-Hulud matcher |

@@ -8,18 +8,19 @@
 
 ## At a Glance
 
-v5.25.4 was published (2026-08-05 threat-intel run: 251 imported IOCs, 22
-hand-added ChainDrop indicators, three Windows-only handoff-gate fixes).
-v5.25.5 is being cut from it: the Action PR-comment fallback fix (#119) and
-the AAHP shared-primitive convergence (#120, merged 9f5e01a) - see "AAHP
-convergence" below for the latter's detail.
+v5.25.5 was published (the Action PR-comment fallback fix #119 and the AAHP
+shared-primitive convergence #120 - see "AAHP convergence" below for the
+latter's detail). v5.25.6 is being cut from it and is a threat-intel release:
+the 2026-08-06 advisory sweep plus the ChainDrop backlog completion, merged as
+#122, which took the feed from 6,588 to 9,631 entries.
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.4 on npm |
-| Release target | v5.25.5, this branch (chore/release-v5.25.5) |
-| Merged since v5.25.4 | #119 (Action comment fix), #120 (AAHP convergence) |
-| Working branch base | 9f5e01a (main, post-#120) |
+| Released package | v5.25.5 on npm |
+| Release target | v5.25.6, this branch (chore/release-v5.25.6) |
+| Merged since v5.25.5 | #122 (advisory sweep + backlog completion) |
+| Working branch base | 4f4fc4f (main, post-#122) |
+| Open owner decisions | T-013 (Node/Babel matrix), T-016 (pinned IOCs on scan) |
 | Threat feed | 9,631 entries, feed.json regenerated at v5.25.5 (backlog drained, 0 waiting) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
@@ -87,6 +88,10 @@ previously showed up as `testFiles=107` in the generated dashboard did not
 recur; `handoff:refresh` reports `testFiles=108`.
 
 ### Needs a decision: version-pinned npm IOCs are unreachable from a repo scan
+
+> Tracked as **T-016** (blocked, owner decision) in MANIFEST.json and
+> NEXT_ACTIONS.md, which is where it survives the next rewrite of this file.
+> The analysis below is the evidence behind that task.
 
 `matchBareNpmIOC` (`src/install-guard.ts:242`) matches a version-pinned IOC only
 when a real version is supplied: line 257 returns on a bare-name IOC for any

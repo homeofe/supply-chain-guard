@@ -6,23 +6,24 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete.
+Five tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete.
 
-Current version: **v5.25.5**
+Current version: **v5.25.6**
 
 ---
 
 ## Status Summary
 
 AAHP 3.9.1 adoption and the verified security hardening are complete. Five
-follow-ups are ready, and the Node/Babel support-matrix decision is owner-blocked.
+follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
+matrix, and whether version-pinned npm IOCs should match on a directory scan.
 
 | Status | Count |
 |--------|-------|
 | Ready | 5 |
-| Blocked | 1 |
+| Blocked | 2 |
 
-The published package is v5.25.5.
+The published package is v5.25.6.
 
 ---
 
@@ -109,6 +110,52 @@ do not merge Babel 8 alone.
 - [ ] The owner selects and records the new minimum Node line.
 - [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
 - [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
+
+---
+
+## T-016: Decide whether version-pinned npm IOCs should match on a directory scan (blocked)
+
+**Goal:** Close the gap between what the feed knows and what `scan` reports, or
+record a deliberate decision not to.
+
+**The finding (verified by execution during the 2026-08-06 backlog import, not
+by reading):** `matchBareNpmIOC` (`src/install-guard.ts:242`) matches a
+version-pinned IOC only when a real version is supplied. Line 257 returns on a
+bare-name IOC for any version; line 258 requires
+`version !== undefined && iocVersion === version`. Only one caller passes a real
+version, `install-guard.ts:273` (`spec.version`). All three scanning callers pass
+`undefined`:
+
+- `src/scanner.ts:1653` - the dependency spec from package.json is discarded at
+  line 1647, which sets `version: undefined` for every non-alias dependency
+- `src/npm-scanner.ts:237` and `:319` - literal `undefined`
+
+Consequence: a project depending on a version-pinned malicious package is caught
+by `guard` but **not** by `scan`. That is 7,749 of the 9,374 package IOCs in the
+feed, including every `@hubsync` and `@ornikar` entry.
+
+Reproduction: a fixture depending on `@hubsync/web-sdk-react@6.3.10` scans clean,
+while `guard --dry-run npm install @hubsync/web-sdk-react@6.3.10` exits 2 with a
+critical `THREAT_INTEL_PACKAGE_IOC`. A bare-name IOC in the same fixture fires
+critical `MALICIOUS_DEPENDENCY` on the directory scan.
+
+**Blocked by:** Owner decision. This is a behaviour change with real
+false-positive surface, not a bug fix. Making pinned IOCs match a resolved
+version would start firing on lockfile-resolved and transitive versions that
+scan almost 8,000 pinned entries against, and a false positive gets the tool
+switched off, which is worse than a miss. Do not implement it on an agent's own
+initiative.
+
+**Acceptance criteria:**
+- [ ] The owner decides: match pinned IOCs on scan, leave scan as an install-time
+      guard only, or gate the behaviour behind a flag.
+- [ ] If matching is adopted, the version source is defined explicitly (declared
+      range in package.json vs resolved version in the lockfile) - these are not
+      the same and a declared range is not a version.
+- [ ] False-positive surface is measured against a real dependency tree before
+      the change ships, not asserted.
+- [ ] Documentation states which scan paths enforce pinned IOCs, so the feed
+      count is not read as scan coverage.
 
 ---
 
