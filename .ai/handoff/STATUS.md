@@ -20,7 +20,7 @@ convergence" below for the latter's detail.
 | Release target | v5.25.5, this branch (chore/release-v5.25.5) |
 | Merged since v5.25.4 | #119 (Action comment fix), #120 (AAHP convergence) |
 | Working branch base | 9f5e01a (main, post-#120) |
-| Threat feed | 6,588 entries, feed.json regenerated at v5.25.5 |
+| Threat feed | 9,631 entries, feed.json regenerated at v5.25.5 (backlog drained, 0 waiting) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |
@@ -34,15 +34,97 @@ private copies of them.
 
 ---
 
+## Backlog-completion import (2026-08-06, unreleased, branch threat-intel/2026-08-06)
+
+Model: claude-opus-5. Second commit on the same branch, so the curated first
+commit stays reviewable and this machine-generated drain is an isolated diff.
+No version bump - the version belongs to Emre's release.
+
+Emre authorised the full import. Window used: `--since 2026-08-04 --until
+2026-08-06 --limit 100000`. That narrow window was verified to be sufficient
+before running it: a dry run over it reported exactly 2,683 new entries, the
+same number the full `--days 14` window reported as waiting, so no entry sat
+outside it. **2,683 entries imported**, feed 6,948 -> **9,631**. The follow-up
+dry run reports 0 new and 0 undrainable, and duplicates rose by exactly 2,683.
+
+The 179 unmappable advisories (150 withdrawn, 22 unsafe package names, 7 bounded
+version ranges) remain excluded by design. They all sit in the older
+`2026-07-23..2026-08-03` part of the window, which is why the narrow window
+reported 0 skipped.
+
+**Bare-name audit (the only real false-positive risk).** 129 of the new entries
+are bare names, which block a package name outright. Every one was checked
+against the npm registry, not sampled: all 129 were created 2026-08-05 or
+2026-08-06, all have exactly one version, and **all 129 are npm "security
+holding packages"** - npm's own security team has already seized every name.
+No package in the set has any legitimate history, so nothing needed escalating.
+The remaining 2,554 new entries are version-pinned.
+
+**Gaps closed:** `@hubsync` 27 entries, `@ornikar` 441 (from zero). Both are
+entirely version-pinned, so neither scope is blocked wholesale. 7 new PyPI
+entries, all correctly `pypi:`-prefixed; no other ecosystem appeared. Prefix
+inversion is structurally impossible here: `ECOSYSTEM_PREFIX` lookups that miss
+are routed to `skipped: unsupported-ecosystem` rather than defaulting to a bare
+npm value, and this window skipped none.
+
+**Fixture scan (routing, not feed-array assertions).** A throwaway fixture
+depending on `@hubsync/web-sdk-react@6.3.10`, `@ornikar/apollo-link-timeout@1.4.2`,
+the new bare name `async-mutex-lock`, and a clean control `lodash@4.17.21`:
+
+| Path | Result |
+|------|--------|
+| Directory scan, bare name | FIRES, critical `MALICIOUS_DEPENDENCY` |
+| Directory scan, version-pinned | does NOT fire |
+| `guard --dry-run npm install <pkg>@<ver>`, pinned | FIRES, critical `THREAT_INTEL_PACKAGE_IOC`, exit 2 |
+| Clean control, both paths | stays clean |
+
+That third row is where the `@hubsync` / `@ornikar` coverage actually lives.
+See "Needs a decision" below: this is a pre-existing scanner limitation that
+this import did not cause and did not change.
+
+**Windows Defender exclusion is in place** for the repo, so the churn that
+previously showed up as `testFiles=107` in the generated dashboard did not
+recur; `handoff:refresh` reports `testFiles=108`.
+
+### Needs a decision: version-pinned npm IOCs are unreachable from a repo scan
+
+`matchBareNpmIOC` (`src/install-guard.ts:242`) matches a version-pinned IOC only
+when a real version is supplied: line 257 returns on a bare-name IOC for any
+version, line 258 requires `version !== undefined && iocVersion === version`.
+Only one caller passes a real version, `install-guard.ts:273` (`spec.version`).
+All three scanning callers hardcode `undefined`:
+
+- `src/scanner.ts:1653` - the dependency spec from package.json is discarded at
+  line 1647, which sets `version: undefined` for every non-alias dependency
+- `src/npm-scanner.ts:237` and `:319` - literal `undefined`
+
+So a project that depends on a version-pinned malicious package is NOT flagged
+by `scan`, only by `guard`. That covers 7,749 of the 9,374 package IOCs now in
+the feed, including every `@hubsync` and `@ornikar` entry this run added. It is
+pre-existing and out of scope for a threat-feed import, but it means "closes the
+`@hubsync`/`@ornikar` gaps" is true of the feed and only partly true of `scan`.
+Fixing it is a behaviour change with real false-positive surface (a pinned IOC
+would begin firing on lockfile-resolved versions), so it needs Emre, not an
+agent acting alone.
+
+---
+
 ## Threat-intel run (2026-08-06, unreleased, branch threat-intel/2026-08-06)
 
 Model: claude-opus-5. No version bump - the version belongs to Emre's release.
 
 Imported 358 package IOCs (250 standard batch + a 108-entry explicit slice) and
 hand-added 2 non-package indicators. Detail is in the CHANGELOG `[Unreleased]`
-block; what follows is the part that needs a human decision.
+block; what follows was the part that needed a human decision.
 
-**The `--days 14` window holds a backlog of 2,683 unimported entries, and it is
+> **RESOLVED 2026-08-06.** Emre decided to import the remainder. All 2,683
+> entries were drained in the backlog-completion commit on this branch (see the
+> section above); the feed is at 9,631 and the importer reports 0 waiting and 0
+> undrainable. The `@hubsync` and `@ornikar` feed gaps described below are
+> closed. The 179 unmappable entries stay excluded, as decided. The analysis
+> below is kept as the record of why the import was justified.
+
+**The `--days 14` window held a backlog of 2,683 unimported entries, and it was
 not ordinary backlog.** The importer's undrainable check fired on the first run
 of this session: 108 entries in `2026-07-26..2026-07-28` were already more runs
 away than they had days left in the window, so no future capped run could ever

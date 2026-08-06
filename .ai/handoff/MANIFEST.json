@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1786002835",
-    "timestamp": "2026-08-06T07:53:55Z",
-    "commit": "8871f50",
+    "session_id": "cli-1786004631",
+    "timestamp": "2026-08-06T08:23:51Z",
+    "commit": "74cdffb",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:626c7a7ced080a9e2237e1e4277e37c96d401fc2940bde521edf0bc67b149b18",
-      "updated": "2026-08-06T07:50:56Z",
-      "lines": 347,
+      "checksum": "sha256:50992c30859aba1a46f260807e50e9e0ff68de236825d30f37a67c329bce1379",
+      "updated": "2026-08-06T08:23:16Z",
+      "lines": 429,
       "summary": "v5.25.4 was published (2026-08-05 threat-intel run: 251 imported IOCs, 22"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:e65642e3ca1b879eb87b65f169519f946e47eccc7bcc9a196016dab86443fc0d",
-      "updated": "2026-08-06T07:53:55Z",
+      "updated": "2026-08-06T08:23:50Z",
       "lines": 138,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:51fae86a011f8e65517a45903a1526e8b1a2d2eda6f5cc764c01450eb9607cc6",
-      "updated": "2026-08-06T07:53:55Z",
+      "updated": "2026-08-06T08:23:50Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:1ce1212e7800d4d9c20eb4bf30750c35063f35a7b56f62484ae2faa1c0fcdcbd",
-      "updated": "2026-08-06T07:53:55Z",
+      "updated": "2026-08-06T08:23:50Z",
       "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,8 +80,8 @@
   "quick_context": "v5.25.4 was published (2026-08-05 threat-intel run: 251 imported IOCs, 22 Five tasks are ready, one owner decision is blocked, and T-008/T-015 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 5024,
-    "full_read": 14904
+    "manifest_plus_core": 5920,
+    "full_read": 15800
   }
   ,"next_task_id": 16
   ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"}}

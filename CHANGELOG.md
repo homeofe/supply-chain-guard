@@ -29,6 +29,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   ChainDrop npm worm. `keyv@6.0.0` is already version-pinned, so this adds a second
   detection path for the same release where the tarball digest is recorded as text.
   Single-source (Snyk), so confidence 0.85.
+- Threat feed: 2,683 further malicious-package IOCs, a backlog-completion import over the
+  `2026-08-04..2026-08-06` window that drains the remainder of the ChainDrop spike the
+  capped standard batch could not reach. The feed goes from 6,948 to 9,631 entries, and a
+  follow-up dry run reports 0 waiting and 0 undrainable. This closes two scopes that had
+  zero feed coverage before this run: `@hubsync` (27 entries) and `@ornikar` (441), both
+  entirely version-pinned, so the scopes are not blocked wholesale and pinned matches are
+  enforced by the install guard. 129 of the new entries are bare names, every one of which
+  npm has already replaced with a security holding package; 7 are PyPI, carrying the
+  `pypi:` prefix. The 179 unmappable advisories in the window stay excluded by design
+  (150 withdrawn, 22 unsafe package names, 7 bounded version ranges).
 
 ## [5.25.5] - 2026-08-05
 
