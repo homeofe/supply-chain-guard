@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete.
+Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete.
 
 Current version: **v5.25.6**
 
@@ -14,13 +14,13 @@ Current version: **v5.25.6**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Five
+AAHP 3.9.1 adoption and the verified security hardening are complete. Six
 follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
 matrix, and whether version-pinned npm IOCs should match on a directory scan.
 
 | Status | Count |
 |--------|-------|
-| Ready | 5 |
+| Ready | 6 |
 | Blocked | 2 |
 
 The published package is v5.25.6.
@@ -110,6 +110,37 @@ do not merge Babel 8 alone.
 - [ ] The owner selects and records the new minimum Node line.
 - [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
 - [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
+
+---
+
+## T-017: Index matchBareNpmIOC so npm IOC lookup is O(1)
+
+**Goal:** Give `matchBareNpmIOC` the same indexed lookup `matchPackageIOC`
+already has, so npm IOC matching stops being a linear scan of the whole feed.
+
+**Why now:** `matchPackageIOC` is an indexed O(1) lookup (see the comment at
+`src/install-guard.ts:270`); `matchBareNpmIOC` (`:242`) still walks the entire
+feed per call. Two consequences:
+
+- Production: every dependency checked by `src/scanner.ts` and
+  `src/npm-scanner.ts` costs one full pass over 9,374 package entries.
+- Tests: `collection-reachability.test.ts` calls the real matcher once per
+  entry, which is ~85M comparisons and about 3.3s. It went red on CI during the
+  v5.25.6 release at the default 5s timeout, and the cost grows with the SQUARE
+  of the feed, which is now growing by thousands of entries per import.
+
+The 30s timeout added there is a stopgap, not the fix. If it goes red again,
+index the matcher instead of raising the number.
+
+**Acceptance criteria:**
+- [ ] `matchBareNpmIOC` resolves through an index, with identical semantics:
+      a bare-name IOC still matches any version, a pinned IOC still matches only
+      an exact version, and ecosystem-prefixed entries are still skipped.
+- [ ] The index is built once per feed rather than per call, matching how
+      `matchPackageIOC` does it.
+- [ ] `collection-reachability.test.ts` passes comfortably inside the default
+      timeout, and the explicit 30s override plus its comment are removed.
+- [ ] A mutation proof: break the pinned-version branch and watch a test go red.
 
 ---
 

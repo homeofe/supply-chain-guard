@@ -3,9 +3,9 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1786005581",
-    "timestamp": "2026-08-06T08:39:41Z",
-    "commit": "4f4fc4f",
+    "session_id": "cli-1786006050",
+    "timestamp": "2026-08-06T08:47:30Z",
+    "commit": "7ea0b94",
     "phase": "idle",
     "duration_minutes": 0
   },
@@ -17,14 +17,14 @@
       "summary": "v5.25.5 was published (the Action PR-comment fallback fix #119 and the AAHP"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:12b9fd7e7fbb3b6ac78527eda9162dfa6e9a841f1df7cacfe4e4a6c10f551140",
-      "updated": "2026-08-06T08:39:06Z",
-      "lines": 211,
-      "summary": "Five tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete."
+      "checksum": "sha256:4a2222ee060b6908ba749e66b587b9047c1e174f2a540195ab74e6482be7afea",
+      "updated": "2026-08-06T08:46:57Z",
+      "lines": 242,
+      "summary": "Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:a5a519978db48009bcba3d68e1d99154af3b757d0e4250308e905bce5a4fbed7",
-      "updated": "2026-08-06T08:39:40Z",
+      "updated": "2026-08-06T08:47:29Z",
       "lines": 139,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:63f89813b6f3adea08531f8160e0c6bccf9cac9b2ccaa30ad8def13ee347f1a4",
-      "updated": "2026-08-06T08:39:40Z",
+      "updated": "2026-08-06T08:47:29Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:5c4e4b23f27783d68a55c1615ffdc4c16f30c33b338281f4c020bf71a2f9ef3e",
-      "updated": "2026-08-06T08:39:40Z",
+      "updated": "2026-08-06T08:47:29Z",
       "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,12 +77,12 @@
       "summary": "{"
     }
   },
-  "quick_context": "v5.25.5 was published (the Action PR-comment fallback fix #119 and the AAHP Five tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete. ",
+  "quick_context": "v5.25.5 was published (the Action PR-comment fallback fix #119 and the AAHP Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 6474,
-    "full_read": 16376
+    "manifest_plus_core": 6786,
+    "full_read": 16688
   }
-  ,"next_task_id": 17
-  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Decide whether version-pinned npm IOCs should match on a directory scan","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision: behaviour change with real false-positive surface","created":"2026-08-06T09:00:00Z"}}
+  ,"next_task_id": 18
+  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Decide whether version-pinned npm IOCs should match on a directory scan","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision: behaviour change with real false-positive surface","created":"2026-08-06T09:00:00Z"},"T-017":{"title":"Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-06T09:30:00Z"}}
 }

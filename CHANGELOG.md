@@ -42,6 +42,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `pypi:` prefix. The 179 unmappable advisories in the window stay excluded by design
   (150 withdrawn, 22 unsafe package names, 7 bounded version ranges).
 
+### Changed
+
+- Test only: the feed-reachability guard in `collection-reachability.test.ts` now runs with
+  an explicit 30s timeout. It calls the real `matchBareNpmIOC` once per npm entry, and that
+  matcher is a linear scan of the feed, so the guard costs roughly 85 million comparisons.
+  Growing the feed by 46% in this release made it about twice as slow and it exceeded the
+  default 5s timeout on CI. No production code changed. The cost grows with the square of
+  the feed, so the actual fix is to index `matchBareNpmIOC` the way `matchPackageIOC`
+  already is, tracked as T-017.
+
 ## [5.25.5] - 2026-08-05
 
 ### Fixed

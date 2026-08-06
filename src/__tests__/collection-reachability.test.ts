@@ -117,7 +117,19 @@ describe("collection reachability", () => {
   // Guard B - every package feed entry is reachable by a matcher some caller invokes
   // -------------------------------------------------------------------------
 
-  it("every package feed entry is reachable by an invoked matcher", () => {
+  // Deliberately quadratic, and given a timeout to match. The guard is only
+  // meaningful if it calls the REAL matchers rather than a test-local index, and
+  // matchBareNpmIOC is a linear scan of the feed (unlike matchPackageIOC, which
+  // is an indexed O(1) lookup). So this is one linear scan per npm entry:
+  // 9,050 npm entries against 9,374 package entries is ~85M comparisons, ~3.3s.
+  //
+  // It cost the v5.25.6 release a red CI run at the default 5s timeout, after the
+  // 2026-08-06 backlog import grew the feed 46% and made this ~2x slower. The
+  // cost grows with the SQUARE of the feed, so the fix is to index
+  // matchBareNpmIOC the way matchPackageIOC already is - tracked as T-017. Until
+  // then this headroom absorbs several more imports; if it goes red again, index
+  // the matcher rather than raising the number a second time.
+  it("every package feed entry is reachable by an invoked matcher", { timeout: 30_000 }, () => {
     const feed = getBundledFeed();
     // The ecosystems any real caller passes: the file scanners plus the offline
     // MCP ioc_lookup enum. Kept as a literal so that widening it is a conscious
