@@ -1,6 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-06. This is one current snapshot, not a session log.
+> Updated 2026-08-07. This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
@@ -8,20 +8,19 @@
 
 ## At a Glance
 
-v5.25.5 was published (the Action PR-comment fallback fix #119 and the AAHP
-shared-primitive convergence #120 - see "AAHP convergence" below for the
-latter's detail). v5.25.6 is being cut from it and is a threat-intel release:
-the 2026-08-06 advisory sweep plus the ChainDrop backlog completion, merged as
-#122, which took the feed from 6,588 to 9,631 entries.
+v5.25.6 was published (#123): the 2026-08-06 advisory sweep plus the ChainDrop
+backlog completion, merged as #122, which took the feed from 6,588 to 9,631
+entries. The 2026-08-07 sweep is unreleased and sits on branch
+threat-intel/2026-08-07 - see the section below for its detail.
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.5 on npm |
-| Release target | v5.25.6, this branch (chore/release-v5.25.6) |
-| Merged since v5.25.5 | #122 (advisory sweep + backlog completion) |
-| Working branch base | 4f4fc4f (main, post-#122) |
+| Released package | v5.25.6 on npm |
+| Release target | none open; next release is Emre's call |
+| Merged since v5.25.5 | #122 (advisory sweep + backlog completion), #123 (release) |
+| Working branch base | c40d603 (main, post-v5.25.6) |
 | Open owner decisions | T-013 (Node/Babel matrix), T-016 (pinned IOCs on scan) |
-| Threat feed | 9,631 entries, feed.json regenerated at v5.25.5 (backlog drained, 0 waiting) |
+| Threat feed | 10,421 entries, feed.json regenerated (window fully drained, 0 waiting) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |
@@ -32,6 +31,91 @@ handoff-doc generator - it is not, and never was, an AAHP tool, despite the
 former name suggesting otherwise. It now imports AAHP's shared bash-resolution,
 Windows-path-conversion, and changelog-grammar primitives instead of vendoring
 private copies of them.
+
+---
+
+## Threat-intel run (2026-08-07, unreleased, branch threat-intel/2026-08-07)
+
+Model: claude-opus-5. Scheduled daily advisory sweep. No version bump - the
+version belongs to Emre's release. Base: c40d603 (main, post-v5.25.6).
+
+**Importer.** 783 new package IOCs, in two passes over the same 14-day window.
+4,318 advisories fetched over 44 pages. The first dry run flagged a
+bulk-publication spike: 533 waiting behind the `--limit 250` cap, of which 33
+were undrainable (they would age out of the window before a future capped run
+could reach them). The standard batch took 250, then the remainder was drained
+with an explicit `--since 2026-07-24 --limit 100000` slice, which is exempt from
+the age-out check. `--allow-backlog` and `--allow-truncated` were NOT used and
+the page cap was not hit. 178 advisories were skipped by the importer (149
+withdrawn, 22 unsafe package name, 7 unmappable version range); those stay
+excluded by design.
+
+**End-of-run drain check.** After the slice, `npm run feed:import -- --dry-run`
+reports `New entries: 0` with no waiting count and no undrainable warning. That
+is the check that proves nothing was stranded, because the importer evaluates
+the whole `--days` window independently of what any single run took. Make it the
+standing last step of this job: a non-zero remainder there is the only reliable
+signal that indicators are aging out unreached.
+
+**Hand-added enrichment: GlassWASM.** The advisory databases only publish
+`package@version`, so the atomic indicators come from vendor write-ups. This run
+found that GlassWASM (Socket, 2026-06-15; corroborated by Corgea) had zero
+coverage in this repo despite being a live Open VSX extension campaign. Added to
+`src/ioc-blocklist.ts` and mirrored into `FEED_CHUNK_9`:
+
+- `dodod[.]lat` (C2 apex) plus its three per-platform stage-2 paths
+  (`/darwin/i/_`, `/linux/i/_`, `/win32/i/_`)
+- Solana dead-drop wallet `6ExrZayPZzMMSnszc42cH81DpuKT8FhCX9H6Sesn6rpz`, which
+  the WASM stager polls and reads commands from via the SPL Memo field
+- Open VSX / GitHub publisher account `zaitoona43`
+- three SHA-256 hashes: the TinyGo WASM stager (shipped under two byte-identical
+  random names) and one per published VSIX
+
+Deliberate exclusions, recorded so a later run does not "fix" them: the
+impersonated upstream publishers `ExarGD` and `noellee-doc` are victims;
+`api.mainnet.solana.com` and the two SPL Memo system program ids are shared
+infrastructure every legitimate Solana project touches. The extension
+identifiers are NOT feed package IOCs - a bare feed value means the npm
+namespace, and these are Open VSX names, so ingesting them would route to the
+wrong ecosystem; the two VSIX hashes carry that identity instead.
+
+The three hashes are single-source (only Socket published them), so they carry
+confidence 0.85 in the feed while every other indicator is 1.0. Per the standing
+caution that WebFetch can corrupt long hex strings, each was checked for a
+well-formed 64-char digest and the stager hash was re-confirmed by exact-string
+search returning the Socket write-up.
+
+ChainDrop was re-checked against two fresh write-ups (Aikido, The Hacker News)
+and needed nothing: every hash they publish already round-trips byte-identical
+against what is in the blocklist. The 546 "Shai-Hulud: Here We Go Again" staging
+repositories were NOT ingested - they sit under compromised victim accounts.
+
+**Retention rule settled this run (Emre, 2026-08-07).** The advisory window and
+detection retention are two separate concerns and must not be conflated:
+
+- The `--days 14` window scopes what the IMPORTER ingests. Keep it strict.
+- It says nothing about what the ENGINE keeps detecting. Every validated
+  indicator stays in the feed indefinitely. A campaign is not over because its
+  write-up is weeks or months old, and there is no basis for assuming an actor
+  stopped operating just because someone published about them.
+
+So a hand-added indicator is never dropped for being older than the window, and
+feed size is never reduced by expiring old campaigns. Controlling import cost and
+scan runtime is a technical problem to solve in the importer and the scan path,
+tracked as a separate refactor - not something to pay for with lost coverage.
+
+Note for future review: GlassWASM had NO prior coverage here, which is easy to
+misread as an oversight. It is not reachable by the importer at all. The advisory
+databases publish `package@version`, and this campaign's indicators are a C2
+host, a wallet, hashes and a publisher account, which only ever appear in vendor
+write-ups; its carriers are Open VSX extensions, an ecosystem the advisory
+databases do not cover. Only the manual STEP 1b enrichment can find campaigns of
+this shape, which is why that step is mandatory on every run.
+
+**Verification.** Routing was proved by scanning fixtures, not by asserting on
+the arrays: `src/__tests__/campaigns.test.ts` gains a GlassWASM block with four
+positive cases (domain, hash, wallet, account) and one negative case asserting
+the public Solana infrastructure is never flagged.
 
 ---
 

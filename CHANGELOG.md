@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 783 malicious-package IOCs imported from the GitHub Advisory Database with
+  OSV.dev corroboration (2026-08-07 sweep). The first dry run reported a bulk-publication
+  spike: 533 entries waiting behind the 250 cap, 33 of which would have aged out of the
+  `--days 14` window before any future capped run could reach them. The standard batch was
+  taken first, then the rest of the same window was drained as an explicit
+  `--since 2026-07-24` slice, so the run ends with the window fully imported: a confirming
+  dry run reports 0 new entries, nothing waiting and no undrainable remainder. The batch
+  continues the Tinkoff/T-Bank and
+  `devplatform-*` dependency-confusion waves, adds a Sui/Move blockchain cluster
+  (`sui-migration-audit-cli`, `sui-graphql-client`, `move-bcs-codec`, `supersig`, plus
+  `alphalend-abi` and `alphalend-layouts` on PyPI), an AI-tooling impersonation cluster
+  (`wormgpt-cli`, `remote-claude-daemon`, `gpt-terminal-cli`, `agenthub-multiagent-mcp`,
+  `agenttunnels`), and four further `baileys` WhatsApp-library clones.
+- IOC blocklist: full indicator set for GlassWASM, the trojanized Open VSX extension
+  campaign (Socket 2026-06-15, corroborated by Corgea), which had no coverage at all. Two
+  impersonation clones of verified VS Code Marketplace extensions were republished on Open
+  VSX carrying a TinyGo-compiled WebAssembly stager that ChaCha20-decrypts its delivery
+  host and reads its commands from Solana SPL Memo fields. Added: the `dodod[.]lat` C2
+  apex, its three per-platform stage-2 paths, the Solana dead-drop wallet, the throwaway
+  publisher account `zaitoona43`, and three SHA-256 hashes (the WASM stager plus one per
+  VSIX). The hashes are single-source, so they carry confidence 0.85; every other
+  indicator is two-source at 1.0. The impersonated upstream publishers, the public Solana
+  mainnet JSON-RPC endpoint, and the two SPL Memo system program ids are deliberately not
+  ingested - they are victims and shared infrastructure, not indicators. The extension
+  identifiers are not added as package IOCs, because a bare feed value means the npm
+  namespace and these are Open VSX names; the two VSIX hashes carry that identity instead.
+  These indicators are deliberately not bounded by the importer's advisory window: that
+  window scopes what the importer ingests, not how long the engine keeps detecting a
+  campaign.
+
 ## [5.25.6] - 2026-08-06
 
 ### Added

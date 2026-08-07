@@ -235,6 +235,15 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // payload queries are deliberately NOT listed - they are legitimate link-local endpoints
   // present in ordinary infrastructure code, and blocking them would flag every repo.
   "npm-cache.com",
+
+  // GlassWASM / GlassWorm successor - trojanized Open VSX extensions (Socket + Corgea,
+  // June 2026). Two impersonation clones of verified VS Code Marketplace extensions were
+  // republished on Open VSX carrying a TinyGo-compiled WebAssembly stager. The WASM blob
+  // ChaCha20-decrypts this host and pulls the platform-specific stage-2 installer from it.
+  // Attacker-registered domain with no legitimate use, so the apex is safe to list; the
+  // Solana JSON-RPC endpoint the stager polls for its dead-drop memos is a public network
+  // service and is deliberately NOT listed.
+  "dodod.lat",
 ];
 
 // ---------------------------------------------------------------------------
@@ -421,6 +430,14 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // bin: webhook[.]site is a legitimate request-inspection service used constantly in
   // ordinary development, so the apex is deliberately NOT listed - only this bin id.
   "webhook.site/710babde-6ace-47fe-83f4-9688e6548df9",
+
+  // GlassWASM trojanized Open VSX extensions (Socket + Corgea, June 2026). Per-platform
+  // stage-2 installer paths the WASM stager pipes into bash / iex once it has decrypted
+  // the host. Path-scoped alongside the dodod[.]lat entry above so a mention of the host
+  // in an incident note and a real fetch URL are both caught.
+  "dodod.lat/darwin/i/_",
+  "dodod.lat/linux/i/_",
+  "dodod.lat/win32/i/_",
 ];
 
 // ---------------------------------------------------------------------------
@@ -720,6 +737,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // published it, and the two hashes above round-tripped byte-identical from the
   // same write-up, which is what corroborates the fetch.
   "d584f9b6af48b7ed1f93713944f033783bf149e1c25e1643eb8c0e9df5dc7782": "ChainDrop poisoned keyv-6.0.0.tgz distribution tarball (SHA256)",
+
+  // GlassWASM trojanized Open VSX extensions (June 2026). One hash for the TinyGo WASM
+  // stager (shipped under two random 16-letter names, snqpkebiwrxmoivl.wasm and
+  // orybbbdsuqmaapel.wasm, which are byte-identical, so one hash catches both) and one
+  // per published VSIX. Single-source: only Socket published the hashes, and Corgea
+  // corroborates every other indicator of the campaign; each round-tripped as a well-formed
+  // 64-char digest and the stager hash was re-confirmed by exact-string search.
+  "558b4f1d9a263c13756ab0126c09dd080c85ba405b29488e1c4e6aa68b554f1f": "GlassWASM TinyGo WebAssembly stager, snqpkebiwrxmoivl.wasm / orybbbdsuqmaapel.wasm (SHA256)",
+  "3aa31999398e7f80231c03d7137ffdb554a84b83dbcffc59ce16c9a65f9e5d58": "GlassWASM trojanized noellee-doc.flint-debug 0.1.1 VSIX (SHA256)",
+  "1e283327ad048bea39f4a8501770858a20f3555e87fe3e202274f2e87f8a3c25": "GlassWASM trojanized ExarGD.vsblack 0.0.1 VSIX (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -846,6 +873,14 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // fast-transform-pipeline and smart-config-manager (both also published as npm
   // packages in the same campaign). Attacker-created, not a compromised victim.
   "smi1e2u",
+
+  // GlassWASM trojanized Open VSX extensions (Socket + Corgea, June 2026)
+  // "zaitoona43" is the single Open VSX publisher account that uploaded both trojanized
+  // clones (ExarGD.vsblack 0.0.1 on 2026-06-09, noellee-doc.flint-debug 0.1.1 on
+  // 2026-06-10); the matching GitHub account was three days old at publication time.
+  // Attacker-created, not a compromised victim. The impersonated upstream publishers
+  // "ExarGD" and "noellee-doc" are the VICTIMS here and are deliberately NOT listed.
+  "zaitoona43",
 ];
 
 // ---------------------------------------------------------------------------
@@ -905,6 +940,16 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
   // deliberately NOT listed - only the attacker's own contract is.
   "0xE1f2395ee43e45A1556EC6438a88c31B83493103":
     "ChainDrop Ethereum mainnet dead-drop C2 resolver contract (August 2026)",
+
+  // GlassWASM trojanized Open VSX extensions (Socket + Corgea, June 2026). The WASM stager
+  // polls Solana mainnet for transactions sent to this attacker-controlled address and reads
+  // its commands out of the SPL Memo field, so the blockchain is the dead-drop. Only the
+  // attacker address is listed: the two SPL Memo program ids the transactions carry are
+  // Solana system programs used by every legitimate memo on the network, and the public
+  // mainnet JSON-RPC endpoint is shared infrastructure - listing either would flag ordinary
+  // Solana code.
+  "6ExrZayPZzMMSnszc42cH81DpuKT8FhCX9H6Sesn6rpz":
+    "GlassWASM Solana dead-drop C2 wallet, commands carried in SPL Memo (June 2026)",
 };
 
 /**

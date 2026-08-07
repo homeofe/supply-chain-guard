@@ -3781,4 +3781,80 @@ describe("Campaign Signatures", () => {
       ).toBeUndefined();
     });
   });
+
+  // =================================================================
+  // GlassWASM - trojanized Open VSX extensions (June 2026)
+  // =================================================================
+
+  describe("GlassWASM (trojanized Open VSX extensions)", () => {
+    it("flags the stage-2 delivery host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stager.js"),
+        'const host = "https://dodod.lat/linux/i/_";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the GlassWASM delivery host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the TinyGo WebAssembly stager hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest.js"),
+        'const sha = "558b4f1d9a263c13756ab0126c09dd080c85ba405b29488e1c4e6aa68b554f1f";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the WASM stager hash must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the Solana dead-drop wallet the stager polls for SPL Memo commands", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poll.js"),
+        'const account = "6ExrZayPZzMMSnszc42cH81DpuKT8FhCX9H6Sesn6rpz";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_WALLET");
+      expect(finding, "the on-chain dead-drop wallet must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the throwaway Open VSX publisher account", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "publisher.js"),
+        'const source = "https://github.com/zaitoona43/vsblack";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT");
+      expect(finding, "the attacker-created publisher account must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The stager reaches its dead-drop over the public Solana mainnet JSON-RPC endpoint
+    // and its commands ride the two SPL Memo system programs. Both are shared network
+    // infrastructure that every legitimate Solana project touches, so they are targets
+    // the malware abuses, not indicators of it, and must never be ingested.
+    it("does NOT flag the public Solana RPC endpoint or the SPL Memo program ids", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "solana.js"),
+        'const rpc = "https://api.mainnet.solana.com";\n' +
+          'const memoV2 = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";\n' +
+          'const memoV1 = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFM";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) =>
+        /api\.mainnet\.solana\.com|MemoSq4gq|Memo1Uhk/.test(JSON.stringify(f)),
+      );
+      expect(
+        finding,
+        "public Solana infrastructure is legitimate and must not be blocked",
+      ).toBeUndefined();
+    });
+  });
 });
