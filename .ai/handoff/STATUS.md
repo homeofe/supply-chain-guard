@@ -1,6 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-07. This is one current snapshot, not a session log.
+> Updated 2026-08-07 (v5.25.7 release). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
@@ -8,17 +8,17 @@
 
 ## At a Glance
 
-v5.25.6 was published (#123): the 2026-08-06 advisory sweep plus the ChainDrop
-backlog completion, merged as #122, which took the feed from 6,588 to 9,631
-entries. The 2026-08-07 sweep is unreleased and sits on branch
-threat-intel/2026-08-07 - see the section below for its detail.
+v5.25.6 was published (#123). v5.25.7 is being cut from it and is a threat-intel
+release: the 2026-08-07 advisory sweep, merged as #124, which drained the full
+14-day window (783 package IOCs) and added the GlassWASM indicator set. The feed
+goes from 9,631 to 10,421 entries.
 
 | Field | Current state |
 |-------|---------------|
 | Released package | v5.25.6 on npm |
-| Release target | none open; next release is Emre's call |
-| Merged since v5.25.5 | #122 (advisory sweep + backlog completion), #123 (release) |
-| Working branch base | c40d603 (main, post-v5.25.6) |
+| Release target | v5.25.7, this branch (chore/release-v5.25.7) |
+| Merged since v5.25.6 | #124 (2026-08-07 advisory sweep + GlassWASM) |
+| Working branch base | 2a61d1c (main, post-#124) |
 | Open owner decisions | T-013 (Node/Babel matrix), T-016 (pinned IOCs on scan) |
 | Threat feed | 10,421 entries, feed.json regenerated (window fully drained, 0 waiting) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
@@ -34,7 +34,7 @@ private copies of them.
 
 ---
 
-## Threat-intel run (2026-08-07, unreleased, branch threat-intel/2026-08-07)
+## Threat-intel run (2026-08-07, merged as #124, shipping in v5.25.7)
 
 Model: claude-opus-5. Scheduled daily advisory sweep. No version bump - the
 version belongs to Emre's release. Base: c40d603 (main, post-v5.25.6).
@@ -119,7 +119,7 @@ the public Solana infrastructure is never flagged.
 
 ---
 
-## Backlog-completion import (2026-08-06, unreleased, branch threat-intel/2026-08-06)
+## Backlog-completion import (2026-08-06, merged as #122, shipped in v5.25.6)
 
 Model: claude-opus-5. Second commit on the same branch, so the curated first
 commit stays reviewable and this machine-generated drain is an isolated diff.
@@ -198,7 +198,7 @@ agent acting alone.
 
 ---
 
-## Threat-intel run (2026-08-06, unreleased, branch threat-intel/2026-08-06)
+## Threat-intel run (2026-08-06, merged as #122, shipped in v5.25.6)
 
 Model: claude-opus-5. No version bump - the version belongs to Emre's release.
 
