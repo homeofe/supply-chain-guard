@@ -448,7 +448,9 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // is single-source (Datadog), "thebeautifulmarchoftime" is confirmed by
   // Microsoft as well. The two long taunt strings the same write-ups list are
   // payload description text, not locators, and belong to the campaign rules in
-  // patterns.ts rather than here.
+  // patterns.ts rather than here. These two are deliberately blocklist-only and
+  // have no bundled-feed counterpart: a bare repository name is not URL-shaped,
+  // and IOC_VALUE_SHAPES.url in threat-intel.ts rejects it by design.
   "thebeautifulmarchoftime",
   "thebeautifulsnadsoftime",
 

@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.25.7",
-  "entryCount": 10682,
+  "entryCount": 10680,
   "entries": [
     {
       "type": "domain",
@@ -86162,24 +86162,6 @@
       "confidence": 1,
       "campaign": "ChainDrop npm Worm",
       "source": "Datadog, Aikido, Snyk",
-      "firstSeen": "2026-08-04"
-    },
-    {
-      "type": "url",
-      "value": "thebeautifulmarchoftime",
-      "severity": "critical",
-      "confidence": 1,
-      "campaign": "ChainDrop npm Worm",
-      "source": "Microsoft, Datadog",
-      "firstSeen": "2026-08-04"
-    },
-    {
-      "type": "url",
-      "value": "thebeautifulsnadsoftime",
-      "severity": "critical",
-      "confidence": 0.85,
-      "campaign": "ChainDrop npm Worm",
-      "source": "Datadog",
       "firstSeen": "2026-08-04"
     },
     {

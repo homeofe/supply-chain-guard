@@ -11290,8 +11290,12 @@ const FEED_CHUNK_10: FeedIOC[] = [
   { type: "hash", value: "14eb4ce01dd4307759887ff819359b70d7d9ff709ecde039a5abc1aac325b128", severity: "critical", confidence: 1.0, campaign: "ChainDrop npm Worm", source: "Datadog", firstSeen: "2026-08-04" },
   { type: "hash", value: "3f3f42d072bd36860ab7bd7fb5e10ac0d22c741c13c89505ccd6ec0ea572eea7", severity: "critical", confidence: 1.0, campaign: "ChainDrop npm Worm", source: "Datadog, SlowMist", firstSeen: "2026-08-04" },
   { type: "hash", value: "29ac906c8bd801dfe1cb39596197df49f80fff2270b3e7fbab52278c24e4f1a7", severity: "critical", confidence: 1.0, campaign: "ChainDrop npm Worm", source: "Datadog, Aikido, Snyk", firstSeen: "2026-08-04" },
-  { type: "url", value: "thebeautifulmarchoftime", severity: "critical", confidence: 1.0, campaign: "ChainDrop npm Worm", source: "Microsoft, Datadog", firstSeen: "2026-08-04" },
-  { type: "url", value: "thebeautifulsnadsoftime", severity: "critical", confidence: 0.85, campaign: "ChainDrop npm Worm", source: "Datadog", firstSeen: "2026-08-04" },
+  // The two exfiltration-repo marker names ("thebeautifulmarchoftime" and
+  // "thebeautifulsnadsoftime") are NOT in this feed. They are bare repository
+  // names, not URLs, and IOC_VALUE_SHAPES.url rejects them - correctly, since
+  // the feed's url shape is what keeps a remote feed from injecting arbitrary
+  // strings. They live in KNOWN_DEAD_DROPS instead, which is substring-matched
+  // and has no shape constraint, so detection is unaffected.
 
   // Alibaba developer toolchain RAT - Corgea's follow-up to Socket's write-up
   // (August 2026). The live raw config path the dependency chain fetches, and a

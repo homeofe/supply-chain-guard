@@ -69,20 +69,28 @@ transitive: vitest -> vite -> postcss; the published package still ships
 `commander` as its only runtime dependency). If a dependabot PR appears for the
 same advisory, close it explicitly - it is already resolved here.
 
-**Open question for Emre: two `IOC_KNOWN_C2_DOMAIN` tests fail on unmodified
-`main`,** i.e. on released v5.25.7, not on this branch - the Phantom Bot
-`87e0bbc636999b.lhr.life` test and the GlassWASM `dodod[.]lat` stage-2 delivery
-host test. A `git stash` on this branch reproduces exactly those two and nothing
-else, so they are pre-existing and NOT the known `zip`/vscode-scanner gap.
-Calling `checkIOCBlocklist()` directly on the same content DOES return
-`IOC_KNOWN_C2_DOMAIN`, so the blocklist data is right and the loss is somewhere
-in the `scan()` pipeline; repeated runs over one fixture did not always produce
-identical findings, which points at something timing-dependent and would explain
-green CI. Not chased further here: out of scope for a sweep, and mixing the fix
-into a threat-intel PR would be wrong. The CI run on PR #126 answers
-"environment or defect" directly - if those two tests pass there, it is this
-Windows box; if they fail, v5.25.7 ships a silent false negative on two
-campaigns.
+**A SECOND Windows-only test gap exists, alongside the known `zip` one.** Two
+`IOC_KNOWN_C2_DOMAIN` tests fail on this box on unmodified `main` - the Phantom
+Bot `87e0bbc636999b.lhr.life` test and the GlassWASM `dodod[.]lat` stage-2
+delivery host test. **CI settled it: both pass on Linux** (PR #126 run, 2,666
+passing), so this is the environment, not a defect in v5.25.7. Recorded here so
+the next run does not re-investigate it: calling `checkIOCBlocklist()` directly
+on the same content returns the finding correctly, the loss is somewhere in the
+`scan()` pipeline under Windows, and repeated runs over one fixture do not
+always produce identical findings. Treat these two the way the `zip` failures
+are already treated.
+
+**CI caught something a green local build could not.** The two ChainDrop
+exfiltration-repo markers were first added as `type: "url"` feed entries as well
+as blocklist entries. `isValidFeedIOC` rejects them, correctly - a bare
+repository name is not URL-shaped, and `IOC_VALUE_SHAPES.url` is what stops a
+remote feed injecting arbitrary strings. `npm run build` is green on this
+because no prebuild gate executes the validator; it surfaced only in
+`issue-54-hardening.test.ts`. They are now blocklist-only, which costs no
+detection since `KNOWN_DEAD_DROPS` is substring-matched. **Add
+`src/__tests__/issue-54-hardening.test.ts` to the targeted suite list whenever a
+run hand-adds a bundled-feed entry** - the existing list in the job file does
+not include it, and `feed.test.ts` does not cover the value-shape contract.
 
 ---
 
