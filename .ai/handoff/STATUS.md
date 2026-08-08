@@ -61,6 +61,29 @@ rather than trusting a fetched rendering.
   locators; if they are wanted, they belong in `patterns.ts` as campaign rules,
   which is a considered change rather than a sweep addition.
 
+**Unrelated fix carried in the same PR.** GHSA-2v37-7h3g-55p8 against `nanoid`
+was published after v5.25.7 and turns `npm audit --audit-level=high` red on
+EVERY branch, so the first CI run on this PR failed on it rather than on
+anything in the sweep. Fixed with a lockfile-only bump to 3.3.18 (dev-only
+transitive: vitest -> vite -> postcss; the published package still ships
+`commander` as its only runtime dependency). If a dependabot PR appears for the
+same advisory, close it explicitly - it is already resolved here.
+
+**Open question for Emre: two `IOC_KNOWN_C2_DOMAIN` tests fail on unmodified
+`main`,** i.e. on released v5.25.7, not on this branch - the Phantom Bot
+`87e0bbc636999b.lhr.life` test and the GlassWASM `dodod[.]lat` stage-2 delivery
+host test. A `git stash` on this branch reproduces exactly those two and nothing
+else, so they are pre-existing and NOT the known `zip`/vscode-scanner gap.
+Calling `checkIOCBlocklist()` directly on the same content DOES return
+`IOC_KNOWN_C2_DOMAIN`, so the blocklist data is right and the loss is somewhere
+in the `scan()` pipeline; repeated runs over one fixture did not always produce
+identical findings, which points at something timing-dependent and would explain
+green CI. Not chased further here: out of scope for a sweep, and mixing the fix
+into a threat-intel PR would be wrong. The CI run on PR #126 answers
+"environment or defect" directly - if those two tests pass there, it is this
+Windows box; if they fail, v5.25.7 ships a silent false negative on two
+campaigns.
+
 ---
 
 ## At a Glance
