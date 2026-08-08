@@ -6,11 +6,12 @@
 
 ---
 
-## Threat-intel run (2026-08-08, branch threat-intel/2026-08-08)
+## Threat-intel run (2026-08-08, merged as #126, shipping in v5.25.8)
 
-Model: claude-opus-5. Scheduled daily advisory sweep. No version bump - the
-version belongs to Emre's release. Base: 5f37e55 (main, post-v5.25.7). Repo was
-clean, no open PRs, so no concurrent-writer conflict.
+Model: claude-opus-5. Scheduled daily advisory sweep, merged as #126. The sweep
+branch itself carried no version bump; v5.25.8 is cut from it in a separate
+release commit. Base: 5f37e55 (main, post-v5.25.7). Repo was clean, no open PRs,
+so no concurrent-writer conflict.
 
 **Importer.** 250 new package IOCs (230 npm, 20 PyPI) in one standard pass over
 the rolling 14-day window. 4,498 advisories fetched over 45 pages, 182
@@ -96,19 +97,21 @@ not include it, and `feed.test.ts` does not cover the value-shape contract.
 
 ## At a Glance
 
-v5.25.6 was published (#123). v5.25.7 is being cut from it and is a threat-intel
-release: the 2026-08-07 advisory sweep, merged as #124, which drained the full
-14-day window (783 package IOCs) and added the GlassWASM indicator set. The feed
-goes from 9,631 to 10,421 entries.
+v5.25.7 was published (#125). v5.25.8 is being cut from it and is a threat-intel
+release: the 2026-08-08 advisory sweep, merged as #126, which added 250 package
+IOCs plus the ChainDrop second indicator wave and the Alibaba RAT follow-up. It
+also carries a lockfile-only `nanoid` bump for GHSA-2v37-7h3g-55p8, which was
+published after v5.25.7 and turned the `npm audit` CI gate red on every branch.
+The feed goes from 10,421 to 10,680 entries.
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.6 on npm |
-| Release target | v5.25.7, this branch (chore/release-v5.25.7) |
-| Merged since v5.25.6 | #124 (2026-08-07 advisory sweep + GlassWASM) |
-| Working branch base | 2a61d1c (main, post-#124) |
+| Released package | v5.25.7 on npm |
+| Release target | v5.25.8, this branch (chore/release-v5.25.8) |
+| Merged since v5.25.7 | #126 (2026-08-08 advisory sweep + ChainDrop wave 2 + Alibaba follow-up + nanoid) |
+| Working branch base | 3ce421d (main, post-#126) |
 | Open owner decisions | T-013 (Node/Babel matrix), T-016 (pinned IOCs on scan) |
-| Threat feed | 10,421 entries, feed.json regenerated (window fully drained, 0 waiting) |
+| Threat feed | 10,680 entries, feed.json regenerated (49 entries still inside the window, undrainable 0) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |

@@ -33,7 +33,7 @@ import {
   RemoteHttpStatusError,
 } from "./remote-download.js";
 
-const TOOL_VERSION = "5.25.7";
+const TOOL_VERSION = "5.25.8";
 const PYPI_API = "https://pypi.org/pypi";
 const PYPI_METADATA_HOST = "pypi.org";
 const PYPI_ARTIFACT_HOST = "files.pythonhosted.org";

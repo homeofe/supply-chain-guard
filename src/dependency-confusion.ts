@@ -15,7 +15,7 @@ import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { readOptionalUtf8File } from "./pattern-scanner.js";
 
-const TOOL_VERSION = "5.25.7";
+const TOOL_VERSION = "5.25.8";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";
