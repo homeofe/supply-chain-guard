@@ -40,6 +40,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   single-source and carry confidence 0.85. The package is version-pinned rather than
   blocked by name, and the `raw.githubusercontent[.]com` host is never listed on its own.
 
+### Security
+
+- Lockfile: `nanoid` 3.3.16 to 3.3.18, resolving GHSA-2v37-7h3g-55p8 (high). A
+  development-only transitive dependency, reached through `vitest` -> `vite` -> `postcss`;
+  the published package still has `commander` as its only runtime dependency, so no
+  consumer was ever exposed. Included here because the newly published advisory turns the
+  `npm audit --audit-level=high` CI gate red on every branch until the lockfile moves.
+
 ## [5.25.7] - 2026-08-07
 
 ### Added
