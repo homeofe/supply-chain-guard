@@ -235,6 +235,23 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // payload queries are deliberately NOT listed - they are legitimate link-local endpoints
   // present in ordinary infrastructure code, and blocking them would flag every repo.
   "npm-cache.com",
+  // Sibling routers resolved from the same Ethereum contract, published once
+  // Microsoft and Datadog reversed the resolver (August 2026). Same
+  // ":443/router" exfil path, same registrant pattern: attacker-registered
+  // lookalikes of pypi[.]org and a JS CDN, no legitimate use, so the apexes are
+  // safe to list. Two independent sources each (Microsoft + Datadog + op-c).
+  "pypi-get.com",
+  "js-mirror.com",
+  // Rotation target the contract handed out before the registry-lookalike names.
+  // Random-label .icu with no legitimate service behind it. Single-source
+  // (Datadog); the entries above corroborate the write-up's other indicators.
+  "awqhnjewqjkl.icu",
+  // The public Ethereum RPC endpoints the stage-2 payload calls to read the
+  // resolver contract (eth-mainnet.nodereal[.]io, go.getblock[.]io,
+  // eth.llamarpc[.]com) are deliberately NOT listed. They are shared, legitimate
+  // infrastructure used by ordinary web3 projects, and blocking them would flag
+  // every Ethereum repository on sight - the contract address in
+  // KNOWN_C2_WALLETS is the indicator that actually distinguishes this campaign.
 
   // GlassWASM / GlassWorm successor - trojanized Open VSX extensions (Socket + Corgea,
   // June 2026). Two impersonation clones of verified VS Code Marketplace extensions were
@@ -417,6 +434,23 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // account/repo paths only - never the github.com apex.
   "github.com/smi1e2u/fast-transform-pipeline",
   "github.com/smi1e2u/smart-config-manager",
+  // The live raw path the chain actually fetches, rather than the repo page.
+  // Full path only - raw.githubusercontent[.]com serves every public repository
+  // on GitHub, so the host must never be listed. Single-source (Corgea), but the
+  // owning repository is confirmed attacker-created by Socket above.
+  "raw.githubusercontent.com/smi1e2u/smart-config-manager/main/defaults/preferences.json",
+
+  // ChainDrop npm worm / "Mini Shai-Hulud" (Microsoft + Datadog, August 4 2026).
+  // Exfiltration dead drops are GitHub repositories the worm creates under each
+  // victim account, identified by a fixed marker name rather than a URL, so the
+  // bare marker string is what a payload or an incident artefact contains. Both
+  // are long random-word constructions with no other use; "thebeautifulsnadsoftime"
+  // is single-source (Datadog), "thebeautifulmarchoftime" is confirmed by
+  // Microsoft as well. The two long taunt strings the same write-ups list are
+  // payload description text, not locators, and belong to the campaign rules in
+  // patterns.ts rather than here.
+  "thebeautifulmarchoftime",
+  "thebeautifulsnadsoftime",
 
   // Fake Corepack install site (Socket + Gurucul, July 2026). The fake VPN landing page
   // the "Download Free" button redirects into, serving
@@ -729,6 +763,17 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668": "ChainDrop setup.mjs preinstall dropper, wave 1 (SHA256)",
   "fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb": "ChainDrop setup.mjs preinstall dropper, later waves (SHA256)",
   "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc": "ChainDrop stage-2 credential stealer, Math_Symbol.js / math_init.js (SHA256)",
+  // Later re-obfuscation waves and the two auxiliary components, published by
+  // Datadog and corroborated one by one via exact-string search (op-c.net's
+  // ChainDrop IOC list carries the first three; the runner memory dumper also
+  // appears in the Aikido/Snyk SAP write-ups and the FBI FLASH-20260702-01, and
+  // the zZ.bin loader in SlowMist's @redhat-cloud-services analysis). The worm
+  // re-obfuscates between waves, so these complement rather than replace the
+  // behavioural rules.
+  "927387d0cfac1118df4b383decc2ea6ba49c9d2f98b47098bcbcba1efc026e1f": "ChainDrop IDE persistence hook dropped as .vscode/tasks.json (SHA256)",
+  "14eb4ce01dd4307759887ff819359b70d7d9ff709ecde039a5abc1aac325b128": "ChainDrop stage-2 credential stealer, re-obfuscated wave (SHA256)",
+  "3f3f42d072bd36860ab7bd7fb5e10ac0d22c741c13c89505ccd6ec0ea572eea7": "ChainDrop deobfuscating loader, zZ.bin (SHA256)",
+  "29ac906c8bd801dfe1cb39596197df49f80fff2270b3e7fbab52278c24e4f1a7": "ChainDrop embedded GitHub Actions Runner.Worker memory dumper (SHA256)",
   // Distribution artefact rather than a payload file: the hash of the published
   // keyv-6.0.0.tgz itself. keyv@6.0.0 is already version-pinned in
   // KNOWN_BAD_NPM_VERSIONS, so this only adds a second detection path for the
@@ -1602,6 +1647,18 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "@picsart/ai-sdk": {
     versions: ["3.32.2"],
     description: "ChainDrop npm worm: republished by the worm from a second compromised publisher account. Legitimate package - only 3.32.2 is malicious (August 4, 2026)",
+  },
+
+  // Alibaba developer toolchain RAT (Corgea, August 2026). Nineteenth package of
+  // the cluster, missed by the eighteen the advisory databases published and by
+  // Socket's original write-up. Version-pinned rather than blocked by name: the
+  // name is generic enough that a future unrelated publisher could claim it, and
+  // 1.0.1 is the only version that has ever existed (published 2026-04-27, still
+  // live). Single-source (Corgea), which is also why this is a pin and not a
+  // MALICIOUS_PACKAGE_PATTERNS entry.
+  "node-data-utils": {
+    versions: ["1.0.1"],
+    description: "Alibaba developer toolchain RAT: staging artifact of the lib-mtop / aone-kit cluster that delivers a cross-platform RAT via a config dead-drop (Corgea, August 2026)",
   },
 };
 

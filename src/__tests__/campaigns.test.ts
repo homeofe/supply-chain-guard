@@ -3780,6 +3780,141 @@ describe("Campaign Signatures", () => {
         "cloud metadata endpoints are legitimate infrastructure and must not be blocked",
       ).toBeUndefined();
     });
+
+    it("flags the sibling C2 routers resolved from the same contract", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "router.js"),
+        'const a = "https://pypi-get.com:443/router";\n' +
+          'const b = "https://js-mirror.com:443/router";\n' +
+          'const c = "https://awqhnjewqjkl.icu:443/router";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hosts = report.findings
+        .filter((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+        .map((f) => f.description)
+        .join(" ");
+      expect(hosts, "pypi-get must be flagged").toContain("pypi-get.com");
+      expect(hosts, "js-mirror must be flagged").toContain("js-mirror.com");
+      expect(hosts, "the .icu rotation target must be flagged").toContain("awqhnjewqjkl.icu");
+    });
+
+    // The resolver reads the C2 address from a mainnet contract through public
+    // Ethereum RPC providers. Those are shared, legitimate services used by
+    // ordinary web3 projects: blocking them would flag every Ethereum repository.
+    it("does NOT flag the public Ethereum RPC providers the resolver calls", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "rpc.js"),
+        'const rpcs = ["https://eth-mainnet.nodereal.io/v1/x",' +
+          '"https://go.getblock.io/x","https://eth.llamarpc.com"];\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) =>
+        /nodereal|getblock|llamarpc/.test(JSON.stringify(f)),
+      );
+      expect(
+        finding,
+        "public Ethereum RPC endpoints are legitimate infrastructure and must not be blocked",
+      ).toBeUndefined();
+    });
+
+    it("flags the re-obfuscated wave payload hashes", async () => {
+      fs.writeFileSync(
+        // Not a .txt: BENIGN_DOC_FILES exempts documentation from the IOC
+        // blocklist, because write-ups legitimately quote hashes.
+        path.join(tempDir, "waves.js"),
+        'const known = [\n  "927387d0cfac1118df4b383decc2ea6ba49c9d2f98b47098bcbcba1efc026e1f",\n' +
+          '  "14eb4ce01dd4307759887ff819359b70d7d9ff709ecde039a5abc1aac325b128",\n' +
+          '  "3f3f42d072bd36860ab7bd7fb5e10ac0d22c741c13c89505ccd6ec0ea572eea7",\n' +
+          '  "29ac906c8bd801dfe1cb39596197df49f80fff2270b3e7fbab52278c24e4f1a7",\n];\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hashes = report.findings.filter((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(hashes.length, "all four later-wave hashes must be flagged").toBe(4);
+    });
+
+    it("flags the GitHub exfiltration dead-drop markers", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const repo = "thebeautifulmarchoftime";\n' +
+          'const alt = "thebeautifulsnadsoftime";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const drops = report.findings
+        .filter((f) => f.rule === "IOC_KNOWN_DEAD_DROP")
+        .map((f) => f.description)
+        .join(" ");
+      expect(drops).toContain("thebeautifulmarchoftime");
+      expect(drops).toContain("thebeautifulsnadsoftime");
+    });
+  });
+
+  // =================================================================
+  // Alibaba developer toolchain RAT - Corgea follow-up (August 2026)
+  // =================================================================
+
+  describe("Alibaba Dev Toolchain RAT (Corgea follow-up)", () => {
+    it("flags the live raw config dead-drop path", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const cfg = "https://raw.githubusercontent.com/smi1e2u/smart-config-manager/main/defaults/preferences.json";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP");
+      expect(finding, "the config dead-drop path must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // raw.githubusercontent.com serves every public repository on GitHub. Only the
+    // full attacker path is an indicator; the host on its own never is.
+    it("does NOT flag an unrelated raw.githubusercontent.com URL", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'const readme = "https://raw.githubusercontent.com/nodejs/node/main/README.md";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP");
+      expect(
+        finding,
+        "the raw.githubusercontent.com host is shared infrastructure and must not be blocked",
+      ).toBeUndefined();
+    });
+
+    it("flags the node-data-utils staging package at 1.0.1", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "node-data-utils": "1.0.1" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding, "the staging package version must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag a different node-data-utils version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "node-data-utils": "2.0.0" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /node-data-utils/.test(JSON.stringify(f)));
+      expect(finding, "only 1.0.1 is pinned - other versions must stay clean").toBeUndefined();
+    });
   });
 
   // =================================================================
