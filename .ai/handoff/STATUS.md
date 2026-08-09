@@ -45,11 +45,32 @@ axios maintainer account, who is a victim. `dl[.]wel1[.]ru` is listed once rathe
 than as five rows because domain matching is an unanchored substring test, so one
 entry covers the published platform subdomains without each double-reporting.
 
-**Open question for Emre.** Aikido lists a second attacker-controlled account,
-`nrwise` (`nrwise[@]proton[.]me`), alongside the hijacked axios maintainer. It is
-not clear from the write-up whether that is a GitHub handle or an npm publisher
-account, and `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is GitHub-only, so it was left out
-rather than filed in the wrong namespace. See the PR body.
+**`nrwise` resolved - do NOT add it, and do not re-open this next run.** Aikido
+lists a second attacker-controlled account, `nrwise` (`nrwise[@]proton[.]me`),
+alongside the hijacked axios maintainer. It was initially left out as an open
+question; it is now settled as a deliberate non-addition, on three independent
+grounds:
+
+- *The matcher makes it worthless.* `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is matched
+  as `github\.com/<account>\b`, so it only ever fires on a github.com URL in
+  scanned content. `github[.]com/nrwise` has ZERO public repositories, so no such
+  URL exists to be referenced. Detection value is exactly zero, not merely small.
+- *The account points away from the attacker.* It has been dormant since 2013
+  with no public repos and 2 followers. npm and GitHub are separate namespaces, so
+  an identical handle implies no connection; an abandoned 13-year-old account fits
+  an unrelated person who grabbed a short name far better than infrastructure
+  stood up for a March 2026 npm publish. Aikido's context (a proton[.]me address,
+  an npm-publishing attack) indicates their `nrwise` is the npm publisher account.
+  The aged-account-takeover reading cannot be excluded, but it changes nothing:
+  with no public repos there is still nothing to detect.
+- *There is nowhere correct to file an npm handle anyway.* No npm-account
+  collection exists in this codebase - `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is the
+  only account list. And the three packages involved (`axios@1.14.1`,
+  `axios@0.30.4`, `plain-crypto-js@4.2.1`) are already version-pinned, so the
+  handle would add no coverage. Same reasoning as `ch4ce` in the 2026-08-08 run.
+
+The asymmetry is one-sided: no detection gained, against a real risk of flagging a
+live account belonging to an actual person.
 
 ---
 
