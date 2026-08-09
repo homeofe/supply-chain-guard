@@ -1,14 +1,16 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-09 (threat-intel sweep). This is one current snapshot, not a session log.
+> Updated 2026-08-09 (v5.25.9 release). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
 ---
 
-## Threat-intel run (2026-08-09, PR open, no version bump)
+## Threat-intel run (2026-08-09, merged as #128, shipping in v5.25.9)
 
-Model: claude-opus-5. Scheduled daily advisory sweep. Base: 7afaedc (main,
+Model: claude-opus-5. Scheduled daily advisory sweep, merged as #128. The sweep
+branch itself carried no version bump; v5.25.9 is cut from it in a separate
+release commit at Emre's direction in the same session. Base: 7afaedc (main,
 post-v5.25.8). Repo was clean with zero open PRs, so no concurrent-writer
 conflict. No version bump on this branch by design: Emre cuts the release.
 
@@ -165,21 +167,20 @@ not include it, and `feed.test.ts` does not cover the value-shape contract.
 
 ## At a Glance
 
-v5.25.7 was published (#125). v5.25.8 is being cut from it and is a threat-intel
-release: the 2026-08-08 advisory sweep, merged as #126, which added 250 package
-IOCs plus the ChainDrop second indicator wave and the Alibaba RAT follow-up. It
-also carries a lockfile-only `nanoid` bump for GHSA-2v37-7h3g-55p8, which was
-published after v5.25.7 and turned the `npm audit` CI gate red on every branch.
-The feed goes from 10,421 to 10,680 entries.
+v5.25.8 was published (#127). v5.25.9 is being cut from it and is a threat-intel
+release: the 2026-08-09 advisory sweep, merged as #128, which added 64 package
+IOCs plus the Flooding Dropper / WEL1DROPPER delivery infrastructure, the axios /
+UNC1069 C2 and implant hashes, and a backfill of the spellcheckpy PyPI RAT. The
+feed goes from 10,680 to 10,764 entries (+84: 64 imported, 20 hand-added).
 
 | Field | Current state |
 |-------|---------------|
-| Released package | v5.25.7 on npm |
-| Release target | v5.25.8, this branch (chore/release-v5.25.8) |
-| Merged since v5.25.7 | #126 (2026-08-08 advisory sweep + ChainDrop wave 2 + Alibaba follow-up + nanoid) |
-| Working branch base | 3ce421d (main, post-#126) |
+| Released package | v5.25.8 on npm |
+| Release target | v5.25.9, this branch (chore/release-v5.25.9) |
+| Merged since v5.25.8 | #128 (2026-08-09 advisory sweep + Flooding Dropper + axios/UNC1069 + spellcheckpy backfill) |
+| Working branch base | 8df6b32 (main, post-#128) |
 | Open owner decisions | T-013 (Node/Babel matrix), T-016 (pinned IOCs on scan) |
-| Threat feed | 10,680 entries, feed.json regenerated (49 entries still inside the window, undrainable 0) |
+| Threat feed | 10,764 entries, feed.json regenerated (window fully drained, remaining 0, undrainable 0) |
 | AAHP dependency | 3.9.2, exact pin (bumped from 3.9.1 in #120) |
 | AAHP manifest schema | aahp_version 3.0, intentionally unchanged |
 | Task authority | MANIFEST.json |

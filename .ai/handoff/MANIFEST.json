@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1786267280",
-    "timestamp": "2026-08-09T09:21:21Z",
-    "commit": "ae83655",
+    "session_id": "cli-1786267778",
+    "timestamp": "2026-08-09T09:29:39Z",
+    "commit": "8df6b32",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:c533ad977412ae544125e132334d9e585532583ced086ade552a54e3b667476c",
-      "updated": "2026-08-09T09:20:45Z",
-      "lines": 677,
-      "summary": "Model: claude-opus-5. Scheduled daily advisory sweep. Base: 7afaedc (main,"
+      "checksum": "sha256:c88d47450805d624a3a7b95f11d77209a9f2e38f2e6c85dedc26cc9c045835bb",
+      "updated": "2026-08-09T09:29:30Z",
+      "lines": 678,
+      "summary": "Model: claude-opus-5. Scheduled daily advisory sweep, merged as #128. The sweep"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:a65304ce758e960231c7d80f7712d928dbd27e43d62750aeef2a2c4a489d77fe",
-      "updated": "2026-08-08T09:28:06Z",
+      "checksum": "sha256:7e09091d37d908ab65e3a332a7aa36612a4c80be67a5c11eaaf557b7fc004407",
+      "updated": "2026-08-09T09:28:12Z",
       "lines": 242,
       "summary": "Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:b2b8e1469492b57b4adb3c469c22af41d4a685fb48ccf6056bbb8e346f149814",
-      "updated": "2026-08-09T09:21:20Z",
-      "lines": 141,
+      "checksum": "sha256:4279d5b228cda524ef597ea129d4f238eea78f69c83621db8e7f58563e32af8e",
+      "updated": "2026-08-09T09:29:37Z",
+      "lines": 142,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:ec4df4ec28bee63d60fd7b8604d70c7ce2de9767c1891e511cf0177bc398d5e7",
-      "updated": "2026-08-09T09:21:20Z",
+      "checksum": "sha256:dbd44422924b9797effd417b3a0393090dc16204e283b599a852af2c4a7b6c6c",
+      "updated": "2026-08-09T09:29:37Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:8f4aa23f0408ad5fad8c668d248baefb7baf1c1a8cb13cb4d9ae164064d3f3e5",
-      "updated": "2026-08-09T09:21:20Z",
+      "checksum": "sha256:7683ff1a97d494310129913c315ed28de06a2be77467dd1118823b7c6a1a9242",
+      "updated": "2026-08-09T09:29:37Z",
       "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,11 +77,11 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: claude-opus-5. Scheduled daily advisory sweep. Base: 7afaedc (main, Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete. ",
+  "quick_context": "Model: claude-opus-5. Scheduled daily advisory sweep, merged as #128. The sweep Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 9630,
-    "full_read": 19579
+    "manifest_plus_core": 9656,
+    "full_read": 19628
   }
   ,"next_task_id": 18
   ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Decide whether version-pinned npm IOCs should match on a directory scan","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision: behaviour change with real false-positive surface","created":"2026-08-06T09:00:00Z"},"T-017":{"title":"Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-06T09:30:00Z"}}

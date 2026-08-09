@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (124, newest first)
+## Releases (125, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.25.9 | 2026-08-09 | Threat feed: 64 malicious-package IOCs imported from the GitHub Advisory Database with |
 | v5.25.8 | 2026-08-08 | Threat feed: 250 malicious-package IOCs imported from the GitHub Advisory Database with |
 | v5.25.7 | 2026-08-07 | Threat feed: 783 malicious-package IOCs imported from the GitHub Advisory Database with |
 | v5.25.6 | 2026-08-06 | Threat feed: 358 malicious-package IOCs imported from the GitHub Advisory Database |
