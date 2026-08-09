@@ -7,6 +7,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 64 malicious-package IOCs imported from the GitHub Advisory Database with
+  OSV.dev corroboration (2026-08-09 sweep, 62 npm and 2 PyPI). 4,492 advisories were fetched
+  over 45 pages; the page cap was not hit, no `--allow-truncated` or `--allow-backlog`
+  override was used, and the `--limit 250` cap was not reached, so nothing is left waiting
+  for the next run. The batch continues the `bnpl-*` / `statist-browser-typed-client-*`
+  dependency-confusion waves, adds a `@yancyyu/agentcli` version sweep (25 releases), a
+  `sextant-cli-*` per-platform binary cluster, a `svelte`/`streak` map-kit typosquat set,
+  and PyPI `riakcs`.
+- IOC blocklist: network infrastructure for the Flooding Dropper / WEL1DROPPER npm
+  slopsquatting campaign (OpenSourceMalware and Sonatype, 2026-08-07). The ~850 packages
+  arrive through the advisory databases, but the delivery hosts do not: added eight
+  attacker-controlled Cloudflare Worker sub-hosts (`oob-worker.*` and
+  `package-proxy.*oobworker`), the DNS-fallback download host `dl[.]wel1[.]ru`, and two
+  SHA-256 stage-2 payload hashes. The shared `workers[.]dev` apex and the three Russian
+  financial-services hosts the write-up embeds with an explicitly unresolved role
+  (`nexus[.]tcsbank[.]ru`, `repo-linux[.]tcsbank[.]ru`, `alertmanager[.]cloudpayments[.]ru`)
+  are deliberately not listed.
+- IOC blocklist: C2 and payload indicators for the axios maintainer account takeover
+  (UNC1069 / "Sapphire Sleet", 2026-03-31). The hijacked releases were already version
+  pinned; this adds the RAT C2 `sfrclak[.]com`, its resolver `142[.]11[.]206[.]73`, and the
+  three per-platform implant hashes. The hijacked maintainer account is a victim and is not
+  listed.
+- IOC blocklist: backfill for the `spellcheckpy` / `spellcheckerpy` PyPI RAT (Aikido,
+  2026-01-20), a campaign that had never been ingested. Both names are blocked bare, since
+  every published version is malicious and neither name has legitimate history, together
+  with the stage-2 host `updatenet[.]work` and `172[.]86[.]73[.]139`. Single-source, so the
+  feed entries carry confidence 0.85.
+- Tests: `campaigns.test.ts` gains scan-level coverage for all three campaigns, including a
+  negative test that the `workers[.]dev` apex and the unattributed third-party hosts stay
+  clean, a clean-version negative for axios, and an ecosystem-inversion guard that
+  `spellcheckpy` fires on a Python lockfile but not on an npm dependency of the same name.
+
 ## [5.25.8] - 2026-08-08
 
 ### Added

@@ -11304,6 +11304,107 @@ const FEED_CHUNK_10: FeedIOC[] = [
   // attacker-created by Socket. Version-pinned, see ioc-blocklist.ts.
   { type: "url", value: "raw.githubusercontent.com/smi1e2u/smart-config-manager/main/defaults/preferences.json", severity: "critical", confidence: 0.85, family: "AlibabaDevRAT", campaign: "Alibaba Dev Toolchain RAT", source: "Corgea", firstSeen: "2026-08-03" },
   { type: "package", value: "node-data-utils@1.0.1", severity: "critical", confidence: 0.85, family: "AlibabaDevRAT", campaign: "Alibaba Dev Toolchain RAT", source: "Corgea", firstSeen: "2026-08-03" },
+
+  // Imported from GitHub Advisory Database (2026-07-26) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:riakcs@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-3849-8v46-m7qx, MAL-2026-13665", firstSeen: "2026-08-08" },
+  { type: "package", value: "pypi:riakcs@0.5.0", severity: "critical", confidence: 1.0, source: "GHSA-3849-8v46-m7qx, MAL-2026-13665", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.pwakasko", severity: "critical", confidence: 0.9, source: "GHSA-4fvg-gp6j-v2qm", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.tdevice", severity: "critical", confidence: 0.9, source: "GHSA-rrvf-xjx8-gmjh", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.pwahelp", severity: "critical", confidence: 0.9, source: "GHSA-wvc6-wpjx-jgx8", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.tdeal", severity: "critical", confidence: 0.9, source: "GHSA-966c-8786-6cx7", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.pwainsurance", severity: "critical", confidence: 0.9, source: "GHSA-hm23-rg8r-xhmg", firstSeen: "2026-08-08" },
+  { type: "package", value: "statist-browser-typed-client-eventea.projects.pwafamily", severity: "critical", confidence: 0.9, source: "GHSA-qmv3-2w4r-rwwq", firstSeen: "2026-08-08" },
+  { type: "package", value: "bnpl-blocks-desktop-bnpl-anchor-title", severity: "critical", confidence: 1.0, source: "GHSA-55g4-q5c3-783j, MAL-2026-12912", firstSeen: "2026-08-08" },
+  { type: "package", value: "test-noexist-xyz-99", severity: "critical", confidence: 0.9, source: "GHSA-682j-6frp-w6rq", firstSeen: "2026-08-08" },
+  { type: "package", value: "specials-resources-server", severity: "critical", confidence: 0.9, source: "GHSA-9wh2-7j4m-r43r", firstSeen: "2026-08-08" },
+  { type: "package", value: "svelte-kit-cache", severity: "critical", confidence: 0.9, source: "GHSA-9fg7-rqp2-7hpg", firstSeen: "2026-08-08" },
+  { type: "package", value: "streak-map-kit", severity: "critical", confidence: 1.0, source: "GHSA-w8wc-wm2m-27hv, MAL-2026-13628", firstSeen: "2026-08-08" },
+  { type: "package", value: "map-streak-kit", severity: "critical", confidence: 1.0, source: "GHSA-m55q-8hc5-f46f, MAL-2026-13632", firstSeen: "2026-08-08" },
+  { type: "package", value: "svelte-streak-kit", severity: "critical", confidence: 0.9, source: "GHSA-2w6v-q693-8jjm", firstSeen: "2026-08-08" },
+  { type: "package", value: "@xiaohhhh1/canvas-agent@0.4.11", severity: "critical", confidence: 1.0, source: "GHSA-29wq-c378-jw6v, MAL-2026-13398", firstSeen: "2026-08-06" },
+  { type: "package", value: "@xiaohhhh1/canvas-agent@0.4.10", severity: "critical", confidence: 1.0, source: "GHSA-29wq-c378-jw6v, MAL-2026-13398", firstSeen: "2026-08-06" },
+  { type: "package", value: "@xiaohhhh1/canvas-agent@0.4.9", severity: "critical", confidence: 1.0, source: "GHSA-29wq-c378-jw6v, MAL-2026-13398", firstSeen: "2026-08-06" },
+  { type: "package", value: "@xiaohhhh1/canvas-agent@0.4.8", severity: "critical", confidence: 1.0, source: "GHSA-29wq-c378-jw6v, MAL-2026-13398", firstSeen: "2026-08-06" },
+  { type: "package", value: "@apicity/meta@0.8.8", severity: "critical", confidence: 1.0, source: "GHSA-rw5c-r24c-f9c7, MAL-2026-13412", firstSeen: "2026-08-06" },
+  { type: "package", value: "sextant-cli-darwin-arm64@0.0.1-rc39", severity: "critical", confidence: 1.0, source: "GHSA-2qg7-5p3x-vr75, MAL-2026-11997", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-darwin-arm64@0.0.1-rc38", severity: "critical", confidence: 1.0, source: "GHSA-2qg7-5p3x-vr75, MAL-2026-11997", firstSeen: "2026-08-05" },
+  { type: "package", value: "tt-help-cli-ycl@1.4.78", severity: "critical", confidence: 1.0, source: "GHSA-jh6x-h6j2-xw9v, MAL-2026-12488", firstSeen: "2026-08-05" },
+  { type: "package", value: "tt-help-cli-ycl@1.4.75", severity: "critical", confidence: 1.0, source: "GHSA-jh6x-h6j2-xw9v, MAL-2026-12488", firstSeen: "2026-08-05" },
+  { type: "package", value: "tt-help-cli-ycl@1.4.76", severity: "critical", confidence: 1.0, source: "GHSA-jh6x-h6j2-xw9v, MAL-2026-12488", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-darwin-amd64@0.0.1-rc39", severity: "critical", confidence: 1.0, source: "GHSA-7x22-xp2x-5r35, MAL-2026-12028", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-darwin-amd64@0.0.1-rc38", severity: "critical", confidence: 1.0, source: "GHSA-7x22-xp2x-5r35, MAL-2026-12028", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-linux-arm64@0.0.1-rc38", severity: "critical", confidence: 1.0, source: "GHSA-3w3q-fqgj-f36f, MAL-2026-12043", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-linux-arm64@0.0.1-rc39", severity: "critical", confidence: 1.0, source: "GHSA-3w3q-fqgj-f36f, MAL-2026-12043", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-linux-amd64@0.0.1-rc38", severity: "critical", confidence: 1.0, source: "GHSA-g6xw-m38g-gq9x, MAL-2026-12029", firstSeen: "2026-08-05" },
+  { type: "package", value: "sextant-cli-linux-amd64@0.0.1-rc39", severity: "critical", confidence: 1.0, source: "GHSA-g6xw-m38g-gq9x, MAL-2026-12029", firstSeen: "2026-08-05" },
+  { type: "package", value: "@ornikar/react-native-svg-transformer@1.0.13", severity: "critical", confidence: 1.0, source: "GHSA-rqjm-92gf-5c24, MAL-2026-11769", firstSeen: "2026-08-04" },
+  { type: "package", value: "@ornikar/intl-config@10.0.10", severity: "critical", confidence: 1.0, source: "GHSA-g4r2-833j-2226, MAL-2026-11757", firstSeen: "2026-08-04" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.42", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.35", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.27", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.52", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.43", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.61", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.66", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.67", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.48", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.26", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.77", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.44", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.53", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.29", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.40", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.33", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.36", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.50", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.71", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.58", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.79", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.30", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.78", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.28", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.80", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@yancyyu/agentcli@1.9.25", severity: "critical", confidence: 1.0, source: "GHSA-wqc4-72w7-qr9g, MAL-2026-11123", firstSeen: "2026-07-28" },
+  { type: "package", value: "@onescience/onecode@1.14.50-202608071618", severity: "critical", confidence: 1.0, source: "GHSA-v8hc-7wp4-4qj3, MAL-2026-10717", firstSeen: "2026-07-27" },
+  { type: "package", value: "@onescience/onecode@1.14.50-202608071143", severity: "critical", confidence: 1.0, source: "GHSA-v8hc-7wp4-4qj3, MAL-2026-10717", firstSeen: "2026-07-27" },
+  { type: "package", value: "@onescience/onecode@1.14.50-202608070922", severity: "critical", confidence: 1.0, source: "GHSA-v8hc-7wp4-4qj3, MAL-2026-10717", firstSeen: "2026-07-27" },
+  { type: "package", value: "@heartlandone-private/fontawesome-pro@6.3.6", severity: "critical", confidence: 1.0, source: "GHSA-76cg-jp79-588m, MAL-2026-11093", firstSeen: "2026-07-27" },
+  { type: "package", value: "@heartlandone-private/fontawesome-pro@6.3.2", severity: "critical", confidence: 1.0, source: "GHSA-76cg-jp79-588m, MAL-2026-11093", firstSeen: "2026-07-27" },
+
+  // Flooding Dropper / WEL1DROPPER npm slopsquatting campaign (August 7 2026). The package
+  // names arrive through the advisory databases; these are the delivery hosts and payload
+  // hashes, which they never publish. The three oob-worker hosts are reported by both
+  // OpenSourceMalware and The Hacker News; the package-proxy hosts and the two binary
+  // hashes are single-source (OpenSourceMalware), hence 0.85.
+  { type: "domain", value: "oob-worker.cf103-070.workers.dev", severity: "critical", confidence: 1.0, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware, The Hacker News", firstSeen: "2026-08-07" },
+  { type: "domain", value: "oob-worker.cf102-baf.workers.dev", severity: "critical", confidence: 1.0, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware, The Hacker News", firstSeen: "2026-08-07" },
+  { type: "domain", value: "oob-worker.cf99-9b3.workers.dev", severity: "critical", confidence: 1.0, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware, The Hacker News", firstSeen: "2026-08-07" },
+  { type: "domain", value: "package-proxy.cf5oobworker.workers.dev", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "domain", value: "package-proxy.cf6oobworker.workers.dev", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "domain", value: "package-proxy.cf7oobworker.workers.dev", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "domain", value: "package-proxy.cf8oobworker.workers.dev", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "domain", value: "package-proxy.cf11oobworker.workers.dev", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "domain", value: "dl.wel1.ru", severity: "critical", confidence: 1.0, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware, The Hacker News", firstSeen: "2026-08-07" },
+  { type: "hash", value: "7e486657f30594afda379b97030252a09a19fe8055e25c9e371544f59bd8e9e3", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+  { type: "hash", value: "c214746c74cae8ece8bdaf69aa05da4db6ce013f9e77452d1eed1a002fd9ba00", severity: "critical", confidence: 0.85, family: "WEL1DROPPER", campaign: "Flooding Dropper", source: "OpenSourceMalware", firstSeen: "2026-08-07" },
+
+  // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" (March 31 2026).
+  // The axios and plain-crypto-js versions were already pinned in v5.x; this is the
+  // C2 and the per-platform implants the advisory databases never published.
+  { type: "domain", value: "sfrclak.com", severity: "critical", confidence: 0.95, family: "UNC1069 RAT", campaign: "axios hijack", source: "Aikido, LevelBlue", firstSeen: "2026-03-31" },
+  { type: "ip", value: "142.11.206.73", severity: "critical", confidence: 0.95, family: "UNC1069 RAT", campaign: "axios hijack", source: "Aikido, LevelBlue", firstSeen: "2026-03-31" },
+  { type: "hash", value: "92ff08773995ebc8d55ec4b8e1a225d0d1e51efa4ef88b8849d0071230c9645a", severity: "critical", confidence: 0.95, family: "UNC1069 RAT", campaign: "axios hijack", source: "Aikido, LevelBlue", firstSeen: "2026-03-31" },
+  { type: "hash", value: "617b67a8e1210e4fc87c92d1d1da45a2f311c08d26e89b12307cf583c900d101", severity: "critical", confidence: 0.95, family: "UNC1069 RAT", campaign: "axios hijack", source: "Aikido, LevelBlue", firstSeen: "2026-03-31" },
+  { type: "hash", value: "fcb81618bb15edfdedfb638b4c08a2af9cac9ecfa551af135a8402bf980375cf", severity: "critical", confidence: 0.95, family: "UNC1069 RAT", campaign: "axios hijack", source: "Aikido, LevelBlue", firstSeen: "2026-03-31" },
+
+  // spellcheckpy / spellcheckerpy PyPI RAT (January 20-21 2026). Backfill of a campaign
+  // that was never ingested. Every published version is malicious, so the packages are
+  // listed by bare name. Single-source (Aikido), hence 0.85. The "pypi:" prefix is
+  // load-bearing - without it these would be read as npm names.
+  { type: "package", value: "pypi:spellcheckpy", severity: "critical", confidence: 0.85, family: "Python RAT", campaign: "updatenet", source: "Aikido", firstSeen: "2026-01-20" },
+  { type: "package", value: "pypi:spellcheckerpy", severity: "critical", confidence: 0.85, family: "Python RAT", campaign: "updatenet", source: "Aikido", firstSeen: "2026-01-20" },
+  { type: "domain", value: "updatenet.work", severity: "critical", confidence: 0.85, family: "Python RAT", campaign: "updatenet", source: "Aikido", firstSeen: "2026-01-20" },
+  { type: "ip", value: "172.86.73.139", severity: "critical", confidence: 0.85, family: "Python RAT", campaign: "updatenet", source: "Aikido", firstSeen: "2026-01-20" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

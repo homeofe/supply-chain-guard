@@ -1,8 +1,55 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-08 (threat-intel sweep). This is one current snapshot, not a session log.
+> Updated 2026-08-09 (threat-intel sweep). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
+
+---
+
+## Threat-intel run (2026-08-09, PR open, no version bump)
+
+Model: claude-opus-5. Scheduled daily advisory sweep. Base: 7afaedc (main,
+post-v5.25.8). Repo was clean with zero open PRs, so no concurrent-writer
+conflict. No version bump on this branch by design: Emre cuts the release.
+
+**Importer.** 64 new package IOCs (62 npm, 2 PyPI) in one standard pass over the
+rolling 14-day window. 4,492 advisories fetched over 45 pages, 16 corroborated by
+OSV. The page cap was NOT hit, so no window slicing and no `--allow-truncated`.
+The `--limit 250` cap was NOT reached either (`remaining: 0`, `undrainable: 0`),
+so unlike the last two runs nothing is left waiting. 158 advisories were skipped
+by design (149 withdrawn, 7 unmappable version range, 2 unsafe package name); the
+JSON report carries only counts for those, not per-advisory detail.
+
+**Manual enrichment (STEP 1b).** The headline campaign of the week, the
+keyv/cacheable ChainDrop worm, needed nothing: the 2026-08-07 and 2026-08-08 runs
+had already ingested its hashes, C2, wallet and package pins, including the
+judgement calls (cloud metadata IPs excluded, the `file-entry-cache@11.1.7`
+vendor discrepancy resolved against the registry). Three genuine gaps were filled
+instead:
+
+- **Flooding Dropper / WEL1DROPPER** (2026-08-07, ~850 packages). The feed already
+  held 78 `bigops` and 134 `dolyame` package entries from the advisory databases,
+  but none of the delivery infrastructure. Added 8 Cloudflare Worker sub-hosts, the
+  DNS-fallback host `dl[.]wel1[.]ru`, and 2 payload hashes.
+- **axios / UNC1069** (2026-03-31). Versions were already pinned; the C2, its
+  resolver IP and the 3 implant hashes were not.
+- **spellcheckpy / spellcheckerpy** (2026-01-20). Never ingested at all. Backfilled
+  as bare-name PyPI blocks plus host and IP. Single-source, confidence 0.85.
+
+**Deliberate non-additions.** The `workers[.]dev` apex; `nexus[.]tcsbank[.]ru`,
+`repo-linux[.]tcsbank[.]ru` and `alertmanager[.]cloudpayments[.]ru` (real Russian
+financial-services hosts that OpenSourceMalware embeds with an explicitly UNCLEAR
+role - health check, decoy, or compromised third party); the Cloudflare anycast
+address `104[.]21[.]35[.]216` published for the ChainDrop router; and the hijacked
+axios maintainer account, who is a victim. `dl[.]wel1[.]ru` is listed once rather
+than as five rows because domain matching is an unanchored substring test, so one
+entry covers the published platform subdomains without each double-reporting.
+
+**Open question for Emre.** Aikido lists a second attacker-controlled account,
+`nrwise` (`nrwise[@]proton[.]me`), alongside the hijacked axios maintainer. It is
+not clear from the write-up whether that is a GitHub handle or an npm publisher
+account, and `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is GitHub-only, so it was left out
+rather than filed in the wrong namespace. See the PR body.
 
 ---
 

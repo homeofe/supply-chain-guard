@@ -2908,6 +2908,14 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   // Single-source (Xygeni).
   "^gcli-control$",
 
+  // spellcheckpy / spellcheckerpy Python RAT (Aikido, January 20-21 2026). Backfill of a
+  // campaign that was never ingested. Typosquats of pyspellchecker/spellchecker that hide
+  // a gzipped stage-1 inside resources/eu.json.gz under a "spellchecker" dictionary key,
+  // then pull stage 2 from updatenet[.]work (in ioc-blocklist). Every published version is
+  // malicious and neither name has a legitimate history, so bare names rather than version
+  // pins. Single-source (Aikido).
+  "^(spellcheckpy|spellcheckerpy)$",
+
   // Very long single-word lowercase names
   "^[a-z]{20,}$",
 ];

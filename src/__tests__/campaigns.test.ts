@@ -3992,4 +3992,199 @@ describe("Campaign Signatures", () => {
       ).toBeUndefined();
     });
   });
+
+  // =================================================================
+  // Flooding Dropper / WEL1DROPPER (August 2026)
+  // =================================================================
+
+  describe("Flooding Dropper npm slopsquatting campaign (August 2026)", () => {
+    it("flags a Cloudflare Worker payload host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "install.js"),
+        'const url = "https://oob-worker.cf99-9b3.workers.dev/pkg/update_win.exe";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the WEL1DROPPER payload host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the package-proxy Worker host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'const mirror = "https://package-proxy.cf11oobworker.workers.dev/";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the package-proxy Worker host must be flagged").toBeDefined();
+    });
+
+    // The DNS fallback host is listed once at the dl[.] label. Matching is an
+    // unanchored substring test, so the published platform subdomains must all
+    // resolve to that single entry rather than needing a row each.
+    it("flags every published DNS-fallback subdomain through the single dl.wel1.ru entry", async () => {
+      for (const host of [
+        "sdk.dl.wel1.ru",
+        "ext.dl.wel1.ru",
+        "pkg.dl.wel1.ru",
+        "net.dl.wel1.ru",
+        "dl.wel1.ru",
+      ]) {
+        const dir = fs.mkdtempSync(path.join(tempDir, "dns-"));
+        fs.writeFileSync(path.join(dir, "resolve.js"), `const c2 = "${host}";\n`);
+
+        const report = await scan({ target: dir, format: "text" });
+        const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+        expect(finding, `${host} must be flagged`).toBeDefined();
+      }
+    });
+
+    it("flags the stage-2 payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "notes.js"),
+        'const sha = "7e486657f30594afda379b97030252a09a19fe8055e25c9e371544f59bd8e9e3";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the WEL1DROPPER payload hash must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The write-up embeds three Russian financial-services hosts whose role it
+    // explicitly calls unclear (health check, decoy, or compromised third party),
+    // and the payload rides the shared Cloudflare Workers platform. Blocking either
+    // would flag legitimate infrastructure, so neither is ingested.
+    it("does NOT flag the workers.dev apex or the unattributed third-party hosts", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        'const platform = "https://my-app.workers.dev/";\n' +
+          'const nexus = "https://nexus.tcsbank.ru/repository/npm-group/";\n' +
+          'const alerts = "https://alertmanager.cloudpayments.ru/api/v2/alerts";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(
+        finding,
+        "shared Cloudflare Workers and unattributed third-party hosts must not be blocked",
+      ).toBeUndefined();
+    });
+  });
+
+  // =================================================================
+  // axios maintainer takeover / UNC1069 (March 2026)
+  // =================================================================
+
+  describe("axios hijack - UNC1069 RAT infrastructure (March 2026)", () => {
+    it("flags the RAT C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "stage.js"),
+        'const c2 = "http://sfrclak.com:8000/6202033";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the axios RAT C2 domain must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the RAT C2 IP", async () => {
+      fs.writeFileSync(path.join(tempDir, "ip.js"), 'const host = "142.11.206.73";\n');
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding, "the axios RAT C2 IP must be flagged").toBeDefined();
+    });
+
+    it("flags the macOS implant hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "92ff08773995ebc8d55ec4b8e1a225d0d1e51efa4ef88b8849d0071230c9645a";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the axios macOS implant hash must be flagged").toBeDefined();
+    });
+
+    it("flags the pinned malicious axios version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { axios: "1.14.1" } }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding, "axios@1.14.1 must be flagged").toBeDefined();
+    });
+
+    // axios is a legitimate package with 83M+ weekly downloads. Only the two
+    // hijacked releases are malicious; every other version must stay clean.
+    it("does NOT flag a clean axios version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { axios: "1.7.9" } }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION");
+      expect(finding, "a clean axios release must not be flagged").toBeUndefined();
+    });
+  });
+
+  // =================================================================
+  // spellcheckpy / spellcheckerpy PyPI RAT (January 2026 backfill)
+  // =================================================================
+
+  describe("spellcheckpy PyPI RAT (January 2026)", () => {
+    it("flags spellcheckpy through a real scan of a Python lockfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "spellcheckpy"\nversion = "1.0.0"\ndescription = "rat"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /spellcheckpy/.test(JSON.stringify(f)));
+      expect(finding, "PyPI lockfile must flag the spellcheck RAT").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // Same inversion guard as gcli-control: a bare feed value means the npm
+    // namespace, so a missing "pypi:" prefix would silently move detection to
+    // the wrong ecosystem instead of weakening it.
+    it("does NOT flag an npm dependency named spellcheckpy (wrong ecosystem)", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { spellcheckpy: "1.0.0" } }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /spellcheckpy/.test(JSON.stringify(f)));
+      expect(finding, "a PyPI IOC must not fire on an npm dependency").toBeUndefined();
+    });
+
+    it("flags the updatenet stage-2 delivery host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.py"),
+        'URL = "https://updatenet.work/settings/history.php"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the spellcheck stage-2 host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The block is anchored, so the legitimate packages these names typosquat
+    // must stay clean.
+    it("does NOT flag the legitimate packages the names typosquat", () => {
+      for (const name of ["pyspellchecker", "spellchecker", "spellcheck"]) {
+        const hit = PYPI_TYPOSQUAT_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+  });
 });

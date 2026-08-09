@@ -253,6 +253,45 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // every Ethereum repository on sight - the contract address in
   // KNOWN_C2_WALLETS is the indicator that actually distinguishes this campaign.
 
+  // Flooding Dropper / WEL1DROPPER npm slopsquatting campaign (OpenSourceMalware +
+  // Sonatype + Unit 42, August 7 2026). ~850 AI-generated typosquat packages published
+  // from disposable npm accounts (the "bigops" / "bnpl" / "dolyame" name families, 35.x.y
+  // versions) whose README talks the developer into running them. Stage 1 pulls a
+  // platform-specific RAT over HTTPS from these Cloudflare Worker hosts, and falls back to
+  // reassembling the binary from base64 chunks in DNS TXT records under dl[.]wel1[.]ru.
+  // Specific attacker sub-hosts only - never the shared workers[.]dev apex.
+  "oob-worker.cf103-070.workers.dev",
+  "oob-worker.cf102-baf.workers.dev",
+  "oob-worker.cf99-9b3.workers.dev",
+  "package-proxy.cf5oobworker.workers.dev",
+  "package-proxy.cf6oobworker.workers.dev",
+  "package-proxy.cf7oobworker.workers.dev",
+  "package-proxy.cf8oobworker.workers.dev",
+  "package-proxy.cf11oobworker.workers.dev",
+  // Attacker-registered download host, no legitimate service behind it. Listed at the
+  // dl[.] label rather than as four separate rows: matching here is an unanchored
+  // substring test, so this one entry already covers the published platform subdomains
+  // (sdk[.] / ext[.] / pkg[.] / net[.]) without each of them double-reporting.
+  "dl.wel1.ru",
+  // The write-up also lists nexus[.]tcsbank[.]ru, repo-linux[.]tcsbank[.]ru and
+  // alertmanager[.]cloudpayments[.]ru, embedded in the sample with an explicitly
+  // UNCLEAR role (health check, decoy, or compromised third party). Those are real
+  // Russian financial-services hosts, not confirmed attacker infrastructure, so they
+  // are deliberately NOT listed - blocking a possible victim on an unresolved
+  // attribution is exactly the false positive that gets a scanner switched off.
+
+  // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" cross-platform RAT
+  // (Aikido + LevelBlue, March 31 2026). Extends coverage that previously only pinned
+  // axios@1.14.1 / @0.30.4 and plain-crypto-js@4.2.1: this is the dropper's C2, reached
+  // at hxxp://sfrclak[.]com:8000/6202033. Attacker-registered, no legitimate use.
+  "sfrclak.com",
+
+  // spellcheckpy / spellcheckerpy PyPI RAT (Aikido, January 2026). Backfill of a campaign
+  // that was never ingested. Stage 2 is pulled from hxxps://updatenet[.]work/settings/
+  // history.php and the implant beacons to hxxps://updatenet[.]work/update1.php.
+  // Attacker-registered lookalike of a software-update host. Single-source.
+  "updatenet.work",
+
   // GlassWASM / GlassWorm successor - trojanized Open VSX extensions (Socket + Corgea,
   // June 2026). Two impersonation clones of verified VS Code Marketplace extensions were
   // republished on Open VSX carrying a TinyGo-compiled WebAssembly stager. The WASM blob
@@ -378,6 +417,16 @@ export const KNOWN_C2_IPS: string[] = [
   "23.27.13.43",
   "198.105.127.210",
   "23.27.202.27",
+
+  // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" (Aikido + LevelBlue,
+  // March 31 2026). Resolver for sfrclak[.]com, which serves the RAT stage on :8000.
+  "142.11.206.73",
+
+  // spellcheckpy / spellcheckerpy PyPI RAT (Aikido, January 2026). Host behind
+  // updatenet[.]work. Single-source. The Cloudflare edge address published for the
+  // ChainDrop router (104[.]21[.]35[.]216) is deliberately NOT listed anywhere here -
+  // it is a shared anycast address fronting millions of sites.
+  "172.86.73.139",
 ];
 
 // ---------------------------------------------------------------------------
@@ -794,6 +843,22 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "558b4f1d9a263c13756ab0126c09dd080c85ba405b29488e1c4e6aa68b554f1f": "GlassWASM TinyGo WebAssembly stager, snqpkebiwrxmoivl.wasm / orybbbdsuqmaapel.wasm (SHA256)",
   "3aa31999398e7f80231c03d7137ffdb554a84b83dbcffc59ce16c9a65f9e5d58": "GlassWASM trojanized noellee-doc.flint-debug 0.1.1 VSIX (SHA256)",
   "1e283327ad048bea39f4a8501770858a20f3555e87fe3e202274f2e87f8a3c25": "GlassWASM trojanized ExarGD.vsblack 0.0.1 VSIX (SHA256)",
+
+  // Flooding Dropper / WEL1DROPPER stage-2 RAT binaries (OpenSourceMalware, August 7 2026).
+  // Single-source for the hashes themselves; the campaign's package families and Worker
+  // hosts are corroborated by Sonatype and Unit 42. Both round-tripped as well-formed
+  // 64-char digests and the Linux one was re-confirmed by exact-string search.
+  "7e486657f30594afda379b97030252a09a19fe8055e25c9e371544f59bd8e9e3": "Flooding Dropper WEL1DROPPER stage-2 payload, Linux x86-64 (SHA256)",
+  "c214746c74cae8ece8bdaf69aa05da4db6ce013f9e77452d1eed1a002fd9ba00": "Flooding Dropper WEL1DROPPER stage-2 payload, macOS universal (SHA256)",
+
+  // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" cross-platform RAT
+  // (Aikido + LevelBlue, March 31 2026). The axios and plain-crypto-js versions were
+  // already pinned; these are the dropped per-platform implants, which the advisory
+  // databases never publish. Each round-tripped as a well-formed 64-char digest and the
+  // macOS one was re-confirmed by exact-string search.
+  "92ff08773995ebc8d55ec4b8e1a225d0d1e51efa4ef88b8849d0071230c9645a": "axios/UNC1069 RAT, macOS /Library/Caches/com.apple.act.mond (SHA256)",
+  "617b67a8e1210e4fc87c92d1d1da45a2f311c08d26e89b12307cf583c900d101": "axios/UNC1069 RAT, Windows %PROGRAMDATA%\\wt.exe (SHA256)",
+  "fcb81618bb15edfdedfb638b4c08a2af9cac9ecfa551af135a8402bf980375cf": "axios/UNC1069 RAT, Linux /tmp/ld.py (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
