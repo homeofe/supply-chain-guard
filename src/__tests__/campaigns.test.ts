@@ -3,6 +3,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
 import { MALICIOUS_PACKAGE_PATTERNS, PYPI_TYPOSQUAT_PATTERNS } from "../patterns.js";
+import { matchPackageIOC, getBundledFeed } from "../threat-intel.js";
+import { matchBareNpmIOC } from "../install-guard.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -4187,4 +4189,195 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // TeamPCP telnyx PyPI compromise + March 2026 npm wave
+  // =================================================================
+
+  describe("TeamPCP telnyx PyPI compromise (March 2026)", () => {
+    it("flags the hijacked telnyx 4.87.1 through a real scan", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "telnyx"\nversion = "4.87.1"\ndescription = "telephony sdk"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /telnyx/.test(JSON.stringify(f)));
+      expect(finding, "the hijacked telnyx release must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the clean telnyx 4.86.0 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "telnyx"\nversion = "4.86.0"\ndescription = "telephony sdk"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /telnyx/.test(JSON.stringify(f)));
+      expect(finding, "a clean telnyx release must not be flagged").toBeUndefined();
+    });
+
+    it("flags the WAV-disguised stage-2 dead drop", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.py"),
+        'URL = "http://83.142.209.203:8080/ringtone.wav"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP");
+      expect(finding, "the WAV stage-2 dead drop must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the aquasecurtiy brand-typosquat C2 host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.py"),
+        'C2 = "https://scan.aquasecurtiy.org/raw"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the aquasecurtiy typosquat must be flagged").toBeDefined();
+    });
+
+    it("flags the telnyx 4.87.1 wheel hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "7321caa303fe96ded0492c747d2f353c4f7d17185656fe292ab0a59e2bd0b8d9";',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the telnyx wheel hash must be flagged").toBeDefined();
+    });
+
+    it("flags the Argon-DevOps-Mgt attacker account", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.py"),
+        'SRC = "https://github.com/Argon-DevOps-Mgt/staging"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT");
+      expect(finding, "the attacker account must be flagged").toBeDefined();
+    });
+
+    // Only the attacker-specific canister and tunnel hostnames are listed. The
+    // shared gateways they sit on, and the real brand the C2 typosquats, must
+    // stay clean or every ICP / Cloudflare Tunnel user becomes a false positive.
+    it("does NOT flag the shared gateways or the real aquasecurity brand", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.py"),
+        [
+          'GATEWAY = "https://raw.icp0.io/"',
+          'TUNNEL = "https://my-own-dev-tunnel.trycloudflare.com/"',
+          'VENDOR = "https://www.aquasecurity.org/"',
+          "",
+        ].join("\n"),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "shared hosts and the real brand must stay clean").toBeUndefined();
+    });
+
+    it("flags a hijacked npm-wave release and leaves the clean one alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { "@opengov/form-utils": "0.7.2" } }),
+      );
+      let report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => /form-utils/.test(JSON.stringify(f))),
+        "the hijacked @opengov/form-utils release must be flagged",
+      ).toBeDefined();
+
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "t", version: "1.0.0", dependencies: { "@opengov/form-utils": "0.7.1" } }),
+      );
+      report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => /form-utils/.test(JSON.stringify(f))),
+        "a clean @opengov/form-utils release must not be flagged",
+      ).toBeUndefined();
+    });
+  });
+
+  // =================================================================
+  // Regression: PyPI feed entries must carry the "pypi:" prefix
+  // =================================================================
+
+  // These six campaigns shipped their PyPI package IOCs as BARE feed values.
+  // A bare value means the npm namespace, so the effect was not a weaker scan
+  // but an inverted one: matchPackageIOC("pypi", ...) returned null for the real
+  // compromise while the npm namespace resolved instead.
+  //
+  // This asserts the resolver directly rather than through scan(). The
+  // package.json path does not consult the feed at all, so a scan-level
+  // "does not flag an npm dependency" test passes either way and proves
+  // nothing; the poetry.lock path is additionally covered by
+  // KNOWN_BAD_PYPI_VERSIONS, which masks the feed defect.
+  describe("PyPI feed entries carry their ecosystem prefix", () => {
+    const feed = getBundledFeed();
+
+    // Two resolvers, two namespaces: an ecosystem-prefixed entry is reachable
+    // only through matchPackageIOC(), a BARE entry only through
+    // matchBareNpmIOC() (see getPackageIndex - bare values are npm by design).
+    // An unprefixed PyPI entry therefore lands in the npm namespace: the PyPI
+    // lookup returns null and the npm one starts answering for it.
+    //
+    // This asserts the resolvers directly. A scan()-level test cannot see it:
+    // the poetry.lock path is also covered by KNOWN_BAD_PYPI_VERSIONS, which
+    // masks the miss, and checkMaliciousDependencyNames() passes no version, so
+    // a versioned bare entry never fires there either. The reachable
+    // false-positive path is install-guard's checkSpec(), which does pass one.
+    const PYPI_ONLY: Array<[string, string]> = [
+      ["litellm", "1.82.7"],
+      ["litellm", "1.82.8"],
+      ["lightning", "2.6.2"],
+      ["lightning", "2.6.3"],
+      ["guardrails-ai", "0.10.1"],
+      ["mistralai", "2.4.6"],
+      ["durabletask", "1.4.1"],
+      ["durabletask", "1.4.3"],
+      ["xinference", "2.6.0"],
+      ["telnyx", "4.87.1"],
+      ["telnyx", "4.87.2"],
+    ];
+
+    for (const [name, version] of PYPI_ONLY) {
+      it(`resolves ${name}@${version} as PyPI and not as npm`, () => {
+        expect(
+          matchPackageIOC("pypi", name, version, feed),
+          `${name}@${version} must resolve as a PyPI IOC`,
+        ).toBeTruthy();
+        expect(
+          matchBareNpmIOC(name, version, feed),
+          `${name}@${version} must NOT resolve as an npm IOC`,
+        ).toBeNull();
+      });
+    }
+
+    // The March 2026 npm wave really is npm, so it must resolve the other way
+    // round. This pins the pair so a future bulk edit cannot prefix everything.
+    it("leaves the genuinely-npm entries in the npm namespace", () => {
+      for (const [name, version] of [
+        ["@opengov/form-utils", "0.7.2"],
+        ["@airtm/uuid-base32", "1.0.2"],
+        ["eslint-config-ppf", "0.128.2"],
+      ] as Array<[string, string]>) {
+        expect(
+          matchBareNpmIOC(name, version, feed),
+          `${name}@${version} must resolve as an npm IOC`,
+        ).toBeTruthy();
+        expect(
+          matchPackageIOC("pypi", name, version, feed),
+          `${name}@${version} must NOT resolve as a PyPI IOC`,
+        ).toBeNull();
+      }
+    });
+  });
+
 });

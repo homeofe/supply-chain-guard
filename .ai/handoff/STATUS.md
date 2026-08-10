@@ -1,10 +1,49 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-09 (v5.25.9 release). This is one current snapshot, not a session log.
+> Updated 2026-08-10 (threat-intel sweep). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
 ---
+
+## Threat-intel run (2026-08-10, PR open, no release)
+
+Model: claude-opus-5. Scheduled daily advisory sweep. Base: 186ff84 (main,
+post-v5.25.9). Repo was clean with zero open PRs and zero open issues, so no
+concurrent-writer conflict; work was done in a `git worktree` under the session
+scratchpad and the shared checkout was left on `main`. No version bump on this
+branch by design: Emre cuts the release.
+
+**Importer.** 2 new package IOCs, both PyPI (`kotanku@0.1.0`,
+`cubesat-upstream-driver@1.0.1`), in one standard pass over the rolling 14-day
+window. 4,014 advisories fetched over 41 pages, both new entries corroborated by
+OSV. The page cap was NOT hit, so no window slicing and no `--allow-truncated`.
+The `--limit 250` cap was NOT reached (`remaining: 0`, `undrainable: 0`), so
+nothing is left waiting. 151 advisories skipped by design (149 withdrawn, 2
+unmappable version range); the JSON report carries only counts for those, not
+per-advisory detail.
+
+**Manual enrichment (STEP 1b).** The cross-reference turned up that TeamPCP was
+only half ingested: the litellm side was covered, the telnyx sibling three days
+later was not, and the campaign's whole March 2026 npm wave was missing. Added
+the non-package indicators (C2 hosts, WAV dead drops, four wheel/`_client.py`
+hashes, the `Argon-DevOps-Mgt` attacker account) plus 58 hijacked npm packages.
+
+**Method note worth keeping.** The vendor write-up's version enumeration proved
+unreliable: asked to enumerate the `@emilgroup` family it returned longer runs
+of versions than the GitHub Advisory Database records (for example
+`customer-sdk` 1.54.1-1.54.5 against the advisory's 1.54.1-1.54.2, and
+`@teale.io/eslint-config` 1.8.9-1.8.16 against 1.8.9-1.8.10). Every
+package@version pair in this change is therefore read from GHSA at generation
+time, not transcribed. Treat fetched enumerations as a lead, not as data.
+
+**Defect found and fixed.** Six PyPI compromises had their package IOCs in the
+feed as BARE values, which means the npm namespace. `matchPackageIOC("pypi",
+...)` returned null for them while the npm resolver answered instead. The
+lockfile scan still flagged them through `KNOWN_BAD_PYPI_VERSIONS`, which is
+exactly why this survived: the blocklist masked the feed miss. Mutation-proved
+both directions before and after. See the "Needs a decision" section of the PR
+for the one open question this leaves.
 
 ## Threat-intel run (2026-08-09, merged as #128, shipping in v5.25.9)
 

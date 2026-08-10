@@ -7,6 +7,48 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 2 malicious-package IOCs imported from the GitHub Advisory Database with
+  OSV.dev corroboration (2026-08-10 sweep, both PyPI: `kotanku` and
+  `cubesat-upstream-driver`). 4,014 advisories were fetched over 41 pages; the page cap
+  was not hit, no `--allow-truncated` or `--allow-backlog` override was used, and the
+  `--limit 250` cap was not reached, so nothing is left waiting for the next run.
+- IOC blocklist: the telnyx PyPI compromise and the March 2026 npm wave of the TeamPCP
+  campaign, which this repo had covered only on its litellm side. Adds the `telnyx`
+  4.87.1 / 4.87.2 version pin, the brand-typosquat C2 `aquasecurtiy[.]org` and its
+  `scan[.]` host, the Internet Computer canister dead-drop, three attacker quick-tunnel
+  hostnames, the two stage-2 hosts `83[.]142[.]209[.]203` and `83[.]142[.]209[.]11`, the
+  two WAV-disguised payload URLs, four SHA-256 hashes covering the trojanized wheels and
+  `_client.py`, and the attacker GitHub account `Argon-DevOps-Mgt`. The `raw[.]icp0[.]io`
+  and `trycloudflare[.]com` apexes, the real `aquasecurity[.]org` brand and the
+  compromised upstream maintainers are deliberately not listed, and a negative test pins
+  that.
+- IOC blocklist: 58 hijacked npm packages (110 version pins) from the same March 2026
+  TeamPCP wave, including the `@emilgroup` SDK family, `@opengov`, `@teale.io` and nine
+  further org-owned packages. Every package@version pair is read from the GitHub Advisory
+  Database rather than transcribed from a write-up: the vendor enumeration disagreed with
+  the advisory data on several packages, listing releases the advisories do not cover.
+  Five packages the advisory database has no entry for are ingested from the write-up
+  alone and carry confidence 0.85.
+- Tests: `campaigns.test.ts` gains scan-level coverage for the telnyx wave (positive,
+  clean-version negative, dead drop, C2 host, wheel hash, attacker account, and a
+  negative that the shared gateways and the real vendor brand stay clean) plus a
+  resolver-level regression block for the ecosystem-prefix fix below.
+
+### Fixed
+
+- Threat feed: six PyPI compromises shipped their package IOCs as BARE feed values, and a
+  bare value denotes the npm namespace. The effect was an inversion rather than a
+  weakening: `matchPackageIOC("pypi", ...)` returned null for `litellm`, `lightning`,
+  `guardrails-ai`, `mistralai`, `durabletask` and `xinference`, while the npm resolver
+  answered for them instead, so an install-guard check of `litellm@1.82.7` would have
+  reported a critical IOC against the unrelated npm package of that name. On lockfile
+  scans the blocklist path (`KNOWN_BAD_PYPI_VERSIONS`) masked the false negative, which
+  is why no existing test caught it. The nine affected entries now carry the `pypi:`
+  prefix, and three duplicate bare `xinference` entries are dropped because correctly
+  prefixed ones already existed alongside them.
+
 ## [5.25.9] - 2026-08-09
 
 ### Added
