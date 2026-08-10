@@ -1,12 +1,36 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-10 (threat-intel sweep). This is one current snapshot, not a session log.
+> Updated 2026-08-10 (v5.25.10 release). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
 ---
 
-## Threat-intel run (2026-08-10, PR open, no release)
+## Release v5.25.10 (2026-08-10)
+
+Model: claude-opus-5. Cuts the 2026-08-10 sweep (#130, merged as bd33bc8) as a
+patch release at Emre's direction, in the same session. Version bumped across all
+14 `aahp.config.json` versionSites plus package.json (19 source occurrences),
+with package-lock.json rewritten by `npm install --package-lock-only`. CHANGELOG
+`[Unreleased]` promoted to `## [5.25.10] - 2026-08-10`, reference link added and
+the `[Unreleased]` compare link re-based on the new tag. NEXT_ACTIONS.md
+current-version header updated. feed.json and the generated handoff set
+regenerated. SECURITY.md untouched: its table tracks `5.x` and this is a patch.
+
+`npm run build` green on all 7 aahp gates plus check:feed, check:handoff and
+tsc; the version-sensitive suites (reporter, cli, feed, threat-intel,
+sbom-generator) pass locally at 180/181 with 1 skip. CI is the full-suite
+verdict.
+
+**Gate note for the next release.** The first push of this release branch went
+red on `aahp-verify` Layer 2 (content-drift: source changed but STATUS.md did
+not) even though local `npm run build` was fully green. That layer lives only in
+CI `aahp verify`, not in the local `check:handoff` script, so a release commit
+that touches only version strings will always trip it unless STATUS.md is edited
+in the SAME commit. Treat "STATUS.md gets a note" as part of the version-bump
+step, not as an afterthought.
+
+## Threat-intel run (2026-08-10, merged as #130, shipping in v5.25.10)
 
 Model: claude-opus-5. Scheduled daily advisory sweep. Base: 186ff84 (main,
 post-v5.25.9). Repo was clean with zero open PRs and zero open issues, so no
