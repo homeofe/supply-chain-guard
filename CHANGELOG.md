@@ -24,13 +24,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   and `trycloudflare[.]com` apexes, the real `aquasecurity[.]org` brand and the
   compromised upstream maintainers are deliberately not listed, and a negative test pins
   that.
-- IOC blocklist: 58 hijacked npm packages (110 version pins) from the same March 2026
+- IOC blocklist: 58 hijacked npm packages (117 version pins) from the same March 2026
   TeamPCP wave, including the `@emilgroup` SDK family, `@opengov`, `@teale.io` and nine
-  further org-owned packages. Every package@version pair is read from the GitHub Advisory
-  Database rather than transcribed from a write-up: the vendor enumeration disagreed with
-  the advisory data on several packages, listing releases the advisories do not cover.
-  Five packages the advisory database has no entry for are ingested from the write-up
-  alone and carry confidence 0.85.
+  further org-owned packages. Version sets are derived from three independent signals
+  rather than one: the GitHub Advisory Database, the vendor package list, and the npm
+  registry `time` map. The advisory ranges are the narrowest of the three and under-cover
+  this campaign by 27 versions across 12 packages. `@teale.io/eslint-config` is advised as
+  1.8.9-1.8.10, but all of 1.8.9-1.8.16 were published on 2026-03-20 and later
+  unpublished, while 1.8.8 (2026-02-17) is still live. A version therefore qualifies when
+  an advisory covers it, or when it was published inside the campaign window and has since
+  been unpublished from a package the campaign is known to have hit. Registry-derived
+  prereleases are excluded: these orgs retract beta channels routinely, so an unpublished
+  prerelease carries no signal. Three pins on packages whose scope no longer resolves
+  publicly rest on the vendor list alone and carry confidence 0.85.
 - Tests: `campaigns.test.ts` gains scan-level coverage for the telnyx wave (positive,
   clean-version negative, dead drop, C2 host, wheel hash, attacker account, and a
   negative that the shared gateways and the real vendor brand stay clean) plus a

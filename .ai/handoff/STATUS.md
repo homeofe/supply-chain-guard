@@ -29,13 +29,39 @@ later was not, and the campaign's whole March 2026 npm wave was missing. Added
 the non-package indicators (C2 hosts, WAV dead drops, four wheel/`_client.py`
 hashes, the `Argon-DevOps-Mgt` attacker account) plus 58 hijacked npm packages.
 
-**Method note worth keeping.** The vendor write-up's version enumeration proved
-unreliable: asked to enumerate the `@emilgroup` family it returned longer runs
-of versions than the GitHub Advisory Database records (for example
-`customer-sdk` 1.54.1-1.54.5 against the advisory's 1.54.1-1.54.2, and
-`@teale.io/eslint-config` 1.8.9-1.8.16 against 1.8.9-1.8.10). Every
-package@version pair in this change is therefore read from GHSA at generation
-time, not transcribed. Treat fetched enumerations as a lead, not as data.
+**Method note worth keeping: GHSA version ranges are too NARROW.** The first cut
+of this change assumed the opposite. The vendor write-up listed more versions
+than the advisories (`customer-sdk` 1.54.1-1.54.5 vs the advisory's
+1.54.1-1.54.2, `@teale.io/eslint-config` 1.8.9-1.8.16 vs 1.8.9-1.8.10), and that
+was initially read as the fetch padding the list with invented sequential
+numbers. The npm registry settled it the other way: a fabricated version cannot
+carry a real publish timestamp, and every disputed version is present in the
+registry `time` map, published 2026-03-20, since unpublished, while the last
+legitimate release of each package is still live. `@teale.io/eslint-config` has
+70 live versions of 78 ever published, and the 8 unpublished ones are exactly the
+vendor's range.
+
+The pins are therefore generated from three signals: an advisory covers the
+version, OR it was published inside the campaign window and has since been
+unpublished from a package the campaign is known to have hit. That added 27
+versions across 12 packages that GHSA alone would have missed (90 -> 117 pins).
+Registry-derived PRERELEASES are excluded on purpose: the `@emilgroup` packages
+retract beta channels constantly, so "unpublished" carries no signal there and
+one such candidate (`changelog-sdk-node@1.0.1-beta.13`) was dropped.
+
+A 404 on the whole package is NOT evidence against an indicator: seven packages
+here 404, and one of them (`@opengov/form-utils`) has a GHSA advisory. Only 3
+pins now rest on the vendor list alone, and they carry confidence 0.85.
+
+**Open question for Emre (no PR issue opened, per the repo invariant).** The
+ecosystem-prefix defect below survived many green releases even though the trap
+is already written down in CLAUDE.md, so prose is demonstrably not holding it.
+A cheap build gate would: assert in `check:feed` that no key of
+`KNOWN_BAD_PYPI_VERSIONS` appears as a BARE feed value, plus the mirror for
+`KNOWN_BAD_NPM_VERSIONS` and a `pypi:` prefix. Deliberately not added here so
+this change stays reviewable, and because a gate deserves its own mutation
+proof. Worth noting `isValidFeedIOC` is still not wired into any prebuild gate
+either. Not gateable offline: version SETS, which need the registry.
 
 **Defect found and fixed.** Six PyPI compromises had their package IOCs in the
 feed as BARE values, which means the npm namespace. `matchPackageIOC("pypi",

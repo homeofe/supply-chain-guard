@@ -1776,169 +1776,176 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
 
   // TeamPCP npm wave (March 19-27, 2026). Legitimate packages whose publishing
   // credentials the actor used; only the listed versions are malicious, so every entry
-  // is version pinned and no package is blocked by name. Version sets come from the
-  // GitHub Advisory Database, not from a write-up transcription.
+  // is version pinned and no package is blocked by name.
+  //
+  // Version sets are derived from three signals, not one: the GitHub Advisory Database,
+  // the vendor package list, and the npm registry `time` map. The advisory ranges are
+  // NARROWER than the real set - @teale.io/eslint-config is advised as 1.8.9-1.8.10 while
+  // all of 1.8.9-1.8.16 were published 2026-03-20 and later unpublished, with 1.8.8
+  // (2026-02-17) still live. A version therefore qualifies when an advisory covers it, or
+  // when it was published inside the campaign window and has since been unpublished from a
+  // package this campaign is known to have hit.
   // Sources: Datadog Security Labs, Endor Labs, Hexastrike, JFrog, OX Security,
-  // Akamai and Trend Micro (March 19-27, 2026).
+  // Akamai and Trend Micro (March 19-27, 2026), plus registry.npmjs.org.
   "@airtm/uuid-base32": {
     versions: ["1.0.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-86xp-4fvm-qm2p, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-86xp-4fvm-qm2p + registry, March 2026)",
   },
   "@emilgroup/account-sdk": {
     versions: ["1.41.1", "1.41.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-79wc-g29x-jj3q, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-79wc-g29x-jj3q + registry, March 2026)",
   },
   "@emilgroup/account-sdk-node": {
     versions: ["1.40.1", "1.40.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-2phg-9x97-9759, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-2phg-9x97-9759 + registry, March 2026)",
   },
   "@emilgroup/accounting-sdk": {
-    versions: ["1.27.1", "1.27.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cjxf-3qww-qv9w, March 2026)",
+    versions: ["1.27.1", "1.27.2", "1.27.3"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cjxf-3qww-qv9w + registry, March 2026)",
   },
   "@emilgroup/accounting-sdk-node": {
     versions: ["1.26.1", "1.26.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-qx4v-wwj4-8xmh, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-qx4v-wwj4-8xmh + registry, March 2026)",
   },
   "@emilgroup/api-documentation": {
     versions: ["1.19.1", "1.19.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-wq88-f86r-hgrh, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-wq88-f86r-hgrh + registry, March 2026)",
   },
   "@emilgroup/auth-sdk": {
     versions: ["1.25.1", "1.25.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gj2w-92fr-m7c2, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gj2w-92fr-m7c2 + registry, March 2026)",
   },
   "@emilgroup/auth-sdk-node": {
     versions: ["1.21.1", "1.21.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8328-7r2v-2fq6, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8328-7r2v-2fq6 + registry, March 2026)",
   },
   "@emilgroup/billing-sdk": {
     versions: ["1.56.1", "1.56.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-m26r-hvqm-73ff, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-m26r-hvqm-73ff + registry, March 2026)",
   },
   "@emilgroup/billing-sdk-node": {
     versions: ["1.57.1", "1.57.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mw23-j5r9-c8vj, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mw23-j5r9-c8vj + registry, March 2026)",
   },
   "@emilgroup/changelog-sdk-node": {
-    versions: ["1.0.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-wcrr-xhm3-j3x9, March 2026)",
+    versions: ["1.0.2", "1.0.3"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-wcrr-xhm3-j3x9 + registry, March 2026)",
   },
   "@emilgroup/claim-sdk": {
     versions: ["1.41.1", "1.41.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mjwm-77q5-mrxr, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mjwm-77q5-mrxr + registry, March 2026)",
   },
   "@emilgroup/claim-sdk-node": {
     versions: ["1.39.1", "1.39.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-38x3-f5vr-mvpw, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-38x3-f5vr-mvpw + registry, March 2026)",
   },
   "@emilgroup/commission-sdk-node": {
-    versions: ["1.0.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cmfv-mmcw-jpw3, March 2026)",
+    versions: ["1.0.1", "1.0.2", "1.0.3"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cmfv-mmcw-jpw3 + registry, March 2026)",
   },
   "@emilgroup/customer-sdk": {
-    versions: ["1.54.1", "1.54.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-rgf4-gx75-xrv2, March 2026)",
+    versions: ["1.54.1", "1.54.2", "1.54.3", "1.54.4", "1.54.5"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-rgf4-gx75-xrv2 + registry, March 2026)",
   },
   "@emilgroup/customer-sdk-node": {
     versions: ["1.55.1", "1.55.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jfwq-4fm4-wwpw, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jfwq-4fm4-wwpw + registry, March 2026)",
   },
   "@emilgroup/discount-sdk": {
     versions: ["1.5.2", "1.5.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-3fjh-jjvh-r58h, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-3fjh-jjvh-r58h + registry, March 2026)",
   },
   "@emilgroup/document-sdk": {
     versions: ["1.45.1", "1.45.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-74q8-chvf-xjp2, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-74q8-chvf-xjp2 + registry, March 2026)",
   },
   "@emilgroup/document-sdk-node": {
-    versions: ["1.43.1", "1.43.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-5q3v-cjxm-6cgm, March 2026)",
+    versions: ["1.43.1", "1.43.2", "1.43.3", "1.43.4", "1.43.5", "1.43.6"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-5q3v-cjxm-6cgm + registry, March 2026)",
   },
   "@emilgroup/document-uploader": {
-    versions: ["0.0.12"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jrpm-f5xg-3frj, March 2026)",
+    versions: ["0.0.11", "0.0.12"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jrpm-f5xg-3frj + registry, March 2026)",
   },
   "@emilgroup/docxtemplater-util": {
-    versions: ["1.1.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f9m8-w27f-mxr3, March 2026)",
+    versions: ["1.1.3", "1.1.4"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f9m8-w27f-mxr3 + registry, March 2026)",
   },
   "@emilgroup/gdv-sdk": {
     versions: ["2.6.1", "2.6.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8vmq-w85q-4q4j, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8vmq-w85q-4q4j + registry, March 2026)",
   },
   "@emilgroup/gdv-sdk-node": {
     versions: ["2.6.1", "2.6.2", "2.6.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gqwm-qw26-8g59, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gqwm-qw26-8g59 + registry, March 2026)",
   },
   "@emilgroup/insurance-sdk": {
-    versions: ["1.97.1", "1.97.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-c9rj-gq4m-f5wq, March 2026)",
+    versions: ["1.97.1", "1.97.2", "1.97.3", "1.97.4", "1.97.5", "1.97.6"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-c9rj-gq4m-f5wq + registry, March 2026)",
   },
   "@emilgroup/insurance-sdk-node": {
     versions: ["1.95.1", "1.95.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h5jq-7px8-v446, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h5jq-7px8-v446 + registry, March 2026)",
   },
   "@emilgroup/notification-sdk-node": {
     versions: ["1.4.1", "1.4.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-9538-fpmw-hjpr, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-9538-fpmw-hjpr + registry, March 2026)",
   },
   "@emilgroup/partner-portal-sdk": {
-    versions: ["1.1.1", "1.1.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-hpqp-f9r8-f725, March 2026)",
+    versions: ["1.1.1", "1.1.2", "1.1.3"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-hpqp-f9r8-f725 + registry, March 2026)",
   },
   "@emilgroup/partner-portal-sdk-node": {
     versions: ["1.1.1", "1.1.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cxm8-rrjm-28jf, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-cxm8-rrjm-28jf + registry, March 2026)",
   },
   "@emilgroup/partner-sdk-node": {
     versions: ["1.19.1", "1.19.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-39vv-2g62-pp83, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-39vv-2g62-pp83 + registry, March 2026)",
   },
   "@emilgroup/payment-sdk": {
     versions: ["1.15.1", "1.15.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-96qx-5379-wp39, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-96qx-5379-wp39 + registry, March 2026)",
   },
   "@emilgroup/payment-sdk-node": {
     versions: ["1.23.1", "1.23.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-4r42-c7jf-m8rf, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-4r42-c7jf-m8rf + registry, March 2026)",
   },
   "@emilgroup/public-api-sdk": {
     versions: ["1.33.1", "1.33.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-qf6c-xv4h-gxw5, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-qf6c-xv4h-gxw5 + registry, March 2026)",
   },
   "@emilgroup/public-api-sdk-node": {
     versions: ["1.35.1", "1.35.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mvrx-3fqg-4hvh, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-mvrx-3fqg-4hvh + registry, March 2026)",
   },
   "@emilgroup/setting-sdk-node": {
-    versions: ["0.2.1"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h7pp-f3cj-j5vh, March 2026)",
+    versions: ["0.2.1", "0.2.2", "0.2.3"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h7pp-f3cj-j5vh + registry, March 2026)",
   },
   "@emilgroup/task-sdk": {
-    versions: ["1.0.4"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f568-m9rh-p7xj, March 2026)",
+    versions: ["1.0.3", "1.0.4"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f568-m9rh-p7xj + registry, March 2026)",
   },
   "@emilgroup/task-sdk-node": {
     versions: ["1.0.4"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-r27q-f5jw-j5jp, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-r27q-f5jw-j5jp + registry, March 2026)",
   },
   "@emilgroup/tenant-sdk": {
     versions: ["1.34.1", "1.34.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-6w74-x38v-9ffj, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-6w74-x38v-9ffj + registry, March 2026)",
   },
   "@emilgroup/tenant-sdk-node": {
     versions: ["1.33.1", "1.33.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gmxq-2g92-63xv, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-gmxq-2g92-63xv + registry, March 2026)",
   },
   "@leafnoise/mirage": {
     versions: ["2.0.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-24fv-r862-wg4c, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-24fv-r862-wg4c + registry, March 2026)",
   },
   "@opengov/form-builder": {
     versions: ["0.12.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source (Datadog); no GitHub Advisory Database entry, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source, no advisory and no registry data, March 2026)",
   },
   "@opengov/form-renderer": {
     versions: ["0.2.20"],
@@ -1950,7 +1957,7 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   },
   "@opengov/ppf-backend-types": {
     versions: ["1.141.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-4xcw-mhqm-x332, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-4xcw-mhqm-x332 + registry, March 2026)",
   },
   "@opengov/ppf-eslint-config": {
     versions: ["0.1.11"],
@@ -1958,59 +1965,59 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   },
   "@opengov/qa-record-types-api": {
     versions: ["1.0.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source (Datadog); no GitHub Advisory Database entry, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source, no advisory and no registry data, March 2026)",
   },
   "@pypestream/floating-ui-dom": {
     versions: ["2.15.1"],
     description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-5h9j-3cr5-f9xj, March 2026)",
   },
   "@teale.io/eslint-config": {
-    versions: ["1.8.9", "1.8.10"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-7h5g-m989-54j2, March 2026)",
+    versions: ["1.8.9", "1.8.10", "1.8.11", "1.8.12", "1.8.13", "1.8.14", "1.8.15", "1.8.16"],
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-7h5g-m989-54j2 + registry, March 2026)",
   },
   "@virtahealth/substrate-root": {
     versions: ["1.0.1"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source (Datadog); no GitHub Advisory Database entry, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source, no advisory and no registry data, March 2026)",
   },
   "babel-plugin-react-pure-component": {
     versions: ["0.1.6"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f9q8-fcvg-876p, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-f9q8-fcvg-876p + registry, March 2026)",
   },
   "cit-playwright-tests": {
     versions: ["1.0.1"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-64p5-3wp7-v4c9, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-64p5-3wp7-v4c9 + registry, March 2026)",
   },
   "eslint-config-ppf": {
     versions: ["0.128.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-29gm-cwfm-376h, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-29gm-cwfm-376h + registry, March 2026)",
   },
   "eslint-config-service-users": {
     versions: ["0.0.3"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-9h8j-g652-xrg8, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-9h8j-g652-xrg8 + registry, March 2026)",
   },
   "jest-preset-ppf": {
     versions: ["0.0.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8999-rqc4-rjrh, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-8999-rqc4-rjrh + registry, March 2026)",
   },
   "opengov-k6-core": {
     versions: ["1.0.2"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h38m-4w8q-55j2, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-h38m-4w8q-55j2 + registry, March 2026)",
   },
   "react-autolink-text": {
     versions: ["2.0.1"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source (Datadog); no GitHub Advisory Database entry, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (registry-corroborated, no advisory, March 2026)",
   },
   "react-leaflet-cluster-layer": {
     versions: ["0.0.4"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jrfv-73x8-f24x, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-jrfv-73x8-f24x + registry, March 2026)",
   },
   "react-leaflet-heatmap-layer": {
     versions: ["2.0.1"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-v4gc-5jfp-x5rj, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (GHSA-v4gc-5jfp-x5rj + registry, March 2026)",
   },
   "react-leaflet-marker-layer": {
     versions: ["0.1.5"],
-    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (single-source (Datadog); no GitHub Advisory Database entry, March 2026)",
+    description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (registry-corroborated, no advisory, March 2026)",
   },
 };
 
