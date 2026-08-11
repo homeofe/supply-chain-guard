@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.25.10",
-  "entryCount": 10896,
+  "entryCount": 11026,
   "entries": [
     {
       "type": "domain",
@@ -88214,6 +88214,1098 @@
       "campaign": "TeamPCP npm wave",
       "source": "Datadog, npm registry",
       "firstSeen": "2026-03-22"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dlmm@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5gh8-34vp-xw63, MAL-2026-13728",
+      "firstSeen": "2026-08-11"
+    },
+    {
+      "type": "package",
+      "value": "pypi:bigtime@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-28hg-x9rg-9j9w, MAL-2026-13712",
+      "firstSeen": "2026-08-11"
+    },
+    {
+      "type": "package",
+      "value": "pypi:plp-contract@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4crr-q8rh-wqrg, MAL-2026-13711",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:plp-contract@2.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4crr-q8rh-wqrg, MAL-2026-13711",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:plp-contract@2.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4crr-q8rh-wqrg, MAL-2026-13711",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-core@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mphw-49c2-f7hr, MAL-2026-13710",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-core@2.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mphw-49c2-f7hr, MAL-2026-13710",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-core@2.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mphw-49c2-f7hr, MAL-2026-13710",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-contracts@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w82v-c64w-j8f5, MAL-2026-13709",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-contracts@2.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w82v-c64w-j8f5, MAL-2026-13709",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:neutrl-contracts@2.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w82v-c64w-j8f5, MAL-2026-13709",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-labs/nodesql",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-86f7-qh62-pq7c, MAL-2026-13714",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-labs/createsql",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qwqp-6xhg-jhhv, MAL-2026-13713",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.695",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.696",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.697",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.698",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.699",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "spoint@0.1.700",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72h3-pwwh-68cx, MAL-2026-13725",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "svelte-kit-streak",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rc4p-g2mc-7w8h, MAL-2026-13726",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "kit-map-streak",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7wwj-2mjc-pmxq, MAL-2026-13724",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "iconova-react",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mvp5-cv38-rqfj, MAL-2026-13705",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "post-css-transfer",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f5h9-q436-8chv, MAL-2026-12417",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "postcss-initial-provider",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-44hx-h55m-c65w, MAL-2026-13696",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "postcss-theme-provider",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-36cv-vvf7-gj75, MAL-2026-13518",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "godot-kit@1.0.1786316795",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j7m9-r9h4-rfw8, MAL-2026-13723",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "runtimekit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v6qq-vq5x-rmxf, MAL-2026-6477",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwind-elements-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mmpq-4w6p-rwg2, MAL-2026-13727",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "fsbrowse@0.2.28",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pvvh-h7rh-2c7g, MAL-2026-13722",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-table/sql-creator",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4hxf-37q3-vfxh, MAL-2026-13718",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-table/schema-generator",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f86c-mf53-7934, MAL-2026-13717",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-prime/nodesql",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f348-mwv9-7p8h, MAL-2026-13716",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@sqlite-prime/createsql",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v49c-g99c-qvf9, MAL-2026-13715",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "eth-library-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rp49-3975-7q6c, MAL-2026-13721",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "eth-library-toolkit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mqxc-259c-25w3, MAL-2026-13720",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "commonjs-assertion",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mfjj-4625-mpvr, MAL-2026-13719",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "commonjs-assert",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hcmm-fvc7-pjv3, MAL-2026-10676",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mppv-3p7f-3fmq, MAL-2026-13708",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mppv-3p7f-3fmq, MAL-2026-13708",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-tracker@1.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2r4-fv2p-jjf8, MAL-2026-13704",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-tracker@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2r4-fv2p-jjf8, MAL-2026-13704",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-tracker@1.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2r4-fv2p-jjf8, MAL-2026-13704",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-tracker@1.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2r4-fv2p-jjf8, MAL-2026-13704",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-tracker@1.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2r4-fv2p-jjf8, MAL-2026-13704",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "neverthrow-js@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qpxw-hpjq-29wj, MAL-2026-13706",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "polymarket-stake-mathss@3.5.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2qqg-9fjr-5mw9, MAL-2026-13707",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-promised-plus@6.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-525m-456x-w57c, MAL-2026-13703",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-deployer@2.3.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7qqp-m577-rp2w, MAL-2026-13700",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-deployer@2.3.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7qqp-m577-rp2w, MAL-2026-13700",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-map@2.3.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rx7j-9w2g-fvjf, MAL-2026-13702",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-format@2.3.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wpwv-ffg9-hmxr, MAL-2026-13701",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-bench@7.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m5h5-5r2r-qw58, MAL-2026-13699",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:chaintest@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6qc6-vp88-49gp, MAL-2026-13686",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-9@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fq7m-frv3-2w4v, MAL-2026-13698",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pytablute@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p4h7-5jh2-3rpc, MAL-2026-13685",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "tokocrytodev@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m482-gfg4-jcp7, MAL-2026-13687",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-10@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wgv9-74pq-hwh9, MAL-2026-13697",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "cryptostock@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vxm9-fcc8-7337, MAL-2026-13693",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "cryptostock@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vxm9-fcc8-7337, MAL-2026-13693",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "hex-encode-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p54-jrq3-p4p9, MAL-2026-13695",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "env-local@18.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r3pr-mmg7-gr2j, MAL-2026-13694",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "chai-jsonss@3.7.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xp6h-f5rv-v8fp, MAL-2026-13692",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.11",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-uni-area-widget@1.0.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-932g-6p3v-rp3w, MAL-2026-13690",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@rblxts/services@1.6.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x6xv-2jr9-4pc5, MAL-2026-13691",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@rblxts/services@1.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x6xv-2jr9-4pc5, MAL-2026-13691",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@kuperka/chainguard-sdk@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x3c3-qwj8-qfpc, MAL-2026-13688",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@kuperka/chainguard-sdk@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x3c3-qwj8-qfpc, MAL-2026-13688",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@noobaihome/amis-simple-area-widget@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jprv-2653-h4xc, MAL-2026-13689",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:btcflip@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f6qg-475c-wmpp, MAL-2026-13681",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:kotoraka@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hmfw-wq6f-f2ph, MAL-2026-13683",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@ssgw/icon@9.999.999",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v5mx-v28f-r24j, MAL-2026-13684",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:btcflx@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wvgr-r9rh-2fqv, MAL-2026-13682",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@rbx-ts/services@1.6.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2846-4m8r-rvv5, MAL-2026-13630",
+      "firstSeen": "2026-08-08"
+    },
+    {
+      "type": "package",
+      "value": "@rbx-ts/services@1.6.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2846-4m8r-rvv5, MAL-2026-13630",
+      "firstSeen": "2026-08-08"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.7.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@2.7.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.9.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "xerohub-discord-voice-v2@1.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h72-42vm-wphp, MAL-2026-11154",
+      "firstSeen": "2026-07-28"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dreamgen@1.8.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:embiggen@0.11.97",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:ensmallen@0.8.101",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:gpsea@0.9.14",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:mem8@6.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:mflux-streamlit@0.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:mflux-streamlit@0.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:phenopacket-store-toolkit@0.1.7",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:ppkt2synergy@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs, Snyk",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pyphetools@0.9.120",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket, Endor Labs",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:ray-mcp-server@0.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:instructor-mcp@1.15.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:instructor-mcp@1.15.3",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:langchain-core-mcp@1.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:langchain-core-mcp@1.4.3",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:openai-mcp@2.41.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:openai-mcp@2.41.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:orchestr8-platform@3.3.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:rlask@3.1.7",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:rsquests@2.34.3",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tiktoken-mcp@0.13.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tiktoken-mcp@0.13.2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tlask@3.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "hash",
+      "value": "6d332f814f15f19758d65026bbfd0a8c49671b319ec77b8fa1b27fc48afff7d9",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "hash",
+      "value": "6506d31707a39949f89534bf9705bcf889f1ecae3dbc6f4ff88d67a8be3d01b2",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "MiniShaiHulud",
+      "campaign": "Miasma Hades PyPI",
+      "source": "Socket",
+      "firstSeen": "2026-06-08"
+    },
+    {
+      "type": "domain",
+      "value": "c.wel1.ru",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "WEL1DROPPER",
+      "campaign": "Flooding Dropper",
+      "source": "The Hacker News",
+      "firstSeen": "2026-08-07"
     }
   ]
 }

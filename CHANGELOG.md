@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 104 malicious-package IOCs imported from the GitHub Advisory Database with
+  OSV.dev corroboration (2026-08-11 sweep), covering 54 package names across npm and PyPI.
+  Notable clusters are three lookalike SQLite scopes (`@sqlite-labs`, `@sqlite-prime`,
+  `@sqlite-table`), a `chai-as-*` typosquat family, Ethereum and Solana tooling
+  impersonations (`eth-library-toolkit`, `eth-library-utils`, `pypi:neutrl-core`,
+  `pypi:plp-contract`), and a set of postcss lookalikes. 1,806 advisories were fetched
+  over 19 pages; the page cap was not hit, no `--allow-truncated` override was used, and
+  the `--limit 250` cap was not reached, so nothing is left waiting for the next run.
+- IOC blocklist: the PyPI branch of the Mini Shai-Hulud / Miasma worm family, tracked by
+  Socket as the `Hades` wave (June 8, 2026). This repo had the family covered only on its
+  npm side. Adds 23 version pins across 18 PyPI packages, plus two SHA-256 digests for the
+  `langchain-core-mcp` artifacts. Stolen maintainer tokens published one trojanized release
+  per project, using a `.pth` site-packages hook so the Bun-based credential stealer runs
+  on every Python start rather than only at install.
+- Threat feed: `c[.]wel1[.]ru`, the DNS TXT control channel of the Flooding Dropper
+  campaign. It sits on a sibling label to the `dl[.]` download hosts already tracked, so
+  the existing entry did not reach it. Single-source, recorded at confidence 0.85.
+
+### Changed
+
+- Miasma `Hades` version sets are corroborated against the live PyPI registry rather than
+  taken from the write-up alone. All 23 versions are confirmed absent from the releases
+  map, and for each of the ten packages that still exist the malicious version is exactly
+  one increment above the surviving `latest`. Only that release is pinned: these are
+  mostly academic genomics and graph-ML libraries with long clean histories (`pyphetools`
+  has 201 releases, `ensmallen` 120, `embiggen` 116), and their clean versions stay
+  installable. The eight names that are gone from PyPI entirely are version-pinned like
+  the rest rather than blocked by bare name, since the registry no longer holds the
+  history that would justify a name-level rule.
+
 ## [5.25.10] - 2026-08-10
 
 ### Added

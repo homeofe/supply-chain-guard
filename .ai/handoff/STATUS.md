@@ -6,6 +6,60 @@
 
 ---
 
+## Threat-intel sweep 2026-08-11 (no version bump)
+
+Model: claude-opus-5. Scheduled daily run. Branch `threat-intel/2026-08-11`, cut
+from `main` at 00c9fcf. The version is deliberately untouched: Emre cuts the
+release separately.
+
+Importer (rolling 14-day window, 1,806 advisories over 19 pages): 104 new package
+IOCs across 54 names. No skips, no unmappable entries, page cap not hit, `--limit
+250` not reached, so no backlog carries into tomorrow.
+
+Manual enrichment, Mini Shai-Hulud / Miasma `Hades` PyPI wave (June 8, 2026): 23
+version pins across 18 PyPI packages plus 2 SHA-256 artifact digests. The family
+was already covered on its npm side (the `@redhat-cloud-services` and LeoPlatform
+waves) but the PyPI branch was entirely absent: all 18 names returned zero hits
+across `threat-intel.ts`, `ioc-blocklist.ts` and `patterns.ts`. Sourced from
+Socket, corroborated by Endor Labs, O3 Security and Snyk.
+
+Also added `c[.]wel1[.]ru`, the Flooding Dropper TXT-record control channel. The
+existing `dl[.]wel1[.]ru` entry covers the four platform download subdomains by
+substring but not this sibling label.
+
+### Decisions taken, for review
+
+1. **The eight fully-removed `Hades` names are version-pinned, not name-blocked.**
+   `instructor-mcp`, `langchain-core-mcp`, `openai-mcp`, `orchestr8-platform`,
+   `rlask`, `rsquests`, `tiktoken-mcp` and `tlask` are gone from PyPI as whole
+   projects, so the registry cannot show whether they ever had legitimate
+   history. `rlask` / `tlask` / `rsquests` are transparent Flask and requests
+   typosquats and would justify a bare-name rule in
+   `PYPI_TYPOSQUAT_PATTERNS`; the four MCP names impersonate real brands but
+   might plausibly be reclaimed by a legitimate project later. Pinning versions
+   is the conservative read and matches what the sources actually published.
+   Worth revisiting if a later write-up confirms the names were never legitimate.
+
+2. **The two `Hades` hashes are labelled by campaign, not per file.** Socket
+   publishes a digest for `langchain_core_mcp-1.4.2-py3-none-any.whl` and one for
+   `langchain_core-setup.pth`, but two independent extractions of that page
+   disagreed on which digest belongs to which file. Both hashes verify as exact
+   strings against the source, so both are ingested; the file-level attribution
+   is the part that is not solid, and inventing it would put a wrong filename in
+   a user-facing finding. Same treatment the Alibaba digests already get.
+
+3. **`ch4ce` was not added.** It is the npm publisher alias behind the Alibaba
+   `@ali`-scope dependency-confusion wave (Socket, August 3). All 18 of that
+   wave's packages are already pinned. `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` matches
+   on `github.com/<handle>`, so adding an npm-only alias there would flag any
+   reference to an unrelated GitHub user of the same name.
+
+4. **`tcsbank[.]ru` and `cloudpayments[.]ru` remain unlisted**, per the reasoning
+   already recorded against the Flooding Dropper block. Re-checked this run and
+   left as is.
+
+---
+
 ## Release v5.25.10 (2026-08-10)
 
 Model: claude-opus-5. Cuts the 2026-08-10 sweep (#130, merged as bd33bc8) as a

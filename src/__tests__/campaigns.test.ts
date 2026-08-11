@@ -4319,6 +4319,71 @@ describe("Campaign Signatures", () => {
   // "does not flag an npm dependency" test passes either way and proves
   // nothing; the poetry.lock path is additionally covered by
   // KNOWN_BAD_PYPI_VERSIONS, which masks the feed defect.
+  // =================================================================
+  // Mini Shai-Hulud / Miasma "Hades" PyPI wave (June 2026)
+  // =================================================================
+
+  describe("Miasma 'Hades' PyPI wave (June 2026)", () => {
+    it("flags the hijacked pyphetools 0.9.120 through a real scan", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "pyphetools"\nversion = "0.9.120"\ndescription = "phenopackets"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /pyphetools/.test(JSON.stringify(f)));
+      expect(finding, "the hijacked pyphetools release must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The whole point of pinning one release out of 201: this package is a
+    // legitimate academic library and the clean versions must stay installable.
+    it("does NOT flag the clean pyphetools 0.9.119 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "pyphetools"\nversion = "0.9.119"\ndescription = "phenopackets"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /pyphetools/.test(JSON.stringify(f)));
+      expect(finding, "a clean pyphetools release must not be flagged").toBeUndefined();
+    });
+
+    // Second lockfile parser, so the pin is not only proven through poetry.lock.
+    it("flags the hijacked ensmallen 0.8.101 but not the clean 0.8.100", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "uv.lock"),
+        '[[package]]\nname = "ensmallen"\nversion = "0.8.101"\n',
+      );
+      const bad = await scan({ target: tempDir, format: "text" });
+      expect(
+        bad.findings.find((f) => /ensmallen/.test(JSON.stringify(f))),
+        "the hijacked ensmallen release must be flagged",
+      ).toBeDefined();
+
+      fs.writeFileSync(
+        path.join(tempDir, "uv.lock"),
+        '[[package]]\nname = "ensmallen"\nversion = "0.8.100"\n',
+      );
+      const clean = await scan({ target: tempDir, format: "text" });
+      expect(
+        clean.findings.find((f) => /ensmallen/.test(JSON.stringify(f))),
+        "the clean ensmallen release must not be flagged",
+      ).toBeUndefined();
+    });
+
+    it("flags the langchain-core-mcp artifact hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "6d332f814f15f19758d65026bbfd0a8c49671b319ec77b8fa1b27fc48afff7d9";',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the Hades wave artifact hash must be flagged").toBeDefined();
+    });
+  });
+
   describe("PyPI feed entries carry their ecosystem prefix", () => {
     const feed = getBundledFeed();
 
@@ -4345,6 +4410,13 @@ describe("Campaign Signatures", () => {
       ["xinference", "2.6.0"],
       ["telnyx", "4.87.1"],
       ["telnyx", "4.87.2"],
+      // Miasma "Hades" PyPI wave (June 2026). Sampled across both halves of the
+      // wave: a hijacked legitimate library and a removed MCP-impersonating name.
+      ["pyphetools", "0.9.120"],
+      ["ensmallen", "0.8.101"],
+      ["ppkt2synergy", "0.1.1"],
+      ["openai-mcp", "2.41.1"],
+      ["langchain-core-mcp", "1.4.2"],
     ];
 
     for (const [name, version] of PYPI_ONLY) {

@@ -273,6 +273,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // substring test, so this one entry already covers the published platform subdomains
   // (sdk[.] / ext[.] / pkg[.] / net[.]) without each of them double-reporting.
   "dl.wel1.ru",
+  // The TXT-record control channel sits on a sibling label rather than under dl[.], so
+  // the entry above does not reach it. Single-source (The Hacker News): the Sonatype and
+  // OpenSourceMalware write-ups describe the fallback only as "platform-specific
+  // subdomains of wel1[.]ru", which is the dl[.] set. Same attacker-registered apex, no
+  // legitimate service behind it.
+  "c.wel1.ru",
   // The write-up also lists nexus[.]tcsbank[.]ru, repo-linux[.]tcsbank[.]ru and
   // alertmanager[.]cloudpayments[.]ru, embedded in the sample with an explicitly
   // UNCLEAR role (health check, decoy, or compromised third party). Those are real
@@ -899,6 +905,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "cd08115806662469bbedec4b03f8427b97c8a4b3bc1442dc18b72b4e19395fe3": "TeamPCP telnyx 4.87.2 wheel, telnyx-4.87.2-py3-none-any.whl (SHA256)",
   "23b1ec58649170650110ecad96e5a9490d98146e105226a16d898fbe108139e5": "TeamPCP telnyx backdoored telnyx/_client.py, version 4.87.1 (SHA256)",
   "ab4c4aebb52027bf3d2f6b2dcef593a1a2cff415774ea4711f7d6e0aa1451d4e": "TeamPCP telnyx backdoored telnyx/_client.py, version 4.87.2 (SHA256)",
+
+  // Mini Shai-Hulud / Miasma "Hades" PyPI wave (Socket, June 8, 2026). Digests of the
+  // langchain-core-mcp artifacts: the distributed wheel and the langchain_core-setup.pth
+  // startup hook it installs. Both were re-verified as exact strings against the source
+  // before ingestion, but the two extractions of that page disagreed about which digest
+  // belongs to which of the two files, so they are labelled by campaign rather than
+  // asserting a per-file mapping that only one reading supports. The package@version
+  // pins already cover a registry install; these catch a vendored or mirrored copy.
+  "6d332f814f15f19758d65026bbfd0a8c49671b319ec77b8fa1b27fc48afff7d9": "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: langchain-core-mcp 1.4.2 artifact, wheel or .pth startup hook (SHA256)",
+  "6506d31707a39949f89534bf9705bcf889f1ecae3dbc6f4ff88d67a8be3d01b2": "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: langchain-core-mcp 1.4.2 artifact, wheel or .pth startup hook (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -2062,6 +2078,98 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "telnyx": {
     versions: ["4.87.1", "4.87.2"],
     description: "telnyx PyPI compromise (TeamPCP): the sibling of the litellm push three days earlier. A backdoored telnyx/_client.py, absent from the upstream GitHub repository, fires on `import telnyx`: on Windows it drops a persistent msbuild.exe into the Startup folder, on Linux and macOS it downloads a credential harvester hidden inside a WAV file from 83[.]142[.]209[.]203:8080. Legitimate package - only 4.87.1 and 4.87.2 are malicious (Endor Labs, OX Security, JFrog, Trend Micro, Akamai and Hexastrike, March 27, 2026)",
+  },
+
+  // --- Mini Shai-Hulud / Miasma "Hades" PyPI wave (June 8, 2026) ------------------
+  // The PyPI branch of the Miasma / Mini Shai-Hulud family already tracked above on the
+  // npm side, attributed to TeamPCP. Stolen maintainer tokens were used to publish one
+  // trojanized release per project; the payload abuses a .pth site-packages hook so it
+  // runs on every Python startup rather than only at install, then pulls a Bun-based
+  // stage 2 that harvests developer, cloud and CI credentials and republishes onward.
+  // Reported by Socket, corroborated by Endor Labs, O3 Security and Snyk.
+  //
+  // Every version below was checked against the live PyPI registry before ingestion:
+  // all 23 are gone from the releases map, and for each package that still exists the
+  // malicious version is exactly one increment above the surviving "latest". Only that
+  // one release is pinned - the packages themselves stay usable, which matters here
+  // because most are academic genomics and graph-ML libraries with years of history
+  // (pyphetools has 201 clean releases, ensmallen 120, embiggen 116).
+  "dreamgen": {
+    versions: ["1.8.1"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 1.8.1 is malicious; 1.8.0 remains the clean latest (Socket, June 8, 2026)",
+  },
+  "embiggen": {
+    versions: ["0.11.97"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate graph-ML package - only 0.11.97 is malicious; 0.11.96 remains the clean latest (Socket + Endor Labs, June 8, 2026)",
+  },
+  "ensmallen": {
+    versions: ["0.8.101"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate graph-processing package - only 0.8.101 is malicious; 0.8.100 remains the clean latest (Socket + Endor Labs, June 8, 2026)",
+  },
+  "gpsea": {
+    versions: ["0.9.14"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate genotype-phenotype package - only 0.9.14 is malicious; 0.9.13 remains the clean latest (Socket + Endor Labs, June 8, 2026)",
+  },
+  "mem8": {
+    versions: ["6.0.1"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 6.0.1 is malicious; 6.0.0 remains the clean latest (Socket, June 8, 2026)",
+  },
+  "mflux-streamlit": {
+    versions: ["0.0.3", "0.0.4"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.0.3 and 0.0.4 are malicious; 0.0.2 remains the clean latest (Socket, June 8, 2026)",
+  },
+  "phenopacket-store-toolkit": {
+    versions: ["0.1.7"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate GA4GH phenopacket package - only 0.1.7 is malicious; 0.1.6 remains the clean latest (Socket + Endor Labs, June 8, 2026)",
+  },
+  "ppkt2synergy": {
+    versions: ["0.1.1"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate HPO annotation package - only 0.1.1 is malicious; 0.1.0 remains the clean latest (Socket + Endor Labs + Snyk, June 8, 2026)",
+  },
+  "pyphetools": {
+    versions: ["0.9.120"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate GA4GH phenopacket package - only 0.9.120 is malicious; 0.9.119 remains the clean latest (Socket + Endor Labs, June 8, 2026)",
+  },
+  "ray-mcp-server": {
+    versions: ["0.2.1"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate Ray MCP server package - only 0.2.1 is malicious; 0.2.0 remains the clean latest (Socket, June 8, 2026)",
+  },
+  // The eight names below are gone from PyPI entirely, not just the bad release. That
+  // removal is consistent with a name that was always attacker-controlled, but the
+  // registry no longer holds the history that would prove it, so they are version-pinned
+  // like the rest rather than blocked by bare name: a name-level rule here would rest on
+  // an inference, and it would fire on any future project that reclaims the name.
+  "instructor-mcp": {
+    versions: ["1.15.2", "1.15.3"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: MCP-developer-targeted package carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "langchain-core-mcp": {
+    versions: ["1.4.2", "1.4.3"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: LangChain-impersonating MCP package carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "openai-mcp": {
+    versions: ["2.41.1", "2.41.2"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: OpenAI-impersonating MCP package carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "orchestr8-platform": {
+    versions: ["3.3.2"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "rlask": {
+    versions: ["3.1.7"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: Flask typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "rsquests": {
+    versions: ["2.34.3"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: requests typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "tiktoken-mcp": {
+    versions: ["0.13.1", "0.13.2"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: tiktoken-impersonating MCP package carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+  "tlask": {
+    versions: ["3.1.4"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: Flask typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
   },
 };
 
