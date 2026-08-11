@@ -1,8 +1,33 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-10 (v5.25.10 release). This is one current snapshot, not a session log.
+> Updated 2026-08-11 (v5.25.11 release). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
+
+---
+
+## Release v5.25.11 (2026-08-11)
+
+Model: claude-opus-5. Cuts the 2026-08-11 sweep (#132, merged as 547ffbb) as a
+patch release at Emre's direction, in the same session. Version bumped across all
+14 `aahp.config.json` versionSites plus package.json, with package-lock.json
+rewritten by `npm install --package-lock-only` rather than by text substitution.
+CHANGELOG `[Unreleased]` promoted to `## [5.25.11] - 2026-08-11`, reference link
+added and the `[Unreleased]` compare link re-based on the new tag. NEXT_ACTIONS.md
+current-version header updated. feed.json and the generated handoff set
+regenerated. SECURITY.md untouched: its table tracks `5.x` and this is a patch.
+CONTRIBUTING.md untouched: no new modules.
+
+The gate note recorded against v5.25.10 was applied preemptively this time: this
+STATUS entry is part of the version-bump commit itself, not a follow-up, so
+`aahp-verify` Layer 2 content-drift has a doc change to pair with the source
+change. That layer lives only in CI, not in the local `check:handoff` script.
+
+Content of the release is the 2026-08-11 threat-intel sweep: 104 imported package
+IOCs across 54 names, plus the hand-added Mini Shai-Hulud / Miasma `Hades` PyPI
+wave (23 version pins across 18 packages, 2 artifact hashes) and the Flooding
+Dropper `c[.]wel1[.]ru` TXT control channel. The three judgement calls behind that
+sweep are recorded in the entry below and are unchanged by this release.
 
 ---
 
