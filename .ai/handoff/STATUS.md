@@ -6,6 +6,39 @@
 
 ---
 
+## Release v5.25.12 (2026-08-12)
+
+Model: claude-opus-5. Cuts the 2026-08-12 sweep (#134, merged as 6f66eb0) as a
+patch release at Emre's direction. Version bumped across all 14
+`aahp.config.json` versionSites plus package.json, with per-file occurrence
+counts asserted before rewriting so a drifted file aborts rather than being
+blind-replaced, and package-lock.json rewritten by `npm install
+--package-lock-only`. CHANGELOG `[Unreleased]` promoted to `## [5.25.12] -
+2026-08-12`, reference link added, `[Unreleased]` compare link re-based.
+NEXT_ACTIONS.md current-version header updated, and its "published package"
+line corrected: it had drifted to v5.25.6 because releases v5.25.7 through
+v5.25.11 only updated the header above it. feed.json and the generated handoff
+set regenerated. SECURITY.md untouched (patch); CONTRIBUTING.md untouched (no
+new modules). This STATUS entry is part of the version-bump commit itself so
+`aahp-verify` Layer 2 content-drift has a doc change paired with the source
+change.
+
+Pre-merge verification of #134 beyond what the sweep reported: all 26 new
+bare-name entries were checked individually against the npm registry, since a
+bare name blocks a package outright and several of them squat real DeFi brands
+(Aerodrome, Camelot, Euler's EVC, BoringVault). Result: 20 are npm security
+holding packages, 4 were created 2026-08-11 and are already unpublished with
+zero versions remaining, and 2 return 404. None has legitimate publishing
+history. The real projects do not publish under those npm names, which is
+precisely why blocking them is safe.
+
+One latent risk recorded rather than acted on: npm permanently holds the 20
+security-holding names, but the 4 unpublished ones are not held the same way. If
+a legitimate project later claims `ethereum-vault-connector` or
+`camelot-ammv2-core` - plausible, since those are real product names - the
+bare-name IOC would begin firing on a legitimate package. Version-pinning is not
+available as an alternative because the malicious versions were unpublished.
+
 ## Threat-intel sweep 2026-08-12 (no version bump)
 
 Model: claude-opus-5. Scheduled daily run. Branch `threat-intel/2026-08-12`, cut

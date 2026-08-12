@@ -6,24 +6,25 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Six tasks are ready, two owner decisions are blocked, and T-008/T-015 are complete.
+Seven tasks are ready, three owner decisions are blocked, and T-008/T-015 are complete.
 
-Current version: **v5.25.11**
+Current version: **v5.25.12**
 
 ---
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Six
-follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
-matrix, and whether version-pinned npm IOCs should match on a directory scan.
+AAHP 3.9.1 adoption and the verified security hardening are complete. Seven
+follow-ups are ready. Three decisions are owner-blocked: the Node/Babel support
+matrix, whether version-pinned npm IOCs should match on a directory scan, and
+the scope of dropped-persistence detection.
 
 | Status | Count |
 |--------|-------|
-| Ready | 6 |
-| Blocked | 2 |
+| Ready | 7 |
+| Blocked | 3 |
 
-The published package is v5.25.6.
+The published package is v5.25.12.
 
 ---
 
@@ -110,6 +111,91 @@ do not merge Babel 8 alone.
 - [ ] The owner selects and records the new minimum Node line.
 - [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
 - [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
+
+---
+
+## T-018: Match known-malware hashes against real file digests
+
+**Goal:** Make the 194 `KNOWN_MALICIOUS_HASHES` entries detect a file BY its
+digest, which is what their descriptions already promise.
+
+**The finding (verified by execution and by grep, 2026-08-12):** the only
+matching consumer of `KNOWN_MALICIOUS_HASHES` is the substring loop at
+`src/ioc-blocklist.ts:2245`, which tests whether the digest TEXT appears inside
+file content. Nothing computes a SHA-256 over a scanned file and looks it up.
+The `createHash` calls in `src/npm-scanner.ts:637` and `src/pypi-scanner.ts:507`
+compute tarball-integrity digests and never consult the malware list, and no
+test asserts a file's own digest is matched.
+
+Concretely, `src/ioc-blocklist.ts:862` is
+`"927387d0...": "ChainDrop IDE persistence hook dropped as .vscode/tasks.json"`.
+That entry can only fire if a file contains its own digest as text, which a
+dropped `tasks.json` never does. The same holds for the WEL1DROPPER stage-2
+payload binaries and the ChainDrop `setup.mjs` droppers: the indicators added to
+catch those artefacts cannot fire on them.
+
+The substring behaviour is still worth keeping - a digest quoted in a manifest or
+report is a real signal - so this is additive, not a replacement.
+
+**Acceptance criteria:**
+- [ ] A SHA-256 is computed per scanned file during the walk and looked up in
+      `KNOWN_MALICIOUS_HASHES`, emitting a distinct rule from the text match so
+      the two signals stay tellable apart.
+- [ ] A fixture whose file content hashes to a known-bad digest fires; the same
+      content with one byte changed does not.
+- [ ] The existing digest-text substring match still fires, with its own test.
+- [ ] Cost is measured on a large tree before merge; hashing every scanned file
+      is not free and the walk already reads them.
+
+---
+
+## T-019: Decide scope for dropped-persistence detection (blocked)
+
+**Goal:** Close, or consciously decline, the persistence-detection gap the
+2026-08-12 sweep escalated.
+
+**Measured coverage (10 fixtures against a fresh v5.25.11 build, 2026-08-12):**
+one of five ChainDrop persistence artefacts is detected, and for the wrong
+reason. LaunchAgent plist plus `launchctl load`: miss, only a 202-char
+`COMPLEX_INSTALL_SCRIPT` length heuristic. Dropped `~/.local/bin` script plus
+`chmod +x`: the drop fires nothing. systemd unit plus `systemctl --user enable`:
+total miss, `systemctl` does not appear anywhere in `dist/`. `.claude/settings.json`
+hook: two criticals. `.vscode/tasks.json` `runOn: folderOpen`: total miss.
+
+Two discriminator fixtures are the actual finding:
+- Replacing the `.claude/settings.json` hook body `curl|bash` with the realistic
+  `$HOME/.local/bin/gh-token-monitor.sh &` drops detection to zero. Autostart-hook
+  injection is not itself flagged; only an independently dangerous command that
+  happens to sit in a hook. Drop plus hook-chain is therefore fully undetected.
+- The identical `curl|bash` yields two criticals in `.claude/settings.json` and
+  zero in `.vscode/tasks.json`, with the file confirmed read. That is a recall
+  gap in a file already opened, not a scope question.
+
+A positive-control fixture fired four criticals and a benign control stayed
+clean, so the negatives are real rather than a broken harness.
+
+**Rejected outright:** a `KNOWN_PERSISTENCE_PATHS` collection.
+`checkIOCBlocklist(content, relativePath)` never tests the path, the walk is
+bounded to the scan root so `~/.local/bin` and `~/Library/LaunchAgents` are
+unreachable by construction, and `FeedIOC.type` is a closed union with no `path`
+member. Measured false-positive surface: 23 of 84 project directories in this
+estate carry a legitimate `.claude/settings.json`.
+
+**Blocked by:** Owner decision on scope and version line. Proposed tranche 1
+(near-zero false-positive surface): route `.vscode/tasks.json` command strings
+through the dangerous-command battery that already guards agent hooks, plus a
+campaign-literal pattern for the ChainDrop artefact names cloning the existing
+`ANTV_WAVE_KITTY_PERSISTENCE` shape. Proposed tranche 2: an
+`INSTALL_HOOK_PERSISTENCE_WRITE` rule scoped strictly to install-script strings.
+
+**Acceptance criteria:**
+- [ ] Owner selects tranche scope and whether it lands on 5.25.x or 5.26.0.
+- [ ] Every shipped rule is content- or behaviour-discriminated, never
+      path-discriminated.
+- [ ] `precision-corpus.test.ts` gains legitimate `.claude/settings.json` and
+      `.vscode/tasks.json` samples before any structural heuristic ships; it has
+      neither today.
+- [ ] Any `runOn: folderOpen` heuristic stays at info on its own.
 
 ---
 
