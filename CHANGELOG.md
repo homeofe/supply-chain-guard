@@ -7,6 +7,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat feed: 93 malicious-package IOCs imported from the GitHub Advisory Database with
+  OSV.dev corroboration (2026-08-12 sweep), covering 50 package names across npm and PyPI.
+  The largest cluster impersonates DeFi protocol SDKs on both ecosystems
+  (`camelot-ammv2-core`, `camelot-ammv2-periphery`, `boring-vault`,
+  `ethereum-vault-connector`, `sui-bcs-codec`, `sui-gql-client`, `pypi:euler-sdk`,
+  `pypi:morpho-sdk`, `pypi:dlmm-sdk`). Also included are a `base65-*` and `bs58-*`
+  encoder-lookalike family aimed at Solana tooling, 27 pinned `newtun` versions, a
+  `pypi:joule-btp-extension` SAP BTP set, and several dependency-confusion entries
+  carrying the usual `99.x` and `999.x` version markers. 1,791 advisories were fetched
+  over 18 pages; the page cap was not hit, no `--allow-truncated` override was used, and
+  the `--limit 250` cap was not reached, so nothing is left waiting for the next run.
+
 ## [5.25.11] - 2026-08-11
 
 ### Added

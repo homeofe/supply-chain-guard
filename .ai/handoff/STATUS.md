@@ -1,8 +1,65 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-11 (v5.25.11 release). This is one current snapshot, not a session log.
+> Updated 2026-08-12 (threat-intel sweep). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
+
+---
+
+## Threat-intel sweep 2026-08-12 (no version bump)
+
+Model: claude-opus-5. Scheduled daily run. Branch `threat-intel/2026-08-12`, cut
+from `main` at e64f72a in a scratchpad worktree, so the shared checkout stayed on
+`main`. The version is deliberately untouched: Emre cuts the release separately.
+
+Importer (rolling 14-day window, 1,791 advisories over 18 pages): 93 new package
+IOCs across 50 names. Nothing was reported unmappable, nothing was skipped, the
+`--limit 250` cap was not reached and the page cap was not hit, so the window did
+not need slicing and no later run inherits a backlog. OSV corroborated 49.
+
+This run added NO hand-written non-package indicators, and that is the finding
+rather than a gap in the search. Every atomic indicator published in the current
+reporting window was already in the blocklist:
+
+- Flooding Dropper / WEL1DROPPER: the three `oob-worker.*.workers[.]dev` hosts,
+  `dl[.]wel1[.]ru` (which covers the `sdk[.]`/`ext[.]`/`pkg[.]`/`net[.]` platform
+  subdomains by substring), `c[.]wel1[.]ru` and both stage-2 hashes are all
+  present from the 2026-08-11 sweep.
+- ChainDrop / Shai-Hulud `keyv` wave (Socket, 2026-08-04): all three published
+  SHA-256 digests (`54dc7ea5...`, `fd3ca400...`, `9fc2570b...`) verified as
+  well-formed 64-char digests and already present in both
+  `ioc-blocklist.ts` and the bundled feed.
+- Mini Shai-Hulud `filev2[.]getsession[.]org` exfil host: already present.
+
+Three deliberate exclusions, all of them the "legitimate shared host" trap:
+
+- `tcsbank[.]ru` and `cloudpayments[.]ru` appear in the Flooding Dropper reporting
+  as institutions the malware TARGETS, not as attacker infrastructure. Blocking
+  them would flag victims.
+- `169[.]254[.]169[.]254` and `169[.]254[.]170[.]2` are the AWS/ECS metadata
+  link-local endpoints the ChainDrop payload queries. They are legitimate cloud
+  infrastructure and would false-positive on any AWS SDK.
+- The Bun release URL under `github[.]com/oven-sh/bun` and the
+  `registry[.]npmjs[.]org` token endpoints are likewise legitimate services the
+  payload abuses rather than attacker-controlled hosts.
+
+### Open points for Emre
+
+1. **Dropped-persistence paths have no home in the blocklist.** The Socket keyv
+   write-up publishes concrete persistence artefacts:
+   `~/.local/bin/gh-token-monitor.sh`, `~/.config/gh-token-monitor/{token,handler}`,
+   `~/Library/LaunchAgents/com.user.gh-token-monitor.plist`, and
+   `~/.config/systemd/user/gh-token-monitor.service`, plus the `.claude/settings.json`
+   and `.vscode/tasks.json` autostart hooks. None of the seven `ioc-blocklist.ts`
+   collections models a dropped file path, so none of these were ingested. Adding a
+   path/persistence collection, or a pattern rule, is a considered design change
+   rather than something a daily sweep should improvise. Worth a decision.
+2. **The newest clusters have no vendor write-up yet.** The DeFi SDK impersonation
+   set (`camelot-ammv2-*`, `boring-vault`, `ethereum-vault-connector`, `sui-*`,
+   `pypi:euler-sdk`, `pypi:morpho-sdk`, `pypi:dlmm-sdk`) and the hijack-shaped
+   `@telekom-ods/react-ui-kit@2.6.9` pin are 1 to 2 days old and are currently
+   covered by package name and version only. If a vendor publishes C2 or hash
+   indicators for them in the next few days, a follow-up sweep should pick those up.
 
 ---
 
