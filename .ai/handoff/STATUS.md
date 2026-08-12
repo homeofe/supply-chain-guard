@@ -6,6 +6,48 @@
 
 ---
 
+## Release v5.26.0 (2026-08-12)
+
+Model: claude-opus-5. First MINOR since 5.25.0, and deliberately so. The repo's
+own precedent is that `5.25.x` carries threat-intel data while `5.x.0` carries
+anything that changes what the scanner does: 5.25.0 was an importer flag, 5.24.0
+and 5.22.0 were fixes to importer and detection behaviour. All three PRs in this
+release add rules that make previously-clean scans report findings, which can
+turn a consumer's `--fail-on` gate red. That is a minor here, not a patch.
+
+Contents: #136 (file-digest matching), #137 (ChainDrop persistence chain and
+dangerous editor tasks), #138 (install hooks that register OS-level
+persistence). Their individual entries are below and are unchanged by this
+release.
+
+| | Before | After |
+|---|--------|-------|
+| ChainDrop persistence artefacts detected | 1 of 5 | 5 of 5 |
+| Known-malware hashes able to match a file | 0 of 194 | 187 of 189 eligible |
+| `.vscode/tasks.json` dangerous commands | not inspected | inspected |
+
+Version bumped across all 14 `aahp.config.json` versionSites plus package.json,
+with per-file occurrence counts asserted before rewriting, and package-lock.json
+rewritten by `npm install --package-lock-only`. CHANGELOG `[Unreleased]` promoted
+to `## [5.26.0] - 2026-08-12`, reference link added and the compare link
+re-based. NEXT_ACTIONS.md version headers updated. feed.json and the generated
+handoff set regenerated.
+
+SECURITY.md untouched, and that is a considered call rather than an omission:
+its Supported Versions table tracks major lines (`5.x`), so a minor inside 5.x
+does not change it. CONTRIBUTING.md untouched: the three PRs extended existing
+modules and added no new `src/` module.
+
+Two follow-ups deliberately left open, both recorded rather than acted on:
+
+- **T-016** stays blocked. Version-pinned npm IOCs match through the install
+  guard but not through a directory scan, covering most of the package IOCs in
+  the feed. Unchanged by this release and still an owner decision.
+- **`precision-corpus.test.ts` has no legitimate `.claude/settings.json` or
+  `.vscode/tasks.json` samples.** That gap is what blocks the tranche-3
+  structural heuristics (a `runOn: folderOpen` signal in its own right). Build
+  the corpus before attempting them, not after.
+
 ## Install-hook persistence, T-019 tranche 2 (2026-08-12, unreleased, branch feat/install-hook-persistence)
 
 Model: claude-opus-5. PR 3 of 3 for the v5.26.0 line. No version bump. With this
