@@ -2177,6 +2177,7 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
 // Utility: check if a string contains any known IOC
 // ---------------------------------------------------------------------------
 
+import { createHash } from "node:crypto";
 import type { Finding } from "./types.js";
 
 /**
@@ -2331,4 +2332,90 @@ export function checkBadVersion(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// File-digest matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Algorithms whose digests in KNOWN_MALICIOUS_HASHES are unambiguously digests
+ * OF FILE BYTES, keyed by the hex length that identifies them.
+ *
+ * Length 40 is deliberately absent. The collection holds two different things
+ * at that length: a Git object id ("Nx Console malicious orphan commit (Git
+ * SHA)"), which is a hash of a commit object and never of file bytes, and a
+ * genuine file SHA-1 ("NadMesh botnet Go agent sample (SHA1)"). Nothing in the
+ * data distinguishes them, so matching either would risk telling a user their
+ * file is malware on the strength of a commit id. That is a data-modelling gap
+ * to fix by typing the collection, not something to guess at here.
+ */
+const FILE_DIGEST_ALGORITHMS = [
+  { algorithm: "sha256", hexLength: 64 },
+  { algorithm: "md5", hexLength: 32 },
+] as const;
+
+/** Lowercased digest -> description. Built once, not per file (cf. T-017). */
+let fileDigestIndex: Map<string, string> | null = null;
+
+function getFileDigestIndex(): Map<string, string> {
+  if (fileDigestIndex) return fileDigestIndex;
+  const usableLengths = new Set<number>(FILE_DIGEST_ALGORITHMS.map((a) => a.hexLength));
+  const index = new Map<string, string>();
+  for (const [hash, description] of Object.entries(KNOWN_MALICIOUS_HASHES)) {
+    if (usableLengths.has(hash.length)) index.set(hash.toLowerCase(), description);
+  }
+  fileDigestIndex = index;
+  return index;
+}
+
+/**
+ * Match a scanned file BY ITS OWN DIGEST against KNOWN_MALICIOUS_HASHES.
+ *
+ * Deliberately separate from the digest handling inside checkIOCBlocklist,
+ * which substring-searches the digest TEXT inside file content. That text match
+ * answers "does this file quote a known-bad digest", which is a real signal in
+ * a lockfile, manifest or advisory, and it is kept unchanged. It cannot answer
+ * "is this file the malware", because a payload never contains its own digest.
+ *
+ * Until this matcher existed, every entry describing a dropped artefact was
+ * unreachable by the thing it names: the ChainDrop hook "dropped as
+ * .vscode/tasks.json", the WEL1DROPPER stage-2 payload binaries, and the
+ * ChainDrop setup.mjs droppers could only have fired on a file that happened to
+ * contain their own hex digest as text.
+ *
+ * No BENIGN_DOC_FILES skip here, unlike the text matcher. That skip exists
+ * because documentation legitimately DISCUSSES indicators; a byte-for-byte
+ * digest match is not discussion, so a .md file that is exactly a known
+ * payload should still be reported.
+ *
+ * Takes the raw bytes rather than decoded text on purpose: a digest must be
+ * computed over the file as it exists on disk. Hashing a UTF-8 decoded string
+ * would not reproduce the published digest for any binary payload, which is
+ * most of what this collection describes.
+ */
+export function checkFileDigest(
+  bytes: Buffer,
+  relativePath: string,
+  // Injectable only so a test can assert the matching behaviour itself. A real
+  // digest has no computable preimage, so a test cannot build a file that
+  // matches a shipped entry; it supplies its own index instead.
+  index: Map<string, string> = getFileDigestIndex(),
+): Finding[] {
+  const findings: Finding[] = [];
+  // The bytes are already in memory, so each extra algorithm is CPU only and
+  // costs no additional I/O.
+  for (const { algorithm } of FILE_DIGEST_ALGORITHMS) {
+    const digest = createHash(algorithm).update(bytes).digest("hex");
+    const description = index.get(digest);
+    if (!description) continue;
+    findings.push({
+      rule: "IOC_KNOWN_MALWARE_FILE_DIGEST",
+      description: `File content matches a known malware digest: ${algorithm} ${digest} (${description})`,
+      severity: "critical",
+      file: relativePath,
+      recommendation: `Remove ${relativePath}. Its contents are byte-for-byte identical to a known malicious artefact.`,
+    });
+  }
+  return findings;
 }

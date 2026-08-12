@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Seven tasks are ready, three owner decisions are blocked, and T-008/T-015 are complete.
+Six tasks are ready, three owner decisions are blocked, and T-008/T-015/T-018 are complete.
 
 Current version: **v5.25.12**
 
@@ -14,14 +14,14 @@ Current version: **v5.25.12**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Seven
+AAHP 3.9.1 adoption and the verified security hardening are complete. Six
 follow-ups are ready. Three decisions are owner-blocked: the Node/Babel support
 matrix, whether version-pinned npm IOCs should match on a directory scan, and
 the scope of dropped-persistence detection.
 
 | Status | Count |
 |--------|-------|
-| Ready | 7 |
+| Ready | 6 |
 | Blocked | 3 |
 
 The published package is v5.25.12.
@@ -111,41 +111,6 @@ do not merge Babel 8 alone.
 - [ ] The owner selects and records the new minimum Node line.
 - [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
 - [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
-
----
-
-## T-018: Match known-malware hashes against real file digests
-
-**Goal:** Make the 194 `KNOWN_MALICIOUS_HASHES` entries detect a file BY its
-digest, which is what their descriptions already promise.
-
-**The finding (verified by execution and by grep, 2026-08-12):** the only
-matching consumer of `KNOWN_MALICIOUS_HASHES` is the substring loop at
-`src/ioc-blocklist.ts:2245`, which tests whether the digest TEXT appears inside
-file content. Nothing computes a SHA-256 over a scanned file and looks it up.
-The `createHash` calls in `src/npm-scanner.ts:637` and `src/pypi-scanner.ts:507`
-compute tarball-integrity digests and never consult the malware list, and no
-test asserts a file's own digest is matched.
-
-Concretely, `src/ioc-blocklist.ts:862` is
-`"927387d0...": "ChainDrop IDE persistence hook dropped as .vscode/tasks.json"`.
-That entry can only fire if a file contains its own digest as text, which a
-dropped `tasks.json` never does. The same holds for the WEL1DROPPER stage-2
-payload binaries and the ChainDrop `setup.mjs` droppers: the indicators added to
-catch those artefacts cannot fire on them.
-
-The substring behaviour is still worth keeping - a digest quoted in a manifest or
-report is a real signal - so this is additive, not a replacement.
-
-**Acceptance criteria:**
-- [ ] A SHA-256 is computed per scanned file during the walk and looked up in
-      `KNOWN_MALICIOUS_HASHES`, emitting a distinct rule from the text match so
-      the two signals stay tellable apart.
-- [ ] A fixture whose file content hashes to a known-bad digest fires; the same
-      content with one byte changed does not.
-- [ ] The existing digest-text substring match still fires, with its own test.
-- [ ] Cost is measured on a large tree before merge; hashing every scanned file
-      is not free and the walk already reads them.
 
 ---
 
@@ -293,6 +258,7 @@ initiative.
 
 | Item | Resolution |
 |------|------------|
+| T-018: known-malware hashes never matched a file | Done: `IOC_KNOWN_MALWARE_FILE_DIGEST` computes SHA-256/MD5 per scanned file, before the scannable-extension gate, over raw bytes. The digest-text substring match is kept as a separate signal. |
 | v5.25.5: AAHP shared-primitive convergence | PR #120 merged: AAHP bumped 3.9.1->3.9.2, `aahp-dashboard.mjs` renamed to `scg-handoff-docs.mjs`, two vendored bash files deleted, shared primitives imported instead; PR #119 Action comment fix also included |
 | T-015: packaged self-scan own-definition false positive | Package-shaped trusted/untrusted regressions pass; v5.25.3 is the recovery release |
 | v5.25.2: AAHP 3.9.1 and security hardening | Released 2026-08-04; live install smoke exposed the T-015 packaged self-scan gap |

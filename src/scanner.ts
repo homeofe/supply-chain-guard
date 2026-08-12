@@ -64,7 +64,7 @@ import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
 import { scanPythonLockfiles } from "./python-lockfile-scanner.js";
-import { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
+import { checkIOCBlocklist, checkBadVersion, checkFileDigest } from "./ioc-blocklist.js";
 import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 import {
   INFOSTEALER_PATTERNS,
@@ -369,6 +369,33 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       checkBinaryFile(relativePath, findings);
     }
 
+    // Digest match against KNOWN_MALICIOUS_HASHES, computed over the RAW BYTES.
+    //
+    // Runs BEFORE the SCANNABLE_EXTENSIONS gate on purpose. Hashing needs no
+    // parser, and most of that collection describes compiled payloads that
+    // carry no scannable extension, so they never reach the content scanners
+    // at all. Gating this on the extension list would leave exactly the
+    // artefacts the digests were collected for unreachable.
+    //
+    // Reading a file the content pass would otherwise skip is new I/O, which
+    // is why the same MAX_FILE_SIZE ceiling applies. A payload padded past
+    // that ceiling would no longer match its published digest anyway.
+    //
+    // The buffer is reused for the UTF-8 decode below, so a scannable file is
+    // still read exactly once.
+    let fileBytes: Buffer | undefined;
+    try {
+      if (fs.statSync(filePath).size <= MAX_FILE_SIZE) {
+        fileBytes = fs.readFileSync(filePath);
+        findings.push(...checkFileDigest(fileBytes, relativePath));
+      }
+    } catch {
+      // Leave fileBytes undefined and stay silent here: the oversized and
+      // unreadable paths below own that accounting, and reporting it twice
+      // would double-count a single file.
+      fileBytes = undefined;
+    }
+
     // Tracks whether the internal-disclosure pass already ran for this file.
     // Dockerfiles and package-manager configs are read in the block below and
     // some of them (.yarnrc.yml) also carry a scannable extension, so without
@@ -394,7 +421,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         continue;
       }
       try {
-        prefetchedContent = fs.readFileSync(filePath, "utf-8");
+        prefetchedContent =
+          fileBytes !== undefined
+            ? fileBytes.toString("utf-8")
+            : fs.readFileSync(filePath, "utf-8");
       } catch {
         recordUnreadablePath(findings, relativePath);
         continue;
@@ -445,7 +475,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       content = prefetchedContent;
     } else {
       try {
-        content = fs.readFileSync(filePath, "utf-8");
+        content =
+          fileBytes !== undefined
+            ? fileBytes.toString("utf-8")
+            : fs.readFileSync(filePath, "utf-8");
       } catch {
         recordUnreadablePath(findings, relativePath);
         continue;

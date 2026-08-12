@@ -7,6 +7,27 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **`IOC_KNOWN_MALWARE_FILE_DIGEST`: scanned files are now matched by their own
+  SHA-256 and MD5 digests against the known-malware hash collection.** Until now the
+  collection had exactly one matcher, a substring search for the digest TEXT inside file
+  content. That answers "does this file quote a known-bad digest", which is a real signal
+  in a manifest or advisory and is unchanged, but it cannot answer "is this file the
+  malware", because a payload never contains its own digest. Every entry describing a
+  dropped artefact was therefore unreachable by the thing it names, including the entry
+  labelled "ChainDrop IDE persistence hook dropped as `.vscode/tasks.json`", the
+  WEL1DROPPER stage-2 payload binaries and the ChainDrop `setup.mjs` droppers.
+  The check runs before the scannable-extension gate, because hashing needs no parser and
+  most of the collection describes compiled payloads that carry no scannable extension and
+  so never reached the content scanners at all. Digests are computed over raw bytes rather
+  than decoded text, since hashing a UTF-8 decoding would not reproduce a binary's
+  published digest. 40-character keys are deliberately excluded: the collection holds both
+  a Git object id and a genuine file SHA-1 at that length and nothing in the data
+  distinguishes them, so matching either could label a file as malware on the strength of
+  a commit id. Measured cost on a 574-file tree is about 3 percent of scan wall-clock; the
+  bytes are already in memory for scannable files, and only 24 files there were newly read.
+
 ## [5.25.12] - 2026-08-12
 
 ### Added

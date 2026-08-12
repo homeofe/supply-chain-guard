@@ -69,7 +69,7 @@ export { scanGoFiles } from "./go-scanner.js";
 export { scanRubyGemsFiles } from "./rubygems-scanner.js";
 export { scanComposerFiles } from "./composer-scanner.js";
 export { scanNuGetFiles } from "./nuget-scanner.js";
-export { checkIOCBlocklist, checkBadVersion } from "./ioc-blocklist.js";
+export { checkIOCBlocklist, checkBadVersion, checkFileDigest } from "./ioc-blocklist.js";
 export { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 export { analyzeInstallHooks } from "./install-hook-scanner.js";
 export { analyzeDependencyRisks, levenshtein } from "./dependency-risk-analyzer.js";

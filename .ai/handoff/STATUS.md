@@ -6,6 +6,52 @@
 
 ---
 
+## File-digest matching, T-018 (2026-08-12, unreleased, branch feat/file-digest-matching)
+
+Model: claude-opus-5. First of three PRs agreed for the v5.26.0 line; no version
+bump here, and the version stays 5.25.12 until all three are on `main`.
+
+Ships `IOC_KNOWN_MALWARE_FILE_DIGEST`. The known-malware hash collection had
+exactly one matcher, the substring loop at `src/ioc-blocklist.ts:2245`, which
+tests whether the digest TEXT appears inside file content. That is a real signal
+for a digest quoted in a manifest or advisory and is kept unchanged, but it
+cannot identify the malware itself, because a payload never contains its own
+digest. Every entry describing a dropped artefact was unreachable by the thing it
+names.
+
+Three design decisions, each pinned by a test that fails if it is reversed:
+
+1. **Runs before the `SCANNABLE_EXTENSIONS` gate.** Hashing needs no parser, and
+   most of the collection describes compiled payloads with no scannable
+   extension, which never reach the content scanners at all. Gating on the
+   extension list would have left exactly the artefacts the digests were
+   collected for unreachable.
+2. **Hashes raw bytes, not decoded text.** Hashing a UTF-8 decoding does not
+   reproduce a binary's published digest. The buffer is reused for the UTF-8
+   decode below it, so a scannable file is still read exactly once.
+3. **Excludes 40-character keys.** The collection holds a Git object id (an
+   orphan commit) and a genuine file SHA-1 at the same length, and nothing in the
+   data distinguishes them. Matching either could label a file as malware on the
+   strength of a commit id. This is a data-modelling gap to fix by typing the
+   collection, not something to guess at in the matcher.
+
+Verification. 10 new tests in `src/__tests__/file-digest.test.ts`, plus
+`ioc-blocklist`, `collection-reachability`, `binary-detection` and
+`precision-corpus` re-run: 70 passing. Mutation proof: moving the check behind
+the extension gate and hashing the decoded string turns exactly the two
+corresponding tests red and leaves the other eight green.
+
+A real digest has no computable preimage, so no test can construct a file
+matching a shipped entry. Unit tests pass their own index; the end-to-end scan
+tests inject one entry into `KNOWN_MALICIOUS_HASHES` in `beforeAll`, before
+anything builds the lazily-cached index, and remove it afterwards.
+
+Cost, measured rather than asserted, on this repo (574 files enumerated, 404
+content-scanned): median scan wall-clock 6.71s without the check and 6.88s with
+it, about 3 percent. 278 files totalling 8.8 MB are hashed, of which only 24
+files and 0.68 MB were newly read; the rest were already in memory. The
+self-scan produces zero digest findings, so no false positive on this repo.
+
 ## Release v5.25.12 (2026-08-12)
 
 Model: claude-opus-5. Cuts the 2026-08-12 sweep (#134, merged as 6f66eb0) as a
