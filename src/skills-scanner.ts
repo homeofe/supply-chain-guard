@@ -23,7 +23,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
-import { PROMPT_INJECTION_PATTERNS, MAX_FILE_SIZE, makeOversizedSkipFinding } from "./patterns.js";
+import {
+  PROMPT_INJECTION_PATTERNS,
+  MAX_FILE_SIZE,
+  makeOversizedSkipFinding,
+  CHAINDROP_PERSISTENCE_ARTEFACT_REGEX,
+} from "./patterns.js";
 import {
   listDiscoveredDirectory,
   listOptionalDirectory,
@@ -191,6 +196,26 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
     );
     if (content === null) continue;
     findings.push(...scanAgentSettingsContent(content, relPath));
+  }
+
+  // .vscode/tasks.json. Read here rather than in the core walk so it goes
+  // through the same dangerous-command battery as an agent hook: an editor task
+  // and a lifecycle hook are the same capability, and until now only one of the
+  // two was checked.
+  for (const relPath of [".vscode/tasks.json"]) {
+    const content = readOptionalUtf8File(
+      dir,
+      path.join(dir, relPath),
+      relPath,
+      findings,
+      {
+        maxBytes: MAX_FILE_SIZE,
+        onOversized: (size) =>
+          findings.push(makeOversizedSkipFinding(relPath, size)),
+      },
+    );
+    if (content === null) continue;
+    findings.push(...scanEditorTasksContent(content, relPath));
   }
 
   return findings;
@@ -378,6 +403,28 @@ export function scanAgentSettingsContent(
         category: "malware",
         recommendation:
           "Remove the hook. Hook commands must never fetch and execute remote code.",
+      });
+    }
+
+    // A hook whose command merely launches an already-dropped artefact carries
+    // no independently dangerous token, so the battery above cannot see it.
+    // That is the realistic ChainDrop shape and it was fully undetected: the
+    // core walk excludes `.claude/`, so this content never reaches the pattern
+    // table where the artefact literal lives.
+    if (CHAINDROP_PERSISTENCE_ARTEFACT_REGEX.test(command)) {
+      findings.push({
+        rule: "CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE",
+        description:
+          "Agent settings hook launches a gh-token-monitor persistence artefact. " +
+          "The ChainDrop / Shai-Hulud keyv wave drops that script and chains it from " +
+          "an autostart hook so GitHub tokens are re-harvested on every session.",
+        severity: "critical",
+        file: relativePath,
+        match: truncate(command),
+        confidence: 0.9,
+        category: "malware",
+        recommendation:
+          "Remove the hook and the dropped artefact, then rotate any GitHub tokens on this machine.",
       });
     }
 
@@ -683,6 +730,134 @@ function collectHookCommands(node: unknown, out: string[], depth: number): void 
       collectHookCommands(value, out, depth + 1);
     }
   }
+}
+
+/**
+ * Collect the effective command lines from a VS Code tasks.json.
+ *
+ * A task's shell invocation is split across `command` and `args`, so the
+ * dangerous part usually sits in an argument rather than the command:
+ * `{"command": "bash", "args": ["-c", "curl ... | bash"]}`. Joining them back
+ * into the line that actually executes is what makes the existing battery see
+ * it. Platform overrides (`windows`/`linux`/`osx`) can carry their own
+ * command/args and are collected as separate lines.
+ *
+ * Returns each line paired with whether that task runs automatically on folder
+ * open, which is used only to escalate an already-dangerous finding, never to
+ * produce one.
+ */
+function collectTaskCommandLines(
+  parsed: unknown,
+): { line: string; autoRun: boolean }[] {
+  const out: { line: string; autoRun: boolean }[] = [];
+  if (parsed === null || typeof parsed !== "object") return out;
+  const tasks = (parsed as Record<string, unknown>).tasks;
+  if (!Array.isArray(tasks)) return out;
+
+  const renderArgs = (args: unknown): string[] => {
+    if (!Array.isArray(args)) return [];
+    return args.map((a) => {
+      if (typeof a === "string") return a;
+      // VS Code allows { value, quoting } argument objects.
+      if (a !== null && typeof a === "object") {
+        const v = (a as Record<string, unknown>).value;
+        if (typeof v === "string") return v;
+      }
+      return "";
+    });
+  };
+
+  for (const task of tasks) {
+    if (task === null || typeof task !== "object") continue;
+    const t = task as Record<string, unknown>;
+
+    const runOptions = t.runOptions;
+    const autoRun =
+      runOptions !== null &&
+      typeof runOptions === "object" &&
+      (runOptions as Record<string, unknown>).runOn === "folderOpen";
+
+    const shapes: Record<string, unknown>[] = [t];
+    for (const platform of ["windows", "linux", "osx"]) {
+      const override = t[platform];
+      if (override !== null && typeof override === "object") {
+        shapes.push(override as Record<string, unknown>);
+      }
+    }
+
+    for (const shape of shapes) {
+      const command = typeof shape.command === "string" ? shape.command : "";
+      const args = renderArgs(shape.args);
+      const line = [command, ...args].filter(Boolean).join(" ").trim();
+      if (line) out.push({ line, autoRun });
+    }
+  }
+  return out;
+}
+
+/**
+ * Scan a .vscode/tasks.json for dangerous task commands.
+ *
+ * Deliberately reuses the command vocabulary that already guards agent hooks
+ * rather than inventing a heuristic: the identical `curl | bash` string
+ * produced two criticals inside .claude/settings.json and nothing at all inside
+ * .vscode/tasks.json, with the file confirmed read. That was a recall gap in a
+ * file the scanner already opens, not a question of scope.
+ *
+ * `runOn: folderOpen` only ESCALATES a command already judged dangerous. On its
+ * own it is an ordinary and widely used VS Code feature, so it never produces a
+ * finding here. Malformed JSON is ignored (no crash, no findings).
+ */
+export function scanEditorTasksContent(
+  content: string,
+  relativePath: string,
+): Finding[] {
+  const findings: Finding[] = [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return findings;
+  }
+
+  for (const { line, autoRun } of collectTaskCommandLines(parsed)) {
+    const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
+    const dangerous =
+      downloadExec ||
+      HOOK_EVAL_REGEX.test(line) ||
+      HOOK_BASE64_REGEX.test(line) ||
+      HOOK_SHELL_RC_WRITE_REGEX.test(line);
+    if (!dangerous) continue;
+
+    // A task normally runs only when a developer invokes it. runOn folderOpen
+    // removes that step, which is the difference between a bad build step and
+    // an autostart mechanism, so it is the only thing that reaches critical.
+    const severity = autoRun ? "critical" : "high";
+    const autoNote = autoRun
+      ? " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action."
+      : " The task runs when invoked.";
+
+    findings.push({
+      rule: downloadExec
+        ? "EDITOR_TASK_DOWNLOAD_EXEC"
+        : "EDITOR_TASK_DANGEROUS_COMMAND",
+      description:
+        (downloadExec
+          ? "Editor task downloads and executes remote code."
+          : "Editor task contains a dangerous command (eval, base64 decode, download-exec pipe, or shell rc file modification).") +
+        autoNote,
+      severity,
+      file: relativePath,
+      match: truncate(line),
+      confidence: 0.9,
+      category: "malware",
+      recommendation:
+        "Remove the task or its command. Editor tasks execute with the developer's full privileges.",
+    });
+  }
+
+  return findings;
 }
 
 /** Render invisible/bidi characters as \uXXXX escapes for the match snippet. */

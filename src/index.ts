@@ -110,6 +110,7 @@ export {
   scanAgentSkillFiles,
   scanSkillContent,
   scanAgentSettingsContent,
+  scanEditorTasksContent,
 } from "./skills-scanner.js";
 export { handleMcpMessage, handleMcpLine, startMcpServer } from "./mcp-server.js";
 export {

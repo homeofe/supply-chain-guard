@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Six tasks are ready, three owner decisions are blocked, and T-008/T-015/T-018 are complete.
+Seven tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018 are complete.
 
 Current version: **v5.25.12**
 
@@ -14,15 +14,14 @@ Current version: **v5.25.12**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Six
-follow-ups are ready. Three decisions are owner-blocked: the Node/Babel support
-matrix, whether version-pinned npm IOCs should match on a directory scan, and
-the scope of dropped-persistence detection.
+AAHP 3.9.1 adoption and the verified security hardening are complete. Seven
+follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
+matrix and whether version-pinned npm IOCs should match on a directory scan.
 
 | Status | Count |
 |--------|-------|
-| Ready | 6 |
-| Blocked | 3 |
+| Ready | 7 |
+| Blocked | 2 |
 
 The published package is v5.25.12.
 
@@ -114,7 +113,7 @@ do not merge Babel 8 alone.
 
 ---
 
-## T-019: Decide scope for dropped-persistence detection (blocked)
+## T-019: Dropped-persistence detection, tranche 2
 
 **Goal:** Close, or consciously decline, the persistence-detection gap the
 2026-08-12 sweep escalated.
@@ -146,12 +145,18 @@ unreachable by construction, and `FeedIOC.type` is a closed union with no `path`
 member. Measured false-positive surface: 23 of 84 project directories in this
 estate carry a legitimate `.claude/settings.json`.
 
-**Blocked by:** Owner decision on scope and version line. Proposed tranche 1
-(near-zero false-positive surface): route `.vscode/tasks.json` command strings
-through the dangerous-command battery that already guards agent hooks, plus a
-campaign-literal pattern for the ChainDrop artefact names cloning the existing
-`ANTV_WAVE_KITTY_PERSISTENCE` shape. Proposed tranche 2: an
-`INSTALL_HOOK_PERSISTENCE_WRITE` rule scoped strictly to install-script strings.
+**Scope decided.** Three PRs, then a v5.26.0 minor. Tranche 1 shipped: the
+`.vscode/tasks.json` recall gap and `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE`,
+including the hook-scanner wiring needed because the core walk excludes
+`.claude/`. Measured against the five published artefacts, coverage went from
+one of five to five of five with the benign control still clean.
+
+**Remaining (tranche 2):** an `INSTALL_HOOK_PERSISTENCE_WRITE` rule scoped
+strictly to the install-script strings `install-hook-scanner.ts` already reads
+(`launchctl`, `systemctl --user enable`, `crontab`, `schtasks`, a
+`CurrentVersion\Run` key, a site-packages `.pth`). It only raises attacker cost:
+the hook string is all the scanner sees, so `node scripts/configure.js` still
+hides the call, and the CHANGELOG should say so.
 
 **Acceptance criteria:**
 - [ ] Owner selects tranche scope and whether it lands on 5.25.x or 5.26.0.

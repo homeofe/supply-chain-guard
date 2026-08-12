@@ -9,6 +9,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- **`EDITOR_TASK_DOWNLOAD_EXEC` / `EDITOR_TASK_DANGEROUS_COMMAND`: `.vscode/tasks.json`
+  now goes through the same dangerous-command battery that already guards agent hooks.**
+  This closes a recall gap rather than adding a heuristic: the identical
+  `curl | bash` string produced two criticals inside `.claude/settings.json` and nothing
+  at all inside `.vscode/tasks.json`, with the file confirmed read. A task's shell
+  invocation is split across `command` and `args`, so the dangerous part usually sits in
+  an argument; the two are rejoined into the line that actually executes, and platform
+  override blocks (`windows`/`linux`/`osx`) are inspected as separate lines. Severity is
+  high for a task a developer must invoke and critical when `runOptions.runOn` is
+  `folderOpen`, which removes that step. `folderOpen` on its own is an ordinary VS Code
+  feature and never produces a finding.
+- **`CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE`: the ChainDrop persistence chain is now
+  detected by artefact name.** The ChainDrop / Shai-Hulud `keyv` wave installs a scheduled
+  token re-harvester rather than exfiltrating once: a dropped script under `~/.local/bin`,
+  a macOS LaunchAgent, and a matching systemd user unit, all named `gh-token-monitor`.
+  Measured against fixtures for the five published artefacts, coverage goes from one of
+  five to five of five. The rule is also wired into the agent-hook scanner directly,
+  because the core walk excludes `.claude/`, so a hook that merely launches an
+  already-dropped script would otherwise reach no pattern table at all: that shape
+  produced zero findings before this change. The literal is defined once and shared
+  between the pattern table and the hook scanner so the two cannot drift.
+
 - **`IOC_KNOWN_MALWARE_FILE_DIGEST`: scanned files are now matched by their own
   SHA-256 and MD5 digests against the known-malware hash collection.** Until now the
   collection had exactly one matcher, a substring search for the digest TEXT inside file

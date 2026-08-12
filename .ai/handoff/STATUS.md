@@ -6,6 +6,57 @@
 
 ---
 
+## Persistence recall, T-019 tranche 1 (2026-08-12, unreleased, branch feat/persistence-recall)
+
+Model: claude-opus-5. PR 2 of 3 for the v5.26.0 line. No version bump.
+
+Two changes, both measured against the ten fixtures built when the gap was first
+investigated (preserved under the session scratchpad at `persist-fix/`).
+
+**`.vscode/tasks.json` recall.** The identical `curl | bash` produced two
+criticals inside `.claude/settings.json` and nothing inside `.vscode/tasks.json`,
+with the file confirmed read. That is a recall gap in a file already opened, not
+a scope question, so it reuses the existing dangerous-command vocabulary rather
+than inventing a heuristic. A task's invocation is split across `command` and
+`args`, so the payload usually sits in an argument; they are rejoined into the
+line that actually executes. `runOn: folderOpen` only escalates high to critical
+and never fires on its own, since it is an ordinary VS Code feature. That limit
+is pinned by a test so the tranche-3 heuristic cannot arrive early by accident.
+
+**`CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE`.** Campaign literal for the dropped
+script, LaunchAgent and systemd unit, cloning the `ANTV_WAVE_KITTY_PERSISTENCE`
+entry's shape and guards.
+
+One thing the fixture re-run caught that reading would not have: adding the
+pattern alone left the headline case still undetected. A `.claude/settings.json`
+hook whose command merely launches the already-dropped script carries no
+independently dangerous token, so the command battery cannot see it, and the core
+walk lists `.claude` in `excludedDirectories`, so that content never reaches the
+pattern table either. The literal is therefore defined once in `patterns.ts` and
+tested directly in the hook scanner as well, which closes it. Without re-running
+the fixtures this PR would have shipped claiming a fix it did not have.
+
+Measured coverage of the five published artefacts: **one of five before, five of
+five after.** The benign control stays clean, the positive control and the
+package-identity reference are unchanged, and the self-scan gate is green.
+
+| Fixture | Before | After |
+|---------|--------|-------|
+| LaunchAgent plist | `COMPLEX_INSTALL_SCRIPT` (low) only | critical |
+| dropped script + chmod | payload cred-steal only | + critical |
+| systemd unit | nothing | critical |
+| agent hook, curl-pipe-bash | 2 criticals | 3 criticals |
+| agent hook, launches dropped script | nothing | critical |
+| tasks.json, curl-pipe-bash | nothing | critical |
+| tasks.json, launches dropped script | nothing | critical |
+| benign control | clean | clean |
+
+Verification: 12 new tests in `src/__tests__/persistence-recall.test.ts`, plus
+`skills-scanner`, `precision-corpus`, `file-digest` and `self-scan-recognition`
+re-run. Mutation proof in two parts, because the PR has two independent halves:
+ignoring `args` turns exactly the four args-dependent tests red, and neutering
+the campaign literal turns exactly the two chain tests red.
+
 ## File-digest matching, T-018 (2026-08-12, unreleased, branch feat/file-digest-matching)
 
 Model: claude-opus-5. First of three PRs agreed for the v5.26.0 line; no version

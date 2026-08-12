@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1786524269",
-    "timestamp": "2026-08-12T08:44:29Z",
-    "commit": "455278d",
+    "session_id": "cli-1786526134",
+    "timestamp": "2026-08-12T09:15:34Z",
+    "commit": "13b7d2a",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a9c3deb873db6c10e4d4c7303b780b015171e70ec6d560c781e75233b4c2409e",
-      "updated": "2026-08-12T08:38:42Z",
-      "lines": 982,
-      "summary": "Model: claude-opus-5. First of three PRs agreed for the v5.26.0 line; no version"
+      "checksum": "sha256:b58d27cbe74afc0e2fb35b75e312a64cafbdcd3c99f047b184843c581dbafd1b",
+      "updated": "2026-08-12T09:15:25Z",
+      "lines": 1033,
+      "summary": "Model: claude-opus-5. PR 2 of 3 for the v5.26.0 line. No version bump."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:295666ec7f862d2114aeb4ad6fe0e3f64557146938f7d62dcaffe386bc779047",
-      "updated": "2026-08-12T08:38:23Z",
-      "lines": 294,
-      "summary": "Six tasks are ready, three owner decisions are blocked, and T-008/T-015/T-018 are complete."
+      "checksum": "sha256:7106bdfc08714956af7ea445eec3151b4a2bc68662546231ac66daed3af9c8bf",
+      "updated": "2026-08-12T09:15:04Z",
+      "lines": 299,
+      "summary": "Seven tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:189ae00cd32e835573bf76f0c68c8e9ce0a71ed3ee3c043bb1d5b06a174ae9ec",
-      "updated": "2026-08-12T08:44:29Z",
+      "updated": "2026-08-12T09:15:34Z",
       "lines": 145,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:cf16b9f15eeb95cf08521bba065cd98c4e28c106c8b3b285e7258351bf776b09",
-      "updated": "2026-08-12T08:44:29Z",
+      "checksum": "sha256:879ac36ce3d0d9cf2f674d9185844181241a50757b25569bb60c0faeb23644a5",
+      "updated": "2026-08-12T09:15:34Z",
       "lines": 70,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:c09000ce042953c00a621c4856858abfab98250c93e80b782af81d98be58ad41",
-      "updated": "2026-08-12T08:44:29Z",
+      "checksum": "sha256:3ef9099462dfd32b8da06757e52e9db26bb10edff11158e90c1c31dd361e0c24",
+      "updated": "2026-08-12T09:15:34Z",
       "lines": 62,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,12 +77,12 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: claude-opus-5. First of three PRs agreed for the v5.26.0 line; no version Six tasks are ready, three owner decisions are blocked, and T-008/T-015/T-018 are complete. ",
+  "quick_context": "Model: claude-opus-5. PR 2 of 3 for the v5.26.0 line. No version bump. Seven tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 13518,
-    "full_read": 23560
+    "manifest_plus_core": 14143,
+    "full_read": 24185
   }
   ,"next_task_id": 20
-  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Decide whether version-pinned npm IOCs should match on a directory scan","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision: behaviour change with real false-positive surface","created":"2026-08-06T09:00:00Z"},"T-017":{"title":"Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-06T09:30:00Z"},"T-018":{"title":"Match known-malware hashes against real file digests, not just digest text in content","status":"done","priority":"high","depends_on":[],"created":"2026-08-12T09:00:00Z"},"T-019":{"title":"Decide scope for dropped-persistence detection (tranche 1 and 2)","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision on tranche scope and version line","created":"2026-08-12T09:00:00Z"}}
+  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Decide whether version-pinned npm IOCs should match on a directory scan","status":"blocked","priority":"high","depends_on":[],"blocked_by":"Owner decision: behaviour change with real false-positive surface","created":"2026-08-06T09:00:00Z"},"T-017":{"title":"Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-06T09:30:00Z"},"T-018":{"title":"Match known-malware hashes against real file digests, not just digest text in content","status":"done","priority":"high","depends_on":[],"created":"2026-08-12T09:00:00Z"},"T-019":{"title":"Dropped-persistence detection: tranche 1 shipped, tranche 2 remaining","status":"ready","priority":"high","depends_on":[],"created":"2026-08-12T09:00:00Z"}}
 }

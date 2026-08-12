@@ -33,6 +33,18 @@ const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blockl
 // design is to fire on documentation (LURE_PATTERNS, PROMPT_INJECTION_PATTERNS)
 // keep plain SCANNER_SRC and stay on their onlyFilePattern scope.
 const BENIGN_DOC_FILES = /\.(md|markdown|txt|rst)$/i;
+/**
+ * Artefact names of the ChainDrop / Shai-Hulud gh-token-monitor persistence
+ * chain: the dropped script, the macOS LaunchAgent, and the systemd user unit.
+ *
+ * Defined once and shared. The pattern-table entry below consumes `.source`,
+ * and skills-scanner.ts tests agent-hook commands against it directly, because
+ * the core walk excludes `.claude/` and so agent config never reaches the
+ * pattern table. Two copies of this literal would drift.
+ */
+export const CHAINDROP_PERSISTENCE_ARTEFACT_REGEX =
+  /(?:gh-token-monitor\.(?:sh|service)|com\.user\.gh-token-monitor)/;
+
 const SCANNER_SRC_OR_DOCS = new RegExp(
   `(?:${SCANNER_SRC.source})|(?:${BENIGN_DOC_FILES.source})`,
   "i",
@@ -2451,6 +2463,21 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
       "Reference to kitty/cat.py Python backdoor or kitty-monitor persistence service. Persistence chain dropped by the May 2026 Mini Shai-Hulud @antv / Nx Console wave (TeamPCP).",
     severity: "critical",
     rule: "ANTV_WAVE_KITTY_PERSISTENCE",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
+  // ChainDrop / Shai-Hulud keyv wave (Socket, August 2026). The credential
+  // stealer installs a scheduled re-harvester rather than exfiltrating once:
+  // a dropped shell script under ~/.local/bin, a macOS LaunchAgent, and a
+  // matching systemd user unit, all named gh-token-monitor. Same shape as the
+  // kitty-monitor chain above, which is why it clones that entry's guards.
+  {
+    name: "chaindrop-gh-token-monitor-persistence",
+    pattern: CHAINDROP_PERSISTENCE_ARTEFACT_REGEX.source,
+    description:
+      "Reference to the gh-token-monitor persistence chain (dropped script, LaunchAgent, or systemd unit). Installed by the ChainDrop / Shai-Hulud keyv wave to re-harvest GitHub tokens on a schedule.",
+    severity: "critical",
+    rule: "CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE",
     notTestFile: true,
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
