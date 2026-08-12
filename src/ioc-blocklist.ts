@@ -2381,8 +2381,14 @@ function getFileDigestIndex(): Map<string, string> {
  * Until this matcher existed, every entry describing a dropped artefact was
  * unreachable by the thing it names: the ChainDrop hook "dropped as
  * .vscode/tasks.json", the WEL1DROPPER stage-2 payload binaries, and the
- * ChainDrop setup.mjs droppers could only have fired on a file that happened to
- * contain their own hex digest as text.
+ * ChainDrop preinstall droppers could only have fired on a file that happened
+ * to contain their own hex digest as text.
+ *
+ * Do not name the ChainDrop loader filenames in this comment. TypeScript copies
+ * JSDoc into the generated .d.ts, `notFilePattern: SCANNER_SRC_OR_DOCS` exempts
+ * src/ but not dist/*.d.ts, and MINI_SHAI_HULUD_LOADER matches those filenames
+ * after any whitespace. Naming them here turns the repo's own build output into
+ * a high-severity self-scan finding, which is how this was found.
  *
  * No BENIGN_DOC_FILES skip here, unlike the text matcher. That skip exists
  * because documentation legitimately DISCUSSES indicators; a byte-for-byte
