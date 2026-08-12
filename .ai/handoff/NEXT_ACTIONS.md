@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Seven tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018 are complete.
+Six tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018/T-019 are complete.
 
 Current version: **v5.25.12**
 
@@ -14,13 +14,13 @@ Current version: **v5.25.12**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Seven
+AAHP 3.9.1 adoption and the verified security hardening are complete. Six
 follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
 matrix and whether version-pinned npm IOCs should match on a directory scan.
 
 | Status | Count |
 |--------|-------|
-| Ready | 7 |
+| Ready | 6 |
 | Blocked | 2 |
 
 The published package is v5.25.12.
@@ -110,62 +110,6 @@ do not merge Babel 8 alone.
 - [ ] The owner selects and records the new minimum Node line.
 - [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
 - [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
-
----
-
-## T-019: Dropped-persistence detection, tranche 2
-
-**Goal:** Close, or consciously decline, the persistence-detection gap the
-2026-08-12 sweep escalated.
-
-**Measured coverage (10 fixtures against a fresh v5.25.11 build, 2026-08-12):**
-one of five ChainDrop persistence artefacts is detected, and for the wrong
-reason. LaunchAgent plist plus `launchctl load`: miss, only a 202-char
-`COMPLEX_INSTALL_SCRIPT` length heuristic. Dropped `~/.local/bin` script plus
-`chmod +x`: the drop fires nothing. systemd unit plus `systemctl --user enable`:
-total miss, `systemctl` does not appear anywhere in `dist/`. `.claude/settings.json`
-hook: two criticals. `.vscode/tasks.json` `runOn: folderOpen`: total miss.
-
-Two discriminator fixtures are the actual finding:
-- Replacing the `.claude/settings.json` hook body `curl|bash` with the realistic
-  `$HOME/.local/bin/gh-token-monitor.sh &` drops detection to zero. Autostart-hook
-  injection is not itself flagged; only an independently dangerous command that
-  happens to sit in a hook. Drop plus hook-chain is therefore fully undetected.
-- The identical `curl|bash` yields two criticals in `.claude/settings.json` and
-  zero in `.vscode/tasks.json`, with the file confirmed read. That is a recall
-  gap in a file already opened, not a scope question.
-
-A positive-control fixture fired four criticals and a benign control stayed
-clean, so the negatives are real rather than a broken harness.
-
-**Rejected outright:** a `KNOWN_PERSISTENCE_PATHS` collection.
-`checkIOCBlocklist(content, relativePath)` never tests the path, the walk is
-bounded to the scan root so `~/.local/bin` and `~/Library/LaunchAgents` are
-unreachable by construction, and `FeedIOC.type` is a closed union with no `path`
-member. Measured false-positive surface: 23 of 84 project directories in this
-estate carry a legitimate `.claude/settings.json`.
-
-**Scope decided.** Three PRs, then a v5.26.0 minor. Tranche 1 shipped: the
-`.vscode/tasks.json` recall gap and `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE`,
-including the hook-scanner wiring needed because the core walk excludes
-`.claude/`. Measured against the five published artefacts, coverage went from
-one of five to five of five with the benign control still clean.
-
-**Remaining (tranche 2):** an `INSTALL_HOOK_PERSISTENCE_WRITE` rule scoped
-strictly to the install-script strings `install-hook-scanner.ts` already reads
-(`launchctl`, `systemctl --user enable`, `crontab`, `schtasks`, a
-`CurrentVersion\Run` key, a site-packages `.pth`). It only raises attacker cost:
-the hook string is all the scanner sees, so `node scripts/configure.js` still
-hides the call, and the CHANGELOG should say so.
-
-**Acceptance criteria:**
-- [ ] Owner selects tranche scope and whether it lands on 5.25.x or 5.26.0.
-- [ ] Every shipped rule is content- or behaviour-discriminated, never
-      path-discriminated.
-- [ ] `precision-corpus.test.ts` gains legitimate `.claude/settings.json` and
-      `.vscode/tasks.json` samples before any structural heuristic ships; it has
-      neither today.
-- [ ] Any `runOn: folderOpen` heuristic stays at info on its own.
 
 ---
 
@@ -263,6 +207,7 @@ initiative.
 
 | Item | Resolution |
 |------|------------|
+| T-019: dropped-persistence detection | Done in two tranches: `.vscode/tasks.json` recall, `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE` (also wired into the hook scanner, since the core walk excludes `.claude/`), and `INSTALL_HOOK_PERSISTENCE_WRITE`. Coverage of the five published artefacts went from one of five to five of five. |
 | T-018: known-malware hashes never matched a file | Done: `IOC_KNOWN_MALWARE_FILE_DIGEST` computes SHA-256/MD5 per scanned file, before the scannable-extension gate, over raw bytes. The digest-text substring match is kept as a separate signal. |
 | v5.25.5: AAHP shared-primitive convergence | PR #120 merged: AAHP bumped 3.9.1->3.9.2, `aahp-dashboard.mjs` renamed to `scg-handoff-docs.mjs`, two vendored bash files deleted, shared primitives imported instead; PR #119 Action comment fix also included |
 | T-015: packaged self-scan own-definition false positive | Package-shaped trusted/untrusted regressions pass; v5.25.3 is the recovery release |

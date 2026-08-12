@@ -30,6 +30,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   already-dropped script would otherwise reach no pattern table at all: that shape
   produced zero findings before this change. The literal is defined once and shared
   between the pattern table and the hook scanner so the two cannot drift.
+- **`INSTALL_HOOK_PERSISTENCE_WRITE`: install hooks that register OS-level persistence are
+  now reported.** Covers launchd (`launchctl`, `LaunchAgents`/`LaunchDaemons`), systemd
+  (`systemctl enable`, unit paths), cron (`crontab`, `/etc/cron.*`), Windows scheduled
+  tasks (`schtasks /create`), the `CurrentVersion\Run` key, the Startup folder, and an
+  auto-imported `site-packages` `.pth`. Installing a package should not schedule code to
+  run again later, and that step is what turns a one-shot credential stealer into a
+  permanent re-harvester. Reported at **high**, not critical, so `--fail-on critical`
+  pipelines are unaffected by the new rule.
+  Scope is deliberately narrow: it reads only the six package.json install-script strings
+  the install-hook scanner already reads. The same commands in ordinary source belong to
+  any service manager or devops tool and would false-positive constantly. **The honest
+  limit that follows: the hook string is all the rule sees, so a hook that calls out to
+  `node scripts/configure.js` hides the call entirely.** This raises the cost of the
+  attack rather than closing it, and a test pins that boundary so it stays visible.
 
 - **`IOC_KNOWN_MALWARE_FILE_DIGEST`: scanned files are now matched by their own
   SHA-256 and MD5 digests against the known-malware hash collection.** Until now the

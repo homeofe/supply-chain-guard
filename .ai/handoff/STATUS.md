@@ -6,6 +6,40 @@
 
 ---
 
+## Install-hook persistence, T-019 tranche 2 (2026-08-12, unreleased, branch feat/install-hook-persistence)
+
+Model: claude-opus-5. PR 3 of 3 for the v5.26.0 line. No version bump. With this
+merged, T-019 is complete and the version bump is the only remaining step.
+
+Adds `INSTALL_HOOK_PERSISTENCE_WRITE`: launchd, systemd, cron, Windows scheduled
+tasks, the `CurrentVersion\Run` key, the Startup folder, and an auto-imported
+`site-packages` `.pth`. Reported at **high, not critical**, so a consumer running
+`--fail-on critical` is unaffected by a new rule; a package that legitimately
+registers a service is rare but not impossible, and high is the honest level for
+it.
+
+Scope is the whole reason the false-positive surface is small. The rule reads
+only the six package.json install-script strings `install-hook-scanner.ts`
+already reads. The identical commands in ordinary source belong to any service
+manager or devops tool, where they would false-positive constantly. Ten benign
+hooks are pinned as clean, including `systemctl restart nginx`, which is not
+persistence registration and must not fire.
+
+**The limit that follows from that scope, demonstrated rather than asserted.**
+The hook string is all the rule sees. Fixture A (persistence inline in the
+postinstall) now fires; fixture C (`"install": "node index.js"`, with the
+`systemctl` call inside `index.js`) still does not, and that is correct
+behaviour for a string-level check rather than a miss. A test pins it, so if it
+ever starts passing the limit has been lifted and the CHANGELOG claim needs
+updating with it. Said plainly in the CHANGELOG: this raises the cost of the
+attack, it does not close it.
+
+Verification: 24 new tests, 12 detection and 12 benign/boundary. Mutation proof:
+neutering the mechanism regex turns exactly the 12 detection tests red and leaves
+all 12 benign and boundary tests green. `install-hook-scanner`,
+`install-hook-host-runtime-patch`, `precision-corpus`, `rule-precision`,
+`persistence-recall`, `file-digest` and `self-scan-recognition` all re-run green.
+
 ## Persistence recall, T-019 tranche 1 (2026-08-12, unreleased, branch feat/persistence-recall)
 
 Model: claude-opus-5. PR 2 of 3 for the v5.26.0 line. No version bump.

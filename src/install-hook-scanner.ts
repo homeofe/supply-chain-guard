@@ -27,6 +27,30 @@ const HOST_RUNTIME_PATH_RE =
 const CODE_MUTATE_RE =
   /\b(?:patch|inject|mutate|overwrite|rewrite|monkey[-\s]?patch|codemod)\b|\bsed\s+-i\b|\.patch(?:\.sh)?\b/i;
 
+// ── INSTALL_HOOK_PERSISTENCE_WRITE detection ────────────────────────────────
+// An install hook that registers code to run AGAIN LATER, independently of the
+// package being installed: a launchd agent, a systemd unit, a cron entry, a
+// scheduled task, a Windows Run key, a Startup-folder entry, or a Python .pth
+// that the interpreter auto-imports.
+//
+// Scoped deliberately to the six package.json install-script strings this module
+// already reads. That is the whole reason its false-positive surface is small:
+// installing persistence from an install hook has essentially no legitimate
+// form, whereas the same commands in ordinary source belong to any service
+// manager, installer or devops tool and would false-positive constantly.
+//
+// It also means the check only sees the hook STRING. A hook that shells out to
+// `node scripts/configure.js` hides the call completely, so this raises the cost
+// of the attack rather than closing it. Said plainly in the CHANGELOG too.
+//
+// Each alternative is specific enough to stand alone, or pairs two required
+// parts (`schtasks` with `/create`, `site-packages` with `.pth`). Gaps are
+// bounded so the expression cannot backtrack pathologically on a long one-liner.
+
+/** Registration of a persistence mechanism with the operating system. */
+const PERSISTENCE_WRITE_RE =
+  /\blaunchctl\b|\bsystemctl\b[^\n]{0,40}\b(?:enable|link)\b|\bcrontab\b|\bschtasks\b[^\n]{0,60}\/create\b|Library[\\/]+Launch(?:Agents|Daemons)|\.config[\\/]+systemd[\\/]+user|\/etc\/systemd\/system|\/etc\/cron\.[a-z]+|Start\s?Menu[\\/]+Programs[\\/]+Startup|CurrentVersion[\\/]+Run\b|site-packages[^\n]{0,80}\.pth\b/i;
+
 interface InstallScripts {
   preinstall?: string;
   postinstall?: string;
@@ -78,6 +102,20 @@ export function analyzeInstallHooks(
         confidence: 0.95,
         category: "malware",
         recommendation: "Never download and execute code during npm install. This is almost certainly malicious.",
+      });
+    }
+
+    // Registering OS-level persistence from an install hook
+    if (PERSISTENCE_WRITE_RE.test(script)) {
+      findings.push({
+        rule: "INSTALL_HOOK_PERSISTENCE_WRITE",
+        description: `${hook} script registers OS-level persistence (launchd, systemd, cron, a scheduled task, a Run key, a Startup entry, or an auto-imported .pth). Installing a package should not schedule code to run again later, and this is how a one-shot credential stealer becomes a permanent re-harvester.`,
+        severity: "high",
+        file: relativePath,
+        match: truncate(`${hook}: ${script}`),
+        confidence: 0.8,
+        category: "malware",
+        recommendation: "Do not let a package install persistence at install time. Install with --ignore-scripts, inspect what the hook schedules, and remove any launchd/systemd/cron entry it already created. Background services should be an explicit, user-invoked step.",
       });
     }
 
