@@ -2616,6 +2616,29 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
     notFilePattern: SCANNER_SRC_OR_DOCS,
   },
 
+  // --- Miasma "Hades" PyPI wave, developer-tooling cluster (August 2026) ---
+  // Socket, StepSecurity and Orca each documented a second, larger cluster of the
+  // Hades campaign. The stealer labels its per-victim exfiltration repositories
+  // with a fixed description string, and polls the GitHub Search API for two
+  // taunt strings that act as dead-drop command markers. All three are payload
+  // TEXT rather than locators, so they belong here rather than in
+  // KNOWN_DEAD_DROPS (the repository-name prefixes went there instead).
+  //
+  // Each alternative is a literal with no consuming gap, so no correlatedMatcher
+  // is required. They are long, unique constructions with no legitimate use,
+  // which is what keeps this rule free of false positives.
+  {
+    name: "hades-wave-deaddrop-markers",
+    pattern:
+      "(?:Hades\\s*-\\s*The\\s+End\\s+for\\s+the\\s+Damned|IfYouYankThisTokenItWillNukeTheComputerOfTheOwnerFully|DontRevokeOrItGoesBoom)",
+    description:
+      "Hades campaign marker detected. Repository description or GitHub Search dead-drop query string used by the August 2026 Miasma 'Hades' PyPI wave to label and command per-victim exfiltration repositories.",
+    severity: "critical",
+    rule: "HADES_WAVE_DEADDROP_MARKER",
+    notTestFile: true,
+    notFilePattern: SCANNER_SRC_OR_DOCS,
+  },
+
   // --- Miasma LeoPlatform / GitHub Actions wave (The Hacker News, June 26, 2026) ---
   // Latest evolution of the Mini Shai-Hulud / Miasma / Hades worm family. Compromised
   // npm maintainer "czirker" republished the LeoPlatform / RStreams SDK + hexo-* packages

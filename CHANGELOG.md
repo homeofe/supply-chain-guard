@@ -7,6 +7,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **179 package IOCs imported from the GitHub Advisory Database**, corroborated against
+  OSV.dev. Mostly npm malware families: the `@years17` / `@years20` n8n-node helper
+  clusters, the `@dreamguyxeon` / `@dgxeon13` libsignal and baileyx impersonations, and
+  a run of `internallib_v*` dependency-confusion names. Nothing was reported unmappable
+  and no entries were left behind the import limit.
+- **`HADES_WAVE_DEADDROP_MARKER`, and 41 version pins for the Miasma "Hades" PyPI wave's
+  developer-tooling cluster.** Socket, StepSecurity and Orca each documented a second and
+  larger cluster of the campaign already covered for June: 37 malicious wheel artifacts
+  across 19 further projects, all carrying the same `*-setup.pth` startup hook that
+  downloads Bun and runs an obfuscated `_index.js` credential stealer. Twenty package
+  names had no coverage at all, and `rlask` was pinned at `3.1.7` when the malicious set
+  actually runs `3.1.4` through `3.1.7`, so `3.1.5` and `3.1.6` were silent misses.
+  Every package here is a legitimate project whose maintainer was compromised, so each is
+  version-pinned rather than blocked by name; the pins are confirmed twice over, by three
+  independent write-ups listing identical version sets and by the PyPI registry showing
+  exactly those versions removed with the highest surviving release one below the first
+  malicious one in every case. `pantheon-agents` is the case that makes pinning matter:
+  the malicious `0.6.1` and `0.6.2` sit between two clean releases, so a range pin would
+  swallow the `0.6.4` recovery release. The new rule covers the repository description and
+  the two GitHub Search dead-drop query strings the payload polls for, and the per-victim
+  exfiltration repository prefixes `stygian-cerberus-` and `tartarean-charon-` are matched
+  as dead drops. The bare underworld component words the same write-ups list are
+  deliberately not matched: `cerberus` alone is a widely used Python validation library.
+  `api.anthropic.com`, named as an exfiltration endpoint, is likewise not listed, being a
+  real API abused as a courier rather than attacker infrastructure.
+
 ## [5.26.0] - 2026-08-12
 
 ### Added

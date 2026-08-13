@@ -4384,6 +4384,120 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Miasma "Hades" PyPI wave, developer-tooling cluster (August 2026)
+  // =================================================================
+
+  describe("Miasma 'Hades' PyPI wave, developer-tooling cluster (August 2026)", () => {
+    it("flags the hijacked coolbox 0.4.1 through a real scan", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "coolbox"\nversion = "0.4.1"\ndescription = "genomics browser"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /coolbox/.test(JSON.stringify(f)));
+      expect(finding, "the hijacked coolbox release must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // coolbox is a real genomics visualisation library. Flagging 0.4.0 would make
+    // the scanner unusable for every project that legitimately depends on it.
+    it("does NOT flag the clean coolbox 0.4.0 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "coolbox"\nversion = "0.4.0"\ndescription = "genomics browser"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /coolbox/.test(JSON.stringify(f)));
+      expect(finding, "a clean coolbox release must not be flagged").toBeUndefined();
+    });
+
+    // pantheon-agents is the sharpest case in this wave: the malicious 0.6.1 and
+    // 0.6.2 sit BETWEEN two clean releases, so a range-style pin would swallow
+    // the 0.6.4 recovery release the maintainer published after the takedown.
+    it("flags pantheon-agents 0.6.2 but not the 0.6.4 recovery release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "uv.lock"),
+        '[[package]]\nname = "pantheon-agents"\nversion = "0.6.2"\n',
+      );
+      const bad = await scan({ target: tempDir, format: "text" });
+      expect(
+        bad.findings.find((f) => /pantheon-agents/.test(JSON.stringify(f))),
+        "the hijacked pantheon-agents release must be flagged",
+      ).toBeDefined();
+
+      fs.writeFileSync(
+        path.join(tempDir, "uv.lock"),
+        '[[package]]\nname = "pantheon-agents"\nversion = "0.6.4"\n',
+      );
+      const clean = await scan({ target: tempDir, format: "text" });
+      expect(
+        clean.findings.find((f) => /pantheon-agents/.test(JSON.stringify(f))),
+        "the clean pantheon-agents recovery release must not be flagged",
+      ).toBeUndefined();
+    });
+
+    // rlask was previously pinned at 3.1.7 alone. The full malicious set runs
+    // 3.1.4 through 3.1.7, so 3.1.5 was a silent miss before this entry.
+    it("flags rlask 3.1.5, previously outside the pinned range", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "uv.lock"),
+        '[[package]]\nname = "rlask"\nversion = "3.1.5"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => /rlask/.test(JSON.stringify(f)));
+      expect(finding, "rlask 3.1.5 must be flagged").toBeDefined();
+    });
+
+    it("flags the per-victim exfiltration repository name prefixes", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const a = "stygian-cerberus-7";\nconst b = "tartarean-charon-12";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const drops = report.findings
+        .filter((f) => f.rule === "IOC_KNOWN_DEAD_DROP")
+        .map((f) => f.description)
+        .join(" ");
+      expect(drops).toContain("stygian-cerberus-");
+      expect(drops).toContain("tartarean-charon-");
+    });
+
+    // The bare component words the write-ups also list are ordinary project
+    // names. cerberus in particular is a widely used Python validation library,
+    // so a dependency on it must stay clean.
+    it("does NOT flag the bare component word 'cerberus'", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "poetry.lock"),
+        '[[package]]\nname = "cerberus"\nversion = "1.3.5"\ndescription = "validation"\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "a legitimate cerberus dependency must not match the dead-drop prefix",
+      ).toBeUndefined();
+    });
+
+    it("flags the Hades dead-drop and taunt markers", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "payload.js"),
+        'const desc = "Hades - The End for the Damned";\n' +
+          'const q = "DontRevokeOrItGoesBoom";\n' +
+          'const t = "IfYouYankThisTokenItWillNukeTheComputerOfTheOwnerFully";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const markers = report.findings.filter((f) => f.rule === "HADES_WAVE_DEADDROP_MARKER");
+      expect(markers.length, "all three Hades markers must be flagged").toBeGreaterThanOrEqual(3);
+      expect(markers[0]?.severity).toBe("critical");
+    });
+  });
+
   describe("PyPI feed entries carry their ecosystem prefix", () => {
     const feed = getBundledFeed();
 
@@ -4417,6 +4531,12 @@ describe("Campaign Signatures", () => {
       ["ppkt2synergy", "0.1.1"],
       ["openai-mcp", "2.41.1"],
       ["langchain-core-mcp", "1.4.2"],
+      // Miasma "Hades" developer-tooling cluster (August 2026). Sampled across
+      // the cluster: a hyphenated name, a single-version pin, and a name that
+      // also exists on npm, where a missing prefix would silently swap namespaces.
+      ["coolbox", "0.4.1"],
+      ["pantheon-toolsets", "0.5.5"],
+      ["uprobe", "0.1.4"],
     ];
 
     for (const [name, version] of PYPI_ONLY) {

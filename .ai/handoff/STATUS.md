@@ -1,10 +1,50 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-12 (threat-intel sweep). This is one current snapshot, not a session log.
+> Updated 2026-08-13 (threat-intel sweep). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
 ---
+
+## Threat-intel sweep 2026-08-13 (unreleased)
+
+Model: claude-opus-5. Scheduled daily sweep. No version bump: the version belongs
+to the release, which Emre cuts.
+
+Importer: 1,918 advisories fetched over 20 pages, 179 new entries written, 160 of
+them OSV-corroborated. Zero skipped, zero unmappable, no page cap hit and nothing
+left waiting behind `--limit` (179 is under the 250 default), so the next run
+starts from a clean window.
+
+Manual enrichment: the Miasma "Hades" PyPI wave's second cluster. The June 8
+bioinformatics cluster was already covered; Socket, StepSecurity and Orca have
+since documented a larger developer-tooling cluster of the same campaign. Twenty
+package names had no coverage at all and `rlask` was under-pinned. 41 feed
+entries and 21 blocklist pins added, plus two dead-drop repository prefixes and
+one new pattern rule for the campaign's markers.
+
+Confidence basis, since this is the part a database cannot do: three independent
+write-ups list identical version sets, and the PyPI registry independently
+confirms them, with the malicious versions removed and the highest surviving
+release sitting exactly one below the first malicious one for every package.
+`nhmpy` is the one entry carrying reduced confidence (0.85): the whole project is
+gone from PyPI and only two of the three sources name it.
+
+### Open for Emre
+
+1. **Persistence artefacts from this wave were deliberately NOT added.** The
+   write-ups list `~/.config/systemd/user/update-monitor.service`,
+   `~/.local/share/updater/update.py`, `/tmp/.bun_ran` and a fixed lock file
+   `/tmp/tmp.0144018410.lock`. `CHAINDROP_PERSISTENCE_ARTEFACT_REGEX` currently
+   covers only the `gh-token-monitor` chain. Extending it would raise recall on
+   this campaign, but `update.py` and `update-monitor.service` are generic enough
+   that the false-positive cost looked worse than the miss, and the daily sweep is
+   the wrong place for a considered detection change. Worth a deliberate decision:
+   the lock-file paths are specific enough to be safe on their own, the two
+   `update*` names are not.
+2. **`api.anthropic.com` is named as an exfiltration endpoint by Socket.** Not
+   listed, on the shared-legitimate-host rule. Flagging it here only to record
+   that it was seen and consciously excluded, not overlooked.
 
 ## Release v5.26.0 (2026-08-12)
 

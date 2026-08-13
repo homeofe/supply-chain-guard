@@ -536,6 +536,24 @@ export const KNOWN_DEAD_DROPS: string[] = [
   "thebeautifulmarchoftime",
   "thebeautifulsnadsoftime",
 
+  // Miasma "Hades" PyPI wave (Socket + StepSecurity + Orca, August 2026). The
+  // stealer creates one exfiltration repository per victim, named from a fixed
+  // underworld-themed prefix plus a counter (stygian-cerberus-1,
+  // tartarean-charon-2, ...). All three write-ups list the same two prefixes, so
+  // the prefix is the stable locator and the trailing digits are not.
+  //
+  // Only the HYPHENATED COMPOUND prefixes are listed. The same write-ups also
+  // name the bare component words the payload draws on - stygian, tartarean,
+  // cerberus, charon, styx, lethe, thanatos, persephone - and several of those
+  // are ordinary open-source project names (cerberus is a widely used Python
+  // validation library). Listing a bare component word here would substring-match
+  // every project that uses it and is deliberately avoided.
+  //
+  // Blocklist-only, like the two markers above: a bare repository-name prefix is
+  // not URL-shaped, so IOC_VALUE_SHAPES.url in threat-intel.ts rejects it.
+  "stygian-cerberus-",
+  "tartarean-charon-",
+
   // Fake Corepack install site (Socket + Gurucul, July 2026). The fake VPN landing page
   // the "Download Free" button redirects into, serving
   // vpnsetup_d9gfqvs3dsic73fcvi90.exe. Path-scoped on purpose: the campaign path is
@@ -2156,8 +2174,8 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
     description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
   },
   "rlask": {
-    versions: ["3.1.7"],
-    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: Flask typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+    versions: ["3.1.4", "3.1.5", "3.1.6", "3.1.7"],
+    description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: Flask typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI. The full malicious set is 3.1.4 through 3.1.7, not 3.1.7 alone (Socket, June 8, 2026; range extended per StepSecurity, August 2026)",
   },
   "rsquests": {
     versions: ["2.34.3"],
@@ -2170,6 +2188,103 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "tlask": {
     versions: ["3.1.4"],
     description: "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: Flask typosquat carrying the .pth startup hook and Bun-based credential stealer; removed from PyPI (Socket, June 8, 2026)",
+  },
+
+  // --- Miasma "Hades" PyPI wave, developer-tooling cluster (August 2026) -------
+  // The June 8 block above covers the bioinformatics/graph-ML cluster. Socket,
+  // StepSecurity and Orca each published a second, larger cluster of the same
+  // campaign: 37 malicious wheel artifacts across 19 further projects, all
+  // carrying the same *-setup.pth startup hook that downloads Bun and runs an
+  // obfuscated _index.js credential stealer.
+  //
+  // Every one of these is a LEGITIMATE package whose maintainer was compromised,
+  // so each is version-pinned and never blocked by name. The pins are confirmed
+  // twice over: all three write-ups list the same version sets, and the PyPI
+  // registry shows exactly those versions removed, with the highest surviving
+  // release sitting one below the first malicious one in every case.
+  //
+  // The write-ups also name api.anthropic.com as an exfiltration endpoint. That
+  // is Anthropic's real API being abused as a courier, not attacker
+  // infrastructure, so it is deliberately NOT listed here.
+  "bramin": {
+    versions: ["0.0.2", "0.0.3", "0.0.4"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.0.2 through 0.0.4 are malicious; 0.0.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "cmd2func": {
+    versions: ["0.2.2", "0.2.3"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate command-wrapping package - only 0.2.2 and 0.2.3 are malicious; 0.2.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "coolbox": {
+    versions: ["0.4.1", "0.4.2"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate genomics visualisation package - only 0.4.1 and 0.4.2 are malicious; 0.4.0 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "dynamo-release": {
+    versions: ["1.5.4"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate single-cell RNA analysis package - only 1.5.4 is malicious; 1.5.3 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "executor-engine": {
+    versions: ["0.3.4", "0.3.5"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate task-execution package - only 0.3.4 and 0.3.5 are malicious; 0.3.3 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "executor-http": {
+    versions: ["0.1.3", "0.1.4"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate task-execution HTTP frontend - only 0.1.3 and 0.1.4 are malicious; 0.1.2 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "funcdesc": {
+    versions: ["0.2.2", "0.2.3"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate function-description package - only 0.2.2 and 0.2.3 are malicious; 0.2.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "magique": {
+    versions: ["0.6.8", "0.6.9"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate agent-communication package - only 0.6.8 and 0.6.9 are malicious; 0.6.7 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "magique-ai": {
+    versions: ["0.4.4", "0.4.5"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate agent-communication package - only 0.4.4 and 0.4.5 are malicious; 0.4.3 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "mrbios": {
+    versions: ["0.1.1", "0.1.2"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate bioinformatics workflow package - only 0.1.1 and 0.1.2 are malicious; 0.1.0 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "napari-ufish": {
+    versions: ["0.0.2", "0.0.3"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate napari plugin - only 0.0.2 and 0.0.3 are malicious; 0.0.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "nhmpy": {
+    versions: ["2.4.7"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Version-pinned to 2.4.7, the only release the write-ups name; the whole project has since been removed from PyPI (StepSecurity + Orca, August 2026)",
+  },
+  "nucbox": {
+    versions: ["0.1.2", "0.1.3"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.1.2 and 0.1.3 are malicious; 0.1.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "okite": {
+    versions: ["0.0.7", "0.0.8"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.0.7 and 0.0.8 are malicious; 0.0.6 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "pantheon-agents": {
+    versions: ["0.6.1", "0.6.2"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate agent-framework package - only 0.6.1 and 0.6.2 are malicious; 0.6.0 is the clean predecessor and 0.6.4 the clean re-release (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "pantheon-toolsets": {
+    versions: ["0.5.5", "0.5.6"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate agent-toolset package - only 0.5.5 and 0.5.6 are malicious; 0.5.4 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "spateo-release": {
+    versions: ["1.1.2"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate spatial-transcriptomics package - only 1.1.2 is malicious; 1.1.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "synago": {
+    versions: ["0.1.1", "0.1.2"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.1.1 and 0.1.2 are malicious; 0.1.0 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "ufish": {
+    versions: ["0.1.2", "0.1.3"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate spot-detection package - only 0.1.2 and 0.1.3 are malicious; 0.1.1 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "uprobe": {
+    versions: ["0.1.3", "0.1.4"],
+    description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.1.3 and 0.1.4 are malicious; 0.1.2 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
   },
 };
 
