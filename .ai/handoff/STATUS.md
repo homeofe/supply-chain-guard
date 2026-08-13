@@ -1,15 +1,31 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-13 (threat-intel sweep). This is one current snapshot, not a session log.
+> Updated 2026-08-13 (release v5.26.1). This is one current snapshot, not a session log.
 > Historical detail belongs in CHANGELOG.md, generated LOG.md,
 > LOG-ARCHIVE.md, and git history.
 
 ---
 
-## Threat-intel sweep 2026-08-13 (unreleased)
+## Release v5.26.1 (2026-08-13)
 
-Model: claude-opus-5. Scheduled daily sweep. No version bump: the version belongs
-to the release, which Emre cuts.
+Model: claude-opus-5. Contents: #140, the 2026-08-13 threat-intel sweep, detailed
+below.
+
+PATCH, not a minor, and the distinction is worth recording because 5.26.0 went the
+other way one day earlier. The repo's rule is that `5.x.0` carries anything that
+changes what the scanner *does*, while threat-intel data ships as a patch. This
+release adds data plus one rule, `HADES_WAVE_DEADDROP_MARKER`, which is a literal
+three-string alternation with no behavioural component: it is an IOC that happens
+to live in `patterns.ts` because the campaign's markers are payload text rather
+than locators. The precedent is `ANTV_WAVE_FIREDALAZER`, a marker rule of exactly
+this shape, which shipped in 5.2.15 as a patch; `DPRK_VALIDATE_SDK` and
+`LOFYSTEALER_MARKER` likewise in 5.2.4. 5.26.0 was a minor because it changed
+detection behaviour (a dangerous-command battery applied to a new file type, a
+persistence chain wired into the hook scanner), which this does not.
+
+## Threat-intel sweep 2026-08-13
+
+Scheduled daily sweep, released as v5.26.1.
 
 Importer: 1,918 advisories fetched over 20 pages, 179 new entries written, 160 of
 them OSV-corroborated. Zero skipped, zero unmappable, no page cap hit and nothing

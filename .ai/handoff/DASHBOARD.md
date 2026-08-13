@@ -13,7 +13,7 @@ Current package inventory and CI gate wiring are generated below.
 
 | Field | Value |
 |-------|-------|
-| Version | 5.26.0 |
+| Version | 5.26.1 |
 | Node engines | >=20.0.0 |
 | Source modules | 74 under `src/` |
 | Test files | 111 under `src/__tests__/` |
