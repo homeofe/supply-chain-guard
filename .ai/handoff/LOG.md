@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (130, newest first)
+## Releases (131, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.26.2 | 2026-08-14 | 169 package IOCs imported from the GitHub Advisory Database, 122 of them |
 | v5.26.1 | 2026-08-13 | 179 package IOCs imported from the GitHub Advisory Database, corroborated against |
 | v5.26.0 | 2026-08-12 | EDITOR_TASK_DOWNLOAD_EXEC / EDITOR_TASK_DANGEROUS_COMMAND: .vscode/tasks.json |
 | v5.25.12 | 2026-08-12 | Threat feed: 93 malicious-package IOCs imported from the GitHub Advisory Database with |

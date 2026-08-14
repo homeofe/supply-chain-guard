@@ -1,15 +1,27 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-14 (unreleased threat-intel sweep on top of v5.26.1). This is one
-> current snapshot, not a session log. Historical detail belongs in CHANGELOG.md,
-> generated LOG.md, LOG-ARCHIVE.md, and git history.
+> Updated 2026-08-14 (release v5.26.2). This is one current snapshot, not a session
+> log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
+> and git history.
 
 ---
 
-## Threat-intel sweep 2026-08-14 (unreleased)
+## Release v5.26.2 (2026-08-14)
 
-Model: claude-opus-5. Scheduled daily sweep. Version deliberately NOT bumped: this
-branch leaves the repo at v5.26.1 and Emre cuts the release.
+Model: claude-opus-5. Contents: the 2026-08-14 threat-intel sweep, detailed below.
+
+PATCH. The release adds feed data only: no new rule, no pattern-table change, no
+change to what the scanner does. That is the same call as v5.26.1 and the reasoning
+recorded there still applies, `5.x.0` carries anything that changes scanner
+behaviour and threat-intel data ships as a patch.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to decide the open question
+and ship, so the version bump and the data landed in one PR (#142) rather than the
+usual two. One merge, one CI settle, then the tag. Nothing about the tag or publish
+path changed.
+
+## Threat-intel sweep 2026-08-14
 
 Importer: 1,842 advisories fetched over 19 pages, 4,782 mapped to IOCs, 169 new
 entries written, 122 of them OSV-corroborated. 4,549 were already in the feed and 64
@@ -42,18 +54,32 @@ version, so none is an established package that a name-level block would break.
 `nolimit-agent` is the one to watch, 12,272 downloads in 30 days off a one-day-old
 single-version package.
 
-### Open for Emre
+### Bare-name blocks: resolved, all 59 stay as names
 
-The bare-name set includes several entries under scopes that belong to real
-organisations: `@rocketreach/rr-components`, `@sapappgyver/appgyver-descriptors`,
+The open question was whether the bare names under scopes belonging to real
+organisations (`@rocketreach/rr-components`, `@sapappgyver/appgyver-descriptors`,
 `@open-banking/cabinet-providers`, `@stockrepublic/republic-components`,
-`@sourceflow-uk/sourceflow-tracker`, `@hanssoft/baileys` and `@hanssoft/libsignal-node`.
-These read as public dependency-confusion placeholders squatting internal names, in
-which case a name-level block is right, and the advisories do declare every version
-malicious. But if any of those scopes is in fact the real organisation's public scope
-and was hijacked, the correct treatment is a version pin, not a name block. Worth one
-look before the release goes out; I did not narrow them on my own because doing so
-without evidence would weaken coverage.
+`@sourceflow-uk/sourceflow-tracker`, `@hanssoft/baileys`, `@hanssoft/libsignal-node`)
+were hijacked legitimate packages that should have been version-pinned instead.
+
+They were not, and there is a clean registry signal that settles it. All 60 bare names
+in this window were queried against the npm registry: 59 now carry exactly one version,
+`0.0.1-security`, published by the `npm-support` account. That is npm's takedown stub,
+which npm publishes only when it removes a package name in its entirety. The one
+exception, `@dsp-next-gen-ui/needs-review`, carries the stub plus the malicious
+dependency-confusion sentinel `999.99.1` and no legitimate release either.
+
+The marker discriminates, which is the part that makes it usable rather than merely
+suggestive. Run against genuinely hijacked packages as controls, `keyv` (85 versions,
+maintainers `lukechilds`/`jaredwray`), `flat-cache` (52, `jaredwray`) and `axios` (143,
+`jasonsaayman`) are all intact with full version history: npm removed the bad versions
+and left the name with its real owner. A whole-name takedown therefore means the name
+was attacker-owned end to end, and a version pin would be wrong because there is no
+legitimate version left to preserve.
+
+Worth reusing: `0.0.1-security` + `npm-support` as sole maintainer is a positive
+confirmation that a bare-name block is safe, and is cheaper than reasoning about
+whether a scope looks corporate.
 
 ## Release v5.26.1 (2026-08-13)
 

@@ -95,7 +95,7 @@ Add to `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` globally):
 
 ```
 -> {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}
-<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"5.26.1"},...}}
+<- {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"supply-chain-guard","version":"5.26.2"},...}}
 -> {"jsonrpc":"2.0","method":"notifications/initialized"}
 -> {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"ioc_lookup","arguments":{"ecosystem":"npm","name":"event-stream","version":"3.3.6"}}}
 <- {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"{\"verdict\":\"malicious\",...}"}]}}
