@@ -7,6 +7,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **169 package IOCs imported from the GitHub Advisory Database**, 122 of them
+  corroborated against OSV.dev. All npm. The window is dominated by same-day throwaway
+  publishes rather than maintainer compromises: every bare-name entry sampled was created
+  on 2026-08-13 with a single version, so blocking those by name carries no false-positive
+  risk against an established package. The larger clusters are a set of eleven fake
+  concurrency primitives (`mutex-forge`, `keyed-mutex-map`, `single-flight-lock`,
+  `semaphore-job-pool`, `priority-mutex-lane`, `shared-slot-gate`, `resource-lease-pool`,
+  `lock-deadline-guard`, `try-lock-runner`, `async-lock-queue`, `async-critical-section`);
+  a run of crypto-library typosquats pinned by version (`@solana-js/web3@1.91.3`,
+  `@ethers-js/contracts@6.9.0`, `@opezneppelin/contracts@5.0.2`, and `bs58-15`, `bs58-33`,
+  `bs58-77`); a date-formatting typosquat family (`datefmt-util-helper`,
+  `datetime-format-xutil`, `datetime-fmt-xutil`, `date-fmt-utils-helper`,
+  `date-fmt-helper-xz`, `fmt-util-k7x2`); assert-library impersonations (`js-assert-plus`,
+  `minimalistic-assert-plus`, `power-assert-plus`, `chai-as-reformed`); AI and agent
+  tooling names (`ai-analyzer` at 20 versions, `cc-skills-helper`, `@kolbo/mcp`,
+  `xrblocks-mcp`, `mastraqqq`, `nolimit-agent` with its two platform binaries); and
+  dependency-confusion placeholders published at sentinel versions, the `@hzero-front-ui`
+  scope and `fr-ito-web-react` at `99.99.99`, the `@khaznatech` scope at `99.0.0`, and
+  `@dgn-src-click-to-pay-org/srcdcfreleasecert` at `374.0.0`. Nothing was reported
+  unmappable, no page cap was hit, and nothing was left waiting behind the import limit.
+
 ## [5.26.1] - 2026-08-13
 
 ### Added

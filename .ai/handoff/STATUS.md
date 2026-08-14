@@ -1,10 +1,59 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-13 (release v5.26.1). This is one current snapshot, not a session log.
-> Historical detail belongs in CHANGELOG.md, generated LOG.md,
-> LOG-ARCHIVE.md, and git history.
+> Updated 2026-08-14 (unreleased threat-intel sweep on top of v5.26.1). This is one
+> current snapshot, not a session log. Historical detail belongs in CHANGELOG.md,
+> generated LOG.md, LOG-ARCHIVE.md, and git history.
 
 ---
+
+## Threat-intel sweep 2026-08-14 (unreleased)
+
+Model: claude-opus-5. Scheduled daily sweep. Version deliberately NOT bumped: this
+branch leaves the repo at v5.26.1 and Emre cuts the release.
+
+Importer: 1,842 advisories fetched over 19 pages, 4,782 mapped to IOCs, 169 new
+entries written, 122 of them OSV-corroborated. 4,549 were already in the feed and 64
+were already covered by a bare-name IOC. Zero skipped, zero unmappable, no page cap
+hit, and nothing left waiting behind `--limit` (169 is under the 250 default), so the
+next run starts from a clean window.
+
+Manual enrichment: none, and that is the notable part of this run. Every campaign the
+vendor sweep surfaced was already fully covered. Checked and confirmed present:
+ChainDrop / keyv (including the `npm-cache[.]com` domain and the `StringListStore`
+contract address), Miasma "Hades" (yesterday's work), Team PCP (the StepSecurity
+2026-08-13 post is a CloudSEK victimology disclosure, 78,330 secrets from 2,186
+organisations, and carries no indicator we lack, `scan[.]aquasecurtiy[.]org`, telnyx
+and the KICS action are all already ingested), and WEL1DROPPER / Flooding Dropper.
+The one WEL1DROPPER detail worth recording: the four DNS-fallback subdomains
+`sdk[.]`, `ext[.]`, `pkg[.]` and `net[.]dl[.]wel1[.]ru` are NOT separate blocklist
+entries, they are covered by the single `dl.wel1.ru` entry, and
+`campaigns.test.ts:4029` exists specifically to prove that. Do not "fix" their
+apparent absence by adding four redundant entries.
+
+### False-positive review of the bare-name blocks
+
+59 of the 169 entries are bare names rather than version pins, which is the shape that
+would hurt if one of them were a real package. Twelve of the riskiest-looking were
+checked against the npm registry (`react-shield`, `source-analyzer`, `root-locator`,
+`path-match-js`, `ts-enum-helper`, `mutex-forge`, `sourceflow-tracker`,
+`finvu-hdfc-sdk`, `blocks-angular`, `index-design-system`, `lab-helper`,
+`nolimit-agent`): every one was created 2026-08-13 and has exactly one published
+version, so none is an established package that a name-level block would break.
+`nolimit-agent` is the one to watch, 12,272 downloads in 30 days off a one-day-old
+single-version package.
+
+### Open for Emre
+
+The bare-name set includes several entries under scopes that belong to real
+organisations: `@rocketreach/rr-components`, `@sapappgyver/appgyver-descriptors`,
+`@open-banking/cabinet-providers`, `@stockrepublic/republic-components`,
+`@sourceflow-uk/sourceflow-tracker`, `@hanssoft/baileys` and `@hanssoft/libsignal-node`.
+These read as public dependency-confusion placeholders squatting internal names, in
+which case a name-level block is right, and the advisories do declare every version
+malicious. But if any of those scopes is in fact the real organisation's public scope
+and was hijacked, the correct treatment is a version pin, not a name block. Worth one
+look before the release goes out; I did not narrow them on my own because doing so
+without evidence would weaken coverage.
 
 ## Release v5.26.1 (2026-08-13)
 
