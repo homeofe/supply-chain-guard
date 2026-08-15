@@ -326,6 +326,20 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "championships-peoples-point-cassette.trycloudflare.com",
   "investigation-launches-hearings-copying.trycloudflare.com",
   "souls-entire-defined-routes.trycloudflare.com",
+
+  // Vellia / Guangnao / lodash-js npm malware cluster (OpenSSF malicious-packages
+  // via amazon-inspector, August 2026). Single-source, so the matching feed entries
+  // carry confidence 0.85.
+  // WebSocket command hub for @guangnao/agent-proxy. Reconstructed at runtime via
+  // XOR+base64, so the host never appears as a plaintext string in the tarball.
+  "hub.client-llm.com",
+  // Cryptojacking pool/wallet config endpoint for @lodash-js/lodash-js. Only the
+  // attacker's specific worker subdomain is listed; the workers[.]dev apex is a
+  // shared Cloudflare host and is deliberately NOT listed.
+  "analytics.baskirill-an.workers.dev",
+  // Lookalike of registry[.]npmjs[.]org, used by @polymarkets/clob-client-v2 to
+  // serve a trojanized inquirer tarball through a direct dependency URL.
+  "registrynpmjs.to",
 ];
 
 // ---------------------------------------------------------------------------
@@ -579,6 +593,18 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // WAV audio files, fetched on `import telnyx` (Endor Labs + Hexastrike).
   "83.142.209.203:8080/ringtone.wav",
   "83.142.209.203:8080/hangup.wav",
+
+  // Vellia / Guangnao / lodash-js npm malware cluster (OpenSSF malicious-packages
+  // via amazon-inspector, August 2026). Single-source, so the matching feed entries
+  // carry confidence 0.85.
+  // Mining pool + wallet config fetched at runtime by @lodash-js/lodash-js.
+  "analytics.baskirill-an.workers.dev/configs/boostydownloader",
+  // Trojanized inquirer tarball, pulled in as a direct dependency URL.
+  "registrynpmjs.to/inquirer-14.0.2.tgz",
+  // @velliajs/discord runtime allow-list / kill-switch. Path-scoped to the
+  // attacker's repository: api[.]github[.]com is a legitimate shared host and is
+  // deliberately NOT listed.
+  "api.github.com/repos/Vellia-Elyvia/mydb/contents/db.json",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1073,6 +1099,15 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // hours later; the pivot that preceded the litellm and telnyx pushes.
   // The compromised upstream maintainers are VICTIMS and are not listed.
   "Argon-DevOps-Mgt",
+
+  // @velliajs/discord npm malware (OpenSSF malicious-packages via amazon-inspector,
+  // August 2026). "navaLinh" hosts the unpinned private git repository the package
+  // installs its `sysframe` dependency from; "Vellia-Elyvia" hosts the remote
+  // allow-list that gates the bot at runtime. Both accounts are attacker-created,
+  // not compromised victims. Single-source, so the matching feed entries carry
+  // confidence 0.85.
+  "navaLinh",
+  "Vellia-Elyvia",
 ];
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,73 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-14 (release v5.26.2). This is one current snapshot, not a session
-> log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
-> and git history.
+> Updated 2026-08-15 (unreleased work on top of v5.26.2). This is one current
+> snapshot, not a session log. Historical detail belongs in CHANGELOG.md, generated
+> LOG.md, LOG-ARCHIVE.md, and git history.
+
+---
+
+## Threat-intel sweep 2026-08-15 (prepared, not released)
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+
+Importer: 6,824 advisories fetched over 69 pages, 9,948 mapped to IOCs, 250 new
+entries written (the `--limit` default), 173 of them OSV-corroborated. 4,620 were
+already in the feed and 65 already covered by a bare-name IOC. Zero skipped, zero
+unmappable, no page cap hit.
+
+Manual enrichment: six atomic indicators plus two GitHub accounts for the Vellia /
+Guangnao / lodash-js cluster, all single-source (amazon-inspector via OpenSSF
+`malicious-packages`) and therefore confidence 0.85. Detail in CHANGELOG.md under
+`[Unreleased]`. Everything the vendor sweep surfaced for the ChainDrop / keyv wave
+was already covered, including `npm-cache[.]com`, `t[.]m-kosche[.]com` and the
+`StringListStore` contract address, so nothing was added there.
+
+### NEEDS A DECISION: the 2026-08-14 advisory backfill
+
+This window is not a normal one and the `--limit` guidance does not cleanly apply.
+GitHub bulk-loaded 5,249 OpenSSF `malicious-packages` records into the advisory
+database on 2026-08-14, and the importer now reports 5,013 entries still queued with
+1,763 of them undrainable: at 250 per run the tail is more runs away than it has days
+left in the `--days 14` window, which is the same silent-false-negative failure the
+page cap treats as fatal. The run was completed with `--allow-backlog`. Three things
+about that queue matter, and the third is the actual decision:
+
+1. **4,363 of the 5,249 are `@zalastax/nolb-*`**, a single scope mass-published in
+   2023. Sampled 25 of them against the live registry: 25/25 are npm security-holding
+   stubs, zero installable. The advisories are boilerplate ("was found to contain
+   malicious code") with no analysis. Importing them would grow the feed by roughly
+   38 percent and `feed.json` from 2.7 MB to about 3.7 MB, to catch names that cannot
+   be installed. Flagging an npm-owned holding stub as critical with a "rotate all
+   secrets" recommendation is also arguably a false positive.
+2. **129 entries sit in the tail behind that block and are genuinely worth having**:
+   `dinotech-auth-utils@99.9.9`, `@veertly/web-app@99.9.9` and `@100.0.0`,
+   `@vyzensockets/baileys`, `tecken`, the `hrp*` set. The sentinel version numbers are
+   the classic dependency-confusion marker. At `--limit 250` no future run reaches
+   them before they age out, because the zalastax block sits in front of them.
+3. **The importer has no way to express "take everything except this scope."** It
+   filters by ecosystem, and the whole spike is npm, so `--ecosystem` does not help.
+   The options are to take all 5,249 or to lose the 129.
+
+Recommended: run the explicit slice for that day and accept the zalastax bulk,
+`npm run feed:import -- --since 2026-08-14 --until 2026-08-15 --limit 100000`, or add
+a scope-exclusion flag to the importer so the dead namespace can be skipped without
+losing the tail. Not done here because a 5,000-entry machine-generated diff into a
+public repo is Emre's call, not the scheduled job's.
+
+The Zapier packages (`@zapier/mcp-integration`, `@zapier/ai-actions-react`,
+`@zapier/spectral-api-ruleset`, `@zapier/stubtree`) are in that queue at positions
+719 to 763, so they arrive on the next run or two either way. They are the Shai-Hulud
+2.0 compromise of November 2025 and are correctly version-pinned by the importer.
+
+### Detection gap found while checking that: Shai-Hulud 2.0 loader filenames
+
+`MINI_SHAI_HULUD_LOADER` in `src/patterns.ts` matches only `setup.mjs` and
+`execution.js`, the April 2026 Mini variant. The November 2025 Shai-Hulud 2.0 wave
+that hit Zapier staged through `setup_bun.js` and `bun_environment.js`, and neither
+string appears anywhere in `src/`. Closing it looks like a literal alternation in the
+existing rule's proven shape, so it is low risk, but it changes a pattern table and
+pattern tables throw at module load, so it belongs in a considered change rather than
+in an unattended threat-intel run.
 
 ---
 

