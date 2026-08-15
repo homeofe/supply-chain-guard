@@ -1,14 +1,25 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-15 (unreleased work on top of v5.26.2). This is one current
-> snapshot, not a session log. Historical detail belongs in CHANGELOG.md, generated
-> LOG.md, LOG-ARCHIVE.md, and git history.
+> Updated 2026-08-15 (release v5.26.3). This is one current snapshot, not a session
+> log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
+> and git history.
 
 ---
 
-## Threat-intel sweep 2026-08-15 (prepared, not released)
+## Release v5.26.3 (2026-08-15)
 
-Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+Model: claude-opus-5. Contents: the 2026-08-15 threat-intel sweep, detailed below.
+
+PATCH. The release adds feed and blocklist data plus one test block: no new rule, no
+pattern-table change, no change to what the scanner does. Same call as v5.26.2 and
+v5.26.1, and the reasoning recorded there still applies.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+and the data landed in one PR (#143) rather than the usual two. One merge, one CI
+settle, then the tag. Nothing about the tag or publish path changed.
+
+## Threat-intel sweep 2026-08-15
 
 Importer: 6,824 advisories fetched over 69 pages, 9,948 mapped to IOCs, 250 new
 entries written (the `--limit` default), 173 of them OSV-corroborated. 4,620 were

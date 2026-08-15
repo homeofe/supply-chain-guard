@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Finding, SbomComponent, SbomDocument, VexStatement } from "./types.js";
 
-const TOOL_VERSION = "5.26.2";
+const TOOL_VERSION = "5.26.3";
 
 interface PackageJson {
   name?: string;
