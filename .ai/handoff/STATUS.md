@@ -1,16 +1,26 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-15 (release v5.26.3). This is one current snapshot, not a session
+> Updated 2026-08-16 (release v5.26.4). This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
 
 ---
 
-## Threat-intel sweep 2026-08-16 (prepared, not released)
+## Release v5.26.4 (2026-08-16)
 
-Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
-No version bump: the branch carries data plus one hand-added version pin, and the
-entry sits under `## [Unreleased]`.
+Model: claude-opus-5. Contents: the 2026-08-16 threat-intel sweep, detailed below.
+
+PATCH. Feed and blocklist data plus one hand-added version pin: no new rule, no
+pattern-table change, no change to what the scanner does. Same call as v5.26.3.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+was added to the already-green sweep PR (#144) and the whole thing landed as one
+squash-merge rather than the usual two. That is deliberate: CLAUDE.md warns against
+back-to-back merges, because each one cancels the previous commit's CI run. One
+merge, one CI settle, then the tag. Nothing about the tag or publish path changed.
+
+## Threat-intel sweep 2026-08-16
 
 Importer: 6,827 advisories over 69 pages, 9,972 mapped, 4,847 already present,
 65 covered by an existing bare-name IOC, 250 written, 223 OSV-corroborated. Run with

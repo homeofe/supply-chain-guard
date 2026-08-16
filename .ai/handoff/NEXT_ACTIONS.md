@@ -8,7 +8,7 @@
 
 Six tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018/T-019 are complete.
 
-Current version: **v5.26.3**
+Current version: **v5.26.4**
 
 ---
 
@@ -23,7 +23,7 @@ matrix and whether version-pinned npm IOCs should match on a directory scan.
 | Ready | 6 |
 | Blocked | 2 |
 
-The published package is v5.26.3.
+The published package is v5.26.4.
 
 ---
 
