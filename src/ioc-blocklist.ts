@@ -1266,6 +1266,13 @@ function normalizePackageName(
 // ---------------------------------------------------------------------------
 
 export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; description: string }> = {
+  // Second detection path for the one still-installable IOC recovered by hand from the
+  // 2026-08-14 advisory-backfill tail - see the matching feed entries in threat-intel.ts.
+  // Pinned to the two versions the advisory names; 1.0.0, 1.0.1 and 1.1.0 are not flagged.
+  "dakumangalsingh": {
+    versions: ["1.2.0", "2.0.1"],
+    description: "dakumangalsingh: malicious npm package versions (GHSA-h2fc-hhv7-4596, Aug 2026)",
+  },
   "ua-parser-js": {
     versions: ["0.7.29", "0.8.0", "1.0.0"],
     description: "ua-parser-js hijack: crypto miner + credential stealer (Oct 2021)",

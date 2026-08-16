@@ -7,6 +7,37 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 package IOCs imported from the GitHub Advisory Database**, 223 of them
+  corroborated against OSV.dev. All npm. The 2026-08-14 bulk backfill described in
+  v5.26.3 is still the dominant feature of the window, so this batch is again the
+  live head of the queue: version-pinned dependency-confusion lures with sentinel
+  versions (`99.9.x`, `100.x`) against real organisation namespaces, plus a farm of
+  throwaway single-version publishes.
+- **`dakumangalsingh@1.2.0` and `@2.0.1`** (GHSA-h2fc-hhv7-4596, MAL-2026-13879),
+  added by hand to both the bundled feed and `KNOWN_BAD_NPM_VERSIONS`. The backfill
+  pushed these two past the point `--limit 250` can reach before they age out of the
+  `--days 14` window, so no later run would have recovered them. Version-pinned to the
+  two versions the advisory names; the package's other three versions are not flagged.
+
+- Nothing else from this window was added, and the reasons are worth recording.
+  4,810 mappable entries were left behind `--limit 250`, and 1,810 of those are
+  unreachable before they age out. That tail was checked rather than accepted blind:
+  1,680 of the 1,810 are a single `@zalastax/nolb-*` scope carrying `MAL-2025-*`
+  identifiers, and a 25-name sample resolved 25/25 to npm security-holding stubs
+  (maintainer `npm`, sole version `0.0.1-security`). Of the remaining 130, 37 of the
+  40 distinct package names are also holding stubs, one returns 404, and one of the
+  two survivors has no published versions at all. Only `dakumangalsingh` was still
+  installable, and it is now pinned above. The age-out is therefore a loss of
+  uninstallable names, not of detection coverage.
+- No new atomic indicators were added. Every campaign reported in the window is
+  already covered: the keyv / ChainDrop npm worm (its C2 domain, the Ethereum
+  contract used to rotate infrastructure, and its campaign tests), Flooding Dropper /
+  WEL1DROPPER (including the deliberate decision to cover the four platform
+  download subdomains through the shared parent label, and to leave the possible
+  victim hosts unlisted), PolinRider / DEV#POPPER, and the spellcheckpy PyPI RAT.
+
 ## [5.26.3] - 2026-08-15
 
 ### Added

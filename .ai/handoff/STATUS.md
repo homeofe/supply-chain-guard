@@ -6,6 +6,54 @@
 
 ---
 
+## Threat-intel sweep 2026-08-16 (prepared, not released)
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+No version bump: the branch carries data plus one hand-added version pin, and the
+entry sits under `## [Unreleased]`.
+
+Importer: 6,827 advisories over 69 pages, 9,972 mapped, 4,847 already present,
+65 covered by an existing bare-name IOC, 250 written, 223 OSV-corroborated. Run with
+`--allow-backlog`, which is justified below rather than used to silence the warning.
+
+The 2026-08-14 backfill from the v5.26.3 sweep has not drained and still dominates the
+window. 4,810 entries sat behind `--limit 250` and 1,810 of those cannot be reached
+before they age out. Rather than accept that blind, the tail was enumerated and probed
+against the live npm registry:
+
+- 1,680 of the 1,810 are one scope, `@zalastax/nolb-*`, all `MAL-2025-*`. A 25-name
+  sample came back 25/25 npm security-holding stubs (maintainer `npm`, sole version
+  `0.0.1-security`). Not installable, so not a detection loss.
+- The other 130 span 40 package names and look far more interesting at first glance:
+  sentinel-version dependency-confusion lures aimed at real organisation namespaces.
+  Probing them individually deflated that: 37 of the 40 are also holding stubs, one is
+  a hard 404, and one of the two survivors has zero published versions. Only
+  `dakumangalsingh` is genuinely installable, and it is now pinned by hand in both the
+  feed and `KNOWN_BAD_NPM_VERSIONS`.
+
+Worth recording because it cuts against the obvious reading: a tail full of
+`99.9.9`-style names against recognisable companies looks like the highest-value
+material in the queue, and it was almost entirely dead. The liveness probe, not the
+name shape, is what settled it.
+
+No atomic indicators were added. Everything reported in the window is already covered
+(keyv / ChainDrop, Flooding Dropper / WEL1DROPPER, PolinRider / DEV#POPPER,
+spellcheckpy). The WEL1DROPPER entry in particular already documents why the four
+platform download subdomains are covered through their shared parent label and why the
+possible victim hosts are deliberately unlisted, so there was nothing to extend.
+
+### Open for Emre
+
+- **The importer cannot exclude a scope, so this repeats daily until ~2026-08-28.**
+  Every run re-fetches and re-ranks the same ~4,300 dead `@zalastax` names, the
+  backlog warning fires every time, and each run has to re-derive that it is safe to
+  ignore. `--ecosystem` does not help: the spike is entirely npm. A `--exclude-scope`
+  flag, or a registry-liveness filter that drops names resolving to a holding stub
+  before they are queued, would fix it. That is a considered change to the importer
+  and outside what the daily job should decide, so it is left here rather than done.
+- **No decision is needed to merge this branch.** The point above is about future
+  runs, not about this change.
+
 ## Release v5.26.3 (2026-08-15)
 
 Model: claude-opus-5. Contents: the 2026-08-15 threat-intel sweep, detailed below.
