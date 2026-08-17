@@ -1,8 +1,74 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-16 (release v5.26.4). This is one current snapshot, not a session
-> log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
-> and git history.
+> Updated 2026-08-17 (threat-intel sweep, unreleased). This is one current snapshot,
+> not a session log. Historical detail belongs in CHANGELOG.md, generated LOG.md,
+> LOG-ARCHIVE.md, and git history.
+
+---
+
+## Threat-intel sweep 2026-08-17 (unreleased, PR open)
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases. No
+version bump: the version belongs to whichever release Emre cuts next.
+
+Importer: 6,819 advisories over 69 pages, 9,966 mapped, 5,089 already present, 65
+covered by an existing bare-name IOC, 250 written, 234 OSV-corroborated. Run with
+`--allow-backlog`, justified below rather than used to silence the warning.
+
+**The finding that changes the read on this backfill.** The 2026-08-14 bulk backfill
+still dominates the window, and the last two sweeps concluded it was a historical
+archive of dead names. That conclusion does not hold for today's selected head. Every
+one of the 235 distinct names in the 250-entry head was probed against the live npm
+registry and **124 came back still installable** - not holding stubs, not 404s. They
+are a handful of active name farms, concentrated in four publisher accounts:
+`ryliefrey` (the `*-putri-tea`, `*-salwa-tea`, `*-lia-tea`, `*-fri-zidan-tea`
+families), `doelsumbing87` and `abbeey` (all carrying the description "Jual Beli All
+Variant Kopling"), and `mipta19`. So the importer's newest-first ordering is doing
+real work here, and the head is worth taking on its own merits rather than as a
+formality.
+
+The remainder was probed too, not accepted blind. Of 4,691 distinct names in the full
+window, 4,363 are the single `@zalastax/nolb-*` scope; a fresh 25-name sample was
+again 25/25 security-holding stubs, matching both prior sweeps. Of the 328 names
+outside that scope, 129 are live and 124 of those are already inside the selected
+head. Exactly one live, still-installable package sits outside what `--limit 250` can
+reach before it ages out: `@zinley/orion`, hand-added and version-pinned. So the 1,812
+undrainable entries are a loss of uninstallable names, not of detection coverage - the
+same conclusion as 2026-08-16, but re-derived rather than assumed.
+
+Hand-added, since advisory databases publish package coordinates and nothing else:
+
+- `@zinley/orion`, six versions (GHSA-jf8m-fw34-6mg8). 41 published versions and a
+  real purpose, so version-pinned; 1.2.35, 1.2.37 and 1.2.40 are deliberately clean
+  and a negative test asserts the pin has not widened into a name block.
+- The `mgc` npm account takeover (UNC1069 / "Sapphire Sleet" / WAVESHAPER.V2,
+  safedep, April 2026): four version pins, the tarball digest, the C2 `/gate`
+  endpoint and three gist paths. This extends a campaign the feed previously covered
+  only through the axios wave. Single-source, so confidence 0.85 - but the implant
+  paths safedep reports match the axios/UNC1069 hash descriptions already in
+  `ioc-blocklist.ts` character-for-character, which is what carried the attribution.
+  The compromised maintainer is NOT blocked: the gist sits under his own GitHub
+  account and the C2 on his own personal domain, both taken over rather than
+  attacker-registered, so only the specific paths are listed and a negative test
+  asserts the account stays out of `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`.
+
+### Open for Emre
+
+- **The importer still cannot filter by scope, and this is the third consecutive
+  sweep to re-derive that `@zalastax/nolb-*` is dead.** 4,363 of 4,691 distinct names
+  in the window are that one scope. Every daily run re-fetches and re-ranks it, and
+  every run spends its judgement budget proving the same negative. An
+  `--exclude-scope` flag, or a pre-queue registry-liveness filter, would end it. This
+  was flagged on 2026-08-16 and not acted on; repeating it because the cost is now
+  three sweeps deep. It is a considered importer change, so the daily job does not
+  make it.
+- **Today weakens the "backfill is all dead" heuristic.** 124 live names in the head
+  is not what the last two sweeps found. If a future run is tempted to skip the
+  import because the window "is just the backfill", that would now be wrong. The
+  registry probe is the thing that answers it, not the shape of the names.
+- The four publisher accounts above are still publishing. Blocking per-package
+  chases them one name at a time; a maintainer-level indicator would not, but the
+  scanner has no such concept today. Worth a decision on whether it should.
 
 ---
 

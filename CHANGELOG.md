@@ -7,6 +7,52 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 package IOCs imported from the GitHub Advisory Database**, 234 of them
+  corroborated against OSV.dev. All npm. The 2026-08-14 bulk backfill is still the
+  dominant feature of the window, but this batch is materially different from the
+  previous two: probing every one of the 235 distinct names in the selected head
+  against the live npm registry resolved **124 of them as still installable**, not
+  holding stubs. They are a small number of active name farms rather than a
+  historical archive: `ryliefrey` (the `*-putri-tea`, `*-salwa-tea`, `*-lia-tea` and
+  `*-fri-zidan-tea` families), `doelsumbing87` and `abbeey` (the packages all
+  carrying the description "Jual Beli All Variant Kopling"), and `mipta19`.
+- **`@zinley/orion`, six versions** (GHSA-jf8m-fw34-6mg8, MAL-2026-1060), added by
+  hand to both the bundled feed and `KNOWN_BAD_NPM_VERSIONS`. It is the only live,
+  still-installable package anywhere in the window that `--limit 250` cannot reach
+  before it ages out, so no later run would have recovered it. Version-pinned to
+  1.2.31, 1.2.32, 1.2.34, 1.2.36, 1.2.38 and 1.2.39; the package has 41 published
+  versions and a real purpose, and 1.2.35, 1.2.37 and 1.2.40 are deliberately not
+  flagged. A negative test asserts that the pin has not widened into a name block.
+- **Five atomic indicators and four version pins for the `mgc` npm account takeover** (UNC1069 /
+  "Sapphire Sleet" / WAVESHAPER.V2, safedep, April 2026), which extends a campaign
+  this feed already covered only through the axios wave. `mgc` is a real CLI tool
+  with three legitimate 2023 releases whose maintainer account was taken over, so
+  the four trojanized publishes (1.2.1 through 1.2.4) are version-pinned and the
+  name is not added to any pattern table. Plus the tarball digest, the
+  `admondtamang[.]com[.]np/gate` C2 endpoint, and the three gist paths the dropper
+  fetches its per-platform stage 2 from. Single-source, so the feed rows carry
+  confidence 0.85 rather than 1.0 - but the implant paths safedep reports
+  (`/tmp/ld.py`, `/Library/Caches/com.apple.act.mond`, `%PROGRAMDATA%\wt.exe`) are
+  character-for-character the ones the axios/UNC1069 hashes already in this
+  blocklist are described by, which is what corroborates the attribution.
+- The compromised maintainer is deliberately NOT blocked. The gist is hosted under
+  his own GitHub account and the C2 runs on his own personal domain, both taken
+  over rather than attacker-registered, so only the specific gist paths and the
+  `/gate` endpoint are listed - not `gist[.]github[.]com`, not
+  `gist[.]githubusercontent[.]com`, and not the bare `admondtamang[.]com[.]np`
+  apex. The account is not in `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` and a negative test
+  asserts it stays that way. He is a victim; flagging the person is the false
+  positive that gets a scanner switched off.
+- 4,562 mappable entries were left behind `--limit 250` and 1,812 of those will age
+  out before any later run can reach them. That tail was checked rather than
+  accepted blind: 4,363 of the 4,691 distinct names are the single `@zalastax/nolb-*`
+  scope, and a 25-name sample again resolved 25/25 to npm security-holding stubs. Of
+  the 328 names outside that scope, all 129 that are still live sit inside the
+  selected head except one, and that one is `@zinley/orion`, pinned above. The
+  age-out is a loss of uninstallable names, not of detection coverage.
+
 ## [5.26.4] - 2026-08-16
 
 ### Added

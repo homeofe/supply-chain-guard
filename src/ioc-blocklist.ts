@@ -481,6 +481,23 @@ export const KNOWN_C2_IPS: string[] = [
 // ---------------------------------------------------------------------------
 
 export const KNOWN_DEAD_DROPS: string[] = [
+  // mgc npm account takeover - UNC1069 / "Sapphire Sleet" WAVESHAPER.V2 (safedep,
+  // April 2026). Same actor as the axios takeover already covered here: the dropped
+  // implant paths safedep reports (/tmp/ld.py, /Library/Caches/com.apple.act.mond,
+  // %PROGRAMDATA%\wt.exe) are character-for-character the ones the axios hashes below
+  // are described by, which is what corroborates an otherwise single-source write-up.
+  // Only the attacker's own gist path and C2 endpoint are listed. The gist is hosted
+  // under the MAINTAINER'S OWN account (admondtamang) and the C2 runs on his personal
+  // domain, both taken over rather than attacker-registered - so gist.github.com,
+  // gist.githubusercontent.com and the bare admondtamang[.]com[.]np apex are
+  // deliberately NOT listed, and the account is NOT in KNOWN_MALICIOUS_GITHUB_ACCOUNTS.
+  // He is a victim; flagging the person is the false positive that gets a scanner
+  // switched off.
+  "admondtamang.com.np/gate",
+  "gist.githubusercontent.com/admondtamang/814132e794e5d007e9b8ebd223a9494f/raw/1c5d51c2002f452a4dd58a1a73a9dd90a7fe0297/linux.payload",
+  "gist.githubusercontent.com/admondtamang/814132e794e5d007e9b8ebd223a9494f/raw/1c5d51c2002f452a4dd58a1a73a9dd90a7fe0297/window.payload",
+  "gist.github.com/admondtamang/814132e794e5d007e9b8ebd223a9494f",
+
   // Vidar dead-drop resolvers (Claude Code leak campaign)
   "steamcommunity.com/profiles/76561198721263282",
   "telegram.me/g1n3sss",
@@ -612,6 +629,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
 // ---------------------------------------------------------------------------
 
 export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
+  // mgc npm account takeover - UNC1069 / "Sapphire Sleet" WAVESHAPER.V2 (safedep,
+  // April 2026). Tarball digest shared by all four trojanized versions. Single-source,
+  // but round-tripped as a well-formed 64-char digest across two independent fetches
+  // before ingestion.
+  "40aa5d412a50db79a814ac5ad65237745727cb4777843d66a760f64285a5a3e6": "mgc 1.2.1-1.2.4 trojanized npm tarball, UNC1069 dropper (SHA256)",
+
   // Claude Code leak campaign (April 2026)
   "d8256fbc62e85dae85eb8d4b49613774": "Claude Code malware archive",
   "8660646bbc6bb7dc8f59a764e25fe1fd": "Claude Code malware archive (variant)",
@@ -1266,6 +1289,26 @@ function normalizePackageName(
 // ---------------------------------------------------------------------------
 
 export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; description: string }> = {
+  // mgc npm account takeover - UNC1069 / "Sapphire Sleet" WAVESHAPER.V2 (safedep,
+  // April 2026). A real CLI tool with three legitimate 2023 releases (1.0.0, 1.1.0,
+  // 1.2.0) whose maintainer account was taken over, so this is version-pinned to the
+  // four trojanized publishes only and the name is NOT added to any pattern table.
+  // npm has since replaced the package with a security-holding stub, but a lockfile
+  // pinned before the takedown still resolves to the malicious tarball.
+  "mgc": {
+    versions: ["1.2.1", "1.2.2", "1.2.3", "1.2.4"],
+    description: "mgc account takeover: UNC1069 cross-platform RAT dropper (Apr 2026)",
+  },
+
+  // Second still-installable IOC recovered by hand from the 2026-08-14 advisory
+  // backfill, this one from outside what --limit 250 can reach before it ages out.
+  // A live package with 41 published versions and a real purpose; six of them are
+  // flagged, so this is version-pinned and 1.2.35, 1.2.37 and 1.2.40 are not listed.
+  "@zinley/orion": {
+    versions: ["1.2.31", "1.2.32", "1.2.34", "1.2.36", "1.2.38", "1.2.39"],
+    description: "@zinley/orion: malicious npm package versions (GHSA-jf8m-fw34-6mg8, Aug 2026)",
+  },
+
   // Second detection path for the one still-installable IOC recovered by hand from the
   // 2026-08-14 advisory-backfill tail - see the matching feed entries in threat-intel.ts.
   // Pinned to the two versions the advisory names; 1.0.0, 1.0.1 and 1.1.0 are not flagged.
