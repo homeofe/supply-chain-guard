@@ -6,6 +6,118 @@
 
 ---
 
+## Carried open items (process and design, not tied to one sweep)
+
+Deliberately a top-level section rather than another dated "Open for the owner". Both
+items outlive any single sweep, and an entry filed under a sweep heading is
+effectively gone once the next sweep adds its own list. Neither is urgent.
+
+### Branch hygiene: check LOCAL branches, not only the remote
+
+The invariant is that this repo carries exactly `main` and `v5`. That has always
+been read as a statement about the remote, with `git ls-remote --heads origin`
+treated as the confirmation. **It is not sufficient.** On 2026-08-17, immediately
+after a clean release, the remote was correct while the shared checkout still
+held six stale local branches, the oldest from 2026-08-12:
+`threat-intel/2026-08-12`, `chore/release-v5.25.12`, `chore/release-v5.26.0`,
+`feat/file-digest-matching`, `feat/install-hook-persistence`,
+`feat/persistence-recall`. All six belonged to merged PRs (#134 to #139). They
+were verified and deleted in that session; the checkout is clean as of this note,
+verified again on all three checks below.
+
+The release routine should check both sides. CLAUDE.md step 12 currently
+prescribes only the remote check; its local copy on the Dev-PC was corrected
+alongside this note, but **CLAUDE.md is gitignored in this repo**, so that copy
+is per-machine and does not survive a fresh clone or reach the second
+subscription's checkout. This section is the durable record of the rule, and any
+machine picking the routine up from CLAUDE.md alone will still have the weaker
+check until it is corrected there too:
+
+    git ls-remote --heads origin     # only main and v5
+    git branch --list                # only main
+    git worktree list                # only the shared checkout, on main
+
+Local leftovers are not merely untidy. A local branch held by a worktree makes
+the merge command's local delete fail, and the remote branch then survives while
+the error names only the local one. That is how `release/v5.25.10` was left on
+the remote after a finished deploy on 2026-08-10. Removing the worktree BEFORE
+merging is what prevents it, and that ordering worked correctly for v5.26.5.
+
+Verifying a branch before deleting: every PR here is squash-merged, so
+`git branch --merged`, `git cherry` and `git rev-list main..branch` all report
+merged work as UNMERGED. Never delete on those. Ask GitHub, then guard the one
+real loss case:
+
+    gh pr list --state all --search "head:<branch>" --json number,state,mergedAt
+    git log <branch> -1 --format=%cI     # keep it if the tip is NEWER than mergedAt
+
+A tip newer than `mergedAt` means a commit exists that no PR knows about. That is
+the only scenario in which deleting loses work.
+
+### Design decision due before v6: the floating major branch, and Marketplace
+
+Decide before v6 is cut, not during. Also captured as a memory entry outside the
+repo, since it spans releases.
+
+**How it works today,** verified against `action.yml` and `ci.yml` on main: `v5`
+is a floating BRANCH, not a tag. The `update-major-branch` job fast-forward-pushes
+it to each release commit (no `--force`; branches are allowed to move, so this
+does not violate the never-move-tags rule). The Action is composite, and
+`action.yml` on that branch pins an EXACT npm version, currently
+`supply-chain-guard@5.26.5`. `action.yml` is one of the 14 `versionSites`, so the
+pin is bumped and gated on every release.
+
+That combination is better than it looks and should not be lost by accident:
+`@v5` gives consumers a floating convenience ref, while every resolution still
+installs an exact, release-gated version rather than a mutable `latest`.
+
+**The problem at v6.** If v5.x stops being released once v6 ships, everyone still
+on `@v5` keeps resolving a frozen `action.yml` pinning an old npm version, so
+their IOC feed silently stops updating. For a scanner that is a false-negative
+generator, and a false negative here lowers the bar across every repo using it.
+
+**The counter-argument, which is why this needs a decision and not just an
+implementation.** A major version is a breaking change by definition. `@v5` exists
+precisely so a v6 that changes inputs, outputs or exit codes does not silently
+break every consumer's workflow on their next run. Collapsing to a single
+always-current ref makes breaking changes auto-propagate, which is the opposite of
+what a major ref is for. The Action already uses exit code 2 for a critical gate
+hit and publishes seven outputs, so there is real surface to break.
+
+Options worth weighing:
+
+- Keep major branches with an explicit v5 maintenance policy, e.g. feed-only
+  patches to the v5 line for a stated window, so `@v5` does not go stale silently.
+  Solves staleness without breaking anyone; costs an ongoing dual release.
+- A single floating ref (`latest`, or point consumers at `main`). Simplest to
+  operate and best for detection freshness, but gives up the breaking-change
+  firewall.
+- Make exact-version pinning (`@v5.26.5`) the documented default in the README
+  with a Dependabot note, keeping a major ref only as a convenience. Arguably the
+  most defensible posture for a security tool, since it is the advice this project
+  gives its own users.
+- Hybrid: keep `@v5` working but emit a deprecation warning once v6 ships, so the
+  ref stops being silently stale even if nobody upgrades.
+
+Whichever is chosen, the README `uses:` examples, `docs/mcp.md`, `action.yml` and
+the `update-major-branch` job's `if:` condition all move together, and the
+branch-hygiene invariant above changes shape (a `v6` branch appearing, or major
+branches disappearing). Update CLAUDE.md's "GitHub Action Distribution" section in
+the same change, since it currently documents the v5-branch scheme as settled.
+
+**Marketplace, re-check at the same time.** Marketplace publishing is NOT
+automatable: GitHub gates it behind a web-UI checkbox in the Release edit view.
+There is no `gh` flag and no REST/GraphQL endpoint, and `gh release create`, which
+is what CI uses, never publishes there. Do NOT build a cookie or session hack into
+CI; that would itself be a supply-chain risk in a supply-chain security tool. The
+listing is discovery UI only and the Action runs via `@v5` regardless. At v6,
+verify by hand that the listing still resolves, that the `uses:` line it advertises
+matches the chosen scheme, and that the checkbox is ticked on the release that
+should be the public entry point. Confirm the current listing state before changing
+anything, since nothing in CI reports it.
+
+---
+
 ## Release v5.26.5 (2026-08-17)
 
 Model: claude-opus-5. Contents: the 2026-08-17 threat-intel sweep, detailed below.
@@ -65,7 +177,7 @@ Hand-added, since advisory databases publish package coordinates and nothing els
   attacker-registered, so only the specific paths are listed and a negative test
   asserts the account stays out of `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`.
 
-### Open for Emre
+### Open for the owner
 
 - **The importer still cannot filter by scope, and this is the third consecutive
   sweep to re-derive that `@zalastax/nolb-*` is dead.** 4,363 of 4,691 distinct names
@@ -131,7 +243,7 @@ spellcheckpy). The WEL1DROPPER entry in particular already documents why the fou
 platform download subdomains are covered through their shared parent label and why the
 possible victim hosts are deliberately unlisted, so there was nothing to extend.
 
-### Open for Emre
+### Open for the owner
 
 - **The importer cannot exclude a scope, so this repeats daily until ~2026-08-28.**
   Every run re-fetches and re-ranks the same ~4,300 dead `@zalastax` names, the
@@ -200,7 +312,7 @@ Recommended: run the explicit slice for that day and accept the zalastax bulk,
 `npm run feed:import -- --since 2026-08-14 --until 2026-08-15 --limit 100000`, or add
 a scope-exclusion flag to the importer so the dead namespace can be skipped without
 losing the tail. Not done here because a 5,000-entry machine-generated diff into a
-public repo is Emre's call, not the scheduled job's.
+public repo is the owner's call, not the scheduled job's.
 
 The Zapier packages (`@zapier/mcp-integration`, `@zapier/ai-actions-react`,
 `@zapier/spectral-api-ruleset`, `@zapier/stubtree`) are in that queue at positions
@@ -334,7 +446,7 @@ release sitting exactly one below the first malicious one for every package.
 `nhmpy` is the one entry carrying reduced confidence (0.85): the whole project is
 gone from PyPI and only two of the three sources name it.
 
-### Open for Emre
+### Open for the owner
 
 1. **Persistence artefacts from this wave were deliberately NOT added.** The
    write-ups list `~/.config/systemd/user/update-monitor.service`,
@@ -526,7 +638,7 @@ self-scan produces zero digest findings, so no false positive on this repo.
 ## Release v5.25.12 (2026-08-12)
 
 Model: claude-opus-5. Cuts the 2026-08-12 sweep (#134, merged as 6f66eb0) as a
-patch release at Emre's direction. Version bumped across all 14
+patch release at the owner's direction. Version bumped across all 14
 `aahp.config.json` versionSites plus package.json, with per-file occurrence
 counts asserted before rewriting so a drifted file aborts rather than being
 blind-replaced, and package-lock.json rewritten by `npm install
@@ -560,7 +672,7 @@ available as an alternative because the malicious versions were unpublished.
 
 Model: claude-opus-5. Scheduled daily run. Branch `threat-intel/2026-08-12`, cut
 from `main` at e64f72a in a scratchpad worktree, so the shared checkout stayed on
-`main`. The version is deliberately untouched: Emre cuts the release separately.
+`main`. The version is deliberately untouched: the owner cuts the release separately.
 
 Importer (rolling 14-day window, 1,791 advisories over 18 pages): 93 new package
 IOCs across 50 names. Nothing was reported unmappable, nothing was skipped, the
@@ -593,7 +705,7 @@ Three deliberate exclusions, all of them the "legitimate shared host" trap:
   `registry[.]npmjs[.]org` token endpoints are likewise legitimate services the
   payload abuses rather than attacker-controlled hosts.
 
-### Open points for Emre
+### Open points for the owner
 
 1. **Dropped-persistence paths have no home in the blocklist.** The Socket keyv
    write-up publishes concrete persistence artefacts:
@@ -616,7 +728,7 @@ Three deliberate exclusions, all of them the "legitimate shared host" trap:
 ## Release v5.25.11 (2026-08-11)
 
 Model: claude-opus-5. Cuts the 2026-08-11 sweep (#132, merged as 547ffbb) as a
-patch release at Emre's direction, in the same session. Version bumped across all
+patch release at the owner's direction, in the same session. Version bumped across all
 14 `aahp.config.json` versionSites plus package.json, with package-lock.json
 rewritten by `npm install --package-lock-only` rather than by text substitution.
 CHANGELOG `[Unreleased]` promoted to `## [5.25.11] - 2026-08-11`, reference link
@@ -641,7 +753,7 @@ sweep are recorded in the entry below and are unchanged by this release.
 ## Threat-intel sweep 2026-08-11 (no version bump)
 
 Model: claude-opus-5. Scheduled daily run. Branch `threat-intel/2026-08-11`, cut
-from `main` at 00c9fcf. The version is deliberately untouched: Emre cuts the
+from `main` at 00c9fcf. The version is deliberately untouched: the owner cuts the
 release separately.
 
 Importer (rolling 14-day window, 1,806 advisories over 19 pages): 104 new package
@@ -695,7 +807,7 @@ substring but not this sibling label.
 ## Release v5.25.10 (2026-08-10)
 
 Model: claude-opus-5. Cuts the 2026-08-10 sweep (#130, merged as bd33bc8) as a
-patch release at Emre's direction, in the same session. Version bumped across all
+patch release at the owner's direction, in the same session. Version bumped across all
 14 `aahp.config.json` versionSites plus package.json (19 source occurrences),
 with package-lock.json rewritten by `npm install --package-lock-only`. CHANGELOG
 `[Unreleased]` promoted to `## [5.25.10] - 2026-08-10`, reference link added and
@@ -722,7 +834,7 @@ Model: claude-opus-5. Scheduled daily advisory sweep. Base: 186ff84 (main,
 post-v5.25.9). Repo was clean with zero open PRs and zero open issues, so no
 concurrent-writer conflict; work was done in a `git worktree` under the session
 scratchpad and the shared checkout was left on `main`. No version bump on this
-branch by design: Emre cuts the release.
+branch by design: the owner cuts the release.
 
 **Importer.** 2 new package IOCs, both PyPI (`kotanku@0.1.0`,
 `cubesat-upstream-driver@1.0.1`), in one standard pass over the rolling 14-day
@@ -763,7 +875,7 @@ A 404 on the whole package is NOT evidence against an indicator: seven packages
 here 404, and one of them (`@opengov/form-utils`) has a GHSA advisory. Only 3
 pins now rest on the vendor list alone, and they carry confidence 0.85.
 
-**Open question for Emre (no PR issue opened, per the repo invariant).** The
+**Open question for the owner (no PR issue opened, per the repo invariant).** The
 ecosystem-prefix defect below survived many green releases even though the trap
 is already written down in CLAUDE.md, so prose is demonstrably not holding it.
 A cheap build gate would: assert in `check:feed` that no key of
@@ -785,9 +897,9 @@ for the one open question this leaves.
 
 Model: claude-opus-5. Scheduled daily advisory sweep, merged as #128. The sweep
 branch itself carried no version bump; v5.25.9 is cut from it in a separate
-release commit at Emre's direction in the same session. Base: 7afaedc (main,
+release commit at the owner's direction in the same session. Base: 7afaedc (main,
 post-v5.25.8). Repo was clean with zero open PRs, so no concurrent-writer
-conflict. No version bump on this branch by design: Emre cuts the release.
+conflict. No version bump on this branch by design: the owner cuts the release.
 
 **Importer.** 64 new package IOCs (62 npm, 2 PyPI) in one standard pass over the
 rolling 14-day window. 4,492 advisories fetched over 45 pages, 16 corroborated by
@@ -972,7 +1084,7 @@ private copies of them.
 ## Threat-intel run (2026-08-07, merged as #124, shipping in v5.25.7)
 
 Model: claude-opus-5. Scheduled daily advisory sweep. No version bump - the
-version belongs to Emre's release. Base: c40d603 (main, post-v5.25.6).
+version belongs to the owner's release. Base: c40d603 (main, post-v5.25.6).
 
 **Importer.** 783 new package IOCs, in two passes over the same 14-day window.
 4,318 advisories fetched over 44 pages. The first dry run flagged a
@@ -1025,7 +1137,7 @@ and needed nothing: every hash they publish already round-trips byte-identical
 against what is in the blocklist. The 546 "Shai-Hulud: Here We Go Again" staging
 repositories were NOT ingested - they sit under compromised victim accounts.
 
-**Retention rule settled this run (Emre, 2026-08-07).** The advisory window and
+**Retention rule settled this run (owner decision, 2026-08-07).** The advisory window and
 detection retention are two separate concerns and must not be conflated:
 
 - The `--days 14` window scopes what the IMPORTER ingests. Keep it strict.
@@ -1058,9 +1170,9 @@ the public Solana infrastructure is never flagged.
 
 Model: claude-opus-5. Second commit on the same branch, so the curated first
 commit stays reviewable and this machine-generated drain is an isolated diff.
-No version bump - the version belongs to Emre's release.
+No version bump - the version belongs to the owner's release.
 
-Emre authorised the full import. Window used: `--since 2026-08-04 --until
+The owner authorised the full import. Window used: `--since 2026-08-04 --until
 2026-08-06 --limit 100000`. That narrow window was verified to be sufficient
 before running it: a dry run over it reported exactly 2,683 new entries, the
 same number the full `--days 14` window reported as waiting, so no entry sat
@@ -1128,20 +1240,20 @@ the feed, including every `@hubsync` and `@ornikar` entry this run added. It is
 pre-existing and out of scope for a threat-feed import, but it means "closes the
 `@hubsync`/`@ornikar` gaps" is true of the feed and only partly true of `scan`.
 Fixing it is a behaviour change with real false-positive surface (a pinned IOC
-would begin firing on lockfile-resolved versions), so it needs Emre, not an
+would begin firing on lockfile-resolved versions), so it needs the owner, not an
 agent acting alone.
 
 ---
 
 ## Threat-intel run (2026-08-06, merged as #122, shipped in v5.25.6)
 
-Model: claude-opus-5. No version bump - the version belongs to Emre's release.
+Model: claude-opus-5. No version bump - the version belongs to the owner's release.
 
 Imported 358 package IOCs (250 standard batch + a 108-entry explicit slice) and
 hand-added 2 non-package indicators. Detail is in the CHANGELOG `[Unreleased]`
 block; what follows was the part that needed a human decision.
 
-> **RESOLVED 2026-08-06.** Emre decided to import the remainder. All 2,683
+> **RESOLVED 2026-08-06.** The owner decided to import the remainder. All 2,683
 > entries were drained in the backlog-completion commit on this branch (see the
 > section above); the feed is at 9,631 and the importer reports 0 waiting and 0
 > undrainable. The `@hubsync` and `@ornikar` feed gaps described below are
@@ -1182,7 +1294,7 @@ Deliberately NOT done here, both recorded so they are not re-derived:
 
 - Not force-importing the remainder. The scheduled task is explicit that a
   thousand-entry machine-generated diff must not be pushed into a public repo on
-  the agent's own initiative. Scope is Emre's call - see the PR body.
+  the agent's own initiative. Scope is the owner's call - see the PR body.
 - Not hand-adding the `@hubsync` / `@ornikar` versions. No source publishes the
   per-scope version lists, and inventing version pins is the one thing the
   enrichment step forbids.
@@ -1202,7 +1314,7 @@ Two indicators were also deliberately rejected rather than ingested:
 
 ## AAHP convergence (2026-08-05, unreleased, branch chore/aahp-converge-shared-primitives)
 
-Emre's instruction: no divergence between this repo and AAHP. Prior state
+The owner's instruction: no divergence between this repo and AAHP. Prior state
 (audited this session, by execution not by reading): this repo vendored local
 copies of `_aahp-lib.sh` and `aahp-manifest.sh` purely because its own fork
 dashboard (`aahp-dashboard.mjs`) called them locally rather than importing

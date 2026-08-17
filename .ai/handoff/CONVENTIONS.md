@@ -9,6 +9,18 @@
 
 - All code, comments, commits, and documentation in **English only**
 - Use clear, direct language in handoff files (agents are the primary readers)
+- **Do not name the maintainer in repository content.** Write "the owner" or "the
+  maintainer", never a personal first name. This repo is public, so a name written
+  into a handoff note, commit message, PR body, release body or CHANGELOG entry is
+  published and indexed for no benefit. Applies to everything an agent writes.
+  It does NOT apply to the deliberate identity and contact fields, which are there
+  on purpose and must keep working: the `LICENSE` and README copyright lines, the
+  `author` field in `package.json` and `action.yml`, and the reporting addresses in
+  `SECURITY.md`, `CODE_OF_CONDUCT.md` and `CONTRIBUTING.md`. Changing any of those
+  is an owner decision, and the contact addresses additionally need a working
+  mailbox to move to.
+- Same rule, same reason as the existing no-AI-attribution rule: both keep
+  incidental personal or tooling identity out of a public artefact.
 
 ## Code Style
 
