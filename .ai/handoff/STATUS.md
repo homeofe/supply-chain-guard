@@ -1,15 +1,28 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-17 (threat-intel sweep, unreleased). This is one current snapshot,
-> not a session log. Historical detail belongs in CHANGELOG.md, generated LOG.md,
-> LOG-ARCHIVE.md, and git history.
+> Updated 2026-08-17 (release v5.26.5). This is one current snapshot, not a session
+> log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
+> and git history.
 
 ---
 
-## Threat-intel sweep 2026-08-17 (unreleased, PR open)
+## Release v5.26.5 (2026-08-17)
 
-Model: claude-opus-5. Prepared by the scheduled daily job, which never releases. No
-version bump: the version belongs to whichever release Emre cuts next.
+Model: claude-opus-5. Contents: the 2026-08-17 threat-intel sweep, detailed below.
+
+PATCH. Feed and blocklist data plus two hand-added version pins and one new campaign
+test block: no new rule, no pattern-table change, no change to what the scanner does.
+Same call as v5.26.3 and v5.26.4.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+was added to the already-green sweep PR (#145) and the whole thing landed as one
+squash-merge rather than the usual two. Same deliberate choice as v5.26.4: CLAUDE.md
+warns against back-to-back merges, because each one cancels the previous commit's CI
+run and the deploy gate then refuses a commit whose CI concluded `cancelled`. One
+merge, one CI settle, then the tag.
+
+## Threat-intel sweep 2026-08-17
 
 Importer: 6,819 advisories over 69 pages, 9,966 mapped, 5,089 already present, 65
 covered by an existing bare-name IOC, 250 written, 234 OSV-corroborated. Run with
