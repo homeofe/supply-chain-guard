@@ -1,6 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-17 (release v5.26.5). This is one current snapshot, not a session
+> Updated 2026-08-18 (release v5.26.6). This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
 
@@ -63,9 +63,9 @@ repo, since it spans releases.
 is a floating BRANCH, not a tag. The `update-major-branch` job fast-forward-pushes
 it to each release commit (no `--force`; branches are allowed to move, so this
 does not violate the never-move-tags rule). The Action is composite, and
-`action.yml` on that branch pins an EXACT npm version, currently
-`supply-chain-guard@5.26.5`. `action.yml` is one of the 14 `versionSites`, so the
-pin is bumped and gated on every release.
+`action.yml` on that branch pins an EXACT npm version. The number is deliberately
+not repeated here: `action.yml` is one of the 14 `versionSites`, so the pin is
+bumped and gated on every release, and a copy in prose only drifts.
 
 That combination is better than it looks and should not be lost by accident:
 `@v5` gives consumers a floating convenience ref, while every resolution still
@@ -144,7 +144,9 @@ released version leaves zero open pull requests. The bump is dev-only
 ## Threat-intel sweep 2026-08-18
 
 Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
-Branch `threat-intel/2026-08-18`, unreleased.
+Shipped as v5.26.6 (PR #148, merged c5be80d); the `threat-intel/2026-08-18`
+branch is deleted. The sweep and the version bump landed as one squash-merge,
+which is the documented way to avoid back-to-back merges cancelling CI.
 
 **The 2026-08-14 backfill question is answered, and it did not need the importer
 change.** It was carried as "NEEDS A DECISION" from the v5.26.3 sweep and repeated
@@ -1167,7 +1169,7 @@ not include it, and `feed.test.ts` does not cover the value-shape contract.
 
 ---
 
-## At a Glance
+## At a Glance (historical, as of the v5.25.9 cut - superseded)
 
 v5.25.8 was published (#127). v5.25.9 is being cut from it and is a threat-intel
 release: the 2026-08-09 advisory sweep, merged as #128, which added 64 package

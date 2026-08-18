@@ -23,7 +23,6 @@ matrix and whether version-pinned npm IOCs should match on a directory scan.
 | Ready | 6 |
 | Blocked | 2 |
 
-The published package is v5.26.4.
 
 ---
 
