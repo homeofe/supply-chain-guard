@@ -7,6 +7,50 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **239 package IOCs imported from the GitHub Advisory Database**, taken as three
+  explicit date slices rather than one rolling window. 187 come from the 2026-08-14
+  bulk backfill, 46 from 2026-08-15 to 2026-08-18 and 6 from 2026-08-04 to
+  2026-08-13. The batch includes the four `@zapier/*` packages from the Shai-Hulud
+  "Second Coming" compromise of November 2025, all correctly version-pinned:
+  `@zapier/spectral-api-ruleset` 1.9.1 to 1.9.3, `@zapier/mcp-integration` 3.0.1 to
+  3.0.3, `@zapier/ai-actions-react` 0.1.12 to 0.1.14 and `@zapier/stubtree` 0.1.2 to
+  0.1.4. Three of those are live packages still publishing today, so the pins matter.
+  Also a cluster of Sui/Move blockchain-tooling lures published 2026-08-17 and
+  2026-08-18 (`sui-move-rpc`, `sui-gql-core`, `sui-move-graphql`, `bcs-core`,
+  `leb128x`, `bucket-protocol-sdk-v2`), which no vendor has written up yet.
+- **Two blockchain dead-drop addresses for the NullReceiver DPRK npm wave**
+  (OpenSourceMalware 2026-08-05, corroborated by Sonatype Research Labs 2026-08-10),
+  added to `KNOWN_C2_WALLETS`. The technique encodes the C2 address in the recipient
+  of a zero-value, zero-data Ethereum transfer, so there is no contract and no
+  transaction data to inspect: the wallet the payload hardcodes and the recipient it
+  looks for are the whole indicator. The recipient address self-verifies against the
+  C2 IP already pinned in `KNOWN_C2_IPS`, since its first four bytes decode to
+  `166[.]88[.]134[.]62` and its trailing bytes are the ASCII tag `helloipbot!!`. The
+  two public Ethereum RPC endpoints the loader reads through are shared
+  infrastructure and are deliberately not listed; a negative test asserts they stay
+  unflagged.
+- **Three NullReceiver packages the advisory databases never carried**, hand-added.
+  `agentgui@1.0.1127` is pinned in both the feed and `KNOWN_BAD_NPM_VERSIONS`: it is
+  a live package with 1,110 published releases whose publisher was compromised, and
+  the trojanized publish is the current `latest` tag, so a name block would flag
+  1,109 clean releases. `scrollbar-hide-plugin` and `tailwind-animation-founder` were
+  unpublished with zero surviving versions and no legitimate history, so they are
+  blocked by name.
+
+### Changed
+
+- **The 2026-08-14 advisory backfill is drained of everything that carries detection
+  value.** It had been carried as an open question across three sweeps because the
+  importer cannot exclude a scope and the choice looked like "take all 5,249 entries
+  or lose the tail behind them". Both halves were probed against the live npm
+  registry instead: 4,363 of the entries are the single `@zalastax/nolb-*` scope, a
+  25-name sample of which is 25/25 npm security-holding stubs whose only published
+  version is `0.0.1-security`, and the 187 entries outside that scope are now all in
+  the feed. The dead scope is not imported, so `feed.json` stays at its current size
+  rather than growing by roughly a third to carry names that cannot be installed.
+
 ## [5.26.5] - 2026-08-17
 
 ### Added

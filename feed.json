@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.26.5",
-  "entryCount": 12281,
+  "entryCount": 12523,
   "entries": [
     {
       "type": "domain",
@@ -99452,6 +99452,1948 @@
       "campaign": "mgc account takeover",
       "source": "safedep",
       "firstSeen": "2026-04-02"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/minima-nisi-placeat-cupiditate",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c257-w48p-9pp5, MAL-2025-13879",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/minus-nisi-molestias-ipsa",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-49g4-fg89-qmp3, MAL-2025-13880",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zyro-inc/eslint-config-zyro",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-42px-w5p2-6g57, MAL-2025-13902",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zva/web@99.50.54",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qw58-5256-3j5w, MAL-2024-9490",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zva/web@99.50.55",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qw58-5256-3j5w, MAL-2024-9490",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zva/web@99.49.54",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qw58-5256-3j5w, MAL-2024-9490",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zpp/campaign-widgets@10.9.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h723-82gj-9qfv, MAL-2023-8288",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/reprehenderit-modi-suscipit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rfjc-9qfc-23v3, MAL-2025-13893",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/rerum-totam-officia-laudantium",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c78f-x9q5-f85j, MAL-2025-13894",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/molestias-vitae-ex-accusantium",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fw5-r9jr-c7vw, MAL-2025-13881",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/earum-consectetur-quos-architecto",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x8pc-c3hv-j7q7, MAL-2025-13865",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/eveniet-quasi-modi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-56cw-p42g-wfj6, MAL-2025-43383",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/dolorem-enim-soluta-animi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gx25-hcv9-wr6p, MAL-2025-13862",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/laborum-minima-neque",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4x7h-2rhq-8v7h, MAL-2025-43384",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/laboriosam-maxime-deserunt-quo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6wg5-r9h7-34jf, MAL-2025-13875",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/eius-ipsam-dolorum",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rg3r-g675-g455, MAL-2025-43382",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/id-possimus-ipsa-veritatis",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3fpv-wx85-6qpf, MAL-2025-13871",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zarafront/lib-zds@99.50.55",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j325-j3fc-vvcr, MAL-2024-8838",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/aliquam-veritatis-corrupti-ipsam",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-379w-xwh2-4gmp, MAL-2025-13850",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/stubtree@0.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrwq-88c2-5h9p, MAL-2025-190920",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/stubtree@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrwq-88c2-5h9p, MAL-2025-190920",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/stubtree@0.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrwq-88c2-5h9p, MAL-2025-190920",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ex-blanditiis-dolore",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rq28-f8mr-fr94, MAL-2025-13868",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/eveniet-optio-incidunt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5mwg-4vq5-c284, MAL-2025-13866",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ex-autem-sequi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j2hr-g68c-rvw6, MAL-2025-13867",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/delectus-itaque-odio",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m72j-prg8-c764, MAL-2025-13858",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/spectral-api-ruleset@1.9.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xcq8-xp54-r78w, MAL-2025-190919",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/spectral-api-ruleset@1.9.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xcq8-xp54-r78w, MAL-2025-190919",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/spectral-api-ruleset@1.9.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xcq8-xp54-r78w, MAL-2025-190919",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ab-dolor-optio-sint",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mcrw-fcwc-qwf4, MAL-2025-13847",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/excepturi-laboriosam-vitae-atque",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3rpg-jrm9-3r9h, MAL-2025-13869",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/expedita-ullam-modi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c9mq-93c3-6q7p, MAL-2025-13870",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/cupiditate-animi-tenetur-doloribus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cvf6-95qf-mqhp, MAL-2025-13857",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/consectetur-natus-hic",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2h59-p44w-gmfj, MAL-2025-13855",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/autem-provident-delectus-libero",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-546h-3496-mq57, MAL-2025-13854",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/animi-dolores-qui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j59q-2chx-x57c, MAL-2025-43378",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ducimus-exercitationem-autem",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7wc4-w58v-mp58, MAL-2025-13864",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/distinctio-aperiam-blanditiis",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4hhh-2jrm-j8w9, MAL-2025-43380",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/mcp-integration@3.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-659m-mwq2-jh49, MAL-2025-190918",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/mcp-integration@3.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-659m-mwq2-jh49, MAL-2025-190918",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/mcp-integration@3.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-659m-mwq2-jh49, MAL-2025-190918",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/in-perferendis-voluptatum",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j9wh-v8j5-v47r, MAL-2025-13872",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/laboriosam-itaque-iste-aliquid",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w69h-jgmq-g32f, MAL-2025-13874",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/deleniti-in-aspernatur-aut",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggm8-j7p6-wwr3, MAL-2025-13859",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ab-officiis-consequuntur-labore",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rfrq-v2wc-j2xp, MAL-2025-13848",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/autem-error-sapiente",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gmhg-f39p-qw2q, MAL-2025-43379",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/eaque-necessitatibus-officia",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jjr6-7chm-7vwx, MAL-2025-43381",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/dolores-sequi-recusandae",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4wp5-v4ch-8h3w, MAL-2025-13863",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/distinctio-amet-deleniti-quo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c5mq-fjgh-7923, MAL-2025-13861",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/aperiam-illo-sed",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w665-59wh-mx9h, MAL-2025-13851",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/architecto-consectetur-praesentium",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w9hh-f9mr-w348, MAL-2025-13852",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/ipsam-possimus-repellendus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h47q-r2xc-f8j4, MAL-2025-13873",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/dignissimos-harum-sint-alias",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h337-7932-p62f, MAL-2025-13860",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/architecto-cumque-incidunt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jpcj-wr46-c242, MAL-2025-13853",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/cupiditate-ad-fuga-minus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fg9g-66fj-49f6, MAL-2025-13856",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/ai-actions-react@0.1.13",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xv4q-6j79-8qp5, MAL-2025-190917",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/ai-actions-react@0.1.14",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xv4q-6j79-8qp5, MAL-2025-190917",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zapier/ai-actions-react@0.1.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xv4q-6j79-8qp5, MAL-2025-190917",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zhiend989/asdfqwer@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ff8m-jm5x-h5fr, MAL-2024-9489",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/alias-non-maxime",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2mgm-8f4f-fr39, MAL-2025-43377",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zettle-bo/apps@35.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7h58-7xq3-v4q6, MAL-2024-1767",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@zittertea/accusantium-ullam-esse",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3q7c-mc3f-j3vq, MAL-2025-13849",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "skipthedishes_react@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c3gx-3r5r-39p2, MAL-2025-4579",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "df-sandbox-test@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-89fq-wqxj-rcpg, MAL-2026-2498",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "df-sandbox-test@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-89fq-wqxj-rcpg, MAL-2026-2498",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@10.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "dinotech-auth-utils@99.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xhcw-fx9m-56pc, MAL-2026-14077",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@unkn0wnartist/h1-poc-test@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ccpj-4jhv-mqxw, MAL-2025-5352",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@unkn0wnartist/h1-poc-test@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ccpj-4jhv-mqxw, MAL-2025-5352",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@veertly/web-app@99.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj2v-gp59-8682, MAL-2026-14073",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@veertly/web-app@100.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj2v-gp59-8682, MAL-2026-14073",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@veertly/web-app@100.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj2v-gp59-8682, MAL-2026-14073",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.2.5-B",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@vyzensockets/baileys@0.3.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q4x-h5q4-8q8m, MAL-2026-14074",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrp9872@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fc8q-7g22-2mh2, MAL-2026-14085",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrp987@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wgc4-hm5f-vjx5, MAL-2025-47118",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrprce@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-92qp-pfvr-6g37, MAL-2025-47121",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrp9871@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-969j-h3jv-fm8w, MAL-2026-14084",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrp9873@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w724-4x2r-53qj, MAL-2025-47119",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "hrprce123@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c4px-g543-q4w8, MAL-2025-47122",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.11",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.13",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tecken@0.1.15",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gxg-7rff-vvmx, MAL-2026-3397",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@xcxcxxx/gsap3@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8wx4-v6f9-47c4, MAL-2025-6337",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@xcxcxxx/gsap3@99.10.90",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8wx4-v6f9-47c4, MAL-2025-6337",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@yaqiguo/dnstest@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5wh2-3gc6-6x5p, MAL-2025-6879",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@yaqiguo/dnstest@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5wh2-3gc6-6x5p, MAL-2025-6879",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@yaqiguo/dnstest@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5wh2-3gc6-6x5p, MAL-2025-6879",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@woody-mrs-potato/utils-banking@1.0.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6fcx-hj63-4h9j, MAL-2024-10227",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1094@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mmwr-73mc-579v, MAL-2026-14090",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "npm_pkg_1093@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24g-rf73-rmgw, MAL-2026-14089",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "internal-utils-bronxi@100.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gvfq-fvj7-q82f, MAL-2025-3132",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "internal-utils-bronxi@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gvfq-fvj7-q82f, MAL-2025-3132",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "internal-utils-bronxi@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gvfq-fvj7-q82f, MAL-2025-3132",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rimo-env-validator@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vxrx-29h5-w69f, MAL-2026-14092",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rimo-env-validator@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vxrx-29h5-w69f, MAL-2026-14092",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "utils-bundle@8.1.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w78x-223m-8f3j, MAL-2026-14098",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-cranberry-wishlist-933@2.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6hmg-xwg7-v3gq, MAL-2026-14079",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-cranberry-wishlist-933@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6hmg-xwg7-v3gq, MAL-2026-14079",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-cranberry-wishlist-933@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6hmg-xwg7-v3gq, MAL-2026-14079",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-caroling-stocking-510@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggp7-664r-m55m, MAL-2026-14078",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-caroling-stocking-510@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggp7-664r-m55m, MAL-2026-14078",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-caroling-stocking-510@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggp7-664r-m55m, MAL-2026-14078",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-caroling-stocking-510@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggp7-664r-m55m, MAL-2026-14078",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "elf-stats-caroling-stocking-510@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ggp7-664r-m55m, MAL-2026-14078",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@mep-exp/api-tools@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q2pc-rvw2-7v5m, MAL-2026-6183",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "thepackagethatworks_@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9vjx-6rvc-2p3c, MAL-2026-14097",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "thepackagethatworks_@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9vjx-6rvc-2p3c, MAL-2026-14097",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "thepackagethatworks_@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9vjx-6rvc-2p3c, MAL-2026-14097",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tether-base@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gwg8-p6mg-cp7g, MAL-2026-3033",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "google-logging-utils-internal@1.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jcx5-6w99-v44p, MAL-2026-14082",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "google-logging-utils-internal@9.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jcx5-6w99-v44p, MAL-2026-14082",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "google-logging-utils-internal@1.1.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jcx5-6w99-v44p, MAL-2026-14082",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@99.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@100.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@101.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@102.999.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@103.999.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@199.99.100",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@200.99.100",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "money-badger-open-rpc@201.99.100",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6gf-368m-9pvf, MAL-2026-3353",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "mw-filesystem-events-nodream-es6@0.0.32",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2cr5-3f7h-7vv6, MAL-2026-14087",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rtms-manager@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5cq2-xfqr-cmvg, MAL-2026-2862",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rtms-manager@1.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5cq2-xfqr-cmvg, MAL-2026-2862",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rtms-manager@1.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5cq2-xfqr-cmvg, MAL-2026-2862",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rtms-manager-dev@1.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-88hw-5c75-wg74, MAL-2026-14093",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "rtms-manager-dev@1.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-88hw-5c75-wg74, MAL-2026-14093",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fanduel@100.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mjhc-2rfg-vh93, MAL-2026-3334",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fanduel@100.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mjhc-2rfg-vh93, MAL-2026-3334",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fanduel@100.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mjhc-2rfg-vh93, MAL-2026-3334",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fanduel@100.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mjhc-2rfg-vh93, MAL-2026-3334",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fatfingers-mybigpackage@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q3pj-88g8-46rf, MAL-2025-4558",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "fatfingers-vroooom@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6rrv-rg7x-p6vh, MAL-2025-3964",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "expect-bundle@6.3.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f24w-wg35-f2f2, MAL-2026-14080",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "events-web@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m3f7-rvwj-fh8v, MAL-2025-6284",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "events-web@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m3f7-rvwj-fh8v, MAL-2025-6284",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "nolimitcity@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ph66-8fq6-fjpg, MAL-2026-14088",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "saps_secplayground_npm_ai@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-637f-42g5-85p4, MAL-2026-14094",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@telekom-wfa/auth-core@99.9.11",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gg3w-7mmm-rv8g, MAL-2026-2523",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "@telekom-wfa/auth-core@99.9.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gg3w-7mmm-rv8g, MAL-2026-2523",
+      "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "tokocrytodev@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m482-gfg4-jcp7, MAL-2026-13687",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "@workoscalif/sudoku@1.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g32-6v5x-wx9c, MAL-2026-13366",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "@workoscalif/sudoku@1.5.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g32-6v5x-wx9c, MAL-2026-13366",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "@workoscalif/sudoku@1.5.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g32-6v5x-wx9c, MAL-2026-13366",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "@workoscalif/sudoku@1.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g32-6v5x-wx9c, MAL-2026-13366",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "@workoscalif/sudoku@1.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g32-6v5x-wx9c, MAL-2026-13366",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "core-tailwindcss-utility@3.7.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4j6f-r8pw-g5w5, MAL-2026-14118",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "bcc-design@9999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v36x-48h2-hc4f, MAL-2026-14117",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "bcc-design-icons@9999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-73q2-99qx-v576, MAL-2026-14119",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "blastradar",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-pp9x-4g56-7322",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "ulebkit",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-w4vj-4cxr-299x",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "sui-move-graphql",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-xgmm-vq93-f5vx",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "runtime-health@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fg74-5f33-c553, MAL-2026-14116",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "runtime-health@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fg74-5f33-c553, MAL-2026-14116",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "runtime-health@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fg74-5f33-c553, MAL-2026-14116",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "pypi:socks5901@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3rcw-hq5f-gvrg, MAL-2026-14100",
+      "firstSeen": "2026-08-18"
+    },
+    {
+      "type": "package",
+      "value": "sui-move-rpc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-342c-493g-f389, MAL-2026-14113",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "leb128x",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p98p-7p39-8v79, MAL-2026-14109",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "sui-gql-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rg66-wjvq-h8xm, MAL-2026-14112",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "bcs-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5w7j-92p9-p5h4, MAL-2026-14105",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "bucket-protocol-sdk-v2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23pf-2cqf-xh64, MAL-2026-4502",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "bnpl-blocks-independent-bnpl-search",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v43r-98qv-2v96, MAL-2026-12341",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "reseller-app",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x3qj-pjpv-x4c6, MAL-2026-14110",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "bolt-delivery-menu-app",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pfrq-994m-rxrr, MAL-2026-4499",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "gator-client",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jrf3-vfx4-8vqh, MAL-2026-4569",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "club-sauce",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vm8j-8r82-992m, MAL-2026-14107",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "rendezvous-js",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q26f-8xxj-pwwf, MAL-2026-4662",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "banana-stand",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m27g-5q57-x86r, MAL-2026-4495",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "awesome-ts-jest",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7xr4-v32m-4h8x, MAL-2026-10188",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "async-mutex-v2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f829-g84r-2fq7, MAL-2026-10582",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "arc-diag-util",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wx2g-gmxq-vvqv, MAL-2026-4481",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "anthropic-setup",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6mwf-mqp4-2f69, MAL-2026-12510",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "sugarball-cli",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5v79-352p-4p25, MAL-2026-14111",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "agentsync-pkg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6h7h-cf78-vgc2, MAL-2026-6443",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "disksweep",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-257r-h9h2-65xg, MAL-2026-6535",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "cloud-agen-bot",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q7j9-fgrw-6553, MAL-2026-14106",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "agent-bot-api",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wg39-r7v9-mwfc, MAL-2026-12138",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "junofficial-userbot",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5x9q-34mv-j8p3, MAL-2026-14108",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "userbotjs",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cpx6-fqq8-2xm5, MAL-2026-14114",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "userbotjs-jun",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hvvr-852c-qpw8, MAL-2026-14115",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "@junofficial/baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6mr4-v6qj-924j, MAL-2026-14101",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "autoai",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8prp-jj56-c277, MAL-2026-14104",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "a.poltoradnev-package-a",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g9p8-9jj7-5ghf, MAL-2026-14103",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "a.poltoradnev-package-c",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6grf-fjh8-82c7, MAL-2026-12127",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "@zynkit/probe",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2pxg-2qw7-jff9, MAL-2026-6314",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "@zizie071/libsignal-node",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3425-gc6h-mm9j, MAL-2026-4473",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "@siwatfa/yorn",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3rxm-r82c-h2f9, MAL-2026-14102",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "pfp-forms-sme-loan@20.2.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-686f-p2j6-prfg, MAL-2026-12414",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "epic-sso@0.0.1-security",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cwhw-mm6w-rcj2, MAL-2025-49192",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "checkout-desktop-total@35.6.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23pp-f6q9-c2ch, MAL-2026-12561",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "epic-common-node@0.0.1-security",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m36g-mhjr-ww2c, MAL-2025-49125",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "epic-common@0.0.1-security",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5ffc-9gj9-xfvj, MAL-2025-49124",
+      "firstSeen": "2026-08-17"
+    },
+    {
+      "type": "package",
+      "value": "agentgui@1.0.1127",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "NullReceiver",
+      "campaign": "NullReceiver",
+      "source": "Sonatype Research Labs, OpenSourceMalware",
+      "firstSeen": "2026-08-10"
+    },
+    {
+      "type": "package",
+      "value": "scrollbar-hide-plugin",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "NullReceiver",
+      "campaign": "NullReceiver",
+      "source": "OpenSourceMalware",
+      "firstSeen": "2026-08-05"
+    },
+    {
+      "type": "package",
+      "value": "tailwind-animation-founder",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "NullReceiver",
+      "campaign": "NullReceiver",
+      "source": "OpenSourceMalware",
+      "firstSeen": "2026-08-05"
     }
   ]
 }

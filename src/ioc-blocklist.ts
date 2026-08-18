@@ -1200,6 +1200,26 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
   // Solana code.
   "6ExrZayPZzMMSnszc42cH81DpuKT8FhCX9H6Sesn6rpz":
     "GlassWASM Solana dead-drop C2 wallet, commands carried in SPL Memo (June 2026)",
+
+  // NullReceiver / DPRK "Contagious Interview" npm wave (OpenSourceMalware,
+  // 2026-08-05; corroborated by Sonatype Research Labs, 2026-08-10). The loader
+  // queries Ethereum for the attacker wallet's latest OUTBOUND transfer and reads
+  // the C2 IP straight out of the recipient address of a zero-value, zero-data
+  // transaction, so nothing is ever written to transaction data and there is no
+  // contract to look at. Both halves of that pair are listed: the wallet is what
+  // the payload hardcodes, the recipient is what the technique is named for.
+  //
+  // The recipient address self-verifies against the C2 IP already pinned in
+  // KNOWN_C2_IPS: its first four bytes a6-58-86-3e decode to 166[.]88[.]134[.]62,
+  // and the trailing bytes 68656c6c6f6970626f742121 are ASCII "helloipbot!!".
+  //
+  // The two public Ethereum RPC endpoints the payload reads through (1rpc[.]io and
+  // eth[.]drpc[.]org) are shared infrastructure and are deliberately NOT listed, for
+  // the same reason as the ChainDrop entry above.
+  "0xa322e5f3d311d3080e6f0121063e9adc2490ef1a":
+    "NullReceiver DPRK npm wave: hardcoded attacker wallet whose outbound transfer carries the C2 address (August 2026)",
+  "0xa658863ea658863e68656c6c6f6970626f742121":
+    "NullReceiver DPRK npm wave: dead-drop recipient address encoding C2 IP 166.88.134.62 plus the ASCII tag helloipbot!! (August 2026)",
 };
 
 /**
@@ -1315,6 +1335,17 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "dakumangalsingh": {
     versions: ["1.2.0", "2.0.1"],
     description: "dakumangalsingh: malicious npm package versions (GHSA-h2fc-hhv7-4596, Aug 2026)",
+  },
+
+  // NullReceiver / DPRK "Contagious Interview" npm wave (Sonatype Research Labs,
+  // 2026-08-10). A real multi-agent ACP client with 1,110 published versions whose
+  // publisher was compromised, so this is version-pinned to the single trojanized
+  // release and the name is NOT added to any pattern table. 1.0.1127 happens to be
+  // the current `latest` tag, which is exactly why a name block would be wrong: the
+  // 1,109 releases before it are clean and still resolve for anyone on a range.
+  "agentgui": {
+    versions: ["1.0.1127"],
+    description: "agentgui publisher compromise: NullReceiver Ethereum-resolved C2 loader (Aug 2026)",
   },
   "ua-parser-js": {
     versions: ["0.7.29", "0.8.0", "1.0.0"],

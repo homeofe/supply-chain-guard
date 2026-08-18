@@ -118,6 +118,98 @@ anything, since nothing in CI reports it.
 
 ---
 
+## Threat-intel sweep 2026-08-18
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+Branch `threat-intel/2026-08-18`, unreleased.
+
+**The 2026-08-14 backfill question is answered, and it did not need the importer
+change.** It was carried as "NEEDS A DECISION" from the v5.26.3 sweep and repeated
+in the two after it, framed as a choice between importing all 5,249 entries or
+losing the tail behind them, because the importer cannot exclude a scope. There is
+a third option and it is the one taken here: run the explicit day slice, take the
+importer's own selection, and drop the one dead scope from it before writing. The
+scope split was re-derived rather than inherited:
+
+- The day slice maps to 4,550 non-duplicate entries. 4,363 are `@zalastax/nolb-*`
+  and 187 are everything else.
+- A fresh 25-name sample of the zalastax scope is 25/25 dead: sole published version
+  `0.0.1-security`, npm's security-holding placeholder, published 2023-02-01. Four of
+  the 25 carry a second version, and `latest` still resolves to the placeholder on
+  all four. That is the fourth independent sample across four sweeps to return the
+  same answer.
+- All 187 outside that scope are now in the feed. Of a 25-name sample, 5 are live and
+  installable, and the interesting ones are the `@zapier/*` set: three of those are
+  live packages still publishing, correctly version-pinned by the importer. No bare
+  name IOC in the 187 lands on a live legitimate package - the 43 bare names are the
+  `@zittertea/*` gibberish-latin farm plus `@zyro-inc/eslint-config-zyro`.
+
+So the backlog warning will keep firing on the default rolling window until the
+spike ages out around 2026-08-28, but **the queue behind the zalastax block is now
+empty**, and that is measured rather than argued: a dry run of the default window
+after these three slices reports 4,363 entries still queued, 250 selected plus 4,113
+remaining, and every name in the selected head is `@zalastax/nolb-*`. 4,363 is
+exactly the size of that scope, so nothing else is left in the window. A future run
+can read the warning as noise until the spike ages out. The importer improvement
+noted below is still worth having; it is now a cost problem rather than a coverage
+risk.
+
+The other two slices were routine: 6 entries for 2026-08-04 to 2026-08-13 (the
+window was already almost fully drained by prior sweeps) and 46 for 2026-08-15 to
+2026-08-18. 239 package IOCs total, no page cap hit, nothing unmappable, nothing
+left behind `--limit` outside the dead scope.
+
+Hand-added, since advisory databases publish package coordinates and nothing else -
+all NullReceiver / DPRK "Contagious Interview" (OpenSourceMalware 2026-08-05,
+corroborated by Sonatype Research Labs 2026-08-10 and The Hacker News):
+
+- Two blockchain addresses in `KNOWN_C2_WALLETS`. The campaign was already partly
+  covered: its C2 IP `166[.]88[.]134[.]62` is pinned from the Joyfill/PolinRider
+  wave, and 8 of its 13 packages were already in the feed. The dead-drop pair was
+  the gap. The recipient address needs no external corroboration to trust: its
+  first four bytes decode to the C2 IP already in the blocklist and its trailing
+  bytes are ASCII `helloipbot!!`, so it validates against data this repo already
+  holds. The attacker wallet was matched character-for-character across three
+  independent write-ups, which is the guard against a WebFetch-mangled hex string.
+- Three packages no advisory database carries. `agentgui@1.0.1127` in both the feed
+  and `KNOWN_BAD_NPM_VERSIONS`: 1,110 published releases, and the trojanized one is
+  the current `latest` tag, so a name block would flag 1,109 clean releases.
+  `scrollbar-hide-plugin` and `tailwind-animation-founder` are unpublished with zero
+  surviving versions and no legitimate history, so those are name blocks.
+
+Deliberately NOT added, each for a reason worth keeping:
+
+- The RPC pool `1rpc[.]io` and `eth[.]drpc[.]org`. Shared public Ethereum
+  infrastructure; listing them flags every legitimate web3 repository. A negative
+  test asserts they stay unflagged.
+- The npm publisher handles `npmuser1101` and `npmuser3002`.
+  `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` matches on `github.com/<account>`, so an npm-only
+  handle put there would never fire and would only mislead the next reader. There is
+  no npm-publisher collection to put them in.
+- The hardcoded loader tag `A10-npm3!`. It would be a valid anchored literal, but
+  adding to a pattern table is a scanner-behaviour change and the two wallets already
+  cover the campaign. Left for a considered change.
+
+### Open for the owner
+
+- **The Sui/Move cluster has no vendor write-up yet.** `sui-move-rpc`,
+  `sui-gql-core`, `sui-move-graphql`, `bcs-core`, `leb128x`, `sui-gql-lite`,
+  `bcs-mini`, `bucket-protocol-sdk-v2` and friends were published across 2026-08-06,
+  2026-08-17 and 2026-08-18 and are in the feed on advisory data alone. They are
+  Sui blockchain developer-tooling lures and the shape suggests one operator. If a
+  vendor publishes atomic indicators for it in the next few days, that is the
+  enrichment this window is missing, and it is worth a targeted look on the next run
+  rather than waiting for the generic sweep to surface it.
+- **The importer still cannot exclude a scope**, so the manual step used here would
+  be needed again for the next bulk backfill. A `--exclude-scope` flag, or a
+  registry-liveness filter dropping names that resolve to a holding stub before they
+  are queued, would remove the manual step entirely. Still a considered change to the
+  importer and still outside what the daily job should decide.
+- **No decision is needed to merge this branch.** Both points above are about future
+  runs.
+
+---
+
 ## Release v5.26.5 (2026-08-17)
 
 Model: claude-opus-5. Contents: the 2026-08-17 threat-intel sweep, detailed below.
