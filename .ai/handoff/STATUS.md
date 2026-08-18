@@ -118,6 +118,29 @@ anything, since nothing in CI reports it.
 
 ---
 
+## Release v5.26.6 (2026-08-18)
+
+Model: claude-opus-5. Contents: the 2026-08-18 threat-intel sweep, detailed below,
+plus the `@types/node` 26.1.2 to 26.2.0 dev-dependency bump.
+
+PATCH. The release adds feed and blocklist data plus one test block: no new rule, no
+pattern-table change, no change to what the scanner does. Same call as v5.26.2
+through v5.26.5, and the reasoning recorded there still applies.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+and the data landed in one PR rather than the usual two. One merge, one CI settle,
+then the tag.
+
+The dependabot bump was pulled into this commit rather than merged as its own PR, and
+PR #147 was closed explicitly. Two reasons, both already recorded: merging back to
+back cancels the previous commit's CI run, after which the deploy gate correctly
+refuses a commit whose CI concluded `cancelled`; and the repo invariant is that a
+released version leaves zero open pull requests. The bump is dev-only
+(`@types/node`), so it cannot affect the published artefact.
+
+---
+
 ## Threat-intel sweep 2026-08-18
 
 Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.

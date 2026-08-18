@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.26.6] - 2026-08-18
+
 ### Added
 
 - **239 package IOCs imported from the GitHub Advisory Database**, taken as three
@@ -50,6 +52,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   version is `0.0.1-security`, and the 187 entries outside that scope are now all in
   the feed. The dead scope is not imported, so `feed.json` stays at its current size
   rather than growing by roughly a third to carry names that cannot be installed.
+- `@types/node` from 26.1.2 to 26.2.0 (dev dependency). Pulled into this release
+  rather than merged separately, so the release leaves no open pull request.
 
 ## [5.26.5] - 2026-08-17
 
@@ -3429,7 +3433,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.26.5...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.26.6...HEAD
+[5.26.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.6
 [5.26.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.5
 [5.26.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.4
 [5.26.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.3

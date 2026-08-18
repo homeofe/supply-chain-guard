@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (134, newest first)
+## Releases (135, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.26.6 | 2026-08-18 | 239 package IOCs imported from the GitHub Advisory Database, taken as three |
 | v5.26.5 | 2026-08-17 | 250 package IOCs imported from the GitHub Advisory Database, 234 of them |
 | v5.26.4 | 2026-08-16 | 250 package IOCs imported from the GitHub Advisory Database, 223 of them |
 | v5.26.3 | 2026-08-15 | 250 package IOCs imported from the GitHub Advisory Database, 173 of them |
