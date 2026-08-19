@@ -54,6 +54,39 @@ real loss case:
 A tip newer than `mergedAt` means a commit exists that no PR knows about. That is
 the only scenario in which deleting loses work.
 
+### A duplicate CI run can block the merge while `gh pr checks` reports green
+
+Hit while cutting v5.26.7 on 2026-08-19. Pushing the release commit onto the open
+sweep PR left the head commit with **two** `CI` runs from the same `pull_request`
+event, created in the same second. The workflow's concurrency group cancelled one,
+and both stayed attached as check runs named `Build and Test`. Branch protection
+takes the latest run per check name, saw a cancelled required check, and refused:
+
+    X Pull request #150 is not mergeable: the base branch policy prohibits the merge.
+
+`gh pr checks 150 --watch` said green throughout, because it reports the run it
+followed rather than every run on the commit. The twin is only visible per commit:
+
+    gh api repos/homeofe/supply-chain-guard/commits/<sha>/check-runs \
+      --jq '.check_runs[] | "\(.name): \(.status)/\(.conclusion)"'
+    gh run list --commit <sha> --json databaseId,name,event,status,conclusion
+
+This is the same failure mode as the existing "do not merge back to back" rule, where
+a cancelled CI conclusion blocks the deploy gate. It is worth writing down separately
+because it fires from a **single** PR with no second merge involved, so that rule does
+not cover it and the protection error reads as a mystery.
+
+The fix is to re-run the cancelled twin, not to work around the gate:
+
+    gh run rerun <cancelled-run-id>
+    gh run watch <cancelled-run-id> --exit-status
+    gh pr view <n> --json mergeStateStatus,mergeable    # BLOCKED -> CLEAN
+
+Do NOT reach for `gh pr merge --admin`: protection here has `enforce_admins: true`
+deliberately, and an empty commit to re-trigger CI only moves the head and can
+reproduce the same duplicate. The merge went through normally once the re-run
+concluded success.
+
 ### Design decision due before v6: the floating major branch, and Marketplace
 
 Decide before v6 is cut, not during. Also captured as a memory entry outside the
