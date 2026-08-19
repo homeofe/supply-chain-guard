@@ -1,7 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-19 (threat-intel sweep, unreleased; latest release is v5.26.6).
-> This is one current snapshot, not a session
+> Updated 2026-08-19 (release v5.26.7). This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
 
@@ -119,10 +118,27 @@ anything, since nothing in CI reports it.
 
 ---
 
+## Release v5.26.7 (2026-08-19)
+
+Model: claude-opus-5. Contents: the 2026-08-19 threat-intel sweep, detailed below.
+Nothing else - no dependency bumps were open at cut time.
+
+PATCH. The release adds feed and blocklist data plus one test block: no new rule, no
+pattern-table change, no change to what the scanner does. Same call as v5.26.2
+through v5.26.6, and the reasoning recorded there still applies.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+and the data landed in one PR rather than the usual two: PR #150 was opened as the
+sweep, then retitled once the release commit went on top of it. One merge, one CI
+settle, then the tag.
+
+---
+
 ## Threat-intel sweep 2026-08-19
 
 Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
-No version bump; opened as a PR for the owner to review and cut.
+Shipped as v5.26.7 (PR #150), together with the release commit.
 
 **205 package IOCs imported, as two explicit slices.** The default rolling window
 still reports the 2026-08-14 spike, so the same approach as the 2026-08-18 sweep was
