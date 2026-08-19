@@ -919,6 +919,13 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668": "ChainDrop setup.mjs preinstall dropper, wave 1 (SHA256)",
   "fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb": "ChainDrop setup.mjs preinstall dropper, later waves (SHA256)",
   "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc": "ChainDrop stage-2 credential stealer, Math_Symbol.js / math_init.js (SHA256)",
+  // A third dropper variant, catalogued by Unit 42 as "setup.mjs.malicious" - the
+  // quarantined copy of the same preinstall dropper, distinct from both waves above.
+  // Single-source (Unit 42): no other vendor has published it, so the feed entry
+  // carries a reduced confidence. The digest round-tripped as a well-formed 64-char
+  // hex string and was re-confirmed by exact-string search before ingest, which is
+  // what a fetched hash needs before it can be trusted.
+  "b27b82afa5f15512f3856e549fb83d873fd0049759a4b62ce64c8d7d4dc2c678": "ChainDrop setup.mjs preinstall dropper, third variant / setup.mjs.malicious (SHA256)",
   // Later re-obfuscation waves and the two auxiliary components, published by
   // Datadog and corroborated one by one via exact-string search (op-c.net's
   // ChainDrop IOC list carries the first three; the runner memory dumper also

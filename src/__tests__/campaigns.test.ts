@@ -3837,6 +3837,17 @@ describe("Campaign Signatures", () => {
       expect(hashes.length, "all four later-wave hashes must be flagged").toBe(4);
     });
 
+    it("flags the third preinstall-dropper variant", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "dropper.js"),
+        'const q = "b27b82afa5f15512f3856e549fb83d873fd0049759a4b62ce64c8d7d4dc2c678";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hashes = report.findings.filter((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(hashes.length, "the setup.mjs.malicious variant must be flagged").toBe(1);
+    });
+
     it("flags the GitHub exfiltration dead-drop markers", async () => {
       fs.writeFileSync(
         path.join(tempDir, "exfil.js"),

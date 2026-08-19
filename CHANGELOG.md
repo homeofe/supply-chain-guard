@@ -7,6 +7,36 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **205 package IOCs imported from the GitHub Advisory Database**, taken as two
+  explicit date slices (2026-08-15 to 2026-08-19 and 2026-08-05 to 2026-08-13)
+  rather than one rolling window, so that the 2026-08-14 bulk backfill is excluded
+  by construction. The batch is dominated by a TypeScript typosquat farm published
+  2026-08-18 and 2026-08-19 (`typescirpt-cli`, `typesript-core`, `typscript-core`,
+  `tyepescript-cli` and 20 more spellings of the same two names), a set of
+  Sui/Ethereum blockchain-tooling lures (`sui-graphql-rpc`, `sui-gql-rpc`,
+  `eth-batcher`, `agora402-payment-utils`, `twapfetch`) and several small scoped
+  clusters (`@sarex-team/*`, `@finaxis/common-js`, `@oyo_tech/oyochat_user`). Of the
+  140 distinct names, 14 are still installable on the registry; the rest are already
+  npm security-holding stubs or 404, and are carried for the historical record.
+- **A third ChainDrop preinstall-dropper hash**, catalogued by Unit 42 as
+  `setup.mjs.malicious` and distinct from the two dropper waves already pinned. Added
+  to `KNOWN_MALICIOUS_HASHES` and to the bundled feed at reduced confidence, since
+  Unit 42 is the only vendor to publish it. The digest was re-confirmed by
+  exact-string search before ingest rather than trusted from the fetched page.
+
+### Changed
+
+- The 4,363 `@zalastax/nolb-*` entries sitting in the import window are still not
+  imported. A 30-name sample was probed against the registry and all 30 are npm
+  security-holding stubs with maintainer `npm`, so importing them would grow the feed
+  and `feed.json` to catch names nobody can install. The two Cloudflare edge IPs and
+  the `tcsbank[.]ru` / `cloudpayments[.]ru` domains that appear in current ChainDrop
+  and Flooding Dropper write-ups are likewise deliberately absent: the first are
+  shared infrastructure and the second are legitimate Russian financial services
+  named as targets, not as attacker infrastructure.
+
 ## [5.26.6] - 2026-08-18
 
 ### Added

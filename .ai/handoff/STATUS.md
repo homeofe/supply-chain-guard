@@ -1,6 +1,7 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-18 (release v5.26.6). This is one current snapshot, not a session
+> Updated 2026-08-19 (threat-intel sweep, unreleased; latest release is v5.26.6).
+> This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
 
@@ -115,6 +116,88 @@ verify by hand that the listing still resolves, that the `uses:` line it adverti
 matches the chosen scheme, and that the checkbox is ticked on the release that
 should be the public entry point. Confirm the current listing state before changing
 anything, since nothing in CI reports it.
+
+---
+
+## Threat-intel sweep 2026-08-19
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+No version bump; opened as a PR for the owner to review and cut.
+
+**205 package IOCs imported, as two explicit slices.** The default rolling window
+still reports the 2026-08-14 spike, so the same approach as the 2026-08-18 sweep was
+used: run explicit day slices that exclude 2026-08-14 by construction, rather than
+importing the block or accepting the age-out warning. The two slices were
+`--since 2026-08-15 --until 2026-08-19` (204 entries) and
+`--since 2026-08-05 --until 2026-08-13` (1 entry, `big-tss@5.0.4`). Explicit slices
+are exempt from the undrainable check, so no `--allow-backlog` was needed and
+nothing was silently dropped.
+
+The split was re-derived rather than inherited, by dumping the full window with
+`--dry-run --limit 100000 --json` and grouping by `firstSeen` and scope:
+
+- 4,568 non-duplicate entries in the window. 4,363 are `@zalastax/nolb-*`, all dated
+  2026-08-14; the remaining 205 are dated 2026-08-07, 08-15, 08-18 and 08-19. The
+  two sets do not overlap on any day, which is what makes the date slice a clean
+  substitute for the scope filter the importer does not have.
+- A fresh 30-name sample of the zalastax scope is 30/30 dead: maintainer `npm`,
+  description "security holding package". That is the fifth independent sample
+  across five sweeps returning the same answer.
+- All 140 distinct names in the imported 205 were probed against the registry, not
+  just sampled: 14 live, 42 holding stubs, 69 with no published versions, 15 hard
+  404. The live set is `chaikit`, `twapfetch`, `sw-pluginer`, `txs-lib-sdk`,
+  `timed-assess`, `streak-key-lib`, `streak-cal-core`, `ai-texts`,
+  `agora402-payment-utils`, `bqq1`, `ts-rand-sdk`, `big-tss`,
+  `@mohamed_nowisar/depconf-canary-test` and PyPI `infogram-bot`. Every one of them
+  is version-pinned by the importer rather than blocked by bare name.
+
+**One non-package indicator added by hand.** Unit 42's ChainDrop analysis catalogues
+a third preinstall-dropper artefact, `setup.mjs.malicious`, whose SHA-256 was not in
+`KNOWN_MALICIOUS_HASHES` alongside the two dropper waves already pinned. Added there
+and to the bundled feed at confidence 0.85, since Unit 42 is the only vendor to
+publish it; the digest was re-confirmed by exact-string search before ingest rather
+than trusted from the fetched page, which is the standing rule for a fetched hash. A
+positive test was added to `campaigns.test.ts`.
+
+**Everything else in this week's write-ups was already covered.** Checked and found
+present: the ChainDrop domain set (`npm-cache[.]com`, `pypi-get[.]com`,
+`js-mirror[.]com`, `awqhnjewqjkl[.]icu`), the Ethereum resolver contract, the
+`thebeautifulmarchoftime` / `thebeautifulsnadsoftime` dead-drop markers, the
+`gh-token-monitor` persistence chain, the Flooding Dropper / WEL1DROPPER hosts and
+payload hashes, the Alibaba dev-toolchain RAT cluster, the LiteLLM and telnyx PyPI
+compromises, and TrapDoor. The enrichment step found nothing new beyond the one hash.
+
+**Four indicators were deliberately NOT ingested,** and the reasoning is recorded
+here so a later sweep does not re-add them as an oversight:
+
+- `104[.]21[.]91[.]101` and `172[.]67[.]215[.]154`, listed by Unit 42 as ChainDrop
+  IPs, are Cloudflare edge addresses. `ioc-blocklist.ts` already excludes the
+  ChainDrop router IP for exactly this reason, and blocking a Cloudflare edge IP
+  would flag arbitrary legitimate infrastructure.
+- `tcsbank[.]ru` and `cloudpayments[.]ru`, which appear in the Flooding Dropper
+  write-ups, are a real bank and a real payment processor. They are named as
+  targets, not as attacker infrastructure.
+- The ChainDrop contract-owner wallet and the Binance deposit address it pivots
+  through were left out too. `KNOWN_C2_WALLETS` is matched against scanned source,
+  and neither address is carried by the payload: the resolver contract is what the
+  stage-2 code actually reads, and it is already listed. The Binance address belongs
+  to the exchange in any case.
+
+### Observation for the owner, not a blocker
+
+Two of the imported names are self-described security-research probes:
+`@mohamed_nowisar/depconf-canary-test` (still live, description "token diagnostics -
+will be deleted") and `mtslink-depconf-probe-profileusername`. GitHub classified both
+as malware (CWE-506) and the importer took them on that basis, which is the correct
+default: this job does not overrule advisory classification by hand. Worth knowing
+that the feed now carries a small number of entries whose author would describe them
+as benign. No action taken.
+
+### Still true from the previous sweep
+
+The default rolling window will keep reporting the zalastax block until it ages out
+around 2026-08-28. The day-slice workaround handles it without an importer change,
+so the `--exclude-scope` idea remains unbuilt and unneeded for now.
 
 ---
 
