@@ -151,6 +151,58 @@ anything, since nothing in CI reports it.
 
 ---
 
+## Lifecycle-hook coverage gap (2026-08-19, unreleased, branch fix/npm-scanner-lifecycle-hooks)
+
+No version bump; the release PR is separate as usual.
+
+**The gap was real and slightly larger than reported.** The finding named one
+four-name `dangerousHooks` list in `npm-scanner.ts`. There were two identical
+copies: `npm-scanner.ts` `checkPackageScripts` (the `scg npm <pkg>` registry
+path) and `scanner.ts` `checkPackageJson` (the directory path), both listing
+`preinstall`, `postinstall`, `preuninstall`, `postuninstall`. A third list in
+`install-hook-scanner.ts` carried six names and was already correct about
+`install` and `prepare`, which is why the miss was easy to overlook: an
+`"install": "curl ... | bash"` in a directory scan still produced
+`INSTALL_HOOK_DOWNLOAD_EXEC`, just never a `SCRIPT_CURL_EXEC`. On the registry
+path it produced nothing at all.
+
+All three now read one exported constant, `AUTO_RUN_LIFECYCLE_HOOKS`, in
+`patterns.ts`. Fixing only the reported copy would have left the second one
+behind, which is worse than not fixing it, because the rule then looks covered.
+
+**The precision decision, which is the part worth re-reading.** The full set of
+hooks npm can run on its own is larger than the set worth scanning.
+`prepublishOnly` is deliberately excluded: it runs only on `npm publish`, never
+on any install, so it cannot reach a consumer, and npm documents it as the home
+for build steps (this repo keeps `npm run build` there). Scanning it would report
+release tooling as install-time risk, which is how a scanner gets switched off.
+`prepack`/`postpack` are out for the same reason. `prepublish` is IN despite
+being deprecated, because it still fires on a bare `npm install` in the package's
+own directory, which is exactly what a directory scan describes.
+
+The added hooks were NOT given a reduced severity. Severity here comes from the
+SUSPICIOUS_SCRIPTS entry that matched, `prepare` genuinely executes for a
+consumer whenever the dependency resolves from a git URL rather than a registry
+tarball, and the `prepare` wrappers were included so that moving a payload from
+`prepare` to `postprepare` is not a one-word evasion.
+
+**Verification.** 44 new tests in `lifecycle-hook-coverage.test.ts`: 13
+new-hook detections across all three paths, 4 regressions on the hooks that
+already worked, 26 pinning the benign and deliberately-excluded cases, 1 pinning
+that the install-hook extractor and analyzer read the same list. Mutation proof:
+deleting the single line `"install",` from `AUTO_RUN_LIFECYCLE_HOOKS` turns
+exactly the two `install` tests red; reverting the whole constant to its previous
+four names turns exactly the 13 new-hook detections red and leaves the other 31
+green. `precision-corpus`, `rule-precision`, `precision-pattern-regressions`,
+`persistence-recall` and `self-scan-recognition` (147 tests) are unchanged, so
+the wider hook set adds no false positive on the corpus. Per repo practice the
+full suite was not run on Windows; Linux CI carries that verdict.
+
+**One honest limit.** The test that asserts the extractor and the analyzer agree
+derives its expectation from `AUTO_RUN_LIFECYCLE_HOOKS`, so it stays green under
+both mutations. It pins parity between the two functions, not the contents of the
+list. The 13 behavioural tests are what pin the contents.
+
 ## Release v5.26.7 (2026-08-19)
 
 Model: claude-opus-5. Contents: the 2026-08-19 threat-intel sweep, detailed below.

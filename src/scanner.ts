@@ -15,6 +15,7 @@ import {
   CAMPAIGN_PATTERNS,
   SUSPICIOUS_FILES,
   SUSPICIOUS_SCRIPTS,
+  AUTO_RUN_LIFECYCLE_HOOKS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
@@ -977,9 +978,10 @@ function checkPackageJson(
   const scripts = pkg.scripts as Record<string, string> | undefined;
   if (!scripts) return;
 
-  const dangerousHooks = ["preinstall", "postinstall", "preuninstall", "postuninstall"];
-
-  for (const hook of dangerousHooks) {
+  // Shared with npm-scanner.ts and install-hook-scanner.ts so the three paths
+  // cannot drift apart again; see AUTO_RUN_LIFECYCLE_HOOKS for why each name
+  // is in the list and why prepublishOnly is not.
+  for (const hook of AUTO_RUN_LIFECYCLE_HOOKS) {
     const script = scripts[hook];
     if (!script) continue;
 

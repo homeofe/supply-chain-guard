@@ -15,6 +15,7 @@ import { extractTarGz } from "./archive-extractor.js";
 import {
   FILE_PATTERNS,
   SUSPICIOUS_SCRIPTS,
+  AUTO_RUN_LIFECYCLE_HOOKS,
   MALICIOUS_PACKAGE_PATTERNS,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
@@ -71,7 +72,7 @@ interface NpmRegistryResponse {
   versions?: Record<string, NpmVersionData>;
 }
 
-interface NpmVersionData {
+export interface NpmVersionData {
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -263,17 +264,21 @@ function checkPackageName(name: string, findings: Finding[]): void {
 
 /**
  * Check package.json scripts for suspicious entries.
+ *
+ * Exported for tests: the rest of this path needs a live registry fetch, so
+ * without a direct handle the hook coverage can only be asserted indirectly.
  */
-function checkPackageScripts(
+export function checkPackageScripts(
   pkg: NpmVersionData,
   findings: Finding[],
 ): void {
   const scripts = pkg.scripts;
   if (!scripts) return;
 
-  const dangerousHooks = ["preinstall", "postinstall", "preuninstall", "postuninstall"];
-
-  for (const hook of dangerousHooks) {
+  // Shared with scanner.ts and install-hook-scanner.ts so the three paths
+  // cannot drift apart again; see AUTO_RUN_LIFECYCLE_HOOKS for why each name
+  // is in the list and why prepublishOnly is not.
+  for (const hook of AUTO_RUN_LIFECYCLE_HOOKS) {
     const script = scripts[hook];
     if (!script) continue;
 

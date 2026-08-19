@@ -7,6 +7,41 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **`install`, `prepare` and the rest of npm's auto-run lifecycle hooks are now
+  scanned for hostile script content.** Three code paths read `package.json`
+  scripts and each carried its own hand-typed list of hook names. The registry
+  path (`scg npm <pkg>`) and the directory path both listed only `preinstall`,
+  `postinstall`, `preuninstall` and `postuninstall`, so a package whose payload
+  sat in `"install": "curl ... | bash"` produced no `SCRIPT_*` finding on either
+  one. `install` is not an exotic hook: npm runs it on every install, and it
+  defaults to `node-gyp rebuild` even in packages that never declare it. The
+  three lists are replaced by a single exported constant,
+  `AUTO_RUN_LIFECYCLE_HOOKS`, so they cannot drift apart again. Newly covered:
+  `install`, `prepare`, `preprepare`, `postprepare`, and the deprecated but
+  still-executed `prepublish`.
+
+  Precision was the constraint here, not recall. `prepublishOnly` is
+  deliberately NOT scanned: it runs only on `npm publish`, never on any install,
+  so it cannot reach someone installing the package, and it is where npm
+  documents that build steps belong (this repo keeps `npm run build` there).
+  Scanning it would report ordinary release tooling as install-time risk.
+  `prepack` and `postpack` are out for the same reason. The added hooks keep the
+  severity of whichever pattern matched rather than being given a lower one of
+  their own: severity comes from the matched pattern, `prepare` really does
+  execute for a consumer whenever the dependency resolves from a git URL rather
+  than a registry tarball, and a `prepare` that pipes curl into bash is not less
+  malicious for firing in fewer contexts.
+
+  Verification: 44 new tests. 13 are the new-hook detections across all three
+  paths, 4 are regressions on the hooks that already worked, 26 pin the benign
+  and deliberately-excluded cases, and 1 pins that the install-hook extractor and
+  analyzer read the same list. Reverting the constant to its previous four names
+  turns exactly those 13 red and leaves the other 31 green. The 147-test
+  precision corpus is unchanged, so the added hooks introduce no new
+  false positive on it.
+
 ## [5.26.7] - 2026-08-19
 
 ### Added

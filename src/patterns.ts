@@ -1959,6 +1959,68 @@ export const SUSPICIOUS_FILES: Array<{
 ];
 
 // ---------------------------------------------------------------------------
+// npm lifecycle hooks that run without being asked
+// ---------------------------------------------------------------------------
+
+/**
+ * The package.json script names npm executes on its own. A hostile command
+ * sitting in one of these runs at install time; the same command under `build`
+ * or `test` runs only when a human types it, which is a different risk and a
+ * different (much noisier) rule.
+ *
+ * ONE list on purpose. This was previously copy-pasted into npm-scanner.ts and
+ * scanner.ts, both copies had drifted to four entries, and install-hook-scanner
+ * .ts carried a third, longer copy - so a published package declaring
+ * `"install": "curl ... | bash"` produced no SUSPICIOUS_SCRIPTS finding on
+ * either the registry path or the directory path. A fourth copy is how that
+ * recurs, so import this rather than re-typing it.
+ *
+ * Why each name is in:
+ *
+ * - `preinstall`, `install`, `postinstall` - npm runs all three, in that order,
+ *   every time the package is installed as a dependency. `install` also defaults
+ *   to `node-gyp rebuild` when a binding.gyp is present, so the hook is live
+ *   even where package.json does not declare it.
+ * - `preprepare`, `prepare`, `postprepare` - run on `npm install` in the
+ *   package's own directory, and for a CONSUMER whenever the dependency
+ *   resolves from a git URL instead of a registry tarball. Git dependencies are
+ *   ordinary in forks, monorepos and commit-pinned setups, so this is a real
+ *   execution path rather than a theoretical one. They sit at the same severity
+ *   as the install trio deliberately: severity comes from the SUSPICIOUS_SCRIPTS
+ *   entry that matched, and a `prepare` that pipes curl into bash is not less
+ *   malicious for firing in fewer contexts. Leaving the pre/post wrappers out
+ *   would also leave a one-word evasion open to anyone who reads this file.
+ * - `prepublish` - deprecated by npm but still executed, and it fires on a bare
+ *   `npm install` inside the package's own directory, which is exactly the
+ *   situation a directory scan reports on.
+ * - `preuninstall`, `postuninstall` - run on removal, with no prompt.
+ *
+ * Deliberately OUT:
+ *
+ * - `prepublishOnly` - runs only on `npm publish`, never on any install, so it
+ *   cannot reach someone installing the package. It is also where npm documents
+ *   that build steps belong (this repo keeps `npm run build` there), so
+ *   scanning it would report ordinary release tooling as install-time risk.
+ * - `prepack` / `postpack` - pack-time only, same reasoning.
+ * - Everything else (`build`, `test`, `start`, ...) - npm runs these only on an
+ *   explicit `npm run`.
+ */
+export const AUTO_RUN_LIFECYCLE_HOOKS = [
+  "preinstall",
+  "install",
+  "postinstall",
+  "prepublish",
+  "preprepare",
+  "prepare",
+  "postprepare",
+  "preuninstall",
+  "postuninstall",
+] as const;
+
+/** A single entry of {@link AUTO_RUN_LIFECYCLE_HOOKS}. */
+export type AutoRunLifecycleHook = (typeof AUTO_RUN_LIFECYCLE_HOOKS)[number];
+
+// ---------------------------------------------------------------------------
 // Suspicious npm scripts
 // ---------------------------------------------------------------------------
 

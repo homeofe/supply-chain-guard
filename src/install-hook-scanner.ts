@@ -7,6 +7,10 @@
  */
 
 import type { Finding } from "./types.js";
+import {
+  AUTO_RUN_LIFECYCLE_HOOKS,
+  type AutoRunLifecycleHook,
+} from "./patterns.js";
 
 // ── INSTALL_HOOK_HOST_RUNTIME_PATCH detection ───────────────────────────────
 // An install hook that patches/mutates a HOST AGENT RUNTIME (OpenClaw, Hermes,
@@ -33,8 +37,9 @@ const CODE_MUTATE_RE =
 // scheduled task, a Windows Run key, a Startup-folder entry, or a Python .pth
 // that the interpreter auto-imports.
 //
-// Scoped deliberately to the six package.json install-script strings this module
-// already reads. That is the whole reason its false-positive surface is small:
+// Scoped deliberately to the package.json lifecycle-script strings this module
+// already reads - AUTO_RUN_LIFECYCLE_HOOKS, the same list npm-scanner.ts and
+// scanner.ts use. That is the whole reason its false-positive surface is small:
 // installing persistence from an install hook has essentially no legitimate
 // form, whereas the same commands in ordinary source belong to any service
 // manager, installer or devops tool and would false-positive constantly.
@@ -51,14 +56,11 @@ const CODE_MUTATE_RE =
 const PERSISTENCE_WRITE_RE =
   /\blaunchctl\b|\bsystemctl\b[^\n]{0,40}\b(?:enable|link)\b|\bcrontab\b|\bschtasks\b[^\n]{0,60}\/create\b|Library[\\/]+Launch(?:Agents|Daemons)|\.config[\\/]+systemd[\\/]+user|\/etc\/systemd\/system|\/etc\/cron\.[a-z]+|Start\s?Menu[\\/]+Programs[\\/]+Startup|CurrentVersion[\\/]+Run\b|site-packages[^\n]{0,80}\.pth\b/i;
 
-interface InstallScripts {
-  preinstall?: string;
-  postinstall?: string;
-  install?: string;
-  preuninstall?: string;
-  postuninstall?: string;
-  prepare?: string;
-}
+/**
+ * Derived from AUTO_RUN_LIFECYCLE_HOOKS rather than hand-listed, so adding a
+ * hook to that list cannot leave this scanner reading a stale subset.
+ */
+type InstallScripts = Partial<Record<AutoRunLifecycleHook, string>>;
 
 /**
  * Deep-analyze install hook scripts from package.json.
@@ -68,9 +70,7 @@ export function analyzeInstallHooks(
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
-  const hookNames: (keyof InstallScripts)[] = [
-    "preinstall", "postinstall", "install", "preuninstall", "postuninstall", "prepare",
-  ];
+  const hookNames = AUTO_RUN_LIFECYCLE_HOOKS;
 
   for (const hook of hookNames) {
     const script = scripts[hook];
@@ -234,14 +234,12 @@ export function extractInstallScripts(
   try {
     const pkg = JSON.parse(content) as { scripts?: Record<string, string> };
     if (!pkg.scripts) return null;
-    return {
-      preinstall: pkg.scripts.preinstall,
-      postinstall: pkg.scripts.postinstall,
-      install: pkg.scripts.install,
-      preuninstall: pkg.scripts.preuninstall,
-      postuninstall: pkg.scripts.postuninstall,
-      prepare: pkg.scripts.prepare,
-    };
+    const scripts: InstallScripts = {};
+    for (const hook of AUTO_RUN_LIFECYCLE_HOOKS) {
+      const value = pkg.scripts[hook];
+      if (typeof value === "string") scripts[hook] = value;
+    }
+    return scripts;
   } catch {
     return null;
   }
