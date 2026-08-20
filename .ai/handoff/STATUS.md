@@ -157,6 +157,58 @@ code, and the metadata workflow must see `synchronize` because a required check 
 evaluated against the head commit's check-runs and therefore has to exist on every
 sha, which six seconds with no checkout makes affordable.
 
+**Scenario record.** Every scenario below was executed against PR #159 and the
+result read back from the API, not inferred. `CI` produces the `Build and Test`
+required check, `PR Metadata Policy` produces `PR metadata policy`, `AAHP Verify`
+produces `aahp-verify`.
+
+| # | event | head sha | runs created on that sha | conclusions | cancellation | branch-protection state |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | opened | 6c74849 | CI, AAHP Verify, PR Metadata Policy | all success | none | BLOCKED then CLEAN once the build finished |
+| B | edited (title only) | 6c74849 | PR Metadata Policy only, CI count unchanged at 1 | success | none, the in-flight build kept running | unchanged |
+| C | edited (body only) | 3b92109 | PR Metadata Policy only, CI count unchanged at 1 | success | none | unchanged |
+| D | synchronize | 03e75fd | CI, AAHP Verify, and NO metadata run | success | none | see the defect this exposed, below |
+| E | two commits ~30s apart | 03beef5 then a43f8a7 | CI on both | superseded CI cancelled, newest sha conclusive | correct, obsolete run cancelled | decided by the newest sha only |
+| F | edited while a build was in progress | 6c74849 | PR Metadata Policy | success | the running CI run was NOT cancelled | unchanged |
+| G | violating title or body | n/a, harness | gate script from the workflow yaml | 11/11 expectations met | n/a | n/a |
+| H | violation fixed | 3b92109 | AAHP Verify | failure to success | none | BLOCKED to CLEAN |
+| I | required check failing | a43f8a7 | aahp-verify failed on a real drift | failure | none | BLOCKED |
+| J | re-run | 3b92109 | none, `gh run rerun` re-runs IN PLACE | success | n/a | CLEAN |
+
+**Scenario D found a defect in the first version of this split, and it would have
+deadlocked the repo.** The metadata workflow originally omitted `synchronize` on
+the reasoning that a new head commit cannot change a title or body. True, and
+irrelevant: a required status check is evaluated against the check-runs attached
+to the HEAD COMMIT, so head sha 03e75fd carried a CI run, an AAHP Verify run and
+zero metadata runs. Adding `PR metadata policy` to the required contexts would
+then have blocked every PR that received a push after being opened, forever, on a
+check that never arrives. Found by running the scenario, not by reading the
+config, which is the reason for running them.
+
+**Scenarios G and H were run as a harness rather than by editing the PR, on
+purpose.** The violating input IS an AI-attribution footer, this repo is public,
+and GitHub keeps PR title and body edit history visible permanently. Publishing
+one to test the gate that forbids publishing them is self-defeating. The harness
+executes the PATTERN extracted from the workflow yaml, so it cannot drift from
+what CI runs, and covers seven violating forms plus four that must NOT trip,
+including this project's own threat intelligence naming the brand and prose
+describing the rule. The platform link the harness cannot prove, that a failing
+step becomes a failing required check and blocks the merge, was proven live
+instead by scenario I.
+
+**On the cancelled-twin question, which is what started this.** Scenario F's
+follow-up put a cancelled and a successful run of the SAME required check name on
+ONE head sha (runs 32358446823 cancelled and 32358449384 success on 6c74849) and
+the PR still read CLEAN, so GitHub evaluates the newest run for a context. That is
+structural rather than lucky: cancel-in-progress only cancels a run that a newer
+run in the same group has just superseded, and the newer run then runs to
+completion. The v5.26.7 block therefore remains UNEXPLAINED by cancellation alone
+and was not reproduced in this session. What is claimed here is narrower and
+measured: the generator of same-sha duplicate CI runs, the `edited` trigger, is
+gone, and a title or body edit now provably creates no CI run at all. The recorded
+remedy in CONVENTIONS.md stays, and scenario J confirms `gh run rerun` re-runs in
+place and leaves the check conclusive.
+
 **Regression mechanism.** `src/__tests__/workflow-trigger-contract.test.ts` encodes
 the event-to-workflow matrix and fails if `edited` returns to ci.yml, if the
 title/body checks move back into the build job, if the commit-range checks leave it,
