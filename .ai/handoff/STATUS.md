@@ -8,6 +8,36 @@
 
 ## Carried open items (process and design, not tied to one sweep)
 
+### Duplicate CI runs: do NOT simply drop the `edited` PR trigger
+
+Removing `edited` from `ci.yml`'s `pull_request` types was proposed as the root-cause
+fix for duplicate runs on one head commit. It is not safe as stated, and the workflow
+already says why: `edited` exists so the **AI-attribution gate** re-runs on a title or
+body edit. The default types (opened/synchronize/reopened) do not fire on an edit, so
+without it a PR can go green and then have the attribution footer pasted into the body
+with nothing re-checking it. This repo is public and that rule is CI-enforced. The
+concurrency group exists *because* of `edited`, not independently of it.
+
+The real defect is that a seconds-long policy check is welded into `Build and Test`,
+which is expensive and is a REQUIRED context. An edit therefore re-runs the whole
+build to re-check a string.
+
+Proposed fix, not yet applied because it needs one coordinated step:
+
+- Split the attribution gate into its own job or workflow that keeps
+  `[opened, synchronize, reopened, edited]`.
+- Narrow `Build and Test` to `[opened, synchronize, reopened]`.
+
+**The coordination step:** the gate then reports under a NEW check name, so
+`required_status_checks.contexts` on `main` must gain it in the same change. Get that
+wrong in either direction and you either leave a window where nothing enforces
+attribution, or add a required check that never runs and blocks every merge. Branch
+protection also needs a PAT: `GITHUB_TOKEN` has no `administration` permission.
+
+Until then the documented `gh run rerun` recovery stands. Note the current behaviour is
+luck, not design: on v5.26.7 the cancelled twin was last and blocked the merge; on
+v5.27.0 the successful one was last and it did not.
+
 Deliberately a top-level section rather than another dated "Open for the owner". Both
 items outlive any single sweep, and an entry filed under a sweep heading is
 effectively gone once the next sweep adds its own list. Neither is urgent.

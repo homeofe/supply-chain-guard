@@ -58,6 +58,66 @@ chore/<short-name>           → build, deps, tooling
 - PR title must reference the GitHub issue: `feat: description (#N)`
 - Squash-merge into main
 
+### Branch hygiene: the invariant is three-sided
+
+A finished deploy leaves exactly `main` and `v5`. That is a statement about the
+REMOTE **and** the local checkout **and** the worktree list. Checking only
+`git ls-remote` has twice reported clean while stale local branches survived.
+
+```
+git ls-remote --heads origin   # only main and v5
+git branch --list              # only main
+git worktree list              # only the shared checkout, on main
+```
+
+Two mechanics make the local side fail silently:
+
+- `git worktree add -b <branch>` creates a local branch that outlives BOTH the
+  worktree and the merge. It has survived `--delete-branch` on every PR cut this
+  way.
+- A local branch still held by a worktree makes the merge command's local delete
+  fail, and the REMOTE branch then survives while the error names only the local
+  one. Remove the worktree BEFORE merging.
+
+### Verifying a branch is safe to delete
+
+Every PR here is squash-merged, so `git branch --merged`, `git cherry` and
+`git rev-list main..branch` all report merged work as UNMERGED. Never delete on
+those. Ask GitHub first:
+
+```
+gh pr list --state all --search "head:<branch>" --json number,state,mergedAt
+git log <branch> -1 --format=%cI     # keep it if the tip is NEWER than mergedAt
+```
+
+**Normalise the timezones before comparing.** `--format=%cI` prints a local
+offset while GitHub returns UTC, so a naive string compare reads an older tip as
+newer and wrongly keeps the branch.
+
+**A repository-wide tree diff does NOT answer this**, and both obvious forms
+mislead:
+
+- `git diff main <branch>` is non-empty whenever the branch is merely BEHIND
+  main. A branch missing one daily feed sweep shows well over a thousand changed
+  lines and is still perfectly safe to delete.
+- `git diff main...<branch>` (three-dot) shows the branch's own pre-squash
+  commits, which main holds under a different SHA after the squash. It is
+  non-empty for a fully merged branch.
+
+Scope the diff to the files the branch itself changed:
+
+```
+git diff --stat main <branch> -- <the branch's changed paths>
+```
+
+Only version strings and generated feed data should differ. Anything else is
+content main does not have, and the branch stays. Confirmed on 2026-08-20:
+`fix/npm-scanner-lifecycle-hooks` showed 25 changed lines repo-wide and, scoped
+to its own files, differed by exactly two version-string lines.
+
+The one real loss case is a commit made after the merge, which no PR knows
+about. The tip-versus-`mergedAt` check above is what guards it.
+
 ## Tests
 
 - Framework: **Vitest** (`npm test`)

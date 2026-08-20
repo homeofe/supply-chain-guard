@@ -14,7 +14,7 @@ Current version: **v5.27.0**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Six
+AAHP 3.9.1 adoption and the verified security hardening are complete. Five
 follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
 matrix and whether version-pinned npm IOCs should match on a directory scan.
 
