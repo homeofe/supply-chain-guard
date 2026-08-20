@@ -279,6 +279,21 @@ matched it, so deleting an entry removed the file and the check together. A
 manifest-independent floor of required runtime assets was added, and the mutation
 is caught.
 
+**CI evidence, read off the run rather than off the tick.** PR #160, head sha
+75fb45e, CI run 32362440688. `compat (Node 20)` ran on node v20.20.2 and
+`compat (Node 22)` on node v22.23.2; both reported 116 of 116 test files
+passing, which is the whole suite and not a subset, and both finished with
+"Packaged artifact OK" covering tarball contents, clean-room install, metadata,
+bin mapping, entry point, declarations and an end-to-end scan. This is the first
+time this project has ever run its suite on Node 22.
+
+That run was also the first PR under the three required contexts, so it doubles
+as the branch-protection verification the CI split needed: `Build and Test`,
+`aahp-verify` and `PR metadata policy` were all present and green on the head
+sha, the aggregator reported once, and the PR read CLEAN. The contract is
+satisfiable on a normal PR, which is the property scenario D showed could not be
+taken for granted.
+
 **What is deliberately NOT done.** `engines.node` still says `>=20.0.0`. Raising
 it is a promise broken for every consumer still on Node 20, in a package installed
 inside other people's pipelines where the Node version is often not theirs to
