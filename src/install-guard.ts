@@ -244,6 +244,30 @@ export function matchBareNpmIOC(
   version: string | undefined,
   feed: FeedIOC[],
 ): FeedIOC | null {
+  // Candidates are held in original feed order, so "first match wins" is
+  // preserved exactly, identical to the linear reference below.
+  const candidates = getBareNpmIndex(feed).get(name);
+  if (!candidates) return null;
+
+  for (const { ioc, version: iocVersion } of candidates) {
+    if (iocVersion === undefined) return ioc; // bare-name IOC: any version
+    if (version !== undefined && iocVersion === version) return ioc;
+  }
+  return null;
+}
+
+/**
+ * Reference implementation, kept so the index has something to be proved
+ * against. install-guard.test.ts asserts the two agree across the WHOLE bundled
+ * feed; without that, an index bug becomes a silent false negative in the most
+ * security-critical matcher in the project. Same arrangement as
+ * matchPackageIOCLinear in threat-intel.ts.
+ */
+export function matchBareNpmIOCLinear(
+  name: string,
+  version: string | undefined,
+  feed: FeedIOC[],
+): FeedIOC | null {
   for (const ioc of feed) {
     if (ioc.type !== "package") continue;
     // Skip ecosystem-prefixed entries; npm names never contain ":".
@@ -258,6 +282,49 @@ export function matchBareNpmIOC(
     if (version !== undefined && iocVersion === version) return ioc;
   }
   return null;
+}
+
+/** One indexed candidate: the entry plus its parsed version (undefined = bare). */
+interface IndexedBareNpmIOC {
+  ioc: FeedIOC;
+  version: string | undefined;
+}
+
+/**
+ * Lazily-built lookup index over a feed array, keyed by bare npm package name.
+ *
+ * Keyed on the feed array identity via a WeakMap, so a caller-supplied feed and
+ * the memoized shared feed each get their own index and neither leaks. Mirrors
+ * packageIndexCache in threat-intel.ts.
+ *
+ * Why this exists (T-017): the linear scan cost one full pass over the feed PER
+ * CALL, so a scan of N dependencies cost N x feed. The feed grows by 100-200
+ * entries per daily sweep, and collection-reachability.test.ts, which calls the
+ * real matcher once per entry, is quadratic in feed size - it went red on CI
+ * during the v5.25.6 release and was carrying a 30s timeout as a stopgap.
+ */
+const bareNpmIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedBareNpmIOC[]>>();
+
+function getBareNpmIndex(feed: FeedIOC[]): Map<string, IndexedBareNpmIOC[]> {
+  const cached = bareNpmIndexCache.get(feed);
+  if (cached) return cached;
+
+  const index = new Map<string, IndexedBareNpmIOC[]>();
+  for (const ioc of feed) {
+    if (ioc.type !== "package") continue;
+    if (ioc.value.includes(":")) continue;
+
+    const at = ioc.value.lastIndexOf("@");
+    const iocName = at > 0 ? ioc.value.substring(0, at) : ioc.value;
+    const iocVersion = at > 0 ? ioc.value.substring(at + 1) : undefined;
+
+    const bucket = index.get(iocName);
+    if (bucket) bucket.push({ ioc, version: iocVersion });
+    else index.set(iocName, [{ ioc, version: iocVersion }]);
+  }
+
+  bareNpmIndexCache.set(feed, index);
+  return index;
 }
 
 function checkSpec(spec: InstallPackageSpec, feed: FeedIOC[]): Finding[] {

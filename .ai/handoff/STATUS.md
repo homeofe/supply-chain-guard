@@ -151,6 +151,31 @@ anything, since nothing in CI reports it.
 
 ---
 
+## T-017 done: matchBareNpmIOC indexed (2026-08-20, unreleased, branch perf/index-bare-npm-ioc)
+
+Model: claude-opus-5. No version bump.
+
+`matchBareNpmIOC` walked the entire feed on every call, and it is the matcher
+every npm dependency check goes through. Now indexed on a `WeakMap` keyed by feed
+array identity, mirroring `matchPackageIOC`. The linear version is kept as
+`matchBareNpmIOCLinear` and a parity suite asserts the two agree across every npm
+entry in the bundled feed, in both the pinned-exact and bare-name branches.
+
+Measured, not asserted: `collection-reachability.test.ts` went from 3,317ms to
+**21ms**, and the 30s stopgap it was carrying is removed. Worth noting the feed
+grew from 9,374 to 12,551 package IOCs between those two measurements, so the
+improvement is understated by the comparison.
+
+Mutation proof: making the index drop the pinned version - so a pinned IOC would
+match any version - turns exactly 3 of the 6 parity tests red, and restoring it
+returns 6/6.
+
+One deliberate asymmetry: the parity suite itself carries a 120s budget. That is
+NOT the same kind of number as the stopgap removed here. Proving parity means
+running the linear reference once per case, so it is O(cases x feed) by
+construction. If it ever needs raising, sample the cases rather than weaken the
+assertion.
+
 ## Release v5.27.0 (2026-08-20)
 
 Model: claude-opus-5. Contents: the 2026-08-20 threat-intel sweep and the

@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- **`matchBareNpmIOC` is now an indexed O(1) lookup instead of a linear scan of the whole
+  feed on every call (T-017).** It is the matcher every npm dependency check goes through,
+  so a scan of N dependencies previously cost N passes over the feed. The index is built
+  once per feed array and cached on a `WeakMap` keyed by array identity, so a
+  caller-supplied feed and the shared bundled feed each get their own and neither leaks -
+  the same arrangement `matchPackageIOC` already used.
+  The previous implementation is kept as `matchBareNpmIOCLinear` purely as a reference, and
+  a new parity suite asserts the two agree across every npm entry in the bundled feed, in
+  both the pinned-exact and bare-name branches. An index bug in this matcher would be a
+  silent false negative, which is invisible in a way a crash is not.
+  Measured effect: `collection-reachability.test.ts`, which calls the real matcher once per
+  feed entry, went from 3,317ms to **21ms**, and its 30s timeout stopgap is removed. That
+  test had gone red on CI during the v5.25.6 release, and its cost grew with the SQUARE of
+  the feed, which now adds 100-200 entries per daily sweep.
+
 ## [5.27.0] - 2026-08-20
 
 ### Added

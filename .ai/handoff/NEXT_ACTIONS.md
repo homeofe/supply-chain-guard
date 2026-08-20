@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Six tasks are ready, two owner decisions are blocked, and T-008/T-015/T-018/T-019 are complete.
+Five tasks are ready, two owner decisions are blocked, and T-008/T-015/T-017/T-018/T-019 are complete.
 
 Current version: **v5.27.0**
 
@@ -20,7 +20,7 @@ matrix and whether version-pinned npm IOCs should match on a directory scan.
 
 | Status | Count |
 |--------|-------|
-| Ready | 6 |
+| Ready | 5 |
 | Blocked | 2 |
 
 
@@ -112,37 +112,6 @@ do not merge Babel 8 alone.
 
 ---
 
-## T-017: Index matchBareNpmIOC so npm IOC lookup is O(1)
-
-**Goal:** Give `matchBareNpmIOC` the same indexed lookup `matchPackageIOC`
-already has, so npm IOC matching stops being a linear scan of the whole feed.
-
-**Why now:** `matchPackageIOC` is an indexed O(1) lookup (see the comment at
-`src/install-guard.ts:270`); `matchBareNpmIOC` (`:242`) still walks the entire
-feed per call. Two consequences:
-
-- Production: every dependency checked by `src/scanner.ts` and
-  `src/npm-scanner.ts` costs one full pass over 9,374 package entries.
-- Tests: `collection-reachability.test.ts` calls the real matcher once per
-  entry, which is ~85M comparisons and about 3.3s. It went red on CI during the
-  v5.25.6 release at the default 5s timeout, and the cost grows with the SQUARE
-  of the feed, which is now growing by thousands of entries per import.
-
-The 30s timeout added there is a stopgap, not the fix. If it goes red again,
-index the matcher instead of raising the number.
-
-**Acceptance criteria:**
-- [ ] `matchBareNpmIOC` resolves through an index, with identical semantics:
-      a bare-name IOC still matches any version, a pinned IOC still matches only
-      an exact version, and ecosystem-prefixed entries are still skipped.
-- [ ] The index is built once per feed rather than per call, matching how
-      `matchPackageIOC` does it.
-- [ ] `collection-reachability.test.ts` passes comfortably inside the default
-      timeout, and the explicit 30s override plus its comment are removed.
-- [ ] A mutation proof: break the pinned-version branch and watch a test go red.
-
----
-
 ## T-016: Decide whether version-pinned npm IOCs should match on a directory scan (blocked)
 
 **Goal:** Close the gap between what the feed knows and what `scan` reports, or
@@ -206,6 +175,7 @@ initiative.
 
 | Item | Resolution |
 |------|------------|
+| T-017: matchBareNpmIOC was a linear scan per call | Done: indexed on a WeakMap keyed by feed identity, with the linear implementation kept as `matchBareNpmIOCLinear` and a parity suite asserting the two agree across the whole bundled feed. collection-reachability went from 3,317ms to 21ms and its 30s stopgap is removed. |
 | T-019: dropped-persistence detection | Done in two tranches: `.vscode/tasks.json` recall, `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE` (also wired into the hook scanner, since the core walk excludes `.claude/`), and `INSTALL_HOOK_PERSISTENCE_WRITE`. Coverage of the five published artefacts went from one of five to five of five. |
 | T-018: known-malware hashes never matched a file | Done: `IOC_KNOWN_MALWARE_FILE_DIGEST` computes SHA-256/MD5 per scanned file, before the scannable-extension gate, over raw bytes. The digest-text substring match is kept as a separate signal. |
 | v5.25.5: AAHP shared-primitive convergence | PR #120 merged: AAHP bumped 3.9.1->3.9.2, `aahp-dashboard.mjs` renamed to `scg-handoff-docs.mjs`, two vendored bash files deleted, shared primitives imported instead; PR #119 Action comment fix also included |
