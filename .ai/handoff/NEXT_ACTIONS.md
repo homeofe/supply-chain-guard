@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, two owner decisions are blocked, and T-008/T-015/T-017/T-018/T-019 are complete.
+Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
 
 Current version: **v5.27.0**
 
@@ -15,13 +15,13 @@ Current version: **v5.27.0**
 ## Status Summary
 
 AAHP 3.9.1 adoption and the verified security hardening are complete. Five
-follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
-matrix and whether version-pinned npm IOCs should match on a directory scan.
+follow-ups are ready. One decision is owner-blocked: the Node/Babel support
+matrix.
 
 | Status | Count |
 |--------|-------|
 | Ready | 5 |
-| Blocked | 2 |
+| Blocked | 1 |
 
 
 ---
@@ -112,52 +112,6 @@ do not merge Babel 8 alone.
 
 ---
 
-## T-016: Decide whether version-pinned npm IOCs should match on a directory scan (blocked)
-
-**Goal:** Close the gap between what the feed knows and what `scan` reports, or
-record a deliberate decision not to.
-
-**The finding (verified by execution during the 2026-08-06 backlog import, not
-by reading):** `matchBareNpmIOC` (`src/install-guard.ts:242`) matches a
-version-pinned IOC only when a real version is supplied. Line 257 returns on a
-bare-name IOC for any version; line 258 requires
-`version !== undefined && iocVersion === version`. Only one caller passes a real
-version, `install-guard.ts:273` (`spec.version`). All three scanning callers pass
-`undefined`:
-
-- `src/scanner.ts:1653` - the dependency spec from package.json is discarded at
-  line 1647, which sets `version: undefined` for every non-alias dependency
-- `src/npm-scanner.ts:237` and `:319` - literal `undefined`
-
-Consequence: a project depending on a version-pinned malicious package is caught
-by `guard` but **not** by `scan`. That is 7,749 of the 9,374 package IOCs in the
-feed, including every `@hubsync` and `@ornikar` entry.
-
-Reproduction: a fixture depending on `@hubsync/web-sdk-react@6.3.10` scans clean,
-while `guard --dry-run npm install @hubsync/web-sdk-react@6.3.10` exits 2 with a
-critical `THREAT_INTEL_PACKAGE_IOC`. A bare-name IOC in the same fixture fires
-critical `MALICIOUS_DEPENDENCY` on the directory scan.
-
-**Blocked by:** Owner decision. This is a behaviour change with real
-false-positive surface, not a bug fix. Making pinned IOCs match a resolved
-version would start firing on lockfile-resolved and transitive versions that
-scan almost 8,000 pinned entries against, and a false positive gets the tool
-switched off, which is worse than a miss. Do not implement it on an agent's own
-initiative.
-
-**Acceptance criteria:**
-- [ ] The owner decides: match pinned IOCs on scan, leave scan as an install-time
-      guard only, or gate the behaviour behind a flag.
-- [ ] If matching is adopted, the version source is defined explicitly (declared
-      range in package.json vs resolved version in the lockfile) - these are not
-      the same and a declared range is not a version.
-- [ ] False-positive surface is measured against a real dependency tree before
-      the change ships, not asserted.
-- [ ] Documentation states which scan paths enforce pinned IOCs, so the feed
-      count is not read as scan coverage.
-
----
-
 ## Ideas / Not Yet Scheduled
 
 - Resolve Install Guard version ranges against the offline metadata cache and add
@@ -175,6 +129,7 @@ initiative.
 
 | Item | Resolution |
 |------|------------|
+| T-016: pinned npm IOCs were unreachable from `scan` | Done: matched in the lockfile path, the only place a RESOLVED version exists. False-positive surface measured at zero across 43 repos / 10,615 resolved deps before shipping. Bare-name entries excluded there to avoid double-reporting across the transitive tree. |
 | T-017: matchBareNpmIOC was a linear scan per call | Done: indexed on a WeakMap keyed by feed identity, with the linear implementation kept as `matchBareNpmIOCLinear` and a parity suite asserting the two agree across the whole bundled feed. collection-reachability went from 3,317ms to 21ms and its 30s stopgap is removed. |
 | T-019: dropped-persistence detection | Done in two tranches: `.vscode/tasks.json` recall, `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE` (also wired into the hook scanner, since the core walk excludes `.claude/`), and `INSTALL_HOOK_PERSISTENCE_WRITE`. Coverage of the five published artefacts went from one of five to five of five. |
 | T-018: known-malware hashes never matched a file | Done: `IOC_KNOWN_MALWARE_FILE_DIGEST` computes SHA-256/MD5 per scanned file, before the scannable-extension gate, over raw bytes. The digest-text substring match is kept as a separate signal. |

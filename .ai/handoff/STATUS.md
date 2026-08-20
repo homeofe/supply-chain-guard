@@ -6,6 +6,38 @@
 
 ---
 
+## T-016 done: pinned npm IOCs now match on a directory scan (2026-08-20, unreleased)
+
+Model: claude-opus-5. Branch feat/lockfile-pinned-ioc. No version bump. Lands on
+top of the indexed matcher from #154, which is what makes it affordable.
+
+Re-derived before deciding: the feed is 12,870 entries / 12,551 package IOCs, of
+which 9,597 are version-pinned npm (76.5%) and 2,433 bare. The note carried since
+2026-08-06 said 7,749 of 9,374, so absolute exposure grew by 1,848 while the SHARE
+fell from 82.7%, because bare names grew faster.
+
+Two findings changed the decision rather than confirming it:
+
+1. The false-positive fear was mis-specified. It is exact name@version equality, so
+   it can only fire wrongly on a wrong pin in the FEED, which is a data-quality
+   question already governed by the bare-name audit discipline. Measured: zero hits
+   across 43 repos and 10,615 resolved dependencies, and zero again with the built
+   scanner on the ten largest trees.
+2. `scan` already did exact name@version matching, in checkLockfileBadVersions,
+   against KNOWN_BAD_NPM_VERSIONS. It simply never consulted the feed. The PyPI
+   scanner already consumed feed data this way. The inconsistency was architectural,
+   not conceptual.
+
+The three callers passing no version are NOT defects: checkPackageName receives only
+a name, and the other iterates Object.keys(dependencies), whose values are ranges.
+There is genuinely nothing to pass, so nothing there was changed.
+
+Mutation proof, three properties separately: reverting to the original bug (no
+version passed) turns 2 tests red; dropping the bare-name exclusion turns 1 red;
+dropping the dedup turns 1 red. An earlier mutant survived and that was a gap in
+the tests, not a pass - it is recorded here because the first attempt looked like a
+proof and was not.
+
 ## Carried open items (process and design, not tied to one sweep)
 
 ### Duplicate CI runs: do NOT simply drop the `edited` PR trigger

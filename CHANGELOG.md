@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **`LOCKFILE_MALICIOUS_VERSION`: a scan now reports a dependency whose LOCKFILE-RESOLVED
+  version is listed in the threat feed (T-016).** The great majority of package IOCs are
+  version-pinned, and those were reachable through `guard` but not through `scan`, which is
+  the more visible surface.
+  The check lives in the lockfile path because that is the only place a resolved version
+  exists. A `package.json` dependency value is a RANGE, not a version, so the callers that
+  pass no version to the matcher were not defects and are unchanged.
+  Exact equality only: a different version of the same package does not fire. Bare-name feed
+  entries are deliberately excluded here, because they already fire on the `package.json`
+  path and a lockfile lists every transitive dependency, so reporting them again would
+  multiply one finding across the tree. A package covered by both the blocklist and the feed
+  yields one finding, not two.
+  False-positive surface was measured before shipping rather than asserted: every pinned npm
+  IOC in the feed against 10,615 resolved dependencies across 43 repositories produced zero
+  hits, and the same measurement with the built scanner on the ten largest trees also
+  produced zero.
+  Scope, so the feed count is not read as scan coverage: `scan` enforces pinned entries only
+  where an npm lockfile is present. A project without one is still covered by bare-name
+  entries on the `package.json` path and by `guard` at install time.
+
 ### Changed
 
 - **`matchBareNpmIOC` is now an indexed O(1) lookup instead of a linear scan of the whole

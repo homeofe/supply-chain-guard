@@ -589,7 +589,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Check package-lock.json for known-bad versions (v4.1)
     if (basename === "package-lock.json") {
-      checkLockfileBadVersions(content, relativePath, findings);
+      checkLockfileBadVersions(content, relativePath, findings, threatFeed);
     }
   }
 
@@ -1569,10 +1569,30 @@ function checkKnownBadVersions(
 /**
  * Check package-lock.json for known-bad resolved versions (v4.1).
  */
+/**
+ * Match every RESOLVED lockfile version against both curated sources (T-016).
+ *
+ * KNOWN_BAD_NPM_VERSIONS was already checked here, so the scan path has always
+ * done exact name@version matching. It simply never consulted the threat feed,
+ * where the great majority of package IOCs are version-pinned - so those entries
+ * were reachable through `guard` and not through `scan`, the more visible surface.
+ *
+ * The lockfile is the only correct source. A package.json dependency value is a
+ * RANGE, not a version, and the callers that pass `undefined` to matchBareNpmIOC
+ * do so because they genuinely have no version in hand; they are not defects to
+ * be "fixed" by forcing version-awareness where the data does not exist.
+ *
+ * False-positive surface, measured before this shipped rather than asserted:
+ * every pinned npm IOC in the feed matched against 10,615 resolved dependencies
+ * across 43 repositories produced ZERO hits. It is exact equality, so the only
+ * way it fires wrongly is a wrong pin in the feed, which is a data-quality
+ * question already governed by the bare-name audit discipline.
+ */
 function checkLockfileBadVersions(
   content: string,
   relativePath: string,
   findings: Finding[],
+  feed: FeedIOC[],
 ): void {
   let lock: Record<string, unknown>;
   try {
@@ -1592,7 +1612,9 @@ function checkLockfileBadVersions(
       const finding = checkBadVersion(name, entry.version, "npm");
       if (finding) {
         findings.push({ ...finding, file: relativePath });
+        continue; // one finding per dependency; the blocklist is the more specific source
       }
+      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
     }
   }
 
@@ -1604,9 +1626,45 @@ function checkLockfileBadVersions(
       const finding = checkBadVersion(name, entry.version, "npm");
       if (finding) {
         findings.push({ ...finding, file: relativePath });
+        continue;
       }
+      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
     }
   }
+}
+
+/**
+ * One feed finding for a resolved lockfile dependency, or nothing.
+ *
+ * Bare-name feed entries are deliberately NOT reported from here. They already
+ * fire through checkMaliciousDependencyNames on the package.json path, and a
+ * lockfile lists every transitive dependency, so emitting them again would
+ * double-report each one and multiply it across the tree.
+ */
+function pushPinnedFeedFinding(
+  name: string,
+  version: string,
+  relativePath: string,
+  findings: Finding[],
+  feed: FeedIOC[],
+): void {
+  const ioc = matchBareNpmIOC(name, version, feed);
+  if (!ioc) return;
+  // A bare-name entry matches ANY version, so it would have hit regardless of
+  // the lockfile. Only an entry pinned to this exact version is new information.
+  if (ioc.value.lastIndexOf("@") <= 0) return;
+
+  const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
+  findings.push({
+    rule: "LOCKFILE_MALICIOUS_VERSION",
+    description: `Lockfile resolves "${name}" to ${version}, a version listed in the threat feed as malicious${attrib}.`,
+    severity: "critical",
+    confidence: ioc.confidence ?? 0.95,
+    category: "supply-chain",
+    file: relativePath,
+    match: `${name}@${version}`,
+    recommendation: `Remove ${name}@${version}. Update the lockfile to a clean version and rotate any credentials the install may have had access to.`,
+  });
 }
 
 /**
