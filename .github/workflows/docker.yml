@@ -16,6 +16,15 @@ permissions:
   contents: read
   packages: write
 
+# Both triggers end in `imagetools create` against :latest, and they check out
+# DIFFERENT refs: a tag run builds the tag, a manual dispatch builds the branch. Left
+# unserialised, two overlapping runs can leave :latest pointing at a build that
+# corresponds to no released version. cancel-in-progress is false on purpose: a publish
+# that is already pushing layers must finish rather than be interrupted half-done.
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/homeofe/supply-chain-guard
 

@@ -29,8 +29,7 @@ What does this PR do?
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review
 - [ ] I have added tests that prove my fix/feature works
+- [ ] `npm run build` is green, including the three governance gate groups it runs before `tsc`
 - [ ] New and existing tests pass
-
-## Checklist
-
-- [ ] No AI/tool attribution in the commits, the title or this body (see CONTRIBUTING.md). A required check enforces it.
+- [ ] `.ai/handoff/STATUS.md` describes this change and `npm run handoff:refresh` has been run (the `aahp-verify` required check enforces it for any code change)
+- [ ] No AI/tool attribution in the commits, the title or this body (see CONTRIBUTING.md). `Build and Test` enforces it for commits and identity, `PR metadata policy` for this title and body.

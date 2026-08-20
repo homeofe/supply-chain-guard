@@ -28,7 +28,7 @@ jobs:
       # `@v5` also works (a floating branch, fast-forwarded on each release), but
       # it goes silently stale once the v5 line stops shipping. Dependabot keeps
       # this line current; see the README for the config.
-      - uses: homeofe/supply-chain-guard@v5.27.0
+      - uses: homeofe/supply-chain-guard@v5.28.0
         with:
           # Fail the check on high or critical findings.
           fail-on: high

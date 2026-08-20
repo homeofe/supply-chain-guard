@@ -21,7 +21,7 @@
  *   opened            -> both  (code validation + metadata policy)
  *   reopened          -> both
  *   synchronize       -> both  (see below - NOT because metadata changed)
- *   ready_for_review  -> ci.yml only        (changes merge candidacy, not the sha)
+ *   ready_for_review  -> NOTHING             (creates no new sha; see below)
  *   edited            -> pr-metadata-policy only  (title/body cannot change code)
  *   push (main, tags) -> ci.yml only
  *
@@ -50,6 +50,17 @@ const META = fs.readFileSync(
   path.join(REPO, ".github/workflows/pr-metadata-policy.yml"),
   "utf-8",
 );
+const AAHP = fs.readFileSync(
+  path.join(REPO, ".github/workflows/aahp-verify.yml"),
+  "utf-8",
+);
+
+/** The three contexts branch protection requires, and the file that must produce each. */
+const REQUIRED: Array<[string, string]> = [
+  ["Build and Test", ".github/workflows/ci.yml"],
+  ["aahp-verify", ".github/workflows/aahp-verify.yml"],
+  ["PR metadata policy", ".github/workflows/pr-metadata-policy.yml"],
+];
 
 /** The `types: [...]` list under a workflow's pull_request trigger. */
 function pullRequestTypes(yaml: string): string[] {
@@ -66,7 +77,7 @@ describe("workflow trigger contract", () => {
 
   it("code validation runs on every event that can change the code", () => {
     const types = pullRequestTypes(CI);
-    for (const t of ["opened", "synchronize", "reopened", "ready_for_review"]) {
+    for (const t of ["opened", "synchronize", "reopened"]) {
       expect(types).toContain(t);
     }
   });
@@ -135,11 +146,56 @@ describe("workflow trigger contract", () => {
         .replace(/\s+/g, " ")
         .trim();
 
-    const ciGroup = group(CI);
-    const metaGroup = group(META);
-    expect(ciGroup).toBeTruthy();
-    expect(metaGroup).toBeTruthy();
-    expect(forPullRequest(metaGroup!)).not.toBe(forPullRequest(ciGroup!));
+    // Pairwise across ALL THREE required-check producers, not just the original
+    // pair. Concurrency groups are REPOSITORY-wide, so two workflows that happen to
+    // pick the same prefix would serialise and cancel each other's runs, and the
+    // symptom would be an unrelated required check mysteriously going cancelled.
+    const groups = [["ci.yml", CI], ["pr-metadata-policy.yml", META], ["aahp-verify.yml", AAHP]] as const;
+    const resolved = groups.map(([name, yaml]) => {
+      const g = group(yaml);
+      expect(g, `${name} declares no concurrency group`).toBeTruthy();
+      return [name, forPullRequest(g!)] as const;
+    });
+    for (let i = 0; i < resolved.length; i++) {
+      for (let j = i + 1; j < resolved.length; j++) {
+        expect(
+          resolved[i]![1],
+          `${resolved[i]![0]} and ${resolved[j]![0]} resolve to the same concurrency group on a pull_request event`,
+        ).not.toBe(resolved[j]![1]);
+      }
+    }
+  });
+
+  it("every required context has exactly one producing workflow", () => {
+    // The check-run name is the contract with branch protection. This asserts the
+    // name appears in the file that owns it and in NO other workflow.
+    const dir = path.join(REPO, ".github/workflows");
+    for (const [context, owner] of REQUIRED) {
+      const producers = fs
+        .readdirSync(dir)
+        .filter((f) => /\.ya?ml$/.test(f))
+        .filter((f) => new RegExp(`^\\s*name:\\s*${context}\\s*$`, "m").test(
+          fs.readFileSync(path.join(dir, f), "utf-8"),
+        ))
+        .map((f) => `.github/workflows/${f}`);
+      expect(producers, `context "${context}" must be produced by exactly one workflow`).toEqual([owner]);
+    }
+  });
+
+  it("no job in a required-check workflow is left unnamed", () => {
+    // A job with no `name:` still produces a check run, using the JOB KEY as the
+    // context. aahp-verify relied on that coincidence: the key happened to equal the
+    // required context, so renaming the key would have silently deleted the context
+    // branch protection waits for.
+    for (const [, file] of REQUIRED) {
+      const yaml = fs.readFileSync(path.join(REPO, file), "utf-8");
+      const jobsAt = yaml.indexOf("\njobs:");
+      expect(jobsAt, `${file} has no jobs block`).toBeGreaterThan(-1);
+      const jobKeys = [...yaml.slice(jobsAt).matchAll(/^ {2}([a-z][a-z0-9_-]*):$/gm)].map((m) => m[1]!);
+      expect(jobKeys.length, `${file} declares no jobs`).toBeGreaterThan(0);
+      const named = [...yaml.slice(jobsAt).matchAll(/^ {4}name:/gm)].length;
+      expect(named, `${file} has ${jobKeys.length} job(s) but only ${named} explicit name(s)`).toBe(jobKeys.length);
+    }
   });
 
   it("the metadata workflow cancels superseded runs", () => {
@@ -150,6 +206,23 @@ describe("workflow trigger contract", () => {
     // effective result. Turning this off would also let two runs race and let one
     // that inspected the older body finish last.
     expect(META).toMatch(/cancel-in-progress:\s*true/);
+  });
+
+  it("the handoff gate runs on every event that creates a head sha", () => {
+    // Same rule as the metadata workflow, and it was previously implicit: this file
+    // had no `types:` at all, so it inherited GitHub's default and the contract was
+    // whatever that default happened to be. Now it is written down and asserted.
+    const types = pullRequestTypes(AAHP);
+    for (const t of ["opened", "synchronize", "reopened"]) expect(types).toContain(t);
+    expect(types).not.toContain("edited");
+  });
+
+  it("code validation does not run on ready_for_review either", () => {
+    // It creates no new head sha and no job here is draft-gated, so a draft PR's
+    // opened/synchronize runs already made the sha conclusive. Re-adding it starts a
+    // duplicate full matrix on an identical tree and, with cancel-in-progress on for
+    // pull_request, can cancel an in-flight run and replace a green result.
+    expect(pullRequestTypes(CI)).not.toContain("ready_for_review");
   });
 
   it("the metadata workflow never checks out PR code", () => {

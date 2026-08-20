@@ -20,9 +20,14 @@ on:
     # content had not changed. That half of the gate now lives in
     # pr-metadata-policy.yml, which owns the "PR metadata policy" required check.
     #
-    # `ready_for_review` is present because leaving draft changes whether the PR is
-    # a merge candidate, and the required check must be conclusive for it.
-    types: [opened, synchronize, reopened, ready_for_review]
+    # `ready_for_review` is deliberately ABSENT, for the same reason `edited` is.
+    # It creates no new head sha, and no job here is draft-gated, so a draft PR's
+    # `opened` and `synchronize` runs have already made that sha conclusive. Adding it
+    # back starts a second full matrix plus a container build on an identical tree and,
+    # because cancel-in-progress is true for pull_request, cancels an in-flight one:
+    # a duplicate build on unchanged code that can replace a green result with a
+    # cancelled one.
+    types: [opened, synchronize, reopened]
   # Manual runs are build-only. Publishing is possible only from an immutable
   # semver tag delivered by the push trigger above.
   workflow_dispatch:
@@ -51,7 +56,8 @@ jobs:
   # real suite proves less than the real suite, and the difference is exactly
   # where a version incompatibility hides.
   #
-  # This matrix is the authoritative Node policy for CI.
+  # This matrix is DERIVED from docs/node-support.md, which is the single
+  # authoritative policy. Do not treat this list as the source of truth.
   # src/__tests__/node-version-contract.test.ts fails the build if any other
   # declaration site in the repo drifts from it. See docs/node-support.md.
   compat:
@@ -203,9 +209,80 @@ jobs:
           path: coverage/coverage-summary.json
           retention-days: 14
 
+  # The container distribution channel, validated at PULL REQUEST time.
+  #
+  # docker.yml already builds this image multi-arch and pushes it to ghcr, but it
+  # triggers ONLY on a full semver tag. So before this job existed, the first time a
+  # Dockerfile change or a base image bump was ever built was during the release
+  # itself, after the decision to publish had already been taken. dependabot opens a
+  # weekly PR to bump the digest-pinned base image, and those PRs were merged on a
+  # pipeline that never invoked `docker build` even once: "green" was evidence about
+  # the npm package and said nothing about the image.
+  #
+  # This job does NOT duplicate docker.yml. It builds a single-arch image and never
+  # pushes; publishing multi-arch on a tag stays where it is. What it adds is that a
+  # broken container path is discovered on the PR rather than during a release.
+  #
+  # It is wired into the "Build and Test" aggregator rather than becoming a fourth
+  # required context, so it blocks a merge without another branch-protection change
+  # and without a second check name to keep in sync. Because `publish` needs `build`,
+  # it also means the image is proven to build and scan before npm publishes.
+  docker:
+    name: Docker build and smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Both stages, explicitly. Building only the final image would still exercise
+      # the builder, but naming it separately means a compile failure is reported as
+      # a compile failure instead of as an opaque final-stage error.
+      - name: Build the builder stage
+        run: docker build --target builder -t scg-builder:ci .
+
+      - name: Build the runtime image
+        run: docker build -t scg:ci .
+
+      # The image must run the major the Node policy declares, read FROM the policy
+      # rather than hardcoded, so this cannot drift from docs/node-support.md.
+      - name: The image runs the declared runtime major
+        run: |
+          expected=$(node -e "const m=require('fs').readFileSync('docs/node-support.md','utf8').match(/\`\`\`json\s*\n([\s\S]*?)\n\`\`\`/);process.stdout.write(String(JSON.parse(m[1]).runtimeMajor))")
+          actual=$(docker run --rm --entrypoint node scg:ci -p 'process.versions.node.split(".")[0]')
+          echo "policy runtimeMajor=$expected  image node major=$actual"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error title=Docker runtime major::The image runs Node $actual but docs/node-support.md declares $expected."
+            exit 1
+          fi
+
+      # ENTRYPOINT is the CLI itself, so the image is driven the way a user drives it.
+      - name: The packaged CLI in the image reports the right version
+        run: |
+          expected=$(node -p "require('./package.json').version")
+          actual=$(docker run --rm scg:ci --version | tr -d '[:space:]')
+          echo "package.json=$expected  image=$actual"
+          test "$expected" = "$actual"
+
+      # The point of the artifact. An image that starts and then cannot finish a scan,
+      # because a data file was left out of the tarball or a native tool is missing,
+      # passes every check above.
+      - name: The image completes a real scan
+        run: |
+          mkdir -p /tmp/fixture
+          printf '{\n  "name": "fixture",\n  "version": "1.0.0",\n  "dependencies": { "express": "4.18.2" }\n}\n' > /tmp/fixture/package.json
+          # Exit code is a findings verdict, not a health signal: this CLI exits
+          # non-zero when it finds something. Only unparseable output means broken.
+          set +e
+          out=$(docker run --rm -v /tmp/fixture:/scan scg:ci scan /scan --format json --no-history 2>&1)
+          rc=$?
+          set -e
+          echo "$out" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{JSON.parse(d)})" \
+            || { echo "::error title=Docker scan::image did not emit parseable JSON (exit $rc)"; echo "$out" | head -20; exit 1; }
+          echo "Image completed a scan and emitted parseable JSON (exit $rc)."
+
+
   # Aggregator. "Build and Test" is a REQUIRED status check, and its NAME is a
   # contract with branch protection, so it stays one context with one producer
-  # even though the work now runs once per Node major.
+  # even though the work now runs once per Node major plus a container build.
   #
   # Renaming the matrix job to this instead would produce "Build and Test (20)"
   # and "Build and Test (22)" and delete the context branch protection waits for,
@@ -213,25 +290,33 @@ jobs:
   # hypothetical: it was measured on PR #159, where a workflow missing the
   # `synchronize` trigger left head shas with no run of a required check at all.
   #
-  # `if: always()` matters. Without it this job is SKIPPED when a matrix leg
+  # `if: always()` matters. Without it this job is SKIPPED when a dependency
   # fails, and a skipped required check is not a failing one, so a red matrix
   # could report as a non-failure. It runs unconditionally and decides explicitly.
   build:
     name: Build and Test
-    needs: [compat]
+    needs: [compat, docker]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Require every Node major to have passed
         env:
           COMPAT_RESULT: ${{ needs.compat.result }}
+          DOCKER_RESULT: ${{ needs.docker.result }}
         run: |
-          echo "Node compatibility matrix result: $COMPAT_RESULT"
+          echo "Node compatibility matrix: $COMPAT_RESULT"
+          echo "Docker image build:          $DOCKER_RESULT"
+          fail=0
           if [ "$COMPAT_RESULT" != "success" ]; then
             echo "::error title=Node compatibility::At least one Node major did not pass. Open the compat legs to see which."
-            exit 1
+            fail=1
           fi
-          echo "Every Node major in the compatibility matrix passed."
+          if [ "$DOCKER_RESULT" != "success" ]; then
+            echo "::error title=Docker image::The container distribution channel did not build or did not scan."
+            fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then exit 1; fi
+          echo "Every Node major passed and the container image builds and scans."
 
 
   publish:
@@ -257,7 +342,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
@@ -267,15 +352,19 @@ jobs:
       - name: Build
         run: npm run build
 
-      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1. Node 20
-      # LTS bundles npm 10.x, which silently falls back to classic
-      # token auth even when id-token: write is granted. Upgrade
-      # explicitly so OIDC kicks in.
-      # Pin an exact reviewed npm 11 release: npm@latest is now npm 12, which requires
-      # Node >=22 and hard-fails EBADENGINE on this Node 20 runner (broke
-      # the v5.11.0 publish on 2026-07-09). npm 11.18.0 is OIDC-capable and
-      # compatible with the latest Node 20 runner. Re-review its engine range
-      # before changing either version.
+      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1, and this step is
+      # STILL required on Node 22: Node 22.23.2 bundles npm 10.9.8, which silently
+      # falls back to classic token auth even when id-token: write is granted.
+      # Checked against nodejs.org/dist rather than assumed, because "the newer Node
+      # surely bundles a newer npm" is the kind of guess that burns a version number.
+      #
+      # The pin stays at 11.18.0 across the move from Node 20 to Node 22. Its engine
+      # range is ^20.17.0 || >=22.9.0, so it runs on this runner unchanged. npm@latest
+      # is now 12.0.2 and would also run here, but this lane CANNOT BE REHEARSED: it
+      # executes only on a tag push, authenticates by OIDC which no dry run exercises,
+      # and a failure burns a version because tags are immutable. So exactly one
+      # variable moves per release, and this release the variable is the Node major.
+      # Re-review the engine range before changing either version.
       - name: Upgrade npm for OIDC trusted publishing
         run: |
           npm install --global --ignore-scripts npm@11.18.0

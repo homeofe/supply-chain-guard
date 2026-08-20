@@ -1,19 +1,21 @@
 # Node.js support policy
 
-This file is the single authoritative statement of which Node versions this
-project supports, tests, publishes from and develops against. It is not a
-description of the configuration: `src/__tests__/node-version-contract.test.ts`
-parses the block below and fails the build if any declaration site in the
-repository disagrees with it. Change the policy here and the gate will tell you
-every file that has to follow.
+This file is the single authoritative statement of which Node versions this project
+supports, tests, publishes from and develops against. It is not a description of the
+configuration. `src/__tests__/node-version-contract.test.ts` parses the block below
+and fails the build if any declaration site in the repository disagrees with it.
+Change the policy here and the gate names every file that has to follow.
 
 ## The policy
 
 ```json
 {
-  "enginesFloor": "20.0.0",
-  "testedMajors": [20, 22],
-  "publishMajor": 20,
+  "baseline": 22,
+  "enginesFloor": "22.0.0",
+  "supportedMajors": [22],
+  "transitionMajors": [20],
+  "transitionRemovedIn": "5.29.0",
+  "publishMajor": 22,
   "runtimeMajor": 22,
   "devBaseline": 22
 }
@@ -21,81 +23,94 @@ every file that has to follow.
 
 | field | meaning | where it must appear |
 | --- | --- | --- |
-| `enginesFloor` | the lowest Node a consumer may install on | `engines.node` in `package.json` |
-| `testedMajors` | every major the complete build and suite runs on | the `compat` matrix in `ci.yml` |
+| `baseline` | the canonical target platform | this document, and every field below |
+| `enginesFloor` | the lowest Node a consumer is supported on | `engines.node` in `package.json` |
+| `supportedMajors` | majors that are supported and fully tested | the `compat` matrix in `ci.yml` |
+| `transitionMajors` | majors still verified but NO LONGER SUPPORTED | the `compat` matrix in `ci.yml` |
+| `transitionRemovedIn` | the release that deletes the transition lane | asserted against `package.json` version |
 | `publishMajor` | the major the npm artifact is published from | the `publish` job in `ci.yml` |
 | `runtimeMajor` | the major the published Action and image execute on | `action.yml`, `Dockerfile` |
 | `devBaseline` | what a contributor should develop on | `.devcontainer/devcontainer.json` |
 
-Two invariants make the rest of it hold, and both are asserted:
+## Supported is not the same as tested
 
-- **`runtimeMajor` must be in `testedMajors`.** This one was violated. Until
-  this policy existed, the published Action and the published container image
-  both ran on Node 22 while CI built and tested only on Node 20, so the two
-  most-used distribution channels executed on a major that nothing verified.
-- **`publishMajor` must be in `testedMajors`.** An artifact must not be built by
-  a toolchain the suite has never run under.
+This distinction is the whole point of the current arrangement, and the gate enforces
+it in both directions.
 
-## Why 22 and not only 20
+- A **supported** major is one this project promises to work on. It is at or above
+  `enginesFloor`, it runs the complete suite, and a consumer on it can file a bug.
+- A **transition** major is one that still runs the complete suite but is **below the
+  floor and out of support**. It exists so that anyone who has not migrated yet finds
+  out from a warning rather than from a breakage, and it is deleted on a fixed date.
 
-Node 20 reached end of life on 2026-04-30, confirmed against the upstream
-`nodejs/Release` schedule rather than from memory. It receives no further
-security patches. Node 22 is supported until 2027-04-30.
+The gate asserts every supported major is at or above the floor, and every transition
+major is strictly **below** it. A major cannot be in both lists. If a transition major
+were allowed at or above the floor it would be indistinguishable from a supported one,
+which is how "temporary" support becomes permanent.
 
-For a tool whose entire purpose is supply-chain security, building and shipping
-from an unpatched runtime is a defect in the product, not a housekeeping detail.
+## Node 20 is a transition lane, not a baseline
 
-## Why the floor is still 20
+Node 20 reached end of life on **2026-04-30**, confirmed against the upstream
+`nodejs/Release` schedule rather than from memory. It receives no security patches.
+Node 22 is supported until 2027-04-30.
 
-Raising `engines.node` is a promise broken for every consumer still on Node 20,
-and this project is installed inside other people's CI where the Node version is
-often not theirs to choose. The floor moves only once the evidence is in, and the
-evidence is the point of the current arrangement: the complete suite, the
-governance gates and a clean-room install of the packed tarball all run on both
-majors, every commit.
+For a tool whose entire purpose is supply-chain security, treating an unpatched
+runtime as the strategic baseline is a defect in the product, not a housekeeping
+detail. As of v5.28.0 Node 22 is the canonical baseline everywhere: `engines.node`,
+the publish job, the composite Action, the container image and the dev container all
+declare it, so there is no longer a state where the documentation says one thing, CI
+tests another, publishing uses a third and distribution executes a fourth.
 
-## The one exception, and how it ends
+`engines.node` is now `>=22.0.0`. npm reports an engine mismatch as **EBADENGINE, a
+warning, not an error**, unless the consumer sets `engine-strict=true`. So a consumer
+still on Node 20 is warned rather than broken, which is exactly what a transition
+period is for.
 
-**Exception: the npm publish job still runs on Node 20 (`publishMajor: 20`).**
+## The removal milestone, and why it cannot be forgotten
 
-- **Why.** The publish job is the only lane that cannot be rehearsed. It runs
-  solely on a semver tag push, it authenticates by OIDC against the npm Trusted
-  Publisher, and OIDC cannot be exercised by a dry run. A failed publish cannot
-  be retried on the same version, because tags here are immutable, so the cost of
-  being wrong is a burned version number. It has been paid before: npm 12 dropped
-  Node 20, `npm@latest` hard-failed EBADENGINE, and the v5.11.0 publish broke.
-- **What reduces the risk meanwhile.** Everything upstream of the OIDC call is
-  now proven on Node 22 every commit, because `scripts/validate-package.sh` packs
-  the tarball, inspects its contents against the manifest, installs it into a
-  clean directory and runs the CLI and the programmatic entry point from that
-  install, on both majors.
-- **Owner.** The repository maintainer.
-- **Exit condition, mechanically checkable.** Set `publishMajor` to 22 in the
-  block above and delete this section. The gate then requires the `publish` job
-  in `ci.yml` to declare Node 22, and requires 22 to be in `testedMajors`. The
-  condition for doing so is that the packaged-artifact lane has been green on
-  `main` on the Node 22 leg across at least one release cycle, which is visible
-  in the Actions history for the `compat (Node 22)` job.
-- **Tracked in.** `.ai/handoff/NEXT_ACTIONS.md`, not a GitHub issue. This
-  repository holds zero open issues by rule, so an issue is not a durable place
-  to track anything here.
+**The Node 20 transition lane is deleted in v5.29.0.**
 
-## Moving the floor to 22 later
+That is not a note in a document that someone has to remember to act on. The gate
+compares `transitionRemovedIn` against the version in `package.json` and **fails the
+build** once the project reaches or passes that version while `transitionMajors` is
+still non-empty. The transition therefore cannot outlive its own milestone: the
+release that would carry it past the deadline cannot be built until the lane is
+removed.
 
-The migration is mechanical once the decision is made, and the gate drives it:
+To perform the removal:
 
-1. Set `enginesFloor` to `22.0.0` and `testedMajors` to `[22, 24]` here.
-2. Run the build. The drift gate names every file that still says 20, including
-   the user-facing examples, which are asserted to reference only tested majors
-   precisely so that they cannot be forgotten.
-3. Update `engines.node`, the matrix and whatever else the gate listed.
-4. Ship it as a minor at least, and say so in the changelog: for a consumer
-   pinned to Node 20 this changes whether the package installs cleanly.
+1. Set `transitionMajors` to `[]` and delete `transitionRemovedIn` from the block.
+2. Run the build. The gate names every file that still refers to Node 20.
+3. Remove the `20` entry from the `compat` matrix in `ci.yml`.
+
+To extend the deadline instead, `transitionRemovedIn` has to be edited deliberately,
+in a diff someone reviews, with a reason. That is the difference between a decision
+and a drift.
+
+## Two invariants that were being violated
+
+Both are asserted, and both were false before this policy existed:
+
+- **`runtimeMajor` must be a supported major.** The published Action and the published
+  container image both ran on Node 22 while CI built and tested only on Node 20, so the
+  two most-used distribution channels executed on a major that nothing verified.
+- **`publishMajor` must be a supported major.** An artifact must not be built by a
+  toolchain the suite has never run under. Until v5.28.0 the npm artifact was published
+  from Node 20, a third runtime distinct from both the tested one and the executed one.
+
+## The npm pin on the publish job
+
+The publish job used to pin `npm@11.18.0` explicitly, because npm 12 requires Node
+`>=22` and hard-failed EBADENGINE on the Node 20 runner, which broke the v5.11.0
+publish on 2026-07-09. That constraint is a consequence of Node 20 and disappears with
+it. See `.github/workflows/ci.yml` for what the pin is now and why; it is still an
+exact pinned version rather than `@latest`, because a publish lane that resolves a
+floating version is a publish lane whose behaviour changes without a commit.
 
 ## What is deliberately not governed here
 
-Threat intelligence and test fixtures mention Node versions as data, not as
-policy: a Dockerfile fixture pinned to `node:20-alpine` exists to be scanned, and
-the advice string in the Dockerfile scanner names a version because it is example
-output. The gate excludes `src/`, test fixtures and `CHANGELOG.md` for that
+Threat intelligence and test fixtures mention Node versions as data, not as policy: a
+Dockerfile fixture pinned to `node:20-alpine` exists precisely to be scanned, and the
+advice string in the Dockerfile scanner names a version because it is example output.
+The gate excludes `src/`, test fixtures, `CHANGELOG.md` and `.ai/handoff/` for that
 reason, and the exclusion list in the test names each one with its reason.

@@ -537,7 +537,7 @@ describe("formatReport – GitLab (Dependency Scanning report)", () => {
       expect(block.name).toBe("supply-chain-guard");
       expect(block.vendor.name).toBe("supply-chain-guard");
       // Version must track package.json - hardcoding broke releases before
-      // (v5.2.14, v5.2.17); the check:version-sync gate counts this string.
+      // (v5.2.14, v5.2.17); the version-sync gate in check:aahp counts this string.
       expect(block.version).toBe(pkg.version);
     }
   });

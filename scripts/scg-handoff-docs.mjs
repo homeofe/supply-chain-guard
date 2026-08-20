@@ -19,7 +19,7 @@
 //   node scripts/scg-handoff-docs.mjs          -> WRITE the docs (npm run handoff:refresh)
 //   node scripts/scg-handoff-docs.mjs --check  -> FAIL if the committed docs are stale
 //                                                 (wired into `prebuild`, like
-//                                                 check:changelog / check:version-sync)
+//                                                 folded into check:aahp)
 //
 // The output is a PURE FUNCTION of committed inputs: package.json, tsconfig,
 // the src/ file list, and the explicit time-bound verification records below.
@@ -123,6 +123,8 @@ ${moduleList}
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (\`ci.yml\`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, \`v5\` branch fast-forward |
 | AAHP Verify (\`aahp-verify.yml\`) | handoff gate; dependabot exempt |
+| PR Metadata Policy (\`pr-metadata-policy.yml\`) | PR title/body attribution gate; required check; dependabot exempt at step level |
+| Docker Image (\`docker.yml\`) | multi-arch image build and ghcr push, on release tags only |
 | Prebuild gates | \`check:aahp\` (changelog, format, version sync, claims, forbidden patterns, schema/docs, links) + \`check:feed\` + \`check:handoff\` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; \`uses: homeofe/supply-chain-guard@v5\` (floating branch) |
@@ -189,8 +191,11 @@ Every participating record carries the Grounded Reflection fields. Expired
 
 | Property | Where |
 |----------|-------|
-| \`npm run build\` (tsc) passes | CI "Build and Test" job |
-| \`npm test\` (vitest) passes | CI "Build and Test" job (Linux) |
+| \`npm run build\` (tsc) passes | CI \`compat\` lanes, reported through "Build and Test" |
+| \`npm test\` (vitest) passes | CI \`compat\` lanes on every supported Node major (Linux) |
+| Packaged artifact installs and scans from its tarball | \`scripts/validate-package.sh\`, inside each \`compat\` lane |
+| Container image builds and completes a scan | CI \`Docker build and smoke\` job |
+| PR title and body carry no tool attribution | "PR metadata policy" required check |
 | \`npm audit --audit-level=high\` passes | CI; dependabot provides update alerts |
 | AAHP handoff gate passes | "AAHP Verify" workflow |
 | OIDC npm publish + GitHub Release + \`v5\` fast-forward | CI, on semver tags only |

@@ -4,7 +4,7 @@
 # the runtime stage installs that tarball globally and runs as a non-root user.
 #
 # Note: the builder runs `npx tsc` directly instead of `npm run build` because
-# the prebuild gates (check:changelog, check:version-sync, check:handoff,
+# the prebuild gates (check:aahp, check:feed, check:handoff,
 # check:feed) validate repo files (CHANGELOG.md, .ai/handoff, feed.json) that
 # are intentionally not copied into the image context.
 #
@@ -46,7 +46,11 @@ FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a55
 RUN apk add --no-cache zip unzip
 
 COPY --from=builder /tmp/supply-chain-guard-*.tgz /tmp/
-RUN npm install -g /tmp/supply-chain-guard-*.tgz && rm -f /tmp/supply-chain-guard-*.tgz
+# --ignore-scripts: this is the last npm invocation in the image and it runs as
+# ROOT, before USER scg. The tarball declares no install lifecycle script, and
+# scripts/validate-package.sh proves the same tarball installs cleanly with the
+# flag on every CI lane, so nothing is lost by refusing to run any.
+RUN npm install -g --ignore-scripts /tmp/supply-chain-guard-*.tgz && rm -f /tmp/supply-chain-guard-*.tgz
 
 # Run as a non-root user. /scan is the conventional mount point:
 #   docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard scan /scan

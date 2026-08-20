@@ -107,6 +107,91 @@ already holds 19 of GitHub's 20-topic maximum, so exactly ONE slot is free
 against 9 proposed additions. Which one, and whether any existing topic is worth
 trading, is deferred to a separate prioritisation review.
 
+## v5.28.0: Node 22 becomes the baseline, and the gates stop failing open (2026-08-20)
+
+Model: claude-opus-5. Branch release/v5.28.0. MINOR: #156 added a rule, and
+`engines.node` moves.
+
+**The owner's decision, and what it settled.** Node 20 reached end of life on
+2026-04-30. Continuing to treat it as the strategic baseline was ruled out, and the
+end state asked for was explicit: documentation, CI, publishing and the distribution
+channels must agree on ONE policy, with a single time-boxed transition exception and
+nothing more.
+
+**What that meant in practice.** `engines.node` is now `>=22.0.0`. The npm artifact is
+published from Node 22, which removes the third runtime: until this release the package
+was tested on one major, published from another, and executed by the Action and image on
+a third. Node 20 remains as an explicit TRANSITION lane, still running the complete
+suite but below the floor and out of support.
+
+**The milestone is enforced, not remembered.** `docs/node-support.md` gained
+`transitionRemovedIn: "5.29.0"`, and the gate compares it against the version in
+package.json. The build FAILS once the project reaches that version while a transition
+lane still exists, so the transition cannot outlive its own deadline: the release that
+would carry it past cannot be built. Extending it means editing a date in a diff someone
+reviews, which is the difference between a decision and a drift.
+
+**The publish-lane exception is withdrawn, and the withdrawal is recorded rather than
+quiet.** v5.27.0's `docs/node-support.md` gated moving `publishMajor` on the Node 22 leg
+being green on `main` "across at least one release cycle", and zero cycles have elapsed
+since #160. That condition is waived by the owner's direction to unify the runtimes,
+against a stronger evidence base than it anticipated: the complete suite plus a
+clean-room install of the packed tarball on both majors, and a container image now built
+and scanned on every PR. Deleting a condition and then doing the thing it gated, without
+saying so, is the move this note exists to prevent.
+
+**One variable moved on the lane that cannot be rehearsed.** The publish job's npm pin
+stays at 11.18.0. Its engine range is `^20.17.0 || >=22.9.0`, checked against the
+registry rather than assumed, so it runs on Node 22 unchanged. npm 12.0.2 would also run
+there, but the publish lane executes only on a tag push and authenticates by OIDC that no
+dry run exercises, so the Node major and the npm major do not move in the same release.
+Node 22.23.2 still bundles npm 10.9.8, so the explicit upgrade step remains load bearing.
+
+**The gate was failing open, and that is the finding of this release.** `check:aahp` ran
+`npx --no-install aahp check .` on the belief that `--no-install` forces the pinned copy.
+It suppresses a DOWNLOAD; it does not stop npx resolving a globally installed `aahp` on
+PATH. Measured 2026-08-20: this repository pins 3.9.2 exactly, a global 3.8.0 was on
+PATH, and in a checkout with an empty `node_modules` the gates reported
+`Governance OK: 7 gate(s) ran, no failures` from 3.8.0, with nothing anywhere saying
+which version had spoken. That was then reproduced by accident in the shared checkout
+during this very session. `scripts/check-aahp-pin.mjs` now runs first and fails closed;
+mutation-proved by hiding `node_modules/@elvatis_com` and confirming exit 1 where the old
+script printed green. It is the exact failure class this project exists to detect in
+other people's builds.
+
+**The container path is validated before a release rather than during one.** `docker.yml`
+already publishes multi-arch to ghcr, but only on a semver tag, so the first build of any
+Dockerfile or base-image change happened during the release itself, after the decision to
+publish. A non-publishing `Docker build and smoke` job now runs on every PR and gates the
+`Build and Test` aggregator: it builds both stages, asserts the image runs the Node major
+the policy declares, checks the packaged CLI version, and completes a real scan from
+inside the image. Proven locally before being wired in. `Dockerfile` also gained
+`--ignore-scripts` on its global install, which was the only npm invocation in the repo
+without it and ran as root.
+
+**Trigger hygiene finished rather than left half-done.** `ready_for_review` is gone from
+ci.yml: it creates no new head sha and no job is draft-gated, so it started a duplicate
+full matrix on an identical tree and could cancel an in-flight run. `aahp-verify.yml`,
+a required-check producer that predated the whole design, gained explicit
+`types: [opened, synchronize, reopened]`, an explicit `name: aahp-verify` (the context was
+previously the job key by coincidence) and its own concurrency group. `docker.yml` gained
+a serialising group, because both its triggers end in an unconditional `:latest` push from
+different refs.
+
+**Evidence.** Node policy gate: 28 assertions, 5 of 5 new-pattern mutations caught
+(Azure `versionSpec`, the URL-encoded README badge, a reverted supporting workflow, the
+CircleCI image, and `Node >= NN` prose). Workflow contract: 15 assertions, 5 of 5
+mutations caught (re-adding `ready_for_review`, an unnamed `aahp-verify` job, a shared
+concurrency group, dropping `synchronize`, and a second workflow claiming the
+`Build and Test` context). Both harnesses printed a green baseline and a green
+post-restore, without which the numbers would mean nothing.
+
+**Found by the audit, not by reading the config.** The blind spots above were invisible
+to the first version of the gate: `versionSpec: '20.x'` installed Node 20 in
+azure-pipelines.yml while its own prose next to it said 22, the README badge encoded
+`>=20` as `%3E%3D20`, and `cimg/node:lts` floats to Node 24 with no digits for any check
+to see.
+
 ## CI trigger split: metadata policy separated from code validation (2026-08-20)
 
 Model: claude-opus-5. Branch ci/split-metadata-policy. No version bump.
@@ -304,35 +389,32 @@ exit condition in `docs/node-support.md`.
 
 ## Carried open items (process and design, not tied to one sweep)
 
-### Duplicate CI runs: do NOT simply drop the `edited` PR trigger
+### Duplicate CI runs: RESOLVED in v5.28.0 (was: do NOT simply drop `edited`)
 
-Removing `edited` from `ci.yml`'s `pull_request` types was proposed as the root-cause
-fix for duplicate runs on one head commit. It is not safe as stated, and the workflow
-already says why: `edited` exists so the **AI-attribution gate** re-runs on a title or
-body edit. The default types (opened/synchronize/reopened) do not fire on an edit, so
-without it a PR can go green and then have the attribution footer pasted into the body
-with nothing re-checking it. This repo is public and that rule is CI-enforced. The
-concurrency group exists *because* of `edited`, not independently of it.
+This entry argued that removing `edited` from `ci.yml` was unsafe as stated, because
+the attribution gate needed it to re-check a PR title or body. That reasoning was
+right, and the fix it proposed has now shipped, so the item is retired rather than
+carried: PR #159 split the title and body halves into `pr-metadata-policy.yml` and
+narrowed `ci.yml`, and v5.28.0 removed `ready_for_review` for the same reason.
 
-The real defect is that a seconds-long policy check is welded into `Build and Test`,
-which is expensive and is a REQUIRED context. An edit therefore re-runs the whole
-build to re-check a string.
+Two things this entry said are now known to be wrong and are corrected here so they
+are not re-derived from the old text:
 
-Proposed fix, not yet applied because it needs one coordinated step:
+- **It claimed branch protection needs a PAT** because `GITHUB_TOKEN` has no
+  `administration` permission. That conflates the Actions token with the maintainer
+  token used from the workstation, which reports `admin=true`. Protection is edited
+  from the workstation, never from a workflow, so no write-capable credential is
+  introduced.
+- **It called the surviving behaviour luck.** Measured since: a cancelled and a
+  successful run of the same required check on one head sha left the PR CLEAN,
+  because GitHub evaluates the newest run and `cancel-in-progress` only ever cancels
+  a run that a newer one has just superseded. The v5.26.7 block therefore remains
+  unexplained by cancellation alone and was never reproduced. `gh run rerun` is
+  still the recovery, and it re-runs in place, leaving the check conclusive.
 
-- Split the attribution gate into its own job or workflow that keeps
-  `[opened, synchronize, reopened, edited]`.
-- Narrow `Build and Test` to `[opened, synchronize, reopened]`.
-
-**The coordination step:** the gate then reports under a NEW check name, so
-`required_status_checks.contexts` on `main` must gain it in the same change. Get that
-wrong in either direction and you either leave a window where nothing enforces
-attribution, or add a required check that never runs and blocks every merge. Branch
-protection also needs a PAT: `GITHUB_TOKEN` has no `administration` permission.
-
-Until then the documented `gh run rerun` recovery stands. Note the current behaviour is
-luck, not design: on v5.26.7 the cancelled twin was last and blocked the merge; on
-v5.27.0 the successful one was last and it did not.
+The full event-to-workflow contract now lives in `docs/ci-and-release.md`, and
+`src/__tests__/workflow-trigger-contract.test.ts` fails if the workflows drift from
+it.
 
 Deliberately a top-level section rather than another dated "Open for the owner". Both
 items outlive any single sweep, and an entry filed under a sweep heading is

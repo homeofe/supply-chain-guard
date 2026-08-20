@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (137, newest first)
+## Releases (138, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v5.28.0 | 2026-08-20 | docs/node-support.md: one authoritative, mechanically enforced Node support |
 | v5.27.0 | 2026-08-20 | 141 package IOCs imported from the GitHub Advisory Database, taken as two |
 | v5.26.7 | 2026-08-19 | 205 package IOCs imported from the GitHub Advisory Database, taken as two |
 | v5.26.6 | 2026-08-18 | 239 package IOCs imported from the GitHub Advisory Database, taken as three |

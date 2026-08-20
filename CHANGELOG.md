@@ -7,7 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [5.28.0] - 2026-08-20
+
 ### Added
+
+- **`docs/node-support.md`: one authoritative, mechanically enforced Node support
+  policy.** Which majors are supported, which are in transition and until when, what
+  the artifact is published from, and what the Action and container image execute on.
+  It is written as a machine-readable block inside its own documentation, and a gate
+  parses that block and holds every declaration site in the repository to it, so the
+  documentation cannot drift away from the configuration.
+- **The container image is now built and exercised on every commit.** Nothing built
+  the `Dockerfile` before, so the weekly base-image bump PRs were merged on a green
+  pipeline that never invoked `docker build`. CI now builds both stages, asserts the
+  image runs the Node major the policy declares, checks the packaged CLI reports the
+  expected version, and runs a real scan from inside the image.
+- **EU compliance positioning (CRA / NIS2) in the README**, describing which
+  obligations the tool supports evidence for, without claiming conformity on a
+  reader's behalf.
 
 - **`LOCKFILE_MALICIOUS_VERSION`: a scan now reports a dependency whose LOCKFILE-RESOLVED
   version is listed in the threat feed (T-016).** The great majority of package IOCs are
@@ -25,11 +42,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   IOC in the feed against 10,615 resolved dependencies across 43 repositories produced zero
   hits, and the same measurement with the built scanner on the ten largest trees also
   produced zero.
+  The finding is emitted at **critical** severity, with the feed entry's own confidence.
+  That is the CLI's default gate and the Action's documented default `fail-on`, so a
+  build that passes on 5.27.0 can fail on 5.28.0 with no configuration change, on a
+  dependency that was already malicious and already resolved in the lockfile. If that
+  lands mid-incident, `--fail-on high` or a baseline file will let you triage without
+  turning the check off.
+
   Scope, so the feed count is not read as scan coverage: `scan` enforces pinned entries only
   where an npm lockfile is present. A project without one is still covered by bare-name
   entries on the `package.json` path and by `guard` at install time.
 
 ### Changed
+
+- **Node 22 is now the supported baseline. `engines.node` is `>=22.0.0`.** Node 20
+  reached end of life on 2026-04-30 and receives no further security patches. For a
+  tool whose subject is supply-chain risk, treating an unpatched runtime as the
+  strategic baseline is a defect in the product rather than a housekeeping detail.
+  npm reports an engine mismatch as EBADENGINE, which is a **warning, not an error**,
+  unless you set `engine-strict=true`. So an install on Node 20 still succeeds and
+  warns. Node 20 stays in CI as an explicit TRANSITION lane: still running the complete
+  suite, but below the floor and out of support, so anyone who has not migrated finds
+  out from a warning rather than a breakage.
+  **The transition lane is removed in 5.29.0.** That milestone is enforced rather than
+  remembered: the policy gate compares it against the version in `package.json` and
+  fails the build once the project reaches it while the lane still exists, so the
+  transition cannot outlive its own deadline. See `docs/node-support.md`.
+- **The npm artifact is now published from Node 22.** Until this release it was
+  published from Node 20, a third runtime distinct from the one CI tested and the one
+  the Action and the container image execute on. The npm pin on the publish job stays
+  at 11.18.0 across the move, because its engine range already covers Node 22 and that
+  lane cannot be rehearsed, so exactly one variable changes per release.
+- **The example pipelines and the SARIF workflow snippet now use Node 22.** These are
+  what a reader copies into their own pipeline, and they were still recommending an
+  end-of-life runtime.
 
 - **Exact version pinning is now the documented default for the GitHub Action.**
   The README example and `examples/github-action-basic.yml` pin an exact release and
@@ -43,9 +89,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   major - if the v5 line stops shipping, `@v5` keeps resolving a frozen action pinning
   an old npm version and the IOC feed stops updating, which for a scanner is a silent
   false negative. An exact pin surfaces that as an out-of-date dependency instead.
-  The pinned example is registered as a `versionSite`, so `check:version-sync` fails
+  The pinned example is registered as a `versionSite`, so the `version-sync` gate fails
   the build if it ever drifts rather than leaving stale copy-paste in the docs.
-
 
 - **`matchBareNpmIOC` is now an indexed O(1) lookup instead of a linear scan of the whole
   feed on every call (T-017).** It is the matcher every npm dependency check goes through,
@@ -3590,7 +3635,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.27.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.28.0...HEAD
+[5.28.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.0
 [5.27.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.27.0
 [5.26.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.7
 [5.26.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.26.6

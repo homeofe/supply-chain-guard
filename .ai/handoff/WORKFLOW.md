@@ -105,7 +105,8 @@ required. For version-bump work, follow the repository-root CLAUDE.md ceremony:
 1. Add the Keep a Changelog release block and matching reference link.
 2. Bump every version site governed by aahp.config.json.
 3. Refresh package-lock.json, the handoff set, and MANIFEST.json.
-4. Open a PR against protected main and wait for Build and Test plus AAHP Verify.
+4. Open a PR against protected main and wait for all three required contexts:
+   `Build and Test`, `aahp-verify` and `PR metadata policy`.
 5. Squash-merge, pull main, and tag that exact merged commit.
 6. Push only the immutable semver tag. CI performs OIDC npm publishing, creates
    the GitHub Release, and fast-forwards the v5 branch.
@@ -120,7 +121,7 @@ required. For version-bump work, follow the repository-root CLAUDE.md ceremony:
 - A blocked task is skipped. If all tasks are blocked, notify the project owner.
 - Notify the owner on a completed task or a real blocker, not routine phase changes.
 - Main is protected with admin enforcement. All changes land through a PR and
-  required Build and Test plus AAHP Verify checks.
+  required `Build and Test`, `aahp-verify` and `PR metadata policy` checks.
 - Each commit must build and every changed behavior needs focused positive and
   negative regression coverage.
 - Never weaken a security gate merely to make a local environment green.

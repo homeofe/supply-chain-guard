@@ -43,7 +43,7 @@ Every participating record carries the Grounded Reflection fields. Expired
 
 | Property | Value | Derived from |
 |----------|-------|--------------|
-| package.json version | 5.27.0 | package.json |
+| package.json version | 5.28.0 | package.json |
 | Source modules present | 74 | src/ file list |
 | Test files present | 116 | src/__tests__/ file list |
 | tsconfig `types: ["node"]` | yes | tsconfig.json |
@@ -55,8 +55,11 @@ Every participating record carries the Grounded Reflection fields. Expired
 
 | Property | Where |
 |----------|-------|
-| `npm run build` (tsc) passes | CI "Build and Test" job |
-| `npm test` (vitest) passes | CI "Build and Test" job (Linux) |
+| `npm run build` (tsc) passes | CI `compat` lanes, reported through "Build and Test" |
+| `npm test` (vitest) passes | CI `compat` lanes on every supported Node major (Linux) |
+| Packaged artifact installs and scans from its tarball | `scripts/validate-package.sh`, inside each `compat` lane |
+| Container image builds and completes a scan | CI `Docker build and smoke` job |
+| PR title and body carry no tool attribution | "PR metadata policy" required check |
 | `npm audit --audit-level=high` passes | CI; dependabot provides update alerts |
 | AAHP handoff gate passes | "AAHP Verify" workflow |
 | OIDC npm publish + GitHub Release + `v5` fast-forward | CI, on semver tags only |

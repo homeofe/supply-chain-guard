@@ -2,7 +2,7 @@
 # Copy into your repository as azure-pipelines.yml (or merge the steps
 # into an existing pipeline).
 #
-# The pipeline installs Node 20, installs the CLI, scans the repository
+# The pipeline installs Node 22, installs the CLI, scans the repository
 # with JSON output, fails the run on high or critical findings, and
 # always publishes the report as a build artifact (even when the scan
 # fails).
@@ -15,9 +15,9 @@ pool:
 
 steps:
   - task: NodeTool@0
-    displayName: Use Node 20
+    displayName: Use Node 22
     inputs:
-      versionSpec: '20.x'
+      versionSpec: '22.x'
 
   - script: npm install -g supply-chain-guard
     displayName: Install supply-chain-guard

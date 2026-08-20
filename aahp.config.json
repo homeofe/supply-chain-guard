@@ -43,8 +43,8 @@
     },
     {
       "file": "README.md",
-      "minOccurrences": 2,
-      "note": "pre-commit snippet rev: tag"
+      "minOccurrences": 3,
+      "note": "Install/usage version references plus the pinned ghcr image tag in the Docker usage example; all must move together or a reader copies a stale command."
     },
     {
       "file": "docs/mcp.md",
@@ -73,7 +73,8 @@
     },
     {
       "file": "examples/github-action-basic.yml",
-      "minOccurrences": 1
+      "minOccurrences": 1,
+      "note": "The pinned Action reference in the basic example workflow."
     }
   ],
   "claims": [

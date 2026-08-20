@@ -33,8 +33,9 @@ For the current module and test-file counts, see DASHBOARD.md (gate-kept fresh).
 
 - **One runtime dependency** (`commander`); everything else is Node built-ins, so
   the scanner installs clean and has minimal supply-chain surface of its own.
-- **Deterministic, offline gates**: the prebuild checks (changelog, version-sync,
-  handoff, feed, claims) and the generated handoff docs are pure functions of
+- **Deterministic, offline gates**: the prebuild gates (check:aahp, covering
+  changelog presence and format, version sync, capability claims, forbidden
+  patterns, schema-doc sync and doc links; plus check:feed and check:handoff) and the generated handoff docs are pure functions of
   committed files - no timestamps, no network - so they cannot silently drift.
 - **Conservative detection**: typosquat/starjacking/self-scan paths favour
   avoiding false positives (whitelists, related-name and monorepo guards).

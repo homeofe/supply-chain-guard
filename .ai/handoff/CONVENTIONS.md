@@ -133,7 +133,8 @@ about. The tip-versus-`mergedAt` check above is what guards it.
 - MAJOR: breaking CLI changes or removed detection rules
 - MINOR: new scanner module or new detection rules
 - PATCH: bug fixes, rule tuning, dependency updates
-- All version bumps move together (enforced by `check:version-sync`) across every
+- All version bumps move together (enforced by the `version-sync` gate inside
+  `check:aahp`) across every
   version site in `aahp.config.json`. CHANGELOG.md, STATUS.md and the generated
   handoff set move with the release. See CLAUDE.md for the authoritative sequence.
 
@@ -141,14 +142,38 @@ about. The tip-versus-`mergedAt` check above is what guards it.
 
 The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary:
 
-1. CHANGELOG.md entry: a new `## [X.Y.Z] - date` block below `## [Unreleased]` in Keep a Changelog format (no `v` in brackets, `### Added/Changed/Fixed` sections, reference-link footer), gated by `check:aahp` (the pinned AAHP CLI's changelog-format gate)
-2. Version bumped everywhere (see Versioning above)
-3. `npm run build` green (prebuild: `check:aahp` = `npx --no-install aahp check .` [changelog + format + version-sync + claims + forbidden-patterns + schema-doc-sync + doc-links] + `check:feed` + `check:handoff`; CI also runs `aahp doctor` for conformance)
-4. `npm test` green
-5. One commit (code + docs + handoff) on a release branch
-6. Open a PR, wait for protected `Build and Test` and `aahp-verify`, then squash-merge
-7. Pull the merged `main`, tag that exact commit as `vX.Y.Z`, and push the tag
-8. CI publishes to npm via OIDC, creates the GitHub Release, and fast-forwards the `v5` branch
+1. CHANGELOG.md entry: a new `## [X.Y.Z] - date` block below `## [Unreleased]` in
+   Keep a Changelog format (no `v` in brackets, `### Added/Changed/Fixed` sections,
+   reference-link footer), gated by `check:aahp`. Also repoint the `[Unreleased]`
+   compare link at the file foot to `compare/vX.Y.Z...HEAD`: it is gated by the
+   schema-doc-sync group and is NOT a versionSite, so step 2 never reaches it
+2. Version bumped everywhere (see Versioning above), including `package.json`
+   itself, then `npm install --package-lock-only`: npm rewrites the lockfile's
+   version fields only at install time, so an edit-based bump leaves it behind
+3. `npm run feed:generate` and `npm run handoff:refresh`. Neither is optional and
+   neither is implied by step 2. `feed.json` embeds the version, so `check:feed`
+   goes red on EVERY bump and not only when threat intelligence changed, and it is
+   deliberately not a versionSite so `check:aahp` says nothing about it. This step
+   was rediscovered by hand on four consecutive releases before being written down
+4. `npm run build` green. Its prebuild runs three groups: `check:aahp`
+   (`scripts/check-aahp-pin.mjs`, then `npx --no-install aahp check .`, covering
+   changelog presence and format, version-sync, claims, forbidden-patterns,
+   schema-doc-sync and doc-links), `check:feed` and `check:handoff`. CI also runs
+   `aahp doctor` for conformance.
+   The pin preflight is not decoration: `npx --no-install` suppresses a DOWNLOAD but
+   still resolves a globally installed `aahp` on PATH, so a checkout with a missing
+   `node_modules` ran a different version of the governance CLI and printed
+   `Governance OK`. Observed on 2026-08-20 with a global 3.8.0 against a 3.9.2 pin.
+5. `npm test` green
+6. One commit (code + docs + handoff) on a release branch
+7. Open a PR, wait for the THREE protected contexts, then squash-merge.
+   `Build and Test` (from `ci.yml`, an aggregator over the Node lanes and the
+   container smoke job), `aahp-verify` (from `aahp-verify.yml`) and
+   `PR metadata policy` (from `pr-metadata-policy.yml`). Exactly one workflow
+   produces each name; two producers for one context means whichever finishes
+   last defines it. `enforce_admins` is true, so none of them can be bypassed
+8. Pull the merged `main`, tag that exact commit as `vX.Y.Z`, and push the tag
+9. CI publishes to npm via OIDC, creates the GitHub Release, and fast-forwards the `v5` branch
 
 ## Detection Rule Conventions
 

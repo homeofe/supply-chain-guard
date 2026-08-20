@@ -5,7 +5,7 @@
 //   node scripts/generate-feed.mjs          -> WRITE feed.json (npm run feed:generate)
 //   node scripts/generate-feed.mjs --check  -> FAIL if the committed feed.json is
 //                                              stale (wired into `prebuild`, like
-//                                              check:changelog / check:handoff)
+//                                              check:aahp / check:handoff)
 //
 // Single source of truth: the BUNDLED_FEED array literal in src/threat-intel.ts.
 // Scripts are .mjs and cannot import TypeScript, so the array body is extracted

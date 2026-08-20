@@ -4,7 +4,7 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 
 [![npm version](https://img.shields.io/npm/v/supply-chain-guard?logo=npm)](https://www.npmjs.com/package/supply-chain-guard)
 [![npm downloads](https://img.shields.io/npm/dw/supply-chain-guard?logo=npm&label=weekly%20downloads)](https://www.npmjs.com/package/supply-chain-guard)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-green?logo=node.js)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-green?logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/homeofe/supply-chain-guard/ci.yml?branch=main&label=CI&logo=github)](https://github.com/homeofe/supply-chain-guard/actions/workflows/ci.yml)
 [![AAHP Verify](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml/badge.svg)](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml)
@@ -36,8 +36,11 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Co
 - [Install Guard](#install-guard)
 - [Adding Custom Patterns](#adding-custom-patterns)
 - [Architecture](#architecture)
+- [EU Compliance (CRA / NIS2)](#eu-compliance-cra--nis2)
+- [Show that you scan](#show-that-you-scan)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
+- [License](#license)
 
 ## Background
 
@@ -114,6 +117,12 @@ Links individual findings into incident-level attack chains:
 
 ## Installation
 
+**Requires Node.js 22 or newer.** Node 20 reached end of life on
+2026-04-30; it still installs and is still covered by CI as a transition lane, but it
+is out of support and that lane is removed in 5.29.0. Full policy, including what the
+package is published from and what the Action and container image run on:
+[`docs/node-support.md`](docs/node-support.md).
+
 ```bash
 npm install -g supply-chain-guard
 ```
@@ -131,7 +140,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.27.0
+    rev: v5.28.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -147,7 +156,7 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:5.28.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
@@ -663,7 +672,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v5.27.0
+      - uses: homeofe/supply-chain-guard@v5.28.0
         with:
           fail-on: critical
           comment-on-pr: true

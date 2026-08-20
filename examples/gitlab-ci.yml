@@ -15,7 +15,7 @@
 # report must never be missing exactly when it matters most).
 
 supply_chain_scan:
-  image: node:20
+  image: node:22
   stage: test
   script:
     - npm install -g supply-chain-guard

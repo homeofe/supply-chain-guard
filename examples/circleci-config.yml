@@ -11,8 +11,8 @@ version: 2.1
 jobs:
   supply_chain_scan:
     docker:
-      # Any image with Node >= 20 works, e.g. cimg/node:20.19 for a pinned tag.
-      - image: cimg/node:lts
+      # Any image with Node >= 22 works, e.g. cimg/node:22.14 for a pinned tag.
+      - image: cimg/node:22.14
     steps:
       - checkout
       - run:

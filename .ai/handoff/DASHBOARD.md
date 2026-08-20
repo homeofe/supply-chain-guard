@@ -13,8 +13,8 @@ Current package inventory and CI gate wiring are generated below.
 
 | Field | Value |
 |-------|-------|
-| Version | 5.27.0 |
-| Node engines | >=20.0.0 |
+| Version | 5.28.0 |
+| Node engines | >=22.0.0 |
 | Source modules | 74 under `src/` |
 | Test files | 116 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
@@ -57,6 +57,8 @@ Overrides: none.
 | GitHub repo | homeofe/supply-chain-guard (Apache-2.0) |
 | CI (`ci.yml`) | build+test on push/PR; on semver tags: OIDC npm publish, GitHub Release, `v5` branch fast-forward |
 | AAHP Verify (`aahp-verify.yml`) | handoff gate; dependabot exempt |
+| PR Metadata Policy (`pr-metadata-policy.yml`) | PR title/body attribution gate; required check; dependabot exempt at step level |
+| Docker Image (`docker.yml`) | multi-arch image build and ghcr push, on release tags only |
 | Prebuild gates | `check:aahp` (changelog, format, version sync, claims, forbidden patterns, schema/docs, links) + `check:feed` + `check:handoff` |
 | npm publish | OIDC trusted publishing (no NPM_TOKEN); needs npm >=11.5.1 in CI |
 | GitHub Action | composite; `uses: homeofe/supply-chain-guard@v5` (floating branch) |

@@ -60,8 +60,11 @@ Known indicators of compromise go in `src/ioc-blocklist.ts`:
 ### No AI or tool attribution
 
 The project is developed with AI assistance, but the **author of record is the
-human**. A required CI check therefore fails a pull request whose **commit
-messages, commit author/committer identity, PR title or PR body** carry tool or
+human**. Two required CI checks enforce this between them: `Build and Test`
+covers the **commit messages and the author/committer identity** across the pull
+request's commit range, and `PR metadata policy` covers the **PR title and body**.
+They are separate because their inputs are: a title edit cannot change code, so it
+must not trigger a full build. Either one fails a pull request carrying tool or
 model attribution: a "Generated with ..." footer, a `Co-authored-by:` (or
 `Assisted-by:` / `Generated-by:`) trailer naming an AI, or an AI vendor no-reply
 address. The same rule is gated over the published files (`CHANGELOG.md`,
@@ -165,6 +168,41 @@ src/
   types.ts                # TypeScript interfaces
   __tests__/              # Test files
 ```
+
+## CI gates and required checks
+
+A pull request is judged on three required status checks, and admins are not
+exempt from them:
+
+| check | produced by | what it means |
+| --- | --- | --- |
+| `Build and Test` | `ci.yml` | every supported Node major built, passed the full suite and installed from its own packed tarball, and the container image builds and scans |
+| `aahp-verify` | `aahp-verify.yml` | the handoff state is intact and changed along with the code |
+| `PR metadata policy` | `pr-metadata-policy.yml` | the PR title and body carry no tool or model attribution |
+
+Two things about this surprise people:
+
+- **`npm run build` is not just `tsc`.** It runs three governance gate groups
+  first. A red gate is the task, not an obstacle to route around.
+- **A code change must bring its handoff state with it.** `aahp-verify` enforces a
+  content-drift gate: if code changed, `.ai/handoff/STATUS.md` and `MANIFEST.json`
+  must change too. Add a short entry to STATUS.md describing what you did and why,
+  then run `npm run handoff:refresh` and commit the result. Only dependabot is
+  exempt.
+
+You can also validate the published artifact locally, exactly as CI does:
+
+```bash
+bash scripts/validate-package.sh
+```
+
+It packs the tarball, installs it into a throwaway directory and drives the CLI
+from that install. On Windows set `SCG_VALIDATE_TMP` to an explicit native path
+first, because MSYS and native node disagree about where `/tmp` is.
+
+Full detail on what runs when, how branch protection behaves and how a release is
+cut: [`docs/ci-and-release.md`](docs/ci-and-release.md). Node version policy:
+[`docs/node-support.md`](docs/node-support.md).
 
 ## Development Setup
 
