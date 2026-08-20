@@ -225,6 +225,68 @@ pull_request event. The assertion now resolves the `||` fallback for that event
 before comparing. Recorded because the first version looked like a proof and was
 not.
 
+## T-013: Node compatibility contract, evidence lanes and drift gate (2026-08-20)
+
+Model: claude-opus-5. Branch node/22-compat-contract. No version bump.
+
+**The survey came back different from the task's premise.** T-013 was written as
+"move to a supported Node line". The inventory found the repository already
+disagreeing with itself: `package.json` promised `>=20.0.0`, CI built, tested and
+PUBLISHED on 20, and `action.yml` and the `Dockerfile` both ran on 22. So the
+composite Action and the container image, the two things people actually run,
+executed on a major CI never exercised, and had for months with everything green,
+because nothing compared the files to each other.
+
+Node 20 reached end of life on 2026-04-30. That was read from the upstream
+nodejs/Release schedule rather than recalled. For a supply-chain security tool,
+building and publishing the artifact from an unpatched runtime is a defect in the
+product, not housekeeping.
+
+**What shipped.** One authoritative policy in `docs/node-support.md`, as a
+machine-readable block inside its own documentation so the doc cannot drift from
+the config. `src/__tests__/node-version-contract.test.ts` parses it and holds
+every declaration site to it, including two invariants that were being violated:
+the runtime major must be tested, and the publish major must be tested.
+
+CI now runs the complete build, every governance gate and the full suite on Node
+20 and Node 22, with no reduced smoke lane. `scripts/validate-package.sh` runs
+inside each matrix leg: it packs, checks the tarball against the manifest,
+installs it into a directory sharing nothing with the checkout, and drives the CLI
+and the programmatic entry point from that install, ending in a real scan.
+
+**The check name stayed put, deliberately.** Making `build` a matrix would have
+renamed its check to `Build and Test (20)` and `Build and Test (22)` and deleted
+the context branch protection waits for, which is the deadlock PR #159 measured
+two days' work earlier in this same session. Instead the matrix runs under
+`compat (Node N)` and a one-step aggregator keeps `Build and Test` as a single
+required context with a single producer. It carries `if: always()` because a
+SKIPPED job is not a failing one, so without it a red matrix could report as a
+non-failure.
+
+**Evidence.** Drift gate: 20 assertions, 9 of 9 mutations caught, including
+action.yml reverting to 20, the Dockerfile reverting to 20, dropping 22 from the
+matrix, lowering the engines floor, moving the publish job to an untested major,
+the devcontainer staying on the EOL major, a user-facing example advertising an
+untested major, and the policy document itself claiming an untested runtime major.
+
+Artifact validation: 34 checks, 3 of 3 artifact defects caught. The first run of
+that mutation harness was INVALID and is recorded as such: it reported 3 of 3
+caught while the clean tree also exited 127, because Python spawned a bash whose
+PATH had no `node`, so every run failed for the same unrelated reason. Re-run from
+bash, one mutation then SURVIVED: dropping `policy-schema.json` from `files[]` was
+invisible, because every assertion read `files[]` and confirmed the tarball
+matched it, so deleting an entry removed the file and the check together. A
+manifest-independent floor of required runtime assets was added, and the mutation
+is caught.
+
+**What is deliberately NOT done.** `engines.node` still says `>=20.0.0`. Raising
+it is a promise broken for every consumer still on Node 20, in a package installed
+inside other people's pipelines where the Node version is often not theirs to
+choose. That is an owner decision, it is recorded as the outstanding half of T-013,
+and the gate makes executing it mechanical. The publish job also still runs on
+Node 20, tracked as a named exception with an owner and a mechanically checkable
+exit condition in `docs/node-support.md`.
+
 ## Carried open items (process and design, not tied to one sweep)
 
 ### Duplicate CI runs: do NOT simply drop the `edited` PR trigger

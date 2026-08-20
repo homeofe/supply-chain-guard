@@ -98,17 +98,48 @@ the production extraction backend or weakening Linux coverage.
 
 ---
 
-## T-013: Move to Babel 8 and a supported Node line (blocked)
+## T-013: Move to Babel 8 and a supported Node line (owner decision outstanding)
 
 **Goal:** Upgrade Babel and the supported Node/CI matrix as one compatible change.
 
-**Blocked by:** Owner decision on raising package engines and both CI jobs together;
-do not merge Babel 8 alone.
+**What is now in place.** The compatibility contract, the evidence to act on it and
+the machinery to execute it all exist, so the remaining step is a decision rather
+than an investigation. `docs/node-support.md` holds the policy as a
+machine-readable block, and `src/__tests__/node-version-contract.test.ts` holds
+every declaration site to it. The complete suite plus a clean-room install of the
+packed tarball now run on Node 20 and Node 22 on every commit.
+
+**What the survey found, and it was not what the task assumed.** The repository
+already disagreed with itself. `package.json` promised `>=20.0.0`, CI built,
+tested and published on 20, while `action.yml` and the `Dockerfile` both executed
+on 22. The two most-used distribution channels were running on a major CI never
+exercised. Node 20 also reached end of life on 2026-04-30, verified against the
+upstream nodejs/Release schedule, so the artifact was being published from an
+unpatched runtime.
+
+**Blocked by:** Owner decision on raising `engines.node`, which is a promise
+broken for every consumer still on Node 20 and therefore not an agent's call.
+Everything else is mechanical once it is made: set `enginesFloor` and
+`testedMajors` in `docs/node-support.md` and the gate names every file that has to
+follow.
 
 **Acceptance criteria:**
+- [x] Every Node declaration site identified and reconciled to one authoritative policy.
+- [x] CI runs the COMPLETE build and suite on both majors, with no reduced smoke lane.
+- [x] The publishing path is validated on both majors without a public release: pack, tarball contents against the manifest, clean-room install, entry point, bin mapping, type declarations, metadata and an end-to-end scan from the installed artifact.
+- [x] A deterministic drift gate exists, mutation-proved 9/9, and the artifact validation is mutation-proved 3/3.
 - [ ] The owner selects and records the new minimum Node line.
-- [ ] Engines, both CI jobs, Babel, lockfile, and user-facing support documentation move together.
-- [ ] Build, full Linux suite, package smoke test, and release gates pass on the new matrix.
+- [ ] Engines, Babel, lockfile and user-facing support documentation move together with it.
+
+**Tracked exception: the npm publish job still runs on Node 20.** It is the one
+lane that cannot be rehearsed, because it runs only on a tag push and
+authenticates by OIDC, which no dry run exercises; a failed publish burns a
+version number, and that bill has been paid before when npm 12 dropped Node 20.
+Owner: the maintainer. Exit condition, mechanically checkable: set `publishMajor`
+to 22 in `docs/node-support.md`, which makes the gate require the publish job to
+declare 22. The condition for doing so is a green `compat (Node 22)` leg on `main`
+across at least one release cycle. Tracked here rather than in a GitHub issue
+because this repository holds zero open issues by rule.
 
 ---
 

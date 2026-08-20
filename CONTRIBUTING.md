@@ -182,7 +182,7 @@ npm test
 
 The repository ships a [dev container](.devcontainer/devcontainer.json). Open the
 repo in VS Code and choose "Reopen in Container" (or use GitHub Codespaces) - it
-installs Node 20, the `zip` CLI, and runs `npm ci` automatically. In the
+installs Node 22, the `zip` CLI, and runs `npm ci` automatically. In the
 container ALL tests pass, including the 14 vscode-scanner tests that need the
 `zip` binary.
 

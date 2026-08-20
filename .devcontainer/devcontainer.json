@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-guard",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y zip && npm ci",
   "customizations": {
     "vscode": {

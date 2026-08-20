@@ -43,9 +43,26 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    name: Build and Test
+  # Complete build and test on every Node major this package supports.
+  #
+  # The contract: the package must install, pass every governance gate, pass the
+  # FULL suite, and run FROM ITS PACKED TARBALL on each major it claims. There is
+  # deliberately no reduced smoke lane, because a lane that runs less than the
+  # real suite proves less than the real suite, and the difference is exactly
+  # where a version incompatibility hides.
+  #
+  # This matrix is the authoritative Node policy for CI.
+  # src/__tests__/node-version-contract.test.ts fails the build if any other
+  # declaration site in the repo drifts from it. See docs/node-support.md.
+  compat:
+    name: compat (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      # Both majors always report. Stopping the 22 leg because 20 failed would
+      # hide the compatibility difference this matrix exists to surface.
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,7 +72,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -157,8 +174,7 @@ jobs:
           if [ "$fail" -ne 0 ]; then
             exit 1
           fi
-          echo "No AI attribution in PR title, body or commit messages."
-
+          echo "No AI attribution in commit messages or author identity."
       # AAHP conformance (v3.6+): the pinned @elvatis_com/aahp CLI self-checks handoff
       # set, MANIFEST schema, grounding, the exact-version dep pin, changelog format and
       # version sync. --no-install forces the pinned node_modules copy, not a fetched one.
@@ -168,13 +184,55 @@ jobs:
       - name: Test
         run: npm run test:coverage
 
+      # Validates the ARTIFACT rather than the working tree: packs, inspects what
+      # came out, installs the tarball into a directory that shares nothing with
+      # this checkout, and drives the CLI and the programmatic entry point from
+      # that install. A build that emits nothing, an entry point aimed at a
+      # missing file, an unshipped data file or a bin that is not executable all
+      # survive a green suite and break on `npm install`. Running it inside the
+      # matrix is what makes it a compatibility check and not just a packaging one.
+      - name: Validate the packaged artifact
+        run: bash scripts/validate-package.sh
+
       - name: Upload coverage summary
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: coverage-summary
+          # Per-major name: two matrix legs uploading one artifact name collide.
+          name: coverage-summary-node${{ matrix.node }}
           path: coverage/coverage-summary.json
           retention-days: 14
+
+  # Aggregator. "Build and Test" is a REQUIRED status check, and its NAME is a
+  # contract with branch protection, so it stays one context with one producer
+  # even though the work now runs once per Node major.
+  #
+  # Renaming the matrix job to this instead would produce "Build and Test (20)"
+  # and "Build and Test (22)" and delete the context branch protection waits for,
+  # blocking every PR on a check that never arrives. That failure mode is not
+  # hypothetical: it was measured on PR #159, where a workflow missing the
+  # `synchronize` trigger left head shas with no run of a required check at all.
+  #
+  # `if: always()` matters. Without it this job is SKIPPED when a matrix leg
+  # fails, and a skipped required check is not a failing one, so a red matrix
+  # could report as a non-failure. It runs unconditionally and decides explicitly.
+  build:
+    name: Build and Test
+    needs: [compat]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every Node major to have passed
+        env:
+          COMPAT_RESULT: ${{ needs.compat.result }}
+        run: |
+          echo "Node compatibility matrix result: $COMPAT_RESULT"
+          if [ "$COMPAT_RESULT" != "success" ]; then
+            echo "::error title=Node compatibility::At least one Node major did not pass. Open the compat legs to see which."
+            exit 1
+          fi
+          echo "Every Node major in the compatibility matrix passed."
+
 
   publish:
     name: Publish to npm

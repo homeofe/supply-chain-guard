@@ -169,6 +169,11 @@ describe("workflow trigger contract", () => {
   it("dependabot is exempted at step level, not job level", () => {
     // A skipped JOB reports a non-success conclusion for its check context. The
     // job must run and the step must skip, so the required check stays conclusive.
-    expect(META).toMatch(/- name: No AI attribution in PR title or body\n\s+if: github\.actor != 'dependabot\[bot\]'/);
+    // `\s+` rather than `\n\s+`: this repository is worked on from Windows as
+    // well as Linux and has no .gitattributes forcing LF, so the same file is
+    // CRLF in one checkout and LF in another. A hardcoded \n passes on the CI
+    // runner and fails on a Windows clone, which is a test that reports on the
+    // checkout rather than on the thing it claims to assert.
+    expect(META).toMatch(/- name: No AI attribution in PR title or body\s+if: github\.actor != 'dependabot\[bot\]'/);
   });
 });
