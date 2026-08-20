@@ -151,6 +151,87 @@ anything, since nothing in CI reports it.
 
 ---
 
+## Threat-intel sweep 2026-08-20 (unreleased, branch threat-intel/2026-08-20)
+
+Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
+No version bump; the release PR is separate as usual.
+
+**141 package IOCs imported, as two explicit slices.** Same approach as the previous
+three sweeps: the 2026-08-14 backfill still sits in the default rolling window, so the
+window was cut into day slices that exclude it by construction rather than importing
+the block or accepting the age-out warning. The slices were
+`--since 2026-08-15 --until 2026-08-20` (140 entries) and
+`--since 2026-08-06 --until 2026-08-13` (1 entry, `golaaa@1.0.3`). Explicit slices are
+exempt from the undrainable check, so no `--allow-backlog` was needed and nothing was
+silently dropped.
+
+The split was re-derived rather than inherited, by dumping the full window with
+`--dry-run --limit 100000 --json` and grouping by `firstSeen` and scope:
+
+- 4,504 non-duplicate entries in the window. 4,363 are `@zalastax/nolb-*`, all dated
+  2026-08-14; the remaining 141 are dated 2026-08-06, 08-19 and 08-20. The two sets
+  still do not overlap on any day, which is what keeps the date slice a clean
+  substitute for the scope filter the importer does not have.
+- **A re-run of the default window after both slices reports 4,363 remaining, all of
+  them `@zalastax/nolb-*` and none of them anything else.** That is the check worth
+  repeating each sweep: it proves the slices took everything that was not the block,
+  rather than assuming it from the date grouping.
+- A fresh sample of the zalastax scope is dead again (`0.0.1-security` holding
+  versions, description "security holding package"). That is the sixth independent
+  sample across six sweeps returning the same answer.
+
+**All 121 distinct names were probed against their registries, not sampled:** 27 live,
+38 npm security-holding stubs, 53 with no published versions, 3 hard 404 (all three
+PyPI). Every one of the 27 live names is version-pinned by the importer. The stronger
+result, and the one that matters for false positives: **all 34 bare-name blocks in this
+batch landed on packages npm has already replaced with a holding stub**, so not one
+all-versions block in this batch can reach installable code. `o0o9@1.8.0` pins a
+version the registry no longer serves, which is harmless.
+
+One entry is worth naming because it is a real vendor SDK rather than a squat:
+`composer:intercom/intercom-php@5.0.2`, 56 releases on Packagist, flagged as part of
+the Mini Shai-Hulud / TeamPCP wave. The advisory range was re-read directly from the
+GitHub API before trusting the import: it is exactly `= 5.0.2`, so the version pin is
+correct and no bare-name block was created.
+
+**No non-package indicator was added by hand.** The enrichment step found nothing
+addable, which is the second sweep in a row with that result. Checked and found already
+covered: the ChainDrop / keyv worm set (domains, `setup.mjs` dropper hashes, the
+Ethereum resolver contract, the Bun-loader chain), NullReceiver / Contagious Interview
+(`bianira-ui@1.27.0`, `fluid-type-ui@2.0.8`, C2 `166[.]88[.]134[.]62`, the attacker
+wallet and the dead-drop recipient address), Flooding Dropper / WEL1DROPPER, the
+Sonatype six-package Ethereum-transaction set (`@kolbo/mcp`, `agentgui`, `godot-kit`,
+`envpack-conf`, `postcss-initial-provider`, `tailwindcss-motion-advanced`), the Mastra
+scope takeover, mrmustard, LiteLLM/telnyx, GlassWASM, TrapDoor, the Nx Console VS Code
+extension breach and the `durabletask` PyPI hijack. Sources swept: Socket, Aikido,
+StepSecurity, OX Security, Sonatype, Unit 42, Wiz, Datadog, safedep, Snyk, Arctic Wolf,
+Phoenix Security and The Hacker News.
+
+Incidental corroboration worth recording: today's import added
+`postcss-initialize-provider@3.0.4`, a third spelling in the family that already carries
+`postcss-initial-provider` and `postcss-initialize-plugin@3.0.4`.
+
+### One indicator deliberately NOT ingested
+
+`shai_hulululud@1.0.48596`, the npm package Socket describes as probing AI malware
+scanners with prompt-injection comments and context flooding. Left out for two reasons,
+recorded so a later sweep does not re-add it as an oversight: Socket classifies it as
+protestware or potentially unwanted behaviour rather than functional malware, and no
+advisory database carries it. It is also out of window (published 2026-06-16). If a
+vendor later reclassifies it as malware, it becomes a normal import rather than a hand
+addition.
+
+### Still true from the previous sweep
+
+The default rolling window keeps reporting the zalastax block until it ages out around
+2026-08-28. The day-slice workaround handles it without an importer change, so the
+`--exclude-scope` idea remains unbuilt and unneeded. Note that after 2026-08-28 the
+block disappears on its own and the plain `npm run feed:import` call in the task file
+starts working again without slicing; a sweep after that date should not keep slicing
+out of habit.
+
+---
+
 ## Lifecycle-hook coverage gap (2026-08-19, unreleased, branch fix/npm-scanner-lifecycle-hooks)
 
 No version bump; the release PR is separate as usual.

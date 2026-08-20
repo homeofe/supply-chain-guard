@@ -7,6 +7,39 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **141 package IOCs imported from the GitHub Advisory Database**, taken as two
+  explicit date slices (2026-08-15 to 2026-08-20 and 2026-08-06 to 2026-08-13)
+  rather than one rolling window, so the 2026-08-14 bulk backfill stays excluded by
+  construction. 121 distinct names: 107 entries are version pins across 88 names and
+  34 are bare names carrying an all-versions advisory. 138 are npm, 3 are PyPI
+  (`libasync`, `rc4-secure`, `reqcrypt-dev`) and 1 is Packagist
+  (`intercom/intercom-php@5.0.2`, the Mini Shai-Hulud / TeamPCP wave reaching a real
+  vendor SDK with 56 releases; the advisory pins exactly `= 5.0.2` and so does the
+  feed).
+
+  Three clusters account for most of the batch. The largest reads as
+  dependency confusion against first-party developer tooling: about fifteen unscoped
+  names published at 1.0.0 on 2026-08-19 that mirror Google-maintained projects
+  (`gaarf`, `gaarf-bq`, `gaarf-node`, `gaarf-node-bq`, `magika-js`, `bazelisk`,
+  `ngsw-config`, `localize-extract`, `localize-translate`, `chromecast-webdriver-cli`,
+  `chromeos-webdriver-cli`, `chrome-enterprise-premium-mcp`, `gemini-cli-a2a-server`,
+  `code-assist-mcp`, `github-policy-bot`). A second cluster squats internal names of a
+  Russian fintech stack (`dolyame-*`, `fb-forms-*`, `fb-cards-*`, `devplatform-*`,
+  `digital-interview-*`, `finance-business-company-id-models`). The third is the
+  familiar blockchain-lure set (`secp256k1-lib`, `evm-validation`, `eth-react-provider`,
+  `hardhat-hold`, `mc-provider`, `mc-registry`, `pump-fun-skills`, `rand-txs-sdk`,
+  `crypto-javas`, `price-scripping-js`).
+
+  All 121 names were probed against their registries rather than sampled: 27 are still
+  installable, 38 are npm security-holding stubs, 53 have no published versions left and
+  3 are hard 404. Every one of the 27 live names is version-pinned, and **every one of
+  the 34 bare-name blocks landed on a package npm has already replaced with a holding
+  stub**, so no all-versions block in this batch can reach installable code. One pin,
+  `o0o9@1.8.0`, names a version the registry no longer serves; it is kept for the
+  historical record and cannot match anything.
+
 ### Fixed
 
 - **`install`, `prepare` and the rest of npm's auto-run lifecycle hooks are now
