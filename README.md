@@ -1,6 +1,6 @@
 # supply-chain-guard
 
-Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents.
+Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents. Supports EU Cyber Resilience Act SBOM and component-documentation work, and NIS2 supply chain risk-management measures.
 
 [![npm version](https://img.shields.io/npm/v/supply-chain-guard?logo=npm)](https://www.npmjs.com/package/supply-chain-guard)
 [![npm downloads](https://img.shields.io/npm/dw/supply-chain-guard?logo=npm&label=weekly%20downloads)](https://www.npmjs.com/package/supply-chain-guard)
@@ -586,6 +586,63 @@ Honest caveats: Socket's registry-wide behavioral detection is deeper than anyth
 - **CI one-two punch**: run `osv-scanner --lockfile=package-lock.json` for known CVEs and MAL- entries, then `supply-chain-guard scan .` for behavioral and campaign-IOC threats in the installed tree. Two axes, one job, both exit-code gated.
 - **Zero-install npm baseline**: `npm audit --audit-level=high` plus `npx supply-chain-guard scan .` covers advisory-known vulnerabilities and unreported malware without adding a single dependency.
 - **Pre-install vetting of a suspicious package**: `guarddog npm scan <pkg>` for an independent heuristic score, plus `supply-chain-guard npm <pkg>` for campaign-IOC and install-hook analysis, before it ever touches your machine.
+## EU Compliance (CRA / NIS2)
+
+supply-chain-guard produces artefacts and findings that **support** compliance
+work under two EU regulations that apply to software manufacturers. It does not
+make an organisation compliant: compliance remains the responsibility of the
+organisation deploying the software, and the mapping below describes what the
+tool produces, not a legal assessment.
+
+### Cyber Resilience Act (CRA)
+
+The CRA requires manufacturers of products with digital elements to identify and
+document the components they ship, to address vulnerabilities in those
+components, and to be able to reason about the integrity of what they build on.
+supply-chain-guard contributes to each of those activities:
+
+- **Component inventory:** generates a [CycloneDX 1.6](https://cyclonedx.org/)
+  SBOM from the real resolved dependency tree, as a machine-readable component
+  list you can attach to technical documentation.
+- **Dependency risk:** detects known-malicious packages and versions,
+  typosquatting, dependency confusion, and compromised publisher activity, at
+  scan time and at install time.
+- **Supply chain integrity:** grades SLSA provenance from levels 0 to 3 by
+  parsing and structurally validating in-toto/DSSE attestations, giving a
+  recorded integrity signal per project.
+
+```bash
+# Write a CycloneDX 1.6 SBOM alongside the scan report
+supply-chain-guard scan ./project --sbom-output sbom.json
+```
+
+Article and paragraph citations are deliberately omitted here. Map these outputs
+to specific provisions against the final published regulation text, with your own
+legal review, rather than against this README.
+
+### NIS2 Directive
+
+NIS2 requires essential and important entities to take measures covering supply
+chain security. The relevant capabilities are:
+
+- **Supply chain risk:** typosquatting, dependency confusion, compromised
+  packages, and malicious GitHub Actions in CI/CD workflows.
+- **Incident evidence:** the correlation engine links individual findings into
+  named attack chains with confidence scores, and reports are exportable as
+  SARIF, JSON, and CycloneDX for retention alongside an incident record.
+- **Configuration exposure:** IaC, Dockerfile, and `.npmrc` / `.yarnrc` scanning
+  surfaces misconfiguration before deployment.
+
+### Operating model
+
+Apache-2.0, no account required, and no telemetry: the scanner reports only to
+its own output. `scan` runs fully offline against the bundled threat feed, so it
+is suitable for air-gapped use. The commands that deliberately reach the network
+are the ones that exist to do so: `supply-chain-guard npm <pkg>` and
+`supply-chain-guard pypi <pkg>` fetch the package under inspection, and the feed
+refresh fetches updated indicators. Offline runs use the feed bundled with the
+installed version, so pin the version you intend to audit against.
+
 ## GitHub Action
 
 **Pin an exact version.** That is the recommended form, and it is the same advice

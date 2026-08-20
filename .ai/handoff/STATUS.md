@@ -60,6 +60,53 @@ dropping the dedup turns 1 red. An earlier mutant survived and that was a gap in
 the tests, not a pass - it is recorded here because the first attempt looked like a
 proof and was not.
 
+## EU compliance positioning in the README (2026-08-20, unreleased)
+
+Model: claude-opus-5. Branch docs/eu-compliance-positioning. README only, plus
+this note. No version bump.
+
+Adds an `EU Compliance (CRA / NIS2)` section between `How It Compares` and
+`GitHub Action`, and one sentence to the intro paragraph. Four things were
+deliberately left OUT of the drafted text, and they are recorded here so a
+later pass does not reinstate them as helpful additions:
+
+1. **No company or location line.** The draft claimed a legal entity and a city.
+   Neither appears anywhere in the repository, the entity is still in formation,
+   and a public README is not the place to assert it. Removed at the owner's
+   direction.
+2. **No article or paragraph citations.** The draft cited specific CRA article
+   paragraphs. Those were not verifiable from an authoritative source here, and
+   the SBOM obligation is commonly attributed to a different provision than the
+   one drafted. Wrong statutory citations in a section aimed at compliance
+   readers are worse than no citations, so the section describes what the tool
+   PRODUCES and tells the reader to map it against the final regulation text
+   with their own legal review.
+3. **"Supports", never "satisfies" or "CRA-ready".** A scanner can contribute
+   artefacts to compliance work; it cannot make an organisation compliant. The
+   section says so in its opening paragraph.
+4. **Air-gap claim qualified.** `scan` is genuinely offline against the bundled
+   feed, but `npm <pkg>` / `pypi <pkg>` fetch the package under inspection and
+   the feed refresh fetches indicators. The unqualified "fully air-gappable"
+   would have been false for those commands.
+
+Formatting: the drafted text carried four em-dashes and two en-dashes. The
+`em-dash` forbidden-patterns rule covers README.md, so it would have failed the
+build rather than merged. Written with hyphens and colons instead, and verified
+at zero of both before the gate ran.
+
+The documented example was executed rather than assumed:
+`scan <dir> --sbom-output sbom.json` exits 0 and writes a CycloneDX 1.6
+document. The flag exists at `src/cli.ts:225`, and SLSA levels 0 to 3 match
+`src/slsa-verifier.ts:326`.
+
+**Repository topics, still open.** The related request was to replace all topics
+with a 20-item list. Replacement would have dropped 8 existing topics including
+`pypi`, `golang` and `rust`, which are supported ecosystems, and `glassworm`, a
+campaign the scanner detects by name. Additive was chosen instead, but the repo
+already holds 19 of GitHub's 20-topic maximum, so exactly ONE slot is free
+against 9 proposed additions. Which one, and whether any existing topic is worth
+trading, is deferred to a separate prioritisation review.
+
 ## Carried open items (process and design, not tied to one sweep)
 
 ### Duplicate CI runs: do NOT simply drop the `edited` PR trigger
