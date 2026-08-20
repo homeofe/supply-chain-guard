@@ -31,6 +31,26 @@ permissions:
 # Keyed on the PR number and scoped to THIS workflow, so a rapid series of body
 # edits collapses to the newest one, and a metadata edit can never cancel an
 # in-flight code-validation run: the two workflows do not share a group.
+#
+# cancel-in-progress stays TRUE, and the reasoning was checked against a live
+# measurement rather than assumed, because a `cancelled` conclusion under a
+# required check name is the state that blocked a merge on the v5.26.7 cut.
+#
+# Two edits two seconds apart on PR #159 (2026-08-20) produced exactly that pair:
+# run 32358446823 cancelled, run 32358449384 success, both named "PR metadata
+# policy" on head sha 6c74849. The PR reported mergeStateStatus=CLEAN, so GitHub
+# evaluated the NEWEST run for the context and the cancelled twin did not block.
+#
+# That is not luck, it is structural: cancel-in-progress only ever cancels a run
+# that a NEWER run in the same group has just superseded, and that newer run then
+# runs to completion (or is itself superseded, recursively). So the newest run for
+# this check name is never the cancelled one.
+#
+# Setting it to FALSE would be strictly worse. GitHub keeps at most one pending
+# run per group and cancels the previously pending one, so a third rapid edit
+# still yields a cancelled conclusion - and without in-progress cancellation two
+# runs can race, letting a run that inspected the OLDER body finish last. A stale
+# green on an attribution gate is a policy hole; a stuck merge is an annoyance.
 concurrency:
   group: pr-metadata-${{ github.event.pull_request.number }}
   cancel-in-progress: true

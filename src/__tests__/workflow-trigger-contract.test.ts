@@ -130,6 +130,16 @@ describe("workflow trigger contract", () => {
     expect(forPullRequest(metaGroup!)).not.toBe(forPullRequest(ciGroup!));
   });
 
+  it("the metadata workflow cancels superseded runs", () => {
+    // Load-bearing for a property measured on PR #159: because a superseded run
+    // is only ever cancelled BY a newer run in the same group, and that newer run
+    // then runs to completion, the newest run for this check name is never the
+    // cancelled one - which is what keeps a cancelled twin from becoming the
+    // effective result. Turning this off would also let two runs race and let one
+    // that inspected the older body finish last.
+    expect(META).toMatch(/cancel-in-progress:\s*true/);
+  });
+
   it("the metadata workflow never checks out PR code", () => {
     // It reads only the event payload. A checkout would let it execute
     // attacker-controlled code from a fork on a cheap, frequently-triggered path.
