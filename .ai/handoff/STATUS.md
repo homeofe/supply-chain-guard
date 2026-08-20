@@ -1,6 +1,6 @@
 # supply-chain-guard: Current State
 
-> Updated 2026-08-19 (release v5.26.7). This is one current snapshot, not a session
+> Updated 2026-08-20 (release v5.27.0). This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
 
@@ -151,10 +151,43 @@ anything, since nothing in CI reports it.
 
 ---
 
-## Threat-intel sweep 2026-08-20 (unreleased, branch threat-intel/2026-08-20)
+## Release v5.27.0 (2026-08-20)
+
+Model: claude-opus-5. Contents: the 2026-08-20 threat-intel sweep and the
+lifecycle-hook coverage fix, both detailed below.
+
+**MINOR, not PATCH, and this is the first release since v5.26.1 that is not a
+patch.** The rule this repo has been applying is recorded under v5.26.6: a release is
+a PATCH when it adds "feed and blocklist data plus one test block: no new rule, no
+pattern-table change, no change to what the scanner does". The threat-intel half of
+this release meets that description exactly. The lifecycle-hook half does not. It
+changes `patterns.ts`, and it changes what the scanner reports on all three code
+paths that read `package.json` scripts: `install`, `prepare`, `preprepare`,
+`postprepare` and `prepublish` now produce `SCRIPT_*` findings where they produced
+none. No new rule id was added, so the change is invisible to a rule inventory, but a
+consumer whose gate was green can go red on the next run without changing a single
+dependency. That is a behaviour change and it gets a minor.
+
+Worth being precise about what does NOT drive the decision, so the precedent stays
+usable: `AUTO_RUN_LIFECYCLE_HOOKS` is a new exported symbol, but `src/index.ts` does
+not re-export `patterns.ts`, so it is not reachable through the package entry point
+and is not public API. The minor rests on the scanner's observable output, not on the
+export.
+
+SECURITY.md needed no edit: its Supported Versions table is major-granularity (`5.x`),
+so a minor does not move it.
+
+The sweep was prepared by the scheduled daily job, which never releases. The release
+was cut in the same session on an explicit instruction to ship, so the version bump
+and the data landed in one PR rather than the usual two. One merge, one CI settle,
+then the tag.
+
+---
+
+## Threat-intel sweep 2026-08-20
 
 Model: claude-opus-5. Prepared by the scheduled daily job, which never releases.
-No version bump; the release PR is separate as usual.
+Shipped as v5.27.0 (PR #153), together with the release commit.
 
 **141 package IOCs imported, as two explicit slices.** Same approach as the previous
 three sweeps: the 2026-08-14 backfill still sits in the default rolling window, so the
@@ -232,9 +265,10 @@ out of habit.
 
 ---
 
-## Lifecycle-hook coverage gap (2026-08-19, unreleased, branch fix/npm-scanner-lifecycle-hooks)
+## Lifecycle-hook coverage gap (2026-08-19)
 
-No version bump; the release PR is separate as usual.
+Merged as PR #152 and shipped in v5.27.0; it is the half of that release that makes it
+a minor rather than a patch.
 
 **The gap was real and slightly larger than reported.** The finding named one
 four-name `dangerousHooks` list in `npm-scanner.ts`. There were two identical
