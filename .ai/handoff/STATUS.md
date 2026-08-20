@@ -186,6 +186,14 @@ concurrency group, dropping `synchronize`, and a second workflow claiming the
 `Build and Test` context). Both harnesses printed a green baseline and a green
 post-restore, without which the numbers would mean nothing.
 
+**Dependabot PR #161 pulled in rather than merged separately.** It bumps
+docker/setup-buildx-action 4.2.0 to 4.3.0 in the two places docker.yml uses it, and
+docker.yml is a file this release already changes. The pinned digest was verified
+against the upstream tag before being taken (the v4.3.0 ref resolves to
+37fe631027851001ddb9b187196cc803df7f5f0e, which is what the bot proposed) rather than
+trusted because a bot proposed it. The PR is closed explicitly, since a release
+leaves zero open pull requests.
+
 **Found by the audit, not by reading the config.** The blind spots above were invisible
 to the first version of the gate: `versionSpec: '20.x'` installed Node 20 in
 azure-pipelines.yml while its own prose next to it said 22, the README badge encoded
