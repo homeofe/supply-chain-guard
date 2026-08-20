@@ -1,20 +1,80 @@
 {
   "$schema": "./node_modules/@elvatis_com/aahp/schema/aahp-config.schema.json",
   "versionSites": [
-    { "file": "src/cli.ts", "minOccurrences": 1, "note": "CLI --version output" },
-    { "file": "src/reporter.ts", "minOccurrences": 5, "note": "text-header VERSION const + SARIF + SBOM + HTML footer + GitLab scanner version" },
-    { "file": "src/scanner.ts", "minOccurrences": 1, "note": "TOOL_VERSION const (ScanReport.tool + risk-history)" },
-    { "file": "src/npm-scanner.ts", "minOccurrences": 1, "note": "npm ScanReport.tool version" },
-    { "file": "src/pypi-scanner.ts", "minOccurrences": 1, "note": "PyPI ScanReport.tool version" },
-    { "file": "src/vscode-scanner.ts", "minOccurrences": 1, "note": "VS Code ScanReport.tool version" },
-    { "file": "src/sbom-generator.ts", "minOccurrences": 1, "note": "CycloneDX generator tool metadata version" },
-    { "file": "src/dependency-confusion.ts", "minOccurrences": 1, "note": "dependency-confusion ScanReport.tool version" },
-    { "file": "README.md", "minOccurrences": 1, "note": "pre-commit snippet rev: tag" },
-    { "file": "docs/mcp.md", "minOccurrences": 1, "note": "MCP initialize response version" },
-    { "file": "action.yml", "minOccurrences": 1, "note": "Marketplace Action installs the exact matching CLI release" },
-    { "file": ".pre-commit-hooks.yaml", "minOccurrences": 1, "note": "example rev: tag in header comment" },
-    { "file": "server.json", "minOccurrences": 2, "note": "MCP registry version + npm package version" },
-    { "file": "package-lock.json", "minOccurrences": 2, "note": "lockfile root version + packages[\"\"].version; npm writes these at install time, so a sed-based bump leaves them a release behind (was stale in v5.20.1 and v5.20.2). Resync with `npm install --package-lock-only`" }
+    {
+      "file": "src/cli.ts",
+      "minOccurrences": 1,
+      "note": "CLI --version output"
+    },
+    {
+      "file": "src/reporter.ts",
+      "minOccurrences": 5,
+      "note": "text-header VERSION const + SARIF + SBOM + HTML footer + GitLab scanner version"
+    },
+    {
+      "file": "src/scanner.ts",
+      "minOccurrences": 1,
+      "note": "TOOL_VERSION const (ScanReport.tool + risk-history)"
+    },
+    {
+      "file": "src/npm-scanner.ts",
+      "minOccurrences": 1,
+      "note": "npm ScanReport.tool version"
+    },
+    {
+      "file": "src/pypi-scanner.ts",
+      "minOccurrences": 1,
+      "note": "PyPI ScanReport.tool version"
+    },
+    {
+      "file": "src/vscode-scanner.ts",
+      "minOccurrences": 1,
+      "note": "VS Code ScanReport.tool version"
+    },
+    {
+      "file": "src/sbom-generator.ts",
+      "minOccurrences": 1,
+      "note": "CycloneDX generator tool metadata version"
+    },
+    {
+      "file": "src/dependency-confusion.ts",
+      "minOccurrences": 1,
+      "note": "dependency-confusion ScanReport.tool version"
+    },
+    {
+      "file": "README.md",
+      "minOccurrences": 2,
+      "note": "pre-commit snippet rev: tag"
+    },
+    {
+      "file": "docs/mcp.md",
+      "minOccurrences": 1,
+      "note": "MCP initialize response version"
+    },
+    {
+      "file": "action.yml",
+      "minOccurrences": 1,
+      "note": "Marketplace Action installs the exact matching CLI release"
+    },
+    {
+      "file": ".pre-commit-hooks.yaml",
+      "minOccurrences": 1,
+      "note": "example rev: tag in header comment"
+    },
+    {
+      "file": "server.json",
+      "minOccurrences": 2,
+      "note": "MCP registry version + npm package version"
+    },
+    {
+      "file": "package-lock.json",
+      "minOccurrences": 2,
+      "note": "lockfile root version + packages[\"\"].version; npm writes these at install time, so a sed-based bump leaves them a release behind (was stale in v5.20.1 and v5.20.2). Resync with `npm install --package-lock-only`"
+    },
+    {
+      "file": "examples/github-action-basic.yml",
+      "minOccurrences": 1
+    }
   ],
   "claims": [
     {
@@ -26,11 +86,26 @@
       "joinTsConcat": true,
       "floorCmd": "scripts/count-rules.mjs",
       "surfaces": [
-        { "file": "package.json", "note": "npm description" },
-        { "file": "README.md", "note": "intro + heuristics cell + architecture block" },
-        { "file": "docs/mcp.md", "note": "scan_directory description" },
-        { "file": "src/mcp-server.ts", "note": "scan_directory MCP tool description (phrase split across concatenated literals)" },
-        { "file": ".github/repo-about.txt", "note": "GitHub About/description source (CI syncs it on release)" }
+        {
+          "file": "package.json",
+          "note": "npm description"
+        },
+        {
+          "file": "README.md",
+          "note": "intro + heuristics cell + architecture block"
+        },
+        {
+          "file": "docs/mcp.md",
+          "note": "scan_directory description"
+        },
+        {
+          "file": "src/mcp-server.ts",
+          "note": "scan_directory MCP tool description (phrase split across concatenated literals)"
+        },
+        {
+          "file": ".github/repo-about.txt",
+          "note": "GitHub About/description source (CI syncs it on release)"
+        }
       ]
     },
     {
@@ -41,7 +116,10 @@
       "flags": "gi",
       "floorCmd": "scripts/count-correlation.mjs",
       "surfaces": [
-        { "file": "README.md", "note": "correlation rules bullet" }
+        {
+          "file": "README.md",
+          "note": "correlation rules bullet"
+        }
       ]
     },
     {
@@ -51,7 +129,10 @@
       "phrase": "(\\d+)\\s*categories\\b",
       "flags": "gi",
       "surfaces": [
-        { "file": "README.md", "note": "architecture: rules across N categories (editorial - no category constant in src, so no floorCmd)" }
+        {
+          "file": "README.md",
+          "note": "architecture: rules across N categories (editorial - no category constant in src, so no floorCmd)"
+        }
       ]
     }
   ],
@@ -102,23 +183,44 @@
     {
       "id": "severity-enum",
       "sources": [
-        { "file": "policy-schema.json", "pattern": "\"(critical|high|medium|low|info)\"" },
-        { "file": ".ai/handoff/CONVENTIONS.md", "pattern": "`(critical|high|medium|low|info)`" }
+        {
+          "file": "policy-schema.json",
+          "pattern": "\"(critical|high|medium|low|info)\""
+        },
+        {
+          "file": ".ai/handoff/CONVENTIONS.md",
+          "pattern": "`(critical|high|medium|low|info)`"
+        }
       ]
     },
     {
       "id": "changelog-reflink-coverage",
       "sources": [
-        { "file": "CHANGELOG.md", "pattern": "\\n## \\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\] - " },
-        { "file": "CHANGELOG.md", "pattern": "\\n\\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\]: " },
-        { "file": "CHANGELOG.md", "pattern": "\\n\\[\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?\\]: \\S*/(?:releases/tag/)?v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\b" }
+        {
+          "file": "CHANGELOG.md",
+          "pattern": "\\n## \\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\] - "
+        },
+        {
+          "file": "CHANGELOG.md",
+          "pattern": "\\n\\[(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\]: "
+        },
+        {
+          "file": "CHANGELOG.md",
+          "pattern": "\\n\\[\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?\\]: \\S*/(?:releases/tag/)?v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\b"
+        }
       ]
     },
     {
       "id": "changelog-unreleased-compare-base",
       "sources": [
-        { "file": "CHANGELOG.md", "pattern": "/compare/v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\.\\.\\.HEAD" },
-        { "file": "package.json", "pattern": "\"version\": \"(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\",\\s*\\n\\s*\"mcpName\"" }
+        {
+          "file": "CHANGELOG.md",
+          "pattern": "/compare/v(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\.\\.\\.HEAD"
+        },
+        {
+          "file": "package.json",
+          "pattern": "\"version\": \"(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\",\\s*\\n\\s*\"mcpName\""
+        }
       ]
     }
   ],
@@ -131,7 +233,9 @@
     ]
   },
   "check": {
-    "skip": ["handoff"]
+    "skip": [
+      "handoff"
+    ]
   },
   "pinnedDep": {
     "name": "@elvatis_com/aahp",

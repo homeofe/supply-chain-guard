@@ -588,6 +588,11 @@ Honest caveats: Socket's registry-wide behavioral detection is deeper than anyth
 - **Pre-install vetting of a suspicious package**: `guarddog npm scan <pkg>` for an independent heuristic score, plus `supply-chain-guard npm <pkg>` for campaign-IOC and install-hook analysis, before it ever touches your machine.
 ## GitHub Action
 
+**Pin an exact version.** That is the recommended form, and it is the same advice
+this tool gives about your own dependencies: a security scanner should be a
+deterministic input, so you know which detection logic and which IOC feed ran, and
+an upgrade is a reviewable change rather than something that happens to you.
+
 ```yaml
 name: Supply Chain Security
 on: [push, pull_request]
@@ -601,11 +606,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v5
+      - uses: homeofe/supply-chain-guard@v5.27.0
         with:
           fail-on: critical
           comment-on-pr: true
 ```
+
+Let Dependabot keep the pin current:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+```
+
+### `@v5`, and what it does and does not guarantee
+
+`@v5` also works and stays supported. It is a floating **branch**, fast-forwarded
+to each release by CI, and the composite action on it pins an exact npm version
+that is bumped and build-gated on every release. So `@v5` is not `latest`: every
+resolution still installs one exact, release-gated version.
+
+The caveat is what happens after a major. If the v5 line stops being released once
+v6 ships, `@v5` keeps resolving a frozen action that pins an old npm version, and
+the IOC feed it installs stops updating. For a scanner that is a silent
+false-negative generator, and nothing in your workflow would report it. An exact
+pin turns that into a visible out-of-date dependency instead.
 
 ### Action Inputs
 

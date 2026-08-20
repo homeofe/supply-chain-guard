@@ -8,7 +8,7 @@ marked values.
 
 | File | What it does |
 | --- | --- |
-| [`github-action-basic.yml`](github-action-basic.yml) | Minimal GitHub Actions workflow using the published Action (`homeofe/supply-chain-guard@v5`). Scans on every push and PR, fails on high severity findings, posts results as a PR comment. |
+| [`github-action-basic.yml`](github-action-basic.yml) | Minimal GitHub Actions workflow using the published Action, pinned to an exact release (the recommended form; `@v5` also works but goes stale once the v5 line stops shipping). Scans on every push and PR, fails on high severity findings, posts results as a PR comment. |
 | [`bot-pr-gate.yml`](bot-pr-gate.yml) | Gate for bot PRs (Dependabot / Renovate). Runs only when a bot opens the PR, diff-scans just the files changed against `origin/main`, and blocks auto-merge if the updated dependency tree trips malware indicators. |
 | [`gitlab-ci.yml`](gitlab-ci.yml) | GitLab CI job template. Installs the CLI, scans with JSON output, fails on high severity, and uploads the report as a job artifact. |
 | [`circleci-config.yml`](circleci-config.yml) | CircleCI job on `cimg/node`. Installs the CLI, scans with JSON output, fails on high severity, and stores the report as a build artifact. |

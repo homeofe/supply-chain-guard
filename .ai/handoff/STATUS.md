@@ -6,6 +6,28 @@
 
 ---
 
+## Exact version pinning documented as the default (2026-08-20, unreleased)
+
+Model: claude-opus-5. Branch docs/recommend-exact-pinning. No version bump.
+
+README and `examples/github-action-basic.yml` now pin an exact release, with a
+Dependabot snippet, and `@v5` is documented as a supported transition path rather
+than the headline form. The README states what `@v5` does and does not guarantee,
+because it is better than it looks: the composite action on that branch pins an
+exact, build-gated npm version, so it is not `latest`. The failure mode is only
+after a major, when a frozen action keeps installing an old feed.
+
+One coupling worth knowing before editing these docs again: pinning an exact
+version in an example turns that file into a version site. Left unregistered it
+would silently go stale and ship stale copy-paste, so `examples/github-action-basic.yml`
+was added to `aahp.config.json` and README's `minOccurrences` raised to 2.
+**There are now 15 version sites, not 14** - read the count from the config rather
+than from any prose, including this note. CONVENTIONS.md already says "every version
+site in aahp.config.json" and needed no change; the historical "all 14" lines in
+older STATUS entries are records of what was true at the time and stay as written.
+
+The remaining half of the v6 decision (a deprecation warning on `@v5` once v6 ships,
+and the manual Marketplace re-check) is still open and unchanged.
 ## T-016 done: pinned npm IOCs now match on a directory scan (2026-08-20, unreleased)
 
 Model: claude-opus-5. Branch feat/lockfile-pinned-ioc. No version bump. Lands on

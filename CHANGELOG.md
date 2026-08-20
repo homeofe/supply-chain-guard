@@ -31,6 +31,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **Exact version pinning is now the documented default for the GitHub Action.**
+  The README example and `examples/github-action-basic.yml` pin an exact release and
+  ship a Dependabot snippet to keep the pin current. Rationale stated in the README:
+  a security scanner should be a deterministic input, so you know which detection
+  logic and which IOC feed ran, and an upgrade is a reviewable change. It is the same
+  advice this tool gives about your own dependencies.
+  `@v5` remains supported and is documented as a transition path, together with what
+  it does and does not guarantee: it is a floating BRANCH whose composite action still
+  pins an exact, build-gated npm version, so it is not `latest`. The caveat is after a
+  major - if the v5 line stops shipping, `@v5` keeps resolving a frozen action pinning
+  an old npm version and the IOC feed stops updating, which for a scanner is a silent
+  false negative. An exact pin surfaces that as an out-of-date dependency instead.
+  The pinned example is registered as a `versionSite`, so `check:version-sync` fails
+  the build if it ever drifts rather than leaving stale copy-paste in the docs.
+
+
 - **`matchBareNpmIOC` is now an indexed O(1) lookup instead of a linear scan of the whole
   feed on every call (T-017).** It is the matcher every npm dependency check goes through,
   so a scan of N dependencies previously cost N passes over the feed. The index is built
