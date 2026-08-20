@@ -20,10 +20,19 @@
  * --------------------------------------------------------------
  *   opened            -> both  (code validation + metadata policy)
  *   reopened          -> both
- *   synchronize       -> ci.yml only        (new head commit = new code)
- *   ready_for_review  -> ci.yml only        (changes merge candidacy)
+ *   synchronize       -> both  (see below - NOT because metadata changed)
+ *   ready_for_review  -> ci.yml only        (changes merge candidacy, not the sha)
  *   edited            -> pr-metadata-policy only  (title/body cannot change code)
  *   push (main, tags) -> ci.yml only
+ *
+ * `synchronize` reaching the metadata workflow looks redundant and is not. A
+ * required status check is evaluated against the check-runs on the HEAD COMMIT, so
+ * a workflow that never runs on `synchronize` leaves every pushed-to PR with a head
+ * sha carrying no run of it, and the required context blocks on a check that never
+ * arrives. The asymmetry is deliberate: ci.yml must NOT see `edited` because its job
+ * costs two minutes and metadata cannot change code, while the metadata workflow
+ * must see `synchronize` because its check has to exist on every sha, and six
+ * seconds with no checkout is what makes that affordable.
  *
  * Deliberately asserted on the RAW file text rather than a parsed object: no YAML
  * parser is a dependency of this package, and adding one to a security scanner to
@@ -62,14 +71,17 @@ describe("workflow trigger contract", () => {
     }
   });
 
-  it("metadata policy runs on edit, and not on a new head commit", () => {
+  it("metadata policy runs on edit AND on every event that makes a new head sha", () => {
     const types = pullRequestTypes(META);
     expect(types).toContain("edited");
     expect(types).toContain("opened");
     expect(types).toContain("reopened");
-    // synchronize would re-run the metadata check on every push, which is the
-    // duplication this split removes, just pointed the other way.
-    expect(types).not.toContain("synchronize");
+    // The one that is easy to delete as redundant. A required check is evaluated
+    // against the head commit's check-runs, so dropping `synchronize` leaves every
+    // pushed-to PR blocked on a context that never reports. Measured on PR #159
+    // before it was added: head sha 03e75fd carried a CI run, an AAHP Verify run,
+    // and no metadata run at all.
+    expect(types).toContain("synchronize");
   });
 
   it("the title and body checks live in exactly one workflow", () => {

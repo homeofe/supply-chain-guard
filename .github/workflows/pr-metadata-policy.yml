@@ -20,10 +20,21 @@ name: PR Metadata Policy
 on:
   pull_request:
     branches: [main]
-    # Metadata-only event set. `synchronize` is deliberately absent: a new head
-    # commit cannot change the title or body, so re-running this on every push
-    # would reintroduce exactly the duplication the split removes.
-    types: [opened, edited, reopened]
+    # `synchronize` is here for a reason that is easy to get backwards, and this
+    # workflow shipped once without it. A new head commit cannot change the title
+    # or body, so on the face of it re-running this on every push is pure waste.
+    #
+    # But a required status check is evaluated against the check-runs attached to
+    # the HEAD COMMIT. Without `synchronize`, pushing to an open PR produces a head
+    # sha carrying no run of this workflow at all, so the required context has
+    # nothing to report and the PR blocks on a check that will never arrive.
+    # Measured on PR #159 before this line was added: head sha 03e75fd had a CI run
+    # and an AAHP Verify run and zero PR Metadata Policy runs.
+    #
+    # So this trigger is not about metadata changing. It is about keeping the
+    # contract satisfiable on every sha branch protection can ask about. The job is
+    # six seconds with no checkout, which is what makes that affordable.
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   contents: read
