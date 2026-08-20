@@ -149,6 +149,14 @@ runs. So: merge first, then add `PR metadata policy` to
 RUNS and reports, it is simply not yet blocking. That window is seconds long and is
 recorded here rather than glossed.
 
+**Trigger sets, after the scenario run.** Code validation takes
+`[opened, synchronize, reopened, ready_for_review]`; metadata policy takes
+`[opened, edited, reopened, synchronize]`. The asymmetry is the point: ci.yml must
+not see `edited` because its job costs two minutes and metadata cannot change
+code, and the metadata workflow must see `synchronize` because a required check is
+evaluated against the head commit's check-runs and therefore has to exist on every
+sha, which six seconds with no checkout makes affordable.
+
 **Regression mechanism.** `src/__tests__/workflow-trigger-contract.test.ts` encodes
 the event-to-workflow matrix and fails if `edited` returns to ci.yml, if the
 title/body checks move back into the build job, if the commit-range checks leave it,
