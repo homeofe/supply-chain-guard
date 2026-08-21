@@ -19,6 +19,24 @@
   `SECURITY.md`, `CODE_OF_CONDUCT.md` and `CONTRIBUTING.md`. Changing any of those
   is an owner decision, and the contact addresses additionally need a working
   mailbox to move to.
+- **Do not name a consumer repository in repository content.** Benchmark and
+  measurement evidence carries **counts and classes only**: write "seven consumer
+  repositories: 128 -> 92 findings", never the list of names. This project is a
+  scanner, so its own measurements read as a finding inventory, and a list of
+  names next to "10 criticals" tells a stranger which specific codebases hold
+  unfixed critical issues, and which of them are private. The counts alone prove
+  exactly the same thing about the rule change, which is the claim actually being
+  made. This applies to a rule comment or test that credits one repository with an
+  attack shape ("the `<name>` pattern") as well: describe the shape, not the
+  codebase it was found in. It applies with full force to PR titles and bodies and
+  to anything reaching a release body, because those are indexed and no later
+  commit can retract them.
+- The `consumer-repo-disclosure` gate in `aahp.config.json` is the backstop, not
+  the control. It matches the cross-repository reference SHAPE and deliberately
+  carries **no list of private repository names**, because that list committed to
+  a public config file would itself be the disclosure it exists to prevent. A
+  consumer named without that prefix will not trip it, so the written rule above
+  is what actually holds.
 - Same rule, same reason as the existing no-AI-attribution rule: both keep
   incidental personal or tooling identity out of a public artefact.
 
