@@ -37,6 +37,13 @@
   a public config file would itself be the disclosure it exists to prevent. A
   consumer named without that prefix will not trip it, so the written rule above
   is what actually holds.
+- The gate has **two copies under two different required checks**, because they
+  read different inputs. The `aahp.config.json` copy reads files (published files,
+  `src/**` including tests, `examples/`, the workflows and the handoff notes) and
+  reaches CI through `prebuild` inside `Build and Test`. The `pr-metadata-policy`
+  copy reads the PR **title and body** from the event payload, which no file gate
+  can see, and is the one guarding the surface a merge makes permanent. Change one
+  pattern and you must change the other: a test asserts they are identical.
 - Same rule, same reason as the existing no-AI-attribution rule: both keep
   incidental personal or tooling identity out of a public artefact.
 
