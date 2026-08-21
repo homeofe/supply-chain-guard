@@ -178,6 +178,32 @@
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/ISSUE_TEMPLATE/*.md"
       ]
+    },
+    {
+      "id": "consumer-repo-disclosure",
+      "pattern": "elvatis[/-][A-Za-z0-9]",
+      "flags": "gi",
+      "message": "Benchmark and measurement evidence carries COUNTS, never consumer repository names (see CONTRIBUTING.md). This scanner's value proposition guarantees its evidence gets read, so naming the repositories it was measured against publishes which private codebases hold which findings. Write 'seven consumer repositories: 128 -> 92 findings' instead of listing them. Note what this rule deliberately does NOT do: it does not carry a list of private repository names, because that list, in a public config file, would itself be the disclosure. It matches the 'elvatis/<repo>' and 'elvatis-<name>' SHAPES only, so a consumer named without that prefix still depends on review and on the CONTRIBUTING rule. 'elvatis.com' (the maintainer's contact address) and the '@elvatis_com/aahp' npm scope are unaffected: neither is followed by '/' or '-'. If a genuinely public sibling repository ever needs linking from a published file, add it to this rule's exclude list in the same commit, so the decision is reviewed rather than silent.",
+      "include": [
+        "CHANGELOG.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "docs/*.md",
+        "action.yml",
+        "package.json",
+        "server.json",
+        "socket.yml",
+        "policy-schema.json",
+        ".pre-commit-hooks.yaml",
+        "src/*.ts",
+        "src/__tests__/*.ts",
+        "examples/*",
+        ".ai/handoff/*.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE/*.md"
+      ]
     }
   ],
   "docSync": [

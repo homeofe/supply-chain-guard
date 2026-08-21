@@ -6,6 +6,57 @@
 
 ---
 
+## Consumer-name disclosure: removed from files, gated, written down (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch fix/consumer-name-disclosure. No version bump.
+
+An audit of this public repository for internal disclosure found three
+cross-repository references in tracked files, and one much larger disclosure in a
+merged pull request body.
+
+### What was fixed in files
+
+- `CHANGELOG.md` (entries v5.2.40 and v5.2.41) named a private repository and an
+  internal issue number as the provenance of a security fix. The provenance now
+  reads "the continuous AAHP Swarm review" with no cross-repository reference.
+  `CHANGELOG.md` becomes the GitHub Release body verbatim, so this was on its way
+  to an indexed surface.
+- `src/__tests__/rule-precision.test.ts:168` named a private consumer repository
+  as the source of the PPE attack shape the test asserts. It now describes the
+  shape instead of the codebase it was observed in.
+
+### What now prevents a repeat
+
+A third `forbiddenPatterns` rule, `consumer-repo-disclosure`, in
+`aahp.config.json`. It runs inside `check:aahp`, which `prebuild` runs, which the
+required `Build and Test` check runs, so it fails a pull request rather than
+merely reporting. Coverage was widened past the `ai-attribution` include list to
+`src/__tests__/*.ts`, `examples/*` and `.ai/handoff/*.md`, because a private name
+in a tracked handoff note in a public repository is exactly as exposed as one in
+the CHANGELOG.
+
+The rule deliberately does **not** enumerate private repository names. That list,
+committed to a public config file, would itself be the disclosure it exists to
+prevent. It matches the reference SHAPE only, which is why `CONTRIBUTING.md` now
+carries the actual rule ("benchmark evidence carries counts, never consumer
+names") and the gate is documented as the backstop, not the control.
+
+Proven in both directions: with the fix committed, `check:aahp` reports
+`forbidden-patterns: 3 rule(s), no matches`. Re-injecting the exact removed
+string into `CHANGELOG.md` turns that gate RED and fails the build; restoring it
+returns to green.
+
+### Needs a decision (owner)
+
+**A merged public pull request body names seven private consumer repositories
+next to their security-finding counts.** Editing a merged pull request body is
+the owner's call, not an agent's, so nothing was changed there. The exact
+location and the proposed remediation are in the session report. The standing
+rule that prevents the next one is now in `CONTRIBUTING.md` and in the pull
+request template checklist.
+
+---
+
 ## Threat-intel sweep: 84 advisory IOCs + arrayref dropper (2026-08-21, unreleased)
 
 Model: claude-opus-5. Branch threat-intel/2026-08-21. No version bump.

@@ -83,6 +83,38 @@ Two deliberate carve-outs:
 If a revert or cherry-pick inherits a trailer from an older commit, the check
 skips it: you are not asked to rewrite history you did not author.
 
+### Benchmark evidence carries counts, never consumer names
+
+Measuring a rule change against real repositories is the strongest evidence a
+pull request here can carry, and you are encouraged to do it. Report it as
+**counts and classes only**:
+
+> Measured against the released v5.17.9 binary on **seven consumer
+> repositories**: 128 -> 92 findings, 10 -> 1 criticals.
+
+Never list the repositories by name. This project is a scanner, so its own
+measurements are read as a finding inventory: a list of names next to
+"10 criticals" tells a stranger which specific codebases hold unfixed critical
+issues, and which of them are private. The counts alone prove exactly the same
+thing about the rule change, which is the claim you are actually making.
+
+The same applies to naming one repository as the source of an attack shape
+("the `<name>` pattern") in a rule comment or a test. Describe the shape, not
+the codebase you found it in.
+
+This is not only about files. It applies with **full force to the pull request
+body and title**, and to anything that reaches a release body, because those are
+indexed and a later commit cannot retract them. `CHANGELOG.md` becomes the
+GitHub Release body verbatim.
+
+A `consumer-repo-disclosure` gate in `aahp.config.json` fails the build on the
+`<org>/<repo>` and `<org>-<name>` reference shapes across the published files,
+the source tree and the handoff notes. Read its `message` field before working
+around it: it deliberately does **not** carry a list of private repository
+names, because that list, in a public config file, would itself be the
+disclosure it exists to prevent. A consumer named without that prefix will not
+trip it, so the rule above is the real control and the gate is the backstop.
+
 ### Code Style
 
 - TypeScript strict mode

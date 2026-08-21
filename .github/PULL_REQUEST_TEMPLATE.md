@@ -33,3 +33,4 @@ What does this PR do?
 - [ ] New and existing tests pass
 - [ ] `.ai/handoff/STATUS.md` describes this change and `npm run handoff:refresh` has been run (the `aahp-verify` required check enforces it for any code change)
 - [ ] No AI/tool attribution in the commits, the title or this body (see CONTRIBUTING.md). `Build and Test` enforces it for commits and identity, `PR metadata policy` for this title and body.
+- [ ] Any benchmark or measurement evidence above reports **counts and classes only**, not consumer repository names (see CONTRIBUTING.md). This body is public and indexed, and no later commit can retract it.

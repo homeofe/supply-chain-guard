@@ -165,7 +165,7 @@ describe("v5.18 rule precision", () => {
 
   describe("GHA_PPE_PULL_TARGET", () => {
     it("TRUE POSITIVE: PR head sha interpolated into run: on pull_request_target", () => {
-      // The elvatis/atlas pattern - the real PPE this rule exists to catch.
+      // A real-world PPE shape observed in a consumer repo - the attack this rule exists to catch.
       writeWorkflow(tempDir, "ppe.yml", [
         "on: pull_request_target",
         "jobs:",

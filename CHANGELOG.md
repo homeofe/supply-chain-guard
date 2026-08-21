@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- **Benchmark evidence in this project's own artefacts now carries counts, never
+  consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
+  a private repository and an internal issue number as the provenance of a security
+  fix, and a rule-precision test named a private consumer repository as the source
+  of the PPE attack shape it asserts. All three now describe the class or the shape
+  instead. `CHANGELOG.md` becomes the GitHub Release body verbatim, so these were on
+  their way to a permanently indexed surface. The rule is written down in
+  `CONTRIBUTING.md` and in the pull request template checklist.
+- **New `consumer-repo-disclosure` governance gate** (`aahp.config.json`,
+  `forbiddenPatterns`), run by `check:aahp` inside `prebuild` and therefore by the
+  required `Build and Test` check. It covers the published files, `src/**` including
+  tests, `examples/` and the tracked handoff notes. It matches the cross-repository
+  reference SHAPE and deliberately carries no list of private repository names,
+  because such a list in a public config file would itself be the disclosure it
+  exists to prevent.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added
@@ -2991,7 +3009,7 @@ ecosystem and abused the `codfish/semantic-release-action` GitHub Action.
 ## [5.2.41] - 2026-06-28
 **Security: command injection in the GitHub trust scanner**
 
-Remediates a finding from the continuous AAHP Swarm review (elvatis/ideabase#24).
+Remediates a finding from the continuous AAHP Swarm review.
 `github-trust-scanner.ts` built five `gh api repos/${owner}/${repo}` calls as shell
 strings via `execSync`, with `owner` and `repo` unvalidated. Because
 `analyzeGitHubTrust` and `parseGitHubUrl` are public API, a consumer passing crafted
@@ -3006,7 +3024,7 @@ values could reach shell command execution. No rule or scan-engine change.
 ## [5.2.40] - 2026-06-28
 **Security: org-scanner command injection and suppressed findings in SARIF/SBOM**
 
-Remediates findings from the continuous AAHP Swarm review (elvatis/ideabase#24).
+Remediates findings from the continuous AAHP Swarm review.
 No rule or scan-engine behavior changed.
 
 - `org-scanner.ts`: `listOrgRepos` built `gh repo list ${org}` and ran it through a
