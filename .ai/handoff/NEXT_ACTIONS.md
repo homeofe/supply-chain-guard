@@ -8,7 +8,7 @@
 
 Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
 
-Current version: **v5.28.0**
+Current version: **v5.28.1**
 
 ---
 
