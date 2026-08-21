@@ -6,6 +6,84 @@
 
 ---
 
+## The published update path was the one that froze a pin (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch fix/consumer-update-cadence. No version bump.
+
+Two questions were asked of this repository: whether the consumer-name fix
+actually reached the PUBLISHED surface, and what this project's release cadence
+and consumer-update path really are when measured rather than assumed.
+
+### The disclosure fix did reach the published surface, because it never left it
+
+`CHANGELOG.md` becomes the GitHub Release body verbatim, so the v5.2.40 and
+v5.2.41 entries looked like they were already published. They were not. Both
+release bodies were created before the changelog moved out of `README.md`, so
+`ci.yml` found no matching section and fell back to its stub, "See README.md for
+full changelog". All 44 releases of that era carry the same stub. The anchor they
+point at still resolves, and the file behind it is the corrected one.
+
+All 134 published release bodies were fetched and scanned for the reference
+shape. Zero hits. The 16 raw matches were all deliberate publications: Kubernetes
+and k3s default service CIDRs that are the scanner's own detection corpus in
+`src/internal-disclosure.ts`, and a public agent-runtime product name this
+project ships a scanner for. `CHANGELOG.md` is also not in the npm `files` list,
+so the tarball never carried it either.
+
+**The remaining exposure is the pull request body surface, and it is larger than
+the changelog was.** It was not touched: editing a merged body is the owner's
+call. Details are in the section below and in the session report.
+
+### The cadence, measured
+
+134 releases in the 155 days to 2026-08-21. 1.40 per day over the last 60 days.
+Median gap 19.8 hours, two thirds of gaps under a day, 51 percent of calendar
+days ship, 93 patch / 36 minor / 4 major.
+
+The README told consumers to pin an exact version and let Dependabot follow it on
+a `weekly` schedule. At 1.4 releases a day that recipe cannot converge: each
+weekly run opens a correct bump pull request and the next weekly run closes it as
+superseded. Measured in one consumer of this Action, counts only: eight
+consecutive weekly bump pull requests, each alive exactly seven days, each
+proposing a newer target, while the pin sat unchanged for 49 days and fell 82
+releases behind, with a green scan check every day.
+
+So the answer to "can consumers practically follow releases" is no, not with the
+configuration this project published, and that is a finding about this package
+rather than about the consumer.
+
+### What changed
+
+`README.md` now recommends `daily` with the measured rate stated as the reason,
+and says plainly that the interval is the cheap half while merging the pull
+request is the half that decides the outcome.
+
+It also drops a claim it should not have made. It said an exact pin "turns that
+into a visible out-of-date dependency". It does not. `scan` runs offline against
+the IOC feed bundled with the pinned version, so a pin that stops moving freezes
+the detection rules at that date, and no exit code, risk score or check name
+reports it. A frozen rule set is a silent false-negative generator, which is the
+same failure the surrounding paragraph warns about for the floating major ref.
+An exact pin buys a PLACE where staleness is reviewable, the bump pull request,
+which is a weaker and different claim.
+
+`src/__tests__/consumer-update-path-contract.test.ts` holds both halves, asserts
+the positive and negative directions separately, guards them with a
+snippet-exists check so a deleted snippet cannot pass vacuously, and re-asserts
+the counts-not-names rule over its own text. Mutation proof after committing the
+fix: reverting the interval fails 2 of 5, reverting the claim fails 1 of 5,
+restoring passes 5 of 5 with a clean tree.
+
+### Known limitation of this change
+
+Nothing here makes a stale pin visible to the consumer at scan time. The IOC feed
+is compiled into `src/threat-intel.ts` with per-indicator `firstSeen` dates but
+no feed-level generation date, so the scanner cannot currently report the age of
+the rules it just ran. Documenting the gap is not closing it. See the session
+report for the proposal.
+
+---
+
 ## Consumer-name disclosure: removed from files, gated, written down (2026-08-21, unreleased)
 
 Model: claude-opus-5. Branch fix/consumer-name-disclosure. No version bump.
