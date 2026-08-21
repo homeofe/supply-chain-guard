@@ -340,6 +340,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Lookalike of registry[.]npmjs[.]org, used by @polymarkets/clob-client-v2 to
   // serve a trojanized inquirer tarball through a direct dependency URL.
   "registrynpmjs.to",
+  // arrayref / proc-macro1 crates.io build-time dropper (August 2026). The VPS
+  // hostname that served the stage-2 binary while `cargo build` ran. Only this
+  // specific attacker host is listed; the hostwindsdns[.]com apex is a shared
+  // hosting-provider domain and is deliberately NOT listed.
+  "hwsrv-798836.hostwindsdns.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -474,6 +479,18 @@ export const KNOWN_C2_IPS: string[] = [
   // is NOT blocked, and two further addresses the sources disagree on are left out.
   "83.142.209.203",
   "83.142.209.11",
+  // arrayref / proc-macro1 crates.io build-time dropper (August 2026). The
+  // poisoned build.rs pulled stage 2 from :9089 and beaconed to :443 on the
+  // first address; the other two served stage-2 C2. Corroborated by
+  // StepSecurity, Wiz and safedep. The maintainer whose crates.io account was
+  // abused to publish arrayref 0.3.10, internment 0.8.7 and append-only-vec
+  // 0.1.9 is a VICTIM and is not listed anywhere in this file.
+  "23.254.165.112",
+  "23.254.167.107",
+  "23.254.167.216",
+  // Same campaign, reported by Wiz only - single-source, so the matching feed
+  // entry carries confidence 0.85 rather than 1.0.
+  "23.254.167.13",
 ];
 
 // ---------------------------------------------------------------------------
@@ -989,6 +1006,15 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // pins already cover a registry install; these catch a vendored or mirrored copy.
   "6d332f814f15f19758d65026bbfd0a8c49671b319ec77b8fa1b27fc48afff7d9": "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: langchain-core-mcp 1.4.2 artifact, wheel or .pth startup hook (SHA256)",
   "6506d31707a39949f89534bf9705bcf889f1ecae3dbc6f4ff88d67a8be3d01b2": "Mini Shai-Hulud / Miasma 'Hades' PyPI wave: langchain-core-mcp 1.4.2 artifact, wheel or .pth startup hook (SHA256)",
+  // arrayref / proc-macro1 crates.io build-time dropper (August 2026). The .crate
+  // artifacts themselves. The cargo: package@version pins already cover a registry
+  // install, so these catch a vendored, mirrored or offline copy. Each digest was
+  // re-verified character-for-character against two independent write-ups
+  // (StepSecurity, Wiz) after a third extraction returned a corrupted, non-hex
+  // rendering of the 1.0.106 digest.
+  "25ad700976873c76af785cb99b33c48db7df8b81f21d1e9e06b3676b9a9373ae": "arrayref 0.3.10 poisoned .crate artifact, build-time dropper (SHA256)",
+  "61198155da51b838772eecf5bfaac6cbc4dcc388dccc56658fc28a8e831b34d4": "proc-macro1 1.0.107 .crate artifact, build-time dropper (SHA256)",
+  "b5c1b5b0763a8809a644a8f92224653f0aca623a98eecc714d27f74b80fbe436": "proc-macro1 1.0.106 .crate artifact, build-time dropper (SHA256)",
 };
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,64 @@
 
 ---
 
+## Threat-intel sweep: 84 advisory IOCs + arrayref dropper (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch threat-intel/2026-08-21. No version bump.
+
+84 package IOCs imported from the GitHub Advisory Database (71 npm, 4 PyPI, 9
+crates.io) plus 8 atomic indicators added by hand for the arrayref build-time
+dropper: the attacker VPS host, four C2 addresses and three poisoned `.crate`
+digests, with eight scanner tests in `campaigns.test.ts`.
+
+### The window had to be sliced, and why
+
+The default rolling window proposed **4,447** entries and warned that 2,447 of
+them would age out before any future run could reach them. That number is not a
+detection backlog. **4,363 of the 4,447 were `@zalastax/nolb-*`**, a single scope
+bulk-published to GHSA on 2026-08-14 with MAL-**2025** ids. Checked against the
+registry, those packages now carry npm's own `security holding package`
+placeholder, maintainer `npm@npmjs.com`, with the 2023 malicious version removed:
+the malware is not obtainable, and every entry would have been a bare-name block.
+
+The day is cleanly separable, which is what made the call safe: 2026-08-07 to
+08-13 yields 0 entries, 08-14 yields 4,363 and **all** of them are that scope, and
+08-15 to 08-21 yields the 84 genuine 2026 entries with zero zalastax. So the
+import ran as `--since 2026-08-15 --until 2026-08-21` and **nothing real was
+dropped** - the arithmetic closes exactly.
+
+**Needs a decision (owner).** The daily job will hit this same wall until the
+backfill ages out of the 14-day window around 2026-08-28: every run re-proposes
+those 4,363, trips the `undrainable` guard and exits non-zero. Three options:
+ignore the red exit for a week; ingest the backfill once to silence it (costs a
+4,363-entry machine-generated diff in a public repo for near-zero detection
+value); or teach the importer to recognise an npm security-holding placeholder and
+skip it, which is the durable fix and would also cover the next bulk backfill.
+
+### Deliberately not ingested
+
+- The crates.io handle that published the dropper. It typosquats a well-known
+  maintainer name, but `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is GitHub-specific and
+  consumed by the repo-owner check. **There is no GitHub account of that name**,
+  and the crates.io numeric id is a crates.io id, not a GitHub id: resolving it as
+  one lands on an unrelated real GitHub user created in 2010. A crates.io-account
+  collection would be the right home if this recurs.
+- The compromised maintainer account, which is a victim, and the
+  `hostwindsdns[.]com` apex, which is a shared hosting provider. Only the
+  attacker's specific host is listed, and a negative test pins that.
+- The campaign's SHA-1 digests: the one source listing them gives them unlabelled
+  and with duplicates, so there is no reliable file mapping to record.
+
+One hash needed three sources. Two independent write-ups agreed on the
+`proc-macro1` 1.0.106 digest; a third returned a rendering with a non-hex `o` in
+it, i.e. corrupted in transport rather than a genuine disagreement. Shape-checked
+all three digests as 64 hex characters before ingesting.
+
+Local suites: campaigns, feed, threat-intel, ioc-blocklist, feed-import,
+issue-54-hardening, cargo-scanner. All new tests green. Two pre-existing
+`IOC_KNOWN_C2_DOMAIN` failures (Phantom Bot, GlassWASM) reproduce identically on
+unmodified `main` on this Windows box and are green in CI. Full-suite verdict is
+CI's.
+
 ## Exact version pinning documented as the default (2026-08-20, unreleased)
 
 Model: claude-opus-5. Branch docs/recommend-exact-pinning. No version bump.

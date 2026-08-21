@@ -7,6 +7,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **Threat feed: 84 package IOCs imported from the GitHub Advisory Database**
+  (2026-08-15 to 2026-08-21), covering 71 npm, 4 PyPI and 9 crates.io indicators.
+  Notable clusters: the `mcp-server-*` set impersonating well-known Model Context
+  Protocol servers, a dependency-confusion wave against internal fintech scopes
+  (`pfp-forms-*`, `hubert-*`, `bigops-*`), and a `create-react-app-*` typosquat set.
+- **arrayref build-time dropper (crates.io, August 2026): atomic indicators.** A
+  maintainer account was used to publish poisoned `arrayref` 0.3.10, `internment`
+  0.8.7 and `append-only-vec` 0.1.9, each pulling a `proc-macro1` typosquat whose
+  `build.rs` fetched and ran a second stage during `cargo build`. Adds the attacker
+  VPS host, four C2 addresses and the three poisoned `.crate` digests, plus scanner
+  tests covering the version pin, the shared-host apex and the legitimate
+  `proc-macro2` crate as negative cases.
+
 ## [5.28.0] - 2026-08-20
 
 ### Added
