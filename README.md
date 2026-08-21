@@ -687,8 +687,23 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: daily
 ```
+
+**`daily`, not `weekly`, and this project's release rate is why.** Measured over
+the 155 days to 2026-08-21: 134 releases, about 1.4 a day over the last two
+months, with a median of 20 hours between releases and two thirds of the gaps
+under a day. A weekly schedule cannot track that. Each weekly run opens a correct
+bump pull request, and the next weekly run closes it as superseded and opens
+another, so an unattended pin never moves at all. Measured in one consumer of
+this Action: eight consecutive weekly bump pull requests, each alive for exactly
+seven days, each proposing a newer target than the last, while the pin itself sat
+unchanged for 49 days and fell 82 releases behind. Every scan check was green
+throughout, because a stale pin is not a failing scan.
+
+The interval is the cheap half. The half that actually decides the outcome is
+whether somebody merges the pull request, and no setting in this file supplies
+that.
 
 ### `@v5`, and what it does and does not guarantee
 
@@ -701,7 +716,19 @@ The caveat is what happens after a major. If the v5 line stops being released on
 v6 ships, `@v5` keeps resolving a frozen action that pins an old npm version, and
 the IOC feed it installs stops updating. For a scanner that is a silent
 false-negative generator, and nothing in your workflow would report it. An exact
-pin turns that into a visible out-of-date dependency instead.
+pin is what turns that into a reviewable out-of-date dependency instead.
+
+**Be precise about what an exact pin does and does not buy you, because a frozen
+exact pin is the same silent false negative.** It ages exactly as quietly. This
+scanner runs offline against the IOC feed bundled with the pinned version, so a
+pin that stops moving freezes the detection rules at that date, and neither the
+exit code, the risk score nor the check name changes to say so. The scan output
+carries no age for the feed it just used. What an exact pin buys is a *place*
+where the staleness becomes reviewable: the bump pull request. That is a
+different claim from the staleness being visible on its own, and the measurement
+above is what the difference costs. If those pull requests are opened and
+superseded without ever being merged, the pin is frozen, the rule set is ageing,
+and nothing in this tool will tell you.
 
 ### Action Inputs
 

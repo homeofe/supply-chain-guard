@@ -24,6 +24,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   reference SHAPE and deliberately carries no list of private repository names,
   because such a list in a public config file would itself be the disclosure it
   exists to prevent.
+- **The README now recommends a `daily` Dependabot interval instead of `weekly`,
+  measured against this project's own release rate.** 134 releases in the 155 days
+  to 2026-08-21, about 1.4 a day over the last two months, a median of 20 hours
+  between releases. A weekly schedule cannot track that: each run opens a correct
+  bump pull request and the next run closes it as superseded, so an unattended pin
+  never moves. Measured in one consumer of this Action: eight consecutive weekly
+  bump pull requests, each alive exactly seven days, each proposing a newer target,
+  while the pin sat unchanged for 49 days and fell 82 releases behind with a green
+  scan check every day.
+- **Corrected the README's claim that an exact pin makes staleness visible.** It
+  does not. `scan` runs offline against the IOC feed bundled with the pinned
+  version, so a pin that stops moving freezes the detection rules at that date,
+  and no exit code, risk score or check name reports it. An exact pin creates a
+  place where staleness becomes reviewable, the bump pull request, which is a
+  weaker and different claim than staleness being self-announcing. The README now
+  states the distinction and what it costs when those pull requests are never
+  merged.
 
 ## [5.28.1] - 2026-08-21
 
