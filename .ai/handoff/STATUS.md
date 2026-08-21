@@ -22,7 +22,7 @@ them would age out before any future run could reach them. That number is not a
 detection backlog. **4,363 of the 4,447 were `@zalastax/nolb-*`**, a single scope
 bulk-published to GHSA on 2026-08-14 with MAL-**2025** ids. Checked against the
 registry, those packages now carry npm's own `security holding package`
-placeholder, maintainer `npm@npmjs.com`, with the 2023 malicious version removed:
+placeholder, owned by npm's own registry account, with the 2023 malicious version removed:
 the malware is not obtainable, and every entry would have been a bare-name block.
 
 The day is cleanly separable, which is what made the call safe: 2026-08-07 to
