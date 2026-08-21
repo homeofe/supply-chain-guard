@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787337826",
-    "timestamp": "2026-08-21T18:43:47Z",
-    "commit": "a6fb7a1",
+    "session_id": "cli-1787345045",
+    "timestamp": "2026-08-21T20:44:05Z",
+    "commit": "4fea8a1",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
       "checksum": "sha256:fbfbc1750b9f99dc8ae6d18c8055279df6e2270b3f3ed0636086747fc9a9acea",
-      "updated": "2026-08-21T18:41:01Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 2531,
       "summary": "Model: claude-opus-5. Branch fix/consumer-name-disclosure. No version bump."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:19814e5e643030be8d6538df50287b6f96331fbc10fa8064c5c05ef842f55823",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 186,
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:931be02f873b962f89ee315b82902c481d1e8517cb624ad48a61aa43ce10b31a",
-      "updated": "2026-08-21T18:43:46Z",
+      "updated": "2026-08-21T20:44:05Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:739538ae71e404936134c8e4813fa90dbf74b41b23d825b253e1b42e6a1ad755",
-      "updated": "2026-08-21T18:43:46Z",
+      "checksum": "sha256:3d096bfdf360b08a51e239104beb78fc586cfd0971ad440762006e5711adc86f",
+      "updated": "2026-08-21T20:44:05Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:b69559acbbfa7c11db8f7cb79f4f6d4a99911dad55bbd70d2b0b734d915cadc9",
-      "updated": "2026-08-21T18:43:46Z",
+      "checksum": "sha256:b74e6fb5cd4460e863953ef351f211e42f792bb776dcb9d20b68acec8d9569d5",
+      "updated": "2026-08-21T20:44:05Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
-      "updated": "2026-08-21T18:43:39Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 249,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-21T18:31:22Z",
+      "updated": "2026-08-21T20:30:00Z",
       "lines": 4,
       "summary": "{"
     }
