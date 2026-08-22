@@ -115,6 +115,68 @@ names, because that list, in a public config file, would itself be the
 disclosure it exists to prevent. A consumer named without that prefix will not
 trip it, so the rule above is the real control and the gate is the backstop.
 
+### No em dashes in tracked files
+
+The em dash (U+2014) is banned. Write a hyphen `-` or a colon `:` instead. The
+en dash (U+2013) is deliberately **not** covered: it has a job of its own in
+numeric ranges such as SLSA levels, this repository uses it that way, and
+banning it too would be a separate decision needing its own argument. Recorded
+here so the next audit reads it as a choice rather than an oversight.
+
+**Scope: every tracked file**, not only documentation. A comment, a `describe()`
+title and a string the CLI prints are all covered, and a new file is covered the
+moment git tracks it.
+
+Three scopes were weighed on 2026-08-22 before that one was chosen
+(<https://github.com/homeofe/supply-chain-guard/issues/178>):
+
+1. **Documentation only**, which is what the rule's own wording used to say.
+   Rejected: the single occurrence with measurable reach outside this project
+   was not in documentation. It was in `src/slsa-verifier.ts`, inside the
+   sentence a scan prints for a project with no build script, which also lands
+   in the SARIF report adopters upload to GitHub code scanning.
+2. **Documentation plus the strings the tool prints.** Rejected: no gate can
+   express it. "This string literal is emitted and that one is not" is not a
+   property a regex over tracked files can decide, so the rule would have gone
+   straight back to being a review convention, which is the state that let 77
+   occurrences accumulate.
+3. **Every tracked file.** Chosen. It is the only one of the three a gate can
+   decide, it needs no per-file judgement, and it fails safe: scope is opt-out,
+   so nothing falls outside it merely by being new.
+
+Enforcement is two halves, both inside `npm run build` and therefore inside the
+required `Build and Test` check:
+
+| half | where | what it decides |
+| --- | --- | --- |
+| the content rule | the `em-dash` entry of `forbiddenPatterns` in `aahp.config.json` | no in-scope file contains U+2014 |
+| the scope rule | `scripts/check-em-dash-scope.mjs`, run by `check:aahp` just before the gates | no tracked file has left the content rule's scope without a written reason |
+
+The second half exists because the first cannot see its own blind spot. Until
+2026-08-22 the content gate reported `no matches` and exited 0 on every pull
+request while the repository held 77 em dashes across 17 files: its `include`
+list named six pathspecs, those six matched none of the 17 files, and so the
+answer was both truthful and useless. The scope checker fails the build if the
+include list is narrowed that way again. It never reads file content and never
+searches for U+2014. There is one em-dash rule and it lives in
+`aahp.config.json`.
+
+**To exempt a file, both halves must agree**: add the pathspec to the rule's
+`exclude` array in `aahp.config.json`, and add it to `SCOPE_EXCEPTIONS` in
+`scripts/check-em-dash-scope.mjs` with a reason a stranger auditing this project
+can evaluate. Either edit alone fails the build. There are two exemptions today,
+the binary demo GIF and the verbatim handoff archive, and each carries its
+reason in that file.
+
+The scope checker refuses in two distinct ways, both non-zero so CI fails either
+way: **exit 1** when a tracked file is uncovered and unexplained, **exit 2** when
+it cannot determine the answer at all, which includes a pathspec matching
+nothing and an `exclude` entry that subtracts nothing. The second is not
+hypothetical. `exclude` used to contain `CHANGELOG.md`, which read like the
+reason the changelog went unchecked and was inert, because a non-empty `include`
+replaces the gate's default file set rather than adding to it, so there was
+nothing for `exclude` to remove.
+
 ### Code Style
 
 - TypeScript strict mode

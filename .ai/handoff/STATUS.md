@@ -6,6 +6,82 @@
 
 ---
 
+## The em-dash rule was enforced on a set of files that held none of them (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/em-dash-rule-scope. No version bump.
+
+An audit reported 77 em dashes across 17 files "with no check enforcing the
+rule". Half of that was wrong in a way worth keeping: a check did exist, it ran
+on every pull request, and it sat inside a required status check. It was green,
+truthfully, because the `em-dash` rule's `include` list named six pathspecs and
+those six matched none of the 17 files. The gate answered the question it was
+asked. Nobody had noticed the question had drifted away from the rule.
+
+### What was actually wrong
+
+Three things, in the order they matter.
+
+1. **Opt-in scope fails open.** Every file created after the rule was written
+   was outside it by default, silently. The `include` list is now the single
+   pathspec `*`, so a file is covered the moment git tracks it and the only way
+   out is a reviewed entry.
+2. **A config line read like a mechanism and was not one.** `exclude` held
+   `CHANGELOG.md`, which every reader took for the reason the changelog went
+   unchecked. It was inert: a non-empty `include` REPLACES the gate's default
+   file set, so `CHANGELOG.md` was never in scope for `exclude` to remove.
+   Deleting that line alone changed nothing, which was verified before it was
+   removed.
+3. **The only written statement of the rule was the gate's own `message`
+   field**, and it said "banned in docs". Under that wording the 49 source
+   occurrences were not violations at all. `CONTRIBUTING.md` now carries the
+   scope, and the two narrower scopes that were rejected, with the reason for
+   each.
+
+### The scope decision, and why the other two were rejected
+
+Documentation only was rejected because the one occurrence with measurable reach
+outside this project was not in documentation: it is in `src/slsa-verifier.ts`,
+in the sentence a scan prints for a project with no build script, and it lands
+in the SARIF report adopters upload to GitHub code scanning. Documentation plus
+emitted strings was rejected because no gate can express it, so the rule would
+have gone back to being a review convention, which is the state that let the 77
+accumulate. Every tracked file was chosen because it is the only one of the
+three a gate can decide.
+
+### The second gate, and what it deliberately is not
+
+`scripts/check-em-dash-scope.mjs` runs inside `check:aahp`, before the AAHP
+gates. It never reads file content and never searches for U+2014. There is still
+exactly one em-dash rule and it lives in `aahp.config.json`. The script answers
+the question that rule cannot ask about itself: does its scope still cover the
+repository? It exits 1 when a tracked file is uncovered and unexplained, and 2
+when it cannot determine the answer at all, which includes a pathspec that
+matches nothing and an `exclude` entry that subtracts nothing.
+
+Two files are exempt, each with its reason in `SCOPE_EXCEPTIONS`: the binary
+demo GIF, because a chance byte sequence in compressed image data is not prose,
+and the handoff archive, because its own header declares its entries preserved
+verbatim. Both hold zero occurrences today, so both preserve rather than
+suppress.
+
+### Assumption recorded, so it is not re-derived
+
+The handoff-archive exemption rests on an inference, not on a written policy:
+the file states it is append-only with older entries "preserved below verbatim",
+and that is read as a reason not to rewrite them. The inference is written next
+to the exemption. Anyone who disagrees deletes the `SCOPE_EXCEPTIONS` entry and
+the matching `exclude` line together, and the file is simply covered.
+
+### Open for the owner
+
+Nothing blocks this change. One item is deliberately left out of it: the AAHP
+CLI gate reads each file inside `try { readFileSync } catch { continue }`, so a
+file it cannot read is skipped in silence rather than failing. That is the same
+fail-open class, it ships to every consumer of the governance CLI, and it is not
+this repository's file to fix. It belongs upstream as its own piece of work.
+
+---
+
 ## The required handoff gate compared main to itself on every push (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump.

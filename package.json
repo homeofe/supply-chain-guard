@@ -14,7 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "check:aahp": "node scripts/check-aahp-pin.mjs && npx --no-install aahp check .",
+    "check:aahp": "node scripts/check-aahp-pin.mjs && node scripts/check-em-dash-scope.mjs && npx --no-install aahp check .",
     "check:handoff": "node scripts/scg-handoff-docs.mjs --check",
     "handoff:refresh": "node scripts/scg-handoff-docs.mjs",
     "feed:generate": "node scripts/generate-feed.mjs",
