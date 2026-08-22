@@ -103,12 +103,12 @@
           "type": "boolean"
         },
         "patterns": {
-          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive.",
+          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive. Because this file travels inside the scanned tree, a regex here is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier; a refusal is reported as INTERNAL_DENYLIST_REFUSED (medium), which marks the scan partial. That refusal includes the ordinary chained-label hostname shape '(?:[a-z0-9-]+\\.)+corp\\.example'; write '[a-z0-9.-]+\\.corp\\.example' instead. The check is not exhaustive, so an accepted pattern is not a guarantee about matching time.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
         "externalFile": {
-          "description": "Path to an UNPUBLISHED file (gitignored, or provisioned by CI) with one entry per line: '#' comments, 'sha256:<digest>', '/regex/flags', or a plain literal. Matches are reported redacted. The SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same without touching this file. A configured path that is absent is reported as INTERNAL_DENYLIST_UNAVAILABLE (info).",
+          "description": "Path to an UNPUBLISHED file (gitignored, or provisioned by CI) with one entry per line: '#' comments, 'sha256:<digest>', '/regex/flags', or a plain literal. Matches are reported redacted. The SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same without touching this file. A configured path that is absent is reported as INTERNAL_DENYLIST_UNAVAILABLE (info). The path must stay inside the scanned directory: an absolute path, a path that climbs out with '..', and a path that leaves through a symbolic link are all refused unread and reported as INTERNAL_DENYLIST_REFUSED (medium). Use SCG_INTERNAL_DISCLOSURE_FILE for a file held outside the tree. Regex entries in a file reached this way are bounded exactly like 'patterns' above, including the refusal of the chained-label hostname shape.",
           "type": "string",
           "minLength": 1
         }

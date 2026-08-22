@@ -174,6 +174,7 @@ runs:
             or . == "NPM_NO_ARTIFACT"
             or . == "INTERNAL_DENYLIST_UNAVAILABLE"
             or . == "INTERNAL_DENYLIST_INVALID_ENTRY"
+            or . == "INTERNAL_DENYLIST_REFUSED"
             or . == "POLICY_INVALID_INTERNAL_TERM";
           type == "object"
           and (.summary | type == "object")

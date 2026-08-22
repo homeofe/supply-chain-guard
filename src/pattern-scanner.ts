@@ -62,6 +62,7 @@ export const PARTIAL_SCAN_RULES: ReadonlySet<string> = new Set([
   "NPM_NO_ARTIFACT",
   "INTERNAL_DENYLIST_UNAVAILABLE",
   "INTERNAL_DENYLIST_INVALID_ENTRY",
+  "INTERNAL_DENYLIST_REFUSED",
   "POLICY_INVALID_INTERNAL_TERM",
 ]);
 
@@ -134,7 +135,17 @@ interface ContainedPath {
   stat: fs.Stats;
 }
 
-function isContainedPath(rootRealPath: string, targetRealPath: string): boolean {
+/**
+ * The containment predicate for the whole scanner: a target is inside a root
+ * only when the relative path from the root to it neither is absolute nor
+ * climbs out. `startsWith` on the root string would accept a sibling directory
+ * that merely shares a prefix, so the relative form is the one to use.
+ *
+ * Exported because every reader of a caller-named path needs exactly this
+ * predicate; a second, slightly different copy is how a containment gap gets
+ * reintroduced.
+ */
+export function isContainedPath(rootRealPath: string, targetRealPath: string): boolean {
   const relative = path.relative(rootRealPath, targetRealPath);
   return relative === "" ||
     (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
@@ -146,7 +157,7 @@ function isContainedPath(rootRealPath: string, targetRealPath: string): boolean 
  * genuinely absent config from a path hidden behind a broken or escaping
  * parent symlink.
  */
-function hasContainedExistingAncestor(
+export function hasContainedExistingAncestor(
   scanRoot: string,
   absolutePath: string,
 ): boolean {

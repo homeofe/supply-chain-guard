@@ -416,6 +416,29 @@ SCG_INTERNAL_DISCLOSURE_FILE=~/.config/scg/internal-terms supply-chain-guard sca
 
 The external file is one entry per line, `#` for comments, `sha256:<digest>` for a hashed entry, `/pattern/flags` for a regex, anything else is a case-insensitive literal. If the file is configured but absent (a shared CI runner that never received it), you get an `INTERNAL_DENYLIST_UNAVAILABLE` finding at `info` severity rather than silence: a deny-list that quietly stopped running looks exactly like a repository that is clean. An entry that cannot be compiled is reported the same way (`INTERNAL_DENYLIST_INVALID_ENTRY`, medium). Neither finding ever prints the entry, and the environment variable is named but its value is not, because a path can itself contain an account name.
 
+**The two sources are not equally trusted, and the difference is deliberate.** `SCG_INTERNAL_DISCLOSURE_FILE` is set by whoever runs the scan, so it may name any path on the machine and carry any pattern. `internalDisclosure.externalFile` and `internalDisclosure.patterns` live in the committed policy file, which travels inside the repository being scanned, and scanning a repository you do not own is the ordinary case for this tool. Entries from there are therefore bounded:
+
+- `externalFile` must stay inside the scanned directory. An absolute path is refused, a relative path that climbs out with `..` is refused, and so is one that leaves through a symbolic link. The file is not opened, so nothing about a path outside the tree reaches the report. The bound is the scanned directory and nothing narrower: a path that stays inside it is still read, `.git/config` included, so a committed `externalFile` can still point at whatever your runner wrote into the workspace. Matches from it stay redacted.
+- A regular expression from `patterns`, **or from an `externalFile` that is inside the tree**, is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier (`(a+)+`, `(a?)*`, and the like). That shape can take exponential time to report no match, so one committed line would otherwise occupy a runner until the workflow times out.
+- Whatever survives those checks runs under a wall-clock budget for the whole scan. On overrun the file reports `INTERNAL_DISCLOSURE_TRUNCATED` rather than running on.
+
+A refusal is an `INTERNAL_DENYLIST_REFUSED` finding at `medium` severity, and like every other coverage finding it marks the scan partial rather than passing quietly. In the published Action a partial scan exits 1 on its own, independently of `fail-on`. None of this applies to the environment-variable source.
+
+**Two limits of the shape check, both worth knowing before you upgrade.**
+
+It refuses more than it has to, and the shape it most often refuses is the ordinary one. A chained label group is how an internal hostname is normally written, and it is rejected even though it is linear in practice:
+
+```yaml
+internalDisclosure:
+  patterns:
+    - /(?:[a-z0-9-]+\.)+corp\.example/   # REFUSED: quantified group holding "+"
+    - /[a-z0-9.-]+\.corp\.example/       # accepted, and matches the same hosts
+```
+
+If you have the first form today, in `patterns` or in your own gitignored `externalFile`, rewrite it before you upgrade. Left as it is, the term stops being looked for, the scan becomes partial, and the Action exits 1.
+
+It also refuses less than it has to, so an accepted pattern is not a promise about time. The check reads the source text, which cannot see ambiguity that comes from overlapping alternation, so `/(a|a)+$/` and `/(a|ab)+$/` are accepted and are still catastrophic, and the wall-clock budget cannot interrupt a match that is already running. Availability from a committed pattern is narrowed here, not closed; the remaining case is tracked on [issue 169](https://github.com/homeofe/supply-chain-guard/issues/169).
+
 **One more note on the paradox.** `allowlist.domains` also answers `INTERNAL_HOSTNAME`, `INTERNAL_SERVICE_ENDPOINT` and `INTERNAL_GIT_REMOTE` for a given host, which is convenient and publishes the host name. If that is not acceptable, suppress by path instead, which names nothing:
 
 ```yaml

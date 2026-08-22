@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f814b7d5e4f18349d0eacc1c180b3cbb92922440da38dc1c3455f201ffbcd620",
+      "checksum": "sha256:b48ec3536ee25d7d7d75e0b6f47e238618fb323a72160f8dea532ddb13fd984c",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2866,
+      "lines": 2979,
       "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
@@ -23,7 +23,7 @@
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:931be02f873b962f89ee315b82902c481d1e8517cb624ad48a61aa43ce10b31a",
+      "checksum": "sha256:7a50a66214286e3f0930d1bfbf1d16e66ef2cb2eb4ec7e5ecaaf0e4a9cdbd4f7",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
