@@ -3,85 +3,85 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787405903",
-    "timestamp": "2026-08-22T13:38:27Z",
-    "commit": "1a141fe",
+    "session_id": "cli-1787440057",
+    "timestamp": "2026-08-22T23:07:37Z",
+    "commit": "80e708d",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b48ec3536ee25d7d7d75e0b6f47e238618fb323a72160f8dea532ddb13fd984c",
-      "updated": "2026-08-22T20:51:49Z",
-      "lines": 2979,
-      "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
+      "checksum": "sha256:4ab1ce999cbff384e81f9d0be66a75b06a64a3646c3a3c55042ef1c5154ae7cf",
+      "updated": "2026-08-22T23:04:55Z",
+      "lines": 3121,
+      "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:19814e5e643030be8d6538df50287b6f96331fbc10fa8064c5c05ef842f55823",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T23:04:06Z",
       "lines": 186,
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:7a50a66214286e3f0930d1bfbf1d16e66ef2cb2eb4ec7e5ecaaf0e4a9cdbd4f7",
-      "updated": "2026-08-22T13:30:32Z",
+      "updated": "2026-08-22T23:07:37Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:a3f5ac40cf40fa687ce694aac88db8946d763ef765d0c4cbc64ea2e3c242d49e",
-      "updated": "2026-08-22T13:30:32Z",
+      "checksum": "sha256:5b4ab0b61d2314e813af3e923db2398ed5c4ef71f6de80c172adbed42c767d2c",
+      "updated": "2026-08-22T23:07:37Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:660c3678483ebc3b297f209d92edd692b38ecc11dbf8ffc0607c0e5943007a1c",
-      "updated": "2026-08-22T13:30:32Z",
+      "checksum": "sha256:53a90eaba24b0ae1ae2c2eb86fb5ad3dca0fec43551866674affc45480a96669",
+      "updated": "2026-08-22T23:07:37Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:59:55Z",
       "lines": 249,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-22T12:36:56Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 34272,
-    "full_read": 45934
+    "manifest_plus_core": 35796,
+    "full_read": 47437
   },
   "next_task_id": 20,
   "tasks": {
