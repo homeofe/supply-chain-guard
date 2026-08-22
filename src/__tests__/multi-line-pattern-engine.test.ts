@@ -452,7 +452,16 @@ exec(payload)
     },
   );
 
-  it("scans concrete 5 MiB repeated-prefix near misses in practical linear time", { timeout: 15_000 }, () => {
+  // The harness timeout is scaled the same way the assertion inside it is. Without
+  // that, the two disagree under the ONE command CI actually runs. `npm run
+  // test:coverage` sets SCG_VITEST_COVERAGE=1 (vitest.config.ts), which makes
+  // performanceBudget multiply by 5: the assertion below then allows 25s while a bare
+  // `timeout: 15_000` killed the test at 15s, so the guard could never be reached and
+  // the failure reported runner noise rather than an algorithmic regression. Outside a
+  // coverage run performanceBudget is the identity, so this is a no-op for `npm test`.
+  // Measured on one CI run of this file's sibling case: Node 20 8,734ms, Node 22
+  // 13,622ms, Node 24 15,070ms, against a 15,000ms bare ceiling.
+  it("scans concrete 5 MiB repeated-prefix near misses in practical linear time", { timeout: performanceBudget(15_000) }, () => {
     const size = 5 * 1024 * 1024;
     const cases: Array<[string, string, string]> = [
       ["SCRIPT_CURL_EXEC", "curl ", "i"],
@@ -475,7 +484,13 @@ exec(payload)
     expect(Date.now() - started).toBeLessThan(performanceBudget(5_000));
   });
 
-  it("keeps exact greedy/lazy endpoints on 5 MiB repeated completions", { timeout: 15_000 }, () => {
+  // Same scaling, same reason as the case above. This is the case that actually went
+  // red: on main at 1a141fe it timed out on the Node 22 leg at 15,137ms, and on the
+  // pull request that added the Node 24 leg it timed out at 15,070ms, both against the
+  // bare 15,000ms ceiling while the assertion below allowed 50,000ms under coverage.
+  // The algorithmic guard is unchanged: performanceBudget(10_000) below is still what
+  // fails on a real regression.
+  it("keeps exact greedy/lazy endpoints on 5 MiB repeated completions", { timeout: performanceBudget(15_000) }, () => {
     const size = 5 * 1024 * 1024;
     const cases = [
       ["SCRIPT_CURL_EXEC", "curl x | bash ", "bash", 4, "last"],
