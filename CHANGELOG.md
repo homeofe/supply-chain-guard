@@ -9,6 +9,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **The Node compatibility matrix now runs the current Active LTS, and the gate
+  asserts that it does.** `engines.node` is `>=22.0.0`, a floor with no ceiling, so
+  the package claims Node 22 and every major after it. The matrix stopped at 22, so
+  the whole claim above the floor was made and never executed. Read against the
+  upstream `nodejs/Release` schedule on 2026-08-22, that was not academic: Node 22
+  had been in Maintenance LTS since 2025-10-21, while Node 24, Active LTS since
+  2025-10-28, was claimed and never run. Because `@types/node` is on the Node 26 API
+  surface, an API available only above Node 22 would have type-checked clean, passed
+  every leg, and failed in a consumer's hands. `docs/node-support.md` gains
+  `activeLtsMajor`, `src/__tests__/node-version-contract.test.ts` asserts
+  `max(supportedMajors)` reaches it and that the matrix runs a leg at or above it,
+  and the `compat` matrix is now Node 20, 22 and 24. The Node 20 transition lane is
+  unchanged and is still deleted in 5.29.0. Reported as
+  https://github.com/homeofe/supply-chain-guard/issues/176
+- **The comment above the `compat` matrix no longer contradicts the policy it points
+  at.** It described the matrix as "every Node major this package supports" four
+  lines above a pointer to a policy whose subject is that supported and tested are
+  deliberately different lists, so a reader of `.github/workflows/ci.yml` alone
+  concluded the repository disagreed with itself. It now states the invariant in the
+  policy's own vocabulary, and five test cases assert that the comment keeps naming
+  `supportedMajors`, `transitionMajors`, `activeLtsMajor`, the policy document and
+  the test that enforces it.
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security

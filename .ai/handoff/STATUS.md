@@ -6,6 +6,65 @@
 
 ---
 
+## The engines floor had no ceiling, so the matrix never ran the Active LTS (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/176-compat-matrix-reaches-active-lts. No version bump.
+Reported as https://github.com/homeofe/supply-chain-guard/issues/176
+
+### What the report said, and what was actually wrong
+
+The report compared `.github/workflows/ci.yml` against `package.json` and found a
+Node 20 leg below an `engines.node` floor of `>=22.0.0`. Every count in it
+re-derives exactly. Its conclusion does not follow: `docs/node-support.md` declares
+`supportedMajors` and `transitionMajors` as disjoint lists, the gate already asserted
+a transition major is strictly below the floor, and `README.md` tells consumers the
+package requires Node 22 or newer. The Node 20 leg is a dated, gate-enforced
+transition lane, deleted in 5.29.0 by an assertion that fails the build. It stays.
+
+The report's own measurement contained the real defect, one line below its headline:
+**legs above the floor, 0 of 2.** `engines.node` is a floor with no ceiling, so
+`>=22.0.0` claims Node 22 and every major after it, and the matrix stopped at 22. Read
+against the upstream `nodejs/Release` schedule on 2026-08-22, Node 22 had been in
+Maintenance LTS since 2025-10-21 and Node 24 had been Active LTS since 2025-10-28. The
+only major the project supported was the one already in maintenance, and the major
+consumers are migrating onto was claimed and never executed. `@types/node` is on the
+Node 26 API surface, so an API available only above Node 22 would have type-checked
+clean, passed both legs, and failed in a consumer's hands.
+
+### What changed
+
+`docs/node-support.md` gains `activeLtsMajor` (24) and `activeLtsReviewedIn` (5.29.0),
+`supportedMajors` becomes `[22, 24]`, and the `compat` matrix becomes 20, 22 and 24.
+`src/__tests__/node-version-contract.test.ts` gains ten cases: five that assert the
+claim reaches the top of its own range and carries a re-read deadline, and five that
+assert the workflow comment keeps naming the policy vocabulary. That comment called the
+matrix "every Node major this package supports" four lines above a pointer to the policy
+whose subject is that supported and tested are different lists, which is the most
+plausible reason this report exists at all.
+
+Restoring the exact pre-change configuration turns exactly the two new upward cases red
+and leaves the other 36 green, which is the demonstration that nothing in the repository
+could see this before.
+
+### Decisions recorded in the repository, not here
+
+Both live in `docs/node-support.md` so the next reader meets them at the code:
+
+- **Why the bound is the Active LTS**, with the two rejected alternatives and their
+  costs. `engines.node` deliberately keeps no upper bound, so majors above the Active
+  LTS (Node 26 today) are claimed and not executed. That residual is stated, and the
+  alternative that would close it is written out with exactly what to change.
+- **Why `activeLtsMajor` is hand-copied rather than fetched**, what the gate can and
+  cannot catch about a hand-copied fact, and why the deadline is `5.29.0`.
+
+### Open for the owner
+
+Unrelated to this change, observed while measuring: the perf case in
+`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15000ms on a Node 22 leg
+at the head sha this report was written against. Not touched here.
+
+---
+
 ## The required handoff gate compared main to itself on every push (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump.
