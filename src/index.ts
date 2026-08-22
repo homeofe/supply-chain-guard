@@ -98,6 +98,11 @@ export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
 export { calculateOrgPosture } from "./posture-engine.js";
 export { loadRiskHistory, saveRiskHistory, analyzeRiskTrend } from "./continuous-monitor.js";
 export { loadTriageDecisions, saveTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+// Exported so a library consumer computing its own view of the triage store
+// (the store has no CLI surface, so a consumer is the only way to use it) asks
+// the same scope rule this package's own metrics and governance checks ask,
+// rather than hand-rolling a third answer. See docs/triage-decisions.md.
+export { buildTriageScope, type TriageScope } from "./triage-scope.js";
 export { checkSlaCompliance } from "./sla-engine.js";
 export { forecastRisk } from "./risk-forecast.js";
 export { calculateMetrics } from "./metrics.js";

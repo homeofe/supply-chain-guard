@@ -35,6 +35,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **The scope of a triage decision now has exactly one implementation,
+  `src/triage-scope.ts`, and both consumers ask it.** The defect above was not a
+  missing file check: the same feature shipped two key widths over the same
+  decisions array, one per consumer, so a single scan report could state
+  `"openCritical": 0` beside "2 critical finding(s) have no assigned owner or
+  triage decision". Sharing a key string would have fixed the counts and left the
+  divergence one edit away, so no consumer builds a key at all. A test in
+  `src/__tests__/triage-scope.test.ts` fails if a second module starts reading
+  `findingFile` directly, and a further test asserts the two consumers reach the
+  same verdict on the same findings.
+- **`CRITICAL_FINDING_NO_OWNER` now treats a decision that carries no
+  `findingFile` as owning that rule in every file.** The governance check
+  previously joined `file ?? ""` into its key, which made a rule-wide decision
+  match only findings that carry no file, so every instance in a real file stayed
+  counted as unowned. That was the other half of the same disagreement. A decision
+  carrying an empty `findingFile` is still file-scoped and still matches only the
+  finding that has no file; absent and empty are different, and each branch has
+  its own test.
+- **New `buildTriageScope` export**, so code outside this package answers "does
+  this decision cover this finding?" with the rule the package itself uses instead
+  of a third hand-rolled one. The store has no CLI subcommand, so a library
+  consumer is the only way to use it.
+- **New `docs/triage-decisions.md`.** The decision store, its file format and its
+  scope rule were documented nowhere, which is a plausible reason the defect above
+  survived four months. The page also records the open question of whether the
+  store should gain a CLI surface, be left library-first, or be dropped in favour
+  of consumers owning it.
+
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
@@ -69,6 +97,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   merged.
 
 ### Fixed
+
+- **`metrics.openCritical` and `metrics.openHigh` no longer drop every instance of
+  a rule once one instance is triaged.** A triage decision identifies a rule AND a
+  file, and `TriageDecision.findingFile` exists to carry that. The metrics engine
+  built its resolved set from `findingRule` alone, so a single resolved decision
+  removed every finding of that rule from the KPIs, including findings in files
+  nobody had looked at, and `topRiskContributors` lost the rule with it. Measured
+  end to end on a project with three critical `EVAL_ATOB` findings and one
+  resolved decision naming one of them: `summary.critical` 3, `openCritical` **0**
+  before, **2** after, and the top contributor changes from
+  `CRITICAL_FINDING_NO_OWNER`, the governance alarm that fired because of the
+  findings the KPI had just hidden, back to `EVAL_ATOB`. A decision naming a file
+  that carries no finding at all, which is what a decision left behind by a rename
+  looks like, zeroed the rule the same way and now resolves nothing.
+  https://github.com/homeofe/supply-chain-guard/issues/171
+- **No gate behaviour changed.** `getReportExitCode` reads `report.summary` and
+  `report.findings` and has never read `metrics`. The fixture above exits 2 before
+  and after the fix, and `report.findings` was complete and correct throughout.
+  The wrong number reached `--format json`, `--json-output` and library consumers
+  of the exported `calculateMetrics`, which is where a dashboard or a compliance
+  report would have trusted it.
+
+
 
 - **The required `aahp-verify` check compared `main` to itself on every push, and
   reported the empty result as a pass.** Layer 2 enforces "code changed implies
@@ -912,17 +963,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [5.25.5] - 2026-08-05
 
-### Fixed
-
-- The Action's PR comment now explains a recovered clean scan instead of posting a
-  blank line. `reportForComment` was guarded on its own indented value, and indenting
-  an empty report yields four spaces, which is truthy - so the clean-scan fallback was
-  unreachable and every `if (reportForComment)` guard always fired. It surfaced only
-  when a stale findings or partial comment was replaced on the return to clean, which
-  is exactly when the reader needs to be told the run came back clean. An empty report
-  is reachable through a failed report read or an empty report file. The verdict line
-  was never affected, so no comment ever claimed clean when it was not.
-
 ### Changed
 
 - Bumped `@elvatis_com/aahp` 3.9.1 -> 3.9.2 (exact pin), and converged this repo's own
@@ -933,6 +973,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Windows-path-conversion, and changelog-grammar primitives from the installed package
   instead. Closes a latent bug for free: the local CHANGELOG heading regex silently
   dropped SemVer pre-release headings from the generated LOG.md table.
+
+### Fixed
+
+- The Action's PR comment now explains a recovered clean scan instead of posting a
+  blank line. `reportForComment` was guarded on its own indented value, and indenting
+  an empty report yields four spaces, which is truthy - so the clean-scan fallback was
+  unreachable and every `if (reportForComment)` guard always fired. It surfaced only
+  when a stale findings or partial comment was replaced on the return to clean, which
+  is exactly when the reader needs to be told the run came back clean. An empty report
+  is reachable through a failed report read or an empty report file. The verdict line
+  was never affected, so no comment ever claimed clean when it was not.
 
 ## [5.25.4] - 2026-08-05
 
@@ -1114,24 +1165,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [5.24.0] - 2026-08-02
 
-### Fixed
-
-- **The feed importer reported an undrainable backlog as harmless, which made a
-  bulk-publication spike a silent false negative.** `--limit` is sized for the
-  steady-state flow (median ~35 advisories/day), and the report claimed anything
-  over it "stays available to the next run". That is only true while the
-  remainder is small enough to drain before `--days` slides past it. The advisory
-  database periodically bulk-publishes retrospective malware datasets - 11,512
-  PyPI advisories on 2026-07-21, 2,262 npm ones on 2026-07-27 - and the resulting
-  remainder is tens of thousands of entries against a 250/day drain rate, so most
-  of it aged out unreached while the run exited clean. The importer now computes
-  how many entries are provably unreachable before they age out (`undrainable` in
-  the JSON report), prints the slice command that recovers them, and exits 2. The
-  entries the run selected are still written - exit 2 means "written, but a slice
-  import is needed", distinct from exit 1 "failed, nothing written". Explicit
-  `--since`/`--until` slices are exempt, since slicing IS the recovery. Suppress
-  with the new `--allow-backlog`.
-
 ### Added
 
 - **3,569 additional npm package IOCs** recovered from the 2026-07-26 and
@@ -1157,17 +1190,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   listed, and the fake VPN page is path-scoped rather than blocking
   `freevpn[.]win` outright.
 
-## [5.23.5] - 2026-08-01
-
 ### Fixed
 
-- **The PointBlank indicator was routed to the wrong ecosystem.** It was added as the
-  bare value `gcli-control`, and a bare value is the npm namespace, so the detection was
-  inverted: a `poetry.lock` or `requirements.txt` pinning `gcli-control` produced no
-  findings while an npm dependency of that name was flagged critical. Corrected to
-  `pypi:gcli-control`. Two scanner-level tests were added - the existing tests asserted
-  against the pattern constant and never ran a scan, which is how a wrongly-routed entry
-  passed CI.
+- **The feed importer reported an undrainable backlog as harmless, which made a
+  bulk-publication spike a silent false negative.** `--limit` is sized for the
+  steady-state flow (median ~35 advisories/day), and the report claimed anything
+  over it "stays available to the next run". That is only true while the
+  remainder is small enough to drain before `--days` slides past it. The advisory
+  database periodically bulk-publishes retrospective malware datasets - 11,512
+  PyPI advisories on 2026-07-21, 2,262 npm ones on 2026-07-27 - and the resulting
+  remainder is tens of thousands of entries against a 250/day drain rate, so most
+  of it aged out unreached while the run exited clean. The importer now computes
+  how many entries are provably unreachable before they age out (`undrainable` in
+  the JSON report), prints the slice command that recovers them, and exits 2. The
+  entries the run selected are still written - exit 2 means "written, but a slice
+  import is needed", distinct from exit 1 "failed, nothing written". Explicit
+  `--since`/`--until` slices are exempt, since slicing IS the recovery. Suppress
+  with the new `--allow-backlog`.
+
+## [5.23.5] - 2026-08-01
+
 ### Added
 
 - **250 malicious package IOCs** imported from the GitHub Advisory Database
@@ -1195,6 +1237,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   deliberately NOT ingested. They are shared public infrastructure and blocking
   them would flag legitimate web3 and developer projects. Regression tests cover
   this.
+
+### Fixed
+
+- **The PointBlank indicator was routed to the wrong ecosystem.** It was added as the
+  bare value `gcli-control`, and a bare value is the npm namespace, so the detection was
+  inverted: a `poetry.lock` or `requirements.txt` pinning `gcli-control` produced no
+  findings while an npm dependency of that name was flagged critical. Corrected to
+  `pypi:gcli-control`. Two scanner-level tests were added - the existing tests asserted
+  against the pattern constant and never ran a scan, which is how a wrongly-routed entry
+  passed CI.
 
 ## [5.23.4] - 2026-07-31
 
@@ -1232,6 +1284,41 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   build-backed self-scan now asserts this contextual false positive is absent.
 
 ## [5.23.3] - 2026-07-30
+
+### Added
+
+- **Build-backed and real-bundle regressions.** An isolated checkout is compiled
+  and scanned with assertions of zero high/critical findings, a score no greater
+  than 10, and a clean/low aggregate verdict, then seeded with malicious controls
+  to prove `dist/` is still scanned. The installed Vite 8.1.4
+  and Vitest 4.1.10 artifacts are tested directly, alongside malicious controls.
+
+- **Adversarial precision and cost coverage.** New focused cases cover exact
+  512/513 gaps, DNS label limits, local-address encodings, comment/string/regex
+  masks, JavaScript and Python scope boundaries, shell expansion and pipeline
+  semantics, TOML/requirements completeness, V8 ownership, and multi-megabyte
+  near misses and assignment chains.
+
+### Changed
+
+- **Self-scan policy is explicit and narrow.** Re-excluding all of `dist/` was
+  rejected because published generated code is part of the artifact being
+  protected. The scanner instead recognizes only exact inert counterparts after
+  package identity verification, preserving protection for every other generated
+  file and every unrelated rule.
+
+- **Release governance documentation matches protected-main reality.** Release
+  work now records the required branch, protected PR checks, squash merge, and
+  post-merge signed-tag sequence instead of the obsolete direct-to-main flow.
+
+- **Release workflow dependencies were refreshed.** `actions/download-artifact`
+  is updated from 7.0.0 to 8.0.1 and `docker/login-action` from 4.5.0 to 4.6.0
+  through the reviewed Dependabot changes.
+
+- **Performance gates separate production cost from coverage overhead.** Real
+  full-suite 5 MiB wall-clock checks are bounded at 10-15 seconds and pass on
+  Linux. V8 coverage runs use a documented 5x instrumentation multiplier;
+  profiling and removal of that multiplier are tracked explicitly for v5.23.4.
 
 ### Fixed
 
@@ -1318,41 +1405,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   aliases and extracted pattern expressions are also covered, closing routes by
   which future detector tables could silently bypass the shared engine contract.
 
-### Changed
-
-- **Self-scan policy is explicit and narrow.** Re-excluding all of `dist/` was
-  rejected because published generated code is part of the artifact being
-  protected. The scanner instead recognizes only exact inert counterparts after
-  package identity verification, preserving protection for every other generated
-  file and every unrelated rule.
-
-- **Release governance documentation matches protected-main reality.** Release
-  work now records the required branch, protected PR checks, squash merge, and
-  post-merge signed-tag sequence instead of the obsolete direct-to-main flow.
-
-- **Release workflow dependencies were refreshed.** `actions/download-artifact`
-  is updated from 7.0.0 to 8.0.1 and `docker/login-action` from 4.5.0 to 4.6.0
-  through the reviewed Dependabot changes.
-
-- **Performance gates separate production cost from coverage overhead.** Real
-  full-suite 5 MiB wall-clock checks are bounded at 10-15 seconds and pass on
-  Linux. V8 coverage runs use a documented 5x instrumentation multiplier;
-  profiling and removal of that multiplier are tracked explicitly for v5.23.4.
-
-### Added
-
-- **Build-backed and real-bundle regressions.** An isolated checkout is compiled
-  and scanned with assertions of zero high/critical findings, a score no greater
-  than 10, and a clean/low aggregate verdict, then seeded with malicious controls
-  to prove `dist/` is still scanned. The installed Vite 8.1.4
-  and Vitest 4.1.10 artifacts are tested directly, alongside malicious controls.
-
-- **Adversarial precision and cost coverage.** New focused cases cover exact
-  512/513 gaps, DNS label limits, local-address encodings, comment/string/regex
-  masks, JavaScript and Python scope boundaries, shell expansion and pipeline
-  semantics, TOML/requirements completeness, V8 ownership, and multi-megabyte
-  near misses and assignment chains.
-
 ## [5.23.2] - 2026-07-30
 
 ### Added
@@ -1389,6 +1441,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   so they cannot fall a release behind again.
 
 ## [5.23.1] - 2026-07-30
+
+### Changed
+
+- Lexical masking now returns immediately when content has no
+  language-relevant string or comment delimiters, preserving matcher semantics
+  while avoiding redundant passes over multi-megabyte plain-code inputs.
+
+- Pattern tables are validated at load time for duplicate IDs, invalid spans,
+  unsafe broad gaps, and missing structural matchers. AST-based wiring tests,
+  differential matcher checks, long-line adversarial cases, late-file fixtures,
+  symlink/archive cases, and Action contract tests guard the repaired behavior.
 
 ### Fixed
 
@@ -1461,17 +1524,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   version instead of stale `1.0.0` or `4.9.0` values. Every governed
   version site includes the exact Marketplace Action CLI pin.
 
-### Changed
-
-- Lexical masking now returns immediately when content has no
-  language-relevant string or comment delimiters, preserving matcher semantics
-  while avoiding redundant passes over multi-megabyte plain-code inputs.
-
-- Pattern tables are validated at load time for duplicate IDs, invalid spans,
-  unsafe broad gaps, and missing structural matchers. AST-based wiring tests,
-  differential matcher checks, long-line adversarial cases, late-file fixtures,
-  symlink/archive cases, and Action contract tests guard the repaired behavior.
-
 ## [5.23.0] - 2026-07-29
 
 ### Added
@@ -1514,6 +1566,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   start-line mapping and ReDoS-budget tests cover the engine itself.
 
 ## [5.22.0] - 2026-07-29
+
+### Added
+
+- **Load-time pattern validation.** A malformed regex anywhere in the pattern table used
+  to be a silent, total loss of content scanning: the scanner compiles patterns inside a
+  per-file try/catch, so one bad entry threw on the first file, was swallowed, and
+  suppressed every rule ordered after it for the whole scan while still exiting 0.
+  Measured: a single invalid entry placed first took a scan from 21 findings to 1 and
+  reported success. Every pattern is now compiled at module load and a bad one is a loud,
+  immediate failure.
+
+- **Pattern guard wiring test.** Fails the build if a new pattern loop appears that does not
+  apply both the file-level and value-level guards, which is how `requiresInFile` came to be
+  honoured by one scanner out of eight.
+
+- **Precision regression corpus.** A committed corpus of ordinary source is scanned on
+  every test run and must produce no high or critical finding, alongside a matching
+  malicious corpus that must keep firing. Every false positive this scanner has shipped
+  was found by someone measuring by hand; this makes an over-broad rule fail the build
+  instead.
 
 ### Fixed
 
@@ -1582,27 +1654,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   no longer part of the comparison, since it is derived entirely from `package.json` in
   the same commit. Every other kind of drift, including adding or removing a dependency,
   still fails the gate.
-
-### Added
-
-- **Load-time pattern validation.** A malformed regex anywhere in the pattern table used
-  to be a silent, total loss of content scanning: the scanner compiles patterns inside a
-  per-file try/catch, so one bad entry threw on the first file, was swallowed, and
-  suppressed every rule ordered after it for the whole scan while still exiting 0.
-  Measured: a single invalid entry placed first took a scan from 21 findings to 1 and
-  reported success. Every pattern is now compiled at module load and a bad one is a loud,
-  immediate failure.
-
-- **Pattern guard wiring test.** Fails the build if a new pattern loop appears that does not
-  apply both the file-level and value-level guards, which is how `requiresInFile` came to be
-  honoured by one scanner out of eight.
-
-- **Precision regression corpus.** A committed corpus of ordinary source is scanned on
-  every test run and must produce no high or critical finding, alongside a matching
-  malicious corpus that must keep firing. Every false positive this scanner has shipped
-  was found by someone measuring by hand; this makes an over-broad rule fail the build
-  instead.
-
 
 ## [5.21.0] - 2026-07-29
 
@@ -1711,6 +1762,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [5.20.2] - 2026-07-28
 
+### Added
+
+- Feed-integrity tests: the bundled entry total must equal `feed.json`'s `entryCount`,
+  must stay above a floor, must equal the sum of the declared chunks, and no chunk may
+  exceed capacity. Plus rollover coverage for the importer. Every prior test asserted
+  on entries that were present, so a dropped chunk would have shipped green.
+
+### Changed
+
+- **The daily import now rolls over to a new chunk instead of growing one array.**
+  Chunking alone would only have deferred the ceiling, because the importer appends
+  to a single place; it now fills the last chunk to `FEED_CHUNK_CAPACITY` (1,000) and
+  then opens a new one, registering it in the composed array. An oversized batch is
+  split across as many chunks as it needs, so no single literal can grow back into
+  TS2590.
+- `scripts/generate-feed.mjs` collects every `FeedIOC[]` declaration and evaluates the
+  composed array, rather than one hard-coded literal. It now fails loudly when a chunk
+  exists but is missing from the spread - the one failure mode chunking introduces,
+  where the feed would otherwise ship silently short.
+
 ### Fixed
 
 - **The bundled feed was one import away from breaking the build.** `tsc` reports
@@ -1725,29 +1796,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   (bad severity, wrong field type, missing required field and unknown property are all
   still compile errors), and no IOC data changed: all 1,197 entries in `feed.json` are
   identical, with only its embedded version string differing.
-### Changed
-
-- **The daily import now rolls over to a new chunk instead of growing one array.**
-  Chunking alone would only have deferred the ceiling, because the importer appends
-  to a single place; it now fills the last chunk to `FEED_CHUNK_CAPACITY` (1,000) and
-  then opens a new one, registering it in the composed array. An oversized batch is
-  split across as many chunks as it needs, so no single literal can grow back into
-  TS2590.
-- `scripts/generate-feed.mjs` collects every `FeedIOC[]` declaration and evaluates the
-  composed array, rather than one hard-coded literal. It now fails loudly when a chunk
-  exists but is missing from the spread - the one failure mode chunking introduces,
-  where the feed would otherwise ship silently short.
-
-### Added
-
-- Feed-integrity tests: the bundled entry total must equal `feed.json`'s `entryCount`,
-  must stay above a floor, must equal the sum of the declared chunks, and no chunk may
-  exceed capacity. Plus rollover coverage for the importer. Every prior test asserted
-  on entries that were present, so a dropped chunk would have shipped green.
 
 ### Security
 
 - Bumped the pinned `@elvatis_com/aahp` gate toolchain to 3.9.0 (supersedes #83).
+
 ## [5.20.1] - 2026-07-28
 
 ### Added
@@ -1864,6 +1917,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [5.19.0] - 2026-07-26
 
+### Added
+
+- **Repo process: AI-attribution gate.** Tool and model attribution (a `Claude Code` markdown
+  link, the `claude[.]com/claude-code` footer URL, or a `Co-authored-by` trailer
+  naming the model) is now blocked on every published surface. The indicators are
+  defanged here for the same reason IOCs are: writing one raw trips the gate, as
+  the first draft of this entry did. `CHANGELOG.md` is deliberately in scope
+  because CI turns its matching section into the GitHub Release body, which is
+  indexed and cannot be fixed by a later commit. Since a PR body and a commit
+  message are not files in the repository, a companion CI step covers those two
+  surfaces, and the `pull_request` trigger now includes `edited` so pasting a
+  footer into a body after CI has passed cannot slip through. The PR title and
+  body reach that step as environment variables and are only ever read as quoted
+  shell variables, never interpolated into the script, so an attacker-controlled
+  body cannot execute on the runner. `.ai/handoff/**` is out of scope by design:
+  that is where an agent note is expected to carry a model id.
+- **Repo process: CHANGELOG reference-link gate.** The pinned AAHP changelog gate walks release
+  headings to footer links but not the reverse, and never inspects what the
+  `[Unreleased]` link points at, which is how a compare link stale by two releases
+  shipped green. Two `docSync` groups now assert both directions plus that the
+  `[Unreleased]` compare base equals the released version, with no new gate script.
+
 ### Fixed
 
 - **The threat-feed importer no longer loses advisories silently.** Its page cap
@@ -1898,28 +1973,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   literal intervening slash, so both matched zero tracked files and the rule only
   ever covered four files at the repository root. Corrected to `docs/*.md` and
   `.ai/handoff/*.md`, taking the rule from 4 files to 15.
-
-### Added
-
-- **Repo process: AI-attribution gate.** Tool and model attribution (a `Claude Code` markdown
-  link, the `claude[.]com/claude-code` footer URL, or a `Co-authored-by` trailer
-  naming the model) is now blocked on every published surface. The indicators are
-  defanged here for the same reason IOCs are: writing one raw trips the gate, as
-  the first draft of this entry did. `CHANGELOG.md` is deliberately in scope
-  because CI turns its matching section into the GitHub Release body, which is
-  indexed and cannot be fixed by a later commit. Since a PR body and a commit
-  message are not files in the repository, a companion CI step covers those two
-  surfaces, and the `pull_request` trigger now includes `edited` so pasting a
-  footer into a body after CI has passed cannot slip through. The PR title and
-  body reach that step as environment variables and are only ever read as quoted
-  shell variables, never interpolated into the script, so an attacker-controlled
-  body cannot execute on the runner. `.ai/handoff/**` is out of scope by design:
-  that is where an agent note is expected to carry a model id.
-- **Repo process: CHANGELOG reference-link gate.** The pinned AAHP changelog gate walks release
-  headings to footer links but not the reverse, and never inspects what the
-  `[Unreleased]` link points at, which is how a compare link stale by two releases
-  shipped green. Two `docSync` groups now assert both directions plus that the
-  `[Unreleased]` compare base equals the released version, with no new gate script.
 
 ## [5.18.2] - 2026-07-26
 
@@ -2234,6 +2287,7 @@ by name only.
   eight hours, so the packages are blocked by name rather than version.
 
 ### Added
+
 - Version-pinned `jscrambler` (8.14.0/8.16.0/8.17.0/8.18.0/8.20.0),
   `jscrambler-webpack-plugin` 8.6.2, `gulp-jscrambler` 8.6.2, `grunt-jscrambler`
   8.5.2 and `jscrambler-metro-plugin` 9.0.2 in `KNOWN_BAD_NPM_VERSIONS`
@@ -2250,6 +2304,7 @@ by name only.
 
 ## [5.17.7] - 2026-07-21
 ### Fixed
+
 - `scan` now self-terminates after a clean or low-only scan instead of hanging.
   The scan command tears down Node's global HTTP and HTTPS keep-alive agents on
   the clean-return path, so pooled npm and PyPI registry sockets close and the
@@ -2280,6 +2335,7 @@ version: a bare-name indicator would flag every clean install. Only
 and has no legitimate history, is anchored by name.
 
 ### Added
+
 - Version-pinned `ruby:` package FeedIOCs in `BUNDLED_FEED` (src/threat-intel.ts)
   for `git_credential_manager` 2.8.0-2.8.3, `Dendreo` 1.1.3-1.1.4 and
   `fastlane-plugin-run_tests_firebase_testlab` 0.3.2. The RubyGems scanner
@@ -2309,6 +2365,7 @@ package IOCs because this is a scanning botnet rather than a poisoned registry
 package.
 
 ### Added
+
 - Command-and-control domain `cdnorigin[.]net` to `KNOWN_C2_DOMAINS` and as a
   `domain` FeedIOC in `BUNDLED_FEED` (src/threat-intel.ts).
 - Command-and-control IP `209[.]99[.]186[.]235` to `KNOWN_C2_IPS` and as an `ip`
@@ -2323,15 +2380,17 @@ package.
 ## [5.17.4] - 2026-07-18
 **Fix: `scan --format json` and risk-history reported a stale tool version (v5.2.0)**
 
+### Changed
+
+- `check:version-sync` now also covers `src/scanner.ts`, so `TOOL_VERSION` can never drift
+  undetected again - the root cause was that the gate did not include scanner.ts.
+
 ### Fixed
+
 - `src/scanner.ts` hardcoded `TOOL_VERSION = "5.2.0"`, so `ScanReport.tool` (emitted
   verbatim by the JSON reporter) and the persisted `.scg-history/` risk entries reported
   `supply-chain-guard v5.2.0`, while every other surface (text header, SARIF, SBOM, HTML
   footer, GitLab) correctly used reporter.ts's own version. Corrected to the release version.
-
-### Changed
-- `check:version-sync` now also covers `src/scanner.ts`, so `TOOL_VERSION` can never drift
-  undetected again - the root cause was that the gate did not include scanner.ts.
 
 ## [5.17.3] - 2026-07-18
 **Threat intel: ViteVenom - malicious Vite npm packages with blockchain C2**
