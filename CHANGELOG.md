@@ -7,6 +7,32 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **Threat feed: 46 package IOCs imported from the GitHub Advisory Database**
+  (2026-08-08 to 2026-08-22), covering 41 npm and 5 PyPI indicators. The largest
+  cluster is `@postman-cse/okta-aio-linux-arm64`, 21 versions of a
+  dependency-confusion package aimed at an internal Postman scope, now an npm
+  security holding package. Also `@gfe/lx-watcher` (2 versions), the PyPI
+  typosquats `boto4`, `scrambleeer` and `requests-crypt`, and a set of
+  all-versions npm names including `kelly-sizing`,
+  `polymarket-trading-developer-tool` and `saas-f-testing`. Scanner tests cover
+  the npm version pin, the PyPI ecosystem routing and the clean neighbouring
+  versions as negative cases.
+- **`@zalastax/nolb-*` name-reservation flood: one anchored rule instead of 4,363
+  feed entries.** OpenSSF malicious-packages classified a single publisher's bulk
+  namespace-squat as CWE-506 and the GitHub Advisory Database backfilled it on
+  2026-08-14, which put 4,363 advisories into one import window, all of them
+  all-versions ranges on `@zalastax/nolb-<suffix>` names published in Jan/Feb 2023.
+  Registry checks on 2026-08-22 found these are npm security holding packages:
+  12 of a 14-name spread sample carry only a `0.0.1-security` placeholder and 2
+  still have their original 2023 version. Taking them as feed entries would have
+  grown the bundled feed 34% (12,962 to 17,325) and added about 1 MB to
+  `feed.json` for one publisher's taken-down squats, so they are covered by a
+  single anchored pattern instead. Every advisory in the scope carries the
+  `nolb-` prefix (1,000 of 1,000 sampled) and the rule is anchored to it, so a
+  non-`nolb` package in the same scope does not match.
+
 ### Changed
 
 - **The Node compatibility matrix now runs the current Active LTS, and the gate

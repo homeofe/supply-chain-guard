@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:42d6e40d1a9560ebd934c57a970a52d9ef38a0e22b6220d4f0e16de4f6b57599",
+      "checksum": "sha256:83ab6e5f93b432252a63f3660534e129906ea7124e74f95b9a7565f84cce5f02",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2890,
+      "lines": 2951,
       "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
