@@ -4978,4 +4978,115 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // @zalastax/nolb-* name-reservation flood (August 2026)
+  // =================================================================
+
+  describe("@zalastax/nolb-* name-reservation flood (August 2026)", () => {
+    // 4,363 advisories backfilled by GHSA on 2026-08-14 from
+    // ossf/malicious-packages, every one an all-versions range on a
+    // @zalastax/nolb-<suffix> name. Covered by ONE anchored pattern rather than
+    // 4,363 feed entries: the names are npm security holding packages (taken
+    // down, registry-verified 2026-08-22), so a bare-name rule carries no
+    // false-positive surface, and 4,363 entries would be a 34% feed growth.
+    //
+    // SURFACE THIS COVERS: the npm-scanner name check (MALICIOUS_PACKAGE_NAME)
+    // and its package.json fallback, both of which consult
+    // MALICIOUS_PACKAGE_PATTERNS. It does NOT cover the generic directory scan
+    // in scanner.ts, which matches the feed's exact names only, by design (see
+    // the comment at scanner.ts checkPackageJsonDependencies). Asserted here at
+    // the pattern level because both npm-scanner call sites sit behind a live
+    // registry fetch and neither containing function is exported.
+    const FLAGGED = [
+      "@zalastax/nolb-react-ur",
+      "@zalastax/nolb-graphqlm",
+      "@zalastax/nolb-_co_",
+      "@zalastax/nolb-bit6",
+    ];
+
+    it("matches every flagged nolb- name", () => {
+      for (const name of FLAGGED) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT reach past the nolb- prefix or into other scopes", () => {
+      const legit = [
+        "@zalastax/some-real-package", // same scope, not the squat prefix
+        "nolb-react-ur", // unscoped lookalike
+        "@other/nolb-react-ur", // different scope
+        "@zalastax/nolb", // prefix without a suffix
+        "react-ur",
+      ];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    it("does NOT make the generic directory scan flag a non-nolb neighbour", async () => {
+      // The directory scan is feed-only, so this asserts the FP guard that
+      // matters for the surface a consumer runs in CI: adding this pattern must
+      // not have introduced a finding for the rest of the scope.
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "app",
+          version: "1.0.0",
+          dependencies: { "@zalastax/some-real-package": "1.0.0", "left-pad": "1.3.0" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "MALICIOUS_DEPENDENCY")).toBe(false);
+    });
+  });
+
+  // =================================================================
+  // Advisory-database import, 2026-08-22 batch
+  // =================================================================
+
+  describe("Advisory-database import, 2026-08-22 batch", () => {
+    // Spot-checks that the imported entries are routed to the ecosystem their
+    // advisory names. A missing feed prefix does not weaken detection, it
+    // inverts it, so the PyPI entries are asserted against the pypi namespace
+    // and the clean neighbouring version is asserted NOT to match.
+    it("pins the @postman-cse dependency-confusion versions (npm)", () => {
+      // Bare feed values are the npm namespace, so they resolve through
+      // matchBareNpmIOC(), not matchPackageIOC() - see the two-resolver note in
+      // "PyPI feed entries carry their ecosystem prefix" above.
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("@postman-cse/okta-aio-linux-arm64", "0.11.6", feed),
+        "a published malicious version must match",
+      ).toBeTruthy();
+      expect(
+        matchBareNpmIOC("@postman-cse/okta-aio-linux-arm64", "0.7.0", feed),
+        "a version the advisory never named must NOT match",
+      ).toBeNull();
+    });
+
+    it("routes the PyPI entries to the pypi namespace, not npm", () => {
+      const feed = getBundledFeed();
+      expect(matchPackageIOC("pypi", "boto4", "1.0.0", feed)).toBeTruthy();
+      expect(matchPackageIOC("pypi", "scrambleeer", "0.1.1", feed)).toBeTruthy();
+      expect(
+        matchPackageIOC("npm", "boto4", "1.0.0", feed),
+        "a pypi: entry must not match an npm package of the same name",
+      ).toBeNull();
+      expect(
+        matchPackageIOC("pypi", "boto4", "1.0.1", feed),
+        "a version between the two pinned ones must NOT match",
+      ).toBeNull();
+    });
+
+    it("keeps the all-versions npm entries reachable by bare name", () => {
+      const feed = getBundledFeed();
+      for (const name of ["kelly-sizing", "polymarket-trading-developer-tool", "saas-f-testing"]) {
+        expect(matchBareNpmIOC(name, "1.0.0", feed), name).toBeTruthy();
+      }
+    });
+  });
+
 });
