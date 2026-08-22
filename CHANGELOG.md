@@ -278,6 +278,46 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `refs/tags/v*` is the control for the latter and remains an open owner decision on
   https://github.com/homeofe/supply-chain-guard/issues/167.
 
+- **A corrupt scanner state file is now a reported failure instead of a clean
+  empty baseline.** Both stores under `.scg-history/` ended their read in
+  `catch { return []; }`, which is the value the absent case returns, so
+  "no history yet" and "the history could not be read" were indistinguishable.
+  Measured on a fixture whose recorded risk climbed over ten scans: removing the
+  last 120 bytes of `risk-history.json` took the scan from exit 1, risk level
+  `high`, three trend findings, to exit 0, risk level `low`, none, with the
+  scanned code unchanged. The suppressed findings are all `high` and the default
+  gate with no `--fail-on` is `summary.high > 0`, so the gate silently stopped
+  detecting a regression it had detected the day before. The same construct in
+  the triage store behaved the same way: a truncated `triage-decisions.json`
+  took the same scan from exit 1 with two `high` governance findings to exit 0
+  with none, and reported `metrics.slaComplianceRate` 100 where the intact store
+  gave 0, so a corrupt file did not merely hide a verdict, it manufactured a
+  compliant one. A store that exists but cannot be used now raises
+  `RISK_HISTORY_UNREADABLE` or `TRIAGE_STORE_UNREADABLE` at severity `high`,
+  marks the report `partialScan`, and therefore exits nonzero independently of
+  `--fail-on`. An absent store is unchanged and still silent, so a first scan of
+  a new project still exits 0.
+- **A state file that is valid JSON but the wrong shape no longer crashes the
+  scan.** Both readers ended in an `as` cast, which asserts a type without
+  checking it, so `null` and `{}` never reached either `catch` and instead threw
+  an unhandled `TypeError` that produced no report at all: four cases across the
+  two stores. Both readers now validate the declared entry shape and report the
+  file as unreadable, so a scan still produces a report.
+- **A scan no longer destroys the evidence it failed to read.** The truncated
+  history in the measurement above still held nine complete, recoverable entries;
+  the next plain `scan` replaced the file with a single fresh entry, so one more
+  run turned "corrupt" into "gone". History is no longer written while an
+  unreadable-store finding is present, and `saveRiskHistory` now throws
+  `RiskHistoryUnreadableError` rather than overwriting a store it could not read,
+  which also protects library consumers calling it directly.
+- **New `readRiskHistory` and `readTriageDecisions` report which of the three
+  things happened** (`absent`, `ok`, `unreadable`) rather than collapsing two of
+  them. `loadRiskHistory` and `loadTriageDecisions` remain exported and behave as
+  before, deprecated rather than re-typed, because they are published API and a
+  signature change would break library consumers. The shared three-way reader
+  lives in `src/state-dir.ts` next to the directory both stores write into, so a
+  future third store does not have to rediscover the rule.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added
