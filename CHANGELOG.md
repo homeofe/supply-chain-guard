@@ -35,12 +35,44 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **The Node compatibility matrix now runs the current Active LTS, and the gate
+  asserts that it does.** `engines.node` is `>=22.0.0`, a floor with no ceiling, so
+  the package claims Node 22 and every major after it. The matrix stopped at 22, so
+  the whole claim above the floor was made and never executed. Read against the
+  upstream `nodejs/Release` schedule on 2026-08-22, that was not academic: Node 22
+  had been in Maintenance LTS since 2025-10-21, while Node 24, Active LTS since
+  2025-10-28, was claimed and never run. Because `@types/node` is on the Node 26 API
+  surface, an API available only above Node 22 would have type-checked clean, passed
+  every leg, and failed in a consumer's hands. `docs/node-support.md` gains
+  `activeLtsMajor`, `src/__tests__/node-version-contract.test.ts` asserts
+  `max(supportedMajors)` reaches it and that the matrix runs a leg at or above it,
+  and the `compat` matrix is now Node 20, 22 and 24. The Node 20 transition lane is
+  unchanged and is still deleted in 5.29.0. Reported as
+  https://github.com/homeofe/supply-chain-guard/issues/176
+- **A perf test's harness timeout is now scaled the same way its own assertion is, so
+  the guard is reachable under the command CI runs.** `npm run test:coverage` sets
+  `SCG_VITEST_COVERAGE=1`, which makes `performanceBudget` multiply by five. Two cases in
+  `src/__tests__/multi-line-pattern-engine.test.ts` asserted against a scaled 50,000 ms
+  budget while a bare `timeout: 15_000` killed them at 15,000 ms, so the algorithmic
+  guard could never be evaluated and a failure reported runner noise instead. Measured
+  across one CI run: the same case took 8,734 ms on Node 20, 13,622 ms on Node 22 and
+  15,070 ms on Node 24, and it had already failed the Node 22 leg on `main` at 15,137 ms
+  with no Node 24 involved. Outside a coverage run `performanceBudget` is the identity,
+  so `npm test` is unchanged, and the `performanceBudget(10_000)` assertion that catches
+  a real regression is untouched.
+- **The comment above the `compat` matrix no longer contradicts the policy it points
+  at.** It described the matrix as "every Node major this package supports" four
+  lines above a pointer to a policy whose subject is that supported and tested are
+  deliberately different lists, so a reader of `.github/workflows/ci.yml` alone
+  concluded the repository disagreed with itself. It now states the invariant in the
+  policy's own vocabulary, and five test cases assert that the comment keeps naming
+  `supportedMajors`, `transitionMajors`, `activeLtsMajor`, the policy document and
+  the test that enforces it.
 - **Two error strings from `feed refresh` changed wording**, because the shared
   downloader reports them: a request-level failure no longer carries the
   `network error:` prefix, and a rejected status now reads `HTTPS request failed
   with status 404 for <url>` instead of `HTTP 404`. Both still name the URL and
   still leave the previous cache untouched.
-
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
