@@ -208,10 +208,33 @@ export interface SlaConfig {
 }
 
 export interface SecurityMetrics {
-  mttrCritical?: number;
   openCritical: number;
   openHigh: number;
-  slaComplianceRate: number;
+  /**
+   * Percentage of measurable triage decisions that are inside their SLA, or
+   * `null` when there is nothing to measure.
+   *
+   * Computed from the single definition in `src/sla-engine.ts`. When the value
+   * is non-null it is 100 if and only if `checkSlaCompliance` reports zero
+   * breaches over the same decisions. The qualifier is required, and an earlier
+   * draft of this comment omitted it: zero breaches alone does not imply 100,
+   * because an empty decision set and a set whose every `decidedAt` is
+   * unparseable each report zero breaches and a rate of `null`. In one
+   * direction the implication needs no qualifier: 100 implies zero breaches.
+   *
+   * `null` means no measurement: no triage decisions were recorded, or every
+   * recorded decision has an unparseable `decidedAt`. It does NOT mean zero
+   * and it does not mean full compliance. Previously this field returned the
+   * flattering `100` for an empty decision set, which made a project that had
+   * never adopted triage indistinguishable from one with a perfect record.
+   *
+   * BREAKING for TypeScript consumers reading this field: the type widened
+   * from `number` to `number | null`. Narrow with an explicit null check.
+   * `mttrCritical` was removed from this interface in the same change. It was
+   * declared optional and was assigned `undefined` unconditionally, so no
+   * consumer can ever have received a value from it.
+   */
+  slaComplianceRate: number | null;
   riskTrend: "increasing" | "stable" | "decreasing";
   topRiskContributors: string[];
 }
