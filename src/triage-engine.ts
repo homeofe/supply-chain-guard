@@ -8,28 +8,150 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, TriageDecision, FindingStatus } from "./types.js";
-import { STATE_DIR, ensureStateDir } from "./state-dir.js";
+import {
+  STATE_DIR,
+  ensureStateDir,
+  readJsonArrayStore,
+  type StateStoreRead,
+  type StateStoreUnreadableReason,
+} from "./state-dir.js";
 import { buildTriageScope } from "./triage-scope.js";
 
-const TRIAGE_DIR = STATE_DIR;
 const TRIAGE_FILE = "triage-decisions.json";
+
+/** The valid values of `TriageDecision.status`. */
+const FINDING_STATUSES: ReadonlySet<string> = new Set<FindingStatus>([
+  "new",
+  "triaged",
+  "accepted-risk",
+  "in-remediation",
+  "resolved",
+  "false-positive",
+]);
+
+/** The result of reading the persisted triage decisions. */
+export type TriageDecisionsRead = StateStoreRead<TriageDecision>;
+
+/**
+ * Why a triage store that exists could not be used.
+ *
+ * See {@link StateStoreUnreadableReason} in `src/state-dir.ts`.
+ */
+export type TriageDecisionsUnreadableReason = StateStoreUnreadableReason;
+
+/**
+ * Structural check for one persisted triage decision.
+ *
+ * `status` is checked against the closed `FindingStatus` set rather than merely
+ * being required to be a string, because every governance rule in
+ * `checkTriageGovernance` below selects on it. An unrecognised status silently
+ * matches no rule, so an entry carrying one would be counted in
+ * `decisions.length` and in the SLA denominator while contributing to no check,
+ * which is a wrong answer rather than an absent one.
+ *
+ * `decidedAt` is required to be a string but is not required to be a parseable
+ * date. The staleness rule below computes `now - new Date(d.decidedAt)`, which
+ * yields `NaN` for an unparseable value, and `NaN > threshold` is `false`, so
+ * an unparseable date fails toward reporting less. That is a real weakness, but
+ * it is a pre-existing one about date handling, it is not the read-path
+ * conflation this store is being corrected for, and tightening it here would
+ * reject stores written by earlier versions that never validated the field.
+ * Stated rather than left for the next reader to rediscover.
+ */
+function isTriageDecision(value: unknown): value is TriageDecision {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const decision = value as Record<string, unknown>;
+  return (
+    typeof decision.findingRule === "string" &&
+    typeof decision.status === "string" &&
+    FINDING_STATUSES.has(decision.status) &&
+    typeof decision.decidedAt === "string"
+  );
+}
+
+/**
+ * Read the persisted triage decisions and say which of the three things happened.
+ *
+ * This store carries the same defect class as the risk history and was measured
+ * to have the same consequence, which is why both are fixed together rather
+ * than one being left as an unremarked twin for the pattern to be copied from.
+ * On a fixture holding one expired risk acceptance and one stale in-remediation
+ * decision, truncating this file took the scan from exit 1 with two `high`
+ * findings to exit 0 with none, and took `metrics.slaComplianceRate` from 0 to
+ * 100. The second number is the sharper harm: a corrupt file did not merely
+ * hide a verdict, it manufactured a perfect compliance score.
+ *
+ * `null` and `{}` additionally crashed the scan outright with
+ * `decisions is not iterable` and no report at all, because the previous reader
+ * ended in `as TriageDecision[]`, which is an assertion and not a check.
+ *
+ * The three-way contract is documented on `readJsonArrayStore` in
+ * `src/state-dir.ts`. The caller that acts on `unreadable` is `src/scanner.ts`,
+ * which raises `TRIAGE_STORE_UNREADABLE` and marks the report `partialScan`.
+ */
+export function readTriageDecisions(dir: string): TriageDecisionsRead {
+  return readJsonArrayStore(dir, TRIAGE_FILE, isTriageDecision);
+}
 
 /**
  * Load triage decisions from persistent storage.
+ *
+ * @deprecated Use {@link readTriageDecisions}, which distinguishes an absent
+ * store from an unreadable one. This wrapper collapses both to `[]` and
+ * therefore cannot tell a caller that governance evidence was lost. It is kept
+ * because it is published API (`src/index.ts`), so removing or re-typing it
+ * would break library consumers; it is not kept because the behaviour is
+ * correct.
  */
 export function loadTriageDecisions(dir: string): TriageDecision[] {
-  const triagePath = path.join(dir, TRIAGE_DIR, TRIAGE_FILE);
-  if (!fs.existsSync(triagePath)) return [];
+  return readTriageDecisions(dir).entries;
+}
 
-  try {
-    return JSON.parse(fs.readFileSync(triagePath, "utf-8")) as TriageDecision[];
-  } catch {
-    return [];
-  }
+/**
+ * Build the finding that reports an unusable triage store.
+ *
+ * Severity `high` on the same derivation as `RISK_HISTORY_UNREADABLE`: the
+ * governance findings this loses (`RISK_ACCEPTANCE_EXPIRED`,
+ * `STALE_CRITICAL_FINDING`, `CRITICAL_FINDING_NO_OWNER`) are `high`, and the
+ * default gate in `src/reporter.ts` with no `--fail-on` is `summary.high > 0`,
+ * so anything lower would leave that gate green and reproduce the defect one
+ * layer down.
+ */
+export function triageStoreUnreadableFinding(
+  reason: TriageDecisionsUnreadableReason,
+): Finding {
+  return {
+    rule: "TRIAGE_STORE_UNREADABLE",
+    description:
+      `The triage decision store at ${STATE_DIR}/${TRIAGE_FILE} exists but could not be used (${reason}). ` +
+      `Governance checks therefore ran against no decisions, so expired risk acceptances, stale remediations and unowned ` +
+      `critical findings cannot be reported, and the SLA compliance rate in this report is computed from an empty store ` +
+      `rather than from the recorded decisions.`,
+    severity: "high",
+    confidence: 1,
+    category: "trust",
+    recommendation:
+      `Treat this run as unverified rather than compliant. Inspect ${STATE_DIR}/${TRIAGE_FILE}: complete entries can often be ` +
+      `recovered by closing the truncated JSON array by hand. Delete the file only if the recorded triage decisions are ` +
+      `genuinely expendable, since they are the record of who accepted which risk and when.`,
+  };
 }
 
 /**
  * Save triage decisions.
+ *
+ * Unlike `saveRiskHistory`, this function does NOT refuse to run when the store
+ * on disk is unreadable, and the asymmetry is deliberate. `saveRiskHistory`
+ * performs a read, append and write, so it would overwrite a corrupt file with
+ * a single fresh entry and destroy the complete entries still recoverable from
+ * it; refusing is what preserves them. This function takes the full decision
+ * list from its caller and replaces the file wholesale, so refusing here would
+ * remove the only supported way to repair a corrupt store through the API,
+ * while preventing no measured loss: no caller in this repository performs a
+ * read-modify-write of this store, and a library consumer that does can use
+ * {@link readTriageDecisions} to see the `unreadable` status before deciding.
  */
 export function saveTriageDecisions(
   dir: string,

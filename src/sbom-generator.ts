@@ -1,5 +1,5 @@
 /**
- * SBOM Generator — CycloneDX 1.6
+ * SBOM Generator - CycloneDX 1.6
  *
  * Generates a proper Software Bill of Materials from a project's
  * package.json + package-lock.json (npm v2+), including VEX statements

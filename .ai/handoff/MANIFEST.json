@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787440057",
-    "timestamp": "2026-08-22T23:07:37Z",
-    "commit": "80e708d",
+    "session_id": "cli-1787443177",
+    "timestamp": "2026-08-22T23:59:37Z",
+    "commit": "95985fd",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:00858a60daee37395b4e0d94aedba59ded2efc9e7adefcae1cf5c4006da0cf91",
-      "updated": "2026-08-22T23:04:55Z",
-      "lines": 3177,
+      "checksum": "sha256:e767450b747088888707bb0094fcf37253d2ba3ea893748a560125b07085d92c",
+      "updated": "2026-08-22T23:58:46Z",
+      "lines": 3389,
       "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:19814e5e643030be8d6538df50287b6f96331fbc10fa8064c5c05ef842f55823",
-      "updated": "2026-08-22T23:04:06Z",
+      "updated": "2026-08-22T23:58:45Z",
       "lines": 186,
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:7a50a66214286e3f0930d1bfbf1d16e66ef2cb2eb4ec7e5ecaaf0e4a9cdbd4f7",
-      "updated": "2026-08-22T23:07:37Z",
+      "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
+      "updated": "2026-08-22T23:59:36Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,20 +41,20 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:5ecfa38d9ddbf228f2b33b52f218605306b82823a8db47fb364dee5455403e70",
-      "updated": "2026-08-22T23:07:37Z",
+      "checksum": "sha256:9983f3c4b9af9479a4d8bbc530a8cc712f46821bc7f32b549573f8a804d12b4c",
+      "updated": "2026-08-22T23:59:36Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:118e50cc415e5dfcf4f7c629e1e590ac297e4ea24fbf8b33b9db4b71899009fe",
-      "updated": "2026-08-22T23:07:37Z",
+      "checksum": "sha256:470784a9e3d9a9923299ec25abbac006a7ad9987eed1702069503cbcd45e9b1e",
+      "updated": "2026-08-22T23:59:36Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
-      "updated": "2026-08-22T22:59:55Z",
+      "updated": "2026-08-22T23:49:40Z",
       "lines": 249,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
@@ -80,97 +80,7 @@
   "quick_context": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 35796,
-    "full_read": 47437
-  },
-  "next_task_id": 20,
-  "tasks": {
-    "T-008": {
-      "title": "Adopt AAHP 3.9.1 and close verified scanner and CI defects",
-      "status": "done",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-04T08:00:00Z",
-      "completed": "2026-08-04T08:15:48Z"
-    },
-    "T-009": {
-      "title": "Implement full offline sigstore verification",
-      "status": "ready",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-04T08:00:00Z"
-    },
-    "T-010": {
-      "title": "Add a first-class known-bad VS Code extension ID IOC type",
-      "status": "ready",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-04T08:00:00Z"
-    },
-    "T-011": {
-      "title": "Verify remaining Digest-78 indicators before ingestion",
-      "status": "ready",
-      "priority": "medium",
-      "depends_on": [],
-      "created": "2026-08-04T08:00:00Z"
-    },
-    "T-012": {
-      "title": "Profile structural matcher cost under V8 coverage",
-      "status": "ready",
-      "priority": "low",
-      "depends_on": [],
-      "created": "2026-08-04T08:00:00Z"
-    },
-    "T-013": {
-      "title": "Move to Babel 8 and a supported Node line",
-      "status": "blocked",
-      "priority": "medium",
-      "depends_on": [],
-      "blocked_by": "Owner decision on raising package engines and both CI jobs together",
-      "created": "2026-08-04T08:00:00Z"
-    },
-    "T-014": {
-      "title": "Remove external zip dependency from VS Code test fixtures",
-      "status": "ready",
-      "priority": "low",
-      "depends_on": [],
-      "created": "2026-08-04T10:00:00Z"
-    },
-    "T-015": {
-      "title": "Fix packaged self-scan own-definition false positive",
-      "status": "done",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-04T09:24:00Z",
-      "completed": "2026-08-04T09:27:00Z"
-    },
-    "T-016": {
-      "title": "Version-pinned npm IOCs match on a directory scan via the lockfile path",
-      "status": "done",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-06T09:00:00Z"
-    },
-    "T-017": {
-      "title": "Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC",
-      "status": "done",
-      "priority": "medium",
-      "depends_on": [],
-      "created": "2026-08-06T09:30:00Z"
-    },
-    "T-018": {
-      "title": "Match known-malware hashes against real file digests, not just digest text in content",
-      "status": "done",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-12T09:00:00Z"
-    },
-    "T-019": {
-      "title": "Dropped-persistence detection (tranches 1 and 2)",
-      "status": "done",
-      "priority": "high",
-      "depends_on": [],
-      "created": "2026-08-12T09:00:00Z"
-    }
+    "manifest_plus_core": 41159,
+    "full_read": 52811
   }
 }

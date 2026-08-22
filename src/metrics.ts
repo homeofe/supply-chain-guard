@@ -10,6 +10,26 @@ import { buildTriageScope } from "./triage-scope.js";
 
 /**
  * Calculate security metrics from findings, history, and triage data.
+ *
+ * KNOWN LIMIT, stated so the next reader does not rediscover it as a defect.
+ * Every field here is a number or a closed string union with no member meaning
+ * "unknown", so an empty `history` and an empty `decisions` produce the same
+ * metrics whether the store was absent or unreadable: `riskTrend` reads
+ * `stable` and `slaComplianceRate` reads 100. When the store could not be read,
+ * both are answers about an empty set rather than about the project.
+ *
+ * What keeps that from being a silent wrong answer is the layer above, not this
+ * one. `src/scanner.ts` raises `RISK_HISTORY_UNREADABLE` or
+ * `TRIAGE_STORE_UNREADABLE` and sets `partialScan`, `src/reporter.ts` then
+ * exits nonzero independently of `--fail-on` and strips clean-verdict
+ * recommendations, and the finding text says in words that these metrics were
+ * computed from an empty store. A consumer reading `metrics` in isolation must
+ * check `partialScan` first; a report with `partialScan: true` is an
+ * indeterminate result and its metrics are not a measurement of the project.
+ *
+ * Widening the types to carry "unknown" was considered and not done here: both
+ * fields are published in `SecurityMetrics`, so it is a breaking change for
+ * library and JSON consumers and belongs in a major, not in a defect fix.
  */
 export function calculateMetrics(
   findings: Finding[],
