@@ -47,20 +47,34 @@ const EXTRA_DOMAIN_IOC: FeedIOC = {
   campaign: "Feed Refresh Test",
 };
 
-type ResLike = EventEmitter & { statusCode?: number };
+type ResLike = EventEmitter & { statusCode?: number; headers?: Record<string, string> };
 type MockedGet = ReturnType<typeof vi.fn>;
 
-/** Configure the mocked https.get to answer with a status + body chunks. */
+/**
+ * Configure the mocked https.get to answer with a status + body chunks.
+ *
+ * The body is emitted on a LATER tick than the response callback, the way a
+ * socket delivers it. Emitting it in the same tick only worked because the old
+ * hand-rolled reader attached its listeners synchronously inside that callback;
+ * any reader that awaits anything first would miss every chunk and hang.
+ *
+ * This mock still cannot represent a peer that stalls or trickles, which is why
+ * the bounds introduced for issue 170 are tested against a real loopback server
+ * in issue-170-feed-bounds.test.ts instead of here.
+ */
 function mockHttpResponse(status: number, chunks: string[]): void {
   (https.get as unknown as MockedGet).mockImplementation(
-    (_url: unknown, cb: (res: ResLike) => void) => {
+    (_options: unknown, cb: (res: ResLike) => void) => {
       const res = new EventEmitter() as ResLike;
       res.statusCode = status;
+      res.headers = {};
       const req = new EventEmitter();
       process.nextTick(() => {
         cb(res);
-        for (const chunk of chunks) res.emit("data", Buffer.from(chunk));
-        res.emit("end");
+        setImmediate(() => {
+          for (const chunk of chunks) res.emit("data", Buffer.from(chunk));
+          res.emit("end");
+        });
       });
       return req;
     },
@@ -321,7 +335,14 @@ describe("refreshFeed", () => {
   it("defaults to the published GitHub raw URL", async () => {
     mockHttpResponse(200, [JSON.stringify({ schema: 1, entries: [EXTRA_DOMAIN_IOC] })]);
     await refreshFeed(undefined, tmpDir);
-    expect((https.get as unknown as MockedGet).mock.calls[0][0]).toBe(DEFAULT_FEED_URL);
+    // The bounded downloader parses the URL and passes RequestOptions, so the
+    // destination is reassembled from the parts rather than compared as a string.
+    const options = (https.get as unknown as MockedGet).mock.calls[0][0] as {
+      protocol: string;
+      hostname: string;
+      path: string;
+    };
+    expect(`${options.protocol}//${options.hostname}${options.path}`).toBe(DEFAULT_FEED_URL);
     expect(DEFAULT_FEED_URL).toContain(
       "raw.githubusercontent.com/homeofe/supply-chain-guard/main/feed.json",
     );
@@ -330,7 +351,7 @@ describe("refreshFeed", () => {
   it("rejects with a clear error when the network is down (no crash)", async () => {
     mockHttpError("getaddrinfo ENOTFOUND raw.githubusercontent.com");
     await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir)).rejects.toThrow(
-      /Failed to refresh threat feed.*network error.*ENOTFOUND/,
+      /Failed to refresh threat feed.*ENOTFOUND/,
     );
     expect(fs.existsSync(path.join(tmpDir, FEED_CACHE_FILE))).toBe(false);
   });
@@ -338,7 +359,7 @@ describe("refreshFeed", () => {
   it("rejects on non-200 HTTP status", async () => {
     mockHttpResponse(404, ["Not Found"]);
     await expect(refreshFeed("https://feed.invalid/feed.json", tmpDir)).rejects.toThrow(
-      /Failed to refresh threat feed.*HTTP 404/,
+      /Failed to refresh threat feed.*failed with status 404/,
     );
   });
 
