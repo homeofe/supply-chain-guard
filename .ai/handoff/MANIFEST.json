@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:ff2324905d573f406f68f6d92d6cca9ad0d769993eb304ec1d3230a034e441bc",
+      "checksum": "sha256:e1844e1bf5a15cec69a671d7df80e406519ba29923c8dcd80fe419a59aef6995",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2805,
+      "lines": 2868,
       "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
@@ -53,9 +53,9 @@
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
-      "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
+      "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
       "updated": "2026-08-22T12:36:56Z",
-      "lines": 249,
+      "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {

@@ -120,4 +120,68 @@ jobs:
           if [ "$fail" -ne 0 ]; then
             exit 1
           fi
-          echo "PR metadata policy OK: title and body carry no tool or model attribution."
+          echo "Attribution check OK: title and body carry no tool or model attribution."
+      # The rule this step enforces is written down in CONTRIBUTING.md, and a FILE
+      # copy of it already runs inside "Build and Test" as the
+      # `consumer-repo-disclosure` entry in aahp.config.json's forbiddenPatterns.
+      # That copy reads files. A pull request title and body are not files, so it has
+      # never been able to see them - and they are the surface that cannot be taken
+      # back. A merged PR body stays indexed for good, which is exactly why the three
+      # such bodies already in this repository had to be reported to the maintainer
+      # instead of fixed in place. The file rule closed the source of the next one;
+      # this closes the metadata source of the next one.
+      #
+      # Deliberately in THIS workflow rather than in ci.yml, for two reasons. It is
+      # the only workflow that runs on `edited`, which is the event a body rewrite
+      # produces - a gate in ci.yml would never see the edit that introduces the
+      # disclosure. And it puts this gate under a DIFFERENT required check name than
+      # the file gate it twins, so neither one going green for its own reasons can
+      # ever stand in for the other.
+      # Step-level exemption below, same shape and same reason as the step above:
+      # this is a required check with enforce_admins, dependabot quotes upstream
+      # release notes verbatim and cannot edit its own body, so a hyphenated upstream
+      # name in a quoted note would hard-block a security update with no way out.
+      # Skipping the STEP keeps the job's conclusion conclusive; skipping the JOB
+      # would report a non-success for the required context.
+      #
+      # The `if:` stays on the line directly under `- name:`, with no comment wedged
+      # between them, because workflow-trigger-contract.test.ts asserts that
+      # adjacency for both steps - that is what makes "exempted at step level" a
+      # machine-checked property rather than a claim in a comment.
+      - name: No consumer repository names in PR title or body
+        if: github.actor != 'dependabot[bot]'
+        env:
+          # Attacker-controlled, exactly as in the step above: anyone who can open a
+          # PR from a fork owns these two strings. They reach the script only as
+          # environment variables read as quoted "$VAR", never interpolated into the
+          # run: block, which bash would parse as code before it ever ran.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # POSIX-ERE twin of the aahp.config.json "consumer-repo-disclosure" rule.
+          # workflow-trigger-contract.test.ts asserts the two are byte-identical:
+          # drift means one published surface silently stops rejecting what the other
+          # still rejects, and nothing in a green build would say so.
+          #
+          # It matches the cross-repository reference SHAPE only and carries no list
+          # of private repository names, because such a list in a public file would
+          # itself be the disclosure it exists to prevent. The maintainer's contact
+          # address and the published npm scope are unaffected: neither is followed
+          # by a slash or a hyphen. Both are asserted as negative cases in the test.
+          DISCLOSURE_PATTERN='elvatis[/-][A-Za-z0-9]'
+          fail=0
+
+          if printf '%s' "$PR_TITLE" | grep -Eiq -- "$DISCLOSURE_PATTERN"; then
+            echo "::error title=Consumer repository named in PR title::Benchmark and measurement evidence carries counts and classes, never consumer repository names. See CONTRIBUTING.md."
+            fail=1
+          fi
+
+          if printf '%s' "$PR_BODY" | grep -Eiq -- "$DISCLOSURE_PATTERN"; then
+            echo "::error title=Consumer repository named in PR body::Write 'seven consumer repositories: 128 -> 92 findings' instead of listing them. This repo is public, PR bodies are indexed, and a merge cannot be retracted. See CONTRIBUTING.md."
+            fail=1
+          fi
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Disclosure check OK: title and body name no consumer repository."
