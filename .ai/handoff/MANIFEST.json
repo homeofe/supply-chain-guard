@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:de4744cad7806923fe3d17e52e9dcb6176480a0b8b009454a7fe20d16919a910",
+      "checksum": "sha256:f7cff62a877247c7ac0d959a1fb3aec33e870c397e8700eb5bdda57c5f57dd5b",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2878,
+      "lines": 2939,
       "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
@@ -41,13 +41,13 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:a3f5ac40cf40fa687ce694aac88db8946d763ef765d0c4cbc64ea2e3c242d49e",
+      "checksum": "sha256:5b4ab0b61d2314e813af3e923db2398ed5c4ef71f6de80c172adbed42c767d2c",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:660c3678483ebc3b297f209d92edd692b38ecc11dbf8ffc0607c0e5943007a1c",
+      "checksum": "sha256:53a90eaba24b0ae1ae2c2eb86fb5ad3dca0fec43551866674affc45480a96669",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."

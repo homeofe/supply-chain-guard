@@ -2253,6 +2253,31 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // and are NOT matched.
   "^(claud-code|cloude-code|cloude|crypto-locale|crypto-reader-info|detect-cache|format-defaults|hardhta|locale-loader-pro|naniod|node-native-bridge|opencraw|parse-compat|rimarf|scan-store|secp256|suport-color|veim|yarsg)$",
 
+  // @zalastax/nolb-* name-reservation flood (GitHub Advisory Database backfill,
+  // August 2026). OpenSSF malicious-packages classified this one publisher's bulk
+  // namespace-squat as CWE-506 and GHSA backfilled it on 2026-08-14: 4,363 advisories
+  // in a single import window, every one an all-versions range (`> 0`) on a name of
+  // the form @zalastax/nolb-<suffix>, all published Jan/Feb 2023.
+  //
+  // Registry-verified 2026-08-22: these are npm SECURITY HOLDING PACKAGES. 12 of a
+  // 14-name spread sample carry only a 0.0.1-security placeholder; 2 still have their
+  // original 2023 version alongside it. So the payload is largely gone and the names
+  // have no legitimate release history - the same situation as the SANDWORM_MODE set
+  // above, where holding-package status is what makes a bare-name rule safe.
+  //
+  // ONE anchored rule rather than 4,363 feed entries: that would be a 34% feed growth
+  // (12,962 -> 17,325) and about 1 MB on feed.json for one publisher's taken-down 2023
+  // squats. Every advisory in the scope carries the nolb- prefix (1,000/1,000 sampled
+  // from ossf/malicious-packages) and the rule is anchored to it, so a non-nolb
+  // @zalastax package does NOT match. A named-publisher namespace rule like the
+  // BufferZoneCorp Go rule above, not the scoped catch-all rejected below.
+  //
+  // LIMIT, on purpose: MALICIOUS_PACKAGE_PATTERNS is read by the npm-scanner name
+  // check and its package.json fallback, NOT by the generic directory scan, which
+  // matches exact feed names only. Taken-down names make that residual gap small,
+  // but it is a gap and not a claim of full coverage.
+  "^@zalastax\\/nolb-[a-z0-9._-]+$",
+
   // NOTE: there is deliberately NO scoped-package catch-all here.
   // A rule of the shape "^@(?!<allowlist>)/.*$" matched 94% of every scoped
   // package on npm, so `scg npm <any scoped package>` exited 1 with riskLevel
