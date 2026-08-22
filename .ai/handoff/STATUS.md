@@ -1,3 +1,17 @@
+## 2026-08-23 - declare merge=union for the handoff append-log
+
+`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by
+one block and nothing else. Eight sibling repositories in this estate already
+declare `merge=union` for it; this one did not, and the two that lacked it are
+exactly the two where twenty-two rebases on 2026-08-23 each resolved this file by
+hand.
+
+It does not stop a pull request going CONFLICTING - GitHub does not honour merge
+drivers server-side, measured 2026-07-31 - so this removes the hand resolution,
+not the merge. `MANIFEST.json` is deliberately left without a driver: it is
+generated state, and the correct resolution is to take main's copy and recompute
+the changed entries, which no driver can do.
+
 # supply-chain-guard: Current State
 
 > Updated 2026-08-20 (release v5.27.0). This is one current snapshot, not a session
