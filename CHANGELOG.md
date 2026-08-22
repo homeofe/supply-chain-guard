@@ -107,6 +107,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   against one merge ref, the live-tip selector returned 12 files and the same
   merge ref against a base one merged commit older returned 15.
 
+### Security
+
+- **The publish path now proves the tagged commit is on `main` before anything is
+  published** (`scripts/check-release-ancestry.mjs`, run by the `publish` job in
+  `ci.yml` before `npm publish` and by the `merge` job in `docker.yml` before the image
+  tags move). **No release was ever published off `main`. This closes a latent defect,
+  found by inspection: measured on 2026-08-22, all 138 semver tags published to date are
+  ancestors of `main`, and none is not.** What was missing was the check, not a clean
+  record. Required status checks, branch protection and `enforce_admins` are all
+  properties of `refs/heads/main` and are never evaluated on a `refs/tags/*` push, so of
+  the three contexts branch protection requires, only `Build and Test` runs on the
+  released commit. `needs: build` did already make `publish` wait for the full compat
+  matrix and the container build and scan, but none of that says where the commit lives,
+  and the one pre-publish check that looks at the tag, `Validate immutable release tag`,
+  compares the tag string against `package.json` and is satisfied by any commit at all
+  whose version field matches. A tag on a commit that never reached `main` would
+  therefore have moved four public channels, the npm package and its `latest` dist-tag,
+  the GitHub Release, the container image including `:latest`, and the floating `v5`
+  branch, with a fully green run and no failing step. This repository squash-merges, so
+  the local pre-merge commit always has a different sha from the commit that lands on
+  `main` while its content looks identical, which is the accident this closes.
+  `docs/ci-and-release.md` has stated the rule since 2026-08-20, the release of 5.28.0;
+  135 of the 138 tags predate that sentence, and until now it was a convention holding
+  rather than a gate enforcing.
+- **Limits of that gate, stated here because they outlive this entry.** Actions runs a
+  workflow from the file present at the pushed ref, so the gate binds tags whose commit
+  already contains it: a tag cut from a commit that predates this change still publishes
+  ungated, and an actor who controls the commit controls its `ci.yml` and can omit the
+  step. The gate closes the accident, not the deliberate case. Restricting who may create
+  `refs/tags/v*` is the control for the latter and remains an open owner decision on
+  https://github.com/homeofe/supply-chain-guard/issues/167.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added
