@@ -83,6 +83,209 @@ starts at the rule's own id.
 - The three merged PR bodies that name consumer repositories. Still not edited -
   editing a merged body is the owner's call. The new gate prevents the next one;
   it cannot retract these.
+## Docker base image pinning: one parser, three verdicts (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-174-docker-base-image-pinning. Issue
+https://github.com/homeofe/supply-chain-guard/issues/174. No version bump.
+
+`DOCKER_UNPINNED_BASE` was one regex and it was narrower than its own five tag
+words. Measured on the released rule over 19 representative `FROM` lines: 5
+flagged, and those 5 were exactly the five bare literal words. Three shapes
+inside the rule's own stated scope scanned clean:
+
+- `FROM --platform=$BUILDPLATFORM node:latest`, because `\S+` bound to the flag
+  token. End to end through the CLI: risk score 2, zero high findings,
+  `--fail-on high` exit 0, on a line carrying a literal `:latest`.
+- `node:lts-alpine`, `nginx:stable-alpine`, `nginx:mainline-alpine`,
+  `node:current-slim`, because the alternation ended at `(?:\s|$)`. The suffixed
+  forms are the upstream rolling tags and the ones people write.
+- `FROM scratch-base:latest` and `FROM scratchpad:latest`, because `(?!scratch)`
+  had no token boundary.
+
+Widening the regex was not available: two of the three misses are structural,
+and `validatePatternSet` rejects the obvious widened forms at module load as a
+broad unbounded consuming gap. All three `FROM` rules now share one
+`correlatedMatcher`. It strips instruction flags, joins backslash continuations,
+drops comment lines, tracks `AS <stage>` names in file order, and exempts
+`scratch` only as a whole token. Because the three rules read the same parse,
+they can no longer disagree about what a build-stage reference is.
+
+### The two decisions, both recorded in the repository
+
+Both are written into `docs/ARCHITECTURE.md`, "Base Image Pinning (decision
+record)", and summarised next to the code in `src/dockerfile-scanner.ts`. Neither
+lives only in a pull request.
+
+1. **Tiering.** The issue asked for one rule at `high` for every `FROM` line
+   without a digest. Not taken. `high` is what the default gate fails on
+   (`getReportExitCode` returns 1 when `summary.high > 0`), so one high tier
+   flips every ordinary version-tagged Dockerfile in every consumer from pass to
+   fail in one release, for a risk that has not changed. Instead
+   `DOCKER_UNPINNED_BASE` stays `high` for a moving channel tag and the new
+   `DOCKER_TAG_NOT_DIGEST` reports a tag without a digest at `low`, mirroring
+   `GHA_UNPINNED_ACTION` / `GHA_TAG_NOT_SHA`. Default gate, `--fail-on high` and
+   `--fail-on medium` unchanged; `--fail-on low`, `--fail-on info` and the risk
+   score do change.
+2. **Compose.** `image:` values stay out of scope, said out loud in each rule's
+   `description`, in README.md and in `docs/ARCHITECTURE.md`. Nine of nine
+   Docker rules are anchored on a Dockerfile instruction keyword, so a Compose
+   file returns nothing from the Docker rule set while the README used to list
+   it as a scanned Docker target. The blocker for implementing it is recorded:
+   a service that also declares `build:` uses `image:` to name what it BUILDS,
+   and telling the two apart needs service-block structure, which this project
+   has no YAML parser for.
+
+### Deliberate behaviour changes a consumer will see
+
+- Newly reported at `high`: `--platform` lines carrying a channel tag, suffixed
+  channel tags, `scratch`-prefixed names, and `FROM ubuntu AS base` (no tag).
+- Newly reported at `low`: every `FROM` line with a tag and no digest.
+- No longer reported: a build-stage reference (`FROM builder`), a commented-out
+  `FROM`, and `FROM` appearing inside another instruction.
+- A `FROM` line carrying an embedded carriage return still classifies. Writing
+  the instruction regex the obvious way, anchored with `$`, would have made
+  `FROM node:latest\rEXTRA` scan clean, because JavaScript's `.` stops at a line
+  terminator. The released regex did report it, so this would have been a
+  regression introduced by the fix rather than a gap left in place. Caught while
+  reading the finished parser, not by the test suite, which is the argument for
+  reading a structural rewrite line by line before shipping it.
+- The report-level "pin base images by digest" recommendation in `src/scanner.ts`
+  now also fires for `DOCKER_TAG_NOT_DIGEST`, so a report whose only base-image
+  finding is the new tier is not left without a recommendation.
+- This repository's own `Dockerfile` stays clean: both `FROM` lines are digest
+  pinned, and a self-scan reports zero `DOCKER_*` findings.
+
+### Open for the owner
+
+Nothing blocks the merge. One judgement is worth a second opinion: whether
+`DOCKER_TAG_NOT_DIGEST` should ship at `low` or at `medium`. `low` was chosen
+because it matches the in-repo Actions precedent and leaves every existing gate
+where it was. `medium` would make it visible to `--fail-on medium` consumers and
+is a one-word change in `src/dockerfile-scanner.ts`; the trade-off is written out
+in `docs/ARCHITECTURE.md`.
+## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
+
+Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.
+Closes https://github.com/homeofe/supply-chain-guard/issues/170 once reviewed.
+
+### What was wrong, and where the issue was incomplete
+
+The issue named one function, `updateThreatFeed`, which is exported library API
+that no CLI command calls. The command the README documents,
+`supply-chain-guard feed refresh`, went through a SECOND downloader in
+`src/feed.ts` with the same two defects and no backstop of any kind. Fixing only
+the function the acceptance criteria name would have closed the issue green with
+the shipped command unchanged.
+
+Measured on the base commit against a loopback peer that sends headers and then
+stalls: `feed refresh` ran 150 seconds with empty stdout, empty stderr and no
+exit, and was killed at the cap. The identical command against a healthy peer
+finished in 0.28 seconds. A 64 MiB chunked body was accepted in full.
+
+### Root cause
+
+Not a forgotten timeout. `src/remote-download.ts` already existed and already
+implemented every bound this issue asks for, and `src/npm-scanner.ts`,
+`src/pypi-scanner.ts` and `src/vscode-scanner.ts` already used it. Registry
+acquisition was hardened behind that shared module; feed acquisition was the one
+caller that never adopted it, and nothing in the build requires a new outbound
+request to go through it.
+
+A contributing cause sits in the tests. `src/__tests__/feed.test.ts` mocks
+`node:https` wholesale and delivers the whole body in one tick, so none of its
+six `refreshFeed` tests could observe a stall. The suite passed around the
+defect rather than over it.
+
+### What changed
+
+- `FEED_REMOTE_LIMITS` in `src/threat-intel.ts`, beside the cache constants:
+  32 MiB, 30 s, 5 redirects. The byte figure is roughly ten times the published
+  feed; the other two are the values the registry scanners already use.
+- `refreshFeed` delegates to `fetchHttpsBuffer`. The hand-rolled request is gone,
+  and with it a second defect in the same function: it decoded each chunk
+  separately, so a multi-byte UTF-8 sequence split across a chunk boundary became
+  replacement characters.
+- `updateThreatFeed` keeps the global `fetch` and its quarantine-and-continue
+  validation, and gains an `AbortSignal` deadline, a `Content-Length` refusal
+  before the body is touched, and a running byte count while streaming.
+- Both take an optional per-call limit override; both default to the constant.
+- New suite `src/__tests__/issue-170-feed-bounds.test.ts` drives a real loopback
+  server rather than a mock, because a mock that answers in one tick cannot
+  represent a peer that stalls.
+
+### The one decision left for the owner
+
+`updateThreatFeed` was hardened in place rather than turned into a wrapper over
+`refreshFeed`. The wrapper would remove the second implementation, which is the
+better end state, but it is a behavioural change to exported, documented API:
+`parseFeedPayload` hard-rejects a bad entry where `updateThreatFeed` quarantines
+it and continues, and the error strings differ. That belongs in its own change
+with its own changelog entry, not smuggled in behind a timeout fix.
+
+Also for the owner: the acceptance criteria on the issue are satisfied by the
+`updateThreatFeed` half alone and need rewriting to name `src/feed.ts` as well,
+or the next reader will conclude the CLI path was out of scope.
+## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
+
+Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
+
+The scheduled import proposed 4,409 new IOCs and refused to exit clean: at the
+default `--limit 250`, 2,659 of the remainder would age out of the `--days 14`
+window before any later run could reach them.
+
+### What the backlog actually was
+
+4,363 of the 4,409 were a single publisher's namespace, `@zalastax/nolb-*`,
+backfilled into the GitHub Advisory Database on 2026-08-14 from
+ossf/malicious-packages. All are all-versions ranges on names published in
+Jan/Feb 2023. The real signal in the window was the other 46.
+
+Two registry checks decided the response, and the first one was misleading on its
+own. A liveness check said the packages exist, are not unpublished, and predate
+the advisory by three years, which reads as a live gap. Reading the version
+contents corrected it: they are npm SECURITY HOLDING PACKAGES. Of a 14-name
+spread sample, 12 carry only a `0.0.1-security` placeholder and 2 still have
+their original 2023 version alongside it. So the payload is largely gone and the
+names have no legitimate release history, which is what makes a bare-name rule
+safe here, the same reasoning the SANDWORM_MODE set already uses.
+
+Taken as feed entries, they would have grown the bundled feed 34% (12,962 to
+17,325) and added roughly 1 MB to `feed.json`, shipped to every consumer, for one
+publisher's taken-down 2023 squats. They are covered by one anchored pattern in
+`MALICIOUS_PACKAGE_PATTERNS` instead, and the 46 real entries were imported
+normally through the project's own writer.
+
+### Needs a decision
+
+**`MALICIOUS_PACKAGE_PATTERNS` does not reach the generic directory scan.** It is
+read by the npm-scanner name check and its `package.json` fallback. The directory
+scan in `scanner.ts` matches exact feed names only, deliberately, because the
+pattern table holds broad rules such as `^[a-z]{20,}$` that would produce false
+positives there. That is the surface the GitHub Action runs, so a
+pattern-only campaign is invisible to it.
+
+Taken-down names make the residual gap small in this case, but the general
+question is open and it is not this job's call to settle: should the directory
+scan consult a NARROW subset of the pattern table, or should any campaign that
+matters on that surface always be paid for in feed entries? Today's answer was
+the pattern, on the grounds that the names are dead. A live campaign of this
+shape would need the other answer, and there is currently nothing that forces
+that choice to be made deliberately.
+
+Second, smaller: the importer has no way to exclude a namespace, so every future
+run will re-propose these 4,363 and refuse to exit clean until they age out
+around 2026-08-28. Runs in that window need `--allow-backlog` or a namespace
+filter in `scripts/import-threat-feed.mjs`.
+
+### Enrichment (STEP 1b) found nothing addable
+
+Socket, Aikido, StepSecurity, safedep, OX Security and The Hacker News were all
+checked for write-ups newer than the v5.28.1 sweep. Every atomic indicator they
+publish is already in the blocklist: the keyv/cacheable Shai-Hulud domains and
+both payload hashes, the arrayref build-time dropper, WEL1DROPPER, the Alibaba
+RAT cluster, Joyfill and the fake Corepack site. The one genuinely new cluster,
+`@postman-cse`, had its advisory published 2026-08-22 00:44 UTC and has no vendor
+write-up yet, so there were no atomic indicators to add beyond the version pins.
 ## The release trigger lived in a ref namespace the gates never reach (2026-08-22)
 
 Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the

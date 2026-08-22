@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "5.28.1",
-  "entryCount": 12962,
+  "entryCount": 13008,
   "entries": [
     {
       "type": "domain",
@@ -104915,6 +104915,374 @@
       "campaign": "arrayref Build-Time Dropper",
       "source": "StepSecurity, Wiz",
       "firstSeen": "2026-08-20"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.8.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.8.11",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.9.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.9.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.10.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "@postman-cse/okta-aio-linux-arm64@0.11.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h84r-259m-g3fg, MAL-2026-14357",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "lumen-pages-community@9.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cf4g-g969-7qvx, MAL-2026-14356",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "fuel-react@91.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-77vr-cf3r-2v4w, MAL-2026-14355",
+      "firstSeen": "2026-08-22"
+    },
+    {
+      "type": "package",
+      "value": "polymarket-trading-developer-tool",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qh4r-g8mr-v3xp, MAL-2026-6714",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "kelly-sizing",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vj74-3pcr-5p7j, MAL-2026-14354",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "@gfe/lx-watcher@1.5.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "@gfe/lx-watcher@1.5.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "saas-f-testing",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvrj-4h6r-8rcg, MAL-2026-12434",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:scrambleeer@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jx7v-9c55-jw2v, MAL-2026-14350",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:scrambleeer@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jx7v-9c55-jw2v, MAL-2026-14350",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:requests-crypt@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cf52-hr54-m53p, MAL-2026-14351",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "rollup-packages-node-polyfills",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gp6f-mxh4-x3mh, MAL-2026-12428",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pino-deploy",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9hw3-p3rx-59cw, MAL-2024-2871",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "express-bunker",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w7r5-8cmj-m893, MAL-2026-10500",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "react-native-ui-message",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w3j6-3pww-qfcw, MAL-2026-12424",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "react-hook-use-debounce-throttle-12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2x4w-64xc-78fv, MAL-2026-5909",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "utils-common-helpers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fq4g-5xjj-r935, MAL-2026-5911",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "react-fontawesome-icons",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xvfg-jp9r-63q2, MAL-2026-12423",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "qr-code-styling-temp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pp2c-4x5r-7h8j, MAL-2026-4655",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pvm-autodoc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9352-468r-x8fr, MAL-2026-12421",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "postcss-animate-css-vars",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-432g-6qr7-8hvh, MAL-2026-12418",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "tailwind-animate-css-plugin",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5w98-j73p-rv7m, MAL-2026-14352",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "polymarket-bot-logger",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v4pc-gmg8-h48w, MAL-2026-10516",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "polygon-toolkit-validator",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-67fh-9pjj-6cpw, MAL-2026-10641",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:boto4@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ffh8-mpww-qp8g, MAL-2026-14349",
+      "firstSeen": "2026-08-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:boto4@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ffh8-mpww-qp8g, MAL-2026-14349",
+      "firstSeen": "2026-08-21"
     }
   ]
 }

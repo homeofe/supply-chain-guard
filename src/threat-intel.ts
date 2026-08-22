@@ -13700,6 +13700,58 @@ const FEED_CHUNK_12: FeedIOC[] = [
   { type: "hash", value: "25ad700976873c76af785cb99b33c48db7df8b81f21d1e9e06b3676b9a9373ae", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
   { type: "hash", value: "61198155da51b838772eecf5bfaac6cbc4dcc388dccc56658fc28a8e831b34d4", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
   { type: "hash", value: "b5c1b5b0763a8809a644a8f92224653f0aca623a98eecc714d27f74b80fbe436", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
+
+  // Imported from GitHub Advisory Database (2026-08-08) - see docs/threat-feed-sources.md
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.8.10", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.8.11", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.9.0", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.9.1", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.0", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.1", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.2", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.3", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.4", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.5", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.6", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.7", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.8", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.10.9", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.0", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.1", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.2", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.3", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.6", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.5", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.4", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
+  { type: "package", value: "lumen-pages-community@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-cf4g-g969-7qvx, MAL-2026-14356", firstSeen: "2026-08-22" },
+  { type: "package", value: "fuel-react@91.0.0", severity: "critical", confidence: 1.0, source: "GHSA-77vr-cf3r-2v4w, MAL-2026-14355", firstSeen: "2026-08-22" },
+  { type: "package", value: "polymarket-trading-developer-tool", severity: "critical", confidence: 1.0, source: "GHSA-qh4r-g8mr-v3xp, MAL-2026-6714", firstSeen: "2026-08-21" },
+  { type: "package", value: "kelly-sizing", severity: "critical", confidence: 1.0, source: "GHSA-vj74-3pcr-5p7j, MAL-2026-14354", firstSeen: "2026-08-21" },
+  { type: "package", value: "@gfe/lx-watcher@1.5.3", severity: "critical", confidence: 1.0, source: "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353", firstSeen: "2026-08-21" },
+  { type: "package", value: "@gfe/lx-watcher@1.5.4", severity: "critical", confidence: 1.0, source: "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353", firstSeen: "2026-08-21" },
+  { type: "package", value: "saas-f-testing", severity: "critical", confidence: 1.0, source: "GHSA-fvrj-4h6r-8rcg, MAL-2026-12434", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:scrambleeer@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:scrambleeer@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:requests-crypt@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-cf52-hr54-m53p, MAL-2026-14351", firstSeen: "2026-08-21" },
+  { type: "package", value: "rollup-packages-node-polyfills", severity: "critical", confidence: 1.0, source: "GHSA-gp6f-mxh4-x3mh, MAL-2026-12428", firstSeen: "2026-08-21" },
+  { type: "package", value: "pino-deploy", severity: "critical", confidence: 1.0, source: "GHSA-9hw3-p3rx-59cw, MAL-2024-2871", firstSeen: "2026-08-21" },
+  { type: "package", value: "express-bunker", severity: "critical", confidence: 1.0, source: "GHSA-w7r5-8cmj-m893, MAL-2026-10500", firstSeen: "2026-08-21" },
+  { type: "package", value: "react-native-ui-message", severity: "critical", confidence: 1.0, source: "GHSA-w3j6-3pww-qfcw, MAL-2026-12424", firstSeen: "2026-08-21" },
+];
+
+const FEED_CHUNK_13: FeedIOC[] = [
+  // Imported from GitHub Advisory Database (2026-08-08) - see docs/threat-feed-sources.md
+  { type: "package", value: "react-hook-use-debounce-throttle-12", severity: "critical", confidence: 1.0, source: "GHSA-2x4w-64xc-78fv, MAL-2026-5909", firstSeen: "2026-08-21" },
+  { type: "package", value: "utils-common-helpers", severity: "critical", confidence: 1.0, source: "GHSA-fq4g-5xjj-r935, MAL-2026-5911", firstSeen: "2026-08-21" },
+  { type: "package", value: "react-fontawesome-icons", severity: "critical", confidence: 1.0, source: "GHSA-xvfg-jp9r-63q2, MAL-2026-12423", firstSeen: "2026-08-21" },
+  { type: "package", value: "qr-code-styling-temp", severity: "critical", confidence: 1.0, source: "GHSA-pp2c-4x5r-7h8j, MAL-2026-4655", firstSeen: "2026-08-21" },
+  { type: "package", value: "pvm-autodoc", severity: "critical", confidence: 1.0, source: "GHSA-9352-468r-x8fr, MAL-2026-12421", firstSeen: "2026-08-21" },
+  { type: "package", value: "postcss-animate-css-vars", severity: "critical", confidence: 1.0, source: "GHSA-432g-6qr7-8hvh, MAL-2026-12418", firstSeen: "2026-08-21" },
+  { type: "package", value: "tailwind-animate-css-plugin", severity: "critical", confidence: 1.0, source: "GHSA-5w98-j73p-rv7m, MAL-2026-14352", firstSeen: "2026-08-21" },
+  { type: "package", value: "polymarket-bot-logger", severity: "critical", confidence: 1.0, source: "GHSA-v4pc-gmg8-h48w, MAL-2026-10516", firstSeen: "2026-08-21" },
+  { type: "package", value: "polygon-toolkit-validator", severity: "critical", confidence: 1.0, source: "GHSA-67fh-9pjj-6cpw, MAL-2026-10641", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:boto4@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:boto4@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
@@ -13722,6 +13774,7 @@ const BUNDLED_FEED: FeedIOC[] = [
   ...FEED_CHUNK_10,
   ...FEED_CHUNK_11,
   ...FEED_CHUNK_12,
+  ...FEED_CHUNK_13,
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download
@@ -13729,6 +13782,34 @@ const BUNDLED_FEED: FeedIOC[] = [
 export const CACHE_DIR = ".scg-cache";
 export const FEED_CACHE_FILE = "threat-feed.json";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Bounds every remote feed acquisition in this package: the `feed refresh`
+ * download (feed.ts) and the legacy updateThreatFeed() below both read them, so
+ * the two paths cannot drift apart again.
+ *
+ * A network read with no deadline is an availability dependency on a stranger.
+ * The deadline here is ABSOLUTE, not an inactivity timeout: it spans DNS,
+ * connect, headers and the body read, which is the only kind that fires on a
+ * peer that keeps trickling bytes instead of going silent. The reasoning is the
+ * same one written out at solana-monitor.ts, applied to the feed channel.
+ *
+ * maxBytes is roughly ten times the published feed.json, and matches
+ * NPM_REMOTE_LIMITS.metadataBytes. timeoutMs and maxRedirects are the house
+ * values already used by npm-scanner.ts, pypi-scanner.ts and vscode-scanner.ts.
+ */
+export const FEED_REMOTE_LIMITS = Object.freeze({
+  maxBytes: 32 * 1024 * 1024,
+  timeoutMs: 30_000,
+  maxRedirects: 5,
+});
+
+/** Per-call relaxation or tightening of FEED_REMOTE_LIMITS. */
+export interface FeedLimitOverrides {
+  maxBytes?: number;
+  timeoutMs?: number;
+  maxRedirects?: number;
+}
 
 /**
  * Copy of the bundled (compiled-in) IOC feed, without any cached remote
@@ -13828,19 +13909,84 @@ export function loadThreatIntel(
 }
 
 /**
+ * Read a fetch Response body under a byte cap, refusing before the chunk that
+ * would cross it is buffered.
+ *
+ * Content-Length is checked first so a declared oversize body is refused before
+ * a single byte of it is read, but it is never trusted on its own: it is absent
+ * on a chunked response and it describes the COMPRESSED size when the peer sends
+ * gzip, which fetch then inflates. The running counter is what actually holds.
+ */
+async function readBoundedBody(
+  response: Response,
+  feedUrl: string,
+  maxBytes: number,
+): Promise<string> {
+  const declared = response.headers.get("content-length");
+  if (declared !== null && /^\d+$/.test(declared) && BigInt(declared) > BigInt(maxBytes)) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(
+      `feed declares ${declared} bytes, over the ${maxBytes}-byte limit, for ${feedUrl}`,
+    );
+  }
+
+  const stream = response.body;
+  if (stream === null) throw new Error(`feed response carried no body for ${feedUrl}`);
+
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value === undefined) continue;
+      if (bytes + value.byteLength > maxBytes) {
+        throw new Error(`feed body exceeded the ${maxBytes}-byte limit for ${feedUrl}`);
+      }
+      bytes += value.byteLength;
+      chunks.push(value);
+    }
+  } catch (err) {
+    // Tear the socket down rather than leaving an oversized or stalled transfer
+    // draining in the background.
+    await reader.cancel().catch(() => undefined);
+    throw err;
+  }
+
+  // Decode ONCE over the whole buffer. Decoding per chunk turns a multi-byte
+  // UTF-8 sequence split across a chunk boundary into replacement characters.
+  return Buffer.concat(chunks, bytes).toString("utf-8");
+}
+
+/**
  * Update remote threat feed and cache locally.
+ *
+ * Bounded by FEED_REMOTE_LIMITS: an absolute deadline covering the whole
+ * request including the body read, and a byte cap applied before the document
+ * is parsed. Both fail closed - the download is abandoned and the previous
+ * cache, or the bundled feed, stays in effect.
+ *
+ * `limitOverrides` relaxes or tightens a single dimension per call and leaves
+ * the rest at the package defaults.
  */
 export async function updateThreatFeed(
   feedUrl: string,
   cacheDir?: string,
+  limitOverrides: FeedLimitOverrides = {},
 ): Promise<{ added: number; total: number }> {
   const cacheBase = cacheDir ?? CACHE_DIR;
+  const { maxBytes, timeoutMs } = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
+  // One signal for the whole call. `fetch` alone imposes a headers timeout and
+  // (through undici) a body INACTIVITY backstop; neither ever fires on a peer
+  // that keeps sending slowly, which is the case this deadline covers.
+  const signal = AbortSignal.timeout(timeoutMs);
 
   try {
-    const response = await fetch(feedUrl);
+    const response = await fetch(feedUrl, { signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const raw = (await response.json()) as unknown;
+    const raw = JSON.parse(await readBoundedBody(response, feedUrl, maxBytes)) as unknown;
     if (!Array.isArray(raw)) throw new Error("Invalid feed format");
     // Validate BEFORE caching: entries failing the indicator contract
     // (unknown type, non-string/empty/oversized value) are quarantined so
@@ -13855,7 +14001,15 @@ export async function updateThreatFeed(
 
     return { added: entries.length, total: BUNDLED_FEED.length + entries.length };
   } catch (err) {
-    throw new Error(`Failed to update threat feed: ${err instanceof Error ? err.message : String(err)}`);
+    // Ask the signal, not the error. fetch and the body stream report an abort
+    // with different names and wordings across runtimes; the signal is the one
+    // witness that says whether OUR deadline is what fired.
+    const message = signal.aborted
+      ? `HTTPS request timed out after ${timeoutMs}ms for ${feedUrl}`
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    throw new Error(`Failed to update threat feed: ${message}`);
   }
 }
 
