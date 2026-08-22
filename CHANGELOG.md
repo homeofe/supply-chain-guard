@@ -7,6 +7,75 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **`DOCKER_TAG_NOT_DIGEST` (low): a base image referenced by tag rather than by
+  an immutable digest.** This is the tier that makes the digest policy visible
+  without changing anyone's gate. `high` is what the default gate fails on, so
+  reporting every version-tagged `FROM` line at `high` would have flipped every
+  ordinary Dockerfile in every consumer from pass to fail in one release, for a
+  risk that had not changed. The split mirrors the precedent already in this
+  codebase for the same question about GitHub Actions references
+  (`GHA_UNPINNED_ACTION` medium, `GHA_TAG_NOT_SHA` low). The default gate,
+  `--fail-on high` and `--fail-on medium` are unchanged; `--fail-on low`,
+  `--fail-on info` and the risk score are not. Disable it with
+  `rules.disable: [DOCKER_TAG_NOT_DIGEST]` if it is not your policy. The full
+  decision record, the option not taken and the stated bounds are in
+  `docs/ARCHITECTURE.md`. The report-level "pin base images by digest"
+  recommendation now also fires for this rule, so a report whose only base-image
+  finding is the new tier still tells the reader what to do about it.
+
+### Fixed
+
+- **`DOCKER_UNPINNED_BASE` was narrower than its own five tag words, so a
+  literal `:latest` could pass a `--fail-on high` gate with exit 0.** The rule
+  was one regex,
+  `FROM\s+(?!scratch)\S+:(?:latest|stable|lts|current|mainline)(?:\s|$)`, and it
+  missed three shapes inside its own stated scope. `\S+` bound to the first
+  token after `FROM`, so `FROM --platform=$BUILDPLATFORM node:latest` scanned
+  clean end to end (risk score 2, zero high findings, `--fail-on high` exit 0).
+  The alternation ended at `(?:\s|$)`, so `node:lts-alpine`,
+  `nginx:stable-alpine`, `nginx:mainline-alpine` and `node:current-slim` escaped
+  while their bare forms flagged, and the suffixed forms are the ones people
+  write. `(?!scratch)` had no token boundary, so `FROM scratch-base:latest` and
+  `FROM scratchpad:latest` scanned clean. Measured over 19 representative `FROM`
+  lines on the released rule: 5 flagged, and those 5 were exactly the five bare
+  literal words.
+
+  Widening the regex could not fix it. Two of the three misses are structural,
+  and this project's own denial-of-service guard rejects the obvious widened
+  forms at module load. The three `FROM` rules now share one structural parser
+  (`correlatedMatcher`, the mechanism this file already used for
+  `DOCKER_CURL_PIPE` and `DOCKER_APT_NO_VERIFY`), which strips instruction
+  flags, joins backslash continuations, drops comment lines, tracks
+  `AS <stage>` names in file order and exempts `scratch` only as a whole token.
+
+- **`DOCKER_NO_TAG` reported a build-stage reference as an untagged image.**
+  `FROM builder`, after an earlier `FROM ... AS builder`, names a stage in the
+  same build, not a registry image, and a stage cannot be pinned. It is no
+  longer reported. The same parser closes the mirror gap: `FROM ubuntu AS base`
+  is now reported, where the old `\s*$` anchor let a stage-declaring line with
+  no tag through.
+
+- **A `FROM` line carrying an embedded carriage return still classifies.**
+  `FROM node:latest\rEXTRA` is a shape the other Docker rules in this file
+  already guard against, and it would have become a way to hide a literal
+  `:latest` from the new parser, because JavaScript's `.` stops at a line
+  terminator. The instruction regex is deliberately left unanchored so the
+  reference is read up to the terminator and judged.
+
+- **Both `FROM` rules stopped matching text that is not an instruction.**
+  `# FROM node:latest` and `RUN echo FROM node:latest` were reported, because
+  the old regex matched `FROM` anywhere in a line. Conversely, the second line
+  of `RUN echo x \` / `FROM node:latest` is an argument to `RUN` and was read as
+  an instruction. Both are now parsed the way the daemon parses them.
+
+  Two tests asserted the old behaviour and were rewritten rather than deleted:
+  one called `FROM node:20-alpine` "pinned" and required a clean result, and a
+  second, stricter one asserted zero findings for a Dockerfile whose `FROM` line
+  carried a version tag. Verified on this repository's own `Dockerfile`, whose
+  two `FROM` lines are digest pinned: zero Docker findings under the new rules.
+
 ### Changed
 
 - **Benchmark evidence in this project's own artefacts now carries counts, never
