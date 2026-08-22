@@ -96,8 +96,28 @@ export { parseWorkflow } from "./workflow-ast.js";
 export { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
 export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
 export { calculateOrgPosture } from "./posture-engine.js";
-export { loadRiskHistory, saveRiskHistory, analyzeRiskTrend } from "./continuous-monitor.js";
-export { loadTriageDecisions, saveTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+// readRiskHistory / readTriageDecisions distinguish an absent store from an
+// unreadable one; loadRiskHistory / loadTriageDecisions are the deprecated
+// wrappers that cannot, kept because they are already published API.
+export {
+  readRiskHistory,
+  loadRiskHistory,
+  saveRiskHistory,
+  analyzeRiskTrend,
+  riskHistoryUnreadableFinding,
+  RiskHistoryUnreadableError,
+} from "./continuous-monitor.js";
+export type { RiskHistoryRead, RiskHistoryUnreadableReason } from "./continuous-monitor.js";
+export {
+  readTriageDecisions,
+  loadTriageDecisions,
+  saveTriageDecisions,
+  checkTriageGovernance,
+  triageStoreUnreadableFinding,
+} from "./triage-engine.js";
+export type { TriageDecisionsRead, TriageDecisionsUnreadableReason } from "./triage-engine.js";
+export { readJsonArrayStore } from "./state-dir.js";
+export type { StateStoreRead, StateStoreStatus, StateStoreUnreadableReason } from "./state-dir.js";
 export { checkSlaCompliance } from "./sla-engine.js";
 export { forecastRisk } from "./risk-forecast.js";
 export { calculateMetrics } from "./metrics.js";
