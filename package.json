@@ -72,7 +72,7 @@
   },
   "devDependencies": {
     "@babel/parser": "^7.29.7",
-    "@elvatis_com/aahp": "3.9.2",
+    "@elvatis_com/aahp": "3.10.0",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^7.0.2",

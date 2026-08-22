@@ -13,6 +13,19 @@
 # workflow no longer shells out to a vendored copy under scripts/. --no-install
 # forces the pinned node_modules copy of the CLI, never a fetched one.
 #
+# Layer 2 is handed the base commit the EVENT knows (AAHP_BASE_SHA on the verify
+# step). It used to infer one, and the inference had no notion of a wrong answer:
+# on a push, actions/checkout sets the local branch to track the remote branch at
+# the pushed commit, so the inferred base WAS HEAD. The gate diffed HEAD against
+# itself, the change set came back empty, and an empty change set was printed as
+# a pass. A required status check reported success having compared nothing. From
+# outside, "nothing to compare" and "nothing wrong" looked identical.
+#
+# Both halves are needed and neither works alone: the CLI must be one that reads
+# an explicit base and refuses a degenerate one (3.10.0 makes a missing, all-zero,
+# malformed, unreadable or HEAD-equal base a blocking failure at --level ci), and
+# the workflow must actually pass it. Passing a base to an older CLI is a no-op.
+#
 name: AAHP Verify
 
 on:
@@ -28,6 +41,14 @@ on:
     # nothing to report and the PR blocks on a result that never arrives.
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      base:
+        # A manual run has no event base to read, and at --level ci a missing base
+        # is a blocking failure rather than a silent guess. Required, so the run
+        # cannot start without the one input its verdict depends on.
+        description: Exact base commit SHA for the Layer 2 diff
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -81,6 +102,13 @@ jobs:
       - name: Run aahp verify (CI level, no escape hatch)
         if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         run: npx --no-install aahp verify . --level ci
+        env:
+          # One operand per event, and every one of them names a commit that is NOT
+          # the commit under test: the pull request base, the pre-push commit, the
+          # required manual input. Bound as env rather than spliced into the run
+          # line, so event-controlled text stays a value and never becomes shell
+          # syntax. If this resolves to empty the gate blocks; it does not guess.
+          AAHP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.base }}
 
       - name: Run aahp doctor (conformance gates)
         if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}

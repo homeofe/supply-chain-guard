@@ -42,6 +42,39 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   states the distinction and what it costs when those pull requests are never
   merged.
 
+### Fixed
+
+- **The required `aahp-verify` check compared `main` to itself on every push, and
+  reported the empty result as a pass.** Layer 2 enforces "code changed implies
+  handoff state changed", and up to AAHP CLI 3.9.2 it inferred its own base
+  commit: the upstream tracking branch first, then `origin/main`. On a push to
+  `main`, `actions/checkout` sets the local branch to track the remote branch at
+  the pushed commit, so the inferred base was HEAD. The diff was HEAD against
+  HEAD, and an empty change set printed as "No source files changed outside
+  `.ai/handoff/`". This was not one bad run: it applied to every push run and
+  every `workflow_dispatch` run the workflow has ever produced. Run
+  https://github.com/homeofe/supply-chain-guard/actions/runs/32517774317 is the
+  recorded instance, green on a commit that touched five files outside
+  `.ai/handoff/`.
+
+  Two changes, and neither works alone. `@elvatis_com/aahp` moves 3.9.2 -> 3.10.0
+  (exact pin): 3.9.2 has no way to be told a base at all, so passing one to it is
+  a no-op, while 3.10.0 reads `--base` / `AAHP_BASE_SHA`, requires it at
+  `--level ci`, and treats a missing, all-zero, malformed, unreadable or
+  HEAD-equal base as a blocking failure instead of an empty change set. And
+  `.github/workflows/aahp-verify.yml` now passes the base the event knows, bound
+  as step env rather than spliced into the run line, with a required `base` input
+  added for `workflow_dispatch`.
+
+  No merge path was open. The `pull_request` run of the same required check is
+  not vacuous, because on a pull request the checkout lands on the merge ref in
+  detached HEAD and the fall-through resolves `origin/main`, a different commit.
+  What was lost is the per-commit attestation on `main` and the independent
+  second evaluation, both of which now hold by design rather than by accident.
+  `src/__tests__/aahp-verify-base-contract.test.ts` evaluates the selector the
+  way GitHub would, per event, and asserts the base is never the commit under
+  test.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added

@@ -6,6 +6,78 @@
 
 ---
 
+## The required handoff gate compared main to itself on every push (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump.
+
+`aahp-verify` is one of three required status checks on `main`. Its Layer 2
+content-drift gate enforces "code changed implies handoff state changed", and to
+answer that it needs a base commit. Up to CLI 3.9.2 it inferred one: the upstream
+tracking branch first, then `origin/main`. On a push to `main`, `actions/checkout`
+sets the local branch to track the remote branch at the pushed commit, so the
+inferred base was HEAD. The gate diffed HEAD against itself, the change set came
+back empty, and an empty change set was printed as a pass.
+
+The consequence is not one bad run. It is every push run the workflow has ever
+produced, and every `workflow_dispatch` run, reporting a Layer 2 verdict that
+compared nothing. Run 32517774317 is the recorded instance: a push whose commit
+touched eight files, five of them outside `.ai/handoff/`, and Layer 2 printed
+"No source files changed outside .ai/handoff/. Drift gate not triggered."
+
+### What was NOT open
+
+No merge path. The `pull_request` run of the same required check is not vacuous:
+on a pull request `actions/checkout` lands on the merge ref in detached HEAD, the
+upstream lookup fails, and the CLI falls through to `origin/main`, which is a
+different commit. Run 32525214132 is a real `pull_request` run of the unfixed
+workflow that correctly named three drifted files and blocked. `main` is
+protected with `enforce_admins` on and force pushes off, and the recent history
+on `main` arrives through squash-merged pull requests, each gated by that
+non-vacuous pull request run.
+
+So what was lost is the per-commit attestation on `main` and the independent
+second evaluation, not a way into `main`. The pull request path worked by
+accident rather than by design, which is precisely why the push run that is
+supposed to catch a regression there could not.
+
+### What changed
+
+Two halves, and neither works alone:
+
+1. `@elvatis_com/aahp` 3.9.2 -> 3.10.0 (exact pin, package.json and
+   package-lock.json). 3.9.2 has no way to be told a base at all, so passing one
+   to it is a no-op. 3.10.0 reads `--base` / `AAHP_BASE_SHA`, requires it at
+   `--level ci`, and turns a missing, all-zero, malformed, unreadable or
+   HEAD-equal base into a blocking failure rather than an empty change set. It
+   also compares the two endpoint trees instead of `base...HEAD`, so a rollback
+   cannot collapse to an empty merge-base diff.
+2. `.github/workflows/aahp-verify.yml` passes the base the event knows:
+   `AAHP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.base }}`,
+   bound as step env rather than spliced into the run line. `workflow_dispatch`
+   gained a required `base` input, because a manual run has no event base and at
+   `--level ci` a missing base now blocks instead of guessing.
+
+The pull request operand is not a change of verdict for that leg; it is what
+keeps that leg running once the CLI stops guessing.
+
+`src/__tests__/aahp-verify-base-contract.test.ts` evaluates the `||` chain the
+way GitHub would, per event, and asserts the resolved base is never the commit
+under test. A string comparison would not have caught the original defect, since
+the defect was two different expressions resolving to the same commit.
+
+### What was deliberately left
+
+The Dependabot actor skip. Six steps in this workflow, including the checkout,
+carry `github.actor != 'dependabot[bot]'`, so on a Dependabot change the required
+check concludes success having executed one `echo` and evaluated zero layers.
+That is real and confirmed at runtime, and it is a separate defect from base
+selection. Removing it is not drop-in safe: a dependency bump modifies
+package.json and package-lock.json, both outside `.ai/handoff/`, so Layer 2 would
+hard-block every dependency update including security updates. 3.10.0 ships the
+mechanism that resolves it, `handoffImpact.nonImpactingModifiedFiles`, but
+writing that list is a reviewed policy statement about which files do not
+describe product state, not a mechanical fix. It needs an owner decision.
+
 ## The published update path was the one that froze a pin (2026-08-21, unreleased)
 
 Model: claude-opus-5. Branch fix/consumer-update-cadence. No version bump.
