@@ -118,6 +118,445 @@ service CIDRs from this scanner's own detection corpus, a public agent-runtime
 product name it ships a scanner for, and the English words trust/intelligence/
 awareness in feature prose). v5.2.40 and v5.2.41 both carry the era's stub body,
 "See README.md for full changelog"; the anchor resolves to the corrected file.
+## The em-dash rule was enforced on a set of files that held none of them (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/em-dash-rule-scope. No version bump.
+
+An audit reported 77 em dashes across 17 files "with no check enforcing the
+rule". Half of that was wrong in a way worth keeping: a check did exist, it ran
+on every pull request, and it sat inside a required status check. It was green,
+truthfully, because the `em-dash` rule's `include` list named six pathspecs and
+those six matched none of the 17 files. The gate answered the question it was
+asked. Nobody had noticed the question had drifted away from the rule.
+
+### What was actually wrong
+
+Three things, in the order they matter.
+
+1. **Opt-in scope fails open.** Every file created after the rule was written
+   was outside it by default, silently. The `include` list is now the single
+   pathspec `*`, so a file is covered the moment git tracks it and the only way
+   out is a reviewed entry.
+2. **A config line read like a mechanism and was not one.** `exclude` held
+   `CHANGELOG.md`, which every reader took for the reason the changelog went
+   unchecked. It was inert: a non-empty `include` REPLACES the gate's default
+   file set, so `CHANGELOG.md` was never in scope for `exclude` to remove.
+   Deleting that line alone changed nothing, which was verified before it was
+   removed.
+3. **The only written statement of the rule was the gate's own `message`
+   field**, and it said "banned in docs". Under that wording the 49 source
+   occurrences were not violations at all. `CONTRIBUTING.md` now carries the
+   scope, and the two narrower scopes that were rejected, with the reason for
+   each.
+
+### The scope decision, and why the other two were rejected
+
+Documentation only was rejected because the one occurrence with measurable reach
+outside this project was not in documentation: it is in `src/slsa-verifier.ts`,
+in the sentence a scan prints for a project with no build script, and it lands
+in the SARIF report adopters upload to GitHub code scanning. Documentation plus
+emitted strings was rejected because no gate can express it, so the rule would
+have gone back to being a review convention, which is the state that let the 77
+accumulate. Every tracked file was chosen because it is the only one of the
+three a gate can decide.
+
+### The second gate, and what it deliberately is not
+
+`scripts/check-em-dash-scope.mjs` runs inside `check:aahp`, before the AAHP
+gates. It never reads file content and never searches for U+2014. There is still
+exactly one em-dash rule and it lives in `aahp.config.json`. The script answers
+the question that rule cannot ask about itself: does its scope still cover the
+repository? It exits 1 when a tracked file is uncovered and unexplained, and 2
+when it cannot determine the answer at all, which includes a pathspec that
+matches nothing and an `exclude` entry that subtracts nothing.
+
+Two files are exempt, each with its reason in `SCOPE_EXCEPTIONS`: the binary
+demo GIF, because a chance byte sequence in compressed image data is not prose,
+and the handoff archive, because its own header declares its entries preserved
+verbatim. Both hold zero occurrences today, so both preserve rather than
+suppress.
+
+### Assumption recorded, so it is not re-derived
+
+The handoff-archive exemption rests on an inference, not on a written policy:
+the file states it is append-only with older entries "preserved below verbatim",
+and that is read as a reason not to rewrite them. The inference is written next
+to the exemption. Anyone who disagrees deletes the `SCOPE_EXCEPTIONS` entry and
+the matching `exclude` line together, and the file is simply covered.
+
+### Open for the owner
+
+Nothing blocks this change. One item is deliberately left out of it: the AAHP
+CLI gate reads each file inside `try { readFileSync } catch { continue }`, so a
+file it cannot read is skipped in silence rather than failing. That is the same
+fail-open class, it ships to every consumer of the governance CLI, and it is not
+this repository's file to fix. It belongs upstream as its own piece of work.
+## A policy-narrowed scan can no longer pass for a clean one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-168-policy-visibility. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/168
+
+### What was actually wrong
+
+The issue's title is about the trust boundary: policy is read from the tree being
+scanned, so a proposed change can disable the rule that would flag it. That much
+is deliberate and unchanged here, because moving it is an owner decision.
+
+The defect that was fixed is the second one underneath it, and it is the reason
+the first one is dangerous rather than merely awkward: the narrowing was
+**silent**. Measured on a directory containing `eval(atob(...))`:
+
+- `rules.disable: [EVAL_ATOB]` took the scan from exit 2 with one critical to
+  exit 0 with none. `suppressedCount` reached 1, but nothing named the rule, and
+  the markdown report, which is the Action's default format and the body of the
+  pull request comment it posts by default, contained the word "suppress" zero
+  times.
+- `ignore: ["app.js"]` was quieter still. `ignore` prunes files before any rule
+  opens them, so `suppressedCount` stayed 0 and **all nine** output formats were
+  silent. Nothing distinguished that report from a genuinely clean one.
+
+The second variant is the severe one, and the issue mentions it only in passing.
+A fix that covered `rules.disable` alone would have passed its own tests while
+leaving the quieter path exactly as it was.
+
+### What changed
+
+- `ScanReport.policyEffect` carries the loaded config's effect as structured
+  metadata: config file, disabled rules, ignored globs, suppressed rules, each
+  with its written reason when one exists. Built by `describePolicyEffect()` in
+  `src/policy-engine.ts`, attached in `src/scanner.ts` next to the policy load.
+  It is `undefined` when the config narrows nothing, so its presence always means
+  something was switched off.
+- All nine formats render it: text, JSON, markdown, SARIF, SBOM, HTML, badge,
+  GitLab and JUnit. Markdown places it **above** the summary, because that is the
+  rendering a reviewer reads before deciding a green check means the change is
+  clean. SARIF carries it as a run-level notification plus
+  `invocations[0].properties`. The badge appends `(policy-narrowed)`, since
+  "clean" on a scan whose config removed a rule is the most misleading string
+  this tool can publish.
+- The v5.2.40 rule is intact and is asserted by a test: policy METADATA is
+  surfaced, suppressed FINDINGS still never enter SARIF, SBOM or GitLab.
+- `POLICY_DISABLE_NO_REASON` and `POLICY_IGNORE_NO_REASON` (medium) bring
+  `rules.disable` and `ignore` up to the audit bar `suppress` has met since v5.3.
+  Both sections now accept a reason-carrying mapping form alongside the list
+  form. Nothing is vetoed: the bare form still disables and still excludes, it is
+  simply reported as undocumented.
+- `README.md` and `action.yml` state where policy is read from and what that
+  means on a `pull_request` event. That was documented nowhere. The README also
+  corrects a `rules.disable` example written as a one-line flow sequence, a form
+  the parser reports as `POLICY_UNKNOWN_KEY` and which disables nothing.
+
+### Evidence
+
+`src/__tests__/issue-168-policy-visibility.test.ts`, 14 tests. The reproduction
+was re-run against a pristine build of the cited commit and against the fixed
+build, same fixtures, same commands: before, `ignore:` produced zero mentions in
+all nine formats; after, all nine name `app.js`, and the `rules.disable` fixture
+names `EVAL_ATOB` in all nine.
+
+Mutation proof: deleting only the `ignoredGlobs` half of `describePolicyEffect`
+leaves the `rules.disable` test green and reddens the `ignore` test, which is the
+mutation that would have caught a decorative fix.
+
+### Still open, and deliberately so
+
+The gate still exits 0 on both fixtures. Making the bypass **loud** is what this
+change does; making it **impossible** means giving the scanner a trusted policy
+source outside the scanned tree, which changes the tool's trust boundary and is
+recorded in the issue as needing the owner. `ScanOptions.policyFile` exists in
+the type and is read by nothing, which is where that work would start.
+## A corrupt state file was a clean baseline, in both stores (2026-08-22, unreleased)
+
+A corrupt state store no longer reads as a clean baseline in either of the two stores.
+Branch `fix/issue-175-risk-history-unreadable`, no version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/175.
+
+Both readers under `.scg-history/` ended in `catch { return []; }`, the same
+value the absent case returns, so "no history yet" and "the store could not be
+read" were one outcome. Reproduced end to end, then re-run against the branch.
+
+### What was measured
+
+Fixture: a project whose recorded risk climbs over ten scans. Removing the last
+120 bytes of `risk-history.json` took the scan from exit 1, level `high`, three
+trend findings, to exit 0, level `low`, none. The suppressed findings are all
+`high` and the default gate with no `--fail-on` is `summary.high > 0`, so the
+gate stopped detecting a regression it detected the day before, in silence.
+
+The triage store was measured too rather than assumed to be the weaker twin, and
+it is not weaker. A truncated `triage-decisions.json` took the same scan from
+exit 1 with two `high` governance findings to exit 0 with none, and reported
+`metrics.slaComplianceRate` 100 where the intact store gave 0. That number is
+the sharper harm: the corrupt file did not only hide a verdict, it manufactured
+a compliant one. That measurement is why both stores are fixed in one change.
+
+Two on-disk states, `null` and `{}`, never reached either `catch`, because both
+readers ended in an `as` cast. They threw an unhandled `TypeError` and produced
+no report at all. Four cases across the two stores, all closed by validating the
+declared entry shape.
+
+Evidence destruction was real and is closed: the truncated file still held nine
+recoverable entries and the next plain scan replaced it with one.
+
+### Decisions a later reader should not have to re-derive
+
+All of these are written next to the code they constrain, not only here.
+
+- Severity `high` on both new findings is derived, not chosen: the findings each
+  one replaces are `high` and the default gate is `summary.high > 0`, so
+  `medium` would reproduce the defect one layer down. Recorded at
+  `riskHistoryUnreadableFinding` in `src/continuous-monitor.ts`.
+- `saveRiskHistory` throws rather than overwriting an unreadable store;
+  `saveTriageDecisions` deliberately does not. The first does a read, append and
+  write, so refusing preserves recoverable entries; the second replaces the file
+  wholesale from its caller's list, so refusing would remove the only supported
+  repair path while preventing no measured loss. Recorded at both call sites.
+- `loadRiskHistory` and `loadTriageDecisions` are deprecated in place rather
+  than re-typed, because both are published API in `src/index.ts`.
+- The three-way reader lives in `src/state-dir.ts`, next to the directory both
+  stores write into, so a third store does not rediscover the rule.
+
+### Open, and it is an owner decision
+
+`SecurityMetrics.riskTrend` and `SecurityMetrics.slaComplianceRate` still read
+`stable` and 100 when a store is unreadable, because neither type has a member
+meaning "unknown". The report is marked `partialScan` and the finding text says
+in words that the metrics came from an empty store, which is what keeps this
+from being a silent wrong answer. Widening either type is a breaking change for
+library and JSON consumers, so it belongs in a major rather than a defect fix.
+The choice and its cost are recorded on `calculateMetrics` in `src/metrics.ts`.
+
+Separately, `saveRiskHistory` still writes with a plain `writeFileSync` onto the
+live path, with no temp file and rename anywhere in `src/`, so an interrupted
+scan can still manufacture the corruption this change now reports. Reporting it
+is in scope here; making it unmanufacturable is a separate change.
+## The engines floor had no ceiling, so the matrix never ran the Active LTS (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/176-compat-matrix-reaches-active-lts. No version bump.
+Reported as https://github.com/homeofe/supply-chain-guard/issues/176
+
+### What the report said, and what was actually wrong
+
+The report compared `.github/workflows/ci.yml` against `package.json` and found a
+Node 20 leg below an `engines.node` floor of `>=22.0.0`. Every count in it
+re-derives exactly. Its conclusion does not follow: `docs/node-support.md` declares
+`supportedMajors` and `transitionMajors` as disjoint lists, the gate already asserted
+a transition major is strictly below the floor, and `README.md` tells consumers the
+package requires Node 22 or newer. The Node 20 leg is a dated, gate-enforced
+transition lane, deleted in 5.29.0 by an assertion that fails the build. It stays.
+
+The report's own measurement contained the real defect, one line below its headline:
+**legs above the floor, 0 of 2.** `engines.node` is a floor with no ceiling, so
+`>=22.0.0` claims Node 22 and every major after it, and the matrix stopped at 22. Read
+against the upstream `nodejs/Release` schedule on 2026-08-22, Node 22 had been in
+Maintenance LTS since 2025-10-21 and Node 24 had been Active LTS since 2025-10-28. The
+only major the project supported was the one already in maintenance, and the major
+consumers are migrating onto was claimed and never executed. `@types/node` is on the
+Node 26 API surface, so an API available only above Node 22 would have type-checked
+clean, passed both legs, and failed in a consumer's hands.
+
+### What changed
+
+`docs/node-support.md` gains `activeLtsMajor` (24) and `activeLtsReviewedIn` (5.29.0),
+`supportedMajors` becomes `[22, 24]`, and the `compat` matrix becomes 20, 22 and 24.
+`src/__tests__/node-version-contract.test.ts` gains ten cases: five that assert the
+claim reaches the top of its own range and carries a re-read deadline, and five that
+assert the workflow comment keeps naming the policy vocabulary. That comment called the
+matrix "every Node major this package supports" four lines above a pointer to the policy
+whose subject is that supported and tested are different lists, which is the most
+plausible reason this report exists at all.
+
+Restoring the exact pre-change configuration turns exactly the two new upward cases red
+and leaves the other 36 green, which is the demonstration that nothing in the repository
+could see this before.
+
+### Decisions recorded in the repository, not here
+
+Both live in `docs/node-support.md` so the next reader meets them at the code:
+
+- **Why the bound is the Active LTS**, with the two rejected alternatives and their
+  costs. `engines.node` deliberately keeps no upper bound, so majors above the Active
+  LTS (Node 26 today) are claimed and not executed. That residual is stated, and the
+  alternative that would close it is written out with exactly what to change.
+- **Why `activeLtsMajor` is hand-copied rather than fetched**, what the gate can and
+  cannot catch about a hand-copied fact, and why the deadline is `5.29.0`.
+
+### What adding the third leg exposed, and why it had to be fixed here
+
+The Node 24 leg went red on its first run, and the cause was not Node 24. The perf case
+`keeps exact greedy/lazy endpoints on 5 MiB repeated completions` in
+`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15,070ms against a bare
+`timeout: 15_000`. Measured across the three legs of that single run: Node 20 8,734ms,
+Node 22 13,622ms, Node 24 15,070ms. The same case had already failed the **Node 22** leg
+on `main` at `1a141fe`, at 15,137ms, with no Node 24 anywhere. The budget sits inside the
+runner's own noise band, so it reports noise, not an algorithmic regression.
+
+Underneath that is a real inconsistency. `npm run test:coverage`, the only command the
+compat legs run, sets `SCG_VITEST_COVERAGE=1` in `vitest.config.ts`, which makes
+`performanceBudget` multiply by five. So the assertion inside that test allowed 50,000ms
+while the harness killed it at 15,000ms: **the guard could never be reached under the
+command CI actually runs.** Both `it` options in that file now use
+`performanceBudget(15_000)`, which is what every sibling perf test already did. Outside a
+coverage run `performanceBudget` is the identity, so `npm test` is bit for bit unchanged,
+and the algorithmic guard, `performanceBudget(10_000)`, is untouched.
+
+### Open for the owner
+
+The same bare-literal pattern is still elsewhere, deliberately left because it is outside
+this change and touching a dozen test files in a Node matrix pull request would be worse
+than naming it. Counted, not estimated:
+
+- **2 files import `performanceBudget` and still use a bare `timeout:` literal**, which is
+  exactly the inconsistency fixed above: `src/__tests__/core-broad-gap-matchers.test.ts`
+  and `src/__tests__/internal-disclosure.test.ts`.
+- **10 further files use a bare `timeout:` literal** without importing it. Some of those
+  have no scaled assertion to disagree with, so they need reading rather than rewriting.
+
+A gate could assert that no file importing `performanceBudget` also carries a bare
+`timeout:` literal. It is not added here, because it would be red on the two files above
+on the day it landed, and a gate that ships red teaches people to ignore it.
+## Docker base image pinning: one parser, three verdicts (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-174-docker-base-image-pinning. Issue
+https://github.com/homeofe/supply-chain-guard/issues/174. No version bump.
+
+`DOCKER_UNPINNED_BASE` was one regex and it was narrower than its own five tag
+words. Measured on the released rule over 19 representative `FROM` lines: 5
+flagged, and those 5 were exactly the five bare literal words. Three shapes
+inside the rule's own stated scope scanned clean:
+
+- `FROM --platform=$BUILDPLATFORM node:latest`, because `\S+` bound to the flag
+  token. End to end through the CLI: risk score 2, zero high findings,
+  `--fail-on high` exit 0, on a line carrying a literal `:latest`.
+- `node:lts-alpine`, `nginx:stable-alpine`, `nginx:mainline-alpine`,
+  `node:current-slim`, because the alternation ended at `(?:\s|$)`. The suffixed
+  forms are the upstream rolling tags and the ones people write.
+- `FROM scratch-base:latest` and `FROM scratchpad:latest`, because `(?!scratch)`
+  had no token boundary.
+
+Widening the regex was not available: two of the three misses are structural,
+and `validatePatternSet` rejects the obvious widened forms at module load as a
+broad unbounded consuming gap. All three `FROM` rules now share one
+`correlatedMatcher`. It strips instruction flags, joins backslash continuations,
+drops comment lines, tracks `AS <stage>` names in file order, and exempts
+`scratch` only as a whole token. Because the three rules read the same parse,
+they can no longer disagree about what a build-stage reference is.
+
+### The two decisions, both recorded in the repository
+
+Both are written into `docs/ARCHITECTURE.md`, "Base Image Pinning (decision
+record)", and summarised next to the code in `src/dockerfile-scanner.ts`. Neither
+lives only in a pull request.
+
+1. **Tiering.** The issue asked for one rule at `high` for every `FROM` line
+   without a digest. Not taken. `high` is what the default gate fails on
+   (`getReportExitCode` returns 1 when `summary.high > 0`), so one high tier
+   flips every ordinary version-tagged Dockerfile in every consumer from pass to
+   fail in one release, for a risk that has not changed. Instead
+   `DOCKER_UNPINNED_BASE` stays `high` for a moving channel tag and the new
+   `DOCKER_TAG_NOT_DIGEST` reports a tag without a digest at `low`, mirroring
+   `GHA_UNPINNED_ACTION` / `GHA_TAG_NOT_SHA`. Default gate, `--fail-on high` and
+   `--fail-on medium` unchanged; `--fail-on low`, `--fail-on info` and the risk
+   score do change.
+2. **Compose.** `image:` values stay out of scope, said out loud in each rule's
+   `description`, in README.md and in `docs/ARCHITECTURE.md`. Nine of nine
+   Docker rules are anchored on a Dockerfile instruction keyword, so a Compose
+   file returns nothing from the Docker rule set while the README used to list
+   it as a scanned Docker target. The blocker for implementing it is recorded:
+   a service that also declares `build:` uses `image:` to name what it BUILDS,
+   and telling the two apart needs service-block structure, which this project
+   has no YAML parser for.
+
+### Deliberate behaviour changes a consumer will see
+
+- Newly reported at `high`: `--platform` lines carrying a channel tag, suffixed
+  channel tags, `scratch`-prefixed names, and `FROM ubuntu AS base` (no tag).
+- Newly reported at `low`: every `FROM` line with a tag and no digest.
+- No longer reported: a build-stage reference (`FROM builder`), a commented-out
+  `FROM`, and `FROM` appearing inside another instruction.
+- A `FROM` line carrying an embedded carriage return still classifies. Writing
+  the instruction regex the obvious way, anchored with `$`, would have made
+  `FROM node:latest\rEXTRA` scan clean, because JavaScript's `.` stops at a line
+  terminator. The released regex did report it, so this would have been a
+  regression introduced by the fix rather than a gap left in place. Caught while
+  reading the finished parser, not by the test suite, which is the argument for
+  reading a structural rewrite line by line before shipping it.
+- The report-level "pin base images by digest" recommendation in `src/scanner.ts`
+  now also fires for `DOCKER_TAG_NOT_DIGEST`, so a report whose only base-image
+  finding is the new tier is not left without a recommendation.
+- This repository's own `Dockerfile` stays clean: both `FROM` lines are digest
+  pinned, and a self-scan reports zero `DOCKER_*` findings.
+
+### Open for the owner
+
+Nothing blocks the merge. One judgement is worth a second opinion: whether
+`DOCKER_TAG_NOT_DIGEST` should ship at `low` or at `medium`. `low` was chosen
+because it matches the in-repo Actions precedent and leaves every existing gate
+where it was. `medium` would make it visible to `--fail-on medium` consumers and
+is a one-word change in `src/dockerfile-scanner.ts`; the trade-off is written out
+in `docs/ARCHITECTURE.md`.
+## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
+
+Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.
+Closes https://github.com/homeofe/supply-chain-guard/issues/170 once reviewed.
+
+### What was wrong, and where the issue was incomplete
+
+The issue named one function, `updateThreatFeed`, which is exported library API
+that no CLI command calls. The command the README documents,
+`supply-chain-guard feed refresh`, went through a SECOND downloader in
+`src/feed.ts` with the same two defects and no backstop of any kind. Fixing only
+the function the acceptance criteria name would have closed the issue green with
+the shipped command unchanged.
+
+Measured on the base commit against a loopback peer that sends headers and then
+stalls: `feed refresh` ran 150 seconds with empty stdout, empty stderr and no
+exit, and was killed at the cap. The identical command against a healthy peer
+finished in 0.28 seconds. A 64 MiB chunked body was accepted in full.
+
+### Root cause
+
+Not a forgotten timeout. `src/remote-download.ts` already existed and already
+implemented every bound this issue asks for, and `src/npm-scanner.ts`,
+`src/pypi-scanner.ts` and `src/vscode-scanner.ts` already used it. Registry
+acquisition was hardened behind that shared module; feed acquisition was the one
+caller that never adopted it, and nothing in the build requires a new outbound
+request to go through it.
+
+A contributing cause sits in the tests. `src/__tests__/feed.test.ts` mocks
+`node:https` wholesale and delivers the whole body in one tick, so none of its
+six `refreshFeed` tests could observe a stall. The suite passed around the
+defect rather than over it.
+
+### What changed
+
+- `FEED_REMOTE_LIMITS` in `src/threat-intel.ts`, beside the cache constants:
+  32 MiB, 30 s, 5 redirects. The byte figure is roughly ten times the published
+  feed; the other two are the values the registry scanners already use.
+- `refreshFeed` delegates to `fetchHttpsBuffer`. The hand-rolled request is gone,
+  and with it a second defect in the same function: it decoded each chunk
+  separately, so a multi-byte UTF-8 sequence split across a chunk boundary became
+  replacement characters.
+- `updateThreatFeed` keeps the global `fetch` and its quarantine-and-continue
+  validation, and gains an `AbortSignal` deadline, a `Content-Length` refusal
+  before the body is touched, and a running byte count while streaming.
+- Both take an optional per-call limit override; both default to the constant.
+- New suite `src/__tests__/issue-170-feed-bounds.test.ts` drives a real loopback
+  server rather than a mock, because a mock that answers in one tick cannot
+  represent a peer that stalls.
+
+### The one decision left for the owner
+
+`updateThreatFeed` was hardened in place rather than turned into a wrapper over
+`refreshFeed`. The wrapper would remove the second implementation, which is the
+better end state, but it is a behavioural change to exported, documented API:
+`parseFeedPayload` hard-rejects a bad entry where `updateThreatFeed` quarantines
+it and continues, and the error strings differ. That belongs in its own change
+with its own changelog entry, not smuggled in behind a timeout fix.
+
+Also for the owner: the acceptance criteria on the issue are satisfied by the
+`updateThreatFeed` half alone and need rewriting to name `src/feed.ts` as well,
+or the next reader will conclude the CLI path was out of scope.
 ## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
 
 Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.

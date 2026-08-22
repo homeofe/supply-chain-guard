@@ -78,7 +78,7 @@ import { analyzeInstallHooks, extractInstallScripts } from "./install-hook-scann
 import { analyzeDependencyRisks } from "./dependency-risk-analyzer.js";
 import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
-import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, matchGlob } from "./policy-engine.js";
+import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
 import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
@@ -92,8 +92,8 @@ import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
 import { feedFreshness, feedStalenessFindings } from "./feed.js";
 import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
-import { loadRiskHistory, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
-import { loadTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
+import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
 import { forecastRisk } from "./risk-forecast.js";
 import { calculateMetrics } from "./metrics.js";
 import {
@@ -300,6 +300,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // same object is reused for the suppression passes further down.
   const policy = loadPolicyConfig(scanDir);
   const ignoreGlobs = policy?.ignore ?? [];
+  // v5.29 (issue 168): record WHAT the config turns off, not just how many
+  // findings it removed. `ignore:` never reached suppressedCount at all, since
+  // it prunes files here, before any rule runs; a scan narrowed that way used
+  // to be indistinguishable from a clean one in every output format.
+  const policyEffect = policy ? describePolicyEffect(policy) : undefined;
 
   // Collect files (v4.5: diff mode filters to changed files only). Coverage
   // failures are held separately so policy.ignore can remove out-of-scope
@@ -759,7 +764,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // the snapshot before later filters can hide a coverage-breaking warning.
   partialScan ||= hasPartialScanFinding(findings);
 
-  // v4.2: Correlation engine — link findings into incidents
+  // v4.2: Correlation engine - link findings into incidents
   const correlation = correlateFindings(findings);
 
   // v4.2: Trust breakdown (for directory/github scans with package.json)
@@ -768,16 +773,61 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // v4.8: Continuous risk monitoring (scores are now post-suppression,
   // matching what saveRiskHistory persists)
-  const riskHistory = loadRiskHistory(scanDir);
+  //
+  // An absent history is a first scan and stays silent. A history file that
+  // exists but cannot be read is lost evidence, and it must not be reported as
+  // the same clean empty baseline: every trend and forecast rule below then
+  // finds nothing while the scan still reports success, which is how a corrupt
+  // state file flipped the default gate from fail to pass with the scanned code
+  // unchanged. This read is deliberately NOT gated on `--no-history`: that flag
+  // suppresses the write only, so a corrupt file still degrades this verdict
+  // and still has to be reported.
+  //
+  // `partialScan` is set here rather than left to `hasPartialScanFinding`
+  // because the second policy pass and the severity filter below both run after
+  // this point and can remove the finding. That is the same reasoning as the
+  // refresh above: a suppression filter may hide a finding, and may never turn
+  // incomplete coverage into a complete clean verdict. Setting the flag here
+  // also keeps the save at the end of this function from overwriting the
+  // unreadable file, which is what preserves the recoverable entries in it.
+  const historyRead = readRiskHistory(scanDir);
+  const riskHistory = historyRead.entries;
+  if (historyRead.status === "unreadable") partialScan = true;
+
   const trendFindings = analyzeRiskTrend(riskHistory, calculateScore(findings));
   findings.push(...trendFindings);
   const forecastFindings = forecastRisk(riskHistory, calculateScore(findings));
   findings.push(...forecastFindings);
 
+  // Pushed after the two analyzers, not before, so the current score they are
+  // given is a score of the scanned project and never includes this finding
+  // about the scanner's own state file. Today that ordering cannot change an
+  // outcome, because an unreadable history yields zero entries and both
+  // analyzers return early on a short history; the ordering is here so that
+  // stays true if either early return is ever relaxed.
+  if (historyRead.status === "unreadable") {
+    findings.push(riskHistoryUnreadableFinding(historyRead.reason ?? "read-failed"));
+  }
+
   // v4.8: Triage governance checks
-  const triageDecisions = loadTriageDecisions(scanDir);
+  //
+  // Same three-way read as the history above, and for the same measured reason:
+  // a truncated triage store took this scan from exit 1 with two high findings
+  // to exit 0 with none, and reported metrics.slaComplianceRate 100 where the
+  // intact store gave 0. See src/triage-engine.ts for the measurement.
+  const triageRead = readTriageDecisions(scanDir);
+  const triageDecisions = triageRead.entries;
+  if (triageRead.status === "unreadable") partialScan = true;
+
   const govFindings = checkTriageGovernance(findings, triageDecisions);
   findings.push(...govFindings);
+
+  // Pushed after checkTriageGovernance for the same reason as the history
+  // finding above: the governance rules read the findings list, so a finding
+  // about the scanner's own state file is kept out of the input they judge.
+  if (triageRead.status === "unreadable") {
+    findings.push(triageStoreUnreadableFinding(triageRead.reason ?? "read-failed"));
+  }
 
   // v5.4.2: Second policy pass over the late-added findings (trend, forecast,
   // governance) so rules like RISK_TREND_SPIKE stay suppressible. Findings
@@ -840,6 +890,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     incidents: correlation.incidents.length > 0 ? correlation.incidents : undefined,
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
+    policyEffect,
     partialScan: partialScan || undefined,
     riskDimensions: calculateRiskDimensions(filteredFindings),
     remediations: generateRemediations(filteredFindings),
@@ -1862,7 +1913,7 @@ function calculateSummary(
  * Each unique rule contributes at most once (its highest severity instance),
  * preventing repeated instances of the same moderate rule from dominating the score.
  */
-// Meta/governance findings that fire because other findings exist — excluded from
+// Meta/governance findings that fire because other findings exist - excluded from
 // score to prevent circular inflation (they don't represent independent risk signals).
 export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
   "CRITICAL_FINDING_NO_OWNER",
@@ -1870,7 +1921,7 @@ export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
 ]);
 
 function calculateScore(findings: Finding[]): number {
-  // Deduplicate by rule — take the highest-severity instance per rule.
+  // Deduplicate by rule - take the highest-severity instance per rule.
   // Skip meta-governance findings that would circularly inflate the score.
   const maxByRule = new Map<string, Severity>();
   for (const finding of findings) {
@@ -2088,7 +2139,14 @@ function generateRecommendations(
       "CRITICAL: Dockerfile pipes remote content to shell. Download, verify checksum, then execute.",
     );
   }
-  if (rules.has("DOCKER_UNPINNED_BASE") || rules.has("DOCKER_NO_TAG")) {
+  // All three base-image verdicts share one remediation, so all three must
+  // reach it. DOCKER_TAG_NOT_DIGEST was the tier that could otherwise be the
+  // only finding in a report and leave that report with no recommendation.
+  if (
+    rules.has("DOCKER_UNPINNED_BASE") ||
+    rules.has("DOCKER_NO_TAG") ||
+    rules.has("DOCKER_TAG_NOT_DIGEST")
+  ) {
     recommendations.push(
       "Pin Docker base images by digest (FROM image@sha256:...) to ensure reproducible and tamper-proof builds.",
     );
@@ -2196,7 +2254,7 @@ function generateRecommendations(
   }
   if (rules.has("DROPPER_TEMP_EXEC")) {
     recommendations.push(
-      "CRITICAL: Dropper/loader behavior detected — writing and executing files in temporary directories.",
+      "CRITICAL: Dropper/loader behavior detected - writing and executing files in temporary directories.",
     );
   }
 
@@ -2225,7 +2283,7 @@ function generateRecommendations(
   }
   if (rules.has("README_LURE_CRACK") || rules.has("RELEASE_NAME_LURE")) {
     recommendations.push(
-      "This repository uses piracy/crack language — a strong indicator of malware distribution. Do not download or use.",
+      "This repository uses piracy/crack language - a strong indicator of malware distribution. Do not download or use.",
     );
   }
 

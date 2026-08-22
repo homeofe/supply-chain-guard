@@ -304,7 +304,7 @@ describe("Dependency Confusion Heuristics (unit)", () => {
 
 // ─── v4.9 new feature unit tests ──────────────────────────────────────────
 
-describe("PyPI confusion detection — parseRequirementsTxt (v4.9)", () => {
+describe("PyPI confusion detection - parseRequirementsTxt (v4.9)", () => {
   let tmpDir: string;
   beforeEach(() => { tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pypi-test-")); });
   afterEach(() => { fs.rmSync(tmpDir, { recursive: true, force: true }); });
@@ -332,7 +332,7 @@ describe("PyPI confusion detection — parseRequirementsTxt (v4.9)", () => {
       "python-utils-helper\nrequests\n",
     );
     // Findings should include DEP_HALLUCINATED_PACKAGE for python-utils-helper
-    // (works offline — no network call needed for hallucinated packages)
+    // (works offline - no network call needed for hallucinated packages)
     const findings = await scanPypiDependencyConfusion(tmpDir);
     expect(findings.some((f) => f.rule === "DEP_HALLUCINATED_PACKAGE" && f.match === "python-utils-helper")).toBe(true);
   });

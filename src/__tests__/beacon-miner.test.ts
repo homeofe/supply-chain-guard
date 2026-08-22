@@ -172,7 +172,7 @@ describe("Network Beacon and Crypto Miner Detection (T-008)", () => {
     });
 
     it("should detect mining configuration keys", async () => {
-      // Note: notFilePattern skips .json — use .js to test mining config detection
+      // Note: notFilePattern skips .json - use .js to test mining config detection
       fs.writeFileSync(
         path.join(tempDir, "miner-config.js"),
         `const cfg = {"wallet":"4Abc123xyzabc","pool_address":"pool.minexmr.com:4444","worker":"worker1"};`,
