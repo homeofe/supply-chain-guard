@@ -89,6 +89,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   against one merge ref, the live-tip selector returned 12 files and the same
   merge ref against a base one merged commit older returned 15.
 
+### Security
+
+- **Every `actions/checkout` step in this repository now states whether it keeps the
+  job's token, and a contract test fails the build when one does not.**
+  `actions/checkout` writes `GITHUB_TOKEN` into `.git/config` unless the step sets
+  `persist-credentials: false`, and at the pinned v7.0.1 that input defaults to
+  `true`. All 8 steps took the default. Seven now set `false`; the eighth,
+  `ci.yml`'s `update-major-branch`, sets `true` with the reason on the step, because
+  it runs the only `git push` in the repository and git reads that credential from
+  `.git/config`. Nothing was exploitable: `--ignore-scripts` on every real `npm`
+  call, no `pull_request_target` / `workflow_run` / `issue_comment` trigger, `.git`
+  excluded from the Docker build context, narrow artifact paths and SHA-pinned
+  actions each closed a leg. That is the reason to hold it with a check rather than
+  a review note: the token's absence was a property of five other decisions, and any
+  of them can move. `src/__tests__/workflow-checkout-credentials.test.ts` treats an
+  omitted key as a defect, requires an exception to name a job that genuinely runs a
+  remote git command, requires the converse so the contract cannot break a release
+  push, and fails when it classifies fewer steps than the files declare.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added
