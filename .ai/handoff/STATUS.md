@@ -43,10 +43,25 @@ Two decisions worth knowing:
   each scan is genuinely current on an old pin and is reported as such. That
   makes it an assertion about the consequence, not about the configuration.
 - **medium, not high.** It moves the score off zero and the risk level off
-  `clean`, so it reaches every report format and the Action's pull request
-  comment, but it cannot flip the Action's default `fail-on: critical` gate or
-  the CLI's default `high` gate. Verified against a real scan: exit 0, unchanged.
-  Escalating it is a product decision, not a side effect. See NEXT_ACTIONS.
+  `clean`, so it is named in eight of the nine report formats and in the Action's
+  pull request comment, but it cannot flip the Action's default `fail-on:
+  critical` gate or the CLI's default `high` gate. Verified against a real scan:
+  exit 0, unchanged. Escalating it is a product decision, not a side effect. See
+  NEXT_ACTIONS.
+
+**Corrected 2026-08-22: this said "every report format", and that was one format
+too many.** Rendering a single `THREAT_FEED_STALE` finding through
+`formatReport` for all nine formats, the rule id appears in `text`, `json`,
+`markdown`, `sarif`, `sbom`, `html`, `gitlab` and `junit`, and NOT in `badge`.
+`formatBadge` builds a Shields.io endpoint payload (`schemaVersion`, `label`,
+`message`, `color`) out of `report.summary` counts alone, so no rule id or
+description can reach it by construction; what is observable there is an
+otherwise clean repository's badge turning from `clean`/`brightgreen` into
+`1 medium`/`yellow`. `junit` carries the id but as a passing `<testcase>`, since
+`formatJunit` only renders `critical`/`high` as `<failure>`. The same wrong
+sentence was in CHANGELOG.md, README.md and NEXT_ACTIONS.md and is corrected in
+all of them; CHANGELOG.md is the one that becomes the GitHub Release body
+verbatim, which is why it was fixed before the pull request text.
 
 Three ways this check could have stopped firing are closed and each has its own
 test: a future-dated `firstSeen` is ignored (one mistyped year would otherwise

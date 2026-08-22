@@ -133,9 +133,13 @@ tarball on both majors in CI; the container image built and scanned on every PR.
 ## Owner decision: should a badly stale rule set fail the build?
 
 `THREAT_FEED_STALE` ships at `medium`, past 30 days. That was chosen so it
-becomes visible everywhere (score, risk level, every report format, the Action's
-pull request comment) without turning the default `fail-on: critical` gate or the
-CLI's default `high` gate red for any consumer on the day it ships.
+becomes visible almost everywhere (score, risk level, eight of the nine report
+formats, the Action's pull request comment) without turning the default
+`fail-on: critical` gate or the CLI's default `high` gate red for any consumer on
+the day it ships. The ninth format, `badge`, is derived from summary counts and
+never names a rule, so it shows the condition as `1 medium`/`yellow` instead of
+`clean`/`brightgreen`. This paragraph said "every report format" until
+2026-08-22; the measurement is in STATUS.md.
 
 The open question is whether a rule set that is egregiously old, say past 180
 days, should escalate to `high` and therefore fail a `fail-on: high` build. The

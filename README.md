@@ -732,11 +732,24 @@ ageing.
 matched against actually is, and reports `THREAT_FEED_STALE` (medium) once the
 newest indicator in that rule set is more than 30 days old. The finding carries
 the measured age and the newest indicator's date, it raises the risk score off
-zero and the risk level off `clean`, and it appears in every report format and in
-the Action's pull request comment. It is derived offline from the feed itself, so
-it travels with the pin: an installation that never updates reports its own age
-without needing a network call, a registry lookup, or anything configured by the
-consumer.
+zero and the risk level off `clean`, and it is named in eight of the nine report
+formats and in the Action's pull request comment, which renders whichever
+`format` you set (`markdown` by default). It is derived offline from the feed
+itself, so it travels with the pin: an installation that never updates reports
+its own age without needing a network call, a registry lookup, or anything
+configured by the consumer.
+
+Where it appears, exactly, because "every format" would be one format too many:
+`text`, `json`, `markdown`, `sarif`, `sbom`, `html`, `gitlab` and `junit` all
+carry the rule id `THREAT_FEED_STALE`, and all but `junit` carry the full
+description as well. The ninth format, `badge`, does not: the Shields.io endpoint
+payload is `{schemaVersion, label, message, color}` derived from the findings
+summary counts, so it never names a rule. What you see there instead is the
+badge for an otherwise clean repository turning from `clean`/`brightgreen` into
+`1 medium`/`yellow` - the condition is visible, but not identifiable, and a
+badge is the one surface where that matters least. In `junit` the rule id is a
+passing `<testcase>` rather than a `<failure>`, because only `critical` and
+`high` become failures there.
 
 The measurement is taken over the rule set the scan *used*, not over the version
 number. A consumer running `supply-chain-guard feed refresh` before each scan

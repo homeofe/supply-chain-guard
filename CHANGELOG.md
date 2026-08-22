@@ -16,11 +16,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   check name, and the pin kept producing a green check while the rules aged.
   Every scan now derives the age of the rule set it actually matched against and
   reports it past 30 days, with the measured age and the newest indicator's date
-  in the finding. It raises the score off zero and the risk level off `clean`, so
-  it reaches every report format and the Action's pull request comment. `medium`
-  is deliberate: it makes the condition visible without turning the default
-  `fail-on: critical` gate red for every consumer on the day it ships. Exclude
-  `THREAT_FEED_STALE` by name if a deliberately frozen rule set is the intent.
+  in the finding. It raises the score off zero and the risk level off `clean`, and
+  it is named in **eight of the nine** report formats and in the Action's pull
+  request comment (which renders whatever `format` is set to, `markdown` by
+  default). The ninth is `badge`: the Shields.io endpoint payload is built from
+  the summary counts alone and carries no rule id or description at all, so an
+  otherwise clean scan turns from `clean`/`brightgreen` into `1 medium`/`yellow`
+  there, which shows the condition without naming it. In `junit` the rule id is
+  present but as a passing `<testcase>` rather than a `<failure>`, since only
+  `critical` and `high` fail there. `medium` is deliberate: it makes the condition
+  visible without turning the default `fail-on: critical` gate red for every
+  consumer on the day it ships. Exclude `THREAT_FEED_STALE` by name if a
+  deliberately frozen rule set is the intent.
 - **The measurement is taken over the rule set the scan used, not over the
   version number.** It reads the merged bundled-plus-refreshed-cache feed that
   `checkThreatIntel` and `matchPackageIOC` consumed, so a consumer running
