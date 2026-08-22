@@ -119,7 +119,9 @@ Links individual findings into incident-level attack chains:
 
 ## Installation
 
-**Requires Node.js 22 or newer.** Node 20 reached end of life on
+**Requires Node.js 22 or newer.** Every release runs its complete test suite, and
+installs and executes its own packed tarball, on Node 22 and on Node 24, the current
+Active LTS. Node 20 reached end of life on
 2026-04-30; it still installs and is still covered by CI as a transition lane, but it
 is out of support and that lane is removed in 5.29.0. Full policy, including what the
 package is published from and what the Action and container image run on:

@@ -48,27 +48,46 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Complete build and test on every Node major this package supports.
+  # Complete build and test on every Node major this repository RUNS. That is not
+  # the same set as the majors it SUPPORTS, and the difference is deliberate.
   #
-  # The contract: the package must install, pass every governance gate, pass the
-  # FULL suite, and run FROM ITS PACKED TARBALL on each major it claims. There is
+  # THE INVARIANT, so that an edit to either side has something to preserve:
+  #
+  #   this matrix  ==  supportedMajors + transitionMajors  (docs/node-support.md)
+  #
+  #   supportedMajors  majors the package promises to work on. Every one is at or
+  #                    above engines.node in package.json, and the highest reaches
+  #                    at least activeLtsMajor, the upstream Active LTS. Without
+  #                    that upper assertion, engines.node ">=22.0.0" would go on
+  #                    claiming every major above 22 with none of them executed.
+  #   transitionMajors majors still fully tested but BELOW the floor and OUT OF
+  #                    SUPPORT, so a consumer who has not migrated is warned by
+  #                    npm rather than broken. Each one carries the release that
+  #                    deletes it. Node 20 reached end of life on 2026-04-30 and
+  #                    its lane is deleted in 5.29.0.
+  #
+  # So a leg below engines.node is expected here and is not a support claim, and a
+  # leg above engines.node is required here and is not optional coverage.
+  #
+  # The contract each leg proves: the package must install, pass every governance
+  # gate, pass the FULL suite, and run FROM ITS PACKED TARBALL. There is
   # deliberately no reduced smoke lane, because a lane that runs less than the
   # real suite proves less than the real suite, and the difference is exactly
   # where a version incompatibility hides.
   #
-  # This matrix is DERIVED from docs/node-support.md, which is the single
+  # This list is DERIVED from docs/node-support.md, which is the single
   # authoritative policy. Do not treat this list as the source of truth.
-  # src/__tests__/node-version-contract.test.ts fails the build if any other
-  # declaration site in the repo drifts from it. See docs/node-support.md.
+  # src/__tests__/node-version-contract.test.ts fails the build if this matrix,
+  # or any other declaration site in the repo, drifts from that policy.
   compat:
     name: compat (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
-      # Both majors always report. Stopping the 22 leg because 20 failed would
-      # hide the compatibility difference this matrix exists to surface.
+      # Every leg always reports. Stopping the 22 and 24 legs because 20 failed
+      # would hide the compatibility difference this matrix exists to surface.
       fail-fast: false
       matrix:
-        node: ['20', '22']
+        node: ['20', '22', '24']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -333,7 +352,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          # Per-major name: two matrix legs uploading one artifact name collide.
+          # Per-major name: matrix legs uploading one artifact name collide.
           name: coverage-summary-node${{ matrix.node }}
           path: coverage/coverage-summary.json
           retention-days: 14

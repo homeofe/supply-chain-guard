@@ -87,6 +87,91 @@ wiring that produces the 1700 findings, so it needs the self-scan trust model to
 work through a mount first. Suppression visibility is also untouched: a report
 exposes only a `suppressedCount` and not the entries behind it, which is exactly
 why the inert suppression stayed invisible.
+## The engines floor had no ceiling, so the matrix never ran the Active LTS (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/176-compat-matrix-reaches-active-lts. No version bump.
+Reported as https://github.com/homeofe/supply-chain-guard/issues/176
+
+### What the report said, and what was actually wrong
+
+The report compared `.github/workflows/ci.yml` against `package.json` and found a
+Node 20 leg below an `engines.node` floor of `>=22.0.0`. Every count in it
+re-derives exactly. Its conclusion does not follow: `docs/node-support.md` declares
+`supportedMajors` and `transitionMajors` as disjoint lists, the gate already asserted
+a transition major is strictly below the floor, and `README.md` tells consumers the
+package requires Node 22 or newer. The Node 20 leg is a dated, gate-enforced
+transition lane, deleted in 5.29.0 by an assertion that fails the build. It stays.
+
+The report's own measurement contained the real defect, one line below its headline:
+**legs above the floor, 0 of 2.** `engines.node` is a floor with no ceiling, so
+`>=22.0.0` claims Node 22 and every major after it, and the matrix stopped at 22. Read
+against the upstream `nodejs/Release` schedule on 2026-08-22, Node 22 had been in
+Maintenance LTS since 2025-10-21 and Node 24 had been Active LTS since 2025-10-28. The
+only major the project supported was the one already in maintenance, and the major
+consumers are migrating onto was claimed and never executed. `@types/node` is on the
+Node 26 API surface, so an API available only above Node 22 would have type-checked
+clean, passed both legs, and failed in a consumer's hands.
+
+### What changed
+
+`docs/node-support.md` gains `activeLtsMajor` (24) and `activeLtsReviewedIn` (5.29.0),
+`supportedMajors` becomes `[22, 24]`, and the `compat` matrix becomes 20, 22 and 24.
+`src/__tests__/node-version-contract.test.ts` gains ten cases: five that assert the
+claim reaches the top of its own range and carries a re-read deadline, and five that
+assert the workflow comment keeps naming the policy vocabulary. That comment called the
+matrix "every Node major this package supports" four lines above a pointer to the policy
+whose subject is that supported and tested are different lists, which is the most
+plausible reason this report exists at all.
+
+Restoring the exact pre-change configuration turns exactly the two new upward cases red
+and leaves the other 36 green, which is the demonstration that nothing in the repository
+could see this before.
+
+### Decisions recorded in the repository, not here
+
+Both live in `docs/node-support.md` so the next reader meets them at the code:
+
+- **Why the bound is the Active LTS**, with the two rejected alternatives and their
+  costs. `engines.node` deliberately keeps no upper bound, so majors above the Active
+  LTS (Node 26 today) are claimed and not executed. That residual is stated, and the
+  alternative that would close it is written out with exactly what to change.
+- **Why `activeLtsMajor` is hand-copied rather than fetched**, what the gate can and
+  cannot catch about a hand-copied fact, and why the deadline is `5.29.0`.
+
+### What adding the third leg exposed, and why it had to be fixed here
+
+The Node 24 leg went red on its first run, and the cause was not Node 24. The perf case
+`keeps exact greedy/lazy endpoints on 5 MiB repeated completions` in
+`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15,070ms against a bare
+`timeout: 15_000`. Measured across the three legs of that single run: Node 20 8,734ms,
+Node 22 13,622ms, Node 24 15,070ms. The same case had already failed the **Node 22** leg
+on `main` at `1a141fe`, at 15,137ms, with no Node 24 anywhere. The budget sits inside the
+runner's own noise band, so it reports noise, not an algorithmic regression.
+
+Underneath that is a real inconsistency. `npm run test:coverage`, the only command the
+compat legs run, sets `SCG_VITEST_COVERAGE=1` in `vitest.config.ts`, which makes
+`performanceBudget` multiply by five. So the assertion inside that test allowed 50,000ms
+while the harness killed it at 15,000ms: **the guard could never be reached under the
+command CI actually runs.** Both `it` options in that file now use
+`performanceBudget(15_000)`, which is what every sibling perf test already did. Outside a
+coverage run `performanceBudget` is the identity, so `npm test` is bit for bit unchanged,
+and the algorithmic guard, `performanceBudget(10_000)`, is untouched.
+
+### Open for the owner
+
+The same bare-literal pattern is still elsewhere, deliberately left because it is outside
+this change and touching a dozen test files in a Node matrix pull request would be worse
+than naming it. Counted, not estimated:
+
+- **2 files import `performanceBudget` and still use a bare `timeout:` literal**, which is
+  exactly the inconsistency fixed above: `src/__tests__/core-broad-gap-matchers.test.ts`
+  and `src/__tests__/internal-disclosure.test.ts`.
+- **10 further files use a bare `timeout:` literal** without importing it. Some of those
+  have no scaled assertion to disagree with, so they need reading rather than rewriting.
+
+A gate could assert that no file importing `performanceBudget` also carries a bare
+`timeout:` literal. It is not added here, because it would be red on the two files above
+on the day it landed, and a gate that ships red teaches people to ignore it.
 ## Docker base image pinning: one parser, three verdicts (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/issue-174-docker-base-image-pinning. Issue
