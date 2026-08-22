@@ -79,7 +79,11 @@ export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
 export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
-export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed } from "./threat-intel.js";
+// getBundledFeedRef is the read-only companion to getBundledFeed: same entries,
+// one stable frozen array instead of a fresh copy per call, so an identity-keyed
+// lookup index built over it survives. Exported because an embedder that hands
+// getBundledFeed() to a matcher hits exactly the defect issue 177 records.
+export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed, getBundledFeedRef } from "./threat-intel.js";
 export { feedStats, refreshFeed, parseFeedPayload, DEFAULT_FEED_URL } from "./feed.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
