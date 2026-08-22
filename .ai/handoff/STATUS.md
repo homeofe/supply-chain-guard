@@ -16,17 +16,21 @@ release-authority finding; two named items stay open for the owner.
 Branch protection on `main` requires three contexts. Only one of them, `Build and
 Test`, can exist on a `refs/tags/*` push: required status checks, branch protection
 and `enforce_admins` are all properties of `refs/heads/main`, and `aahp-verify` and
-`PR metadata policy` have no tag-ref run in their histories. The `publish` job gated
-on the shape of the ref alone, and the one pre-publish check it did run, `Validate
-immutable release tag`, compares the tag string against `package.json`. That check is
-satisfied by any commit at all whose version field matches, so it carries no
-information about where the commit lives.
+`PR metadata policy` have no tag-ref run in their histories. `needs: build` did already
+hold the `publish` job until the compat matrix and the container build and scan passed,
+but none of that says where the commit lives, and the one pre-publish check that looked
+at the tag, `Validate immutable release tag`, compares the tag string against
+`package.json`. That check is satisfied by any commit at all whose version field
+matches, so it too carries no information about where the commit lives.
 
-`docs/ci-and-release.md` has always said to tag the merged commit on `main` and never
-the pre-merge commit. This repository squash-merges, so those two always have
-different shas while the content looks identical. All 138 semver tags to date are
-ancestors of `main`, which is what a convention looks like right up until the release
-where it is not.
+`docs/ci-and-release.md` says to tag the merged commit on `main` and never the
+pre-merge commit. That sentence was written down on 2026-08-20, in the 5.28.0 release;
+135 of the 138 tags to date predate it, so as a written rule in the release runbook it
+governed at most the last three releases. This repository squash-merges, so those two commits always have
+different shas while the content looks identical. Nothing went wrong: measured
+2026-08-22, all 138 semver tags to date are ancestors of `main` and none is not, which
+is what a convention looks like right up until the release where it is not. This closes
+a latent defect, not an incident.
 
 ### What changed
 
@@ -51,8 +55,18 @@ a text search would have reported a gate that no longer runs.
 2. Whether a repository ruleset should restrict creation of `refs/tags/v*`. That is an
    access-control change and needs an explicit bypass list.
 
-Neither is required for the ancestry gate to close the hole. Both are recorded on the
-issue this work came from.
+Neither is required for the ancestry gate to close the hole. Both are recorded on
+https://github.com/homeofe/supply-chain-guard/issues/167, which this pull request does
+not close.
+
+### What the gate does not reach
+
+Actions runs a workflow from the file present at the pushed ref, so the gate binds only
+tags whose commit already contains it. Two consequences, both stated in the gate script
+header and above the `publish` job rather than only here: a tag cut from a commit that
+predates this change still publishes ungated, and an actor who controls the commit
+controls its `ci.yml` and can omit the step. The gate closes the accident. Only the tag
+ruleset closes the deliberate case.
 
 ---
 

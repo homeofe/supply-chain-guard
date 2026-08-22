@@ -359,20 +359,42 @@ jobs:
           # almost nothing.
           fetch-depth: 0
 
-      # The release-authority gate. docs/ci-and-release.md has always said to tag the
-      # MERGED commit on main and never the pre-merge commit, and this repository
-      # squash-merges, so those two ALWAYS have different shas. Until now that rule
-      # lived only in prose, and 138 of 138 tags complying with it was a convention
-      # holding rather than a gate enforcing.
+      # The release-authority gate. docs/ci-and-release.md says to tag the MERGED commit
+      # on main and never the pre-merge commit, and this repository squash-merges, so
+      # those two ALWAYS have different shas. That sentence was written down on
+      # 2026-08-20, in the 5.28.0 release, and 135 of the 138 tags to date predate it;
+      # before this step it was prose either way. No tag has ever pointed off main:
+      # measured 2026-08-22, all 138 semver tags are ancestors of main. That is a
+      # convention holding, not a gate enforcing, which is what this step changes.
       #
       # Runs before every other step in this job, including the tag validator, because
       # the tag validator only compares the tag string against package.json and is
-      # satisfied by any commit at all whose version field matches.
+      # satisfied by any commit at all whose version field matches. `needs: build`
+      # above already made this job wait for the compat matrix and the container build
+      # and scan, but passing those says nothing about where the commit lives.
       #
       # See scripts/check-release-ancestry.mjs for the exit codes: "cannot answer" is
       # a different code from "answered no", so a green run here means the question
       # was really asked. Node is preinstalled on the runner, which is why this and
       # the tag validator can both run before the Setup Node.js step.
+      #
+      # WHAT THIS GATE DOES NOT COVER, so the next reader does not overestimate it:
+      #   * Actions runs a workflow from the file present at the PUSHED ref, so this
+      #     step exists only on tags whose commit already contains it. A tag cut from a
+      #     commit that predates this change publishes ungated, and an actor who
+      #     controls the commit controls its ci.yml and can simply omit the step. This
+      #     binds the accident, not the deliberate case. The control for the deliberate
+      #     case is a ruleset restricting creation of refs/tags/v*, an open owner
+      #     decision on https://github.com/homeofe/supply-chain-guard/issues/167.
+      #   * The branch is not overridable here: the script is called with no arguments,
+      #     so it checks against main. A release from a maintenance branch would need
+      #     --branch passed in this file, which is a deliberate edit.
+      #   * The gate performs a network `git fetch` of main, so an unreachable origin
+      #     surfaces as exit 5, a red release rather than a silent pass. It does NOT
+      #     need the checkout's credentials: this repository is public, and an
+      #     unauthenticated `git ls-remote` of refs/heads/main was verified to resolve
+      #     on 2026-08-22, so persist-credentials: false, proposed in
+      #     https://github.com/homeofe/supply-chain-guard/issues/179, leaves it working.
       - name: Require the released commit to be on main
         run: node scripts/check-release-ancestry.mjs
 

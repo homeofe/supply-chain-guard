@@ -120,6 +120,11 @@ jobs:
       # legitimate recovery, so the gate costs nothing there and there is no `if:` to
       # get wrong. fetch-depth: 0 is required; see the gate script for why a shallow
       # checkout is a hard failure rather than a silent pass.
+      #
+      # What this gate does not reach is recorded in one place, the header of
+      # scripts/check-release-ancestry.mjs, and repeated above the publish job in
+      # ci.yml: Actions runs a workflow from the file at the pushed ref, so the step
+      # binds only tags whose commit already contains it.
       - name: Check out for the release-authority gate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

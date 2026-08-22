@@ -7,14 +7,22 @@
  * Required status checks, branch protection and enforce_admins are properties of
  * `refs/heads/main`. The publish trigger is a `refs/tags/*` push. The two namespaces
  * do not intersect, so none of those gates is ever evaluated on the commit that is
- * actually released. The only pre-publish gate that did exist compares the tag STRING
- * against `package.json`, and is therefore satisfied by ANY commit whose version field
+ * actually released. `needs: build` did already hold the publish job until the compat
+ * matrix and the container build and scan passed, but none of that says where the
+ * commit lives, and the one pre-publish gate that looked at the tag compares the tag
+ * STRING against `package.json`, so it is satisfied by ANY commit whose version field
  * matches, wherever it lives.
  *
  * The everyday route into that hole is not an attacker. This repository squash-merges,
  * so the local pre-merge commit ALWAYS has a different sha from the commit that lands
  * on `main`, while its content looks identical. `docs/ci-and-release.md` says to tag
- * the merged one. That rule lived only in prose until this gate.
+ * the merged one. That rule lived only in prose until this gate, and no release ever
+ * broke it: measured 2026-08-22, all 138 semver tags to date are ancestors of `main`.
+ * These tests pin a latent defect closed, not an incident cleaned up.
+ *
+ * They also do not, and cannot, cover the deliberate case. Actions runs a workflow
+ * from the file at the pushed ref, so the gate binds only tags whose commit already
+ * contains it. See the "WHAT THIS GATE CANNOT DO" section of the script header.
  *
  * WHAT THESE TESTS ARE FOR, AND HOW TO REDDEN THEM ON PURPOSE
  * ----------------------------------------------------------

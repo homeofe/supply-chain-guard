@@ -11,10 +11,12 @@
  * namespace with its `tags:` trigger and then treated arrival there as sufficient
  * authority to publish. Nothing asserted the relationship between the two.
  *
- * The one pre-publish gate that did exist, "Validate immutable release tag", compares
- * the tag STRING against `package.json`. It is satisfied by ANY commit whose version
- * field matches, wherever that commit lives, so it carries no information about
- * whether the code was ever on `main`.
+ * The publish job did already wait on `needs: build`, so the full compat matrix and
+ * the container build and scan had to pass before it ran. None of that says where the
+ * commit lives. The one pre-publish gate that looked at the tag itself, "Validate
+ * immutable release tag", compares the tag STRING against `package.json`. It is
+ * satisfied by ANY commit whose version field matches, wherever that commit lives, so
+ * it too carries no information about whether the code was ever on `main`.
  *
  * A tag push moves four public distribution channels at once: the npm package and
  * its `latest` dist-tag, the GitHub Release, the container image including `:latest`,
@@ -29,6 +31,12 @@
  * and whose divergence is visible only in the provenance sha. That rule existed only
  * in prose. This script is the same rule as a gate.
  *
+ * That has never happened here. Measured on 2026-08-22, all 138 semver tags published
+ * to date are ancestors of `main` and none is not, and the runbook sentence quoted
+ * above was only written down on 2026-08-20, in the 5.28.0 release, which 135 of those
+ * tags predate. This gate closes a latent defect found by inspection. It is not the
+ * response to an incident: nothing was ever published off `main`.
+ *
  * Provenance does not cover this. An off-main release carries a genuine, verifiable
  * attestation naming a commit that is absent from `main`'s history, and signature
  * verification passes on it. Provenance is forensics, not prevention.
@@ -41,6 +49,12 @@
  *   --branch <name>   branch it must be on; defaults to "main"
  *   --remote <name>   remote to fetch that branch from; defaults to "origin"
  *   --repo <dir>      repository to run in; defaults to the current directory
+ *
+ * Outside GitHub Actions $GITHUB_SHA is empty, so --commit is REQUIRED there and the
+ * script exits 2 rather than passing on nothing. The pre-tag check a maintainer runs
+ * from the merged commit is:
+ *
+ *   npm run check:release-ancestry -- --commit HEAD
  *
  * EXIT CODES (each outcome has its own code, deliberately)
  * -------------------------------------------------------
@@ -64,6 +78,33 @@
  * removes `fetch-depth: 0` and it keeps reporting green while inspecting almost
  * nothing. Refusing to answer is loud and blocks the release; answering wrongly is
  * silent and ships it.
+ *
+ * WHAT THIS GATE CANNOT DO
+ * ------------------------
+ * This gate is a STEP IN A WORKFLOW FILE, and Actions runs a workflow from the file
+ * present at the PUSHED ref. So it binds only tags whose commit already contains it.
+ *
+ *   1. Transitional: a tag cut from a commit that predates this change carries a
+ *      ci.yml without this step and still publishes ungated.
+ *   2. Permanent: an actor who controls the commit also controls its ci.yml and can
+ *      simply omit the step. This closes the ACCIDENT, the wrong sha out of two that
+ *      look identical after a squash merge. It cannot close the deliberate case.
+ *
+ * The control for the deliberate case is a repository ruleset restricting creation of
+ * refs/tags/v*, which is an access-control change and an open owner decision on
+ * https://github.com/homeofe/supply-chain-guard/issues/167. Nothing in this file
+ * should be read as covering it.
+ *
+ * Two smaller limits, for the same reason:
+ *   * Both workflows call this script with no arguments, so --branch is not reachable
+ *     from a release. A release cut from a maintenance branch exits 6 until someone
+ *     edits the workflow, which is deliberate rather than accidental.
+ *   * The check performs a network `git fetch`, so an unreachable remote surfaces as
+ *     exit 5, a red release rather than a silent pass. It does not need the checkout's
+ *     credentials: this repository is public and an unauthenticated ls-remote of
+ *     refs/heads/main was verified to resolve on 2026-08-22, so persist-credentials:
+ *     false, proposed on issue 179 of this repository, leaves this gate working. See
+ *     https://github.com/homeofe/supply-chain-guard/issues/179
  */
 import { spawnSync } from "node:child_process";
 import process from "node:process";
