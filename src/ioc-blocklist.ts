@@ -665,7 +665,7 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "0d58616c750fc8530a7e90eee18398ddedd08cc0f4908c863ab650673b9819dd": "MacSync Stealer variant (SHA256)",
   "86d0c50cab4f394c58976c44d6d7b67a7dfbbb813fbcf622236e183d94fd944f": "MacSync Stealer variant (SHA256)",
 
-  // TCLBANKER Brazilian banking trojan (May 2026) — REF3076 / trojanized Logitech AI Prompt Builder
+  // TCLBANKER Brazilian banking trojan (May 2026) - REF3076 / trojanized Logitech AI Prompt Builder
   "701d51b7be8b034c860bf97847bd59a87dca8481c4625328813746964995b626": "TCLBANKER component (SHA256)",
   "8a174aa70a4396547045aef6c69eb0259bae1706880f4375af71085eeb537059": "TCLBANKER component (SHA256)",
   "668f932433a24bbae89d60b24eee4a24808fc741f62c5a3043bb7c9152342f40": "TCLBANKER component (SHA256)",
@@ -2589,7 +2589,7 @@ export function checkBadVersion(
   if (entry.versions.includes(version)) {
     return {
       rule: "IOC_KNOWN_BAD_VERSION",
-      description: `Known compromised package version: ${name}@${version} — ${entry.description}`,
+      description: `Known compromised package version: ${name}@${version} - ${entry.description}`,
       severity: "critical",
       recommendation: `Remove ${name}@${version} immediately. This version contains known malware. Upgrade to a clean version.`,
     };

@@ -22,7 +22,7 @@ describe("Core Scanner", () => {
     });
 
     // v4.9: SLSA_LEVEL_0 (info severity, score=1) is emitted for directories
-    // without any build scripts — this is a posture finding, not a security alert.
+    // without any build scripts - this is a posture finding, not a security alert.
     // Verify no actual security/malware findings are present.
     const securityFindings = report.findings.filter(
       (f) => !f.rule.startsWith("SLSA_"),

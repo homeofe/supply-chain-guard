@@ -1,5 +1,5 @@
 /**
- * Correlation engine (v4.2) — CORE FEATURE.
+ * Correlation engine (v4.2) - CORE FEATURE.
  *
  * Aggregates individual findings into incident-level clusters.
  * Links related findings, boosts confidence, generates attack narratives,
