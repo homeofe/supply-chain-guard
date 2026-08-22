@@ -3787,8 +3787,41 @@ export const LURE_PATTERNS: PatternEntry[] = [
   },
   {
     name: "readme-lure-crack",
+    // The `no limits` alternative carries a hyphen guard on both sides, and
+    // only that alternative. `\s*` permits zero spaces, which is what lets the
+    // prose lure "no message limits" also match the six letters "nolimit"
+    // wherever they appear - including inside a hyphenated PACKAGE NAME quoted
+    // in prose. That is not hypothetical: `nolimit-agent` is a real malicious
+    // npm package, so any changelog or advisory that names it earned a CRITICAL
+    // finding for describing malware accurately. Security-focused changelogs
+    // are exactly the documents this rule reads.
+    //
+    // The guard is `(?<!-)` / `(?!-)` and nothing wider, because a hyphen on
+    // either side is the entire measured false-positive shape: it means the
+    // match is one segment of a longer identifier token (`nolimit-agent`,
+    // `agent-nolimit`, `@scope/nolimit-agent`) rather than a word in a
+    // sentence. Underscore needs no guard - `\b` already blocks `nolimit_agent`
+    // because `_` is a word character - and `no-limits` never matched, because
+    // `\s*` does not match a hyphen.
+    //
+    // Detection is not narrowed. Every lure phrasing still fires, including the
+    // spaced forms ("no limits", "no message limits", "no limit"), the
+    // single-token form ("nolimits build"), and prose that happens to be
+    // followed by a dash ("no limits - download now"). The other alternatives
+    // are untouched. src/__tests__/issue-173-self-scan-gate.test.ts pins both
+    // directions.
+    //
+    // NOTE FOR WHOEVER DOCUMENTS THIS RULE NEXT. onlyFilePattern below includes
+    // CHANGELOG, and CI now scans this repository's own tree, so writing any of
+    // the phrasings above verbatim into CHANGELOG.md raises a real critical
+    // finding and turns the build red. That is the rule working, not a bug: lure
+    // phrasing in a changelog is exactly what it is for. Release notes about this
+    // rule therefore describe the phrasings instead of quoting them, and the
+    // literal strings live in the test file named above, which is exempt through
+    // notTestFile. This was measured, not predicted: the first draft of the
+    // release note for this very fix was caught by the new gate.
     pattern:
-      "\\b(?:crack(?:ed)?|keygen|license\\s*bypass|no\\s*(?:message\\s*)?limits?|unlock(?:ed)?\\s*(?:features?|enterprise|pro|premium))\\b",
+      "\\b(?:crack(?:ed)?|keygen|license\\s*bypass|(?<!-)no\\s*(?:message\\s*)?limits?(?!-)|unlock(?:ed)?\\s*(?:features?|enterprise|pro|premium))\\b",
     description:
       "README contains crack/keygen/unlock language. Malware repos promise premium features to lure downloads.",
     severity: "critical",

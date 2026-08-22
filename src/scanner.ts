@@ -136,6 +136,15 @@ const SELF_SCAN_INERT_FILES = new Set([
   "src/__tests__/beacon-miner.test.ts",
   "src/__tests__/campaigns.test.ts",
   "src/__tests__/core-broad-gap-matchers.test.ts",
+  // Two real shipped KNOWN_MALICIOUS_HASHES entries are quoted verbatim as
+  // regression fixtures: a 40-hex Git object id that must stay OUT of the
+  // file-digest match set, and a sha256 that must stay reachable through the
+  // digest-TEXT matcher. Both assertions name the exact shipped digest, so the
+  // fixtures cannot be replaced with invented values without deleting the
+  // property they prove. Omitting this file from the list was an oversight
+  // rather than a decision: 16 sibling test files quoting shipped indicators
+  // are already listed.
+  "src/__tests__/file-digest.test.ts",
   // Real go: IOC (github.com/BufferZoneCorp/...) used as a go.sum fixture.
   "src/__tests__/go-scanner.test.ts",
   "src/__tests__/infostealer-patterns.test.ts",
