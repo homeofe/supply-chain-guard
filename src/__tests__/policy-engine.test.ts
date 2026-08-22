@@ -337,6 +337,29 @@ describe("Policy Engine", () => {
       expect(config!.suppress?.[0]).toMatchObject({ rule: "EVAL_ATOB", path: "vendor/**" });
       // Quoted glob must have its quotes stripped so it actually matches.
       expect(matchGlob(config!.ignore![1], "src/app.min.js")).toBe(true);
+      // v5.29 (issue 168): the bare list form still works and still excludes
+      // the path; it just cannot be audited, so each entry is reported. The
+      // suppress entry carries a reason and is therefore not reported.
+      expect((config!.warnings ?? []).map((w) => w.rule)).toEqual([
+        "POLICY_IGNORE_NO_REASON",
+        "POLICY_IGNORE_NO_REASON",
+      ]);
+    });
+
+    it("parses the reason-carrying mapping form for ignore without warning", () => {
+      fs.writeFileSync(path.join(tmpDir, ".supply-chain-guard.yml"), [
+        "ignore:",
+        "  vendor/**: upstream code, scanned by its own project",
+        '  "**/*.min.js": build output, scanned at source instead',
+      ].join("\n"));
+
+      const config = loadPolicyConfig(tmpDir);
+      expect(config!.ignore).toEqual(["vendor/**", "**/*.min.js"]);
+      expect(config!.ignoreReasons).toEqual({
+        "vendor/**": "upstream code, scanned by its own project",
+        "**/*.min.js": "build output, scanned at source instead",
+      });
+      expect(matchGlob(config!.ignore![1], "src/app.min.js")).toBe(true);
       expect(config!.warnings).toBeUndefined();
     });
   });
@@ -450,7 +473,10 @@ describe("Policy Engine", () => {
       const config = loadConfig([
         "rules:",
         "  disable:",
-        "    - HEX_ARRAY",
+        // v5.29 (issue 168): a valid config documents what it switches off.
+        // The bare list form still disables the rule and is reported as
+        // POLICY_DISABLE_NO_REASON, which is asserted separately below.
+        "    HEX_ARRAY: minified vendor bundles, reviewed",
         "  severityOverrides:",
         "    GHA_UNPINNED_ACTION: medium",
         "allowlist:",
@@ -467,8 +493,23 @@ describe("Policy Engine", () => {
         "  file: .scg-baseline.json",
       ]);
       expect(config.warnings).toBeUndefined();
+      expect(config.rules?.disable).toEqual(["HEX_ARRAY"]);
+      expect(config.rules?.disableReasons).toEqual({
+        HEX_ARRAY: "minified vendor bundles, reviewed",
+      });
       const result = applyPolicy([makeFinding("EVAL_ATOB", "critical")], config);
       expect(result.findings.some((f) => f.rule.startsWith("POLICY_"))).toBe(false);
+    });
+
+    it("reports an undocumented rules.disable entry, the audit gap suppress never had", () => {
+      const config = loadConfig(["rules:", "  disable:", "    - HEX_ARRAY"]);
+      expect((config.warnings ?? []).map((w) => w.rule)).toEqual([
+        "POLICY_DISABLE_NO_REASON",
+      ]);
+      // The rule is still disabled: the warning is an audit trail, not a veto.
+      const result = applyPolicy([makeFinding("HEX_ARRAY", "critical")], config);
+      expect(result.findings.some((f) => f.rule === "HEX_ARRAY")).toBe(false);
+      expect(result.findings.some((f) => f.rule === "POLICY_DISABLE_NO_REASON")).toBe(true);
     });
 
     it("should tolerate a leading yaml-language-server schema comment", () => {

@@ -64,6 +64,11 @@ export interface ScanReport {
   trustBreakdown?: TrustBreakdown;
   /** Number of findings suppressed by policy/baseline (v4.4) */
   suppressedCount?: number;
+  /**
+   * What the loaded policy config turned off for this scan (v5.29).
+   * Present only when the config actually narrowed the scan.
+   */
+  policyEffect?: PolicyEffect;
   /** Whether scan completed fully (v4.4) */
   partialScan?: boolean;
   /** Threat timeline for forensics (v4.5) */
@@ -292,6 +297,13 @@ export interface ThreatIntelSource {
 export interface PolicyConfig {
   rules?: {
     disable?: string[];
+    /**
+     * Written justification per disabled rule id, from the mapping form
+     * `disable: { RULE_ID: "why" }` (v5.29). A rule id present in `disable`
+     * but absent here was declared without a reason, which is reported as
+     * POLICY_DISABLE_NO_REASON.
+     */
+    disableReasons?: Record<string, string>;
     severityOverrides?: Record<string, Severity>;
   };
   allowlist?: {
@@ -310,10 +322,22 @@ export interface PolicyConfig {
   };
   /** Path globs whose matching files are skipped by the scanner walk (v5.13). */
   ignore?: string[];
+  /**
+   * Written justification per ignore glob, from the mapping form
+   * `ignore: { "dist/**": "why" }` (v5.29). A glob present in `ignore` but
+   * absent here was declared without a reason: POLICY_IGNORE_NO_REASON.
+   */
+  ignoreReasons?: Record<string, string>;
   /** Internal-disclosure deny-list (see InternalDisclosurePolicy). */
   internalDisclosure?: InternalDisclosurePolicy;
   /** Validation problems collected while parsing (v5.3, fail-closed config validation) */
   warnings?: PolicyWarning[];
+  /**
+   * Basename of the config file this policy was parsed from, e.g.
+   * ".supply-chain-guard.yml" (set by loadPolicyConfig, v5.29). Reported so a
+   * reader can find the file that narrowed the scan.
+   */
+  sourceFile?: string;
 }
 
 /**
@@ -363,7 +387,9 @@ export type PolicyWarningRule =
   | "POLICY_UNKNOWN_KEY"
   | "POLICY_SUPPRESSION_NO_REASON"
   | "POLICY_MALFORMED_RULE_ID"
-  | "POLICY_INVALID_INTERNAL_TERM";
+  | "POLICY_INVALID_INTERNAL_TERM"
+  | "POLICY_DISABLE_NO_REASON"
+  | "POLICY_IGNORE_NO_REASON";
 
 /**
  * A problem found while parsing .supply-chain-guard.yml (v5.3).
@@ -381,6 +407,43 @@ export interface PolicyWarning {
   line?: number;
   /** Config file name, e.g. ".supply-chain-guard.yml" (set by loadPolicyConfig) */
   file?: string;
+}
+
+/**
+ * One thing a policy config switched off: a rule id, or a path glob, with the
+ * written justification when the config supplied one (v5.29).
+ */
+export interface PolicyEffectEntry {
+  /** Rule id, or path glob for `ignoredGlobs` */
+  id: string;
+  /** Written justification from the config; absent when none was given */
+  reason?: string;
+}
+
+/**
+ * The effective policy for a scan: what the loaded config removed from the
+ * result, named rather than counted (v5.29, issue 168).
+ *
+ * `suppressedCount` alone could not answer the only question that matters when
+ * a report comes back clean: WHAT was turned off. A count of 1 reads the same
+ * whether a noisy informational rule or the critical rule that would have
+ * failed the gate was disabled, and the `ignore:` form produced no count at
+ * all because it prunes files before any rule runs. Every output format
+ * renders this block, so a narrowed scan can no longer be mistaken for a clean
+ * one in whichever format the reader happens to be looking at.
+ *
+ * This carries policy METADATA only. Suppressed FINDINGS stay out of the
+ * machine formats, which is the separate and still-standing v5.2.40 rule.
+ */
+export interface PolicyEffect {
+  /** Config file the policy was read from, e.g. ".supply-chain-guard.yml" */
+  configFile: string;
+  /** Rule ids switched off by `rules.disable`: their findings never appear */
+  disabledRules: PolicyEffectEntry[];
+  /** Path globs under `ignore:`: matching files are never opened */
+  ignoredGlobs: PolicyEffectEntry[];
+  /** Rule ids named by `suppress` entries */
+  suppressedRules: PolicyEffectEntry[];
 }
 
 export interface ScanSummary {

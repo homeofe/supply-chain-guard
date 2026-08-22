@@ -77,7 +77,7 @@ export { analyzePublishingAnomalies, evaluateVersionDrift, checkRegistryVersionD
 export { scanReleaseArtifacts } from "./release-scanner.js";
 export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
-export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
+export { loadPolicyConfig, applyPolicy, applyBaseline, describePolicyEffect, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
 export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed } from "./threat-intel.js";
 export { feedStats, refreshFeed, parseFeedPayload, DEFAULT_FEED_URL } from "./feed.js";
@@ -132,6 +132,8 @@ export type {
   SolanaTransaction,
   PatternEntry,
   PolicyConfig,
+  PolicyEffect,
+  PolicyEffectEntry,
   InternalDisclosurePolicy,
   WatchlistEntry,
   WatchlistConfig,
