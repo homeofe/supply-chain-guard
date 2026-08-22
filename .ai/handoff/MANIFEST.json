@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:bc9f7b1fd352ab99e662303c2d495f8d1272939e7645d459b9f438cc4771c527",
-      "updated": "2026-08-22T13:29:37Z",
-      "lines": 2681,
+      "checksum": "sha256:1b0b50a17bc818e59d1773fea20c421633d2e6ea1de520f92f33a0d259a17b6e",
+      "updated": "2026-08-22T20:51:49Z",
+      "lines": 2727,
       "summary": "Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump."
     },
     "NEXT_ACTIONS.md": {

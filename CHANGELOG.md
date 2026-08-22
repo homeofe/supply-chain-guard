@@ -75,6 +75,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   way GitHub would, per event, and asserts the base is never the commit under
   test.
 
+  Anyone copying this workflow should know that the pull request leg does change
+  what it diffs, which an earlier draft of this entry and of `.ai/handoff/STATUS.md`
+  denied. It used to compare `origin/main...HEAD`, three-dot against the live tip,
+  which is exactly the pull request's own files. It now compares two endpoint trees
+  from `github.event.pull_request.base.sha`, the base tip recorded when the event
+  fired. With `strict` off in branch protection, nothing forces those to agree, and
+  once `main` advances the change set widens to include commits that are not the
+  pull request's. That is not simply stricter: Layer 2 looks for `STATUS.md` and
+  `MANIFEST.json` anywhere in the change set, and a commit pulled in from `main`
+  carries both, so a widened set can satisfy the gate for a pull request that
+  changed source and no handoff file. Measured on this repository on 2026-08-22:
+  against one merge ref, the live-tip selector returned 12 files and the same
+  merge ref against a base one merged commit older returned 15.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added

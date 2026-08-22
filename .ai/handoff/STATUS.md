@@ -57,8 +57,54 @@ Two halves, and neither works alone:
    gained a required `base` input, because a manual run has no event base and at
    `--level ci` a missing base now blocks instead of guessing.
 
-The pull request operand is not a change of verdict for that leg; it is what
-keeps that leg running once the CLI stops guessing.
+### Correction: the pull request operand DOES change that leg's change set
+
+An earlier revision of this entry said "the pull request operand is not a change
+of verdict for that leg; it is what keeps that leg running once the CLI stops
+guessing." The second half holds. The first half is wrong, and the measurement
+is below rather than the reasoning that produced it.
+
+3.9.2 resolved its own base on that leg. The checkout is a detached merge ref,
+the upstream lookup fails, and it fell through to `origin/main`, read live from
+the same clone, then diffed `origin/main...HEAD` (three-dot). The merge ref is
+rebuilt on the live tip, so that change set was exactly the pull request's own
+files. 3.10.0 diffs two endpoint trees from
+`github.event.pull_request.base.sha`, which is the base tip recorded on the pull
+request when the event fired, not the live one. `branches/main/protection`
+returns `strict: false`, read live on 2026-08-22, so a pull request is never
+forced up to date and nothing keeps the two operands in step. Pull request 165
+is the live instance: its `base.sha` is still `a5048bd`, one merged commit
+behind `main` at `1a141fe`.
+
+Measured on this repository, 2026-08-22, against `refs/pull/183/merge` (parents
+`1a141fe` and `ee0235d`):
+
+```
+git diff --name-only origin/main...refs/pull/183/merge   -> 12 files
+git diff --name-only a5048bd refs/pull/183/merge         -> 15 files
+```
+
+The extra three, `.ai/handoff/DASHBOARD.md`, `.ai/handoff/TRUST.md` and
+`src/__tests__/consumer-update-path-contract.test.ts`, are the whole of
+`1a141fe`, another author's commit, not that pull request's.
+
+Widening is not simply stricter, which is the part worth writing down. Layer 2
+sets `STATUS_TOUCHED` and `MANIFEST_TOUCHED` over the WHOLE change set and
+passes when both are set, so a commit dragged in from `main` carries the very
+two files that satisfy the gate. Constructed on top of `1a141fe`: one commit
+touching only `src/scanner.ts` and no handoff file, merged into a simulated
+merge ref. The live-tip selector returns `M src/scanner.ts` alone, which is the
+failing case. The same merge ref against the stale `a5048bd` returns that plus
+`M .ai/handoff/STATUS.md` and `M .ai/handoff/MANIFEST.json`, which is the
+passing case. On a stale base the widened change set can therefore mask a real
+drift failure, not merely report extra files.
+
+What remains true: passing an operand at all is what keeps that leg running,
+because 3.10.0 blocks a `--level ci` run given no base. The operand that would
+not widen is the base tip the merge ref was actually built on, which is
+`HEAD^1` of the merge ref rather than the event's recorded `base.sha`. That is
+a behaviour change to a required gate, so it is written here as an open item
+for the owner rather than made silently in this pull request.
 
 `src/__tests__/aahp-verify-base-contract.test.ts` evaluates the `||` chain the
 way GitHub would, per event, and asserts the resolved base is never the commit
