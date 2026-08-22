@@ -278,7 +278,14 @@ jobs:
           # fixture directory inspects 1. Deriving the number means it tracks the
           # repository instead of decaying into a stale constant that nobody
           # remembers how to justify.
-          floor=$(git ls-files -- src | grep -c '\.ts$' || echo 0)
+          #
+          # `|| true` and not `|| echo 0`: grep -c already PRINTS 0 when it
+          # matches nothing, and additionally exits 1, so an `echo 0` fallback
+          # appends a second zero and floor becomes two lines. The numeric test
+          # below then aborts with "integer expression expected" instead of the
+          # legible message it exists to print. A gate that fails illegibly is
+          # most of the way to a gate nobody trusts.
+          floor=$(git ls-files -- src | grep -c '\.ts$' || true)
           if [ "$floor" -eq 0 ]; then
             echo "::error title=Self-scan control::No TypeScript sources found under src/, so no file-count floor can be established. Refusing to pass without a control."
             exit 1
