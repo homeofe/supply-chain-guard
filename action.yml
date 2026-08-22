@@ -188,7 +188,9 @@ runs:
             or . == "NPM_NO_ARTIFACT"
             or . == "INTERNAL_DENYLIST_UNAVAILABLE"
             or . == "INTERNAL_DENYLIST_INVALID_ENTRY"
-            or . == "POLICY_INVALID_INTERNAL_TERM";
+            or . == "POLICY_INVALID_INTERNAL_TERM"
+            or . == "RISK_HISTORY_UNREADABLE"
+            or . == "TRIAGE_STORE_UNREADABLE";
           type == "object"
           and (.summary | type == "object")
           and (.findings | type == "array")
