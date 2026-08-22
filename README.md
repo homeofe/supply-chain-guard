@@ -310,9 +310,13 @@ Practically: the default gate exits non-zero on `critical` and `high` only, so *
 
 ```yaml
 rules:
-  disable: [INTERNAL_PRIVATE_IP, INTERNAL_HOSTNAME, INTERNAL_SERVICE_ENDPOINT,
-            INTERNAL_GIT_REMOTE, INTERNAL_DEV_PATH, INTERNAL_SINGLE_LABEL_URL]
+  disable:
+    INTERNAL_PRIVATE_IP: RFC1918 addresses are expected in this repository's fixtures
+    INTERNAL_HOSTNAME: internal names are already covered by a separate review
 ```
+
+The parser reads block style only; a flow sequence on one line
+(`disable: [A, B]`) is reported as `POLICY_UNKNOWN_KEY` and disables nothing.
 
 ### False-positive controls
 
@@ -451,9 +455,12 @@ Create `.supply-chain-guard.yml` in your project root to customize behavior:
 
 ```yaml
 rules:
+  # Every disabled rule needs a written reason, the same bar `suppress` has met
+  # since v5.3. The bare list form (`- HEX_ARRAY`) still disables the rule and is
+  # reported as POLICY_DISABLE_NO_REASON.
   disable:
-    - HEX_ARRAY
-    - CHARCODE_OBFUSCATION
+    HEX_ARRAY: minified vendor bundles in this repository, reviewed 2026-08
+    CHARCODE_OBFUSCATION: same bundles, same review
   severityOverrides:
     GHA_UNPINNED_ACTION: medium
 
@@ -471,10 +478,13 @@ allowlist:
     # says who publishes the code, not that every version of it is safe.
     - my-org
 
-# Skip files matched by these path globs (** / * / ?) during the scan.
+# Skip files matched by these path globs (** / * / ?) during the scan. These
+# files are never opened, so nothing about them reaches the report except the
+# policy block below. Each glob needs a written reason; the bare list form
+# (`- vendor/**`) still skips the path and is reported as POLICY_IGNORE_NO_REASON.
 ignore:
-  - vendor/**
-  - "**/*.min.js"
+  "vendor/**": third-party code, tracked by the upstream project's own scanning
+  "**/*.min.js": build output, scanned at source instead
 
 suppress:
   - rule: RELEASE_EXE_ARTIFACT
@@ -491,6 +501,37 @@ baseline:
 Findings can also be suppressed inline with a comment on the line directly
 above them: `// scg-ignore-next-line RULE reason` (JS/TS) or
 `# scg-ignore-next-line RULE` (Python/YAML/shell).
+
+### Where the policy is read from, and what that means on a pull request
+
+The policy file is read **from the directory being scanned**, and from nowhere
+else. There is no flag, environment variable or Action input that points the
+scanner at a policy outside the scan target.
+
+On a `pull_request` event the checkout materialises the **head of the proposing
+branch**, so the policy that governs the scan is the one on the branch under
+review, not the one on your default branch. A change that adds
+`.supply-chain-guard.yml` alongside the code it excuses is applying its own
+policy to itself. Anyone who can push a branch can therefore narrow the scan of
+that branch.
+
+That is a property of reading policy from the tree, and it is stated here rather
+than left to be discovered. What it is **not** is silent:
+
+- Every narrowing is named in the report, in **all nine output formats**,
+  including the markdown pull request comment the Action posts by default.
+  A scan narrowed by policy can no longer be mistaken for a clean scan in any
+  format, including `ignore:`, which removes files before any rule opens them
+  and used to leave no trace anywhere.
+- A narrowing declared without a written reason is reported as a finding
+  (`POLICY_DISABLE_NO_REASON`, `POLICY_IGNORE_NO_REASON`,
+  `POLICY_SUPPRESSION_NO_REASON`), so an undocumented exclusion costs a line in
+  the report rather than nothing.
+
+If your threat model includes an untrusted proposer, the controls that actually
+hold are outside this tool: require review on `.supply-chain-guard.yml` through
+`CODEOWNERS`, or scan a base-ref checkout in a separate job. Treat a policy file
+in a pull request diff as a change to your security gate, because it is one.
 
 ## Baseline Diffing (v4.4)
 

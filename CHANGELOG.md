@@ -9,6 +9,41 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- **Every scan report now names what the loaded policy switched off, in all nine
+  output formats** (`policyEffect` on `ScanReport`, rendered by `src/reporter.ts`
+  in text, JSON, markdown, SARIF, SBOM, HTML, badge, GitLab and JUnit). A config
+  in the scanned tree could remove the rule that would have failed the gate and
+  leave no trace a reader could find. Measured on a directory containing
+  `eval(atob(...))`: with `rules.disable: [EVAL_ATOB]` the scan went from exit 2
+  with one critical to exit 0 with none, `suppressedCount` reached 1 but never
+  named the rule, and the markdown report - the Action's default format and the
+  body of the pull request comment it posts - contained the word "suppress" zero
+  times. With `ignore: ["app.js"]` it was quieter still: `ignore` prunes files
+  before any rule opens them, so `suppressedCount` stayed 0 and every one of the
+  nine formats was silent. Both fixtures now name `EVAL_ATOB` and `app.js`
+  respectively in all nine. Policy METADATA is what is surfaced; suppressed
+  FINDINGS stay out of the machine formats, which is the separate v5.2.40 rule
+  and is unchanged.
+- **`POLICY_DISABLE_NO_REASON` and `POLICY_IGNORE_NO_REASON`** (medium), which
+  bring `rules.disable` and `ignore` up to the audit bar `suppress` has met since
+  v5.3. Both sections now accept a reason-carrying mapping form
+  (`EVAL_ATOB: why` and `"vendor/**": why`) alongside the existing list form; the
+  list form still disables and still excludes, it is simply reported as
+  undocumented. Nothing is vetoed: a narrowing without a written reason costs a
+  line in the report rather than nothing at all.
+
+- **The consumer-name rule is now enforced on the pull request title and body**,
+  not only on files. The `consumer-repo-disclosure` gate reads tracked files, so
+  it could never see PR metadata - which is the surface that cannot be retracted,
+  since a merged body stays indexed. A POSIX-ERE twin of the same pattern now runs
+  in the `PR metadata policy` required check, which is the only workflow triggered
+  by `edited` and therefore the only one that sees a body rewrite. The two copies
+  sit under different required check names on purpose, so neither can stand in for
+  the other, and a test asserts they stay byte-identical.
+- **The file gate now also covers `.github/workflows/*.yml`.** Measured before the
+  change: injecting a cross-repository reference into a workflow file left
+  `check:aahp` green, because no glob in the rule's include list reached that
+  directory.
 
 ### Changed
 
@@ -82,18 +117,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   weaker and different claim than staleness being self-announcing. The README now
   states the distinction and what it costs when those pull requests are never
   merged.
-- **The consumer-name rule is now enforced on the pull request title and body**,
-  not only on files. The `consumer-repo-disclosure` gate reads tracked files, so
-  it could never see PR metadata - which is the surface that cannot be retracted,
-  since a merged body stays indexed. A POSIX-ERE twin of the same pattern now runs
-  in the `PR metadata policy` required check, which is the only workflow triggered
-  by `edited` and therefore the only one that sees a body rewrite. The two copies
-  sit under different required check names on purpose, so neither can stand in for
-  the other, and a test asserts they stay byte-identical.
-- **The file gate now also covers `.github/workflows/*.yml`.** Measured before the
-  change: injecting a cross-repository reference into a workflow file left
-  `check:aahp` green, because no glob in the rule's include list reached that
-  directory.
 
 ### Fixed
 
