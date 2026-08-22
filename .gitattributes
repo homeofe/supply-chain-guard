@@ -8,3 +8,17 @@
 # regenerate MANIFEST.json - a required gate for every code commit - so on Windows
 # the handoff check could not be satisfied at all.
 *.sh text eol=lf
+
+# `.ai/handoff/STATUS.md` is an append-log: every pull request prepends its own
+# session note, so two branches almost always differ by one prepended block and
+# nothing else. `union` keeps both sides, which is the correct resolution here
+# and the only one that does not lose somebody's note.
+#
+# Verified for local `git merge`. GitHub does NOT honour merge drivers
+# server-side (measured 2026-07-31 in Shield: two PRs touching STATUS.md still
+# showed as CONFLICTING after a third merged), so a PR touching STATUS.md still
+# needs a local merge before it can land. What this removes is the HAND
+# resolution, not the merge itself. Measured here on 2026-08-23: twenty-two
+# rebases in one session, every one of them resolving this file by hand, in the
+# two repositories that lacked this line while eight siblings had it.
+.ai/handoff/STATUS.md merge=union

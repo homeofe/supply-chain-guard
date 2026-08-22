@@ -110,6 +110,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # The same release-authority gate as ci.yml's publish job, because this workflow
+      # is a SECOND publish path: it carries its own `tags:` trigger and moves :latest
+      # and :X.Y.Z on its own. Fixing only ci.yml would leave the container channel
+      # open to exactly the commit npm just refused.
+      #
+      # It gates the MANIFEST push rather than the per-platform builds. Those push
+      # untagged, digest-only images that no consumer can resolve by name; this job is
+      # where a tag starts pointing at a build.
+      #
+      # Deliberately NOT conditioned on the ref being a tag. On the manual recovery
+      # path GITHUB_SHA is the dispatched ref's commit, which is on main for any
+      # legitimate recovery, so the gate costs nothing there and there is no `if:` to
+      # get wrong. fetch-depth: 0 is required; see the gate script for why a shallow
+      # checkout is a hard failure rather than a silent pass.
+      #
+      # What this gate does not reach is recorded in one place, the header of
+      # scripts/check-release-ancestry.mjs, and repeated above the publish job in
+      # ci.yml: Actions runs a workflow from the file at the pushed ref, so the step
+      # binds only tags whose commit already contains it.
+      - name: Check out for the release-authority gate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Require the released commit to be on main
+        run: node scripts/check-release-ancestry.mjs
+
       - name: Download digests
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

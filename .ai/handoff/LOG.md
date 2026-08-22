@@ -33,25 +33,25 @@ This generated journal lists every release derived from CHANGELOG.md, newest fir
 | v5.25.8 | 2026-08-08 | Threat feed: 250 malicious-package IOCs imported from the GitHub Advisory Database with |
 | v5.25.7 | 2026-08-07 | Threat feed: 783 malicious-package IOCs imported from the GitHub Advisory Database with |
 | v5.25.6 | 2026-08-06 | Threat feed: 358 malicious-package IOCs imported from the GitHub Advisory Database |
-| v5.25.5 | 2026-08-05 | The Action's PR comment now explains a recovered clean scan instead of posting a |
+| v5.25.5 | 2026-08-05 | Bumped @elvatis_com/aahp 3.9.1 -> 3.9.2 (exact pin), and converged this repo's own |
 | v5.25.4 | 2026-08-05 | Threat feed: 251 malicious-package IOCs imported from the GitHub Advisory |
 | v5.25.3 | 2026-08-04 | Installed package self-scans no longer treat the compiled Shai-Hulud matcher |
 | v5.25.2 | 2026-08-04 | Adopted @elvatis_com/aahp 3.9.1 and migrated the existing handoff state to |
 | v5.25.1 | 2026-08-04 | 16 malicious package IOCs imported from the GitHub Advisory Database |
 | v5.25.0 | 2026-08-03 | --ecosystem <list> for scripts/import-threat-feed.mjs, to import only |
-| v5.24.0 | 2026-08-02 | The feed importer reported an undrainable backlog as harmless, which made a |
-| v5.23.5 | 2026-08-01 | The PointBlank indicator was routed to the wrong ecosystem. It was added as the |
+| v5.24.0 | 2026-08-02 | 3,569 additional npm package IOCs recovered from the 2026-07-26 and |
+| v5.23.5 | 2026-08-01 | 250 malicious package IOCs imported from the GitHub Advisory Database |
 | v5.23.4 | 2026-07-31 | 250 malicious package IOCs imported from the GitHub Advisory Database |
-| v5.23.3 | 2026-07-30 | A built release no longer reports itself as critically compromised. On the |
+| v5.23.3 | 2026-07-30 | Build-backed and real-bundle regressions. An isolated checkout is compiled |
 | v5.23.2 | 2026-07-30 | Threat intel: 250 malicious package IOCs imported from the GitHub Advisory |
-| v5.23.1 | 2026-07-30 | Pattern evaluation no longer silently stops on ordinary source files. The |
+| v5.23.1 | 2026-07-30 | Lexical masking now returns immediately when content has no |
 | v5.23.0 | 2026-07-29 | Bounded multi-line pattern matching (spansLines). The pattern engine |
-| v5.22.0 | 2026-07-29 | Nine detection rules fired on ordinary source code. Measured on a corpus of |
+| v5.22.0 | 2026-07-29 | Load-time pattern validation. A malformed regex anywhere in the pattern table used |
 | v5.21.0 | 2026-07-29 | Daily threat-intel import (2026-07-29): 250 malware package IOCs from the GitHub Advisory |
-| v5.20.2 | 2026-07-28 | The bundled feed was one import away from breaking the build. tsc reports |
+| v5.20.2 | 2026-07-28 | Feed-integrity tests: the bundled entry total must equal feed.json's entryCount, |
 | v5.20.1 | 2026-07-28 | 258 new threat indicators. 250 malicious-package IOCs imported from the |
 | v5.20.0 | 2026-07-27 | 259 new threat indicators. 250 malicious-package IOCs imported from the |
-| v5.19.0 | 2026-07-26 | The threat-feed importer no longer loses advisories silently. Its page cap |
+| v5.19.0 | 2026-07-26 | Repo process: AI-attribution gate. Tool and model attribution (a Claude Code markdown |
 | v5.18.2 | 2026-07-26 | Threat-feed import 2026-07-26. Imported 250 malicious-package IOCs from |
 | v5.18.1 | 2026-07-25 | The scanner's state directory now ignores itself. .scg-history/ holds |
 | v5.18.0 | 2026-07-25 | Internal-disclosure rule family (INTERNAL_*), a new detection axis. |
@@ -132,15 +132,15 @@ This generated journal lists every release derived from CHANGELOG.md, newest fir
 | v5.2.6 | 2026-05-08 | Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026) |
 | v5.2.5 | 2026-05-01 | Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) |
 | v5.2.4 | 2026-04-30 | Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026) |
-| v5.2.3 | 2026-04-26 | Documentation catch-up  bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
-| v5.2.2 | 2026-04-26 | Solana monitor: rate-limit-aware RPC client  closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
+| v5.2.3 | 2026-04-26 | Documentation catch-up - bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
+| v5.2.2 | 2026-04-26 | Solana monitor: rate-limit-aware RPC client - closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
 | v5.2.1 | 2026-04-26 | Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) |
-| v5.2.0 | 2026-04-08 | Self-Scan Clean + Text Wrapping  the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
+| v5.2.0 | 2026-04-08 | Self-Scan Clean + Text Wrapping - the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
 | v5.1.1 | 2026-04-07 | CI and test fixes |
-| v5.1.0 | 2026-04-07 | Comprehensive ASCII CLI output  complete redesign of the default text reporter. |
-| v5.0.1 | 2026-04-07 | False positive fixes  second pass after live workspace testing revealed additional FPs. |
-| v5.0.0 | 2026-04-07 | Context-Aware False Positive Elimination  workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemati... |
-| v4.9.0 | 2026-04-07 | New: SBOM Generator  reads package-lock.json (v2+) to generate CycloneDX 1.6 SBOMs with real components[] (name, vers... |
+| v5.1.0 | 2026-04-07 | Comprehensive ASCII CLI output - complete redesign of the default text reporter. |
+| v5.0.1 | 2026-04-07 | False positive fixes - second pass after live workspace testing revealed additional FPs. |
+| v5.0.0 | 2026-04-07 | Context-Aware False Positive Elimination - workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemat... |
+| v4.9.0 | 2026-04-07 | New: SBOM Generator - reads package-lock.json (v2+) to generate CycloneDX 1.6 SBOMs with real components[] (name, ver... |
 | v4.8.0 | 2026-04-04 | New: Continuous Risk Monitor -- persistent risk history, trend detection (spikes, stagnation, increasing) |
 | v4.7.0 | 2026-04-04 | New: Attack Graph Engine -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs... |
 | v4.6.0 | 2026-04-04 | New: Remediation Engine -- concrete, prioritized fix steps for every finding |

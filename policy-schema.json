@@ -12,12 +12,27 @@
       "additionalProperties": false,
       "properties": {
         "disable": {
-          "description": "Rule ids to disable entirely. Disabled findings are dropped and counted as suppressed.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Z][A-Z0-9_]*$"
-          }
+          "description": "Rule ids to disable entirely. A disabled rule's findings are dropped from the report before they are counted, so every entry is named in the scan report's policy block in all nine output formats. Prefer the mapping form 'RULE_ID: <why>', which records the justification; the bare list form still works and is reported as POLICY_DISABLE_NO_REASON.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[A-Z][A-Z0-9_]*$": {
+                  "description": "Why this rule is switched off (audit trail).",
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
         },
         "severityOverrides": {
           "description": "Map of rule id to the severity it should be reported with.",
@@ -81,9 +96,21 @@
       }
     },
     "ignore": {
-      "description": "Path globs (** / * / ?) whose matching files are skipped entirely by the scanner walk.",
-      "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "description": "Path globs (** / * / ?) whose matching files are skipped entirely by the scanner walk. Nothing about an ignored file reaches the report in any form, so every glob is named in the scan report's policy block in all nine output formats. Prefer the mapping form '<glob>: <why>', which records the justification; the bare list form still works and is reported as POLICY_IGNORE_NO_REASON.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "description": "Why this path is not scanned (audit trail).",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
     },
     "internalDisclosure": {
       "description": "Deny-list for the internal-disclosure rule family (INTERNAL_*). The built-in shape rules need none of this; this section is for names only your project knows. A list of internal hostnames committed to a public repository is itself the leak, so prefer hashedTerms (publishable) or externalFile (never published) over patterns.",

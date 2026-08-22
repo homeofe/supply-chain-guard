@@ -267,6 +267,46 @@ like any other. In order:
 9. Tag the **merged** commit on `main`, never the pre-merge commit, and push the tag.
    Pushing the tag is what triggers publish, the GitHub Release, the `v5` fast-forward
    and the multi-arch image build.
+
+   This step is now enforced rather than remembered. Both publish paths run
+   `scripts/check-release-ancestry.mjs` before anything leaves the runner: the `publish`
+   job in `ci.yml` before `npm publish`, and the `merge` job in `docker.yml` before the
+   image tags move. It fails the release if the tagged commit is not an ancestor of
+   `origin/main`.
+
+   To get the same answer locally before tagging, without burning a version number, run
+   `npm run check:release-ancestry -- --commit HEAD` from the merged commit. **The
+   `--commit` argument is required outside GitHub Actions.** Without it the script falls
+   back to `$GITHUB_SHA`, which is empty on a workstation, and it exits `2` with "No
+   commit to check" rather than passing on nothing: verified by running both forms on
+   2026-08-22. Exit `0` means the commit is on `main` and exit `6` means it is not; every
+   other code means the question could not be answered, and they are listed in the script
+   header.
+
+   The branch is not overridable from either workflow. Both call the script with no
+   arguments, so it always checks against `main`. A release cut from a maintenance branch
+   would exit `6`, and authorising one means passing `--branch` in the workflow, which is
+   a deliberate edit rather than something that can happen by accident. That matches the
+   two-branch model in step 10 below.
+
+   Why it is needed: required status checks are a property of `refs/heads/main` and are
+   never evaluated on a `refs/tags/*` push, so of the three contexts branch protection
+   requires, only `Build and Test` runs on the released commit. `needs: build` did already
+   make `publish` wait for the full compat matrix and the container build and scan, but
+   none of that says where the commit lives, and the tag validator that already existed
+   compares the tag string against `package.json` and is satisfied by any commit whose
+   version field matches. Because this repository squash-merges, the local pre-merge
+   commit always has a different sha from the one on `main` while its content looks
+   identical, so tagging the wrong one would have published four channels with a fully
+   green run and no failing step.
+
+   That has not happened here. Measured on 2026-08-22, all 138 semver tags published to
+   date are ancestors of `main`, and none is not. The gate closes a latent hole rather
+   than cleaning up after an incident. Note also what it cannot close: Actions runs a
+   workflow from the file present at the pushed ref, so the gate binds only tags whose
+   commit already contains it, and an actor who controls the commit can omit the step.
+   Restricting who may create `refs/tags/v*` is the control for that case and is an open
+   owner decision on https://github.com/homeofe/supply-chain-guard/issues/167.
 10. Delete the branch and confirm it is gone on **both** sides. When a release is
     finished the repository has exactly two branches, `main` and `v5`, no open pull
     requests and no open issues.

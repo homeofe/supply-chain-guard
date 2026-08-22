@@ -207,10 +207,17 @@ describe("issue #54: threat-intel indicator hardening", () => {
   });
 
   it("updateThreatFeed filters invalid entries before writing the cache", async () => {
-    vi.stubGlobal("fetch", async () => ({
-      ok: true,
-      json: async () => [legitDomain, { type: "regex", value: "(", severity: "critical" }],
-    }));
+    // A real Response, not a two-property stand-in. updateThreatFeed reads the
+    // body as a stream under a byte cap (issue 170), so the stub has to carry
+    // headers and a body the way the global fetch returns them.
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(
+          JSON.stringify([legitDomain, { type: "regex", value: "(", severity: "critical" }]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
 
     const result = await updateThreatFeed("https://github.com/homeofe/supply-chain-guard/raw/main/feed.json", tempDir);
 
