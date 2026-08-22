@@ -23,6 +23,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as https from "node:https";
+import type { Finding } from "./types.js";
 import {
   CACHE_DIR,
   FEED_CACHE_FILE,
@@ -57,6 +58,160 @@ export function feedStats(feed: FeedIOC[]): FeedStats {
     bySeverity[ioc.severity] = (bySeverity[ioc.severity] ?? 0) + 1;
   }
   return { total: feed.length, byType, bySeverity };
+}
+
+// ---------------------------------------------------------------------------
+// Feed freshness (offline)
+// ---------------------------------------------------------------------------
+
+/**
+ * Age, in days, past which the rule set in use can no longer claim currency.
+ *
+ * Why this exists at all: `scan` runs OFFLINE against the feed bundled with the
+ * installed version. A consumer that pins an exact version and never moves the
+ * pin therefore freezes its detection rules at that release's date, and until
+ * now nothing reported it - not the exit code, not the risk score, not the
+ * check name. The pin kept producing a green check while the rules aged, which
+ * is the one failure mode a scanner cannot afford, because the green check is
+ * the whole reason anybody trusts it.
+ *
+ * The number is chosen against this project's own measured release rate: 134
+ * releases in the 155 days to 2026-08-21, a median of about 20 hours between
+ * releases. A rule set whose newest indicator is over a month old is therefore
+ * around a hundred releases behind, not one or two.
+ */
+export const FEED_STALE_AFTER_DAYS = 30;
+
+/** Rule id of the staleness finding. Stable: consumers exclude it by name. */
+export const FEED_STALE_RULE = "THREAT_FEED_STALE";
+
+export interface FeedFreshness {
+  /** `YYYY-MM-DD` of the newest usable indicator, or null if none was usable. */
+  newestIndicator: string | null;
+  /** Whole days between the newest usable indicator and `now`, or null. */
+  ageDays: number | null;
+  /** How many entries carried a usable, non-future `firstSeen`. */
+  datedEntries: number;
+  /** True when the rule set is older than FEED_STALE_AFTER_DAYS, or undatable. */
+  stale: boolean;
+}
+
+const MS_PER_DAY = 86_400_000;
+const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
+
+/**
+ * Parse a `firstSeen` value into a UTC epoch, or null if it is not a real
+ * calendar date. Rejects values that parse but do not round-trip (`2026-02-31`),
+ * because Date.UTC silently rolls those over into a later, wrong day.
+ */
+function indicatorDateMs(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = ISO_DATE_PREFIX.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const ms = Date.UTC(year, month - 1, day);
+  if (!Number.isFinite(ms)) return null;
+  const parsed = new Date(ms);
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return ms;
+}
+
+/**
+ * How old the rule set actually in use is, derived from the newest `firstSeen`
+ * across the entries the scan will match against. Pure, offline and
+ * deterministic: it reads only the feed that was passed in.
+ *
+ * Deliberately computed over the EFFECTIVE feed (loadThreatIntel(): bundled
+ * plus a cache entry younger than 24h), not over the bundled feed alone. That
+ * makes the answer a statement about the consequence - how recent are the rules
+ * this scan can match - rather than about the configuration. A consumer running
+ * `feed refresh` before each scan is genuinely current even on an old pin, and
+ * is correctly reported as such.
+ *
+ * A `firstSeen` in the FUTURE relative to `now` is ignored rather than trusted.
+ * Trusting it would let one mistyped year in one entry make every feed look
+ * permanently current, which is precisely the false negative this function is
+ * here to prevent.
+ */
+export function feedFreshness(
+  feed: readonly FeedIOC[],
+  now: number | Date = Date.now(),
+): FeedFreshness {
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  let newestMs: number | null = null;
+  let datedEntries = 0;
+
+  for (const ioc of feed) {
+    const ms = indicatorDateMs((ioc as { firstSeen?: unknown }).firstSeen);
+    if (ms === null || ms > nowMs) continue;
+    datedEntries += 1;
+    if (newestMs === null || ms > newestMs) newestMs = ms;
+  }
+
+  // No entry carried a usable date. That is not evidence of freshness, so it
+  // reports as stale: an undatable rule set is unclassifiable, and a staleness
+  // check that stays silent on the one input it cannot classify is the check
+  // that never fires.
+  if (newestMs === null) {
+    return { newestIndicator: null, ageDays: null, datedEntries: 0, stale: true };
+  }
+
+  const ageDays = Math.floor((nowMs - newestMs) / MS_PER_DAY);
+  return {
+    newestIndicator: new Date(newestMs).toISOString().slice(0, 10),
+    ageDays,
+    datedEntries,
+    stale: ageDays > FEED_STALE_AFTER_DAYS,
+  };
+}
+
+/**
+ * The staleness finding, or an empty array when the rule set is current.
+ *
+ * Severity is `medium` on purpose. It moves the score off zero and the risk
+ * level off `clean`, so the condition is visible in every report format and in
+ * the Action's pull request comment, without silently turning the default
+ * `fail-on: critical` gate red for every consumer on the day this ships.
+ * Raising it is a policy decision for the maintainer, not a side effect.
+ */
+export function feedStalenessFindings(freshness: FeedFreshness): Finding[] {
+  if (!freshness.stale) return [];
+
+  const age =
+    freshness.ageDays === null || freshness.newestIndicator === null
+      ? "of unknown age (no indicator in it carries a usable date)"
+      : `${freshness.ageDays} days old (newest indicator ${freshness.newestIndicator}, ` +
+        `across ${freshness.datedEntries} dated indicators)`;
+
+  return [
+    {
+      rule: FEED_STALE_RULE,
+      description:
+        `The threat-intel rule set this scan matched against is ${age}. ` +
+        `Scanning is offline, so indicators published after that date could not ` +
+        `be detected by this run, and no other part of the result says so.`,
+      severity: "medium",
+      confidence: 1.0,
+      category: "trust",
+      rationale:
+        "The bundled rule set travels with the installed version, so a version " +
+        "pin that stops moving freezes detection at that release's date while " +
+        "every scan keeps reporting success.",
+      recommendation:
+        "Update supply-chain-guard to a current release, or run " +
+        "`supply-chain-guard feed refresh` before the scan to merge the " +
+        `published feed for 24h. Exclude the ${FEED_STALE_RULE} rule only if a ` +
+        "deliberately frozen rule set is the intent.",
+    },
+  ];
 }
 
 // ---------------------------------------------------------------------------
