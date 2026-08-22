@@ -17,18 +17,23 @@
  *      matchPackageIOC(). A refreshed cache therefore extends detection at
  *      scan time without a new npm release.
  *
- * Zero-dependency: uses node:https directly (mockable in tests).
+ * Zero-dependency: the download goes through remote-download.ts, the package's
+ * bounded HTTPS retrieval module, which is the same code path the npm, PyPI and
+ * VS Code scanners use. It is node:https underneath (mockable in tests) with an
+ * absolute deadline, a byte cap and per-hop redirect revalidation added.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as https from "node:https";
+import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import {
   CACHE_DIR,
   FEED_CACHE_FILE,
+  FEED_REMOTE_LIMITS,
   isValidFeedIOC,
   normalizeFeedIOC,
   type FeedIOC,
+  type FeedLimitOverrides,
 } from "./threat-intel.js";
 
 /** Published feed location: the committed feed.json on the main branch. */
@@ -120,30 +125,23 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
   return normalizedEntries;
 }
 
-/** Download a URL over HTTPS and resolve with the response body. */
-function httpsGetBody(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, (res: {
-      statusCode?: number;
-      on: (event: string, handler: (chunk?: Buffer) => void) => void;
-    }) => {
-      const status = res.statusCode ?? 0;
-      let data = "";
-      res.on("data", (chunk?: Buffer) => {
-        if (chunk) data += chunk.toString();
-      });
-      res.on("end", () => {
-        if (status !== 200) {
-          reject(new Error(`HTTP ${status}`));
-          return;
-        }
-        resolve(data);
-      });
-    });
-    req.on("error", (err: Error) => {
-      reject(new Error(`network error: ${err.message}`));
-    });
-  });
+/**
+ * Download a URL over HTTPS and resolve with the response body.
+ *
+ * This used to be a hand-rolled https.get with no deadline and no cap, so a peer
+ * that sent headers and then stalled held `feed refresh` open with no output and
+ * no exit, and a peer that sent an oversized document was buffered in full. The
+ * request now goes through the package's bounded downloader, which carries an
+ * absolute deadline across every redirect hop, refuses a declared Content-Length
+ * over the cap before reading a byte, and counts bytes while streaming when no
+ * length is declared.
+ */
+async function httpsGetBody(url: string, limits: RemoteRequestLimits): Promise<string> {
+  const { body } = await fetchHttpsBuffer(url, limits);
+  // Decode ONCE over the whole buffer. The previous reader did `data +=
+  // chunk.toString()` per chunk, which turns a multi-byte UTF-8 sequence split
+  // across a chunk boundary into replacement characters.
+  return body.toString("utf-8");
 }
 
 /**
@@ -152,13 +150,21 @@ function httpsGetBody(url: string): Promise<string> {
  * for 24h (CACHE_TTL_MS in threat-intel.ts); re-run daily for same-day
  * protection between npm releases. Never crashes the process on network
  * failure - callers get a rejected promise with a clear message.
+ *
+ * The download is bounded by FEED_REMOTE_LIMITS. `limitOverrides` relaxes or
+ * tightens a single dimension per call (a slow link may want a longer deadline)
+ * and leaves the rest at the package defaults. Every bound fails closed: the
+ * download is abandoned, nothing is written, and the previous cache stays in
+ * effect.
  */
 export async function refreshFeed(
   feedUrl: string = DEFAULT_FEED_URL,
   cacheDir: string = CACHE_DIR,
+  limitOverrides: FeedLimitOverrides = {},
 ): Promise<RefreshResult> {
+  const limits: RemoteRequestLimits = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
   try {
-    const body = await httpsGetBody(feedUrl);
+    const body = await httpsGetBody(feedUrl, limits);
     const entries = parseFeedPayload(body);
 
     fs.mkdirSync(cacheDir, { recursive: true });
