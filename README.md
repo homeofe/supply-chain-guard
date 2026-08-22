@@ -416,6 +416,14 @@ SCG_INTERNAL_DISCLOSURE_FILE=~/.config/scg/internal-terms supply-chain-guard sca
 
 The external file is one entry per line, `#` for comments, `sha256:<digest>` for a hashed entry, `/pattern/flags` for a regex, anything else is a case-insensitive literal. If the file is configured but absent (a shared CI runner that never received it), you get an `INTERNAL_DENYLIST_UNAVAILABLE` finding at `info` severity rather than silence: a deny-list that quietly stopped running looks exactly like a repository that is clean. An entry that cannot be compiled is reported the same way (`INTERNAL_DENYLIST_INVALID_ENTRY`, medium). Neither finding ever prints the entry, and the environment variable is named but its value is not, because a path can itself contain an account name.
 
+**The two sources are not equally trusted, and the difference is deliberate.** `SCG_INTERNAL_DISCLOSURE_FILE` is set by whoever runs the scan, so it may name any path on the machine and carry any pattern. `internalDisclosure.externalFile` and `internalDisclosure.patterns` live in the committed policy file, which travels inside the repository being scanned, and scanning a repository you do not own is the ordinary case for this tool. Entries from there are therefore bounded:
+
+- `externalFile` must stay inside the scanned directory. An absolute path is refused, a relative path that climbs out with `..` is refused, and so is one that leaves through a symbolic link. The file is not opened, so nothing about a path outside the tree reaches the report.
+- A `patterns` regular expression is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier (`(a+)+`, `(a?)*`, and the like). That shape can take exponential time to report no match, so one committed line would otherwise occupy a runner until the workflow times out.
+- Whatever survives those checks runs under a wall-clock budget for the whole scan. On overrun the file reports `INTERNAL_DISCLOSURE_TRUNCATED` rather than running on.
+
+A refusal is an `INTERNAL_DENYLIST_REFUSED` finding at `medium` severity, and like every other coverage finding it marks the scan partial rather than passing quietly. None of this applies to the environment-variable source.
+
 **One more note on the paradox.** `allowlist.domains` also answers `INTERNAL_HOSTNAME`, `INTERNAL_SERVICE_ENDPOINT` and `INTERNAL_GIT_REMOTE` for a given host, which is convenient and publishes the host name. If that is not acceptable, suppress by path instead, which names nothing:
 
 ```yaml

@@ -28,6 +28,7 @@ import {
   MAX_LINE_LENGTH,
   MAX_FINDINGS_PER_RULE,
   MAX_FINDINGS_PER_FILE,
+  MAX_SCANNED_TREE_REGEX_LENGTH,
 } from "../internal-disclosure.js";
 import { loadPolicyConfig, applyPolicy } from "../policy-engine.js";
 import { scan } from "../scanner.js";
@@ -1234,6 +1235,322 @@ describe("internal-disclosure: configurable deny-list", () => {
       rules(scanInternalDisclosure('host = "vault.corp"', "src/config.ts", runtime)),
     ).toContain("INTERNAL_HOSTNAME");
   });
+});
+
+// ---------------------------------------------------------------------------
+// Trust boundary: the committed policy file travels inside the scanned tree
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether this host lets an unprivileged process create a directory link. On
+ * Windows without Developer Mode it does not, so the one test that needs one is
+ * skipped there and runs on CI.
+ */
+const directoryLinksSupported = (() => {
+  const probe = fs.mkdtempSync(path.join(os.tmpdir(), "scg-link-probe-"));
+  try {
+    fs.mkdirSync(path.join(probe, "target"));
+    fs.symlinkSync(
+      path.join(probe, "target"),
+      path.join(probe, "link"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(probe, { recursive: true, force: true });
+  }
+})();
+
+describe("internal-disclosure: deny-list entries supplied by the scanned tree", () => {
+  const SENTINEL = "alpha-sentinel-9f3";
+  let root: string;
+  let scanDir: string;
+  let outsideDir: string;
+  let outsideFile: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-trust-"));
+    scanDir = path.join(root, "repo");
+    outsideDir = path.join(root, "outside");
+    fs.mkdirSync(scanDir);
+    fs.mkdirSync(outsideDir);
+    outsideFile = path.join(outsideDir, "private-inventory.txt");
+    // Line 3 cannot be compiled. That matters: if the loader ever opens this
+    // file it announces the fact with INTERNAL_DENYLIST_INVALID_ENTRY, so the
+    // absence of that finding is what proves the file was never read.
+    fs.writeFileSync(
+      outsideFile,
+      ["# outside the scanned tree", SENTINEL, "sha256:this-is-not-a-digest", ""].join("\n"),
+      "utf-8",
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  function writePolicy(...lines: string[]): void {
+    fs.writeFileSync(path.join(scanDir, ".supply-chain-guard.yml"), lines.join("\n"), "utf-8");
+  }
+
+  /** Load with an empty environment, so only the committed config is in play. */
+  function loadFromCommittedConfig() {
+    return loadInternalDisclosureConfig(
+      scanDir,
+      loadPolicyConfig(scanDir),
+      {} as NodeJS.ProcessEnv,
+    );
+  }
+
+  function loadFromOperatorFile(file: string) {
+    return loadInternalDisclosureConfig(scanDir, null, {
+      [INTERNAL_DISCLOSURE_ENV]: file,
+    } as NodeJS.ProcessEnv);
+  }
+
+  function probeLine(): string {
+    return `const probe = "${SENTINEL}";`;
+  }
+
+  it("refuses a committed externalFile that climbs out of the scanned tree", () => {
+    // The portable vector: no knowledge of the host layout is needed.
+    writePolicy("internalDisclosure:", "  externalFile: ../outside/private-inventory.txt");
+    const runtime = loadFromCommittedConfig();
+
+    const refused = runtime.loadFindings.filter((f) => f.rule === "INTERNAL_DENYLIST_REFUSED");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].severity).toBe("medium");
+    expect(refused[0].description).toContain("outside the scanned directory");
+
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_INVALID_ENTRY");
+    expect(runtime.matchers).toHaveLength(0);
+    expect(runtime.enabled).toBe(false);
+    expect(rules(scanInternalDisclosure(probeLine(), "src/app.js", runtime))).not.toContain(
+      "INTERNAL_DENYLIST_MATCH",
+    );
+  });
+
+  it("refuses an absolute externalFile from the committed config", () => {
+    writePolicy("internalDisclosure:", `  externalFile: ${outsideFile.replace(/\\/g, "/")}`);
+    const runtime = loadFromCommittedConfig();
+
+    const refused = runtime.loadFindings.filter((f) => f.rule === "INTERNAL_DENYLIST_REFUSED");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].description).toContain(INTERNAL_DISCLOSURE_ENV);
+
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_INVALID_ENTRY");
+    expect(runtime.matchers).toHaveLength(0);
+  });
+
+  it.skipIf(!directoryLinksSupported)(
+    "refuses a committed externalFile that leaves the tree through a link",
+    () => {
+      fs.symlinkSync(
+        outsideDir,
+        path.join(scanDir, "linked"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      // Lexically this never leaves the scan directory. Only resolving the link
+      // shows that it does.
+      writePolicy("internalDisclosure:", "  externalFile: linked/private-inventory.txt");
+      const runtime = loadFromCommittedConfig();
+
+      const refused = runtime.loadFindings.filter((f) => f.rule === "INTERNAL_DENYLIST_REFUSED");
+      expect(refused).toHaveLength(1);
+      expect(refused[0].description).toContain("symbolic link");
+      expect(runtime.matchers).toHaveLength(0);
+    },
+  );
+
+  it("still reads a deny-list file that stays inside the scanned tree", () => {
+    fs.mkdirSync(path.join(scanDir, "config"));
+    fs.writeFileSync(path.join(scanDir, "config", "terms.txt"), `${SENTINEL}\n`, "utf-8");
+    writePolicy("internalDisclosure:", "  externalFile: config/terms.txt");
+    const runtime = loadFromCommittedConfig();
+
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(rules(scanInternalDisclosure(probeLine(), "src/app.js", runtime))).toContain(
+      "INTERNAL_DENYLIST_MATCH",
+    );
+  });
+
+  it("reports an absent in-tree file as unavailable rather than refused", () => {
+    // Containment must not swallow the ordinary absence this feature relies on.
+    writePolicy("internalDisclosure:", "  externalFile: config/terms.txt");
+    const runtime = loadFromCommittedConfig();
+    expect(rules(runtime.loadFindings)).toEqual(["INTERNAL_DENYLIST_UNAVAILABLE"]);
+  });
+
+  it("leaves the operator's environment variable free to point outside the tree", () => {
+    const runtime = loadFromOperatorFile(outsideFile);
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(rules(scanInternalDisclosure(probeLine(), "src/app.js", runtime))).toContain(
+      "INTERNAL_DENYLIST_MATCH",
+    );
+  });
+
+  it("keeps per-line reporting for the operator's source, by decision", () => {
+    // Recorded choice, not an oversight: the operator chose the file, and
+    // per-line reporting is what makes a silently broken deny-list visible.
+    const runtime = loadFromOperatorFile(outsideFile);
+    const invalid = runtime.loadFindings.filter(
+      (f) => f.rule === "INTERNAL_DENYLIST_INVALID_ENTRY",
+    );
+    expect(invalid).toHaveLength(1);
+    expect(invalid[0].description).toContain("line 3");
+    expect(invalid[0].description).toContain(INTERNAL_DISCLOSURE_ENV);
+    expect(invalid[0].description).not.toContain(outsideDir);
+  });
+
+  it(
+    "refuses a pathological committed pattern and finishes inside a stated budget",
+    { timeout: performanceBudget(60_000) },
+    () => {
+      writePolicy("internalDisclosure:", "  patterns:", '    - "/(a+)+$/"');
+      const runtime = loadFromCommittedConfig();
+
+      // A line the deny-list pass is still willing to inspect, built so the
+      // pattern can never match it. The wall clock is asserted FIRST and on
+      // purpose: it is the assertion that fails if the refusal ever stops
+      // happening, and a reviewer can confirm it is load-bearing by narrowing
+      // the refusal to the wrong origin and watching this line, not the ones
+      // below it, turn red after tens of seconds.
+      const hostile = `const probe = "${"a".repeat(30)}b";`;
+      const started = performance.now();
+      const found = scanInternalDisclosure(hostile, "src/app.js", runtime);
+      const elapsed = performance.now() - started;
+      expect(elapsed).toBeLessThan(performanceBudget(5_000));
+      expect(rules(found)).not.toContain("INTERNAL_DENYLIST_MATCH");
+
+      const refused = runtime.loadFindings.filter((f) => f.rule === "INTERNAL_DENYLIST_REFUSED");
+      expect(refused).toHaveLength(1);
+      expect(refused[0].description).toContain("exponential");
+      expect(runtime.matchers).toHaveLength(0);
+    },
+  );
+
+  it("leaves an ordinary committed pattern alone", () => {
+    // Precision half of the contract: over-refusing would get the feature
+    // switched off, which is worse than the shape it guards against.
+    writePolicy(
+      "internalDisclosure:",
+      "  patterns:",
+      "    - /build-\\d{2}\\.corp/",
+      "    - /(alpha|beta)-service/",
+      "    - sample-service",
+    );
+    const runtime = loadFromCommittedConfig();
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(runtime.matchers).toHaveLength(3);
+  });
+
+  it("caps the length of a committed regex but not of the operator's", () => {
+    const long = `/${"a".repeat(MAX_SCANNED_TREE_REGEX_LENGTH + 1)}/`;
+    writePolicy("internalDisclosure:", "  patterns:", `    - "${long}"`);
+    const fromConfig = loadFromCommittedConfig();
+    expect(rules(fromConfig.loadFindings)).toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(fromConfig.matchers).toHaveLength(0);
+
+    const operatorFile = path.join(outsideDir, "long-pattern.txt");
+    fs.writeFileSync(operatorFile, `${long}\n`, "utf-8");
+    const fromOperator = loadFromOperatorFile(operatorFile);
+    expect(rules(fromOperator.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(fromOperator.matchers).toHaveLength(1);
+  });
+
+  it("stops scanned-tree matchers once their budget is gone, and says so", () => {
+    const runtime = emptyInternalDisclosureRuntime();
+    runtime.matchers.push(
+      {
+        kind: "literal",
+        literal: "operator-term",
+        redact: false,
+        label: `$${INTERNAL_DISCLOSURE_ENV} line 1`,
+        origin: "operator",
+      },
+      {
+        kind: "literal",
+        literal: "tree-term",
+        redact: false,
+        label: "patterns[0]",
+        origin: "scanned-tree",
+      },
+    );
+    runtime.enabled = true;
+    runtime.scannedTreeBudgetMs = 0;
+
+    const found = scanInternalDisclosure(
+      'const a = "operator-term tree-term";',
+      "src/app.js",
+      runtime,
+    );
+    expect(
+      found.filter((f) => f.rule === "INTERNAL_DENYLIST_MATCH").map((f) => f.match),
+    ).toEqual(["operator-term"]);
+    expect(rules(found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+  });
+
+  it(
+    "charges scanned-tree matchers for the time they spend",
+    { timeout: performanceBudget(60_000) },
+    () => {
+      const slow = `const slow = "${"a".repeat(22)}b";`;
+      const content = [
+        ...Array.from({ length: 8 }, () => slow),
+        'const late = "tree-term";',
+      ].join("\n");
+
+      function measure(budgetMs: number) {
+        const runtime = emptyInternalDisclosureRuntime();
+        runtime.matchers.push(
+          // Built by hand on purpose. loadInternalDisclosureConfig refuses this
+          // shape outright; what is under test here is the second layer, the
+          // budget that catches a pattern the shape check would let through.
+          {
+            kind: "regex",
+            regex: /(a+)+$/i,
+            redact: false,
+            label: "patterns[0]",
+            origin: "scanned-tree",
+          },
+          {
+            kind: "literal",
+            literal: "tree-term",
+            redact: false,
+            label: "patterns[1]",
+            origin: "scanned-tree",
+          },
+        );
+        runtime.enabled = true;
+        runtime.scannedTreeBudgetMs = budgetMs;
+
+        const started = performance.now();
+        const found = scanInternalDisclosure(content, "src/app.js", runtime);
+        return { elapsed: performance.now() - started, found, runtime };
+      }
+
+      // The generous run goes first so the one-off cost of warming the pattern
+      // is charged to the run that is allowed to do all the work. Comparing the
+      // two runs, rather than asserting an absolute duration, keeps this
+      // meaningful on a machine of any speed.
+      const unbounded = measure(600_000);
+      const bounded = measure(1);
+
+      // Control: with a budget it cannot exhaust, the pass reaches the last
+      // line and finds the term there. Without this the comparison below would
+      // hold just as well for a deny-list that never ran at all.
+      expect(rules(unbounded.found)).toContain("INTERNAL_DENYLIST_MATCH");
+
+      // With a budget of one millisecond the first line spends it, and the pass
+      // stops instead of working through the rest of the file.
+      expect(bounded.runtime.scannedTreeBudgetMs).toBeLessThanOrEqual(0);
+      expect(rules(bounded.found)).toContain("INTERNAL_DISCLOSURE_TRUNCATED");
+      expect(bounded.found.filter((f) => f.rule === "INTERNAL_DENYLIST_MATCH")).toHaveLength(0);
+      expect(bounded.elapsed).toBeLessThan(unbounded.elapsed / 3);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------

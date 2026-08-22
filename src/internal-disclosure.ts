@@ -70,6 +70,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding, PatternEntry, PolicyConfig, Severity } from "./types.js";
 import { isPatternMatchAccepted, validatePatternSet } from "./patterns.js";
+import { hasContainedExistingAncestor, isContainedPath } from "./pattern-scanner.js";
+import { hasNestedUnboundedQuantifier } from "./regex-complexity.js";
 
 // ---------------------------------------------------------------------------
 // Reserved documentation space (the value layer)
@@ -1208,6 +1210,33 @@ export const MAX_FINDINGS_PER_FILE = 100;
  */
 export const MAX_MATCH_ATTEMPTS_PER_RULE = 20000;
 
+/**
+ * Longest regular-expression source accepted from a deny-list entry that the
+ * scanned tree itself supplied. Internal-term patterns are short by nature
+ * (a hostname shape, a project prefix, an identifier format); a source longer
+ * than this is not a deny-list entry, it is a payload.
+ */
+export const MAX_SCANNED_TREE_REGEX_LENGTH = 200;
+
+/**
+ * Wall-clock budget, per scan, for matchers the scanned tree itself supplied.
+ *
+ * This is the second layer, not the first. It is checked BETWEEN matcher
+ * invocations and therefore cannot interrupt one already-running `exec`, which
+ * is why a scanned-tree pattern is also refused at compile time when its shape
+ * can backtrack exponentially. What this bounds is the aggregate: many cheap
+ * matchers over many lines, and any pattern that is merely slow rather than
+ * astronomical.
+ *
+ * The value is chosen to be unreachable by a real deny-list and still a hard
+ * stop. Measured against this project's own `src/` tree, 196 files, 96,133
+ * lines, 5.23 MB, with six ordinary committed entries: 108 ms. Overrunning is
+ * reported (INTERNAL_DISCLOSURE_TRUNCATED, which makes the scan partial), so a
+ * budget set too low would not fail silently; it would fail loudly on a clean
+ * repository, which is the outcome this margin exists to avoid.
+ */
+export const SCANNED_TREE_MATCHER_BUDGET_MS = 30_000;
+
 /** Longest line the deny-list pass inspects. */
 const MAX_DENYLIST_LINE = MAX_LINE_LENGTH;
 
@@ -1480,6 +1509,20 @@ export function hashInternalTerm(term: string, salt?: string | null): string {
   return crypto.createHash("sha256").update(input, "utf8").digest("hex");
 }
 
+/**
+ * Who supplied a deny-list entry, which is the only thing that decides how far
+ * it is trusted.
+ *
+ *   `operator`     the SCG_INTERNAL_DISCLOSURE_FILE environment variable, set
+ *                  by whoever runs the scan. Same trust level as the scan
+ *                  itself: it may name any path and carry any pattern.
+ *   `scanned-tree` the committed `.supply-chain-guard.yml`, which travels with
+ *                  the tree under test. A scan of somebody else's repository
+ *                  reads their file, so these entries are input, not
+ *                  configuration, and are bounded accordingly.
+ */
+export type DenyMatcherOrigin = "operator" | "scanned-tree";
+
 /** A compiled deny-list entry. */
 export interface DenyMatcher {
   kind: "literal" | "regex";
@@ -1493,6 +1536,8 @@ export interface DenyMatcher {
   redact: boolean;
   /** Safe label for the finding. Never the term when `redact` is true. */
   label: string;
+  /** Trust level of the source this matcher came from. */
+  origin: DenyMatcherOrigin;
 }
 
 /** Everything the scan needs to evaluate the configured deny-list. */
@@ -1507,6 +1552,12 @@ export interface InternalDisclosureRuntime {
   enabled: boolean;
   /** Salt applied to hashed terms, or null when the digests are unsalted. */
   salt: string | null;
+  /**
+   * Wall-clock milliseconds still available, across the whole scan, to matchers
+   * with origin `scanned-tree`. Decremented as they run; at or below zero they
+   * stop running and the file records INTERNAL_DISCLOSURE_TRUNCATED instead.
+   */
+  scannedTreeBudgetMs: number;
 }
 
 /** Environment variable holding the path to the unpublished deny-list file. */
@@ -1514,7 +1565,14 @@ export const INTERNAL_DISCLOSURE_ENV = "SCG_INTERNAL_DISCLOSURE_FILE";
 
 /** An empty runtime: the built-in shape rules still run against it. */
 export function emptyInternalDisclosureRuntime(): InternalDisclosureRuntime {
-  return { hashes: new Set(), matchers: [], loadFindings: [], enabled: false, salt: null };
+  return {
+    hashes: new Set(),
+    matchers: [],
+    loadFindings: [],
+    enabled: false,
+    salt: null,
+    scannedTreeBudgetMs: SCANNED_TREE_MATCHER_BUDGET_MS,
+  };
 }
 
 /**
@@ -1523,13 +1581,20 @@ export function emptyInternalDisclosureRuntime(): InternalDisclosureRuntime {
  *   `sha256:<64 hex>`  a hashed term (accepted in the external file too)
  *   `/pattern/flags`   a regular expression
  *   anything else      a case-insensitive literal
+ *
+ * `origin` decides how far the entry is trusted. An `operator` entry compiles
+ * exactly as it always has. A `scanned-tree` entry travels with the repository
+ * under test, so its regular expressions are bounded in length and refused when
+ * their shape can backtrack exponentially; a refusal is returned rather than
+ * thrown, because it has to reach the report.
  */
 function compileDenyEntry(
   raw: string,
   redact: boolean,
   label: string,
   hashes: Set<string>,
-): { matcher?: DenyMatcher; error?: string } {
+  origin: DenyMatcherOrigin,
+): { matcher?: DenyMatcher; error?: string; refusal?: string } {
   const entry = raw.trim();
   if (entry === "") return {};
 
@@ -1546,19 +1611,28 @@ function compileDenyEntry(
 
   const regexMatch = /^\/(.+)\/([gimsuy]*)$/.exec(entry);
   if (regexMatch) {
-    const flags = regexMatch[2].includes("i") ? regexMatch[2] : regexMatch[2] + "i";
-    try {
+    const source = regexMatch[1];
+    if (origin === "scanned-tree" && source.length > MAX_SCANNED_TREE_REGEX_LENGTH) {
       return {
-        matcher: {
-          kind: "regex",
-          regex: new RegExp(regexMatch[1], flags.replace(/g/g, "")),
-          redact,
-          label,
-        },
+        refusal: `the regular expression is longer than the ${MAX_SCANNED_TREE_REGEX_LENGTH}-character limit for a pattern supplied by the scanned tree`,
       };
+    }
+    const flags = regexMatch[2].includes("i") ? regexMatch[2] : regexMatch[2] + "i";
+    let regex: RegExp;
+    try {
+      regex = new RegExp(source, flags.replace(/g/g, ""));
     } catch {
       return { error: "not a valid regular expression" };
     }
+    // Shape is checked after compilation so that an invalid expression still
+    // reports the clearer "not a valid regular expression".
+    if (origin === "scanned-tree" && hasNestedUnboundedQuantifier(source)) {
+      return {
+        refusal:
+          "the regular expression quantifies a group that already contains a variable quantifier, a shape whose failure to match can take exponential time",
+      };
+    }
+    return { matcher: { kind: "regex", regex, redact, label, origin } };
   }
 
   if (entry.length < 3) {
@@ -1567,7 +1641,7 @@ function compileDenyEntry(
         "shorter than 3 characters; a literal that short would match almost every file",
     };
   }
-  return { matcher: { kind: "literal", literal: entry.toLowerCase(), redact, label } };
+  return { matcher: { kind: "literal", literal: entry.toLowerCase(), redact, label, origin } };
 }
 
 /** Transparency finding: a configured deny-list source could not be used. */
@@ -1598,6 +1672,75 @@ function invalidEntryFinding(source: string, line: number, reason: string): Find
     recommendation:
       "Fix the entry. Hashed entries are \"sha256:\" plus 64 hex characters (generate them with \"supply-chain-guard internal-hash <term>\"), regular expressions use the /pattern/flags form, and anything else is a literal of at least 3 characters.",
   };
+}
+
+/**
+ * Fail-closed finding: a deny-list source or entry that the scanned tree itself
+ * supplied was refused, so it was never read and never run. Names the source
+ * and why, never the contents of anything, because nothing was read.
+ */
+function refusedFinding(source: string, reason: string): Finding {
+  return {
+    rule: "INTERNAL_DENYLIST_REFUSED",
+    description: `Internal-disclosure deny-list source ${source} was refused because ${reason}. It contributed no entries, so any term it holds is NOT being looked for.`,
+    severity: "medium",
+    confidence: 1.0,
+    category: "disclosure",
+    recommendation:
+      "The committed policy file travels with the repository, so a scan of an untrusted tree would otherwise read and run whatever it names. Keep the deny-list file inside the repository and reference it with a relative path, or supply it out of band through the SCG_INTERNAL_DISCLOSURE_FILE environment variable, which is set by whoever runs the scan and is not bounded this way.",
+  };
+}
+
+/**
+ * Decide whether a deny-list path from the scanned tree's own configuration may
+ * be read, returning the refusal reason or null.
+ *
+ * The question this answers is NOT whether the path string is safe to print.
+ * A committed path is already published, so it is. The question is whether the
+ * CONTENTS at that path are inside the trust boundary, and for a tree whose
+ * owner is not the operator the answer is only yes when the path stays in the
+ * tree. Both halves matter: an absolute path names a file on the runner, and a
+ * relative `..` reaches the same places without needing to know the layout.
+ *
+ * The predicates come from the path reader that already does this for every
+ * other file the scan opens, so there is one containment rule, not two.
+ */
+function refuseUncontainedScannedTreePath(scanDir: string, configured: string): string | null {
+  if (path.isAbsolute(configured)) {
+    return `an absolute path is accepted only from the ${INTERNAL_DISCLOSURE_ENV} environment variable, never from the scanned tree's own configuration`;
+  }
+
+  const root = path.resolve(scanDir);
+  const target = path.resolve(root, configured);
+  if (!isContainedPath(root, target)) {
+    return "the path resolves outside the scanned directory";
+  }
+
+  let exists = true;
+  try {
+    fs.lstatSync(target);
+  } catch {
+    exists = false;
+  }
+
+  // An absent file is a normal state (INTERNAL_DENYLIST_UNAVAILABLE reports it
+  // below) but only when the absence is genuine, not a leaf hidden behind a
+  // parent symlink that already left the tree.
+  if (!exists) {
+    return hasContainedExistingAncestor(root, target)
+      ? null
+      : "the path leaves the scanned directory through a symbolic link";
+  }
+
+  try {
+    if (!isContainedPath(fs.realpathSync(root), fs.realpathSync(target))) {
+      return "the path leaves the scanned directory through a symbolic link";
+    }
+  } catch {
+    return "the path could not be resolved inside the scanned directory";
+  }
+
+  return null;
 }
 
 /**
@@ -1643,22 +1786,60 @@ export function loadInternalDisclosureConfig(
   }
 
   (section?.patterns ?? []).forEach((raw, index) => {
-    const { matcher } = compileDenyEntry(raw, false, `patterns[${index}]`, runtime.hashes);
+    const label = `patterns[${index}]`;
+    const { matcher, refusal } = compileDenyEntry(
+      raw,
+      false,
+      label,
+      runtime.hashes,
+      "scanned-tree",
+    );
     if (matcher) runtime.matchers.push(matcher);
+    if (refusal) runtime.loadFindings.push(refusedFinding(label, refusal));
   });
 
   // The env-var source is described by the variable NAME, never by its value:
   // that value is a local path, and printing it into a report would be the
   // very disclosure this feature exists to prevent. A path from the committed
   // config is already published, so it can be named.
-  const externalSources: Array<{ configured: string; label: string }> = [];
+  //
+  // The two sources are kept apart from here on, because they are not equally
+  // trusted. The environment variable is set by whoever runs the scan; the
+  // committed config arrives inside the tree under test, which for this tool is
+  // routinely somebody else's repository.
+  const externalSources: Array<{
+    configured: string;
+    label: string;
+    origin: DenyMatcherOrigin;
+  }> = [];
+
   const fromEnv = env[INTERNAL_DISCLOSURE_ENV];
-  if (fromEnv) externalSources.push({ configured: fromEnv, label: `$${INTERNAL_DISCLOSURE_ENV}` });
-  if (section?.externalFile) {
-    externalSources.push({ configured: section.externalFile, label: section.externalFile });
+  if (fromEnv) {
+    externalSources.push({
+      configured: fromEnv,
+      label: `$${INTERNAL_DISCLOSURE_ENV}`,
+      origin: "operator",
+    });
   }
 
-  for (const { configured, label: source } of externalSources) {
+  if (section?.externalFile) {
+    const refusal = refuseUncontainedScannedTreePath(scanDir, section.externalFile);
+    if (refusal) {
+      // Refused BEFORE any filesystem access beyond containment resolution, so
+      // the "not found" versus "could not be read" distinction, and the
+      // per-line reporting below, cannot say anything about a path outside the
+      // tree: nothing outside the tree is opened.
+      runtime.loadFindings.push(refusedFinding(section.externalFile, refusal));
+    } else {
+      externalSources.push({
+        configured: section.externalFile,
+        label: section.externalFile,
+        origin: "scanned-tree",
+      });
+    }
+  }
+
+  for (const { configured, label: source, origin } of externalSources) {
     const resolved = path.isAbsolute(configured) ? configured : path.join(scanDir, configured);
     let content: string;
     try {
@@ -1676,16 +1857,26 @@ export function loadInternalDisclosureConfig(
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].replace(/\r$/, "").trim();
       if (line === "" || line.startsWith("#")) continue;
-      const { matcher, error } = compileDenyEntry(
+      const { matcher, error, refusal } = compileDenyEntry(
         line,
         true,
         `${source} line ${i + 1}`,
         runtime.hashes,
+        origin,
       );
       if (matcher) runtime.matchers.push(matcher);
       // Fail closed: an entry that cannot be compiled is a term nobody is
       // looking for. The message names the line, never its content.
+      //
+      // DECISION, deliberately left as it stands: line numbers are still
+      // reported for the operator source even though that source may point
+      // outside the scanned tree. Whoever exported the variable chose the file,
+      // and per-line reporting is what makes a silently broken deny-list
+      // visible; removing it would cost exactly the transparency the feature
+      // exists for. Revisit only with a decision recorded on the issue, not as
+      // a side effect of another change.
       if (error) runtime.loadFindings.push(invalidEntryFinding(source, i + 1, error));
+      if (refusal) runtime.loadFindings.push(refusedFinding(`${source} line ${i + 1}`, refusal));
     }
   }
 
@@ -2012,6 +2203,12 @@ function scanDenyList(
   const findings: Finding[] = [];
   const seen = new Set<string>();
 
+  // Split once per file, not once per line. Matchers the scanned tree supplied
+  // run under a scan-wide wall-clock budget; the operator's own matchers are
+  // the operator's own business and run as they always have.
+  const operatorMatchers = runtime.matchers.filter((m) => m.origin === "operator");
+  const scannedTreeMatchers = runtime.matchers.filter((m) => m.origin === "scanned-tree");
+
   const push = (line: number, label: string, matchText: string, redact: boolean): void => {
     const key = `${line}|${label}`;
     if (seen.has(key)) return;
@@ -2058,21 +2255,43 @@ function scanDenyList(
       }
     }
 
-    for (const matcher of runtime.matchers) {
-      if (matcher.kind === "literal") {
-        const index = line.toLowerCase().indexOf(matcher.literal ?? "");
-        if (index >= 0) {
-          push(lineNo, matcher.label, line.slice(index, index + (matcher.literal?.length ?? 0)), matcher.redact);
-        }
-      } else if (matcher.regex) {
-        matcher.regex.lastIndex = 0;
-        const m = matcher.regex.exec(line);
-        if (m) push(lineNo, matcher.label, m[0], matcher.redact);
+    runMatchers(operatorMatchers, line, lineNo, push);
+
+    if (scannedTreeMatchers.length > 0) {
+      if (runtime.scannedTreeBudgetMs <= 0) {
+        truncationReasons.add(
+          `deny-list matchers supplied by the scanned tree exhausted their ${SCANNED_TREE_MATCHER_BUDGET_MS} ms budget`,
+        );
+      } else {
+        const started = performance.now();
+        runMatchers(scannedTreeMatchers, line, lineNo, push);
+        runtime.scannedTreeBudgetMs -= performance.now() - started;
       }
     }
   }
 
   return findings;
+}
+
+/** One line against one set of matchers. Shared by both trust levels. */
+function runMatchers(
+  matchers: DenyMatcher[],
+  line: string,
+  lineNo: number,
+  push: (line: number, label: string, matchText: string, redact: boolean) => void,
+): void {
+  for (const matcher of matchers) {
+    if (matcher.kind === "literal") {
+      const index = line.toLowerCase().indexOf(matcher.literal ?? "");
+      if (index >= 0) {
+        push(lineNo, matcher.label, line.slice(index, index + (matcher.literal?.length ?? 0)), matcher.redact);
+      }
+    } else if (matcher.regex) {
+      matcher.regex.lastIndex = 0;
+      const m = matcher.regex.exec(line);
+      if (m) push(lineNo, matcher.label, m[0], matcher.redact);
+    }
+  }
 }
 
 /** Remediation text per rule id. */
@@ -2098,6 +2317,8 @@ export function getInternalDisclosureRecommendation(rule: string): string {
       "Provide the unpublished pattern file wherever the deny-list should be enforced, or remove the setting if it is no longer used.",
     INTERNAL_DENYLIST_INVALID_ENTRY:
       "Fix the entry in the unpublished pattern file. An entry that cannot be compiled is silently doing nothing, which looks exactly like a repository with no leaks.",
+    INTERNAL_DENYLIST_REFUSED:
+      "Keep the deny-list file inside the repository and reference it with a relative path, and keep patterns free of a quantified group inside a quantified group. A path or pattern in the committed policy file is read while scanning a tree that may not be yours, so it is bounded; the SCG_INTERNAL_DISCLOSURE_FILE environment variable is not.",
     INTERNAL_DISCLOSURE_TRUNCATED:
       "Generated output is the usual cause and needs no action. If this is authored content, review it manually: the INTERNAL_* rules did not examine all of it.",
   };

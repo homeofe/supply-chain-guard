@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { hasBroadUnboundedConsumingGap } from "../regex-complexity.js";
+import {
+  hasBroadUnboundedConsumingGap,
+  hasNestedUnboundedQuantifier,
+} from "../regex-complexity.js";
 
 describe("hasBroadUnboundedConsumingGap", () => {
   it.each([
@@ -74,5 +77,48 @@ describe("hasBroadUnboundedConsumingGap", () => {
   it("uses escape parity rather than treating every preceded dot as escaped", () => {
     expect(hasBroadUnboundedConsumingGap(String.raw`\.\*`)).toBe(false);
     expect(hasBroadUnboundedConsumingGap(String.raw`\\.*`)).toBe(true);
+  });
+});
+
+describe("hasNestedUnboundedQuantifier", () => {
+  it.each([
+    "(a+)+$",
+    "(a*)*b",
+    "(a?)+b",
+    "(x+x+)+y",
+    "([a-z]+)*end",
+    "(?:\\d+)+tail",
+    "prefix(?:[0-9]{2,4})*suffix",
+    "outer((inner+))+",
+  ])("refuses the exponential shape in %s", (source) => {
+    expect(hasNestedUnboundedQuantifier(source)).toBe(true);
+  });
+
+  it.each([
+    "build-\\d{2}\\.corp",
+    "(alpha|beta)+",
+    "(a{2})+",
+    "\\w+\\.internal\\.example",
+    "(?:alpha|beta)\\d{4}",
+    "sample-service-\\d+",
+    "\\(a+\\)+",
+    "[+*?]+",
+    "(?<label>alpha|beta)*",
+  ])("accepts the ordinary deny-list shape in %s", (source) => {
+    expect(hasNestedUnboundedQuantifier(source)).toBe(false);
+  });
+
+  it("does not read the group-prefix question mark as an inner quantifier", () => {
+    // "(?:" opens a non-capturing group. Treating its "?" as a quantifier
+    // would refuse every grouped alternation anyone writes.
+    expect(hasNestedUnboundedQuantifier("(?:alpha)+")).toBe(false);
+    expect(hasNestedUnboundedQuantifier("(?:alpha?)+")).toBe(true);
+  });
+
+  it("separates a fixed repetition from a variable one", () => {
+    // "{2}" matches exactly twice, so an outer quantifier has nothing to
+    // explore; "{2,3}" gives it a choice on every repetition.
+    expect(hasNestedUnboundedQuantifier("(a{2})*")).toBe(false);
+    expect(hasNestedUnboundedQuantifier("(a{2,3})*")).toBe(true);
   });
 });
