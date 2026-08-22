@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b0c889702ccae9d0edcfceba8dcbb02a6de4d2997a59f6787347630ba0ed952c",
+      "checksum": "sha256:6e616b54979cba70ca829d6622f5bbdaf5fb338d87b551a656149f55fa7038e3",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2879,
+      "lines": 2940,
       "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
@@ -23,7 +23,7 @@
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:931be02f873b962f89ee315b82902c481d1e8517cb624ad48a61aa43ce10b31a",
+      "checksum": "sha256:7a50a66214286e3f0930d1bfbf1d16e66ef2cb2eb4ec7e5ecaaf0e4a9cdbd4f7",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
@@ -41,13 +41,13 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:a3f5ac40cf40fa687ce694aac88db8946d763ef765d0c4cbc64ea2e3c242d49e",
+      "checksum": "sha256:5b4ab0b61d2314e813af3e923db2398ed5c4ef71f6de80c172adbed42c767d2c",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:660c3678483ebc3b297f209d92edd692b38ecc11dbf8ffc0607c0e5943007a1c",
+      "checksum": "sha256:53a90eaba24b0ae1ae2c2eb86fb5ad3dca0fec43551866674affc45480a96669",
       "updated": "2026-08-22T13:30:32Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
