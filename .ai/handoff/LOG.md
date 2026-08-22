@@ -132,15 +132,15 @@ This generated journal lists every release derived from CHANGELOG.md, newest fir
 | v5.2.6 | 2026-05-08 | Threat intel: CanisterSprawl, BufferZoneCorp, MacSync, EtherRAT (May 2026) |
 | v5.2.5 | 2026-05-01 | Threat intel: Mini Shai-Hulud / TeamPCP supply chain worm (April 2026) |
 | v5.2.4 | 2026-04-30 | Threat intel: DPRK @validate-sdk/v2 + LofyGang / LofyStealer (April 2026) |
-| v5.2.3 | 2026-04-26 | Documentation catch-up  bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
-| v5.2.2 | 2026-04-26 | Solana monitor: rate-limit-aware RPC client  closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
+| v5.2.3 | 2026-04-26 | Documentation catch-up - bumps version strings in src/cli.ts, src/reporter.ts (text header, SARIF, SBOM, HTML footer)... |
+| v5.2.2 | 2026-04-26 | Solana monitor: rate-limit-aware RPC client - closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21). |
 | v5.2.1 | 2026-04-26 | Threat intel: Checkmarx KICS / Bitwarden CLI supply-chain breach (April 2026) |
-| v5.2.0 | 2026-04-08 | Self-Scan Clean + Text Wrapping  the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
+| v5.2.0 | 2026-04-08 | Self-Scan Clean + Text Wrapping - the scanner no longer flags its own source code. Scanning supply-chain-guard itself... |
 | v5.1.1 | 2026-04-07 | CI and test fixes |
-| v5.1.0 | 2026-04-07 | Comprehensive ASCII CLI output  complete redesign of the default text reporter. |
-| v5.0.1 | 2026-04-07 | False positive fixes  second pass after live workspace testing revealed additional FPs. |
-| v5.0.0 | 2026-04-07 | Context-Aware False Positive Elimination  workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemati... |
-| v4.9.0 | 2026-04-07 | New: SBOM Generator  reads package-lock.json (v2+) to generate CycloneDX 1.6 SBOMs with real components[] (name, vers... |
+| v5.1.0 | 2026-04-07 | Comprehensive ASCII CLI output - complete redesign of the default text reporter. |
+| v5.0.1 | 2026-04-07 | False positive fixes - second pass after live workspace testing revealed additional FPs. |
+| v5.0.0 | 2026-04-07 | Context-Aware False Positive Elimination - workspace-wide scan of 100k+ LOC across 15 projects identified 14 systemat... |
+| v4.9.0 | 2026-04-07 | New: SBOM Generator - reads package-lock.json (v2+) to generate CycloneDX 1.6 SBOMs with real components[] (name, ver... |
 | v4.8.0 | 2026-04-04 | New: Continuous Risk Monitor -- persistent risk history, trend detection (spikes, stagnation, increasing) |
 | v4.7.0 | 2026-04-04 | New: Attack Graph Engine -- models relationships between repos, packages, workflows, secrets, IOCs as directed graphs... |
 | v4.6.0 | 2026-04-04 | New: Remediation Engine -- concrete, prioritized fix steps for every finding |

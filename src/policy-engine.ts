@@ -8,7 +8,14 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Finding, PolicyConfig, PolicyWarning, Severity } from "./types.js";
+import type {
+  Finding,
+  PolicyConfig,
+  PolicyEffect,
+  PolicyEffectEntry,
+  PolicyWarning,
+  Severity,
+} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Minimal glob matcher (no dependency; commander stays the only runtime dep)
@@ -70,6 +77,19 @@ const CONFIG_FILENAMES = [
 /**
  * Load policy config from the project directory.
  * Returns null if no config file found.
+ *
+ * TRUST BOUNDARY, stated here because the call site cannot state it: `dir` is
+ * the directory being SCANNED. Policy and artifact are therefore the same
+ * input, so on a pull_request event the config that governs the scan is the
+ * one on the proposing branch. That is a deliberate, documented property (see
+ * the "Where policy is read from" section of README.md and the `policy-source`
+ * note in action.yml), not an oversight, and changing it is an owner decision
+ * tracked in https://github.com/homeofe/supply-chain-guard/issues/168.
+ *
+ * What is NOT deliberate, and what this module now prevents, is the change
+ * being SILENT: every narrowing the config performs is recorded by
+ * describePolicyEffect() and rendered in every output format, and a narrowing
+ * declared without a written reason is reported as a finding.
  */
 export function loadPolicyConfig(dir: string): PolicyConfig | null {
   for (const filename of CONFIG_FILENAMES) {
@@ -79,6 +99,7 @@ export function loadPolicyConfig(dir: string): PolicyConfig | null {
     try {
       const content = fs.readFileSync(configPath, "utf-8");
       const config = parseYamlConfig(content);
+      config.sourceFile = filename;
       // Attach the config file name so warnings-turned-findings point at it
       if (config.warnings) {
         for (const warning of config.warnings) warning.file = filename;
@@ -116,6 +137,14 @@ const HASHED_TERM_PATTERN = /^(?:sha256:)?[0-9a-f]{64}$/i;
 
 /** Keys allowed inside a suppress entry */
 const SUPPRESS_ENTRY_KEYS = new Set(["rule", "reason", "path"]);
+
+/**
+ * Filled in for a suppress entry until a real `reason:` line overwrites it.
+ * Named rather than inlined because describePolicyEffect() has to tell a
+ * placeholder apart from a written justification: reporting this string to a
+ * reader as the reason a finding vanished would be worse than reporting none.
+ */
+const SUPPRESS_PLACEHOLDER_REASON = "suppressed by policy";
 
 /** Rule ids are SCREAMING_SNAKE_CASE (e.g. EVAL_ATOB, GHA_UNPINNED_ACTION) */
 const RULE_ID_PATTERN = /^[A-Z][A-Z0-9_]*$/;
@@ -192,6 +221,17 @@ function parseYamlConfig(content: string): PolicyConfig {
 
     // Sub-sections
     if (indent === 2 && trimmed.endsWith(":")) {
+      // `ignore:` takes globs, not sub-keys. A mapping key with an empty value
+      // ("dist/**:") is the reason-carrying form written without its reason, so
+      // record the glob and report the missing justification rather than
+      // reporting an "unknown key" the user never intended to write.
+      if (currentSection === "ignore") {
+        const glob = stripQuotes(trimmed.slice(0, -1));
+        config.ignore ??= [];
+        config.ignore.push(glob);
+        currentSubSection = "";
+        continue;
+      }
       currentSubSection = trimmed.slice(0, -1);
       if (sectionKnown && !KNOWN_SECTIONS[currentSection].includes(currentSubSection)) {
         if (currentSection === "suppress" && currentSubSection === "- rule") {
@@ -300,7 +340,7 @@ function parseYamlConfig(content: string): PolicyConfig {
           }
           config.suppress.push({
             rule: ruleId,
-            reason: "suppressed by policy",
+            reason: SUPPRESS_PLACEHOLDER_REASON,
           });
           reasonProvided.push(false);
         } else {
@@ -340,6 +380,29 @@ function parseYamlConfig(content: string): PolicyConfig {
         // so is what lets a missing salt be reported rather than look clean.
         config.internalDisclosure ??= {};
         config.internalDisclosure.hashSalted = /^(?:true|yes|1)$/i.test(stripQuotes(val));
+      } else if (currentSection === "rules" && currentSubSection === "disable") {
+        // Mapping form: `EVAL_ATOB: why this rule is off`. The list form
+        // (`- EVAL_ATOB`) stays supported and is handled with the other list
+        // items above; this branch is what lets a disable carry the same audit
+        // trail `suppress` has required since v5.3.
+        config.rules ??= {};
+        config.rules.disable ??= [];
+        config.rules.disable.push(k);
+        const reason = stripQuotes(val);
+        if (reason !== "") {
+          config.rules.disableReasons ??= {};
+          config.rules.disableReasons[k] = reason;
+        }
+      } else if (currentSection === "ignore" && currentSubSection === "") {
+        // Mapping form: `"dist/**": why these files are not scanned`.
+        const glob = stripQuotes(k);
+        config.ignore ??= [];
+        config.ignore.push(glob);
+        const reason = stripQuotes(val);
+        if (reason !== "") {
+          config.ignoreReasons ??= {};
+          config.ignoreReasons[glob] = reason;
+        }
       } else if (currentSection === "suppress" && SUPPRESS_ENTRY_KEYS.has(k)) {
         // Handle suppress reason/path on inline entries. ("rule:" continuation
         // lines are tolerated; entries are created by the "- rule:" item.)
@@ -374,6 +437,28 @@ function parseYamlConfig(content: string): PolicyConfig {
     }
   });
 
+  // v5.29 (issue 168): `rules.disable` and `ignore` are held to the same audit
+  // bar. Both remove findings from the report more completely than `suppress`
+  // does - `disable` drops them before they are counted, `ignore` prunes the
+  // files before any rule looks at them - so neither may be the one narrowing
+  // that needs no written justification.
+  for (const ruleId of config.rules?.disable ?? []) {
+    if (!config.rules?.disableReasons?.[ruleId]) {
+      warnings.push({
+        rule: "POLICY_DISABLE_NO_REASON",
+        message: `rules.disable entry "${ruleId}" has no reason; write it as "${ruleId}: <why>" so the disabled rule carries an audit trail`,
+      });
+    }
+  }
+  for (const glob of config.ignore ?? []) {
+    if (!config.ignoreReasons?.[glob]) {
+      warnings.push({
+        rule: "POLICY_IGNORE_NO_REASON",
+        message: `ignore entry "${glob}" has no reason; write it as "${glob}: <why>" so the unscanned path carries an audit trail`,
+      });
+    }
+  }
+
   if (warnings.length > 0) config.warnings = warnings;
   return config;
 }
@@ -402,6 +487,22 @@ const POLICY_WARNING_META: Record<
       "Policy suppression has no reason. Suppressions without a documented justification cannot be audited and tend to outlive the tradeoff that motivated them.",
     recommendation:
       "Add a \"reason:\" line to every suppress entry in .supply-chain-guard.yml.",
+  },
+  POLICY_DISABLE_NO_REASON: {
+    severity: "medium",
+    confidence: 1.0,
+    description:
+      "A rule is disabled with no documented reason. rules.disable removes that rule's findings from the report entirely - more completely than a suppression, which is at least recorded as suppressed - so an undocumented entry is an unaudited decision to stop looking, and it outlives whoever made it.",
+    recommendation:
+      "Write the entry as \"RULE_ID: <why>\" under rules.disable in .supply-chain-guard.yml. The bare list form (\"- RULE_ID\") still works and still disables the rule; it just cannot be audited.",
+  },
+  POLICY_IGNORE_NO_REASON: {
+    severity: "medium",
+    confidence: 1.0,
+    description:
+      "A path is excluded from the scan with no documented reason. ignore: prunes matching files before any rule opens them, so nothing about the excluded code reaches the report in any form - not a finding, not a suppression, not a count. An undocumented exclusion is the quietest way a scan can be narrowed.",
+    recommendation:
+      "Write the entry as \"<glob>: <why>\" under ignore: in .supply-chain-guard.yml. The bare list form (\"- <glob>\") still works and still excludes the path; it just cannot be audited.",
   },
   POLICY_MALFORMED_RULE_ID: {
     severity: "medium",
@@ -435,6 +536,48 @@ function policyWarningToFinding(warning: PolicyWarning): Finding {
     recommendation: meta.recommendation,
     confidence: meta.confidence,
     category: "config",
+  };
+}
+
+/**
+ * Describe what a loaded policy config removes from a scan (v5.29, issue 168).
+ *
+ * Returns undefined when the config narrows nothing, so a policy block present
+ * in a report always means something was turned off, and its absence is not an
+ * ambiguous "either nothing was disabled or nobody rendered it".
+ *
+ * Reasons come out only when they were actually written. A suppress entry the
+ * parser filled with SUPPRESS_PLACEHOLDER_REASON reports no reason at all,
+ * because presenting the placeholder as a justification would make an
+ * unaudited suppression read as an audited one.
+ */
+export function describePolicyEffect(policy: PolicyConfig): PolicyEffect | undefined {
+  const entry = (id: string, reason: string | undefined): PolicyEffectEntry =>
+    reason !== undefined && reason !== "" ? { id, reason } : { id };
+
+  const disabledRules = (policy.rules?.disable ?? []).map((id) =>
+    entry(id, policy.rules?.disableReasons?.[id]),
+  );
+  const ignoredGlobs = (policy.ignore ?? []).map((glob) =>
+    entry(glob, policy.ignoreReasons?.[glob]),
+  );
+  const suppressedRules = (policy.suppress ?? []).map((s) =>
+    entry(s.rule, s.reason === SUPPRESS_PLACEHOLDER_REASON ? undefined : s.reason),
+  );
+
+  if (
+    disabledRules.length === 0 &&
+    ignoredGlobs.length === 0 &&
+    suppressedRules.length === 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    configFile: policy.sourceFile ?? CONFIG_FILENAMES[0],
+    disabledRules,
+    ignoredGlobs,
+    suppressedRules,
   };
 }
 

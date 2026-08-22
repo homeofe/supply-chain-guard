@@ -68,6 +68,29 @@ function slaComplianceRateOf(
  * fall back to the engine's built-in default. The parameter exists so that a
  * future configuration surface cannot be wired into one of the two and not
  * the other, which is the shape of the defect this module just lost.
+ *
+ * KNOWN LIMIT, stated so the next reader does not rediscover it as a defect.
+ * `riskTrend` is a closed string union with no member meaning "unknown", so an
+ * empty `history` yields `stable` whether the store was absent, unreadable, or
+ * genuinely empty: that is an answer about an empty set, not about the project.
+ * `slaComplianceRate` no longer shares that limit - it reads `null` when there
+ * is nothing measurable - but `null` still does not separate "no decisions were
+ * made" from "the decision store could not be read".
+ *
+ * What keeps that from being a silent wrong answer is the layer above, not this
+ * one. `src/scanner.ts` raises `RISK_HISTORY_UNREADABLE` or
+ * `TRIAGE_STORE_UNREADABLE` and sets `partialScan`, `src/reporter.ts` then
+ * exits nonzero independently of `--fail-on` and strips clean-verdict
+ * recommendations, and the finding text says in words that these metrics were
+ * computed from an empty store. A consumer reading `metrics` in isolation must
+ * check `partialScan` first; a report with `partialScan: true` is an
+ * indeterminate result and its metrics are not a measurement of the project.
+ *
+ * `slaComplianceRate` was widened from `number` to `number | null` as part of
+ * giving SLA compliance a single definition. That IS a breaking change for
+ * library and JSON consumers and is carried as one. `riskTrend` was NOT widened
+ * with it: it is published in `SecurityMetrics` on the same terms, so widening
+ * it is a separate decision rather than a consequence of this one.
  */
 export function calculateMetrics(
   findings: Finding[],

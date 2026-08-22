@@ -177,7 +177,7 @@ export function checkSlaCompliance(
     if (verdict === "breached") {
       findings.push({
         rule: "SLA_BREACH_CRITICAL",
-        description: `SLA breached for "${d.findingRule}" — open for ${Math.round(age / (24 * 60 * 60 * 1000))} days (SLA: ${slaMs / (24 * 60 * 60 * 1000)}d). Owner: ${d.owner ?? "unassigned"}.`,
+        description: `SLA breached for "${d.findingRule}" - open for ${Math.round(age / (24 * 60 * 60 * 1000))} days (SLA: ${slaMs / (24 * 60 * 60 * 1000)}d). Owner: ${d.owner ?? "unassigned"}.`,
         severity: "critical",
         confidence: 1.0,
         category: "trust",
@@ -186,7 +186,7 @@ export function checkSlaCompliance(
     } else {
       findings.push({
         rule: "SLA_AT_RISK",
-        description: `SLA at risk for "${d.findingRule}" — ${Math.round((slaMs - age) / (60 * 60 * 1000))} hours remaining. Owner: ${d.owner ?? "unassigned"}.`,
+        description: `SLA at risk for "${d.findingRule}" - ${Math.round((slaMs - age) / (60 * 60 * 1000))} hours remaining. Owner: ${d.owner ?? "unassigned"}.`,
         severity: "high",
         confidence: 1.0,
         category: "trust",

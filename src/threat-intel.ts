@@ -14340,7 +14340,7 @@ export function checkThreatIntel(
 
       findings.push({
         rule: "THREAT_INTEL_MATCH",
-        description: `Threat intelligence match: ${ioc.type} "${ioc.value}"${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` — ${ioc.campaign}` : ""}`,
+        description: `Threat intelligence match: ${ioc.type} "${ioc.value}"${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` - ${ioc.campaign}` : ""}`,
         severity: ioc.severity,
         file: relativePath,
         confidence,
