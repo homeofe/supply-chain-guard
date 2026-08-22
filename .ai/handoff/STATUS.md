@@ -6,6 +6,81 @@
 
 ---
 
+## The scanned tree's own policy file is input, not configuration (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/internal-disclosure-config-containment. No
+version bump. Remediates
+https://github.com/homeofe/supply-chain-guard/issues/169; the pull request is
+https://github.com/homeofe/supply-chain-guard/pull/183 and the issue is left open
+for the owner to close.
+
+### What was actually wrong
+
+Not a missing check. The containment predicate this needed was already written in
+this repository, twice, and the deny-list loader used neither. The reasoning that
+allowed that is visible in the old comment beside the code: it asked whether the
+configured path STRING was safe to print, correctly concluded that a committed
+path is already public, and never asked the separate question of whether the
+CONTENTS at that path are inside the trust boundary.
+
+The same gap explains the regular-expression half. `MAX_MATCH_ATTEMPTS_PER_RULE`
+and the `performanceBudget` test helper bound the patterns this project wrote.
+Neither reached the patterns a scanned repository writes.
+
+`hashedTerms` and `suppress` were designed with the scanned tree's trust level in
+mind. `externalFile` and `patterns` were not, and `.supply-chain-guard.yml`
+travels inside a tree whose owner is routinely not the operator.
+
+### What changed
+
+`externalFile` from the committed config must resolve inside the scanned
+directory: absolute paths, `..` traversal and symlink escapes are refused BEFORE
+the file is opened, so the existence, permission and per-line reporting that
+follow a read cannot describe anything outside the tree. A committed regular
+expression is capped at 200 characters and refused when it quantifies a group
+that already contains a variable quantifier. What survives runs under a scan-wide
+wall-clock budget. Refusals are reported as `INTERNAL_DENYLIST_REFUSED` (medium),
+registered both in `PARTIAL_SCAN_RULES` and in the `coverage_rule` list in
+`action.yml`, so the Action fails closed on them.
+
+Containment reuses `isContainedPath` and `hasContainedExistingAncestor` from
+`src/pattern-scanner.ts`, now exported instead of copied. The shape classifier
+`hasNestedUnboundedQuantifier` was added beside the existing
+`hasBroadUnboundedConsumingGap` in `src/regex-complexity.ts` and reuses its
+parsing primitives.
+
+### Numbers worth keeping
+
+- The pathological committed pattern `/(a+)+$/` against a 34-character
+  non-matching line did NOT complete within a 60,000 ms budget before the change.
+  After it, the same scan completes in under 300 ms and reports the refusal. At
+  the worst input the deny-list pass still inspects, a line of 1,998 characters,
+  it also completes in under 350 ms.
+- A legitimate deny-list of six ordinary entries over this project's own `src/`
+  tree (196 files, 96,133 lines, 5.23 MB) consumes 108 ms of the matcher budget.
+  That measurement is why the budget is 30 seconds and not two: overrunning is
+  reported and makes the scan partial, so a budget set too low fails loudly on a
+  clean repository.
+- 85 existing tests in `src/__tests__/internal-disclosure.test.ts` surrounded this
+  defect without covering it. Every one of them wrote its external file inside the
+  scan root with a bare relative name.
+
+### Open, and deliberately not done here
+
+- The operator-supplied `SCG_INTERNAL_DISCLOSURE_FILE` source is untouched,
+  including its line-number reporting for a file outside the tree. That source is
+  chosen by whoever runs the scan, and per-line reporting is what makes a silently
+  broken deny-list visible. Recorded as a decision in the code, open for the owner
+  to revisit.
+- No size cap on the read that containment still allows. With containment the file
+  is inside the tree the runner already downloaded, so a cap bounds a memory copy
+  rather than a new capability. Separate change.
+- The published composite Action still declares no `timeout-minutes`. It is a
+  property of the Action rather than of this defect and changes behaviour for
+  every consumer, so it belongs in its own pull request.
+
+---
+
 ## The required handoff gate compared main to itself on every push (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump.
