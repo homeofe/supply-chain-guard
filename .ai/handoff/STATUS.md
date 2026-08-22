@@ -1,3 +1,17 @@
+## 2026-08-23 - declare merge=union for the handoff append-log
+
+`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by
+one block and nothing else. Eight sibling repositories in this estate already
+declare `merge=union` for it; this one did not, and the two that lacked it are
+exactly the two where twenty-two rebases on 2026-08-23 each resolved this file by
+hand.
+
+It does not stop a pull request going CONFLICTING - GitHub does not honour merge
+drivers server-side, measured 2026-07-31 - so this removes the hand resolution,
+not the merge. `MANIFEST.json` is deliberately left without a driver: it is
+generated state, and the correct resolution is to take main's copy and recompute
+the changed entries, which no driver can do.
+
 # supply-chain-guard: Current State
 
 > Updated 2026-08-20 (release v5.27.0). This is one current snapshot, not a session
@@ -90,6 +104,128 @@ that pin absent against empty. Restored, 34 pass.
 2. **Whether the triage store gets a CLI surface.** Options and the argument for
    each are written down at the end of `docs/triage-decisions.md`, next to the
    format they concern, rather than here.
+## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
+
+Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
+
+The scheduled import proposed 4,409 new IOCs and refused to exit clean: at the
+default `--limit 250`, 2,659 of the remainder would age out of the `--days 14`
+window before any later run could reach them.
+
+### What the backlog actually was
+
+4,363 of the 4,409 were a single publisher's namespace, `@zalastax/nolb-*`,
+backfilled into the GitHub Advisory Database on 2026-08-14 from
+ossf/malicious-packages. All are all-versions ranges on names published in
+Jan/Feb 2023. The real signal in the window was the other 46.
+
+Two registry checks decided the response, and the first one was misleading on its
+own. A liveness check said the packages exist, are not unpublished, and predate
+the advisory by three years, which reads as a live gap. Reading the version
+contents corrected it: they are npm SECURITY HOLDING PACKAGES. Of a 14-name
+spread sample, 12 carry only a `0.0.1-security` placeholder and 2 still have
+their original 2023 version alongside it. So the payload is largely gone and the
+names have no legitimate release history, which is what makes a bare-name rule
+safe here, the same reasoning the SANDWORM_MODE set already uses.
+
+Taken as feed entries, they would have grown the bundled feed 34% (12,962 to
+17,325) and added roughly 1 MB to `feed.json`, shipped to every consumer, for one
+publisher's taken-down 2023 squats. They are covered by one anchored pattern in
+`MALICIOUS_PACKAGE_PATTERNS` instead, and the 46 real entries were imported
+normally through the project's own writer.
+
+### Needs a decision
+
+**`MALICIOUS_PACKAGE_PATTERNS` does not reach the generic directory scan.** It is
+read by the npm-scanner name check and its `package.json` fallback. The directory
+scan in `scanner.ts` matches exact feed names only, deliberately, because the
+pattern table holds broad rules such as `^[a-z]{20,}$` that would produce false
+positives there. That is the surface the GitHub Action runs, so a
+pattern-only campaign is invisible to it.
+
+Taken-down names make the residual gap small in this case, but the general
+question is open and it is not this job's call to settle: should the directory
+scan consult a NARROW subset of the pattern table, or should any campaign that
+matters on that surface always be paid for in feed entries? Today's answer was
+the pattern, on the grounds that the names are dead. A live campaign of this
+shape would need the other answer, and there is currently nothing that forces
+that choice to be made deliberately.
+
+Second, smaller: the importer has no way to exclude a namespace, so every future
+run will re-propose these 4,363 and refuse to exit clean until they age out
+around 2026-08-28. Runs in that window need `--allow-backlog` or a namespace
+filter in `scripts/import-threat-feed.mjs`.
+
+### Enrichment (STEP 1b) found nothing addable
+
+Socket, Aikido, StepSecurity, safedep, OX Security and The Hacker News were all
+checked for write-ups newer than the v5.28.1 sweep. Every atomic indicator they
+publish is already in the blocklist: the keyv/cacheable Shai-Hulud domains and
+both payload hashes, the arrayref build-time dropper, WEL1DROPPER, the Alibaba
+RAT cluster, Joyfill and the fake Corepack site. The one genuinely new cluster,
+`@postman-cse`, had its advisory published 2026-08-22 00:44 UTC and has no vendor
+write-up yet, so there were no atomic indicators to add beyond the version pins.
+## The release trigger lived in a ref namespace the gates never reach (2026-08-22)
+
+Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the
+release-authority finding; two named items stay open for the owner.
+
+### What was true before
+
+Branch protection on `main` requires three contexts. Only one of them, `Build and
+Test`, can exist on a `refs/tags/*` push: required status checks, branch protection
+and `enforce_admins` are all properties of `refs/heads/main`, and `aahp-verify` and
+`PR metadata policy` have no tag-ref run in their histories. `needs: build` did already
+hold the `publish` job until the compat matrix and the container build and scan passed,
+but none of that says where the commit lives, and the one pre-publish check that looked
+at the tag, `Validate immutable release tag`, compares the tag string against
+`package.json`. That check is satisfied by any commit at all whose version field
+matches, so it too carries no information about where the commit lives.
+
+`docs/ci-and-release.md` says to tag the merged commit on `main` and never the
+pre-merge commit. That sentence was written down on 2026-08-20, in the 5.28.0 release;
+135 of the 138 tags to date predate it, so as a written rule in the release runbook it
+governed at most the last three releases. This repository squash-merges, so those two commits always have
+different shas while the content looks identical. Nothing went wrong: measured
+2026-08-22, all 138 semver tags to date are ancestors of `main` and none is not, which
+is what a convention looks like right up until the release where it is not. This closes
+a latent defect, not an incident.
+
+### What changed
+
+`scripts/check-release-ancestry.mjs` fetches `main` and refuses the release unless the
+commit being published is an ancestor of it. It runs in `ci.yml`'s `publish` job before
+every other step, and in `docker.yml`'s `merge` job before the image tags move, because
+that workflow carries its own tag trigger and moves `:latest` on its own. Both jobs now
+check out with `fetch-depth: 0`; the gate refuses to answer in a shallow checkout rather
+than answering from the few commits a depth-1 fetch happens to hold, which is the most
+plausible way it could have decayed into a silent pass.
+
+Each outcome has its own exit code, and "cannot answer" (2, 3, 4, 5) is deliberately a
+different code from "answered no" (6). `src/__tests__/release-ancestry.test.ts` asserts
+the exact codes against real git repositories, and asserts the wiring on comment-stripped
+YAML: with the step deleted, the raw file still contains the script path in a comment, so
+a text search would have reported a gate that no longer runs.
+
+### Still open, and both are owner decisions
+
+1. Whether `aahp-verify.yml` should gain a `tags:` trigger so the handoff gate evaluates
+   the released commit. That changes what a release must satisfy.
+2. Whether a repository ruleset should restrict creation of `refs/tags/v*`. That is an
+   access-control change and needs an explicit bypass list.
+
+Neither is required for the ancestry gate to close the hole. Both are recorded on
+https://github.com/homeofe/supply-chain-guard/issues/167, which this pull request does
+not close.
+
+### What the gate does not reach
+
+Actions runs a workflow from the file present at the pushed ref, so the gate binds only
+tags whose commit already contains it. Two consequences, both stated in the gate script
+header and above the `publish` job rather than only here: a tag cut from a commit that
+predates this change still publishes ungated, and an actor who controls the commit
+controls its `ci.yml` and can omit the step. The gate closes the accident. Only the tag
+ruleset closes the deliberate case.
 
 ---
 
