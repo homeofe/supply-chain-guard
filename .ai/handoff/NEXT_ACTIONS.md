@@ -130,6 +130,32 @@ tarball on both majors in CI; the container image built and scanned on every PR.
 
 ---
 
+## Owner decision: should a badly stale rule set fail the build?
+
+`THREAT_FEED_STALE` ships at `medium`, past 30 days. That was chosen so it
+becomes visible almost everywhere (score, risk level, eight of the nine report
+formats, the Action's pull request comment) without turning the default
+`fail-on: critical` gate or the CLI's default `high` gate red for any consumer on
+the day it ships. The ninth format, `badge`, is derived from summary counts and
+never names a rule, so it shows the condition as `1 medium`/`yellow` instead of
+`clean`/`brightgreen`. This paragraph said "every report format" until
+2026-08-22; the measurement is in STATUS.md.
+
+The open question is whether a rule set that is egregiously old, say past 180
+days, should escalate to `high` and therefore fail a `fail-on: high` build. The
+argument for it is that at that point the green check is actively misleading: the
+scan is reporting on a corpus that has missed roughly two hundred releases. The
+argument against it is that it turns a calendar date into a build break in
+repositories that changed nothing, which is exactly the behaviour that gets a
+scanner switched off.
+
+This is a decision about how loud this package is allowed to be inside somebody
+else's pipeline, so it is not being made from inside a pull request. The severity
+lives in `feedStalenessFindings` in `src/feed.ts` and the threshold in
+`FEED_STALE_AFTER_DAYS`; adding a band is a small change once the answer exists.
+
+---
+
 ## Ideas / Not Yet Scheduled
 
 - Resolve Install Guard version ranges against the offline metadata cache and add

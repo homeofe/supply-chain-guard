@@ -20,6 +20,104 @@ the changed entries, which no driver can do.
 
 ---
 
+## The rule set now reports its own age (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch feat/feed-staleness-self-report. No version bump.
+
+This closes the gap the previous section left open under "Known limitation of
+this change": documentation told consumers that a frozen pin freezes the rules,
+but nothing at scan time said so.
+
+### What the feed's age actually is, measured
+
+At v5.28.1 the bundled feed is **1 day old**: 12,962 entries, 12,951 of them
+carrying a `firstSeen`, newest indicator 2026-08-21, oldest 2025-09-29. Two
+thirds of the corpus was added in the last two months (6,360 in 2026-07, 6,073 in
+2026-08). So the feed shipped with the current release is not the problem. The
+whole exposure sits on the consumer side, in a pin that stops moving while this
+corpus keeps growing at roughly a hundred entries a day.
+
+The previous session concluded the scanner "cannot currently report the age of
+the rules it just ran" because the feed carries no feed-level generation date.
+It does not need one. The per-indicator `firstSeen` dates are enough: the maximum
+over the feed is the date past which this rule set knows nothing.
+
+### What was built
+
+`feedFreshness()` in `src/feed.ts` derives `{ newestIndicator, ageDays,
+datedEntries, stale }` from that maximum. Pure, offline, deterministic, no
+network and no configuration. Past 30 days `scan()` emits `THREAT_FEED_STALE`
+(medium) carrying the measured age and the newest indicator's date.
+
+Two decisions worth knowing:
+
+- **It measures the EFFECTIVE feed, not the pin.** `scanner.ts` passes the
+  merged bundled-plus-refreshed-cache list that `checkThreatIntel` and
+  `matchPackageIOC` already consumed. A consumer running `feed refresh` before
+  each scan is genuinely current on an old pin and is reported as such. That
+  makes it an assertion about the consequence, not about the configuration.
+- **medium, not high.** It moves the score off zero and the risk level off
+  `clean`, so it is named in eight of the nine report formats and in the Action's
+  pull request comment, but it cannot flip the Action's default `fail-on:
+  critical` gate or the CLI's default `high` gate. Verified against a real scan:
+  exit 0, unchanged. Escalating it is a product decision, not a side effect. See
+  NEXT_ACTIONS.
+
+**Corrected 2026-08-22: this said "every report format", and that was one format
+too many.** Rendering a single `THREAT_FEED_STALE` finding through
+`formatReport` for all nine formats, the rule id appears in `text`, `json`,
+`markdown`, `sarif`, `sbom`, `html`, `gitlab` and `junit`, and NOT in `badge`.
+`formatBadge` builds a Shields.io endpoint payload (`schemaVersion`, `label`,
+`message`, `color`) out of `report.summary` counts alone, so no rule id or
+description can reach it by construction; what is observable there is an
+otherwise clean repository's badge turning from `clean`/`brightgreen` into
+`1 medium`/`yellow`. `junit` carries the id but as a passing `<testcase>`, since
+`formatJunit` only renders `critical`/`high` as `<failure>`. The same wrong
+sentence stood in CHANGELOG.md, README.md, NEXT_ACTIONS.md and the doc comment
+on `feedStalenessFindings` in `src/feed.ts`, and is corrected in all four;
+CHANGELOG.md is the one that becomes the GitHub Release body verbatim, which is
+why it was fixed before the pull request text. The `src/feed.ts` comment matters
+because it is the copy a maintainer meets at the moment they consider raising
+the severity, so it now carries the measurement and an instruction not to
+restore the old wording without re-rendering all nine formats. That edit is a
+comment: no behaviour changed.
+
+Three ways this check could have stopped firing are closed and each has its own
+test: a future-dated `firstSeen` is ignored (one mistyped year would otherwise
+make every feed look permanently current), a date that parses but does not
+round-trip (`2026-02-31`, which `Date.UTC` rolls into March) is rejected rather
+than normalized past every real entry, and a feed with no usable date at all
+reports stale rather than silent.
+
+`feed stats` now prints both ages, bundled and effective, and returns them under
+`bundledFreshness` / `freshness` in `--format json`.
+
+### Proof
+
+`src/__tests__/feed-staleness.test.ts`, 12 tests. The integration case scans the
+SAME directory twice, once with a 1-day feed and once with a 400-day feed, so the
+only variable is the feed's age: the stale run gains exactly the one rule and a
+higher score, and no other rule appears or disappears. Mutation proof after
+committing the fix, five substitutions, each guarded by an assertion that it
+changed the file: trusting a future date, accepting a non-round-tripping date,
+treating an undatable feed as fresh, never emitting the finding, and dropping the
+scanner wiring. All five go red; restoring returns 12 of 12 green on a clean tree.
+
+Local full suite: 4 files / 18 tests failing on this branch, versus 8 files / 52
+tests failing on unmodified `origin/main` in the same environment. Every file
+failing here also fails there (the missing `zip` binary and load-dependent
+flakes). Linux CI is the verdict.
+
+### Independent re-audit of the published release bodies
+
+All 134 release bodies re-fetched and re-scanned for private repository names,
+internal issue numbers, LAN addresses, host names and local paths. Same result as
+the previous session, reached independently: **zero real disclosures**. The 16
+raw matches are all deliberate publications (Kubernetes/k3s/Docker default
+service CIDRs from this scanner's own detection corpus, a public agent-runtime
+product name it ships a scanner for, and the English words trust/intelligence/
+awareness in feature prose). v5.2.40 and v5.2.41 both carry the era's stub body,
+"See README.md for full changelog"; the anchor resolves to the corrected file.
 ## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
 
 Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
