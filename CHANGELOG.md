@@ -7,8 +7,45 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **`slaComplianceRate` now measures SLA compliance.** It measured a resolution
+  rate (`resolved` divided by `not new`) under an SLA name, so it contradicted
+  this project's own SLA engine on identical input, in both directions, in every
+  release from v4.8.0 to v5.28.1. Two accepted-risk decisions reported 0 percent
+  while `checkSlaCompliance` reported no breach at all; a decision left in `new`
+  30 days past a 24 hour SLA reported 100 percent while the engine reported a
+  breach, because the metric excluded `new` from its denominator and the engine
+  did not. There is now one definition, `slaVerdict` in `src/sla-engine.ts`, and
+  `src/metrics.ts` counts its verdicts instead of computing its own. The
+  published invariant is exact: the rate is 100 if and only if
+  `checkSlaCompliance` reports zero breaches over the same decisions. The value
+  is floored rather than rounded so that one breach in 200 decisions reports 99
+  and not 100.
+- **An empty triage store no longer reports 100 percent compliance.**
+  `slaComplianceRate` is now `number | null` and returns `null` when there is
+  nothing to measure: no decisions recorded, or every decision carrying a
+  `decidedAt` that cannot be parsed. Until now a project that had never adopted
+  triage was indistinguishable in the JSON report from one with a perfect
+  record, and the test suite asserted that as correct. `null` rather than
+  `undefined` keeps the key present in JSON output, so a consumer can tell
+  "not measured" from "this tool version has no such field".
+
 ### Changed
 
+- **BREAKING for TypeScript consumers of the library API.**
+  `SecurityMetrics.slaComplianceRate` widened from `number` to `number | null`,
+  and `SecurityMetrics.mttrCritical` was removed. `mttrCritical` was declared
+  optional and assigned `undefined` unconditionally behind a placeholder
+  comment, so it was always absent from JSON output and no consumer can ever
+  have read a value from it. Implementing it needs a finding-creation timestamp
+  that `TriageDecision` does not carry. The CLI, the Action, every non-JSON
+  report format and the MCP server are unaffected: none of them reads either
+  field.
+- **`TriageDecision.dueDate` is documented as not consulted.** Neither the SLA
+  engine nor the metric has ever read it; the deadline is derived from the rule
+  id. The gap is now stated at the line that would have to change, so the field
+  no longer looks like it works.
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
