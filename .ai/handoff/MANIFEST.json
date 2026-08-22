@@ -11,10 +11,10 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:d36fb4212c1ee9987f950121330a1df1b7af0e4e8a5581114e8a446a9e0d3834",
+      "checksum": "sha256:6dd9cacfa1cacf311b5fe840f4b07bb2cfb826989b9bb0e83a967e2664f8bd23",
       "updated": "2026-08-22T20:51:49Z",
-      "lines": 2792,
-      "summary": "Branch fix/issue-170-feed-timeout-and-size-cap. No version bump."
+      "lines": 2867,
+      "summary": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:19814e5e643030be8d6538df50287b6f96331fbc10fa8064c5c05ef842f55823",
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:a3f5ac40cf40fa687ce694aac88db8946d763ef765d0c4cbc64ea2e3c242d49e",
-      "updated": "2026-08-22T13:37:51Z",
+      "updated": "2026-08-22T13:30:32Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:660c3678483ebc3b297f209d92edd692b38ecc11dbf8ffc0607c0e5943007a1c",
-      "updated": "2026-08-22T13:37:51Z",
+      "updated": "2026-08-22T13:30:32Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,12 +77,100 @@
       "summary": "{"
     }
   },
-  "quick_context": "Branch fix/issue-170-feed-timeout-and-size-cap. No version bump. Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 34154,
-    "full_read": 45816
+    "manifest_plus_core": 34272,
+    "full_read": 45934
+  },
+  "next_task_id": 20,
+  "tasks": {
+    "T-008": {
+      "title": "Adopt AAHP 3.9.1 and close verified scanner and CI defects",
+      "status": "done",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-04T08:00:00Z",
+      "completed": "2026-08-04T08:15:48Z"
+    },
+    "T-009": {
+      "title": "Implement full offline sigstore verification",
+      "status": "ready",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-04T08:00:00Z"
+    },
+    "T-010": {
+      "title": "Add a first-class known-bad VS Code extension ID IOC type",
+      "status": "ready",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-04T08:00:00Z"
+    },
+    "T-011": {
+      "title": "Verify remaining Digest-78 indicators before ingestion",
+      "status": "ready",
+      "priority": "medium",
+      "depends_on": [],
+      "created": "2026-08-04T08:00:00Z"
+    },
+    "T-012": {
+      "title": "Profile structural matcher cost under V8 coverage",
+      "status": "ready",
+      "priority": "low",
+      "depends_on": [],
+      "created": "2026-08-04T08:00:00Z"
+    },
+    "T-013": {
+      "title": "Move to Babel 8 and a supported Node line",
+      "status": "blocked",
+      "priority": "medium",
+      "depends_on": [],
+      "blocked_by": "Owner decision on raising package engines and both CI jobs together",
+      "created": "2026-08-04T08:00:00Z"
+    },
+    "T-014": {
+      "title": "Remove external zip dependency from VS Code test fixtures",
+      "status": "ready",
+      "priority": "low",
+      "depends_on": [],
+      "created": "2026-08-04T10:00:00Z"
+    },
+    "T-015": {
+      "title": "Fix packaged self-scan own-definition false positive",
+      "status": "done",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-04T09:24:00Z",
+      "completed": "2026-08-04T09:27:00Z"
+    },
+    "T-016": {
+      "title": "Version-pinned npm IOCs match on a directory scan via the lockfile path",
+      "status": "done",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-06T09:00:00Z"
+    },
+    "T-017": {
+      "title": "Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC",
+      "status": "done",
+      "priority": "medium",
+      "depends_on": [],
+      "created": "2026-08-06T09:30:00Z"
+    },
+    "T-018": {
+      "title": "Match known-malware hashes against real file digests, not just digest text in content",
+      "status": "done",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-12T09:00:00Z"
+    },
+    "T-019": {
+      "title": "Dropped-persistence detection (tranches 1 and 2)",
+      "status": "done",
+      "priority": "high",
+      "depends_on": [],
+      "created": "2026-08-12T09:00:00Z"
+    }
   }
-  ,"next_task_id": 20
-  ,"tasks": {"T-008":{"title":"Adopt AAHP 3.9.1 and close verified scanner and CI defects","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z","completed":"2026-08-04T08:15:48Z"},"T-009":{"title":"Implement full offline sigstore verification","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-010":{"title":"Add a first-class known-bad VS Code extension ID IOC type","status":"ready","priority":"high","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-011":{"title":"Verify remaining Digest-78 indicators before ingestion","status":"ready","priority":"medium","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-012":{"title":"Profile structural matcher cost under V8 coverage","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T08:00:00Z"},"T-013":{"title":"Move to Babel 8 and a supported Node line","status":"blocked","priority":"medium","depends_on":[],"blocked_by":"Owner decision on raising package engines and both CI jobs together","created":"2026-08-04T08:00:00Z"},"T-014":{"title":"Remove external zip dependency from VS Code test fixtures","status":"ready","priority":"low","depends_on":[],"created":"2026-08-04T10:00:00Z"},"T-015":{"title":"Fix packaged self-scan own-definition false positive","status":"done","priority":"high","depends_on":[],"created":"2026-08-04T09:24:00Z","completed":"2026-08-04T09:27:00Z"},"T-016":{"title":"Version-pinned npm IOCs match on a directory scan via the lockfile path","status":"done","priority":"high","depends_on":[],"created":"2026-08-06T09:00:00Z"},"T-017":{"title":"Index matchBareNpmIOC so npm IOC lookup is O(1) like matchPackageIOC","status":"done","priority":"medium","depends_on":[],"created":"2026-08-06T09:30:00Z"},"T-018":{"title":"Match known-malware hashes against real file digests, not just digest text in content","status":"done","priority":"high","depends_on":[],"created":"2026-08-12T09:00:00Z"},"T-019":{"title":"Dropped-persistence detection (tranches 1 and 2)","status":"done","priority":"high","depends_on":[],"created":"2026-08-12T09:00:00Z"}}
 }
