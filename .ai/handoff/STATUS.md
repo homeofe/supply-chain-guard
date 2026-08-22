@@ -20,6 +20,80 @@ the changed entries, which no driver can do.
 
 ---
 
+## A policy-narrowed scan can no longer pass for a clean one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-168-policy-visibility. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/168
+
+### What was actually wrong
+
+The issue's title is about the trust boundary: policy is read from the tree being
+scanned, so a proposed change can disable the rule that would flag it. That much
+is deliberate and unchanged here, because moving it is an owner decision.
+
+The defect that was fixed is the second one underneath it, and it is the reason
+the first one is dangerous rather than merely awkward: the narrowing was
+**silent**. Measured on a directory containing `eval(atob(...))`:
+
+- `rules.disable: [EVAL_ATOB]` took the scan from exit 2 with one critical to
+  exit 0 with none. `suppressedCount` reached 1, but nothing named the rule, and
+  the markdown report, which is the Action's default format and the body of the
+  pull request comment it posts by default, contained the word "suppress" zero
+  times.
+- `ignore: ["app.js"]` was quieter still. `ignore` prunes files before any rule
+  opens them, so `suppressedCount` stayed 0 and **all nine** output formats were
+  silent. Nothing distinguished that report from a genuinely clean one.
+
+The second variant is the severe one, and the issue mentions it only in passing.
+A fix that covered `rules.disable` alone would have passed its own tests while
+leaving the quieter path exactly as it was.
+
+### What changed
+
+- `ScanReport.policyEffect` carries the loaded config's effect as structured
+  metadata: config file, disabled rules, ignored globs, suppressed rules, each
+  with its written reason when one exists. Built by `describePolicyEffect()` in
+  `src/policy-engine.ts`, attached in `src/scanner.ts` next to the policy load.
+  It is `undefined` when the config narrows nothing, so its presence always means
+  something was switched off.
+- All nine formats render it: text, JSON, markdown, SARIF, SBOM, HTML, badge,
+  GitLab and JUnit. Markdown places it **above** the summary, because that is the
+  rendering a reviewer reads before deciding a green check means the change is
+  clean. SARIF carries it as a run-level notification plus
+  `invocations[0].properties`. The badge appends `(policy-narrowed)`, since
+  "clean" on a scan whose config removed a rule is the most misleading string
+  this tool can publish.
+- The v5.2.40 rule is intact and is asserted by a test: policy METADATA is
+  surfaced, suppressed FINDINGS still never enter SARIF, SBOM or GitLab.
+- `POLICY_DISABLE_NO_REASON` and `POLICY_IGNORE_NO_REASON` (medium) bring
+  `rules.disable` and `ignore` up to the audit bar `suppress` has met since v5.3.
+  Both sections now accept a reason-carrying mapping form alongside the list
+  form. Nothing is vetoed: the bare form still disables and still excludes, it is
+  simply reported as undocumented.
+- `README.md` and `action.yml` state where policy is read from and what that
+  means on a `pull_request` event. That was documented nowhere. The README also
+  corrects a `rules.disable` example written as a one-line flow sequence, a form
+  the parser reports as `POLICY_UNKNOWN_KEY` and which disables nothing.
+
+### Evidence
+
+`src/__tests__/issue-168-policy-visibility.test.ts`, 14 tests. The reproduction
+was re-run against a pristine build of the cited commit and against the fixed
+build, same fixtures, same commands: before, `ignore:` produced zero mentions in
+all nine formats; after, all nine name `app.js`, and the `rules.disable` fixture
+names `EVAL_ATOB` in all nine.
+
+Mutation proof: deleting only the `ignoredGlobs` half of `describePolicyEffect`
+leaves the `rules.disable` test green and reddens the `ignore` test, which is the
+mutation that would have caught a decorative fix.
+
+### Still open, and deliberately so
+
+The gate still exits 0 on both fixtures. Making the bypass **loud** is what this
+change does; making it **impossible** means giving the scanner a trusted policy
+source outside the scanned tree, which changes the tool's trust boundary and is
+recorded in the issue as needing the owner. `ScanOptions.policyFile` exists in
+the type and is read by nothing, which is where that work would start.
 ## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
 
 Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.

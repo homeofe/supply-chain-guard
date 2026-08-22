@@ -78,7 +78,7 @@ import { analyzeInstallHooks, extractInstallScripts } from "./install-hook-scann
 import { analyzeDependencyRisks } from "./dependency-risk-analyzer.js";
 import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
-import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, matchGlob } from "./policy-engine.js";
+import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
 import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
@@ -299,6 +299,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // same object is reused for the suppression passes further down.
   const policy = loadPolicyConfig(scanDir);
   const ignoreGlobs = policy?.ignore ?? [];
+  // v5.29 (issue 168): record WHAT the config turns off, not just how many
+  // findings it removed. `ignore:` never reached suppressedCount at all, since
+  // it prunes files here, before any rule runs; a scan narrowed that way used
+  // to be indistinguishable from a clean one in every output format.
+  const policyEffect = policy ? describePolicyEffect(policy) : undefined;
 
   // Collect files (v4.5: diff mode filters to changed files only). Coverage
   // failures are held separately so policy.ignore can remove out-of-scope
@@ -829,6 +834,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     incidents: correlation.incidents.length > 0 ? correlation.incidents : undefined,
     trustBreakdown,
     suppressedCount: suppressedCount > 0 ? suppressedCount : undefined,
+    policyEffect,
     partialScan: partialScan || undefined,
     riskDimensions: calculateRiskDimensions(filteredFindings),
     remediations: generateRemediations(filteredFindings),

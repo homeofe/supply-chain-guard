@@ -73,6 +73,39 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   weaker and different claim than staleness being self-announcing. The README now
   states the distinction and what it costs when those pull requests are never
   merged.
+- **`README.md` and `action.yml` now state where the policy is read from.** It is
+  read from the directory being scanned and from nowhere else, which on a
+  `pull_request` event is the head of the proposing branch, so a change can ship a
+  config that narrows the scan of that same change. That property was documented
+  nowhere before. The README also lists the controls that hold when the proposer
+  is untrusted, and corrects a `rules.disable` example written as a flow sequence
+  on one line, a form the parser reports as `POLICY_UNKNOWN_KEY` and which
+  disables nothing.
+
+### Added
+
+- **Every scan report now names what the loaded policy switched off, in all nine
+  output formats** (`policyEffect` on `ScanReport`, rendered by `src/reporter.ts`
+  in text, JSON, markdown, SARIF, SBOM, HTML, badge, GitLab and JUnit). A config
+  in the scanned tree could remove the rule that would have failed the gate and
+  leave no trace a reader could find. Measured on a directory containing
+  `eval(atob(...))`: with `rules.disable: [EVAL_ATOB]` the scan went from exit 2
+  with one critical to exit 0 with none, `suppressedCount` reached 1 but never
+  named the rule, and the markdown report - the Action's default format and the
+  body of the pull request comment it posts - contained the word "suppress" zero
+  times. With `ignore: ["app.js"]` it was quieter still: `ignore` prunes files
+  before any rule opens them, so `suppressedCount` stayed 0 and every one of the
+  nine formats was silent. Both fixtures now name `EVAL_ATOB` and `app.js`
+  respectively in all nine. Policy METADATA is what is surfaced; suppressed
+  FINDINGS stay out of the machine formats, which is the separate v5.2.40 rule
+  and is unchanged.
+- **`POLICY_DISABLE_NO_REASON` and `POLICY_IGNORE_NO_REASON`** (medium), which
+  bring `rules.disable` and `ignore` up to the audit bar `suppress` has met since
+  v5.3. Both sections now accept a reason-carrying mapping form
+  (`EVAL_ATOB: why` and `"vendor/**": why`) alongside the existing list form; the
+  list form still disables and still excludes, it is simply reported as
+  undocumented. Nothing is vetoed: a narrowing without a written reason costs a
+  line in the report rather than nothing at all.
 
 ### Fixed
 
