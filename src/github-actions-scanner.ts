@@ -106,7 +106,7 @@ export const WORKFLOW_PATTERNS: Array<
     rule: "GHA_ATOB_USAGE",
   },
 
-  // Environment variable exfiltration — requires secrets/env passed as DATA (not as URL)
+  // Environment variable exfiltration - requires secrets/env passed as DATA (not as URL)
   {
     pattern: "curl\\b[^'\"\\n]*(?:-d|--data|--data-raw|-H|--header)[^'\"\\n]*\\$\\{\\{\\s*(?:secrets|env)\\.",
     description: "Secret or env variable passed as curl request data/header (potential exfiltration)",
@@ -162,7 +162,7 @@ export const WORKFLOW_PATTERNS: Array<
   {
     pattern: "(?:echo|tee|cat|cp|mv|write).*\\.github[\\\\/]workflows[\\\\/]",
     description:
-      "Workflow writes to .github/workflows/ — this can persist malicious code by modifying CI pipeline files (supply chain worm pattern)",
+      "Workflow writes to .github/workflows/ - this can persist malicious code by modifying CI pipeline files (supply chain worm pattern)",
     severity: "critical",
     rule: "GHA_SELF_MODIFY",
     correlatedMatcher: WORKFLOW_BROAD_GAP_MATCHERS.SELF_MODIFY,
@@ -177,11 +177,11 @@ validatePatternSet("WORKFLOW_PATTERNS", WORKFLOW_PATTERNS);
  * Sources: GitHub Security Advisories, supply chain incident reports.
  */
 const KNOWN_MALICIOUS_ACTION_SHAS = new Map<string, string>([
-  // tj-actions/changed-files — compromised September 2025 (GHSA-2025-tj-actions)
+  // tj-actions/changed-files - compromised September 2025 (GHSA-2025-tj-actions)
   // Exfiltrated CI secrets to attacker-controlled server via public build logs
   ["d8462b4fc879d893f8f3b49843bde065f3f07b82", "tj-actions/changed-files (Sep 2025 compromise)"],
   ["0e58ed8671d6b60d0890c21b07f8835ace038e67", "tj-actions/changed-files (Sep 2025 compromise variant)"],
-  // reviewdog/action-setup — compromised as part of tj-actions attack chain
+  // reviewdog/action-setup - compromised as part of tj-actions attack chain
   ["3f401fe1d58fe77e10d665ab713057369b8cdfe4", "reviewdog/action-setup (Sep 2025 attack chain)"],
 ]);
 
@@ -270,7 +270,7 @@ function scanWorkflowContent(
   // and (for PPE) to workflows whose trigger grants the elevated context.
   checkInterpolationSinkRules(content, relativePath, findings);
 
-  // v5.7: structural, trigger-aware rules (Cordyceps class) — these need to
+  // v5.7: structural, trigger-aware rules (Cordyceps class) - these need to
   // know which event fires the workflow and what its token can do, which the
   // line-by-line passes above are blind to.
   checkWorkflowAstRules(content, relativePath, findings);
@@ -685,7 +685,7 @@ function checkWorkflowAstRules(
   const triggerSet = new Set(ast.triggers);
   const privileged = PRIVILEGED_TRIGGERS.filter((t) => triggerSet.has(t));
 
-  // GHA_PRIVILEGED_TRIGGER — the workflow runs in an elevated context.
+  // GHA_PRIVILEGED_TRIGGER - the workflow runs in an elevated context.
   if (privileged.length > 0) {
     findings.push({
       rule: "GHA_PRIVILEGED_TRIGGER",
@@ -701,7 +701,7 @@ function checkWorkflowAstRules(
     });
   }
 
-  // GHA_PWN_REQUEST_CHECKOUT — privileged trigger checks out attacker PR/head code.
+  // GHA_PWN_REQUEST_CHECKOUT - privileged trigger checks out attacker PR/head code.
   const hasPwnTrigger = ast.triggers.some((t) => PWN_CHECKOUT_TRIGGERS.includes(t));
   if (hasPwnTrigger) {
     for (const job of ast.jobs) {
@@ -727,7 +727,7 @@ function checkWorkflowAstRules(
     }
   }
 
-  // GHA_GITHUB_SCRIPT_INJECTION — untrusted context eval'd as JS by github-script.
+  // GHA_GITHUB_SCRIPT_INJECTION - untrusted context eval'd as JS by github-script.
   for (const job of ast.jobs) {
     for (const step of job.steps) {
       if (
@@ -749,7 +749,7 @@ function checkWorkflowAstRules(
     }
   }
 
-  // GHA_PERMS_WRITE_ALL — the token is granted every scope.
+  // GHA_PERMS_WRITE_ALL - the token is granted every scope.
   if (ast.permissions.writeAll || ast.jobs.some((j) => j.permissions.writeAll)) {
     findings.push({
       rule: "GHA_PERMS_WRITE_ALL",
@@ -765,7 +765,7 @@ function checkWorkflowAstRules(
     });
   }
 
-  // GHA_PERMS_DEFAULT_BROAD — privileged trigger with no explicit least-privilege.
+  // GHA_PERMS_DEFAULT_BROAD - privileged trigger with no explicit least-privilege.
   // Fire when there is no top-level permissions block AND at least one job runs
   // without its own block (inheriting the broad repo default). A single sibling
   // job declaring permissions must not silence the rule for the jobs that don't.
@@ -1025,7 +1025,7 @@ function checkActionReferences(
     const ref = actionRef.substring(atIndex + 1);
     const owner = actionPath.split("/")[0] ?? "";
 
-    // Check against known malicious SHAs (highest priority — always critical)
+    // Check against known malicious SHAs (highest priority - always critical)
     if (SHA_PATTERN.test(ref) && KNOWN_MALICIOUS_ACTION_SHAS.has(ref)) {
       findings.push({
         rule: "GHA_KNOWN_MALICIOUS_SHA",

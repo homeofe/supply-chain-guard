@@ -252,7 +252,7 @@ export function analyzeRiskTrend(
     }
   }
 
-  // Stagnation at high risk — require at least 5 history entries to avoid
+  // Stagnation at high risk - require at least 5 history entries to avoid
   // false alarms from new projects that haven't been remediated yet
   if (history.length >= 5 && recent.every((h) => h.score > 50) && recent.length >= 3) {
     findings.push({

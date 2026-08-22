@@ -20,7 +20,7 @@ import {
 import { hasBroadUnboundedConsumingGap } from "./regex-complexity.js";
 export { isPatternApplicableToFile } from "./pattern-applicability.js";
 
-/** Matches the scanner's own source files — used to prevent self-scan false positives. */
+/** Matches the scanner's own source files - used to prevent self-scan false positives. */
 const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
 
 // v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
