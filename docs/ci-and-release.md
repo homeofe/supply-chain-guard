@@ -192,6 +192,22 @@ like any other. In order:
 9. Tag the **merged** commit on `main`, never the pre-merge commit, and push the tag.
    Pushing the tag is what triggers publish, the GitHub Release, the `v5` fast-forward
    and the multi-arch image build.
+
+   This step is now enforced rather than remembered. Both publish paths run
+   `scripts/check-release-ancestry.mjs` before anything leaves the runner: the `publish`
+   job in `ci.yml` before `npm publish`, and the `merge` job in `docker.yml` before the
+   image tags move. It fails the release if the tagged commit is not an ancestor of
+   `origin/main`. Run `npm run check:release-ancestry` locally before tagging to get the
+   same answer without burning a version number.
+
+   Why it was needed: required status checks are a property of `refs/heads/main` and are
+   never evaluated on a `refs/tags/*` push, so of the three contexts branch protection
+   requires, only `Build and Test` runs on the released commit. The tag validator that
+   already existed compares the tag string against `package.json` and is satisfied by any
+   commit whose version field matches. Because this repository squash-merges, the local
+   pre-merge commit always has a different sha from the one on `main` while its content
+   looks identical, so tagging the wrong one published four channels with a fully green
+   run and no failing step.
 10. Delete the branch and confirm it is gone on **both** sides. When a release is
     finished the repository has exactly two branches, `main` and `v5`, no open pull
     requests and no open issues.

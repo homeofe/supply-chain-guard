@@ -319,6 +319,25 @@ jobs:
           echo "Every Node major passed and the container image builds and scans."
 
 
+  # WHICH REQUIRED CHECKS ACTUALLY RUN ON A TAG REF
+  # ----------------------------------------------
+  # Branch protection on main requires three contexts. Only ONE of them can exist on
+  # a refs/tags/* push, because required status checks are a property of the BRANCH
+  # and the two ref namespaces do not intersect. Measured over the run history:
+  #
+  #   Build and Test       RUNS on a tag ref. This workflow carries a `tags:` trigger,
+  #                        and `needs: build` below makes it block the publish.
+  #   aahp-verify          does NOT. Its push trigger is `branches: [main]`, and it has
+  #                        no tag-ref run in its last 100.
+  #   PR metadata policy   does NOT. It triggers on pull_request only, and has no
+  #                        tag-ref run in its entire history.
+  #
+  # So arriving on a tag proves the code built, tested and scanned on every supported
+  # Node major. It proves nothing about WHERE the commit lives, and branch protection
+  # never gets a chance to say so. The ancestry gate below is that second half, and it
+  # is what stands between one mistyped `git tag` and four public distribution
+  # channels: npm plus its `latest` dist-tag, the GitHub Release, the container image
+  # including :latest, and the floating v5 branch that `uses: ...@v5` resolves to.
   publish:
     name: Publish to npm
     needs: build
@@ -331,6 +350,31 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, and NOT optional. The ancestry gate below cannot decide
+          # ancestry in a shallow checkout, so it refuses to answer rather than
+          # answering from the handful of commits a depth-1 fetch happens to hold.
+          # Deleting this line therefore turns every release red, which is the point:
+          # the alternative is a gate that keeps reporting green while inspecting
+          # almost nothing.
+          fetch-depth: 0
+
+      # The release-authority gate. docs/ci-and-release.md has always said to tag the
+      # MERGED commit on main and never the pre-merge commit, and this repository
+      # squash-merges, so those two ALWAYS have different shas. Until now that rule
+      # lived only in prose, and 138 of 138 tags complying with it was a convention
+      # holding rather than a gate enforcing.
+      #
+      # Runs before every other step in this job, including the tag validator, because
+      # the tag validator only compares the tag string against package.json and is
+      # satisfied by any commit at all whose version field matches.
+      #
+      # See scripts/check-release-ancestry.mjs for the exit codes: "cannot answer" is
+      # a different code from "answered no", so a green run here means the question
+      # was really asked. Node is preinstalled on the runner, which is why this and
+      # the tag validator can both run before the Setup Node.js step.
+      - name: Require the released commit to be on main
+        run: node scripts/check-release-ancestry.mjs
 
       - name: Validate immutable release tag
         run: |

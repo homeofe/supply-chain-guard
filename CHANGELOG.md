@@ -89,6 +89,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   against one merge ref, the live-tip selector returned 12 files and the same
   merge ref against a base one merged commit older returned 15.
 
+### Security
+
+- **The publish path now proves the tagged commit is on `main` before anything is
+  published** (`scripts/check-release-ancestry.mjs`, run by the `publish` job in
+  `ci.yml` before `npm publish` and by the `merge` job in `docker.yml` before the image
+  tags move). Required status checks, branch protection and `enforce_admins` are all
+  properties of `refs/heads/main` and are never evaluated on a `refs/tags/*` push, so of
+  the three contexts branch protection requires, only `Build and Test` ran on the
+  released commit. The one pre-publish gate that existed compares the tag string against
+  `package.json` and is satisfied by any commit at all whose version field matches. A tag
+  on a commit that never reached `main` therefore moved four public channels, the npm
+  package and its `latest` dist-tag, the GitHub Release, the container image including
+  `:latest`, and the floating `v5` branch, with a fully green run and no failing step.
+  This repository squash-merges, so the local pre-merge commit always has a different sha
+  from the commit that lands on `main` while its content looks identical, which is the
+  accident this closes. `docs/ci-and-release.md` had said to tag the merged commit since
+  before any of the 138 releases to date; it is now a gate rather than a convention.
+
 ## [5.28.1] - 2026-08-21
 
 ### Added

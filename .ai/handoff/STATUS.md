@@ -6,6 +6,56 @@
 
 ---
 
+## The release trigger lived in a ref namespace the gates never reach (2026-08-22)
+
+Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the
+release-authority finding; two named items stay open for the owner.
+
+### What was true before
+
+Branch protection on `main` requires three contexts. Only one of them, `Build and
+Test`, can exist on a `refs/tags/*` push: required status checks, branch protection
+and `enforce_admins` are all properties of `refs/heads/main`, and `aahp-verify` and
+`PR metadata policy` have no tag-ref run in their histories. The `publish` job gated
+on the shape of the ref alone, and the one pre-publish check it did run, `Validate
+immutable release tag`, compares the tag string against `package.json`. That check is
+satisfied by any commit at all whose version field matches, so it carries no
+information about where the commit lives.
+
+`docs/ci-and-release.md` has always said to tag the merged commit on `main` and never
+the pre-merge commit. This repository squash-merges, so those two always have
+different shas while the content looks identical. All 138 semver tags to date are
+ancestors of `main`, which is what a convention looks like right up until the release
+where it is not.
+
+### What changed
+
+`scripts/check-release-ancestry.mjs` fetches `main` and refuses the release unless the
+commit being published is an ancestor of it. It runs in `ci.yml`'s `publish` job before
+every other step, and in `docker.yml`'s `merge` job before the image tags move, because
+that workflow carries its own tag trigger and moves `:latest` on its own. Both jobs now
+check out with `fetch-depth: 0`; the gate refuses to answer in a shallow checkout rather
+than answering from the few commits a depth-1 fetch happens to hold, which is the most
+plausible way it could have decayed into a silent pass.
+
+Each outcome has its own exit code, and "cannot answer" (2, 3, 4, 5) is deliberately a
+different code from "answered no" (6). `src/__tests__/release-ancestry.test.ts` asserts
+the exact codes against real git repositories, and asserts the wiring on comment-stripped
+YAML: with the step deleted, the raw file still contains the script path in a comment, so
+a text search would have reported a gate that no longer runs.
+
+### Still open, and both are owner decisions
+
+1. Whether `aahp-verify.yml` should gain a `tags:` trigger so the handoff gate evaluates
+   the released commit. That changes what a release must satisfy.
+2. Whether a repository ruleset should restrict creation of `refs/tags/v*`. That is an
+   access-control change and needs an explicit bypass list.
+
+Neither is required for the ancestry gate to close the hole. Both are recorded on the
+issue this work came from.
+
+---
+
 ## The required handoff gate compared main to itself on every push (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/aahp-verify-explicit-base. No version bump.
