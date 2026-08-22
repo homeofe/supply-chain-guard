@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:0c1e515cd3d77404845f3da6da13d569cc55e05d150c28527dd141cce85ab883",
+      "checksum": "sha256:52a9ab79722f490c72b99e10b93f735db7bde8ebc70e5e19d28c781d5a999f10",
       "updated": "2026-08-22T23:04:55Z",
-      "lines": 3001,
+      "lines": 3081,
       "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {

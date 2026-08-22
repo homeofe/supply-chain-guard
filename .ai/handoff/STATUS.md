@@ -93,6 +93,86 @@ CLI gate reads each file inside `try { readFileSync } catch { continue }`, so a
 file it cannot read is skipped in silence rather than failing. That is the same
 fail-open class, it ships to every consumer of the governance CLI, and it is not
 this repository's file to fix. It belongs upstream as its own piece of work.
+## Docker base image pinning: one parser, three verdicts (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-174-docker-base-image-pinning. Issue
+https://github.com/homeofe/supply-chain-guard/issues/174. No version bump.
+
+`DOCKER_UNPINNED_BASE` was one regex and it was narrower than its own five tag
+words. Measured on the released rule over 19 representative `FROM` lines: 5
+flagged, and those 5 were exactly the five bare literal words. Three shapes
+inside the rule's own stated scope scanned clean:
+
+- `FROM --platform=$BUILDPLATFORM node:latest`, because `\S+` bound to the flag
+  token. End to end through the CLI: risk score 2, zero high findings,
+  `--fail-on high` exit 0, on a line carrying a literal `:latest`.
+- `node:lts-alpine`, `nginx:stable-alpine`, `nginx:mainline-alpine`,
+  `node:current-slim`, because the alternation ended at `(?:\s|$)`. The suffixed
+  forms are the upstream rolling tags and the ones people write.
+- `FROM scratch-base:latest` and `FROM scratchpad:latest`, because `(?!scratch)`
+  had no token boundary.
+
+Widening the regex was not available: two of the three misses are structural,
+and `validatePatternSet` rejects the obvious widened forms at module load as a
+broad unbounded consuming gap. All three `FROM` rules now share one
+`correlatedMatcher`. It strips instruction flags, joins backslash continuations,
+drops comment lines, tracks `AS <stage>` names in file order, and exempts
+`scratch` only as a whole token. Because the three rules read the same parse,
+they can no longer disagree about what a build-stage reference is.
+
+### The two decisions, both recorded in the repository
+
+Both are written into `docs/ARCHITECTURE.md`, "Base Image Pinning (decision
+record)", and summarised next to the code in `src/dockerfile-scanner.ts`. Neither
+lives only in a pull request.
+
+1. **Tiering.** The issue asked for one rule at `high` for every `FROM` line
+   without a digest. Not taken. `high` is what the default gate fails on
+   (`getReportExitCode` returns 1 when `summary.high > 0`), so one high tier
+   flips every ordinary version-tagged Dockerfile in every consumer from pass to
+   fail in one release, for a risk that has not changed. Instead
+   `DOCKER_UNPINNED_BASE` stays `high` for a moving channel tag and the new
+   `DOCKER_TAG_NOT_DIGEST` reports a tag without a digest at `low`, mirroring
+   `GHA_UNPINNED_ACTION` / `GHA_TAG_NOT_SHA`. Default gate, `--fail-on high` and
+   `--fail-on medium` unchanged; `--fail-on low`, `--fail-on info` and the risk
+   score do change.
+2. **Compose.** `image:` values stay out of scope, said out loud in each rule's
+   `description`, in README.md and in `docs/ARCHITECTURE.md`. Nine of nine
+   Docker rules are anchored on a Dockerfile instruction keyword, so a Compose
+   file returns nothing from the Docker rule set while the README used to list
+   it as a scanned Docker target. The blocker for implementing it is recorded:
+   a service that also declares `build:` uses `image:` to name what it BUILDS,
+   and telling the two apart needs service-block structure, which this project
+   has no YAML parser for.
+
+### Deliberate behaviour changes a consumer will see
+
+- Newly reported at `high`: `--platform` lines carrying a channel tag, suffixed
+  channel tags, `scratch`-prefixed names, and `FROM ubuntu AS base` (no tag).
+- Newly reported at `low`: every `FROM` line with a tag and no digest.
+- No longer reported: a build-stage reference (`FROM builder`), a commented-out
+  `FROM`, and `FROM` appearing inside another instruction.
+- A `FROM` line carrying an embedded carriage return still classifies. Writing
+  the instruction regex the obvious way, anchored with `$`, would have made
+  `FROM node:latest\rEXTRA` scan clean, because JavaScript's `.` stops at a line
+  terminator. The released regex did report it, so this would have been a
+  regression introduced by the fix rather than a gap left in place. Caught while
+  reading the finished parser, not by the test suite, which is the argument for
+  reading a structural rewrite line by line before shipping it.
+- The report-level "pin base images by digest" recommendation in `src/scanner.ts`
+  now also fires for `DOCKER_TAG_NOT_DIGEST`, so a report whose only base-image
+  finding is the new tier is not left without a recommendation.
+- This repository's own `Dockerfile` stays clean: both `FROM` lines are digest
+  pinned, and a self-scan reports zero `DOCKER_*` findings.
+
+### Open for the owner
+
+Nothing blocks the merge. One judgement is worth a second opinion: whether
+`DOCKER_TAG_NOT_DIGEST` should ship at `low` or at `medium`. `low` was chosen
+because it matches the in-repo Actions precedent and leaves every existing gate
+where it was. `medium` would make it visible to `--fail-on medium` consumers and
+is a one-word change in `src/dockerfile-scanner.ts`; the trade-off is written out
+in `docs/ARCHITECTURE.md`.
 ## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
 
 Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.
