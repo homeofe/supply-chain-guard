@@ -7,8 +7,45 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **The rule set in use now reports its own age (`THREAT_FEED_STALE`, medium).**
+  `scan` matches offline against the IOC feed bundled with the installed version,
+  so a pin that stops moving freezes detection at that release's date. Until now
+  nothing in the result said so: not the exit code, not the risk score, not the
+  check name, and the pin kept producing a green check while the rules aged.
+  Every scan now derives the age of the rule set it actually matched against and
+  reports it past 30 days, with the measured age and the newest indicator's date
+  in the finding. It raises the score off zero and the risk level off `clean`, so
+  it reaches every report format and the Action's pull request comment. `medium`
+  is deliberate: it makes the condition visible without turning the default
+  `fail-on: critical` gate red for every consumer on the day it ships. Exclude
+  `THREAT_FEED_STALE` by name if a deliberately frozen rule set is the intent.
+- **The measurement is taken over the rule set the scan used, not over the
+  version number.** It reads the merged bundled-plus-refreshed-cache feed that
+  `checkThreatIntel` and `matchPackageIOC` consumed, so a consumer running
+  `feed refresh` before each scan is correctly reported as current even on an old
+  pin. That makes the answer a statement about the consequence, how recent the
+  rules this scan could match are, rather than about the configuration.
+- **Three ways a staleness check stops firing are closed explicitly.** A
+  `firstSeen` in the future is ignored rather than trusted, because one mistyped
+  year in one entry would otherwise make every feed look permanently current. A
+  date that parses but does not round-trip (`2026-02-31`, which `Date.UTC`
+  silently rolls into March) is rejected rather than normalized past every real
+  entry. A feed in which no entry carries a usable date reports stale rather than
+  silent, because an undatable rule set is unclassifiable and a check that says
+  nothing about the one input it cannot classify is a check that never fires.
+- **`feed stats` prints both ages**, the one bundled with the installed version
+  and the effective one at scan time, marking either `[STALE]`, and returns them
+  under `bundledFreshness` / `freshness` in `--format json`. `feedFreshness`,
+  `feedStalenessFindings`, `FEED_STALE_AFTER_DAYS` and `FEED_STALE_RULE` are
+  exported from the package index for embedders.
+
 ### Changed
 
+- **Corrected the README claim that nothing in this tool reports a frozen rule
+  set.** That was true when it was written and is no longer, so the paragraph now
+  describes what the scan reports and what an exact pin still does not buy.
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
