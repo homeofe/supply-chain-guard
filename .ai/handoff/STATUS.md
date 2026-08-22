@@ -100,6 +100,67 @@ because it matches the in-repo Actions precedent and leaves every existing gate
 where it was. `medium` would make it visible to `--fail-on medium` consumers and
 is a one-word change in `src/dockerfile-scanner.ts`; the trade-off is written out
 in `docs/ARCHITECTURE.md`.
+## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
+
+Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
+
+The scheduled import proposed 4,409 new IOCs and refused to exit clean: at the
+default `--limit 250`, 2,659 of the remainder would age out of the `--days 14`
+window before any later run could reach them.
+
+### What the backlog actually was
+
+4,363 of the 4,409 were a single publisher's namespace, `@zalastax/nolb-*`,
+backfilled into the GitHub Advisory Database on 2026-08-14 from
+ossf/malicious-packages. All are all-versions ranges on names published in
+Jan/Feb 2023. The real signal in the window was the other 46.
+
+Two registry checks decided the response, and the first one was misleading on its
+own. A liveness check said the packages exist, are not unpublished, and predate
+the advisory by three years, which reads as a live gap. Reading the version
+contents corrected it: they are npm SECURITY HOLDING PACKAGES. Of a 14-name
+spread sample, 12 carry only a `0.0.1-security` placeholder and 2 still have
+their original 2023 version alongside it. So the payload is largely gone and the
+names have no legitimate release history, which is what makes a bare-name rule
+safe here, the same reasoning the SANDWORM_MODE set already uses.
+
+Taken as feed entries, they would have grown the bundled feed 34% (12,962 to
+17,325) and added roughly 1 MB to `feed.json`, shipped to every consumer, for one
+publisher's taken-down 2023 squats. They are covered by one anchored pattern in
+`MALICIOUS_PACKAGE_PATTERNS` instead, and the 46 real entries were imported
+normally through the project's own writer.
+
+### Needs a decision
+
+**`MALICIOUS_PACKAGE_PATTERNS` does not reach the generic directory scan.** It is
+read by the npm-scanner name check and its `package.json` fallback. The directory
+scan in `scanner.ts` matches exact feed names only, deliberately, because the
+pattern table holds broad rules such as `^[a-z]{20,}$` that would produce false
+positives there. That is the surface the GitHub Action runs, so a
+pattern-only campaign is invisible to it.
+
+Taken-down names make the residual gap small in this case, but the general
+question is open and it is not this job's call to settle: should the directory
+scan consult a NARROW subset of the pattern table, or should any campaign that
+matters on that surface always be paid for in feed entries? Today's answer was
+the pattern, on the grounds that the names are dead. A live campaign of this
+shape would need the other answer, and there is currently nothing that forces
+that choice to be made deliberately.
+
+Second, smaller: the importer has no way to exclude a namespace, so every future
+run will re-propose these 4,363 and refuse to exit clean until they age out
+around 2026-08-28. Runs in that window need `--allow-backlog` or a namespace
+filter in `scripts/import-threat-feed.mjs`.
+
+### Enrichment (STEP 1b) found nothing addable
+
+Socket, Aikido, StepSecurity, safedep, OX Security and The Hacker News were all
+checked for write-ups newer than the v5.28.1 sweep. Every atomic indicator they
+publish is already in the blocklist: the keyv/cacheable Shai-Hulud domains and
+both payload hashes, the arrayref build-time dropper, WEL1DROPPER, the Alibaba
+RAT cluster, Joyfill and the fake Corepack site. The one genuinely new cluster,
+`@postman-cse`, had its advisory published 2026-08-22 00:44 UTC and has no vendor
+write-up yet, so there were no atomic indicators to add beyond the version pins.
 ## The release trigger lived in a ref namespace the gates never reach (2026-08-22)
 
 Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the
