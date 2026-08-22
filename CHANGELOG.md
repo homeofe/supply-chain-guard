@@ -9,29 +9,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
-- **Threat feed: 46 package IOCs imported from the GitHub Advisory Database**
-  (2026-08-08 to 2026-08-22), covering 41 npm and 5 PyPI indicators. The largest
-  cluster is `@postman-cse/okta-aio-linux-arm64`, 21 versions of a
-  dependency-confusion package aimed at an internal Postman scope, now an npm
-  security holding package. Also `@gfe/lx-watcher` (2 versions), the PyPI
-  typosquats `boto4`, `scrambleeer` and `requests-crypt`, and a set of
-  all-versions npm names including `kelly-sizing`,
-  `polymarket-trading-developer-tool` and `saas-f-testing`. Scanner tests cover
-  the npm version pin, the PyPI ecosystem routing and the clean neighbouring
-  versions as negative cases.
-- **`@zalastax/nolb-*` name-reservation flood: one anchored rule instead of 4,363
-  feed entries.** OpenSSF malicious-packages classified a single publisher's bulk
-  namespace-squat as CWE-506 and the GitHub Advisory Database backfilled it on
-  2026-08-14, which put 4,363 advisories into one import window, all of them
-  all-versions ranges on `@zalastax/nolb-<suffix>` names published in Jan/Feb 2023.
-  Registry checks on 2026-08-22 found these are npm security holding packages:
-  12 of a 14-name spread sample carry only a `0.0.1-security` placeholder and 2
-  still have their original 2023 version. Taking them as feed entries would have
-  grown the bundled feed 34% (12,962 to 17,325) and added about 1 MB to
-  `feed.json` for one publisher's taken-down squats, so they are covered by a
-  single anchored pattern instead. Every advisory in the scope carries the
-  `nolb-` prefix (1,000 of 1,000 sampled) and the rule is anchored to it, so a
-  non-`nolb` package in the same scope does not match.
 
 ### Changed
 
@@ -109,6 +86,78 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **`DOCKER_UNPINNED_BASE` was narrower than its own five tag words, so a
+  literal `:latest` could pass a `--fail-on high` gate with exit 0.** The rule
+  was one regex,
+  `FROM\s+(?!scratch)\S+:(?:latest|stable|lts|current|mainline)(?:\s|$)`, and it
+  missed three shapes inside its own stated scope. `\S+` bound to the first
+  token after `FROM`, so `FROM --platform=$BUILDPLATFORM node:latest` scanned
+  clean end to end (risk score 2, zero high findings, `--fail-on high` exit 0).
+  The alternation ended at `(?:\s|$)`, so `node:lts-alpine`,
+  `nginx:stable-alpine`, `nginx:mainline-alpine` and `node:current-slim` escaped
+  while their bare forms flagged, and the suffixed forms are the ones people
+  write. `(?!scratch)` had no token boundary, so `FROM scratch-base:latest` and
+  `FROM scratchpad:latest` scanned clean. Measured over 19 representative `FROM`
+  lines on the released rule: 5 flagged, and those 5 were exactly the five bare
+  literal words.
+
+  Widening the regex could not fix it. Two of the three misses are structural,
+  and this project's own denial-of-service guard rejects the obvious widened
+  forms at module load. The three `FROM` rules now share one structural parser
+  (`correlatedMatcher`, the mechanism this file already used for
+  `DOCKER_CURL_PIPE` and `DOCKER_APT_NO_VERIFY`), which strips instruction
+  flags, joins backslash continuations, drops comment lines, tracks
+  `AS <stage>` names in file order and exempts `scratch` only as a whole token.
+
+- **`DOCKER_NO_TAG` reported a build-stage reference as an untagged image.**
+  `FROM builder`, after an earlier `FROM ... AS builder`, names a stage in the
+  same build, not a registry image, and a stage cannot be pinned. It is no
+  longer reported. The same parser closes the mirror gap: `FROM ubuntu AS base`
+  is now reported, where the old `\s*$` anchor let a stage-declaring line with
+  no tag through.
+
+- **A `FROM` line carrying an embedded carriage return still classifies.**
+  `FROM node:latest\rEXTRA` is a shape the other Docker rules in this file
+  already guard against, and it would have become a way to hide a literal
+  `:latest` from the new parser, because JavaScript's `.` stops at a line
+  terminator. The instruction regex is deliberately left unanchored so the
+  reference is read up to the terminator and judged.
+
+- **Both `FROM` rules stopped matching text that is not an instruction.**
+  `# FROM node:latest` and `RUN echo FROM node:latest` were reported, because
+  the old regex matched `FROM` anywhere in a line. Conversely, the second line
+  of `RUN echo x \` / `FROM node:latest` is an argument to `RUN` and was read as
+  an instruction. Both are now parsed the way the daemon parses them.
+
+  Two tests asserted the old behaviour and were rewritten rather than deleted:
+  one called `FROM node:20-alpine` "pinned" and required a clean result, and a
+  second, stricter one asserted zero findings for a Dockerfile whose `FROM` line
+  carried a version tag. Verified on this repository's own `Dockerfile`, whose
+  two `FROM` lines are digest pinned: zero Docker findings under the new rules.
+
+- **Threat feed: 46 package IOCs imported from the GitHub Advisory Database**
+  (2026-08-08 to 2026-08-22), covering 41 npm and 5 PyPI indicators. The largest
+  cluster is `@postman-cse/okta-aio-linux-arm64`, 21 versions of a
+  dependency-confusion package aimed at an internal Postman scope, now an npm
+  security holding package. Also `@gfe/lx-watcher` (2 versions), the PyPI
+  typosquats `boto4`, `scrambleeer` and `requests-crypt`, and a set of
+  all-versions npm names including `kelly-sizing`,
+  `polymarket-trading-developer-tool` and `saas-f-testing`. Scanner tests cover
+  the npm version pin, the PyPI ecosystem routing and the clean neighbouring
+  versions as negative cases.
+- **`@zalastax/nolb-*` name-reservation flood: one anchored rule instead of 4,363
+  feed entries.** OpenSSF malicious-packages classified a single publisher's bulk
+  namespace-squat as CWE-506 and the GitHub Advisory Database backfilled it on
+  2026-08-14, which put 4,363 advisories into one import window, all of them
+  all-versions ranges on `@zalastax/nolb-<suffix>` names published in Jan/Feb 2023.
+  Registry checks on 2026-08-22 found these are npm security holding packages:
+  12 of a 14-name spread sample carry only a `0.0.1-security` placeholder and 2
+  still have their original 2023 version. Taking them as feed entries would have
+  grown the bundled feed 34% (12,962 to 17,325) and added about 1 MB to
+  `feed.json` for one publisher's taken-down squats, so they are covered by a
+  single anchored pattern instead. Every advisory in the scope carries the
+  `nolb-` prefix (1,000 of 1,000 sampled) and the rule is anchored to it, so a
+  non-`nolb` package in the same scope does not match.
 - **The remote threat feed is now fetched with a deadline and a size cap, on both
   download paths.** `supply-chain-guard feed refresh` hand-rolled its own
   `https.get` with neither, so a peer that sent response headers and then stalled
@@ -133,7 +182,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   An inactivity timeout would not have been a fix. Node's global `fetch` already
   had one and it never fires against a peer that trickles the body; the deadline
   is absolute and covers the body read. There is a test for exactly that case.
-
 
 
 - **The required `aahp-verify` check compared `main` to itself on every push, and
