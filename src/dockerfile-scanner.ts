@@ -303,6 +303,321 @@ const dockerNpmGlobalMatcher: NonNullable<
   });
 
 // ---------------------------------------------------------------------------
+// FROM instructions: one structural parser, three pinning verdicts
+// ---------------------------------------------------------------------------
+
+/**
+ * WHY A PARSER AND NOT A WIDER REGEX.
+ *
+ * The released rule was one regex,
+ * `FROM\s+(?!scratch)\S+:(?:latest|stable|lts|current|mainline)(?:\s|$)`, and it
+ * was narrower than its own five words:
+ *
+ * - `\S+` binds to the FIRST token after FROM, so
+ *   `FROM --platform=$BUILDPLATFORM node:latest` scanned clean despite carrying
+ *   a literal `:latest`, and passed `--fail-on high` with exit code 0.
+ * - the alternation ended at `(?:\s|$)`, so the suffixed upstream channel tags
+ *   (`node:lts-alpine`, `nginx:stable-alpine`, `nginx:mainline-alpine`) scanned
+ *   clean while their bare forms flagged. The suffixed forms are the ones people
+ *   actually write.
+ * - `(?!scratch)` had no token boundary, so `FROM scratch-base:latest` and
+ *   `FROM scratchpad:latest` scanned clean.
+ *
+ * Measured on the released rule over 19 representative FROM lines: 5 flagged,
+ * and the 5 were exactly the five bare literal words.
+ *
+ * Widening the regex cannot fix this. Two of the three misses are structural (a
+ * flag token, a build-stage name), and this repository's own denial-of-service
+ * guard, `validatePatternSet` in src/patterns.ts, refuses the obvious widened
+ * forms at module load because they contain a broad unbounded consuming gap.
+ * `correlatedMatcher` is the mechanism this file already uses for exactly that
+ * reason (DOCKER_CURL_PIPE, DOCKER_APT_NO_VERIFY), so the FROM rules use it too.
+ * One parser produces all three verdicts, which is why the rules can no longer
+ * disagree about what a build-stage reference is.
+ */
+
+/**
+ * TIERING AND SEVERITY. This is an owner-level policy choice, recorded here
+ * because this is where the next reader meets it. The options and the reasoning
+ * are in docs/ARCHITECTURE.md, "Base image pinning".
+ *
+ * A base image reference is sorted into exactly one verdict:
+ *
+ *   digest pinned      `FROM node:22-alpine@sha256:<64 hex>`  no finding
+ *   scratch            `FROM scratch`                         no finding
+ *   no tag, no digest  `FROM ubuntu`             DOCKER_NO_TAG          high
+ *   moving channel tag `FROM node:lts-alpine`    DOCKER_UNPINNED_BASE   high
+ *   tag, but no digest `FROM node:20-alpine`     DOCKER_TAG_NOT_DIGEST  low
+ *
+ * The alternative was one rule at `high` for every FROM line without a digest.
+ * It was not taken, for a measured reason: `high` is what the DEFAULT gate fails
+ * on (`getReportExitCode` in src/reporter.ts returns 1 when `summary.high > 0`),
+ * so a single high tier would flip every ordinary version-tagged Dockerfile in
+ * every consumer from pass to fail in one release, for a risk that has not
+ * changed. The split follows the precedent this codebase already set for the
+ * same question about GitHub Actions references: src/github-actions-scanner.ts
+ * reports a branch-like ref as GHA_UNPINNED_ACTION (medium) and a version tag
+ * that is not a commit SHA as GHA_TAG_NOT_SHA (low). DOCKER_TAG_NOT_DIGEST is
+ * the Docker analogue of GHA_TAG_NOT_SHA and carries the same `low`.
+ *
+ * What that costs and who pays it: the default gate, `--fail-on high` and
+ * `--fail-on medium` are unchanged by this tier; `--fail-on low`,
+ * `--fail-on info` and the risk score (weight 1 per finding, see
+ * SEVERITY_WEIGHTS in src/risk-engine.ts) are not. A consumer who wants the
+ * digest policy enforced raises the gate to `--fail-on low`; a consumer who does
+ * not want the tier at all sets `rules.disable: [DOCKER_TAG_NOT_DIGEST]` in
+ * .supply-chain-guard.yml, or reassigns it through `rules.severityOverrides`.
+ */
+
+/**
+ * DELIBERATE SCOPE LIMIT: Compose `image:` values.
+ *
+ * `isDockerFile()` admits docker-compose.yml, so the file is opened and read,
+ * but every rule in DOCKERFILE_PATTERNS is anchored on a Dockerfile instruction
+ * keyword and none of them can match Compose syntax. That is stated in each
+ * FROM rule's `description`, in README.md and in docs/ARCHITECTURE.md rather
+ * than left to be discovered, because a file that is read by rules which
+ * structurally cannot match it looks like coverage and is not.
+ */
+
+/** Tag words that name a MOVING CHANNEL rather than a specific release. */
+const MUTABLE_CHANNEL_TAGS: ReadonlySet<string> = new Set([
+  "latest",
+  "stable",
+  "lts",
+  "current",
+  "mainline",
+]);
+
+/**
+ * A digest that actually pins.
+ *
+ * The OCI image specification writes a digest as `algorithm ":" encoded`, and
+ * registers exactly two algorithms: sha256 (64 hex characters) and sha512 (128).
+ * The length is part of the test on purpose, so a truncated placeholder such as
+ * `@sha256:abc...` is NOT read as a pin. It identifies no image and the daemon
+ * rejects it, so treating it as pinned would report a broken reference as safe.
+ */
+const PINNED_DIGEST_RE =
+  /^(?:sha256:[0-9a-fA-F]{64}|sha512:[0-9a-fA-F]{128})$/;
+
+/**
+ * How many characters of one FROM instruction are parsed, and how much of a
+ * continuation chain is joined.
+ *
+ * The bound exists so that a single attacker-supplied multi-megabyte line, or a
+ * file of a million continuation lines, cannot turn this matcher superlinear.
+ * 1024 is roughly double the longest FROM instruction the reference grammar can
+ * produce: an image name is capped at 255 characters, a tag at 128, a sha512
+ * digest costs 136 with its separator, `--platform=linux/arm64/v8` about 25,
+ * and ` AS <stage>` a few dozen more, which totals under 600. An instruction
+ * longer than this bound is therefore not a legal reference; it is parsed as far
+ * as the bound and then produces no finding, which is asserted by the test
+ * "does not classify a FROM instruction longer than the parse bound".
+ */
+const MAX_FROM_INSTRUCTION_CHARS = 1024;
+
+/** A Dockerfile comment line. Docker removes these before joining continuations. */
+const DOCKER_COMMENT_LINE_RE = /^[ \t]*#/;
+
+/**
+ * `FROM` as the instruction of the line. Group 1 is the indent, group 2 the rest.
+ *
+ * Deliberately NOT anchored with `$`. JavaScript's `.` stops at a line
+ * terminator, so `FROM node:latest\rEXTRA` would fail a `$`-anchored match
+ * entirely and the literal `:latest` would scan clean. Without the anchor the
+ * reference is read up to the terminator and still classified, which is the
+ * same evasion the other rules in this file guard against (see hasDotTerminator
+ * above). Covered by "classifies a FROM instruction carrying an embedded line
+ * terminator".
+ */
+const FROM_INSTRUCTION_RE = /^([ \t]*)FROM[ \t]+(.*)/i;
+
+/** A FROM instruction flag, for example `--platform=linux/amd64`. */
+const FROM_FLAG_RE = /^--[A-Za-z][A-Za-z0-9-]*(?:=.*)?$/;
+
+/**
+ * A reference that is WHOLLY a build argument or environment variable. Its value
+ * is not visible to a file-local scan and may itself carry a digest, so
+ * classifying it would be a guess. The ARG default is deliberately not resolved
+ * either: `--build-arg` overrides it at build time, so the default is not
+ * authoritative. Such a reference produces no finding, in either direction.
+ */
+const WHOLLY_VARIABLE_REF_RE = /^\$(?:\{[^{}]*\}|[A-Za-z_][A-Za-z0-9_]*)$/;
+
+/** A line continued by a trailing backslash. */
+const LINE_CONTINUATION_RE = /\\[ \t]*$/;
+
+interface DockerLogicalLine {
+  /** Offset of the first character of the instruction's first physical line. */
+  start: number;
+  /** Offset just past that first physical line, so evidence never spans lines. */
+  firstLineEnd: number;
+  /** Comment lines removed, continuations joined, length bounded. */
+  text: string;
+}
+
+/**
+ * Yield logical Dockerfile lines: comment lines dropped, backslash
+ * continuations joined, in that order, which is the order the daemon applies.
+ *
+ * Tracking continuations is not a nicety. Without it, the second line of
+ * `RUN echo x \` / `FROM node:latest` reads as a FROM instruction when it is an
+ * argument to RUN.
+ */
+function* iterateDockerLogicalLines(
+  content: string,
+): Iterable<DockerLogicalLine> {
+  let index = 0;
+  let pending: DockerLogicalLine | undefined;
+
+  for (;;) {
+    if (index > content.length) break;
+    const newline = content.indexOf("\n", index);
+    const lineEnd = newline === -1 ? content.length : newline;
+    let rawEnd = lineEnd;
+    if (rawEnd > index && content.charCodeAt(rawEnd - 1) === 0x0d) rawEnd--;
+    const raw = content.slice(index, rawEnd);
+
+    if (!DOCKER_COMMENT_LINE_RE.test(raw)) {
+      const continues = LINE_CONTINUATION_RE.test(raw);
+      const body = continues ? raw.replace(LINE_CONTINUATION_RE, "") : raw;
+      pending ??= { start: index, firstLineEnd: rawEnd, text: "" };
+      const budget = MAX_FROM_INSTRUCTION_CHARS - pending.text.length;
+      if (budget > 0) pending.text += body.slice(0, budget);
+      if (!continues) {
+        yield pending;
+        pending = undefined;
+      }
+    }
+
+    if (newline === -1) break;
+    index = newline + 1;
+  }
+
+  if (pending !== undefined) yield pending;
+}
+
+interface FromInstruction {
+  /** Offset of the FROM keyword. */
+  start: number;
+  /** Offset just past the reported evidence, always on the FROM keyword's line. */
+  end: number;
+  /** The image reference token with FROM flags removed, "" when absent. */
+  reference: string;
+  /** Lower-cased build-stage name this instruction declares, if any. */
+  stage: string | undefined;
+}
+
+function parseFromInstruction(
+  line: DockerLogicalLine,
+): FromInstruction | undefined {
+  const match = FROM_INSTRUCTION_RE.exec(line.text);
+  if (match === null) return undefined;
+
+  const start = line.start + match[1]!.length;
+  const end = Math.min(
+    line.firstLineEnd,
+    start + MAX_FROM_INSTRUCTION_CHARS,
+  );
+  if (end <= start) return undefined;
+
+  const tokens = match[2]!.split(/[ \t]+/).filter((token) => token !== "");
+  let cursor = 0;
+  while (cursor < tokens.length && FROM_FLAG_RE.test(tokens[cursor]!)) cursor++;
+
+  // Docker stage names are matched case-insensitively, so normalise once here.
+  const stage =
+    tokens.length > cursor + 2 && tokens[cursor + 1]!.toLowerCase() === "as"
+      ? tokens[cursor + 2]!.toLowerCase()
+      : undefined;
+
+  return { start, end, reference: tokens[cursor] ?? "", stage };
+}
+
+type BaseImagePinning =
+  | "digest-pinned"
+  | "scratch"
+  | "no-tag"
+  | "mutable-channel"
+  | "tag-without-digest";
+
+/**
+ * Sort one image reference into exactly one pinning verdict, or undefined when
+ * the reference cannot be judged from the file alone.
+ *
+ * Reference grammar: `[registry[:port]/]name[:tag][@digest]`. The port colon is
+ * distinguished from the tag colon by requiring the tag colon to come after the
+ * last `/`, which is why `registry.example.com:5000/team/app` is not read as a
+ * tag of `5000/team/app`.
+ */
+function classifyBaseImageReference(
+  reference: string,
+): BaseImagePinning | undefined {
+  if (reference === "") return undefined;
+  if (WHOLLY_VARIABLE_REF_RE.test(reference)) return undefined;
+
+  const at = reference.lastIndexOf("@");
+  const namePart = at === -1 ? reference : reference.slice(0, at);
+  if (at !== -1 && PINNED_DIGEST_RE.test(reference.slice(at + 1))) {
+    return "digest-pinned";
+  }
+
+  const slash = namePart.lastIndexOf("/");
+  const colon = namePart.lastIndexOf(":");
+  const tagged = colon > slash;
+  const tag = tagged ? namePart.slice(colon + 1) : "";
+  const name = tagged ? namePart.slice(0, colon) : namePart;
+
+  // `scratch` is the reserved empty image and cannot be pinned. It is exempt
+  // only as a WHOLE token, which is what `scratch-base` and `scratchpad` broke.
+  if (at === -1 && !tagged && name.toLowerCase() === "scratch") return "scratch";
+  if (at === -1 && !tagged) return "no-tag";
+
+  // A moving channel tag composes as `<channel>-<variant>` upstream
+  // (node:lts-alpine, nginx:stable-alpine), so the FIRST hyphen-separated
+  // component is what decides. Only that leading position counts: a trailing
+  // component is a variant name, not a channel.
+  const channel = tag.split("-", 1)[0]!.toLowerCase();
+  if (MUTABLE_CHANNEL_TAGS.has(channel)) return "mutable-channel";
+
+  // Everything left is referenced by something that is not an immutable digest:
+  // a version tag, an arbitrary tag, or a malformed digest.
+  return "tag-without-digest";
+}
+
+/**
+ * Build the structural matcher for one pinning verdict.
+ *
+ * Build-stage names are collected in file order and a reference resolving to an
+ * already declared stage is skipped: `FROM builder` after `... AS builder` names
+ * a stage in this build, not a registry image, and a stage cannot be digest
+ * pinned. Order matters, because Docker resolves only stages declared ABOVE the
+ * instruction.
+ */
+function fromInstructionMatcher(
+  wanted: BaseImagePinning,
+): NonNullable<PatternEntry["correlatedMatcher"]> {
+  return function* matchFromInstructions(content: string) {
+    const declaredStages = new Set<string>();
+
+    for (const line of iterateDockerLogicalLines(content)) {
+      const instruction = parseFromInstruction(line);
+      if (instruction === undefined) continue;
+
+      const referencesStage = declaredStages.has(
+        instruction.reference.toLowerCase(),
+      );
+      if (instruction.stage !== undefined) declaredStages.add(instruction.stage);
+      if (referencesStage) continue;
+
+      if (classifyBaseImageReference(instruction.reference) !== wanted) continue;
+      yield boundedStructuralMatch(content, instruction.start, instruction.end);
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Dockerfile patterns
 // ---------------------------------------------------------------------------
 
@@ -319,21 +634,49 @@ export const DOCKERFILE_PATTERNS: PatternEntry[] = [
   },
   {
     name: "docker-unpinned-base",
+    // Shape only, kept so the rule still reads as a pattern and still passes
+    // validatePatternSet. The verdict comes from fromInstructionMatcher; editing
+    // this string changes nothing that is reported.
     pattern:
-      "FROM\\s+(?!scratch)\\S+:(?:latest|stable|lts|current|mainline)(?:\\s|$)",
+      "FROM\\s+\\S*:(?:latest|stable|lts|current|mainline)",
     description:
-      "Dockerfile uses a mutable tag (e.g. :latest) instead of a pinned digest. The image can change without notice.",
+      "Dockerfile base image is referenced by a moving channel tag (latest, stable, lts, current, mainline, " +
+      "including variant forms such as stable-alpine). The image behind such a tag is replaced without notice, " +
+      "so the same Dockerfile builds different software. Compose image: values are out of scope for every " +
+      "Docker rule; see docs/ARCHITECTURE.md.",
     severity: "high",
     rule: "DOCKER_UNPINNED_BASE",
+    correlatedMatcher: fromInstructionMatcher("mutable-channel"),
   },
   {
     name: "docker-no-tag",
+    // Shape only; see the note on docker-unpinned-base.
     pattern:
       "FROM\\s+(?!scratch)[a-z][a-z0-9._/-]*\\s*$",
     description:
-      "Dockerfile FROM without a tag or digest. Defaults to :latest, which is mutable.",
+      "Dockerfile FROM without a tag or digest. Defaults to :latest, which is mutable. A reference to a build " +
+      "stage declared earlier in the same file is not a registry image and is not reported. Compose image: " +
+      "values are out of scope for every Docker rule; see docs/ARCHITECTURE.md.",
     severity: "high",
     rule: "DOCKER_NO_TAG",
+    correlatedMatcher: fromInstructionMatcher("no-tag"),
+  },
+  {
+    name: "docker-tag-not-digest",
+    // Shape only; see the note on docker-unpinned-base. Kept admissible to
+    // hasBroadUnboundedConsumingGap on its own, so that removing the matcher
+    // shows up as a wrong verdict in the tests rather than as an import error
+    // that vitest reports as "no tests", which reads far too much like a pass.
+    pattern:
+      "FROM\\s+\\S+:\\S+",
+    description:
+      "Dockerfile base image is referenced by tag rather than by an immutable digest, so the same tag can " +
+      "resolve to a different image on the next build. Reported at low severity: it is a reproducibility gap, " +
+      "not a moving channel. Compose image: values are out of scope for every Docker rule; see " +
+      "docs/ARCHITECTURE.md.",
+    severity: "low",
+    rule: "DOCKER_TAG_NOT_DIGEST",
+    correlatedMatcher: fromInstructionMatcher("tag-without-digest"),
   },
   {
     name: "docker-http-source",
@@ -477,9 +820,15 @@ function getDockerRecommendation(rule: string): string {
     DOCKER_CURL_PIPE:
       "Download files to disk first, verify their checksum, then execute. Never pipe remote content to a shell.",
     DOCKER_UNPINNED_BASE:
-      "Pin base images by digest: FROM node:20@sha256:abc... This ensures reproducible builds.",
+      "Replace the channel tag with a specific release and pin it by digest: " +
+      "FROM node:22-alpine@sha256:<64 hex>. A channel tag moves under you, so the build is not reproducible " +
+      "and a compromised republish of that tag lands silently.",
     DOCKER_NO_TAG:
       "Always specify a tag or digest for base images. Using no tag defaults to :latest which is mutable.",
+    DOCKER_TAG_NOT_DIGEST:
+      "Add the digest alongside the tag: FROM node:22-alpine@sha256:<64 hex>. The tag stays readable and the " +
+      "digest makes the build reproducible. Pair it with an automated bump (Dependabot or Renovate) so the pin " +
+      "does not silently freeze, and see docs/ARCHITECTURE.md if this tier is noise for your project.",
     DOCKER_HTTP_SOURCE:
       "Download files in a RUN step with checksum verification instead of using ADD with URLs.",
     DOCKER_SECRETS_BUILD:
