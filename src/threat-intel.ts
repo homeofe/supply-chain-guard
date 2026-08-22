@@ -13784,6 +13784,34 @@ export const FEED_CACHE_FILE = "threat-feed.json";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
+ * Bounds every remote feed acquisition in this package: the `feed refresh`
+ * download (feed.ts) and the legacy updateThreatFeed() below both read them, so
+ * the two paths cannot drift apart again.
+ *
+ * A network read with no deadline is an availability dependency on a stranger.
+ * The deadline here is ABSOLUTE, not an inactivity timeout: it spans DNS,
+ * connect, headers and the body read, which is the only kind that fires on a
+ * peer that keeps trickling bytes instead of going silent. The reasoning is the
+ * same one written out at solana-monitor.ts, applied to the feed channel.
+ *
+ * maxBytes is roughly ten times the published feed.json, and matches
+ * NPM_REMOTE_LIMITS.metadataBytes. timeoutMs and maxRedirects are the house
+ * values already used by npm-scanner.ts, pypi-scanner.ts and vscode-scanner.ts.
+ */
+export const FEED_REMOTE_LIMITS = Object.freeze({
+  maxBytes: 32 * 1024 * 1024,
+  timeoutMs: 30_000,
+  maxRedirects: 5,
+});
+
+/** Per-call relaxation or tightening of FEED_REMOTE_LIMITS. */
+export interface FeedLimitOverrides {
+  maxBytes?: number;
+  timeoutMs?: number;
+  maxRedirects?: number;
+}
+
+/**
  * Copy of the bundled (compiled-in) IOC feed, without any cached remote
  * entries merged. Used by "feed stats" to distinguish bundled vs effective
  * entry counts; scripts/generate-feed.mjs derives the publishable feed.json
@@ -13929,19 +13957,84 @@ export function loadThreatIntel(
 }
 
 /**
+ * Read a fetch Response body under a byte cap, refusing before the chunk that
+ * would cross it is buffered.
+ *
+ * Content-Length is checked first so a declared oversize body is refused before
+ * a single byte of it is read, but it is never trusted on its own: it is absent
+ * on a chunked response and it describes the COMPRESSED size when the peer sends
+ * gzip, which fetch then inflates. The running counter is what actually holds.
+ */
+async function readBoundedBody(
+  response: Response,
+  feedUrl: string,
+  maxBytes: number,
+): Promise<string> {
+  const declared = response.headers.get("content-length");
+  if (declared !== null && /^\d+$/.test(declared) && BigInt(declared) > BigInt(maxBytes)) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(
+      `feed declares ${declared} bytes, over the ${maxBytes}-byte limit, for ${feedUrl}`,
+    );
+  }
+
+  const stream = response.body;
+  if (stream === null) throw new Error(`feed response carried no body for ${feedUrl}`);
+
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value === undefined) continue;
+      if (bytes + value.byteLength > maxBytes) {
+        throw new Error(`feed body exceeded the ${maxBytes}-byte limit for ${feedUrl}`);
+      }
+      bytes += value.byteLength;
+      chunks.push(value);
+    }
+  } catch (err) {
+    // Tear the socket down rather than leaving an oversized or stalled transfer
+    // draining in the background.
+    await reader.cancel().catch(() => undefined);
+    throw err;
+  }
+
+  // Decode ONCE over the whole buffer. Decoding per chunk turns a multi-byte
+  // UTF-8 sequence split across a chunk boundary into replacement characters.
+  return Buffer.concat(chunks, bytes).toString("utf-8");
+}
+
+/**
  * Update remote threat feed and cache locally.
+ *
+ * Bounded by FEED_REMOTE_LIMITS: an absolute deadline covering the whole
+ * request including the body read, and a byte cap applied before the document
+ * is parsed. Both fail closed - the download is abandoned and the previous
+ * cache, or the bundled feed, stays in effect.
+ *
+ * `limitOverrides` relaxes or tightens a single dimension per call and leaves
+ * the rest at the package defaults.
  */
 export async function updateThreatFeed(
   feedUrl: string,
   cacheDir?: string,
+  limitOverrides: FeedLimitOverrides = {},
 ): Promise<{ added: number; total: number }> {
   const cacheBase = cacheDir ?? CACHE_DIR;
+  const { maxBytes, timeoutMs } = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
+  // One signal for the whole call. `fetch` alone imposes a headers timeout and
+  // (through undici) a body INACTIVITY backstop; neither ever fires on a peer
+  // that keeps sending slowly, which is the case this deadline covers.
+  const signal = AbortSignal.timeout(timeoutMs);
 
   try {
-    const response = await fetch(feedUrl);
+    const response = await fetch(feedUrl, { signal });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const raw = (await response.json()) as unknown;
+    const raw = JSON.parse(await readBoundedBody(response, feedUrl, maxBytes)) as unknown;
     if (!Array.isArray(raw)) throw new Error("Invalid feed format");
     // Validate BEFORE caching: entries failing the indicator contract
     // (unknown type, non-string/empty/oversized value) are quarantined so
@@ -13956,7 +14049,15 @@ export async function updateThreatFeed(
 
     return { added: entries.length, total: BUNDLED_FEED.length + entries.length };
   } catch (err) {
-    throw new Error(`Failed to update threat feed: ${err instanceof Error ? err.message : String(err)}`);
+    // Ask the signal, not the error. fetch and the body stream report an abort
+    // with different names and wordings across runtimes; the signal is the one
+    // witness that says whether OUR deadline is what fired.
+    const message = signal.aborted
+      ? `HTTPS request timed out after ${timeoutMs}ms for ${feedUrl}`
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    throw new Error(`Failed to update threat feed: ${message}`);
   }
 }
 
@@ -14287,7 +14388,7 @@ export function checkThreatIntel(
 
       findings.push({
         rule: "THREAT_INTEL_MATCH",
-        description: `Threat intelligence match: ${ioc.type} "${ioc.value}"${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` — ${ioc.campaign}` : ""}`,
+        description: `Threat intelligence match: ${ioc.type} "${ioc.value}"${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` - ${ioc.campaign}` : ""}`,
         severity: ioc.severity,
         file: relativePath,
         confidence,

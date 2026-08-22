@@ -16,7 +16,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── README_LURE rules only fire in markdown/README files ──────────
 
-  describe("README_LURE rules — onlyFilePattern", () => {
+  describe("README_LURE rules - onlyFilePattern", () => {
     it("should NOT fire README_LURE_CRACK on .ts source files containing 'nolimit'", async () => {
       fs.writeFileSync(
         path.join(tempDir, "rate-limiter.ts"),
@@ -65,7 +65,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── SHAI_HULUD rules skip YAML workflow files ─────────────────────
 
-  describe("SHAI_HULUD rules — notFilePattern (.yml)", () => {
+  describe("SHAI_HULUD rules - notFilePattern (.yml)", () => {
     it("should NOT fire SHAI_HULUD_WORM on .yml file containing 'npm publish'", async () => {
       fs.mkdirSync(path.join(tempDir, ".github", "workflows"), { recursive: true });
       fs.writeFileSync(
@@ -123,7 +123,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── Minified files do not trigger context-unaware patterns ────────
 
-  describe("Minified file exclusion — notFilePattern (.min.js)", () => {
+  describe("Minified file exclusion - notFilePattern (.min.js)", () => {
     it("should NOT fire PROXY_HANDLER_TRAP on .min.js files", async () => {
       fs.writeFileSync(
         path.join(tempDir, "htmx.min.js"),
@@ -167,7 +167,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── JSON files do not trigger miner config keys ───────────────────
 
-  describe("JSON file exclusion — MINER_CONFIG_KEYS", () => {
+  describe("JSON file exclusion - MINER_CONFIG_KEYS", () => {
     it("should NOT fire MINER_CONFIG_KEYS on bootstrap-icons.json with 'coin' icon names", async () => {
       fs.writeFileSync(
         path.join(tempDir, "bootstrap-icons.json"),
@@ -189,7 +189,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── IAC_HARDCODED_SECRET skips test files and dummy values ────────
 
-  describe("IAC_HARDCODED_SECRET — notTestFile + pattern tightening", () => {
+  describe("IAC_HARDCODED_SECRET - notTestFile + pattern tightening", () => {
     it("should NOT fire IAC_HARDCODED_SECRET on conftest.py with dummy api_key", async () => {
       fs.writeFileSync(
         path.join(tempDir, "conftest.py"),
@@ -211,7 +211,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── VIDAR_BROWSER_THEFT requires OS-specific browser paths ────────
 
-  describe("VIDAR_BROWSER_THEFT — pattern precision", () => {
+  describe("VIDAR_BROWSER_THEFT - pattern precision", () => {
     it("should NOT fire VIDAR_BROWSER_THEFT on 'History' word in Prisma schema", async () => {
       fs.writeFileSync(
         path.join(tempDir, "schema.prisma"),
@@ -267,7 +267,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
       );
       const report = await scan({ target: tempDir, format: "text" });
       const hasMeta = report.findings.find((f) => f.rule === "CRITICAL_FINDING_NO_OWNER");
-      // Score must not be inflated by meta-finding — CRITICAL_FINDING_NO_OWNER fires
+      // Score must not be inflated by meta-finding - CRITICAL_FINDING_NO_OWNER fires
       // because MINER_STRATUM_PROTOCOL is critical, but should NOT add to the score itself.
       // Real findings: MINER_STRATUM_PROTOCOL (critical=25). Meta adds 0.
       if (hasMeta) {
@@ -280,7 +280,7 @@ describe("Context-Aware False Positive Elimination (v5.0.0)", () => {
 
   // ── PROXY_BACKCONNECT requires SOCKS5/protocol indicators ─────────
 
-  describe("PROXY_BACKCONNECT — pattern precision", () => {
+  describe("PROXY_BACKCONNECT - pattern precision", () => {
     it("should NOT fire PROXY_BACKCONNECT on array .reverse() method", async () => {
       fs.writeFileSync(
         path.join(tempDir, "utils.ts"),

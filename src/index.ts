@@ -77,13 +77,13 @@ export { analyzePublishingAnomalies, evaluateVersionDrift, checkRegistryVersionD
 export { scanReleaseArtifacts } from "./release-scanner.js";
 export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
-export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
+export { loadPolicyConfig, applyPolicy, applyBaseline, describePolicyEffect, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
 // getBundledFeedRef is the read-only companion to getBundledFeed: same entries,
 // one stable frozen array instead of a fresh copy per call, so an identity-keyed
 // lookup index built over it survives. Exported because an embedder that hands
 // getBundledFeed() to a matcher hits exactly the defect issue 177 records.
-export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed, getBundledFeedRef } from "./threat-intel.js";
+export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed, getBundledFeedRef, FEED_REMOTE_LIMITS, type FeedLimitOverrides } from "./threat-intel.js";
 export { feedStats, refreshFeed, parseFeedPayload, DEFAULT_FEED_URL } from "./feed.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
@@ -100,8 +100,28 @@ export { parseWorkflow } from "./workflow-ast.js";
 export { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
 export { checkHoneytokenAccess, getHoneytokenEnv } from "./secret-simulator.js";
 export { calculateOrgPosture } from "./posture-engine.js";
-export { loadRiskHistory, saveRiskHistory, analyzeRiskTrend } from "./continuous-monitor.js";
-export { loadTriageDecisions, saveTriageDecisions, checkTriageGovernance } from "./triage-engine.js";
+// readRiskHistory / readTriageDecisions distinguish an absent store from an
+// unreadable one; loadRiskHistory / loadTriageDecisions are the deprecated
+// wrappers that cannot, kept because they are already published API.
+export {
+  readRiskHistory,
+  loadRiskHistory,
+  saveRiskHistory,
+  analyzeRiskTrend,
+  riskHistoryUnreadableFinding,
+  RiskHistoryUnreadableError,
+} from "./continuous-monitor.js";
+export type { RiskHistoryRead, RiskHistoryUnreadableReason } from "./continuous-monitor.js";
+export {
+  readTriageDecisions,
+  loadTriageDecisions,
+  saveTriageDecisions,
+  checkTriageGovernance,
+  triageStoreUnreadableFinding,
+} from "./triage-engine.js";
+export type { TriageDecisionsRead, TriageDecisionsUnreadableReason } from "./triage-engine.js";
+export { readJsonArrayStore } from "./state-dir.js";
+export type { StateStoreRead, StateStoreStatus, StateStoreUnreadableReason } from "./state-dir.js";
 export { checkSlaCompliance } from "./sla-engine.js";
 export { forecastRisk } from "./risk-forecast.js";
 export { calculateMetrics } from "./metrics.js";
@@ -136,6 +156,8 @@ export type {
   SolanaTransaction,
   PatternEntry,
   PolicyConfig,
+  PolicyEffect,
+  PolicyEffectEntry,
   InternalDisclosurePolicy,
   WatchlistEntry,
   WatchlistConfig,
