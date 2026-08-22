@@ -87,6 +87,71 @@ wiring that produces the 1700 findings, so it needs the self-scan trust model to
 work through a mount first. Suppression visibility is also untouched: a report
 exposes only a `suppressedCount` and not the entries behind it, which is exactly
 why the inert suppression stayed invisible.
+## A corrupt state file was a clean baseline, in both stores (2026-08-22, unreleased)
+
+A corrupt state store no longer reads as a clean baseline in either of the two stores.
+Branch `fix/issue-175-risk-history-unreadable`, no version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/175.
+
+Both readers under `.scg-history/` ended in `catch { return []; }`, the same
+value the absent case returns, so "no history yet" and "the store could not be
+read" were one outcome. Reproduced end to end, then re-run against the branch.
+
+### What was measured
+
+Fixture: a project whose recorded risk climbs over ten scans. Removing the last
+120 bytes of `risk-history.json` took the scan from exit 1, level `high`, three
+trend findings, to exit 0, level `low`, none. The suppressed findings are all
+`high` and the default gate with no `--fail-on` is `summary.high > 0`, so the
+gate stopped detecting a regression it detected the day before, in silence.
+
+The triage store was measured too rather than assumed to be the weaker twin, and
+it is not weaker. A truncated `triage-decisions.json` took the same scan from
+exit 1 with two `high` governance findings to exit 0 with none, and reported
+`metrics.slaComplianceRate` 100 where the intact store gave 0. That number is
+the sharper harm: the corrupt file did not only hide a verdict, it manufactured
+a compliant one. That measurement is why both stores are fixed in one change.
+
+Two on-disk states, `null` and `{}`, never reached either `catch`, because both
+readers ended in an `as` cast. They threw an unhandled `TypeError` and produced
+no report at all. Four cases across the two stores, all closed by validating the
+declared entry shape.
+
+Evidence destruction was real and is closed: the truncated file still held nine
+recoverable entries and the next plain scan replaced it with one.
+
+### Decisions a later reader should not have to re-derive
+
+All of these are written next to the code they constrain, not only here.
+
+- Severity `high` on both new findings is derived, not chosen: the findings each
+  one replaces are `high` and the default gate is `summary.high > 0`, so
+  `medium` would reproduce the defect one layer down. Recorded at
+  `riskHistoryUnreadableFinding` in `src/continuous-monitor.ts`.
+- `saveRiskHistory` throws rather than overwriting an unreadable store;
+  `saveTriageDecisions` deliberately does not. The first does a read, append and
+  write, so refusing preserves recoverable entries; the second replaces the file
+  wholesale from its caller's list, so refusing would remove the only supported
+  repair path while preventing no measured loss. Recorded at both call sites.
+- `loadRiskHistory` and `loadTriageDecisions` are deprecated in place rather
+  than re-typed, because both are published API in `src/index.ts`.
+- The three-way reader lives in `src/state-dir.ts`, next to the directory both
+  stores write into, so a third store does not rediscover the rule.
+
+### Open, and it is an owner decision
+
+`SecurityMetrics.riskTrend` and `SecurityMetrics.slaComplianceRate` still read
+`stable` and 100 when a store is unreadable, because neither type has a member
+meaning "unknown". The report is marked `partialScan` and the finding text says
+in words that the metrics came from an empty store, which is what keeps this
+from being a silent wrong answer. Widening either type is a breaking change for
+library and JSON consumers, so it belongs in a major rather than a defect fix.
+The choice and its cost are recorded on `calculateMetrics` in `src/metrics.ts`.
+
+Separately, `saveRiskHistory` still writes with a plain `writeFileSync` onto the
+live path, with no temp file and rename anywhere in `src/`, so an interrupted
+scan can still manufacture the corruption this change now reports. Reporting it
+is in scope here; making it unmanufacturable is a separate change.
 ## The engines floor had no ceiling, so the matrix never ran the Active LTS (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/176-compat-matrix-reaches-active-lts. No version bump.
