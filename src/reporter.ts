@@ -5,10 +5,62 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { Finding, ScanReport, Severity } from "./types.js";
+import type {
+  Finding,
+  PolicyEffect,
+  PolicyEffectEntry,
+  ScanReport,
+  Severity,
+} from "./types.js";
 
 const PARTIAL_SCAN_WARNING =
   "Scan incomplete: one or more configured checks or files could not be fully evaluated. No clean verdict can be established until coverage gaps are resolved.";
+
+/**
+ * v5.29 (issue 168). One sentence, rendered identically by all nine formats,
+ * so a reader who has met it in the CLI recognises it in a pull request
+ * comment, in SARIF, or in a GitLab report.
+ *
+ * The wording is the point. A narrowed scan and a clean scan produce the same
+ * empty finding list, and until this block existed nothing in markdown, SARIF,
+ * SBOM, GitLab, JUnit, HTML or the badge distinguished them. The `ignore:` form
+ * did not even increment suppressedCount, because it prunes files before any
+ * rule opens them, so the text format had nothing to print either.
+ */
+const POLICY_EFFECT_HEADLINE =
+  "Policy narrowed this scan. The rules and paths below produced no findings because the loaded config switched them off, not because the code was examined and found clean.";
+
+/** "EVAL_ATOB (no reason given)" or "EVAL_ATOB (reason as written)". */
+function policyEntryText(entry: PolicyEffectEntry): string {
+  return entry.reason ? `${entry.id} (${entry.reason})` : `${entry.id} (no reason given)`;
+}
+
+/**
+ * The non-empty groups, ordered by how completely each one hides code:
+ * `ignore` never opens the file, `rules.disable` drops the finding before it
+ * is counted, `suppress` at least records that something was removed.
+ */
+function policyEffectGroups(
+  effect: PolicyEffect,
+): Array<{ label: string; entries: PolicyEffectEntry[] }> {
+  return [
+    { label: "Paths not scanned (ignore)", entries: effect.ignoredGlobs },
+    { label: "Rules disabled (rules.disable)", entries: effect.disabledRules },
+    { label: "Rules suppressed (suppress)", entries: effect.suppressedRules },
+  ].filter((group) => group.entries.length > 0);
+}
+
+/**
+ * Single-line rendering for the formats that carry a string rather than a
+ * block: the SARIF notification, the GitLab scan message, the SBOM property
+ * and the JUnit testsuite property.
+ */
+function policyEffectLine(effect: PolicyEffect): string {
+  const parts = policyEffectGroups(effect).map(
+    (group) => `${group.label}: ${group.entries.map(policyEntryText).join(", ")}`,
+  );
+  return `${POLICY_EFFECT_HEADLINE} Config: ${effect.configFile}. ${parts.join(". ")}.`;
+}
 
 /** Default CLI gate semantics for a collection of findings. */
 export function getFindingsExitCode(
@@ -300,6 +352,24 @@ function formatText(report: ScanReport): string {
     lines.push("");
   }
 
+  // ── POLICY IN EFFECT ───────────────────────────────────────────────────────
+  // Deliberately outside the box: an entry carries a free-text reason of any
+  // length, and a wrapped reason must never be truncated to keep a border
+  // aligned. The whole purpose of this block is that nothing it names is lost.
+  if (report.policyEffect) {
+    const effect = report.policyEffect;
+    lines.push(`${BOLD}POLICY IN EFFECT${RESET}  ${DIM}${effect.configFile}${RESET}`);
+    for (const line of wrapText(POLICY_EFFECT_HEADLINE, W)) lines.push(line);
+    lines.push("");
+    for (const group of policyEffectGroups(effect)) {
+      lines.push(`  ${BOLD}${group.label}${RESET}`);
+      for (const entry of group.entries) {
+        lines.push(`    - ${policyEntryText(entry)}`);
+      }
+    }
+    lines.push("");
+  }
+
   // ── FINDINGS DETAIL ────────────────────────────────────────────────────────
   if (report.findings.length > 0) {
     const sorted = [...report.findings].sort(
@@ -508,6 +578,32 @@ function formatMarkdown(report: ScanReport): string {
   }
   lines.push("");
 
+  // Policy in effect (v5.29, issue 168). Placed ABOVE the summary on purpose:
+  // markdown is the Action's default format and the body of its pull request
+  // comment, so this is the one rendering a human reviewer actually reads
+  // before deciding a green check means the change is clean.
+  if (report.policyEffect) {
+    const effect = report.policyEffect;
+    lines.push("### ⚠️ Policy in effect");
+    lines.push("");
+    // The headline and the group labels are this module's own constants and are
+    // emitted verbatim. Everything that came out of the config file - rule ids,
+    // globs, reasons - goes through the escapers, because a policy file in a
+    // scanned tree is attacker-controlled input like any other scanned content.
+    lines.push(`> ${POLICY_EFFECT_HEADLINE}`);
+    lines.push(">");
+    lines.push(`> Loaded from \`${mdInlineCode(effect.configFile)}\` in the scanned tree.`);
+    lines.push("");
+    for (const group of policyEffectGroups(effect)) {
+      lines.push(`- **${group.label}:**`);
+      for (const entry of group.entries) {
+        const reason = entry.reason ? mdText(entry.reason) : "_no reason given_";
+        lines.push(`  - \`${mdInlineCode(entry.id)}\` ${reason}`);
+      }
+    }
+    lines.push("");
+  }
+
   // Summary
   lines.push("### Summary");
   lines.push("");
@@ -651,6 +747,39 @@ function formatSarif(report: ScanReport): string {
     results.push(result);
   }
 
+  // Run-level notifications. Partial coverage stays FIRST: it was the only
+  // notification before v5.29 and consumers index it positionally.
+  const notifications: Array<Record<string, unknown>> = [];
+  if (report.partialScan) {
+    notifications.push({
+      level: "warning",
+      message: { text: PARTIAL_SCAN_WARNING },
+    });
+  }
+  if (report.policyEffect) {
+    notifications.push({
+      level: "warning",
+      message: { text: policyEffectLine(report.policyEffect) },
+    });
+  }
+
+  // The v5.2.40 rule still holds: suppressed FINDINGS never enter machine
+  // output. What goes in here is policy METADATA - which rules and paths the
+  // config removed - which is the opposite of leaking a suppressed result and
+  // is the only way a SARIF consumer can tell a narrowed scan from a clean one.
+  const invocations =
+    notifications.length > 0
+      ? [
+          {
+            executionSuccessful: !report.partialScan,
+            toolExecutionNotifications: notifications,
+            ...(report.policyEffect
+              ? { properties: { policyEffect: report.policyEffect } }
+              : {}),
+          },
+        ]
+      : undefined;
+
   const sarif = {
     $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
     version: "2.1.0" as const,
@@ -664,21 +793,7 @@ function formatSarif(report: ScanReport): string {
             rules,
           },
         },
-        ...(report.partialScan
-          ? {
-              invocations: [
-                {
-                  executionSuccessful: false,
-                  toolExecutionNotifications: [
-                    {
-                      level: "warning",
-                      message: { text: PARTIAL_SCAN_WARNING },
-                    },
-                  ],
-                },
-              ],
-            }
-          : {}),
+        ...(invocations ? { invocations } : {}),
         results,
       },
     ],
@@ -711,6 +826,20 @@ function formatSbom(report: ScanReport): string {
     name: "supply-chain-guard:scan-status",
     value: "partial",
   };
+  // CycloneDX metadata.properties is a name/value list, which is exactly the
+  // slot for "this document describes a deliberately narrowed scan" (v5.29).
+  const policyEffectProperties = report.policyEffect
+    ? [
+        {
+          name: "supply-chain-guard:policy-config",
+          value: report.policyEffect.configFile,
+        },
+        {
+          name: "supply-chain-guard:policy-effect",
+          value: policyEffectLine(report.policyEffect),
+        },
+      ]
+    : [];
 
   // v4.9: use the proper CycloneDX 1.6 document if available
   if (report.sbomDocument) {
@@ -720,11 +849,15 @@ function formatSbom(report: ScanReport): string {
     // Attach scan findings as vulnerabilities to the real SBOM
     const withVulns = {
       ...report.sbomDocument,
-      ...(report.partialScan
+      ...(report.partialScan || policyEffectProperties.length > 0
         ? {
             metadata: {
               ...metadata,
-              properties: [...(metadata.properties ?? []), partialScanProperty],
+              properties: [
+                ...(metadata.properties ?? []),
+                ...(report.partialScan ? [partialScanProperty] : []),
+                ...policyEffectProperties,
+              ],
             },
           }
         : {}),
@@ -764,7 +897,14 @@ function formatSbom(report: ScanReport): string {
         name: report.target,
         "bom-ref": "target",
       },
-      ...(report.partialScan ? { properties: [partialScanProperty] } : {}),
+      ...(report.partialScan || policyEffectProperties.length > 0
+        ? {
+            properties: [
+              ...(report.partialScan ? [partialScanProperty] : []),
+              ...policyEffectProperties,
+            ],
+          }
+        : {}),
     },
     components: [] as unknown[],
     vulnerabilities: report.findings.filter((f) => !f.suppressed).map((finding, idx) => ({
@@ -817,6 +957,14 @@ function formatBadge(report: ScanReport): string {
   } else {
     message = "clean";
     color = "brightgreen";
+  }
+  // v5.29 (issue 168): the badge is the most compressed reading of a report,
+  // and "clean" on a scan whose config removed a rule is the single most
+  // misleading string this tool can publish. The suffix is additive, so it
+  // qualifies a critical count exactly as it qualifies a clean one, and it can
+  // never make the badge look calmer than the gate it represents.
+  if (report.policyEffect) {
+    message = `${message} (policy-narrowed)`;
   }
   return JSON.stringify({
     schemaVersion: 1,
@@ -927,6 +1075,18 @@ function formatGitlab(report: ScanReport): string {
       start_time: gitlabTime(startMs),
       end_time: gitlabTime(startMs + (report.durationMs ?? 0)),
       status: report.partialScan ? ("failure" as const) : ("success" as const),
+      // scan.messages is the schema's own slot for analyzer-level notices
+      // (security-report-schemas v15.2.4: items require {level, value}, level in
+      // info|warn|fatal). A custom key would also validate, since the scan object
+      // does not set additionalProperties:false, but only this one is rendered by
+      // the GitLab security UI, and rendering is the entire point here.
+      ...(report.policyEffect
+        ? {
+            messages: [
+              { level: "warn" as const, value: policyEffectLine(report.policyEffect) },
+            ],
+          }
+        : {}),
     },
     vulnerabilities,
   };
@@ -971,6 +1131,19 @@ function formatJunit(report: ScanReport): string {
   lines.push(
     `<testsuite name="supply-chain-guard" tests="${testCount}" failures="${failureCount}" errors="${errorCount}" time="${timeSeconds}">`,
   );
+
+  // Run metadata belongs in <properties>, which every JUnit consumer renders
+  // and which leaves the tests/failures/errors counts untouched (v5.29).
+  if (report.policyEffect) {
+    lines.push("  <properties>");
+    lines.push(
+      `    <property name="supply-chain-guard:policy-config" value="${xmlEscape(report.policyEffect.configFile)}"/>`,
+    );
+    lines.push(
+      `    <property name="supply-chain-guard:policy-effect" value="${xmlEscape(policyEffectLine(report.policyEffect))}"/>`,
+    );
+    lines.push("  </properties>");
+  }
 
   if (report.partialScan) {
     lines.push('  <testcase name="SCAN_INCOMPLETE" classname="supply-chain-guard">');
@@ -1067,6 +1240,8 @@ header .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:14px;opacity:0.85}
 .score-label{font-size:14px;color:#64748b}
 .score-level{font-size:20px;font-weight:600;text-transform:uppercase;color:${scoreColor}}
 .partial-warning{background:#fffbeb;border:1px solid #f59e0b;color:#92400e;padding:16px 20px;border-radius:10px;margin-bottom:24px}
+.policy-warning{background:#fffbeb;border:1px solid #f59e0b;color:#92400e;padding:16px 20px;border-radius:10px;margin-bottom:24px}
+.policy-warning ul{margin:8px 0 0 20px}
 .summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
 .summary .chip{padding:8px 16px;border-radius:8px;font-weight:600;font-size:14px}
 .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:24px;margin-bottom:24px}
@@ -1098,6 +1273,7 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
   </header>
 
   ${report.partialScan ? `<div class="partial-warning"><strong>Scan incomplete.</strong> Coverage gaps prevented a complete verdict. Resolve skipped or unreadable files before treating this result as clean.</div>` : ""}
+  ${report.policyEffect ? `<div class="policy-warning"><strong>Policy in effect.</strong> ${escapeHtml(POLICY_EFFECT_HEADLINE)} Loaded from <code>${escapeHtml(report.policyEffect.configFile)}</code>.${policyEffectGroups(report.policyEffect).map((group) => `<ul><li>${escapeHtml(group.label)}: ${group.entries.map((entry) => escapeHtml(policyEntryText(entry))).join(", ")}</li></ul>`).join("")}</div>` : ""}
 
   <div class="score-card">
     <div>
