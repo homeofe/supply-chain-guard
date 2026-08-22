@@ -41,6 +41,60 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   weaker and different claim than staleness being self-announcing. The README now
   states the distinction and what it costs when those pull requests are never
   merged.
+- **A component whose name is not an npm package name now carries NO purl and a
+  `supply-chain-guard:sbom:purl-unavailable` property saying why, instead of a
+  well-formed purl that identifies nothing.** npm lockfile keys are filesystem
+  paths, so a nested duplicate reaches the generator as
+  `middle/node_modules/@acme/dep` and a workspace member as `packages/app`. An
+  npm purl carries at most one namespace segment, so no canonical purl exists for
+  either; the previous output asserted a scope named `packages` publishing a
+  package named `app`. A consumer can now tell "here is the identifier" from "no
+  identifier could be derived", which the document could not previously express.
+  The underlying naming defect is separate and still open
+  (https://github.com/homeofe/supply-chain-guard/issues/192): this change stops
+  the purl from stating something false about those components, it does not
+  recover their real names. `SbomComponent.purl` is optional as a result, so code
+  reading `.purl` off an `SbomComponent` under TypeScript strict mode now has to
+  handle `undefined`.
+- **The SBOM generator preserves the case of a package name rather than
+  lowercasing it.** The purl specification's npm type definition marks namespace
+  and name case sensitive and notes that packages predating npm's 2015 lowercase
+  rule were grandfathered in. `packageurl-js` 2.0.1 lowercases both, so the two
+  disagree for a legacy mixed-case package such as `Base64`. The reasoning is
+  recorded in `src/sbom-generator.ts` next to the code that depends on it. No
+  component of this repository's own inventory has an uppercase name, so this
+  does not affect the counts below.
+
+### Fixed
+
+- **Scoped-package purls in the SBOM percent-encoded the separator between the
+  npm scope and the package name, so scoped components carried an identifier no
+  other tool matches.** `@babel/parser` was emitted as
+  `pkg:npm/%40babel%2Fparser@7.29.7`; the canonical purl is
+  `pkg:npm/%40babel/parser@7.29.7`. The purl specification treats the npm scope
+  as the purl namespace, and the `/` before the name is the namespace separator,
+  which stays literal. The two forms are not interchangeable: the old one parses
+  as a package with NO namespace whose name contains a slash, so it matches
+  neither a canonical purl by string equality nor a namespace-and-name lookup,
+  which are the two ways purl matching is done in practice. It round trips
+  through a parser without throwing, which is why it survived, and a test case
+  named "should generate correct purl for scoped packages" pinned it.
+
+  Measured by scanning this repository at v5.28.1 and comparing every emitted
+  purl against the canonical purl built by the reference `packageurl-js` 2.0.1
+  from the same scope, name and version: 119 components, 55 equal, 64 not equal,
+  every one of the 64 a scoped package. After the change, on the same tree with
+  the same comparison, 119 of 119 are equal. The 55 unscoped components compared
+  equal before the change as well, which is the control that the comparison is
+  not simply reporting everything as different.
+
+- **`npmPurl()` now percent-encodes each purl segment on its own instead of
+  running `String.prototype.replace` over the joined name.** `replace` with a
+  string argument substitutes only the FIRST occurrence, so the old encoding was
+  also wrong for any name containing more than one `@` or `/`, and it did not
+  fire at all for a name that does not begin with `@`. The encoder follows the
+  specification's character rules rather than `encodeURIComponent`, which leaves
+  five characters unencoded that the specification does not exempt.
 
 ## [5.28.1] - 2026-08-21
 

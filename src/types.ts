@@ -96,11 +96,28 @@ export interface SbomComponent {
   type: "library" | "application" | "framework";
   name: string;
   version: string;
-  /** Package URL (pkg:npm/name@version or pkg:pypi/name@version) */
-  purl: string;
+  /**
+   * Package URL, canonical per the purl specification
+   * (`pkg:npm/express@4.18.3`, `pkg:npm/%40types/node@22.0.0`).
+   *
+   * OPTIONAL, and the absence carries meaning. A purl is emitted only when a
+   * canonical one can be derived from the component's name. When it cannot, the
+   * field is left out and the component carries a
+   * `supply-chain-guard:sbom:purl-unavailable` property naming the reason,
+   * rather than an identifier that is well-formed and wrong. A consumer can
+   * therefore tell "here is the identifier" from "no identifier could be
+   * derived"; before this was optional the two were indistinguishable.
+   */
+  purl?: string;
   hashes?: Array<{ alg: "SHA-256" | "SHA-512" | "SHA-1"; content: string }>;
   licenses?: string[];
   scope?: "required" | "optional" | "excluded";
+  /**
+   * CycloneDX component properties (name/value pairs). Used here to record why
+   * a field that a reader expects is absent, so that absence is a statement in
+   * the document rather than a gap in it.
+   */
+  properties?: Array<{ name: string; value: string }>;
 }
 
 export interface VexStatement {

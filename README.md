@@ -625,6 +625,23 @@ supply-chain-guard contributes to each of those activities:
 supply-chain-guard scan ./project --sbom-output sbom.json
 ```
 
+Component identifiers in that document are Package URLs built to the
+[purl specification](https://github.com/package-url/purl-spec). A scoped package
+is written `pkg:npm/%40scope/name@version`, with the `/` between the scope and
+the name left as the namespace separator, so the string equals the canonical purl
+for that package and decomposes into the namespace and name that advisory data is
+keyed on. Two limits are worth knowing before you ingest one:
+
+- **A component can carry no purl at all.** When the lockfile entry does not
+  yield an npm package name, no canonical purl exists for it, so none is emitted
+  and the component instead carries a
+  `supply-chain-guard:sbom:purl-unavailable` property naming the reason. Absence
+  is deliberate and means "no identifier could be derived", not "not checked".
+- **A package name is reproduced with its case intact.** The specification's npm
+  type definition marks namespace and name case sensitive, so a grandfathered
+  mixed-case package keeps its name. Some purl libraries lowercase instead, and
+  their output will differ from this one for such a package.
+
 Article and paragraph citations are deliberately omitted here. Map these outputs
 to specific provisions against the final published regulation text, with your own
 legal review, rather than against this README.
