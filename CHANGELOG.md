@@ -12,6 +12,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **Two error strings from `feed refresh` changed wording**, because the shared
+  downloader reports them: a request-level failure no longer carries the
+  `network error:` prefix, and a rejected status now reads `HTTPS request failed
+  with status 404 for <url>` instead of `HTTP 404`. Both still name the URL and
+  still leave the previous cache untouched.
+
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
@@ -119,6 +125,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   single anchored pattern instead. Every advisory in the scope carries the
   `nolb-` prefix (1,000 of 1,000 sampled) and the rule is anchored to it, so a
   non-`nolb` package in the same scope does not match.
+- **The remote threat feed is now fetched with a deadline and a size cap, on both
+  download paths.** `supply-chain-guard feed refresh` hand-rolled its own
+  `https.get` with neither, so a peer that sent response headers and then stalled
+  held the command open with no output and no exit: measured at 150 seconds
+  against a stalling loopback peer, against 0.28 seconds for the same command
+  against a healthy one. The same peer now fails closed in 30.4 seconds with exit
+  code 1 and one line naming the deadline. A 64 MiB chunked body was previously
+  accepted in full; it is now refused after 32 MiB with nothing written.
+  Reported as https://github.com/homeofe/supply-chain-guard/issues/170.
+
+  The root cause was not a forgotten timeout. This package already had a bounded
+  downloader, `src/remote-download.ts`, used by the npm, PyPI and VS Code
+  scanners; feed acquisition was the one caller that never adopted it.
+  `refreshFeed` now goes through it, so the deadline, the `Content-Length`
+  refusal, the streaming byte cap and the per-hop redirect revalidation are the
+  same code the registry scanners use. The legacy `updateThreatFeed` keeps the
+  global `fetch` and its quarantine-and-continue validation, and gains an
+  `AbortSignal` deadline plus a byte cap applied before the document is parsed.
+  Both read the new `FEED_REMOTE_LIMITS` constant (32 MiB, 30 s, 5 redirects),
+  and both take an optional per-call override.
+
+  An inactivity timeout would not have been a fix. Node's global `fetch` already
+  had one and it never fires against a peer that trickles the body; the deadline
+  is absolute and covers the body read. There is a test for exactly that case.
 
 
 - **The required `aahp-verify` check compared `main` to itself on every push, and
