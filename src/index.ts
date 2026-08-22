@@ -79,7 +79,7 @@ export { correlateFindings } from "./correlation-engine.js";
 export { calculateTrustBreakdown } from "./trust-breakdown.js";
 export { loadPolicyConfig, applyPolicy, applyBaseline, saveBaseline } from "./policy-engine.js";
 export { detectTrustSignals } from "./trust-signals.js";
-export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed } from "./threat-intel.js";
+export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed, FEED_REMOTE_LIMITS, type FeedLimitOverrides } from "./threat-intel.js";
 export { feedStats, refreshFeed, parseFeedPayload, DEFAULT_FEED_URL } from "./feed.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";

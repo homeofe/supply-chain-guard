@@ -2122,7 +2122,14 @@ function generateRecommendations(
       "CRITICAL: Dockerfile pipes remote content to shell. Download, verify checksum, then execute.",
     );
   }
-  if (rules.has("DOCKER_UNPINNED_BASE") || rules.has("DOCKER_NO_TAG")) {
+  // All three base-image verdicts share one remediation, so all three must
+  // reach it. DOCKER_TAG_NOT_DIGEST was the tier that could otherwise be the
+  // only finding in a report and leave that report with no recommendation.
+  if (
+    rules.has("DOCKER_UNPINNED_BASE") ||
+    rules.has("DOCKER_NO_TAG") ||
+    rules.has("DOCKER_TAG_NOT_DIGEST")
+  ) {
     recommendations.push(
       "Pin Docker base images by digest (FROM image@sha256:...) to ensure reproducible and tamper-proof builds.",
     );

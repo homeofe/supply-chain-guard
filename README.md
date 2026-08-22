@@ -73,7 +73,9 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 ### Infrastructure & CI/CD
 - GitHub Actions: unpinned actions, secrets exfiltration, encoded payloads, curl piping
 - Agentic workflows (GitLost class): AI-agent steps and gh-aw `.github/workflows/*.md` that ingest untrusted issue/PR text, hold a cross-repo token, and can post publicly - the prompt-injection data-leak posture
-- Dockerfile: curl pipe, unpinned base images, hardcoded secrets, SUID bits
+- Dockerfile / Containerfile: curl pipe, base images on a moving channel tag or without a digest,
+  hardcoded secrets, SUID bits. Compose `image:` values are out of scope for every Docker rule
+  (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#base-image-pinning-decision-record))
 - Terraform/IaC: inline scripts, external modules, hardcoded secrets
 - Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
 - Git hooks and submodule security
@@ -582,7 +584,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 | RubyGems | `scan` | Gemfile, Gemfile.lock (malicious-gem IOCs, http/git sources) |
 | Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
 | NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
-| Docker | `scan` | Dockerfile, docker-compose.yml, Containerfile |
+| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. `docker-compose.yml` is read, but every Docker rule is anchored on a Dockerfile instruction keyword, so Compose `image:` values are not covered |
 | Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets) |
 | VS Code | `vscode` | .vsix files, activation events, dangerous APIs |
 | GitHub Actions | `scan` | .github/workflows/*.yml |
@@ -838,6 +840,16 @@ URL, hash, or package name), never a regular expression. All ingestion paths
 validate each entry against its type's shape and quarantine anything invalid -
 a malformed or hostile feed entry can neither crash a scan nor flood it with
 garbage matches, and a rejected refresh never overwrites the previous cache.
+
+**Acquisition bounds:** both download paths are bounded before anything is
+parsed or written. An absolute 30 second deadline covers DNS, connect, headers
+and the body read; the response is capped at 32 MiB, refused on a declared
+`Content-Length` over the cap before a byte is read and counted again while
+streaming when no length is declared; at most 5 redirects are followed and every
+hop is revalidated. An inactivity timeout would not be enough, because a peer
+that keeps trickling bytes never triggers one. Every bound fails closed and
+loudly: the download is abandoned, one line naming the bound goes to stderr, the
+command exits non-zero, and the previous cache stays in effect.
 
 ### Where the feed comes from
 
