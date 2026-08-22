@@ -214,9 +214,13 @@ export interface SecurityMetrics {
    * Percentage of measurable triage decisions that are inside their SLA, or
    * `null` when there is nothing to measure.
    *
-   * Computed from the single definition in `src/sla-engine.ts`. The value is
-   * 100 if and only if `checkSlaCompliance` reports zero breaches over the
-   * same decisions.
+   * Computed from the single definition in `src/sla-engine.ts`. When the value
+   * is non-null it is 100 if and only if `checkSlaCompliance` reports zero
+   * breaches over the same decisions. The qualifier is required, and an earlier
+   * draft of this comment omitted it: zero breaches alone does not imply 100,
+   * because an empty decision set and a set whose every `decidedAt` is
+   * unparseable each report zero breaches and a rate of `null`. In one
+   * direction the implication needs no qualifier: 100 implies zero breaches.
    *
    * `null` means no measurement: no triage decisions were recorded, or every
    * recorded decision has an unparseable `decidedAt`. It does NOT mean zero

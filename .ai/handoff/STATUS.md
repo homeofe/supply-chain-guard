@@ -36,9 +36,23 @@ One definition, `slaVerdict` in `src/sla-engine.ts`, returning
 `compliant | at-risk | breached | unmeasurable`. `checkSlaCompliance` builds its
 findings from it and `src/metrics.ts` counts its verdicts. `slaComplianceRate`
 became `number | null`, floored rather than rounded, so the published invariant
-is exact: 100 if and only if the engine reports zero breaches over the same
-decisions. `mttrCritical` was removed from `SecurityMetrics`; it was assigned
-`undefined` unconditionally and was always absent from JSON output.
+is exact: when the rate is non-null, it is 100 if and only if the engine reports
+zero breaches over the same decisions. `mttrCritical` was removed from
+`SecurityMetrics`; it was assigned `undefined` unconditionally and was always
+absent from JSON output.
+
+The "when non-null" qualifier is a correction. An earlier revision of this entry,
+the CHANGELOG entry, the `SecurityMetrics` doc comment and the pull request body
+all stated the biconditional unrestricted, and unrestricted it is false in one
+direction. Executed on this branch, 2026-08-22: an empty decision set gives
+`checkSlaCompliance` 0 breaches and `slaComplianceRate` `null`, not 100; two
+decisions whose `decidedAt` cannot be parsed give the same pair; and the control,
+one `resolved` decision, gives 0 breaches and 100. So zero breaches does not
+imply 100. The other direction needs no qualifier: 100 does imply zero breaches.
+The code and the tests were already right about this. The cross-check in
+`src/__tests__/sla-engine.test.ts` asserts the weaker, correct form,
+`if (breaches === 0) expect(rate === null || rate === 100).toBe(true)`; only the
+prose overreached, and only the prose changed.
 
 Both are breaking for TypeScript consumers of the library API and nothing else:
 no gate, exit code, workflow, Action input or output, non-JSON report format or

@@ -39,10 +39,15 @@ import { slaVerdict } from "./sla-engine.js";
  *   dropped key from an older tool version that never had the field.
  * - `Math.floor`, not `Math.round`. Rounding would let one breach in 200
  *   decisions report as 100 percent. Flooring makes the published invariant
- *   exact: the value is 100 if and only if `checkSlaCompliance` finds zero
- *   breaches in the same decisions. The cost is that the number is never
- *   rounded up, which is the correct direction of error for a compliance
- *   figure.
+ *   exact: WHEN THE VALUE IS NON-NULL it is 100 if and only if
+ *   `checkSlaCompliance` finds zero breaches in the same decisions. An earlier
+ *   draft of this comment dropped that qualifier and stated the biconditional
+ *   unrestricted, which is false in one direction: the two `return null` paths
+ *   above are reached with zero breaches, so zero breaches does not imply 100.
+ *   The `if (breaches === 0) expect(rate === null || rate === 100)` assertion
+ *   in `src/__tests__/sla-engine.test.ts` is the form the tests always used.
+ *   The cost of flooring is that the number is never rounded up, which is the
+ *   correct direction of error for a compliance figure.
  */
 function slaComplianceRateOf(
   decisions: TriageDecision[],

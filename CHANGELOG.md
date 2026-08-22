@@ -18,10 +18,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   breach, because the metric excluded `new` from its denominator and the engine
   did not. There is now one definition, `slaVerdict` in `src/sla-engine.ts`, and
   `src/metrics.ts` counts its verdicts instead of computing its own. The
-  published invariant is exact: the rate is 100 if and only if
-  `checkSlaCompliance` reports zero breaches over the same decisions. The value
-  is floored rather than rounded so that one breach in 200 decisions reports 99
-  and not 100.
+  published invariant is exact: **when the rate is non-null**, it is 100 if and
+  only if `checkSlaCompliance` reports zero breaches over the same decisions.
+  The qualifier is load-bearing and an earlier draft of this entry dropped it,
+  publishing the unrestricted biconditional. Zero breaches does not imply 100:
+  an empty decision set and a set whose every `decidedAt` is unparseable both
+  report zero breaches and a rate of `null`. The direction that does hold
+  unrestricted is 100 implies zero breaches. The value is floored rather than
+  rounded so that one breach in 200 decisions reports 99 and not 100.
 - **An empty triage store no longer reports 100 percent compliance.**
   `slaComplianceRate` is now `number | null` and returns `null` when there is
   nothing to measure: no decisions recorded, or every decision carrying a
