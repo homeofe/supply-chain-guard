@@ -187,6 +187,135 @@ jobs:
       - name: AAHP conformance
         run: npx --no-install aahp doctor . --json
 
+      # Self-scan: this repository, inspected by the scanner this repository ships.
+      #
+      # WHY THIS EXISTS
+      # ---------------
+      # Every other CLI invocation in this pipeline validates the DISTRIBUTION:
+      # that the package installs, that the image starts, that a scan of a
+      # four-line fixture emits parseable JSON. Those are liveness probes. None
+      # of them inspects the CONTENT of this tree. Until this step existed, every
+      # rule this tool enforces on its consumers was unenforced on its own
+      # source, and the required "Build and Test" context that gates an npm
+      # release proved nothing about what was in the release. A scanner that does
+      # not scan itself is a trust claim nobody has tested.
+      #
+      # WHY THIS EXACT WIRING
+      # ---------------------
+      # It runs the locally built CLI from the checkout root, and that is not
+      # incidental. isOwnPackageRoot in src/scanner.ts compares the resolved scan
+      # target against the scanner's own install root; only when they match does
+      # the SELF_SCAN_INERT_FILES allowlist apply and .supply-chain-guard.yml get
+      # read from this directory. Scanning this same tree through a container
+      # mount instead (reusing the docker step below looks cheaper) makes that
+      # comparison false, which switches the allowlist and the policy off and
+      # reports roughly 1700 self-referential findings on detector definitions
+      # the tool ships deliberately. That number is measured, not estimated. A
+      # step like that gets switched off within a week, which is the failure mode
+      # this gate was added to prevent. Do not rewire it that way.
+      #
+      # There is deliberately no `if:` condition. A step keyed on a matrix value
+      # such as `matrix.node == '22'` disappears in silence on the day that value
+      # leaves the matrix, which is the same class of defect as the missing gate
+      # itself. Running on every leg costs the measured scanner time (about 9 s)
+      # twice, inside a job that already runs npm ci, npm audit, tsc, the full
+      # suite with coverage, and a clean-room tarball install.
+      #
+      # --no-history because the checkout is fetch-depth 0: a history scan would
+      # walk every commit ever made and report content that no pull request can
+      # change. This step is a gate on the working tree.
+      #
+      # THRESHOLD
+      # ---------
+      # --fail-on critical, chosen rather than inherited. The measurement behind
+      # it: with the three fixes that ship alongside this step, the tree reports
+      # ZERO findings at every severity, plus seven findings suppressed by
+      # .supply-chain-guard.yml, each carrying a written reason. So `critical` is
+      # not the strictest threshold this tree can hold today; `--fail-on info`
+      # would also pass on this commit.
+      #
+      # `critical` is still the deliberate choice. It is the severity at which a
+      # finding is a regression rather than a backlog item, and it already covers
+      # the only recurring finding source this repository has: threat-intelligence
+      # releases, which add real indicators to CHANGELOG.md and to feed.json and
+      # surface as critical. A stricter threshold buys coverage of severities that
+      # currently have no instances and no known source here, and pays for it by
+      # turning unrelated pull requests red. A gate that blocks unrelated work is
+      # a gate somebody deletes.
+      #
+      # OPEN DECISION for the maintainer, written here rather than in a pull
+      # request comment so that the next reader meets it: tighten to
+      # `--fail-on high`, or lower, once this step has enough history to show what
+      # actually appears at those severities. Whoever tightens it should re-run
+      # the mutations described in src/__tests__/issue-173-self-scan-gate.test.ts.
+      #
+      # Exit codes from getReportExitCode in src/reporter.ts, with --fail-on set:
+      # 0 = nothing at or above the threshold and the scan was complete;
+      # 1 = a finding at or above the threshold, OR a partial scan. A partial scan
+      # failing the gate is intended: a scan that could not read part of the tree
+      # has not cleared the part it could not read.
+      - name: Self-scan this repository
+        run: |
+          report="$RUNNER_TEMP/self-scan.json"
+
+          # The report is written OUTSIDE the checkout on purpose. Written into
+          # it, the file would still be sitting in the tree when npm pack and the
+          # governance gates run later in this same job.
+          rc=0
+          node dist/cli.js scan . --fail-on critical --format json --no-history > "$report" || rc=$?
+
+          # POSITIVE CONTROL. A green verdict produced by inspecting the wrong
+          # directory is indistinguishable from a green verdict produced by a
+          # clean tree, and that ambiguity is exactly the defect this step closes.
+          # So the step has to prove it looked at this repository before its
+          # verdict is allowed to mean anything.
+          #
+          # The floor is DERIVED from the checkout rather than hardcoded: it is
+          # the number of TypeScript sources tracked under src/ (192 when this
+          # was written, against 407 files actually inspected). Every one of them
+          # lives under the checkout root and is plain text the scanner includes,
+          # so any scan genuinely rooted here inspects at least that many. The CI
+          # fixture directory inspects 1. Deriving the number means it tracks the
+          # repository instead of decaying into a stale constant that nobody
+          # remembers how to justify.
+          #
+          # `|| true` and not `|| echo 0`: grep -c already PRINTS 0 when it
+          # matches nothing, and additionally exits 1, so an `echo 0` fallback
+          # appends a second zero and floor becomes two lines. The numeric test
+          # below then aborts with "integer expression expected" instead of the
+          # legible message it exists to print. A gate that fails illegibly is
+          # most of the way to a gate nobody trusts.
+          floor=$(git ls-files -- src | grep -c '\.ts$' || true)
+          if [ "$floor" -eq 0 ]; then
+            echo "::error title=Self-scan control::No TypeScript sources found under src/, so no file-count floor can be established. Refusing to pass without a control."
+            exit 1
+          fi
+
+          REPORT="$report" FLOOR="$floor" node -e '
+            const fs = require("fs");
+            const r = JSON.parse(fs.readFileSync(process.env.REPORT, "utf8"));
+            const scanned = r.summary.filesScanned;
+            const floor = Number(process.env.FLOOR);
+            console.log("self-scan: " + scanned + " of " + r.summary.totalFiles +
+              " files inspected, " + r.findings.length + " findings, " +
+              (r.suppressedCount || 0) + " suppressed by .supply-chain-guard.yml");
+            for (const f of r.findings) {
+              console.log("  " + f.severity + "  " + f.rule + "  " + f.file + (f.line ? ":" + f.line : ""));
+            }
+            if (!(scanned >= floor)) {
+              console.error("::error title=Self-scan target::Only " + scanned +
+                " files were inspected, but this checkout tracks " + floor +
+                " TypeScript sources under src/. The scan did not cover this repository, so its verdict means nothing.");
+              process.exit(1);
+            }
+          '
+
+          if [ "$rc" -ne 0 ]; then
+            echo "::error title=Self-scan::The scanner reported a finding at or above critical on this repository, or could not scan it completely (exit $rc). Fix the finding, or add a reviewed suppression with a written reason to .supply-chain-guard.yml. Do not silence it here."
+            exit "$rc"
+          fi
+          echo "Self-scan clean at the critical threshold."
+
       - name: Test
         run: npm run test:coverage
 

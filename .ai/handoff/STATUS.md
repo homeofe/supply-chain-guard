@@ -20,6 +20,73 @@ the changed entries, which no driver can do.
 
 ---
 
+## The scanner now scans this repository (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-173-self-scan-gate. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/173
+
+CI built the scanner, started it, and confirmed it emitted parseable JSON against
+a four-line fixture `package.json`. It never pointed the scanner at this
+repository, so every rule this tool enforces on its consumers was unenforced on
+its own tree, and none of the three status checks branch protection requires on
+`main` read a line of it. The omission dates from the first commit: no commit in
+the history of `.github/workflows/` ever removed such a step, because none ever
+added one.
+
+The class matters more than the instance: a smoke test that proves the tool RUNS
+reads exactly like a check that the tool PASSES. Both are green, and only one of
+them looked at your code.
+
+### What the first real self-scan found
+
+Four critical findings, all four self-referential false positives. Nothing was
+hiding behind the missing gate, which is a measured result and not an assumption.
+The cost was elsewhere. `.supply-chain-guard.yml` had been maintained for a
+self-scan that never ran, and it had already drifted: one of its five
+suppressions matched nothing. Two product-level false positives had also shipped
+undetected, one of which fires on any adopter whose changelog names a package
+like the real malicious `nolimit-agent`.
+
+All four are fixed rather than suppressed. A gate introduced on a red tree is a
+gate somebody turns off. The tree now reports zero findings at every severity,
+plus seven suppressions each carrying a written reason.
+
+### The wiring constraint, which is the part that is easy to get wrong
+
+The step must run the locally built CLI from the checkout root.
+`isOwnPackageRoot` compares the resolved target against the scanner's own install
+root, and only a match applies `SELF_SCAN_INERT_FILES` and loads the policy file
+from this directory. Reaching the same tree through a container mount, which
+looks like the cheap option because the docker job already mounts one, switches
+both off and reports roughly 1700 self-referential findings. That is measured.
+Anyone rewiring this should read the comment above the step first.
+
+The step also carries a positive control, and that is the load-bearing half: a
+scan of the wrong directory finds nothing and exits 0, so a green step that
+inspected nothing looks exactly like a green step that inspected a clean tree.
+It compares `filesScanned` against the count of TypeScript sources the checkout
+tracks under `src/`. Verified by execution: repointed at the old fixture, the
+scan is green at `critical` and the control fails the step anyway.
+
+### Open for the owner
+
+The threshold is `--fail-on critical`, and that is a choice rather than a
+ceiling. With these fixes the tree is clean at every severity, so `--fail-on
+info` would also pass today. `critical` was chosen because it is the severity at
+which a finding is a regression rather than a backlog item, and because it
+already covers the only recurring finding source here, the threat-intelligence
+releases that add real indicators to `CHANGELOG.md` and `feed.json`. Tightening
+to `high` or lower is a live option once the step has enough history to show what
+appears at those severities. The decision and its tradeoff are recorded next to
+the step in `ci.yml`, not only here.
+
+### Not addressed
+
+The docker job still scans only the fixture; making it scan the checkout is the
+wiring that produces the 1700 findings, so it needs the self-scan trust model to
+work through a mount first. Suppression visibility is also untouched: a report
+exposes only a `suppressedCount` and not the entries behind it, which is exactly
+why the inert suppression stayed invisible.
 ## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
 
 Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.

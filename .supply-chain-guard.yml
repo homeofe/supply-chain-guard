@@ -34,9 +34,23 @@ suppress:
   # This repo's own tooling discussing its publish process is not a worm.
   - rule: SHAI_HULUD_WORM
     reason: doc-generator template in scripts/scg-handoff-docs.mjs describes this repo's npm publish pipeline; detection stays active for scanned user projects
-  - rule: SHAI_HULUD_CRED_STEAL
-    reason: same generator template mentions NPM_TOKEN only to document that OIDC publishing uses no token; no credential access occurs
 
   # The DOCKER_NPM_GLOBAL suppression that used to sit here is gone: the rule
   # now inspects the package specs and no longer fires on our image's local
   # tarball install. Fixing the rule beat documenting an exception for it.
+  #
+  # SHAI_HULUD_CRED_STEAL was removed for a different reason: it suppressed
+  # nothing. Measured on the first automated self-scan, this tree yields 11
+  # findings with this file absent and 4 with it present, and SHAI_HULUD_CRED_STEAL
+  # appears in neither set. It had been added defensively next to its sibling
+  # SHAI_HULUD_WORM, which does fire three times on the same generator template.
+  # A suppression that matches nothing is not free: it is standing permission
+  # for a finding no reviewer has ever seen, and because the report exposes only
+  # a suppressedCount and not the entries behind it, nothing would have made
+  # that visible. Removing it means the rule now has to go through review if it
+  # ever does fire here.
+  #
+  # This file is only load-bearing because CI runs the self-scan that consumes
+  # it (see the "Self-scan this repository" step in .github/workflows/ci.yml).
+  # Before that step existed, the scan was run by hand and the drift above was
+  # invisible. Re-read these entries whenever the self-scan verdict changes.
