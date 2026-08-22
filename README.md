@@ -153,6 +153,22 @@ The scanner writes its risk history to `.scg-history/` in the scanned repo;
 it is not written when `--no-history` is set, which the hook now uses. For
 plain scans without that flag, add the folder to your `.gitignore`.
 
+**If a file in `.scg-history/` cannot be read, the scan says so and fails.** The
+two stores there, `risk-history.json` and `triage-decisions.json`, are the
+baseline that trend, forecast and triage-governance rules compare against. A
+store that is absent is a first scan and stays silent, which is the normal case
+on a fresh checkout or a hosted runner. A store that exists but does not parse,
+because a scan was interrupted mid-write or the file was edited by hand, is lost
+evidence, and the two are deliberately not reported the same way: the scan emits
+`RISK_HISTORY_UNREADABLE` or `TRIAGE_STORE_UNREADABLE` at `high`, sets
+`partialScan: true`, and exits nonzero regardless of `--fail-on`, because an
+unusable baseline is an indeterminate result rather than a clean one. The
+unreadable file is left on disk rather than overwritten, so complete entries can
+still be recovered from it, usually by closing the truncated JSON array by hand.
+Delete the file to start a new baseline once you have decided the old trend is
+expendable. `--no-history` does not silence this: that flag stops the write, not
+the read, so a corrupt store still degrades the verdict and is still reported.
+
 The hook scans the repository root on every commit and fails on high or critical findings.
 
 ### Docker
