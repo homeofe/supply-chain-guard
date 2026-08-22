@@ -864,6 +864,16 @@ validate each entry against its type's shape and quarantine anything invalid -
 a malformed or hostile feed entry can neither crash a scan nor flood it with
 garbage matches, and a rejected refresh never overwrites the previous cache.
 
+**Acquisition bounds:** both download paths are bounded before anything is
+parsed or written. An absolute 30 second deadline covers DNS, connect, headers
+and the body read; the response is capped at 32 MiB, refused on a declared
+`Content-Length` over the cap before a byte is read and counted again while
+streaming when no length is declared; at most 5 redirects are followed and every
+hop is revalidated. An inactivity timeout would not be enough, because a peer
+that keeps trickling bytes never triggers one. Every bound fails closed and
+loudly: the download is abandoned, one line naming the bound goes to stderr, the
+command exits non-zero, and the previous cache stays in effect.
+
 ### Where the feed comes from
 
 Curated entries are hand-added from vendor write-ups. Malicious-package entries

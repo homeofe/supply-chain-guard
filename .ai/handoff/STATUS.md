@@ -94,6 +94,68 @@ change does; making it **impossible** means giving the scanner a trusted policy
 source outside the scanned tree, which changes the tool's trust boundary and is
 recorded in the issue as needing the owner. `ScanOptions.policyFile` exists in
 the type and is read by nothing, which is where that work would start.
+## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
+
+Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.
+Closes https://github.com/homeofe/supply-chain-guard/issues/170 once reviewed.
+
+### What was wrong, and where the issue was incomplete
+
+The issue named one function, `updateThreatFeed`, which is exported library API
+that no CLI command calls. The command the README documents,
+`supply-chain-guard feed refresh`, went through a SECOND downloader in
+`src/feed.ts` with the same two defects and no backstop of any kind. Fixing only
+the function the acceptance criteria name would have closed the issue green with
+the shipped command unchanged.
+
+Measured on the base commit against a loopback peer that sends headers and then
+stalls: `feed refresh` ran 150 seconds with empty stdout, empty stderr and no
+exit, and was killed at the cap. The identical command against a healthy peer
+finished in 0.28 seconds. A 64 MiB chunked body was accepted in full.
+
+### Root cause
+
+Not a forgotten timeout. `src/remote-download.ts` already existed and already
+implemented every bound this issue asks for, and `src/npm-scanner.ts`,
+`src/pypi-scanner.ts` and `src/vscode-scanner.ts` already used it. Registry
+acquisition was hardened behind that shared module; feed acquisition was the one
+caller that never adopted it, and nothing in the build requires a new outbound
+request to go through it.
+
+A contributing cause sits in the tests. `src/__tests__/feed.test.ts` mocks
+`node:https` wholesale and delivers the whole body in one tick, so none of its
+six `refreshFeed` tests could observe a stall. The suite passed around the
+defect rather than over it.
+
+### What changed
+
+- `FEED_REMOTE_LIMITS` in `src/threat-intel.ts`, beside the cache constants:
+  32 MiB, 30 s, 5 redirects. The byte figure is roughly ten times the published
+  feed; the other two are the values the registry scanners already use.
+- `refreshFeed` delegates to `fetchHttpsBuffer`. The hand-rolled request is gone,
+  and with it a second defect in the same function: it decoded each chunk
+  separately, so a multi-byte UTF-8 sequence split across a chunk boundary became
+  replacement characters.
+- `updateThreatFeed` keeps the global `fetch` and its quarantine-and-continue
+  validation, and gains an `AbortSignal` deadline, a `Content-Length` refusal
+  before the body is touched, and a running byte count while streaming.
+- Both take an optional per-call limit override; both default to the constant.
+- New suite `src/__tests__/issue-170-feed-bounds.test.ts` drives a real loopback
+  server rather than a mock, because a mock that answers in one tick cannot
+  represent a peer that stalls.
+
+### The one decision left for the owner
+
+`updateThreatFeed` was hardened in place rather than turned into a wrapper over
+`refreshFeed`. The wrapper would remove the second implementation, which is the
+better end state, but it is a behavioural change to exported, documented API:
+`parseFeedPayload` hard-rejects a bad entry where `updateThreatFeed` quarantines
+it and continues, and the error strings differ. That belongs in its own change
+with its own changelog entry, not smuggled in behind a timeout fix.
+
+Also for the owner: the acceptance criteria on the issue are satisfied by the
+`updateThreatFeed` half alone and need rewriting to name `src/feed.ts` as well,
+or the next reader will conclude the CLI path was out of scope.
 ## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
 
 Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
