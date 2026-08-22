@@ -35,6 +35,14 @@ export interface Finding {
   evidence?: string;
   /** Whether suppressed by policy/baseline (v4.4) */
   suppressed?: boolean;
+  /**
+   * The reason the project's policy declared for suppressing this finding
+   * (v5.29). Set only when `.supply-chain-guard.yml` carried an explicit
+   * non-empty `reason:` for the matching `suppress:` entry, so an absent value
+   * means "no reason was recorded", never "reason unknown to us". Carried into
+   * the SBOM VEX statement for the suppression.
+   */
+  suppressionReason?: string;
 }
 
 export interface ScanReport {
@@ -92,15 +100,59 @@ export interface ScanReport {
 // v4.9 SBOM & SLSA types
 // ---------------------------------------------------------------------------
 
+/**
+ * One CycloneDX 1.6 licence entry (v5.29).
+ *
+ * The three shapes are not interchangeable. `license.id` is constrained by the
+ * spec to the SPDX identifier enum, `expression` is an unconstrained SPDX
+ * expression string, and `license.name` is free text for anything that is
+ * neither. See `encodeLicense()` in src/sbom-generator.ts for which input maps
+ * to which, and why an unrecognised identifier must not be emitted as an id.
+ */
+export type SbomLicenseEntry =
+  | { license: { id: string } }
+  | { license: { name: string } }
+  | { expression: string };
+
+/** CycloneDX name/value property, used to record what was not assessed. */
+export interface SbomProperty {
+  name: string;
+  value: string;
+}
+
 export interface SbomComponent {
   type: "library" | "application" | "framework";
+  /**
+   * Identifier other parts of the document reference (v5.29). Required,
+   * because without it no `dependencies` relationship can name the component.
+   */
+  "bom-ref": string;
   name: string;
   version: string;
   /** Package URL (pkg:npm/name@version or pkg:pypi/name@version) */
   purl: string;
   hashes?: Array<{ alg: "SHA-256" | "SHA-512" | "SHA-1"; content: string }>;
-  licenses?: string[];
+  /**
+   * Declared licences (v5.29). Absent means the source manifest declared none;
+   * in that case a `supply-chain-guard:license` property records that the field
+   * was not assessed rather than leaving the absence unexplained.
+   */
+  licenses?: SbomLicenseEntry[];
   scope?: "required" | "optional" | "excluded";
+  properties?: SbomProperty[];
+}
+
+/**
+ * One node of the CycloneDX dependency graph (v5.29).
+ *
+ * `dependsOn: []` is a positive statement that the component declares no
+ * dependencies. A component that has NO entry in the document's `dependencies`
+ * array makes no statement at all, which is how the package.json fallback
+ * records that transitive edges were never assessed.
+ */
+export interface SbomDependency {
+  ref: string;
+  dependsOn: string[];
 }
 
 export interface VexStatement {
@@ -123,9 +175,30 @@ export interface SbomDocument {
   metadata: {
     timestamp: string;
     tools: { components: Array<{ type: string; name: string; version: string }> };
-    component: { type: string; name: string; "bom-ref": string };
+    component: {
+      type: string;
+      name: string;
+      /**
+       * Version of the subject (v5.29). Omitted, together with `purl`, when no
+       * package.json declared one; `metadata.properties` then carries a
+       * `supply-chain-guard:sbom:subject-version` entry saying so, because a
+       * placeholder version on the one component that identifies the product
+       * is worse than an absent one.
+       */
+      version?: string;
+      purl?: string;
+      "bom-ref": string;
+    };
+    /** Records what the generator could and could not assess (v5.29). */
+    properties?: SbomProperty[];
   };
   components: SbomComponent[];
+  /**
+   * Dependency graph (v5.29). Absent when no manifest was found at all. See
+   * SbomDependency for the difference between an empty `dependsOn` and a
+   * missing entry.
+   */
+  dependencies?: SbomDependency[];
   vulnerabilities?: VexStatement[];
 }
 
@@ -304,6 +377,15 @@ export interface PolicyConfig {
     reason: string;
     /** Optional file glob: suppress the rule only under this path (v5.13). */
     path?: string;
+    /**
+     * True when `reason` holds the parser's placeholder rather than a reason
+     * the user wrote (v5.29). The parser fills in a placeholder so that later
+     * code always has a string, which means a non-empty `reason` alone does
+     * not prove the user justified anything. Consumers that publish the reason
+     * (the SBOM VEX statements) must check this flag before quoting it as the
+     * project's own words.
+     */
+    reasonPlaceholder?: boolean;
   }>;
   baseline?: {
     file?: string;

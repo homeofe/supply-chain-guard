@@ -7,6 +7,50 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **The generated SBOM now carries the licences, the dependency relationships and
+  the `bom-ref` values that `package-lock.json` already holds.** Every component
+  was emitted without any of the three, so the artefact was a flat list that
+  could express no relationship and answered nothing about licensing, even
+  though the generator had parsed a lockfile in which every entry declares a
+  licence. Measured on this repository's own lockfile: 119 components, 0 with a
+  licence, 0 with a `bom-ref` and no top level `dependencies` array before; 119
+  licences, 119 unique `bom-ref` values and a 120 entry `dependencies` array
+  carrying 158 `dependsOn` edges after. Edges are resolved the way npm resolves
+  them, deepest match first, so a nested duplicate is linked to the dependent
+  that installed it rather than to the hoisted copy.
+- **`metadata.component` now carries `version` and `purl` as their own fields.**
+  The name and version were concatenated into the name string
+  (`"name@1.2.3"`), so a consumer reading `metadata.component.version` to
+  identify the product got `undefined`. When no package.json declares a version,
+  the field and the `purl` are omitted and a `metadata.properties` entry records
+  why, rather than a placeholder version standing in for the shipped one.
+- **The SBOM now states what it could not assess instead of leaving it blank.**
+  `metadata.properties` records which manifest the inventory came from, how many
+  components carry a declared licence, whether the dependency graph was
+  resolved, partial or not assessed, and how many declared edges resolve to no
+  component in the document (22 on this repository, all uninstalled optional
+  peer dependencies). A component whose manifest declares no licence carries a
+  `supply-chain-guard:license` property saying so. No `dependsOn` is emitted for
+  an edge whose target is not in the document.
+- **VEX statements for policy-suppressed findings now reach the document on the
+  `scan` path, and quote the project's own reason.** `applyPolicy()` marks a finding
+  suppressed and then drops it from the array it returns, so the suppressed
+  findings never reached the generator and the VEX branch could not fire on the
+  scanner path: a scan with a matching `suppress:` entry reported
+  `suppressedCount: 1` and wrote an SBOM with no `vulnerabilities` key at all.
+  The suppressed findings are now passed to the generator separately, and stay
+  out of the report's own findings array. The hardcoded
+  `justification: "protected_by_compiler"` is gone: that field is a fixed
+  CycloneDX enum which a free-text `reason:` cannot be mapped to, so the
+  declared reason is carried verbatim in `analysis.detail` and a suppression
+  with no recorded reason produces a statement that says exactly that.
+- Known limitation, unchanged by this work: `supplier` and `author` are still
+  absent from every component. `package-lock.json` carries neither, and the
+  generator reads no other source. This is now stated in the README rather than
+  left to be discovered from the artefact.
+
 ### Changed
 
 - **Benchmark evidence in this project's own artefacts now carries counts, never
