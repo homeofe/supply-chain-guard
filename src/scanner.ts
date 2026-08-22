@@ -732,6 +732,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // history (guaranteed phantom RISK_TREND_SPIKE on the second scan of any
   // repo with suppressions). Same bug class as the v5.2.40 SARIF/SBOM leak.
   let suppressedCount = 0;
+  // v5.29: findings a `suppress:` entry removed. Kept out of `findings` on
+  // purpose (see applyPolicy) and used only to build the SBOM VEX statements,
+  // which previously could never fire because the objects were dropped here.
+  const policySuppressed: Finding[] = [];
 
   // Inline // scg-ignore-next-line RULE / # scg-ignore-next-line RULE comments:
   // drop a finding when the source line directly above it carries the directive.
@@ -743,6 +747,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const policyResult = applyPolicy(findings, policy);
     findings = policyResult.findings;
     suppressedCount += policyResult.suppressedCount;
+    policySuppressed.push(...policyResult.suppressedFindings);
   }
   // Policy validation findings are materialized by applyPolicy(), so refresh
   // the snapshot before later filters can hide a coverage-breaking warning.
@@ -776,6 +781,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const latePass = applyPolicy(findings, policy);
     findings = latePass.findings;
     suppressedCount += latePass.suppressedCount;
+    policySuppressed.push(...latePass.suppressedFindings);
   }
 
   // v4.4: Apply baseline (if configured)
@@ -842,7 +848,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     riskHistory: riskHistory.length > 0 ? riskHistory : undefined,
     metrics,
     // v4.9: CycloneDX 1.6 SBOM from actual dependency inventory
-    sbomDocument: generateSbomDocument(scanDir, filteredFindings),
+    sbomDocument: generateSbomDocument(scanDir, filteredFindings, policySuppressed),
     // v4.9: SLSA provenance level
     slsaLevel: getSLSALevel(scanDir),
   };

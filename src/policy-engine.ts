@@ -300,7 +300,12 @@ function parseYamlConfig(content: string): PolicyConfig {
           }
           config.suppress.push({
             rule: ruleId,
+            // Placeholder, flagged as such: a consumer that publishes the
+            // reason (the SBOM VEX statements) must be able to tell this apart
+            // from words the user actually wrote. Cleared by the "reason:" line
+            // below when one follows.
             reason: "suppressed by policy",
+            reasonPlaceholder: true,
           });
           reasonProvided.push(false);
         } else {
@@ -345,7 +350,10 @@ function parseYamlConfig(content: string): PolicyConfig {
         // lines are tolerated; entries are created by the "- rule:" item.)
         if (k === "reason" && config.suppress?.length) {
           config.suppress[config.suppress.length - 1].reason = val;
-          if (val !== "") reasonProvided[config.suppress.length - 1] = true;
+          if (val !== "") {
+            reasonProvided[config.suppress.length - 1] = true;
+            config.suppress[config.suppress.length - 1].reasonPlaceholder = false;
+          }
         } else if (k === "path" && config.suppress?.length && val !== "") {
           // Optional file glob: the rule is suppressed only under this path.
           config.suppress[config.suppress.length - 1].path = stripQuotes(val);
@@ -441,12 +449,22 @@ function policyWarningToFinding(warning: PolicyWarning): Finding {
 /**
  * Apply policy to findings: disable rules, override severities,
  * suppress findings, apply allowlists.
+ *
+ * `suppressedFindings` (v5.29) carries the findings a `suppress:` entry
+ * removed, so a consumer that has to describe the suppression can still see it.
+ * They are deliberately NOT in the returned `findings`: everything downstream
+ * of this function treats that array as the report, and a suppressed finding
+ * leaking back into it is the v5.4.2 bug class. The array holds only
+ * `suppress:`-matched findings, not the ones removed by `rules.disable`,
+ * allowlists or the baseline, because only a `suppress:` entry carries a
+ * documented reason to publish.
  */
 export function applyPolicy(
   findings: Finding[],
   policy: PolicyConfig,
-): { findings: Finding[]; suppressedCount: number } {
+): { findings: Finding[]; suppressedCount: number; suppressedFindings: Finding[] } {
   let suppressedCount = 0;
+  const suppressedFindings: Finding[] = [];
   const disabledRules = new Set(policy.rules?.disable ?? []);
   const severityOverrides = policy.rules?.severityOverrides ?? {};
   const suppressEntries = policy.suppress ?? [];
@@ -481,6 +499,14 @@ export function applyPolicy(
       finding.suppressed = true;
       finding.severity = "info";
       finding.description = `[SUPPRESSED] ${finding.description}`;
+      // Quote the reason only when the user wrote one. The parser fills in a
+      // placeholder so later code always has a string, so `reason` being
+      // non-empty proves nothing on its own.
+      const declaredReason = suppressMatch.reasonPlaceholder
+        ? ""
+        : (suppressMatch.reason ?? "").trim();
+      if (declaredReason !== "") finding.suppressionReason = declaredReason;
+      suppressedFindings.push(finding);
       continue; // Don't include in output
     }
 
@@ -562,7 +588,7 @@ export function applyPolicy(
     result.push(policyWarningToFinding(warning));
   }
 
-  return { findings: result, suppressedCount };
+  return { findings: result, suppressedCount, suppressedFindings };
 }
 
 /**

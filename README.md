@@ -625,6 +625,46 @@ supply-chain-guard contributes to each of those activities:
 supply-chain-guard scan ./project --sbom-output sbom.json
 ```
 
+#### What the SBOM carries, and what it says it could not assess
+
+From `package-lock.json` (v2 or later) every component carries a stable
+`bom-ref`, a `purl`, the integrity hashes, the CycloneDX `scope`, and the
+licence the lockfile declares, expressed as an SPDX `expression` when the string
+is an expression and as `license.id` when it is a plain SPDX identifier. An
+identifier the generator cannot vouch for is kept as `license.name` rather than
+asserted as SPDX, because the CycloneDX schema constrains `license.id` to the
+SPDX enum. Relationships are emitted as a top level `dependencies` array rooted
+at the subject component and resolved the way npm resolves them, so a nested
+duplicate is linked to the dependent that actually installed it rather than to
+the hoisted copy.
+
+What could not be assessed is stated instead of left blank. A component whose
+manifest declares no licence carries a `supply-chain-guard:license` property
+saying so, so an empty licence column is never read as "no licence terms". At
+the document level, `metadata.properties` records which manifest the inventory
+came from, how many components carry a declared licence, whether the dependency
+graph was resolved, partial or not assessed, and how many declared edges resolve
+to no component in the document (uninstalled optional peer dependencies,
+normally). A declared edge whose target is not in the document is counted there
+rather than emitted as a `dependsOn` pointing at a `bom-ref` that does not
+exist.
+
+```bash
+# What this SBOM says it could and could not assess
+supply-chain-guard scan ./project --format sbom > sbom.json
+node -e "const d=require('./sbom.json');for (const p of d.metadata.properties ?? []) console.log(p.name, '=', p.value)"
+```
+
+Findings removed by a `suppress:` entry in `.supply-chain-guard.yml` are emitted
+as CycloneDX VEX statements, with the reason the policy declared carried
+verbatim in `analysis.detail`. No `analysis.justification` is emitted: that
+field is a fixed enum that a free-text reason cannot be mapped to. A suppression
+with no recorded reason produces a statement that says exactly that.
+
+Supplier and author are not emitted. `package-lock.json` does not carry either
+field, and the SBOM generator reads only `package-lock.json` and `package.json`,
+so there is nothing to populate them from without a registry lookup.
+
 Article and paragraph citations are deliberately omitted here. Map these outputs
 to specific provisions against the final published regulation text, with your own
 legal review, rather than against this README.
