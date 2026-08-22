@@ -1221,12 +1221,24 @@ export const MAX_SCANNED_TREE_REGEX_LENGTH = 200;
 /**
  * Wall-clock budget, per scan, for matchers the scanned tree itself supplied.
  *
- * This is the second layer, not the first. It is checked BETWEEN matcher
- * invocations and therefore cannot interrupt one already-running `exec`, which
- * is why a scanned-tree pattern is also refused at compile time when its shape
- * can backtrack exponentially. What this bounds is the aggregate: many cheap
- * matchers over many lines, and any pattern that is merely slow rather than
- * astronomical.
+ * Read this together with `hasNestedUnboundedQuantifier`, and do not read
+ * either as a bound on a single catastrophic match, because neither is one and
+ * the pair is not one either. This budget is checked BETWEEN matcher
+ * invocations, so it cannot interrupt an `exec` that is already running. The
+ * compile-time shape refusal catches one family, a quantified group holding a
+ * variable quantifier, and misses others: overlapping alternation such as
+ * `(a|a)+`, and a bounded outer repetition such as `(a+){2,30}`. A pattern in
+ * the gap between the two is bounded by nothing here. Measured on this code,
+ * `/(a|a)+$/` against a non-matching line of 27 characters spends about 16
+ * seconds inside one `exec`, and the deny-list pass inspects lines up to
+ * MAX_DENYLIST_LINE.
+ *
+ * What this budget does bound is the aggregate: many cheap matchers over many
+ * lines, and any pattern that is merely slow rather than astronomical. Closing
+ * the remaining gap needs a matcher that can be stopped mid-match, which is
+ * recorded against
+ * https://github.com/homeofe/supply-chain-guard/issues/169 rather than
+ * attempted here.
  *
  * The value is chosen to be unreachable by a real deny-list and still a hard
  * stop. Measured against this project's own `src/` tree, 196 files, 96,133
@@ -1583,10 +1595,13 @@ export function emptyInternalDisclosureRuntime(): InternalDisclosureRuntime {
  *   anything else      a case-insensitive literal
  *
  * `origin` decides how far the entry is trusted. An `operator` entry compiles
- * exactly as it always has. A `scanned-tree` entry travels with the repository
- * under test, so its regular expressions are bounded in length and refused when
- * their shape can backtrack exponentially; a refusal is returned rather than
- * thrown, because it has to reach the report.
+ * exactly as it did before this bound existed. A `scanned-tree` entry travels
+ * with the repository under test, so its regular expressions are bounded in
+ * length and refused when their shape matches the one `hasNestedUnboundedQuantifier`
+ * recognises; a refusal is returned rather than thrown, because it has to reach
+ * the report. That classifier is not exhaustive, and neither the refusal nor
+ * the budget below bounds a single catastrophic match: see the note on
+ * SCANNED_TREE_MATCHER_BUDGET_MS.
  */
 function compileDenyEntry(
   raw: string,
@@ -1676,8 +1691,16 @@ function invalidEntryFinding(source: string, line: number, reason: string): Find
 
 /**
  * Fail-closed finding: a deny-list source or entry that the scanned tree itself
- * supplied was refused, so it was never read and never run. Names the source
- * and why, never the contents of anything, because nothing was read.
+ * supplied was refused, so it never became a matcher and never ran.
+ *
+ * It names the source and the reason, never the text of an entry. Only one of
+ * the three call sites refuses before a read, and the difference is worth
+ * keeping straight: a refused `externalFile` PATH is never opened, so nothing
+ * about it beyond the committed path string can reach the report. A refused
+ * `patterns[i]` entry needs no file at all. A refused LINE inside an in-tree
+ * `externalFile` is emitted after that file has been read, and is named by its
+ * position (`<path> line <n>`), which is what `invalidEntryFinding` beside it
+ * already does.
  */
 function refusedFinding(source: string, reason: string): Finding {
   return {
@@ -1704,6 +1727,16 @@ function refusedFinding(source: string, reason: string): Finding {
  *
  * The predicates come from the path reader that already does this for every
  * other file the scan opens, so there is one containment rule, not two.
+ *
+ * The bound is the scanned directory and nothing narrower, which is the limit
+ * to state plainly: in a CI checkout that directory also holds whatever the
+ * runner wrote into the workspace, `.git` included. A committed
+ * `externalFile: .git/config` therefore stays inside the tree and is still
+ * read, so the per-line compile-failure report and the redacted whole-line
+ * match still describe a file the repository owner did not author. Redaction
+ * holds, so a term is confirmed rather than printed. Narrowing this further is
+ * recorded against
+ * https://github.com/homeofe/supply-chain-guard/issues/169.
  */
 function refuseUncontainedScannedTreePath(scanDir: string, configured: string): string | null {
   if (path.isAbsolute(configured)) {

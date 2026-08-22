@@ -76,12 +76,30 @@ export function hasBroadUnboundedConsumingGap(source: string): boolean {
  * minutes.
  *
  * Like `hasBroadUnboundedConsumingGap` this is a conservative static
- * classifier, not a proof of complexity. It deliberately over-rejects: a fixed
- * repetition such as `{2}` is NOT treated as variable (it has exactly one way
- * to match, so it cannot create the ambiguity), but `(x{2,3})+` is refused even
- * though its blow-up is milder than `(x+)+`. Callers use it where a refusal is
- * reported as a visible finding and the author can rewrite the entry, never to
- * silently drop input.
+ * classifier, not a proof of complexity. It answers ONE question, and the two
+ * ways it is wrong both matter to a caller.
+ *
+ * It OVER-rejects. A fixed repetition such as `{2}` is not treated as variable
+ * (it has exactly one way to match, so it cannot create the ambiguity), but
+ * `(x{2,3})+` is refused even though its blow-up is milder than `(x+)+`. More
+ * importantly it refuses the ordinary domain-chain shape
+ * `(?:[a-z0-9-]+\.)+corp\.example`, which is linear in practice because the
+ * inner class cannot match the separator, and which is how most people write an
+ * internal hostname. `[a-z0-9.-]+\.corp\.example` is the accepted rewrite.
+ *
+ * It also UNDER-rejects, and this is the half a reader must not assume away: a
+ * `false` here is NOT a certificate that the source is safe to run. Ambiguity
+ * that comes from overlapping alternation is invisible to it, so `(a|a)+$`,
+ * `(a|ab)+$` and `(\d|\d\d)+$` are all accepted and all catastrophic; so is a
+ * bounded outer repetition such as `(a+){2,30}$`, because `{n,m}` is not read
+ * as unbounded. Measured, `/(a|a)+$/` against a non-matching line of 27
+ * characters spends about 16 seconds in one `exec`. Deciding this properly
+ * needs the NFA, not a scan of the source, so callers must not rely on a
+ * `false` as a time bound. Tracked on
+ * https://github.com/homeofe/supply-chain-guard/issues/169.
+ *
+ * Callers use it where a refusal is reported as a visible finding and the
+ * author can rewrite the entry, never to silently drop input.
  */
 export function hasNestedUnboundedQuantifier(source: string): boolean {
   for (let index = 0; index < source.length; index += 1) {

@@ -1446,6 +1446,53 @@ describe("internal-disclosure: deny-list entries supplied by the scanned tree", 
     expect(runtime.matchers).toHaveLength(3);
   });
 
+  it("refuses the ordinary domain-chain hostname shape, which is a behaviour change", () => {
+    // The precision test above passes because neither of its patterns is the
+    // shape most people reach for. This one IS: a chained label group is how
+    // an internal hostname is normally written, it is linear in practice
+    // because the inner class cannot match the dot that follows it, and the
+    // shape check refuses it anyway.
+    //
+    // The consequence is not cosmetic. The refusal is a coverage finding, so
+    // the scan becomes partial and the published Action exits 1 on a partial
+    // scan independently of fail-on. A consumer upgrading with this pattern in
+    // place gets a red build and stops matching their own term, which is why
+    // README.md and CHANGELOG.md both state it and offer the rewrite. This
+    // test is what keeps those two documents honest.
+    writePolicy("internalDisclosure:", "  patterns:", "    - /(?:[a-z0-9-]+\\.)+corp\\.example/");
+    const refusedRun = loadFromCommittedConfig();
+    const refused = refusedRun.loadFindings.filter((f) => f.rule === "INTERNAL_DENYLIST_REFUSED");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].description).toContain("exponential");
+    expect(refusedRun.matchers).toHaveLength(0);
+    expect(
+      rules(scanInternalDisclosure('const h = "build-01.corp.example";', "src/app.js", refusedRun)),
+    ).not.toContain("INTERNAL_DENYLIST_MATCH");
+
+    // The rewrite the finding steers an author towards has to actually work,
+    // or the recommendation is advice that leaves them stuck.
+    writePolicy("internalDisclosure:", "  patterns:", "    - /[a-z0-9.-]+\\.corp\\.example/");
+    const rewritten = loadFromCommittedConfig();
+    expect(rules(rewritten.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(
+      rules(scanInternalDisclosure('const h = "build-01.corp.example";', "src/app.js", rewritten)),
+    ).toContain("INTERNAL_DENYLIST_MATCH");
+  });
+
+  it("does not bound a catastrophic shape the classifier fails to recognise", () => {
+    // The limit of the shape check, stated as a test so it cannot be forgotten
+    // by a reader of the passing suite. Overlapping alternation is ambiguity a
+    // scan of the source cannot see, so /(a|a)+$/ compiles, and the wall-clock
+    // budget is checked BETWEEN matcher invocations and cannot interrupt the
+    // exec that follows. Deliberately asserted WITHOUT running the match: the
+    // proof of cost belongs in the issue, not in a suite that has to stay fast.
+    writePolicy("internalDisclosure:", "  patterns:", '    - "/(a|a)+$/"');
+    const runtime = loadFromCommittedConfig();
+    expect(rules(runtime.loadFindings)).not.toContain("INTERNAL_DENYLIST_REFUSED");
+    expect(runtime.matchers).toHaveLength(1);
+    expect(runtime.matchers[0].origin).toBe("scanned-tree");
+  });
+
   it("caps the length of a committed regex but not of the operator's", () => {
     const long = `/${"a".repeat(MAX_SCANNED_TREE_REGEX_LENGTH + 1)}/`;
     writePolicy("internalDisclosure:", "  patterns:", `    - "${long}"`);

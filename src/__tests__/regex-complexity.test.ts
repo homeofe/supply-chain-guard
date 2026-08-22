@@ -122,3 +122,47 @@ describe("hasNestedUnboundedQuantifier", () => {
     expect(hasNestedUnboundedQuantifier("(a{2,3})*")).toBe(true);
   });
 });
+
+/**
+ * The classifier is wrong in two directions, and both are load-bearing for its
+ * callers, so both are pinned here rather than left in a doc comment. A
+ * refusal is a visible finding an author can act on; an acceptance is NOT a
+ * certificate that the source is safe to run.
+ *
+ * If a change to `hasNestedUnboundedQuantifier` flips one of these, that is
+ * good news, not a broken test. Move the case to the block above, and update
+ * the doc comment, the README and the CHANGELOG in the same commit, because
+ * all three currently state these limits to consumers.
+ */
+describe("hasNestedUnboundedQuantifier: the limits it is documented to have", () => {
+  it.each([
+    // Ambiguity from overlapping alternation, which a scan of the source
+    // cannot see. Each of these is catastrophic and each is accepted.
+    "(a|a)+$",
+    "(a|ab)+$",
+    String.raw`(\d|\d\d)+$`,
+    // A bounded outer repetition: "{2,30}" is not read as unbounded.
+    "(a+){2,30}$",
+  ])("under-rejects %s, so a false answer is not a time bound", (source) => {
+    expect(hasNestedUnboundedQuantifier(source)).toBe(false);
+  });
+
+  it.each([
+    // The ordinary way to write an internal hostname or path prefix. Linear in
+    // practice, because the inner class cannot match the separator that
+    // follows it, and refused anyway.
+    String.raw`(?:[a-z0-9-]+\.)+corp\.example`,
+    String.raw`([a-z0-9-]+\.)+internal`,
+    String.raw`(\w+\.)+example\.test`,
+    String.raw`(?:[\w-]+/)+deploy\.key`,
+  ])("over-rejects the ordinary chain shape %s", (source) => {
+    expect(hasNestedUnboundedQuantifier(source)).toBe(true);
+  });
+
+  it("accepts the rewrite the refusal steers an author towards", () => {
+    // What README.md and the INTERNAL_DENYLIST_REFUSED recommendation offer in
+    // place of the refused chain shape. If this ever starts failing, both of
+    // those documents are wrong and consumers have no working rewrite.
+    expect(hasNestedUnboundedQuantifier(String.raw`[a-z0-9.-]+\.corp\.example`)).toBe(false);
+  });
+});
