@@ -748,7 +748,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // the snapshot before later filters can hide a coverage-breaking warning.
   partialScan ||= hasPartialScanFinding(findings);
 
-  // v4.2: Correlation engine — link findings into incidents
+  // v4.2: Correlation engine - link findings into incidents
   const correlation = correlateFindings(findings);
 
   // v4.2: Trust breakdown (for directory/github scans with package.json)
@@ -1851,7 +1851,7 @@ function calculateSummary(
  * Each unique rule contributes at most once (its highest severity instance),
  * preventing repeated instances of the same moderate rule from dominating the score.
  */
-// Meta/governance findings that fire because other findings exist — excluded from
+// Meta/governance findings that fire because other findings exist - excluded from
 // score to prevent circular inflation (they don't represent independent risk signals).
 export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
   "CRITICAL_FINDING_NO_OWNER",
@@ -1859,7 +1859,7 @@ export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
 ]);
 
 function calculateScore(findings: Finding[]): number {
-  // Deduplicate by rule — take the highest-severity instance per rule.
+  // Deduplicate by rule - take the highest-severity instance per rule.
   // Skip meta-governance findings that would circularly inflate the score.
   const maxByRule = new Map<string, Severity>();
   for (const finding of findings) {
@@ -2185,7 +2185,7 @@ function generateRecommendations(
   }
   if (rules.has("DROPPER_TEMP_EXEC")) {
     recommendations.push(
-      "CRITICAL: Dropper/loader behavior detected — writing and executing files in temporary directories.",
+      "CRITICAL: Dropper/loader behavior detected - writing and executing files in temporary directories.",
     );
   }
 
@@ -2214,7 +2214,7 @@ function generateRecommendations(
   }
   if (rules.has("README_LURE_CRACK") || rules.has("RELEASE_NAME_LURE")) {
     recommendations.push(
-      "This repository uses piracy/crack language — a strong indicator of malware distribution. Do not download or use.",
+      "This repository uses piracy/crack language - a strong indicator of malware distribution. Do not download or use.",
     );
   }
 

@@ -476,7 +476,7 @@ function buildDescription(result: DependencyResult): string {
   }
 
   if (result.flags.includes("version-cooldown")) {
-    return `Version of "${result.name}" used in this project was published to npm less than ${VERSION_COOLDOWN_DAYS} days ago. Security vendors typically need 7 days to detect malicious packages — using brand-new versions carries elevated risk.`;
+    return `Version of "${result.name}" used in this project was published to npm less than ${VERSION_COOLDOWN_DAYS} days ago. Security vendors typically need 7 days to detect malicious packages - using brand-new versions carries elevated risk.`;
   }
 
   if (result.flags.includes("scoped-public-npm") && result.flags.includes("no-readme")) {
@@ -2334,7 +2334,7 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
     if (AI_HALLUCINATED_PYPI_PACKAGES.has(normalizedName)) {
       findings.push({
         rule: "DEP_HALLUCINATED_PACKAGE",
-        description: `PyPI package "${name}" matches a known AI-hallucinated package name. LLMs frequently suggest this non-existent package — it may be squatted on PyPI.`,
+        description: `PyPI package "${name}" matches a known AI-hallucinated package name. LLMs frequently suggest this non-existent package - it may be squatted on PyPI.`,
         severity: "high",
         file: manifest,
         match: name,

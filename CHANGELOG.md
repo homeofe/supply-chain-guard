@@ -35,12 +35,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **The `em-dash` governance rule now covers every tracked file, and a second
+  gate keeps it that way.** The rule's `include` list named six pathspecs, and
+  those six matched none of the 17 files that carried an em dash, so
+  `forbidden-patterns` reported `no matches` and exited 0 on every pull request
+  while 77 occurrences sat in the tree, 28 of them in `CHANGELOG.md`. Scope is
+  now the single pathspec `*`, which makes it opt-out: a new file is covered the
+  moment git tracks it. All 77 occurrences are corrected, every one a
+  space-delimited em dash replaced by a hyphen with no wording changed,
+  including the eleven inside strings the CLI prints and the one that reached
+  the SARIF report adopters upload to GitHub code scanning.
+  `scripts/check-em-dash-scope.mjs`, run by `check:aahp` and therefore inside
+  the required `Build and Test` check, fails the build if the include list is
+  narrowed that way again, if an `exclude` entry subtracts nothing (the state
+  the inert `CHANGELOG.md` entry was in), or if an exemption loses its written
+  reason. It never reads file content: `aahp.config.json` remains the only
+  em-dash rule. The scope decision and the two narrower options that were
+  rejected are recorded in `CONTRIBUTING.md`. Reported in
+  <https://github.com/homeofe/supply-chain-guard/issues/178>.
 - **Two error strings from `feed refresh` changed wording**, because the shared
   downloader reports them: a request-level failure no longer carries the
   `network error:` prefix, and a rejected status now reads `HTTPS request failed
   with status 404 for <url>` instead of `HTTP 404`. Both still name the URL and
   still leave the previous cache untouched.
-
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security
@@ -3624,15 +3641,15 @@ Two fresh May 2026 supply-chain campaigns are now signatured.
 
 Two fresh April 2026 supply-chain campaigns are now signatured.
 
-- **DPRK AI-inserted npm malware** — `@validate-sdk/v2` was inserted into a victim project as a dependency by the Claude Opus LLM during a social-engineering operation attributed to North Korean actors. New rule `DPRK_VALIDATE_SDK` in `src/patterns.ts` plus a `MALICIOUS_PACKAGE_PATTERNS` entry, a bundled threat-intel `package` IOC, and a recommendation to audit AI-suggested dependencies.
-- **LofyGang / LofyStealer (aka GrabBot)** — Brazilian crew resurfaces after three years targeting Minecraft players with a new infostealer disguised as Minecraft hacks. New rules `LOFYSTEALER_MARKER` and `LOFYGANG_MINECRAFT_LURE` in `src/patterns.ts`, plus threat-intel `package` IOCs for the family aliases.
+- **DPRK AI-inserted npm malware** - `@validate-sdk/v2` was inserted into a victim project as a dependency by the Claude Opus LLM during a social-engineering operation attributed to North Korean actors. New rule `DPRK_VALIDATE_SDK` in `src/patterns.ts` plus a `MALICIOUS_PACKAGE_PATTERNS` entry, a bundled threat-intel `package` IOC, and a recommendation to audit AI-suggested dependencies.
+- **LofyGang / LofyStealer (aka GrabBot)** - Brazilian crew resurfaces after three years targeting Minecraft players with a new infostealer disguised as Minecraft hacks. New rules `LOFYSTEALER_MARKER` and `LOFYGANG_MINECRAFT_LURE` in `src/patterns.ts`, plus threat-intel `package` IOCs for the family aliases.
 - 5 new tests in `src/__tests__/campaigns.test.ts`.
 
 ## [5.2.3] - 2026-04-26
-**Documentation catch-up** — bumps version strings in `src/cli.ts`, `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) that were stuck at `5.2.0` / `5.1.0` since the v5.2.1 and v5.2.2 releases. No behavior change.
+**Documentation catch-up** - bumps version strings in `src/cli.ts`, `src/reporter.ts` (text header, SARIF, SBOM, HTML footer) that were stuck at `5.2.0` / `5.1.0` since the v5.2.1 and v5.2.2 releases. No behavior change.
 
 ## [5.2.2] - 2026-04-26
-**Solana monitor: rate-limit-aware RPC client** — closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21).
+**Solana monitor: rate-limit-aware RPC client** - closes [#21](https://github.com/homeofe/supply-chain-guard/issues/21).
 
 The public Solana RPC (`api[.]mainnet-beta[.]solana[.]com`) returns HTTP 429 and JSON-RPC error `-32005` when its per-IP quota is exceeded. Previously the monitor surfaced these as fatal poll errors and skipped the interval. Now `solanaRpc()` retries with exponential backoff and recovers automatically.
 
@@ -3651,18 +3668,18 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - **C2 IPs**: `94[.]154[.]172[.]43`, `91[.]195[.]240[.]123`
 - **Compromised package**: `@bitwarden/cli@2026.4.0`
 - **New campaign rules** in `src/patterns.ts`:
-  - `CHECKMARX_SHAI_HULUD_V3` — matches the `Shai-Hulud: The Third Coming` exfil marker string
-  - `CHECKMARX_MCP_ADDON` — matches the `mcpAddon.js` loader filename
-  - `BITWARDEN_CLI_LOADER` — matches `bw_setup.js` / `bw1.js` loader/payload pair
+  - `CHECKMARX_SHAI_HULUD_V3` - matches the `Shai-Hulud: The Third Coming` exfil marker string
+  - `CHECKMARX_MCP_ADDON` - matches the `mcpAddon.js` loader filename
+  - `BITWARDEN_CLI_LOADER` - matches `bw_setup.js` / `bw1.js` loader/payload pair
 - 4 new tests in `src/__tests__/campaigns.test.ts`
 
 ## [5.2.0] - 2026-04-08
-**Self-Scan Clean + Text Wrapping** — the scanner no longer flags its own source code. Scanning `supply-chain-guard` itself drops from 100/critical (243 critical + 137 high) to clean.
+**Self-Scan Clean + Text Wrapping** - the scanner no longer flags its own source code. Scanning `supply-chain-guard` itself drops from 100/critical (243 critical + 137 high) to clean.
 
 **Scanner source exclusion** (`src/scanner.ts`):
 - New shared `SCANNER_SOURCE_FILE` and `TEST_FILE_REGEX` constants replace duplicated inline regexes
-- `checkIOCBlocklist()` and `checkThreatIntel()` now skip scanner definition files and test files — eliminates ~50 IOC/threat-intel self-matches
-- `checkMultiLineProtestware()` skips scanner source and test files — eliminates proximity false positives
+- `checkIOCBlocklist()` and `checkThreatIntel()` now skip scanner definition files and test files - eliminates ~50 IOC/threat-intel self-matches
+- `checkMultiLineProtestware()` skips scanner source and test files - eliminates proximity false positives
 
 **Pattern-level guards** (`src/patterns.ts`):
 - `notTestFile: true` added to all ~120 pattern rules (was only on 1). Test files with malware samples are no longer flagged
@@ -3675,11 +3692,11 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 
 ## [5.1.1] - 2026-04-07
 **CI and test fixes**
-- CI workflow: add GitHub Release creation step — after npm publish, automatically creates a GitHub Release with changelog notes extracted from README.md
+- CI workflow: add GitHub Release creation step - after npm publish, automatically creates a GitHub Release with changelog notes extracted from README.md
 - `reporter.test.ts`: fix 3 text-format assertions that checked old output patterns (`"scan report"`, `"52/100"`, `"None"`) broken by the v5.1.0 ASCII output redesign
 
 ## [5.1.0] - 2026-04-07
-**Comprehensive ASCII CLI output** — complete redesign of the default text reporter.
+**Comprehensive ASCII CLI output** - complete redesign of the default text reporter.
 - Double-line banner header (`╔╗`) with tool name and version
 - Risk score with 36-char visual gauge bar, color-coded by severity level
 - Findings summary as a severity histogram with proportional `█░` bars scaled to highest count
@@ -3689,20 +3706,20 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 - Fixed stale hardcoded `4.8.0`/`4.9.0` version strings in SARIF, SBOM metadata, and HTML footer
 
 ## [5.0.1] - 2026-04-07
-**False positive fixes — second pass** after live workspace testing revealed additional FPs.
+**False positive fixes - second pass** after live workspace testing revealed additional FPs.
 - `PROXY_HANDLER_TRAP`: `notFilePattern` extended to cover non-minified vendor files in `/static/js/`, `/vendor/`, `/public/js/`, `/assets/js/` directories (e.g. `tailwindcss.js`)
-- `SHAI_HULUD_WORM` / `SHAI_HULUD_CRED_STEAL`: switched from `notFilePattern(yml)` to `onlyExtensions` for source code only — eliminates FPs on `.md`, `.json`, and other doc/config files
-- `README_LURE` rules: `onlyFilePattern` tightened to filename-based match (README/CHANGELOG/DESCRIPTION/CONTRIBUTING) instead of any `*.md` file — eliminates FPs on `docs/*.md`
+- `SHAI_HULUD_WORM` / `SHAI_HULUD_CRED_STEAL`: switched from `notFilePattern(yml)` to `onlyExtensions` for source code only - eliminates FPs on `.md`, `.json`, and other doc/config files
+- `README_LURE` rules: `onlyFilePattern` tightened to filename-based match (README/CHANGELOG/DESCRIPTION/CONTRIBUTING) instead of any `*.md` file - eliminates FPs on `docs/*.md`
 - `DROPPER_TEMP_EXEC`: pattern tightened from `save.*\.exe` to `saveFile\(` to avoid matching variable names
 - `PROTESTWARE_PROXIMITY`: destructive token detection now requires actual function calls (`fs.rm*\s*\(`) rather than any line containing `child_process`
 
 ## [5.0.0] - 2026-04-07
-**Context-Aware False Positive Elimination** — workspace-wide scan of 100k+ LOC across 15 projects identified 14 systematic FP categories. v5.0.0 eliminates all of them without weakening real detection.
+**Context-Aware False Positive Elimination** - workspace-wide scan of 100k+ LOC across 15 projects identified 14 systematic FP categories. v5.0.0 eliminates all of them without weakening real detection.
 
 **New PatternEntry context fields** (`src/types.ts`):
-- `onlyFilePattern?: RegExp` — only apply pattern to files whose path matches (e.g. README/docs only)
-- `notFilePattern?: RegExp` — skip files whose path matches (e.g. `.min.js`, `.yml`)
-- `notTestFile?: boolean` — skip test/spec/fixture/conftest files
+- `onlyFilePattern?: RegExp` - only apply pattern to files whose path matches (e.g. README/docs only)
+- `notFilePattern?: RegExp` - skip files whose path matches (e.g. `.min.js`, `.yml`)
+- `notTestFile?: boolean` - skip test/spec/fixture/conftest files
 
 **Rule-level fixes** (`src/patterns.ts`):
 - `README_LURE_CRACK` / `README_LURE_LEAKED` / `README_LURE_URGENCY`: `onlyFilePattern` → README/CHANGELOG/`.md` files only. Source files like `.ts` no longer trigger these
@@ -3716,33 +3733,33 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 **Scanner fixes** (`src/scanner.ts`):
 - `.claude/` directory excluded from scanning (eliminates 7× duplicate findings from Claude Code worktrees)
 - `CRITICAL_FINDING_NO_OWNER` and `RISK_STAGNATION_HIGH` excluded from risk score calculation (meta-governance findings caused circular score inflation)
-- `relativePath` normalized to forward slashes — cross-platform consistency in all finding `file` fields
+- `relativePath` normalized to forward slashes - cross-platform consistency in all finding `file` fields
 - `checkBeaconMinerPatterns` now respects `notFilePattern`/`onlyFilePattern`/`notTestFile` like `checkFilePatterns`
 - Binary detection path splitting fixed for cross-platform compatibility
 
 **Continuous monitor fix** (`src/continuous-monitor.ts`):
 - `RISK_STAGNATION_HIGH` requires ≥5 history entries before firing (avoids false alarms on new projects)
 
-**SCANNABLE_EXTENSIONS**: `.md` added — README/CHANGELOG files now scanned for lure patterns via `checkFilePatterns`
+**SCANNABLE_EXTENSIONS**: `.md` added - README/CHANGELOG files now scanned for lure patterns via `checkFilePatterns`
 
 - 22 new context-aware tests (629 total)
 - Expected score reduction: projects scoring 100/critical due to FPs → ≤20/low with no actual malware
 
 ## [4.9.0] - 2026-04-07
-- **New: SBOM Generator** — reads `package-lock.json` (v2+) to generate CycloneDX 1.6 SBOMs with real `components[]` (name, version, PURL, hashes, licenses). Falls back to `package.json` direct deps. VEX statements for suppressed findings. Use `--sbom-output <file>` to write separately.
-- **New: SLSA Verifier** — detects SLSA provenance level (0–3) per project. Checks for sigstore/cosign signing, `slsa-github-generator` usage, hermetic build evidence, provenance attestation files. New rules: `SLSA_LEVEL_0`, `SLSA_NO_PROVENANCE`, `SLSA_UNSIGNED_ARTIFACTS`.
-- **New: GitHub Actions PPE Patterns** — `GHA_PPE_PULL_TARGET` (critical), `GHA_SCRIPT_INJECTION` (critical), `GHA_OIDC_WRITE_PERM`, `GHA_CACHE_POISONING`, `GHA_ARTIFACT_DOWNLOAD`, `GHA_SELF_MODIFY`. Known malicious SHA blocklist (tj-actions Sep 2025, reviewdog).
-- **New: Dependency Confusion Enhancements** — `DEP_HALLUCINATED_PACKAGE` (AI-hallucinated npm/PyPI names), `DEP_FRESH_PUBLISH` (version < 24h old), `DEP_SCOPED_PUBLIC` (internal-looking scoped package on public registry), `scanPypiDependencyConfusion()` for `requirements.txt`/`pyproject.toml`.
-- **False Positive Reduction** — scanning a 100k+ LOC production codebase went from 819 findings/critical to 17 findings/high:
+- **New: SBOM Generator** - reads `package-lock.json` (v2+) to generate CycloneDX 1.6 SBOMs with real `components[]` (name, version, PURL, hashes, licenses). Falls back to `package.json` direct deps. VEX statements for suppressed findings. Use `--sbom-output <file>` to write separately.
+- **New: SLSA Verifier** - detects SLSA provenance level (0–3) per project. Checks for sigstore/cosign signing, `slsa-github-generator` usage, hermetic build evidence, provenance attestation files. New rules: `SLSA_LEVEL_0`, `SLSA_NO_PROVENANCE`, `SLSA_UNSIGNED_ARTIFACTS`.
+- **New: GitHub Actions PPE Patterns** - `GHA_PPE_PULL_TARGET` (critical), `GHA_SCRIPT_INJECTION` (critical), `GHA_OIDC_WRITE_PERM`, `GHA_CACHE_POISONING`, `GHA_ARTIFACT_DOWNLOAD`, `GHA_SELF_MODIFY`. Known malicious SHA blocklist (tj-actions Sep 2025, reviewdog).
+- **New: Dependency Confusion Enhancements** - `DEP_HALLUCINATED_PACKAGE` (AI-hallucinated npm/PyPI names), `DEP_FRESH_PUBLISH` (version < 24h old), `DEP_SCOPED_PUBLIC` (internal-looking scoped package on public registry), `scanPypiDependencyConfusion()` for `requirements.txt`/`pyproject.toml`.
+- **False Positive Reduction** - scanning a 100k+ LOC production codebase went from 819 findings/critical to 17 findings/high:
   - `LOCKFILE_ORPHANED_DEPENDENCY`: 794 individual findings → 1 aggregated summary (npm v7 flat lockfile fix)
   - `TYPOSQUAT_LEVENSHTEIN`: pre-check against popular-packages set; min name length ≥4; short popular packages (ws/pg/nx) excluded from comparison; bcryptjs/swr/tsx/zod added to whitelist
   - `SVG_SCRIPT_INJECTION`: restricted to `.svg` files only (new `onlyExtensions` field on PatternEntry)
   - `IMPORT_EXPRESSION`: backtick without `${...}` expression no longer triggers; severity high→medium
   - `BEACON_INTERVAL_FETCH`: severity high→medium (React polling false positive)
   - `DEAD_DROP_DNS_TXT` / `C2_DOH_RESOLVER`: severity high→medium (false positives in security tooling)
-  - `GHA_ENV_EXFIL`: pattern tightened — only fires when secrets/env passed as curl data/header
+  - `GHA_ENV_EXFIL`: pattern tightened - only fires when secrets/env passed as curl data/header
   - `WORKFLOW_SECRET_TO_UPLOAD_PATH`: severity high→medium, confidence 0.7→0.6
-  - `SECRETS_SSH_KEY_READ`: pattern requires specific key filenames (`id_rsa`, `id_ed25519` etc.) — no longer fires on `cat >> ~/.ssh/known_hosts` CI setup
+  - `SECRETS_SSH_KEY_READ`: pattern requires specific key filenames (`id_rsa`, `id_ed25519` etc.) - no longer fires on `cat >> ~/.ssh/known_hosts` CI setup
 - **Score Calculation**: per-rule deduplication (each unique rule contributes once to score) + weights medium 8→5, low 3→2
 - 45 new tests (607 total)
 
