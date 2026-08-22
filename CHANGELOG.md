@@ -7,7 +7,58 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **`metrics.openCritical` and `metrics.openHigh` no longer drop every instance of
+  a rule once one instance is triaged.** A triage decision identifies a rule AND a
+  file, and `TriageDecision.findingFile` exists to carry that. The metrics engine
+  built its resolved set from `findingRule` alone, so a single resolved decision
+  removed every finding of that rule from the KPIs, including findings in files
+  nobody had looked at, and `topRiskContributors` lost the rule with it. Measured
+  end to end on a project with three critical `EVAL_ATOB` findings and one
+  resolved decision naming one of them: `summary.critical` 3, `openCritical` **0**
+  before, **2** after, and the top contributor changes from
+  `CRITICAL_FINDING_NO_OWNER`, the governance alarm that fired because of the
+  findings the KPI had just hidden, back to `EVAL_ATOB`. A decision naming a file
+  that carries no finding at all, which is what a decision left behind by a rename
+  looks like, zeroed the rule the same way and now resolves nothing.
+  https://github.com/homeofe/supply-chain-guard/issues/171
+- **No gate behaviour changed.** `getReportExitCode` reads `report.summary` and
+  `report.findings` and has never read `metrics`. The fixture above exits 2 before
+  and after the fix, and `report.findings` was complete and correct throughout.
+  The wrong number reached `--format json`, `--json-output` and library consumers
+  of the exported `calculateMetrics`, which is where a dashboard or a compliance
+  report would have trusted it.
+
 ### Changed
+
+- **The scope of a triage decision now has exactly one implementation,
+  `src/triage-scope.ts`, and both consumers ask it.** The defect above was not a
+  missing file check: the same feature shipped two key widths over the same
+  decisions array, one per consumer, so a single scan report could state
+  `"openCritical": 0` beside "2 critical finding(s) have no assigned owner or
+  triage decision". Sharing a key string would have fixed the counts and left the
+  divergence one edit away, so no consumer builds a key at all. A test in
+  `src/__tests__/triage-scope.test.ts` fails if a second module starts reading
+  `findingFile` directly, and a further test asserts the two consumers reach the
+  same verdict on the same findings.
+- **`CRITICAL_FINDING_NO_OWNER` now treats a decision that carries no
+  `findingFile` as owning that rule in every file.** The governance check
+  previously joined `file ?? ""` into its key, which made a rule-wide decision
+  match only findings that carry no file, so every instance in a real file stayed
+  counted as unowned. That was the other half of the same disagreement. A decision
+  carrying an empty `findingFile` is still file-scoped and still matches only the
+  finding that has no file; absent and empty are different, and each branch has
+  its own test.
+- **New `buildTriageScope` export**, so code outside this package answers "does
+  this decision cover this finding?" with the rule the package itself uses instead
+  of a third hand-rolled one. The store has no CLI subcommand, so a library
+  consumer is the only way to use it.
+- **New `docs/triage-decisions.md`.** The decision store, its file format and its
+  scope rule were documented nowhere, which is a plausible reason the defect above
+  survived four months. The page also records the open question of whether the
+  store should gain a CLI surface, be left library-first, or be dropped in favour
+  of consumers owning it.
 
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
