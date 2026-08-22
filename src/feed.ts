@@ -177,10 +177,19 @@ export function feedFreshness(
  * The staleness finding, or an empty array when the rule set is current.
  *
  * Severity is `medium` on purpose. It moves the score off zero and the risk
- * level off `clean`, so the condition is visible in every report format and in
- * the Action's pull request comment, without silently turning the default
- * `fail-on: critical` gate red for every consumer on the day this ships.
- * Raising it is a policy decision for the maintainer, not a side effect.
+ * level off `clean`, so the rule is named in EIGHT of the nine report formats
+ * and in the Action's pull request comment, without silently turning the
+ * default `fail-on: critical` gate red for every consumer on the day this
+ * ships. Raising it is a policy decision for the maintainer, not a side effect.
+ *
+ * The ninth is `badge`: `formatBadge` in `src/reporter.ts` builds a Shields.io
+ * endpoint payload out of `report.summary` counts alone, so no rule id or
+ * description can reach it by construction. There the condition shows as an
+ * otherwise clean repository's badge going from `clean`/`brightgreen` to
+ * `1 medium`/`yellow`. In `junit` the rule id IS present, but as a passing
+ * `<testcase>`, because only `critical`/`high` become `<failure>` there. This
+ * comment said "every report format" until it was measured; do not restore that
+ * wording without re-rendering all nine.
  */
 export function feedStalenessFindings(freshness: FeedFreshness): Finding[] {
   if (!freshness.stale) return [];

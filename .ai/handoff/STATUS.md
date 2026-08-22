@@ -59,9 +59,14 @@ description can reach it by construction; what is observable there is an
 otherwise clean repository's badge turning from `clean`/`brightgreen` into
 `1 medium`/`yellow`. `junit` carries the id but as a passing `<testcase>`, since
 `formatJunit` only renders `critical`/`high` as `<failure>`. The same wrong
-sentence was in CHANGELOG.md, README.md and NEXT_ACTIONS.md and is corrected in
-all of them; CHANGELOG.md is the one that becomes the GitHub Release body
-verbatim, which is why it was fixed before the pull request text.
+sentence stood in CHANGELOG.md, README.md, NEXT_ACTIONS.md and the doc comment
+on `feedStalenessFindings` in `src/feed.ts`, and is corrected in all four;
+CHANGELOG.md is the one that becomes the GitHub Release body verbatim, which is
+why it was fixed before the pull request text. The `src/feed.ts` comment matters
+because it is the copy a maintainer meets at the moment they consider raising
+the severity, so it now carries the measurement and an instruction not to
+restore the old wording without re-rendering all nine formats. That edit is a
+comment: no behaviour changed.
 
 Three ways this check could have stopped firing are closed and each has its own
 test: a future-dated `firstSeen` is ignored (one mistyped year would otherwise
