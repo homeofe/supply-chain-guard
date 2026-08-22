@@ -57,11 +57,40 @@ Both live in `docs/node-support.md` so the next reader meets them at the code:
 - **Why `activeLtsMajor` is hand-copied rather than fetched**, what the gate can and
   cannot catch about a hand-copied fact, and why the deadline is `5.29.0`.
 
+### What adding the third leg exposed, and why it had to be fixed here
+
+The Node 24 leg went red on its first run, and the cause was not Node 24. The perf case
+`keeps exact greedy/lazy endpoints on 5 MiB repeated completions` in
+`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15,070ms against a bare
+`timeout: 15_000`. Measured across the three legs of that single run: Node 20 8,734ms,
+Node 22 13,622ms, Node 24 15,070ms. The same case had already failed the **Node 22** leg
+on `main` at `1a141fe`, at 15,137ms, with no Node 24 anywhere. The budget sits inside the
+runner's own noise band, so it reports noise, not an algorithmic regression.
+
+Underneath that is a real inconsistency. `npm run test:coverage`, the only command the
+compat legs run, sets `SCG_VITEST_COVERAGE=1` in `vitest.config.ts`, which makes
+`performanceBudget` multiply by five. So the assertion inside that test allowed 50,000ms
+while the harness killed it at 15,000ms: **the guard could never be reached under the
+command CI actually runs.** Both `it` options in that file now use
+`performanceBudget(15_000)`, which is what every sibling perf test already did. Outside a
+coverage run `performanceBudget` is the identity, so `npm test` is bit for bit unchanged,
+and the algorithmic guard, `performanceBudget(10_000)`, is untouched.
+
 ### Open for the owner
 
-Unrelated to this change, observed while measuring: the perf case in
-`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15000ms on a Node 22 leg
-at the head sha this report was written against. Not touched here.
+The same bare-literal pattern is still elsewhere, deliberately left because it is outside
+this change and touching a dozen test files in a Node matrix pull request would be worse
+than naming it. Counted, not estimated:
+
+- **2 files import `performanceBudget` and still use a bare `timeout:` literal**, which is
+  exactly the inconsistency fixed above: `src/__tests__/core-broad-gap-matchers.test.ts`
+  and `src/__tests__/internal-disclosure.test.ts`.
+- **10 further files use a bare `timeout:` literal** without importing it. Some of those
+  have no scaled assertion to disagree with, so they need reading rather than rewriting.
+
+A gate could assert that no file importing `performanceBudget` also carries a bare
+`timeout:` literal. It is not added here, because it would be red on the two files above
+on the day it landed, and a gate that ships red teaches people to ignore it.
 
 ---
 

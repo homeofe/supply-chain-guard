@@ -23,6 +23,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   and the `compat` matrix is now Node 20, 22 and 24. The Node 20 transition lane is
   unchanged and is still deleted in 5.29.0. Reported as
   https://github.com/homeofe/supply-chain-guard/issues/176
+- **A perf test's harness timeout is now scaled the same way its own assertion is, so
+  the guard is reachable under the command CI runs.** `npm run test:coverage` sets
+  `SCG_VITEST_COVERAGE=1`, which makes `performanceBudget` multiply by five. Two cases in
+  `src/__tests__/multi-line-pattern-engine.test.ts` asserted against a scaled 50,000 ms
+  budget while a bare `timeout: 15_000` killed them at 15,000 ms, so the algorithmic
+  guard could never be evaluated and a failure reported runner noise instead. Measured
+  across one CI run: the same case took 8,734 ms on Node 20, 13,622 ms on Node 22 and
+  15,070 ms on Node 24, and it had already failed the Node 22 leg on `main` at 15,137 ms
+  with no Node 24 involved. Outside a coverage run `performanceBudget` is the identity,
+  so `npm test` is unchanged, and the `performanceBudget(10_000)` assertion that catches
+  a real regression is untouched.
 - **The comment above the `compat` matrix no longer contradicts the policy it points
   at.** It described the matrix as "every Node major this package supports" four
   lines above a pointer to a policy whose subject is that supported and tested are
