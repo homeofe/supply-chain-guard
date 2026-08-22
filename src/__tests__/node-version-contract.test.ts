@@ -29,6 +29,24 @@
  * transition lane still exists. The transition cannot outlive its own deadline,
  * because the release that would carry it past cannot be built.
  *
+ * THE CLAIM HAS A TOP TOO
+ * -----------------------
+ * `engines.node` is a floor with no ceiling, so ">=22.0.0" is a promise about Node 22
+ * AND about every major after it. Everything above described only the bottom of that
+ * range, and the matrix used to stop at the floor, so the whole promise above 22 was
+ * made and never executed. On 2026-08-22 that mattered concretely: Node 22 had been in
+ * Maintenance LTS since 2025-10-21 while Node 24, Active LTS since 2025-10-28, was
+ * claimed and never run. `@types/node` is on the Node 26 API surface, so an API that
+ * exists only above 22 would type-check clean, pass every leg, and fail for a consumer.
+ *
+ * So `activeLtsMajor` is asserted from above the way the floor is asserted from below:
+ * max(supportedMajors) must reach it, and the matrix must run a leg at or above it.
+ * It is a hand-copied upstream fact rather than a network lookup, because a gate that
+ * resolves a fact over the wire is a gate that depends on a stranger's uptime. A
+ * hand-copied fact goes stale silently, so it carries `activeLtsReviewedIn`, the same
+ * version-keyed deadline shape `transitionRemovedIn` uses. Reported as
+ * https://github.com/homeofe/supply-chain-guard/issues/176
+ *
  * The policy itself lives in docs/node-support.md as a machine-readable block, so
  * the documentation cannot drift from the configuration either: this test parses
  * that block and holds every declaration site to it.
@@ -47,6 +65,15 @@ interface NodePolicy {
   supportedMajors: number[];
   transitionMajors: number[];
   transitionRemovedIn?: string;
+  /**
+   * The upstream Active LTS major, hand-copied from the nodejs/Release schedule and
+   * verified on 2026-08-22 (Node 24: Active LTS from 2025-10-28, Maintenance from
+   * 2026-10-20). Deliberately NOT resolved over the network at test time.
+   * `activeLtsReviewedIn` is what stops this constant going stale in silence.
+   */
+  activeLtsMajor: number;
+  /** Release by which `activeLtsMajor` must be re-read from upstream. */
+  activeLtsReviewedIn: string;
   publishMajor: number;
   runtimeMajor: number;
   devBaseline: number;
@@ -76,6 +103,21 @@ function cmp(a: string, b: string): number {
     if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0);
   }
   return 0;
+}
+
+/**
+ * The majors the `compat` matrix in ci.yml actually declares, ascending.
+ * Read here rather than inline so the "exactly the lanes" case and the "reaches the
+ * Active LTS" case cannot drift into reading two different things.
+ */
+function compatMatrix(): number[] {
+  const ci = read(".github/workflows/ci.yml");
+  const m = ci.match(/matrix:\s*\n\s*node:\s*\[([^\]]*)\]/);
+  if (!m) throw new Error("no compat matrix found in .github/workflows/ci.yml");
+  return m[1]!
+    .split(",")
+    .map((s) => Number(s.trim().replace(/['"]/g, "")))
+    .sort((a, b) => a - b);
 }
 
 /** `node-version: '20'` / `node-version: "22"` / `node-version: 20`. */
@@ -175,6 +217,109 @@ describe("node version policy", () => {
     });
   });
 
+  describe("the support claim reaches the top of its own range", () => {
+    // `engines.node` is a floor with no ceiling, so every case above this point
+    // constrains only the bottom of the promise. These constrain the top. Without
+    // them the matrix can sit entirely at the floor while `>=22.0.0` goes on
+    // claiming every major above it, which is what
+    // https://github.com/homeofe/supply-chain-guard/issues/176 measured: 0 of 2 legs
+    // above the floor against a declared range of [22, unbounded].
+
+    it("the declared Active LTS is at or above the engines floor", () => {
+      // Ordered first because it is what stops the next two cases passing
+      // vacuously: drop `activeLtsMajor` below the floor and "supported reaches the
+      // Active LTS" becomes true for free. It is also a real defect in its own
+      // right, in the other direction: a floor above the Active LTS would require
+      // every consumer of a supply-chain security tool onto the Current line.
+      //
+      // WHAT THIS CANNOT CATCH, said plainly rather than left as a surprise:
+      // `activeLtsMajor` lowered to exactly the floor still passes here, and the two
+      // cases below then hold trivially. Nothing in a test can tell a correct
+      // hand-copied upstream fact from an incorrect one without asking the network,
+      // and asking the network is the trade this gate refuses. `activeLtsReviewedIn`
+      // is the answer instead: the fact must be re-read on a deadline, in a reviewed
+      // diff, which is a decision rather than a drift.
+      expect(
+        P.activeLtsMajor,
+        `activeLtsMajor ${P.activeLtsMajor} is below the engines floor ${FLOOR}: either the floor demands a runtime newer than the Active LTS, or activeLtsMajor is stale`,
+      ).toBeGreaterThanOrEqual(FLOOR);
+    });
+
+    it("the supported majors reach the current Active LTS", () => {
+      // The Active LTS is the major consumers are migrating their CI and their
+      // production images onto. Claiming it in `engines.node` while never executing
+      // it is the same defect as claiming a floor nothing tests, pointed upward.
+      // Majors ABOVE the Active LTS (the Current line) are a stated, deliberate
+      // residual, not an oversight. See docs/node-support.md.
+      expect(
+        Math.max(...P.supportedMajors),
+        `supportedMajors [${P.supportedMajors}] stops below the Active LTS ${P.activeLtsMajor}, which engines.node "${P.enginesFloor}" and up already claims`,
+      ).toBeGreaterThanOrEqual(P.activeLtsMajor);
+    });
+
+    it("the CI compat matrix runs a leg at or above the current Active LTS", () => {
+      // Redundant with the case above only while the "exactly the lanes" case also
+      // holds. Stated separately because this is the invariant in the form a reader
+      // of ci.yml is looking for, and a reader who cannot find it assumes it is absent.
+      const declared = compatMatrix();
+      expect(
+        declared.filter((m) => m >= P.activeLtsMajor),
+        `compat matrix [${declared}] runs no leg at or above the Active LTS ${P.activeLtsMajor}`,
+      ).not.toEqual([]);
+    });
+
+    it("the Active LTS declaration carries a review milestone", () => {
+      // `activeLtsMajor` is hand-copied from upstream, so it cannot notice that it
+      // has gone stale. An upstream fact with no re-read deadline is exactly the
+      // "note someone has to remember" this policy file exists to avoid.
+      expect(P.activeLtsReviewedIn, "activeLtsMajor without activeLtsReviewedIn is an upstream fact with no expiry").toBeTruthy();
+      expect(P.activeLtsReviewedIn).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    it("the project has not passed the Active LTS review milestone", () => {
+      // Same teeth, same shape, same reason as transitionRemovedIn: version-keyed
+      // rather than clock-keyed, so the build never turns red on an unrelated pull
+      // request because a date rolled over.
+      const version = JSON.parse(read("package.json")).version as string;
+      expect(
+        cmp(version, P.activeLtsReviewedIn),
+        `version ${version} has reached the Active LTS review milestone ${P.activeLtsReviewedIn}: re-read the nodejs/Release schedule, correct activeLtsMajor if it moved, and move activeLtsReviewedIn forward deliberately`,
+      ).toBeLessThan(0);
+    });
+  });
+
+  describe("the workflow comment states the invariant instead of contradicting it", () => {
+    // The comment above the compat matrix used to call it "every Node major this
+    // package supports", four lines above a pointer to a policy whose whole subject
+    // is that supported and tested are different lists. A reader of ci.yml alone
+    // concluded the repository contradicted itself, and filed
+    // https://github.com/homeofe/supply-chain-guard/issues/176 saying so.
+    //
+    // Membership, not phrasing: a comment that names both lists cannot also claim the
+    // matrix is only what the package supports, and requiring the names keeps the
+    // pointer to the policy and its gate from being dropped in a later rewrite.
+    const compatHeader = () => {
+      const ci = read(".github/workflows/ci.yml");
+      const start = ci.indexOf("\njobs:");
+      const end = ci.indexOf("\n    steps:");
+      expect(start, "no jobs: block in ci.yml").toBeGreaterThan(-1);
+      expect(end, "no steps: block in the first ci.yml job").toBeGreaterThan(start);
+      return ci.slice(start, end);
+    };
+
+    for (const term of [
+      "supportedMajors",
+      "transitionMajors",
+      "activeLtsMajor",
+      "docs/node-support.md",
+      "src/__tests__/node-version-contract.test.ts",
+    ]) {
+      it(`the compat job comment names ${term}`, () => {
+        expect(compatHeader(), `the comment above the compat matrix no longer names ${term}`).toContain(term);
+      });
+    }
+  });
+
   describe("normative sites match the policy exactly", () => {
     it("package.json engines.node is the declared floor", () => {
       const pkg = JSON.parse(read("package.json"));
@@ -182,14 +327,7 @@ describe("node version policy", () => {
     });
 
     it("the CI compat matrix is exactly the supported plus transition majors", () => {
-      const ci = read(".github/workflows/ci.yml");
-      const m = ci.match(/matrix:\s*\n\s*node:\s*\[([^\]]*)\]/);
-      expect(m, "no compat matrix found in ci.yml").toBeTruthy();
-      const declared = m![1]!
-        .split(",")
-        .map((s) => Number(s.trim().replace(/['"]/g, "")))
-        .sort((a, b) => a - b);
-      expect(declared).toEqual(ALL_LANES);
+      expect(compatMatrix()).toEqual(ALL_LANES);
     });
 
     it("the CI publish job runs on the publish major", () => {
