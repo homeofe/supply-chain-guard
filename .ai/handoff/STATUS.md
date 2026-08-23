@@ -87,6 +87,161 @@ wiring that produces the 1700 findings, so it needs the self-scan trust model to
 work through a mount first. Suppression visibility is also untouched: a report
 exposes only a `suppressedCount` and not the entries behind it, which is exactly
 why the inert suppression stayed invisible.
+## PR bodies are now gated too, and the published surfaces were re-checked (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch fix/pr-body-disclosure-gate. No version bump.
+
+Follow-up to the section below. Two things: the earlier finding was re-verified
+against the surfaces that are actually published, and the two coverage holes that
+verification exposed were closed.
+
+### The published surfaces, re-checked
+
+The previous session recorded that the two `CHANGELOG.md` entries were "on their
+way to an indexed surface" because `CHANGELOG.md` becomes the GitHub Release body
+verbatim. That mechanism is real, but it did **not** apply to those two releases.
+The published bodies of v5.2.40 and v5.2.41 (both 2026-06-28) contain one line
+pointing at the README and nothing else - the CHANGELOG-as-release-body pipeline
+came later. **Nothing needs to be retracted from either release body.**
+
+The exposure those two entries did produce was somewhere else. Until 2026-07-02
+the changelog lived in `README.md`, and `README.md` is in `package.json`'s `files`
+array, so it ships inside every npm tarball. Four published versions carry the
+reference in their README: **5.2.40, 5.2.41, 5.2.42 and 5.2.44**. npm tarballs are
+immutable, so this is the one copy that cannot be edited - only deprecated. That
+is an owner decision and nothing was done about it here.
+
+### Two holes the re-check exposed, both now closed
+
+- **The gate could not see a pull request title or body.** It reads tracked files;
+  PR metadata is not a file. That is the surface that cannot be retracted at all,
+  and it is where the largest known disclosure in this repository still sits. A
+  POSIX-ERE twin of the same pattern now runs in the `PR metadata policy` required
+  check - the only workflow triggered by `edited`, so the only one that can see a
+  body rewrite. It sits under a **different** required check name than the file
+  copy on purpose, so neither can stand in for the other.
+- **The gate did not cover `.github/workflows/*.yml`.** Measured by mutation before
+  the change: a cross-repository reference injected into a workflow file left
+  `check:aahp` green. That glob is now in the rule's include list, and the same
+  mutation now fails the build.
+
+### Proven, in both directions
+
+Replayed against real data rather than fixtures: the new predicate fires on all
+three merged PR bodies that carry a disclosure and stays silent on the five most
+recent clean ones. The pattern was also run through the same `grep -Eiq` the
+runner executes, over 11 cases - five reference shapes that must fire, and six
+things this project publishes on purpose that must not (the maintainer contact
+address, the npm scope, the LICENSE holder line, prose describing the rule
+itself). Each file-scope mutation asserts the substitution actually changed the
+file first, because a mutation that fails to apply looks exactly like a gate that
+passed.
+
+One trap worth recording: the include-list anchor used for the config edit is
+**not unique** - the `ai-attribution` rule ends its list on the same string and
+appears first in the file. A plain replace would have widened the wrong rule and
+left this one untouched, with the gate still reporting three rules and still
+passing. The uniqueness assertion caught it; the edit is scoped to the slice that
+starts at the rule's own id.
+
+### Needs a decision (owner)
+
+- The four immutable npm tarballs above (5.2.40, 5.2.41, 5.2.42, 5.2.44).
+- The three merged PR bodies that name consumer repositories. Still not edited -
+  editing a merged body is the owner's call. The new gate prevents the next one;
+  it cannot retract these.
+## SLA compliance had two definitions and shipped the wrong one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-172-sla-single-definition. No version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/172.
+
+### What was wrong
+
+`slaComplianceRate` in `src/metrics.ts` computed `resolved / not-new`, a
+resolution rate, under an SLA name. The real deadline logic lived in
+`src/sla-engine.ts`. The two had never been executed against the same input in
+the same process, in code or in a test, so they disagreed in both directions for
+every release from v4.8.0 (2026-04-04) to v5.28.1:
+
+| Decisions | Old rate | `checkSlaCompliance` |
+|-----------|----------|----------------------|
+| two accepted-risk | 0 | 0 breaches |
+| all in-remediation, inside deadline | 0 | 0 breaches |
+| one `new`, 30 days past a 24h SLA | 100 | 1 breach |
+| none at all | 100 | 0 breaches |
+
+The third row was not in the issue and is the dangerous direction: the metric
+excluded `new` from its denominator while the engine evaluated it, so a report
+could show 100 percent compliance next to real breaches.
+
+### What changed
+
+One definition, `slaVerdict` in `src/sla-engine.ts`, returning
+`compliant | at-risk | breached | unmeasurable`. `checkSlaCompliance` builds its
+findings from it and `src/metrics.ts` counts its verdicts. `slaComplianceRate`
+became `number | null`, floored rather than rounded, so the published invariant
+is exact: when the rate is non-null, it is 100 if and only if the engine reports
+zero breaches over the same decisions. `mttrCritical` was removed from
+`SecurityMetrics`; it was assigned `undefined` unconditionally and was always
+absent from JSON output.
+
+The "when non-null" qualifier is a correction. An earlier revision of this entry,
+the CHANGELOG entry, the `SecurityMetrics` doc comment and the pull request body
+all stated the biconditional unrestricted, and unrestricted it is false in one
+direction. Executed on this branch, 2026-08-22: an empty decision set gives
+`checkSlaCompliance` 0 breaches and `slaComplianceRate` `null`, not 100; two
+decisions whose `decidedAt` cannot be parsed give the same pair; and the control,
+one `resolved` decision, gives 0 breaches and 100. So zero breaches does not
+imply 100. The other direction needs no qualifier: 100 does imply zero breaches.
+The code and the tests were already right about this. The cross-check in
+`src/__tests__/sla-engine.test.ts` asserts the weaker, correct form,
+`if (breaches === 0) expect(rate === null || rate === 100).toBe(true)`; only the
+prose overreached, and only the prose changed.
+
+Both are breaking for TypeScript consumers of the library API and nothing else:
+no gate, exit code, workflow, Action input or output, non-JSON report format or
+MCP field reads either one. The CHANGELOG entry says so plainly.
+
+### Assumptions now written next to the code, not left implicit
+
+- `resolved`, `false-positive` and `accepted-risk` are compliant by status with
+  no date read. An accepted risk is a recorded decision not to remediate, so it
+  has no deadline to miss. The alternative, that acceptance should expire and be
+  re-approved, needs an expiry field on `TriageDecision` that does not exist and
+  is an owner decision.
+- An unparseable `decidedAt` is `unmeasurable`, excluded from both sides of the
+  rate rather than counted as compliant, so a corrupt triage store reports "not
+  measured" instead of "perfect".
+- A `decidedAt` in the future is compliant. Clock skew between machines writing a
+  committed triage file is ordinary and any future-dating cut-off would be an
+  invented number.
+- `at-risk` is inside the SLA. The 0.8 warning fraction is named
+  `AT_RISK_FRACTION` and documented as the pre-existing value it is.
+- `Math.floor` rather than `Math.round`, because rounding lets one breach in 200
+  decisions report as 100.
+
+### Two gaps found and deliberately not closed here
+
+1. **`checkSlaCompliance` has no caller**, so `SLA_BREACH_CRITICAL` and
+   `SLA_AT_RISK` cannot reach a scan report at all. Filed as
+   https://github.com/homeofe/supply-chain-guard/issues/194 (T-021). It is the
+   structural reason the contradiction above stayed invisible from the CLI: only
+   one of the two definitions ever ran. Wiring it in changes risk score and exit
+   code for adopters of triage, which is a decision, not a patch.
+2. **`TriageDecision.dueDate` is never consulted** by either the engine or the
+   metric; the deadline is derived from the rule id. The field is declared and
+   accepted from the triage store, so it looks like it works. This is now stated
+   in a comment at the line that would have to change. Honouring it would move
+   the deadline for every project that already sets it, so it is an owner call.
+
+### Owner decision recorded, not deferred
+
+The issue's acceptance criteria required that the empty decision set stop
+returning 100. The two ways to do that are a nullable type (chosen) or a rename
+to `resolutionRate` keeping the old arithmetic (rejected: it preserves a number
+nothing consumed, under a second name, and leaves the SLA field missing). The
+nullable type is breaking for TypeScript consumers, so the release carrying it
+should be at least a minor bump with the CHANGELOG note that is already written.
 ## Every checkout now states whether it keeps the token (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/checkout-credential-contract. No version bump.

@@ -197,7 +197,8 @@
         "examples/*",
         ".ai/handoff/*.md",
         ".github/PULL_REQUEST_TEMPLATE.md",
-        ".github/ISSUE_TEMPLATE/*.md"
+        ".github/ISSUE_TEMPLATE/*.md",
+        ".github/workflows/*.yml"
       ]
     }
   ],

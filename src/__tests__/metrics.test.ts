@@ -25,10 +25,24 @@ describe("Metrics", () => {
     expect(m.openCritical).toBe(0);
   });
 
-  it("should calculate SLA compliance rate", () => {
+  // The old assertion here read `resolved` + `triaged` with empty decidedAt
+  // values as 50 percent, which was a RESOLUTION rate wearing the SLA name.
+  // Under the single definition in src/sla-engine.ts, `triaged` past its
+  // deadline is the only thing that lowers the rate, and the arithmetic is
+  // driven by breaches rather than by how far along the workflow an item is.
+  it("counts a breached decision against the rate and an open one for it", () => {
+    const day = 24 * 60 * 60 * 1000;
     const decisions: TriageDecision[] = [
-      { findingRule: "A", status: "resolved", decidedAt: "" },
-      { findingRule: "B", status: "triaged", decidedAt: "" },
+      {
+        findingRule: "A_CRITICAL",
+        status: "triaged",
+        decidedAt: new Date(Date.now() - 30 * day).toISOString(),
+      },
+      {
+        findingRule: "B_CRITICAL",
+        status: "triaged",
+        decidedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      },
     ];
     const m = calculateMetrics([], [], decisions);
     expect(m.slaComplianceRate).toBe(50);
@@ -54,8 +68,13 @@ describe("Metrics", () => {
     expect(m.topRiskContributors[0]).toBe("EVAL_ATOB");
   });
 
-  it("should return 100% compliance when no decisions", () => {
+  // Replaces the assertion that pinned the third defect in the issue: an empty
+  // decision set used to report 100, so a project that had never adopted triage
+  // was indistinguishable from one with a perfect record. `null` says "not
+  // measured", and stays a present key in JSON output where `undefined` would
+  // be dropped.
+  it("reports null, not 100, when there are no decisions to measure", () => {
     const m = calculateMetrics([], [], []);
-    expect(m.slaComplianceRate).toBe(100);
+    expect(m.slaComplianceRate).toBeNull();
   });
 });

@@ -858,7 +858,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const riskLevel = getRiskLevel(score);
   const recommendations = generateRecommendations(filteredFindings, partialScan);
 
-  // v4.8: Calculate metrics and save history
+  // v4.8: Calculate metrics and save history.
+  //
+  // No SLA configuration is passed because this project exposes no surface to
+  // configure one: `SlaConfig` has no home in `PolicyConfig` and no CLI flag, so
+  // the built-in default in src/sla-engine.ts is the only SLA in effect. If a
+  // configuration surface is added, it must reach BOTH calculateMetrics and
+  // checkSlaCompliance; wiring one and not the other reintroduces the split that
+  // made slaComplianceRate contradict the SLA engine.
   const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions);
 
   // Save risk history for trend tracking (skip temp dirs; --no-history lets
