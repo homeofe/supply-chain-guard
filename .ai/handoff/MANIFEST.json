@@ -11,15 +11,15 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:303414ffc3ae636ad3a4b008fc0232d083ed886567c77b9cac4ecd58fb1b92d6",
+      "checksum": "sha256:b837d23621ed040cdc5d2d23cfe58f0c4821c88ebb2a67c8402ce9d7f906c48d",
       "updated": "2026-08-22T23:50:00Z",
-      "lines": 3481,
+      "lines": 3555,
       "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:19814e5e643030be8d6538df50287b6f96331fbc10fa8064c5c05ef842f55823",
+      "checksum": "sha256:62f9ce73d7ba44028ef131098513699ec72031129a75cf464a1124e27ad871dc",
       "updated": "2026-08-22T23:50:00Z",
-      "lines": 186,
+      "lines": 224,
       "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
@@ -41,13 +41,13 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:872547631562d3cb6bab39ba6ef65286ec8a3594a70a8898075fb7f275140152",
+      "checksum": "sha256:c71709c0052fcc61c729994fa8f95cc1c53fbce4a3ac95b20c193d5dac2e0e3a",
       "updated": "2026-08-22T23:51:09Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:659062fdecf55baffa4b9ca4e4cd3acc5894906d51ae23bf9a90a493604dd83d",
+      "checksum": "sha256:70921d0f85d9b98f87d12c8f99e401b77fb15bde36fdcd43074e55e2327c9e95",
       "updated": "2026-08-22T23:51:09Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
