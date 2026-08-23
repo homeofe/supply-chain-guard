@@ -528,18 +528,21 @@ function formatText(report: ScanReport): string {
   if (report.trustBreakdown) {
     const tb   = report.trustBreakdown;
     const BAR_W = 32;
-    const tbRow = (label: string, score: number) => {
-      const col = trustColor(score);
-      return boxRow(`  ${label.padEnd(14)}${col}${mkBar(score, 100, BAR_W)}${RESET}  ${col}${score}/100${RESET}`);
+    const tbRow = (label: string, dim: { score: number; assessed?: boolean }) => {
+      if (dim.assessed === false) {
+        return boxRow(`  ${label.padEnd(14)}${DIM}[not assessed]${RESET}`);
+      }
+      const col = trustColor(dim.score);
+      return boxRow(`  ${label.padEnd(14)}${col}${mkBar(dim.score, 100, BAR_W)}${RESET}  ${col}${dim.score}/100${RESET}`);
     };
 
     lines.push(boxTop("TRUST BREAKDOWN"));
-    lines.push(tbRow("Publisher",    tb.publisherTrust.score));
-    lines.push(tbRow("Code",         tb.codeQuality.score));
-    lines.push(tbRow("Dependencies", tb.dependencyTrust.score));
-    lines.push(tbRow("Release",      tb.releaseProcess.score));
+    lines.push(tbRow("Publisher",    tb.publisherTrust));
+    lines.push(tbRow("Code",         tb.codeQuality));
+    lines.push(tbRow("Dependencies", tb.dependencyTrust));
+    lines.push(tbRow("Release",      tb.releaseProcess));
     lines.push(boxDiv());
-    lines.push(tbRow("Overall",      tb.overallScore));
+    lines.push(boxRow(`  ${"Overall".padEnd(14)}${trustColor(tb.overallScore)}${mkBar(tb.overallScore, 100, BAR_W)}${RESET}  ${trustColor(tb.overallScore)}${tb.overallScore}/100${RESET}`));
     lines.push(boxBot());
     lines.push("");
   }

@@ -65,4 +65,68 @@ describe("Trust Breakdown", () => {
     const expected = Math.round(100 * 0.4 + 100 * 0.3 + 100 * 0.2 + 100 * 0.1);
     expect(tb.overallScore).toBe(expected);
   });
+
+  // ── Issue #202: Directory scan trust breakdown renormalisation & unassessed dimensions ──
+  it("does not assert publisher or release process facts on a directory scan", () => {
+    const tb = calculateTrustBreakdown([], "local-dir", true, "directory");
+    expect(tb.publisherTrust.assessed).toBe(false);
+    expect(tb.releaseProcess.assessed).toBe(false);
+
+    // Indicators must not emit affirmative claims about unexamined metadata
+    const allPublisherDetails = tb.publisherTrust.indicators.map((i) => i.detail).join(" ");
+    expect(allPublisherDetails).not.toContain("Established publisher account");
+    expect(allPublisherDetails).not.toContain("No recent maintainer changes");
+    expect(allPublisherDetails).toContain("Not assessed");
+
+    const allReleaseDetails = tb.releaseProcess.indicators.map((i) => i.detail).join(" ");
+    expect(allReleaseDetails).not.toContain("Clean release artifacts");
+    expect(allReleaseDetails).toContain("Not assessed");
+  });
+
+  it("renormalises overall trust score in a directory scan so malware is not bounded by 50", () => {
+    // Infostealer fixture findings: DEAD_DROP_STEAM, EVAL_ATOB, VIDAR_BROWSER_THEFT
+    const findings = [
+      makeFinding("DEAD_DROP_STEAM", "critical"),
+      makeFinding("EVAL_ATOB", "critical"),
+      makeFinding("VIDAR_BROWSER_THEFT", "critical"),
+    ];
+    const tb = calculateTrustBreakdown(findings, "local-malware", true, "directory");
+
+    // Code quality is heavily penalized
+    expect(tb.codeQuality.score).toBeLessThanOrEqual(30);
+
+    // Overall score is renormalised over Code Quality (0.3) + Dependency Trust (0.2)
+    // with sum of weights = 0.5. It must NOT land at 85/100 or be bounded above 50!
+    expect(tb.overallScore).toBeLessThanOrEqual(58);
+    expect(tb.overallScore).not.toBe(85);
+  });
+
+  it("renders [not assessed] in text report format for directory scan", async () => {
+    const { formatReport } = await import("../reporter.js");
+    const findings = [
+      makeFinding("DEAD_DROP_STEAM", "critical"),
+      makeFinding("EVAL_ATOB", "critical"),
+      makeFinding("VIDAR_BROWSER_THEFT", "critical"),
+    ];
+    const tb = calculateTrustBreakdown(findings, "local-malware", true, "directory");
+    const mockReport: any = {
+      tool: "supply-chain-guard@5.28.1",
+      target: "local-malware",
+      scanType: "directory",
+      timestamp: new Date().toISOString(),
+      findings,
+      trustBreakdown: tb,
+      summary: { totalFiles: 5, filesScanned: 5, critical: 3, high: 0, medium: 0, low: 0, info: 0 },
+      score: 90,
+      riskLevel: "critical",
+      recommendations: ["Remove the file"],
+      durationMs: 50,
+      version: "5.28.1",
+    };
+    const rendered = formatReport(mockReport, "text");
+    expect(rendered).toContain("Publisher     \x1b[2m[not assessed]\x1b[0m");
+    expect(rendered).toContain("Release       \x1b[2m[not assessed]\x1b[0m");
+    expect(rendered).not.toMatch(/Publisher\s+100\/100/);
+    expect(rendered).not.toMatch(/Release\s+100\/100/);
+  });
 });

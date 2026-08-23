@@ -852,11 +852,18 @@ export interface TrustIndicator {
   detail: string;
 }
 
+export interface TrustDimension {
+  score: number;
+  indicators: TrustIndicator[];
+  /** Whether this dimension was actively assessed in the current scan mode */
+  assessed?: boolean;
+}
+
 export interface TrustBreakdown {
-  publisherTrust: { score: number; indicators: TrustIndicator[] };
-  codeQuality: { score: number; indicators: TrustIndicator[] };
-  dependencyTrust: { score: number; indicators: TrustIndicator[] };
-  releaseProcess: { score: number; indicators: TrustIndicator[] };
+  publisherTrust: TrustDimension;
+  codeQuality: TrustDimension;
+  dependencyTrust: TrustDimension;
+  releaseProcess: TrustDimension;
   overallScore: number;
 }
 

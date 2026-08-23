@@ -844,7 +844,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // v4.2: Trust breakdown (for directory/github scans with package.json)
   const hasLockfile = fs.existsSync(path.join(scanDir, "package-lock.json"));
-  const trustBreakdown = calculateTrustBreakdown(findings, target, hasLockfile);
+  const trustBreakdown = calculateTrustBreakdown(findings, target, hasLockfile, scanType);
 
   // v4.8: Continuous risk monitoring (scores are now post-suppression,
   // matching what saveRiskHistory persists)

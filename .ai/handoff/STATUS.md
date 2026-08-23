@@ -1,23 +1,23 @@
-## 2026-08-23: Issue 203 (Correlation Confidence Scoring Calibration & Indicator Counts)
+## 2026-08-23: Issue 202 (Directory Scan Trust Breakdown Renormalisation)
 
 Do not start v6.0.0. Zero-open-issues is not met.
 
 ### Already on GitHub / Closed Issues
 All closed-issue acceptance boxes were reconciled against origin/main on GitHub
-by editing issue bodies. Done for: 205, 204, 201 (merged via PR #224), 200, 199,
-198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176,
+by editing issue bodies. Done for: 205, 204, 203 (merged via PR #225), 201 (merged via PR #224),
+200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176,
 175, 174, 173, 172, 171, 170, 169, 167, 168.
 
-### Open issues remaining: 203 (in progress), 202, 208
+### Open issues remaining: 202 (in progress), 208
 
-This change addresses Issue #203:
-- Calibrated compound incident confidence calculation in `src/correlation-engine.ts`: weights baseline member finding confidence against match ratio (`matchedRules.length / rule.rules.length`) plus rule boost, preventing immediate saturation at 1.0 on minimum matches.
-- Strict ordering: full matches yield higher confidence (up to 1.0) than partial/minimum matches.
-- Distributed confidence: only rules where `minMatch === total` (3 of 19) report 100% on minimum match; the other 16 produce distinct, calibrated confidence scores.
-- Added `matchedIndicatorsCount` and `totalIndicatorsCount` to `IncidentCluster` type and populated them in `correlateFindings`.
-- Updated text and SARIF formatters to render indicator counts `(matched/total)`.
-- Updated README.md wording regarding calibrated confidence scoring.
-- Added unit tests in `src/__tests__/correlation-engine.test.ts` asserting strict ordering, minority 100% on minMatch, and indicator counts.
+This change addresses Issue #202:
+- Mode-aware Trust Breakdown in `src/trust-breakdown.ts`: marks Publisher Trust and Release Process as `assessed: false` in local directory scans when no relevant anomaly signals were gathered.
+- Indicator details: does not emit affirmative assertions ("Established publisher account", "Clean release artifacts") when dimensions were not assessed.
+- Renormalised overall score: weights overall trust score across assessed dimensions (Code Quality and Dependency Trust) rather than bounding malware above 50/100 through unexamined 100/100 constants.
+- Text renderer in `src/reporter.ts`: renders `[not assessed]` for unassessed dimensions.
+- Updated README.md to state which scan modes populate all 4 dimensions.
+- Added tests in `src/__tests__/trust-breakdown.test.ts` verifying unassessed indicator details, renormalisation, and text report rendering.
+
 
 
 

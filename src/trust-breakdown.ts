@@ -5,27 +5,97 @@
  * Publisher Trust, Code Quality, Dependency Trust, Release Process.
  */
 
-import type { Finding, TrustBreakdown, TrustIndicator } from "./types.js";
+import type { Finding, TrustBreakdown, TrustDimension, TrustIndicator } from "./types.js";
 
 /**
  * Calculate trust breakdown from findings and package metadata.
+ *
+ * Mode-aware (Issue #202):
+ * - When scanning a remote package or repository (`github`, `npm`, `pypi`), all 4
+ *   dimensions (Publisher, Code, Dependencies, Release) are assessed.
+ * - When scanning a local directory (`directory`), Publisher Trust and Release Process
+ *   are marked as `assessed: false` unless relevant anomaly signals were detected,
+ *   and the overall score is renormalised across the assessed dimensions rather
+ *   than falsely reporting unexamined dimensions as 100/100.
  */
 export function calculateTrustBreakdown(
   findings: Finding[],
   packageName: string,
   hasLockfile: boolean,
+  scanType: string = "package",
 ): TrustBreakdown {
-  const publisherTrust = calcPublisherTrust(findings);
-  const codeQuality = calcCodeQuality(findings);
-  const dependencyTrust = calcDependencyTrust(findings, hasLockfile);
-  const releaseProcess = calcReleaseProcess(findings);
-
-  const overallScore = Math.round(
-    publisherTrust.score * 0.4 +
-    codeQuality.score * 0.3 +
-    dependencyTrust.score * 0.2 +
-    releaseProcess.score * 0.1,
+  const isRemoteOrPkg =
+    scanType === "github" ||
+    scanType === "npm" ||
+    scanType === "pypi" ||
+    scanType === "package";
+  const publisherFindings = findings.filter(
+    (f) =>
+      f.rule === "PUBLISH_MAINTAINER_CHANGE" ||
+      f.rule === "REPO_NEW_ACCOUNT" ||
+      f.rule === "REPO_KNOWN_MALICIOUS_ACCOUNT" ||
+      f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT" ||
+      f.rule === "PUBLISH_VERSION_GAP",
   );
+  const releaseFindings = findings.filter(
+    (f) => f.rule.startsWith("RELEASE_") || f.rule === "PUBLISH_SCRIPT_ADDED",
+  );
+
+  const publisherAssessed = isRemoteOrPkg || publisherFindings.length > 0;
+  const releaseAssessed = isRemoteOrPkg || releaseFindings.length > 0;
+
+  const publisherTrust: TrustDimension = publisherAssessed
+    ? calcPublisherTrust(findings)
+    : {
+        score: 0,
+        indicators: [
+          {
+            name: "Publisher signals",
+            status: "yellow",
+            detail: "Not assessed for local directory scan",
+          },
+        ],
+        assessed: false,
+      };
+
+  const codeQuality: TrustDimension = calcCodeQuality(findings);
+  const dependencyTrust: TrustDimension = calcDependencyTrust(findings, hasLockfile);
+
+  const releaseProcess: TrustDimension = releaseAssessed
+    ? calcReleaseProcess(findings)
+    : {
+        score: 0,
+        indicators: [
+          {
+            name: "Release signals",
+            status: "yellow",
+            detail: "Not assessed for local directory scan",
+          },
+        ],
+        assessed: false,
+      };
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  if (publisherTrust.assessed !== false) {
+    weightedSum += publisherTrust.score * 0.4;
+    totalWeight += 0.4;
+  }
+  if (codeQuality.assessed !== false) {
+    weightedSum += codeQuality.score * 0.3;
+    totalWeight += 0.3;
+  }
+  if (dependencyTrust.assessed !== false) {
+    weightedSum += dependencyTrust.score * 0.2;
+    totalWeight += 0.2;
+  }
+  if (releaseProcess.assessed !== false) {
+    weightedSum += releaseProcess.score * 0.1;
+    totalWeight += 0.1;
+  }
+
+  const overallScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 100;
 
   return {
     publisherTrust,
@@ -36,7 +106,7 @@ export function calculateTrustBreakdown(
   };
 }
 
-function calcPublisherTrust(findings: Finding[]): { score: number; indicators: TrustIndicator[] } {
+function calcPublisherTrust(findings: Finding[]): TrustDimension {
   const indicators: TrustIndicator[] = [];
   let score = 100;
 
@@ -68,10 +138,10 @@ function calcPublisherTrust(findings: Finding[]): { score: number; indicators: T
     indicators.push({ name: "Version gap", status: "yellow", detail: "Long gap between releases" });
   }
 
-  return { score: Math.max(0, score), indicators };
+  return { score: Math.max(0, score), indicators, assessed: true };
 }
 
-function calcCodeQuality(findings: Finding[]): { score: number; indicators: TrustIndicator[] } {
+function calcCodeQuality(findings: Finding[]): TrustDimension {
   const indicators: TrustIndicator[] = [];
   let score = 100;
 
@@ -103,10 +173,10 @@ function calcCodeQuality(findings: Finding[]): { score: number; indicators: Trus
     indicators.push({ name: "Code clarity", status: "green", detail: "No obfuscation detected" });
   }
 
-  return { score: Math.max(0, score), indicators };
+  return { score: Math.max(0, score), indicators, assessed: true };
 }
 
-function calcDependencyTrust(findings: Finding[], hasLockfile: boolean): { score: number; indicators: TrustIndicator[] } {
+function calcDependencyTrust(findings: Finding[], hasLockfile: boolean): TrustDimension {
   const indicators: TrustIndicator[] = [];
   let score = 100;
 
@@ -133,10 +203,10 @@ function calcDependencyTrust(findings: Finding[], hasLockfile: boolean): { score
     indicators.push({ name: "Typosquatting", status: "red", detail: "Possible typosquatted dependency" });
   }
 
-  return { score: Math.max(0, score), indicators };
+  return { score: Math.max(0, score), indicators, assessed: true };
 }
 
-function calcReleaseProcess(findings: Finding[]): { score: number; indicators: TrustIndicator[] } {
+function calcReleaseProcess(findings: Finding[]): TrustDimension {
   const indicators: TrustIndicator[] = [];
   let score = 100;
 
@@ -155,5 +225,5 @@ function calcReleaseProcess(findings: Finding[]): { score: number; indicators: T
     indicators.push({ name: "Script change", status: "yellow", detail: "Install scripts added in recent version" });
   }
 
-  return { score: Math.max(0, score), indicators };
+  return { score: Math.max(0, score), indicators, assessed: true };
 }

@@ -114,8 +114,8 @@ Links individual findings into incident-level attack chains:
 - 15+ correlation rules with confidence scoring
 
 ### Trust Breakdown (v4.2)
-4-dimension trust scoring for every scan:
-- Publisher Trust (40%) / Code Quality (30%) / Dependency Trust (20%) / Release Process (10%)
+Multi-dimension trust scoring for package and repository inspections:
+- Publisher Trust (40%) / Code Quality (30%) / Dependency Trust (20%) / Release Process (10%) (all 4 dimensions populated for `npm`, `pypi`, `repo`, and remote `scan <github-url>` modes; local directory scans evaluate Code Quality and Dependency Trust with renormalised weights).
 
 ## Installation
 
