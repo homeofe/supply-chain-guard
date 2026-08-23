@@ -19,6 +19,7 @@ import type {
   SlaConfig,
 } from "./types.js";
 import { slaVerdict } from "./sla-engine.js";
+import { buildTriageScope } from "./triage-scope.js";
 
 /**
  * SLA compliance over a set of triage decisions.
@@ -98,11 +99,18 @@ export function calculateMetrics(
   decisions: TriageDecision[],
   slaConfig?: SlaConfig,
 ): SecurityMetrics {
-  // Open findings by severity
-  const resolvedRules = new Set(
-    decisions.filter((d) => d.status === "resolved").map((d) => d.findingRule),
-  );
-  const openFindings = findings.filter((f) => !resolvedRules.has(f.rule) && f.severity !== "info");
+  // Open findings by severity.
+  //
+  // A decision resolves the finding it names, not every finding that shares its
+  // rule. Scope is defined once in ./triage-scope.ts and shared with the
+  // governance check in ./triage-engine.ts, so the two consumers of this same
+  // decisions array cannot key on different widths again. Building the set from
+  // d.findingRule alone is what produced
+  // https://github.com/homeofe/supply-chain-guard/issues/171 : one resolved
+  // instance zeroed the KPI while every other instance was still live in
+  // report.findings in the same document.
+  const resolvedScope = buildTriageScope(decisions.filter((d) => d.status === "resolved"));
+  const openFindings = findings.filter((f) => !resolvedScope.covers(f) && f.severity !== "info");
   const openCritical = openFindings.filter((f) => f.severity === "critical").length;
   const openHigh = openFindings.filter((f) => f.severity === "high").length;
 

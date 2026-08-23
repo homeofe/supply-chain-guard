@@ -15,6 +15,7 @@ import {
   type StateStoreRead,
   type StateStoreUnreadableReason,
 } from "./state-dir.js";
+import { buildTriageScope } from "./triage-scope.js";
 
 const TRIAGE_FILE = "triage-decisions.json";
 
@@ -171,11 +172,24 @@ export function checkTriageGovernance(
   decisions: TriageDecision[],
 ): Finding[] {
   const govFindings: Finding[] = [];
-  const decisionMap = new Map<string, TriageDecision>();
 
-  for (const d of decisions) {
-    decisionMap.set(`${d.findingRule}|${d.findingFile ?? ""}`, d);
-  }
+  // A finding has an owner when ANY decision covers it, whatever its status:
+  // being triaged, accepted or in remediation all mean somebody has looked at
+  // it. Which findings a decision covers is decided in ./triage-scope.ts, the
+  // one place that rule lives, and the metrics engine in ./metrics.ts asks the
+  // same module. Before that module existed these two consumers of the same
+  // decisions array keyed on different widths and could contradict each other
+  // inside a single scan report:
+  // https://github.com/homeofe/supply-chain-guard/issues/171
+  //
+  // Behaviour change that came with the shared rule: this check used to join
+  // `rule` and `file ?? ""` into one string key, which made a decision carrying
+  // no findingFile match only findings that carry no file. A rule-wide decision
+  // therefore left every instance in a real file counted as unowned. It now
+  // covers them, which is what "no findingFile" has always meant on the metrics
+  // side and what the field's optionality says. Both halves have a test in
+  // src/__tests__/triage-engine.test.ts.
+  const triaged = buildTriageScope(decisions);
 
   // Check for critical findings without owner.
   // v5.2.20: only fire this meta-governance check when the project is actually
@@ -185,7 +199,7 @@ export function checkTriageGovernance(
   // triage in the first place.
   if (decisions.length > 0) {
     const criticalWithoutOwner = findings.filter(
-      (f) => f.severity === "critical" && !decisionMap.has(`${f.rule}|${f.file ?? ""}`),
+      (f) => f.severity === "critical" && !triaged.covers(f),
     );
     if (criticalWithoutOwner.length > 0) {
       govFindings.push({

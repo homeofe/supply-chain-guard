@@ -118,6 +118,90 @@ service CIDRs from this scanner's own detection corpus, a public agent-runtime
 product name it ships a scanner for, and the English words trust/intelligence/
 awareness in feature prose). v5.2.40 and v5.2.41 both carry the era's stub body,
 "See README.md for full changelog"; the anchor resolves to the corrected file.
+## A triage decision is a (rule, file) pair, and only one consumer knew it (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/triage-decision-scope-key. No version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/171
+
+### What was wrong
+
+`calculateMetrics` built its resolved set from `d.findingRule` alone, so one
+resolved decision removed every finding of that rule from `openCritical`,
+`openHigh` and `topRiskContributors`, including findings in files nobody had
+triaged. `TriageDecision.findingFile` exists to scope a decision to a file and
+was never read there.
+
+The root cause is not a missing file check. `git log -- src/metrics.ts` returns a
+single commit, the one that created the file, and the correct (rule, file) key
+was written the same day in the same feature over the same array, in
+`checkTriageGovernance`. One feature shipped two key widths and only one
+survived. Both read the identical decisions array on the same scan, so one JSON
+report could carry `"openCritical": 0` beside "2 critical finding(s) have no
+assigned owner or triage decision".
+
+It survived four months because every case in `metrics.test.ts` used at most one
+finding per rule and never set `file` on either side. With one instance per rule
+a rule-keyed set and a pair-keyed set give identical answers, so the suite could
+not tell the two implementations apart and stayed green under either. The green
+suite was part of the finding.
+
+### What changed
+
+The scope rule now has exactly one implementation, `src/triage-scope.ts`, and
+both consumers ask it. Sharing a key STRING between the two call sites would
+have fixed the counts and left the divergence one edit away, so no consumer
+builds a key at all; they ask "does any of these decisions cover this finding?".
+`buildTriageScope` is exported for library consumers, who are the only way to
+use the store since it has no CLI subcommand.
+
+One behaviour change came with it: `CRITICAL_FINDING_NO_OWNER` joined
+`file ?? ""` into its key, so a decision carrying no `findingFile` matched only
+findings that carry no file and every instance in a real file stayed "unowned".
+It now covers them, which is what an absent `findingFile` has always meant on
+the metrics side. Absent and empty stay different, and each branch has a test.
+
+`docs/triage-decisions.md` is new: the store, its format and its scope rule were
+documented nowhere.
+
+### Evidence
+
+Paired end to end through the built CLI on one fixture, three critical
+`EVAL_ATOB` findings in three files, one resolved decision naming `src/a.js`,
+same command both times:
+
+| | before | after |
+| --- | --- | --- |
+| `summary.critical` | 3 | 3 |
+| `metrics.openCritical` | 0 | 2 |
+| `topRiskContributors` | `CRITICAL_FINDING_NO_OWNER` | `EVAL_ATOB`, `CRITICAL_FINDING_NO_OWNER` |
+| process exit code | 2 | 2 |
+
+Variant with the decision naming `vendor/not-scanned.js`, a path no finding
+carries: `openCritical` 0 before, 3 after. Variant with no `findingFile` at all:
+0 before, 0 after, which is the behaviour that had to be preserved.
+
+No gate moved. `getReportExitCode` reads `report.summary`, `report.findings` and
+`report.partialScan`, never `metrics`, and the fixture exits 2 in both columns.
+The wrong number reached `--format json`, `--json-output` and library consumers.
+
+Mutation proof, both branches of the new module, run on the three affected test
+files: replacing the file-scoped lookup with a rule-level one reddens 11 of 34;
+replacing `d.findingFile === undefined` with `!d.findingFile` reddens the 2 cases
+that pin absent against empty. Restored, 34 pass.
+
+### Open for the maintainer
+
+1. **The severity label on the issue.** It carries `priority: high`. The measured
+   blast radius is narrower than that: no gate, no exit code, no finding and no
+   human-facing report format was affected, and reaching the defect at all
+   requires opting into a store with no CLI surface. Against calling it low: a
+   security KPI reading 0 next to three live critical findings in the same
+   payload is exactly the number a dashboard or a compliance report trusts, and
+   the failure is silent and permanent once a stale decision exists. The call is
+   the maintainer's; the fix does not depend on it.
+2. **Whether the triage store gets a CLI surface.** Options and the argument for
+   each are written down at the end of `docs/triage-decisions.md`, next to the
+   format they concern, rather than here.
 ## The scanner now scans this repository (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/issue-173-self-scan-gate. No version bump.
