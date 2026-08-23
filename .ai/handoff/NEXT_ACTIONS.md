@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Six tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019/T-020 are complete.
+Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
 
 Current version: **v5.28.1**
 
@@ -14,14 +14,15 @@ Current version: **v5.28.1**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Six
-follow-ups are ready. One decision is owner-blocked: the Node/Babel support
-matrix.
+AAHP 3.9.1 adoption and the verified security hardening are complete. Five
+follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
+matrix (T-013), and whether `scg npm` should read the refreshed feed the way
+`scg scan` does (T-020).
 
 | Status | Count |
 |--------|-------|
-| Ready | 6 |
-| Blocked | 1 |
+| Ready | 5 |
+| Blocked | 2 |
 
 
 ---
@@ -98,6 +99,43 @@ the production extraction backend or weakening Linux coverage.
 
 ---
 
+## T-020: Decide whether `scg npm` should see refreshed feed entries (BLOCKED on owner)
+
+**Goal:** Settle a coverage asymmetry that is currently silent, one way or the
+other, deliberately and with tests.
+
+**Blocked by:** Owner decision. This changes what the scanner DETECTS, so it is
+not an implementation detail an agent should pick.
+
+**The measurement.** `src/npm-scanner.ts` reads the bundled feed only.
+`src/scanner.ts` and `src/install-guard.ts` read `loadThreatIntel()`, which
+merges the cache `scg feed refresh` writes. With one synthetic entry in a
+temporary cache directory: bundled 12,962 entries against 12,963 merged; the
+added IOC is a MISS on the npm path and a HIT on the scan path, while a control
+name taken from the bundled feed hits on both. So `scg npm <package>` does not
+see IOCs added by `feed refresh` and `scg scan` does.
+
+**The two options**, both written next to the code in `src/npm-scanner.ts`:
+
+- **A. Keep the bundled feed.** `scg npm` stays hermetic and returns the same
+  verdict on every machine, and never sees a refreshed IOC.
+- **B. Switch to `loadThreatIntel()`.** Coverage matches `scg scan`; index reuse
+  is preserved because that function returns the shared array; the verdict now
+  depends on local cache state.
+
+**Not a performance question.** Issue 177 made this scanner reuse one feed
+reference and left the choice of WHICH feed untouched, on purpose.
+
+**Files:** `src/npm-scanner.ts` (`checkPackageName`, `checkDependencies`), and a
+focused test either way.
+
+**Acceptance criteria:**
+- [ ] The owner records A or B, with the reason, in this file.
+- [ ] The chosen behavior is asserted by a test that fails if the feed source is switched back.
+- [ ] `docs/` states which feed `scg npm` consults, so a user can predict whether `feed refresh` affects it.
+
+---
+
 ## T-013: Node baseline migration (DONE in v5.28.0)
 
 Closed. The owner decided the direction and it shipped: Node 22 is the canonical
@@ -140,29 +178,6 @@ tarball on both majors in CI; the container image built and scanned on every PR.
 
 ---
 
-## T-021: Decide whether checkSlaCompliance is wired into runScan or removed
-
-**Goal:** `checkSlaCompliance` is exported from the package entry point and has
-no caller in `src/`, so `SLA_BREACH_CRITICAL` and `SLA_AT_RISK` cannot reach a
-scan report through any format. Confirmed end to end: `SLA_` findings number 0
-in every CLI case, including one whose only decision is 30 days past a 24 hour
-SLA and which the engine flags when called directly. It is also the structural
-reason the T-020 contradiction stayed invisible from the CLI, because only one
-of the two SLA definitions ever ran.
-
-**Issue:** https://github.com/homeofe/supply-chain-guard/issues/194
-
-**Files:** `src/scanner.ts` (the triage governance block), `src/sla-engine.ts`,
-`src/index.ts`.
-
-**Acceptance criteria:**
-- [ ] A decision aged past its SLA produces a finding in a real `scan` run, or `checkSlaCompliance` is removed from the public API. One of the two, decided and recorded.
-- [ ] The chosen path is exercised end to end by a test, not by calling the engine directly, so "not wired in" cannot return silently.
-- [ ] If wired in, the effect on risk score and exit code is stated in the CHANGELOG, because it can newly fail a build for an adopter of triage.
-- [ ] If removed, the CHANGELOG records the removal of a published export.
-
----
-
 ## Recently Completed
 
 > Resolution records the closure evidence: commit, PR, test run, live
@@ -170,7 +185,6 @@ of the two SLA definitions ever ran.
 
 | Item | Resolution |
 |------|------------|
-| T-020: `slaComplianceRate` measured a resolution rate, not SLA compliance | Done: one definition, `slaVerdict` in `src/sla-engine.ts`, consumed by both `checkSlaCompliance` and `src/metrics.ts`. Rate is nullable, floored not rounded, and WHEN NON-NULL is 100 if and only if the engine reports zero breaches on the same decisions; unrestricted that biconditional is false, since an empty or wholly unparseable decision set gives zero breaches and a rate of `null`. `mttrCritical` removed. A cross-check suite runs both functions on one input, which no test did before. Evidence and the two deliberately open gaps are in STATUS.md; issue https://github.com/homeofe/supply-chain-guard/issues/172. Follow-up: T-021 / https://github.com/homeofe/supply-chain-guard/issues/194. |
 | T-016: pinned npm IOCs were unreachable from `scan` | Done: matched in the lockfile path, the only place a RESOLVED version exists. False-positive surface measured at zero across 43 repos / 10,615 resolved deps before shipping. Bare-name entries excluded there to avoid double-reporting across the transitive tree. |
 | T-017: matchBareNpmIOC was a linear scan per call | Done: indexed on a WeakMap keyed by feed identity, with the linear implementation kept as `matchBareNpmIOCLinear` and a parity suite asserting the two agree across the whole bundled feed. collection-reachability went from 3,317ms to 21ms and its 30s stopgap is removed. |
 | T-019: dropped-persistence detection | Done in two tranches: `.vscode/tasks.json` recall, `CHAINDROP_GH_TOKEN_MONITOR_PERSISTENCE` (also wired into the hook scanner, since the core walk excludes `.claude/`), and `INSTALL_HOOK_PERSISTENCE_WRITE`. Coverage of the five published artefacts went from one of five to five of five. |
