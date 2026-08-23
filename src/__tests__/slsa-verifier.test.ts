@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { getSLSALevel, verifySLSA, parseAttestation } from "../slsa-verifier.js";
+import { getSLSALevel, verifySLSA, parseAttestation, assessSLSA } from "../slsa-verifier.js";
 
 let tmpDir: string;
 
@@ -86,6 +86,29 @@ jobs:
     uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
 `);
     expect(getSLSALevel(tmpDir)).toBe(3);
+  });
+
+  it("does not grant Level 3 when the generator and workflow_call live in different files", () => {
+    // Same pair of signals as the test above, split across two workflows.
+    // Combining them over the concatenated corpus is the same defect issue 190
+    // reported for the npm-native path: a callable CodeQL workflow plus a
+    // generator mention in an unrelated release file is not a builder invocation.
+    mkWorkflow(tmpDir, "callable.yml", `
+on:
+  workflow_call:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`);
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+jobs:
+  slsa:
+    uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
+`);
+    expect(getSLSALevel(tmpDir)).toBe(2);
   });
 
   it("should return 3 when slsa-github-generator SHA + a VALID provenance statement", () => {
@@ -177,9 +200,15 @@ jobs:
     expect(getSLSALevel(tmpDir)).toBe(1);
   });
 
-  it("should treat --provenance + id-token:write split across two workflow files as L3", () => {
-    // Detection scans the concatenated content of all workflows in
-    // .github/workflows/, mirroring how reviewers read a repo's CI surface.
+  // CHANGED ASSERTION (unreleased, issue 190). This test previously asserted 3 for
+  // exactly this fixture, with the rationale that detection "scans the
+  // concatenated content of all workflows, mirroring how reviewers read a
+  // repo's CI surface". That locked in the defect: an `id-token: write` in a
+  // job that never publishes cannot let a publish step in a DIFFERENT job mint
+  // provenance, so the configuration below produces no provenance at runtime
+  // and must not be graded as though it did. The signals must resolve to one
+  // job; the L2 grade is what the `--provenance` flag alone earns.
+  it("does NOT grant L3 when --provenance and id-token:write are in different workflows", () => {
     mkWorkflow(tmpDir, "perms.yml", `
 on: workflow_call
 jobs:
@@ -198,7 +227,286 @@ jobs:
     steps:
       - run: npm publish --provenance --access public
 `);
+    expect(getSLSALevel(tmpDir)).toBe(2);
+  });
+
+  // ── unreleased, issue 190: text in a comment is not a build step ───────────────
+
+  it("does NOT grant L2 when the only signing action reference is a comment", () => {
+    mkWorkflow(tmpDir, "ci.yml", `
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # - uses: sigstore/cosign-action@v3
+      - run: echo not-implemented
+`);
+    expect(getSLSALevel(tmpDir)).toBe(1);
+  });
+
+  it("does NOT grant L3 for a commented-out publish step in the SAME job as id-token: write", () => {
+    // The fixture from issue 190, tightened: both signals are in one job, so
+    // job scoping alone cannot save this. Only refusing to match commented text
+    // keeps it below 3.
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      # TODO: we should eventually run npm publish --provenance here
+      - run: echo not-implemented
+`);
+    expect(getSLSALevel(tmpDir)).toBe(1);
+  });
+
+  it("does NOT grant L3 when the publish job's own permissions omit id-token", () => {
+    // GitHub replaces workflow-level permissions with the job-level block, so
+    // this publish job does NOT hold id-token: write and cannot sign.
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: npm publish --provenance
+`);
+    expect(getSLSALevel(tmpDir)).toBe(2);
+  });
+
+  it("grants L3 when the publish job inherits workflow-level id-token: write", () => {
+    // Positive control for the check above: with no job-level permissions block
+    // the workflow-level grant DOES apply, so this is a real npm-native L3.
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance
+`);
     expect(getSLSALevel(tmpDir)).toBe(3);
+  });
+
+  it("caps the level at 2 when a present attestation does not parse as a usable statement", () => {
+    // Issue 190: a 3/3 headline used to coexist with SLSA_PROVENANCE_INVALID in
+    // the same report, which said two contradictory things at once.
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance
+`);
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        _type: "https://in-toto.io/Statement/v1",
+        subject: [],
+        predicateType: "https://slsa.dev/provenance/v1",
+        predicate: {},
+      }),
+    );
+    expect(getSLSALevel(tmpDir)).toBe(2);
+    expect(verifySLSA(tmpDir).some((f) => f.rule === "SLSA_PROVENANCE_INVALID")).toBe(true);
+  });
+});
+
+// ─── unreleased, issue 188: the DSSE signatures member ────────────────────────────
+
+describe("parseAttestation - signature state", () => {
+  const stmt = {
+    _type: "https://in-toto.io/Statement/v1",
+    subject: [{ name: "pkg-1.0.0.tgz", digest: { sha256: "ab".repeat(32) } }],
+    predicateType: "https://slsa.dev/provenance/v1",
+    predicate: { runDetails: { builder: { id: "https://evil.example.com/not-a-builder" } } },
+  };
+
+  function writeEnvelope(signatures: unknown) {
+    const envelope: Record<string, unknown> = {
+      payloadType: "application/vnd.in-toto+json",
+      payload: Buffer.from(JSON.stringify(stmt)).toString("base64"),
+    };
+    if (signatures !== undefined) envelope.signatures = signatures;
+    fs.writeFileSync(path.join(tmpDir, "provenance.json"), JSON.stringify(envelope));
+  }
+
+  it("rejects a DSSE envelope whose signatures array is empty", () => {
+    writeEnvelope([]);
+    const res = parseAttestation(tmpDir);
+    expect(res.structurallyValid).toBe(false);
+    expect(res.kind).toBe("malformed");
+    expect(res.signatureStatus).toBe("absent");
+    expect(verifySLSA(tmpDir).some((f) => f.rule === "SLSA_ATTESTATION_UNSIGNED")).toBe(true);
+  });
+
+  it("rejects a DSSE envelope with no signatures key at all", () => {
+    writeEnvelope(undefined);
+    const res = parseAttestation(tmpDir);
+    expect(res.structurallyValid).toBe(false);
+    expect(res.signatureStatus).toBe("absent");
+  });
+
+  it("rejects signature entries that carry no sig value", () => {
+    writeEnvelope([{ keyid: "k" }]);
+    const res = parseAttestation(tmpDir);
+    expect(res.structurallyValid).toBe(false);
+    expect(res.signatureStatus).toBe("absent");
+  });
+
+  it("an unsigned envelope is distinguishable from a signed one", () => {
+    writeEnvelope([]);
+    const unsigned = parseAttestation(tmpDir);
+    writeEnvelope([{ sig: "MEUCIQ" }]);
+    const signed = parseAttestation(tmpDir);
+    expect(unsigned.signatureStatus).not.toBe(signed.signatureStatus);
+    expect(unsigned.structurallyValid).not.toBe(signed.structurallyValid);
+  });
+
+  it("reports a present signature as unverified, never as verified", () => {
+    writeEnvelope([{ sig: "MEUCIQ" }]);
+    const res = parseAttestation(tmpDir);
+    expect(res.structurallyValid).toBe(true);
+    expect(res.signatureStatus).toBe("present-unverified");
+    expect(res.signatureCount).toBe(1);
+    expect(res.checksNotPerformed?.length).toBeGreaterThan(0);
+    // The caveat reaches every format that renders findings, which is the only
+    // route it has into SARIF, GitLab and JUnit.
+    const finding = verifySLSA(tmpDir).find((f) => f.rule === "SLSA_SIGNATURE_NOT_VERIFIED");
+    expect(finding).toBeDefined();
+    expect(finding?.description).toContain("NOT verified");
+  });
+
+  it("marks a bare in-toto statement as having no envelope to sign", () => {
+    fs.writeFileSync(path.join(tmpDir, "provenance.json"), JSON.stringify(stmt));
+    const res = parseAttestation(tmpDir);
+    expect(res.signatureStatus).toBe("not-applicable");
+    expect(res.structurallyValid).toBe(true);
+  });
+});
+
+// ─── unreleased, issue 189: the digest set ────────────────────────────────────────
+
+describe("parseAttestation - subject digest set", () => {
+  function writeSubjectDigest(digest: unknown) {
+    const stmt = {
+      _type: "https://in-toto.io/Statement/v1",
+      subject: [{ name: "pkg-1.0.0.tgz", digest }],
+      predicateType: "https://slsa.dev/provenance/v1",
+      predicate: {},
+    };
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        payloadType: "application/vnd.in-toto+json",
+        payload: Buffer.from(JSON.stringify(stmt)).toString("base64"),
+        signatures: [{ sig: "MEUCIQ" }],
+      }),
+    );
+  }
+
+  it("rejects an empty digest set", () => {
+    writeSubjectDigest({});
+    const res = parseAttestation(tmpDir);
+    expect(res.kind).toBe("malformed");
+    expect(res.structurallyValid).toBe(false);
+    expect(verifySLSA(tmpDir).some((f) => f.rule === "SLSA_PROVENANCE_INVALID")).toBe(true);
+  });
+
+  it("rejects an array digest rather than an algorithm-to-value map", () => {
+    // A NON-empty array: Object.entries(["deadbeef"]) is [["0","deadbeef"]],
+    // which would pass the length and string-value checks. The Array.isArray
+    // guard is the only thing that rejects this shape. An empty array is
+    // already rejected by the length check that the empty-object test pins,
+    // so writeSubjectDigest([]) would stay green if Array.isArray were deleted.
+    writeSubjectDigest(["deadbeef"]);
+    expect(parseAttestation(tmpDir).kind).toBe("malformed");
+  });
+
+  it("rejects a digest whose values are not strings", () => {
+    writeSubjectDigest({ sha256: 12345 });
+    expect(parseAttestation(tmpDir).kind).toBe("malformed");
+  });
+
+  it("rejects a digest whose value is an empty string", () => {
+    writeSubjectDigest({ sha256: "" });
+    expect(parseAttestation(tmpDir).kind).toBe("malformed");
+  });
+
+  it("accepts a real digest set and counts only usable subjects", () => {
+    const stmt = {
+      _type: "https://in-toto.io/Statement/v1",
+      subject: [
+        { name: "empty", digest: {} },
+        { name: "real", digest: { sha256: "ab".repeat(32) } },
+      ],
+      predicateType: "https://slsa.dev/provenance/v1",
+      predicate: {},
+    };
+    fs.writeFileSync(
+      path.join(tmpDir, "provenance.json"),
+      JSON.stringify({
+        payloadType: "application/vnd.in-toto+json",
+        payload: Buffer.from(JSON.stringify(stmt)).toString("base64"),
+        signatures: [{ sig: "MEUCIQ" }],
+      }),
+    );
+    const res = parseAttestation(tmpDir);
+    expect(res.structurallyValid).toBe(true);
+    expect(res.subjectCount).toBe(1);
+  });
+});
+
+// ─── Unreleased: the grade carries what it was computed from ─────────────────────
+
+describe("assessSLSA", () => {
+  it("always reports checks that were never run, at every level", () => {
+    for (const level of [0, 3]) {
+      if (level === 3) {
+        mkWorkflow(tmpDir, "release.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance
+`);
+      }
+      const assessment = assessSLSA(tmpDir);
+      expect(assessment.level).toBe(level);
+      expect(assessment.notAssessed.length).toBeGreaterThan(0);
+      expect(assessment.notAssessed.join(" ")).toContain("signature");
+    }
+  });
+
+  it("names the job that produced an npm-native Level 3", () => {
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm publish --provenance
+`);
+    const assessment = assessSLSA(tmpDir);
+    expect(assessment.level).toBe(3);
+    expect(assessment.basis.join(" ")).toContain('job "publish" in release.yml');
   });
 });
 

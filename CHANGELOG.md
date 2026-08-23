@@ -43,6 +43,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   change: injecting a cross-repository reference into a workflow file left
   `check:aahp` green, because no glob in the rule's include list reached that
   directory.
+- **Threat feed: 38 package IOCs imported from the GitHub Advisory Database**
+  (2026-08-14 to 2026-08-23), covering 37 npm and 1 PyPI indicator, 22 of them
+  corroborated by OSV. The largest clusters are `totp-utils` (8 versions of a
+  one-time-password helper), a ten-entry dependency-confusion set of the form
+  `<digit>-<verb>sight-web` (`2-loadsight-web`, `3-buildsight-web`,
+  `6-viewsight-web`, `8-fetchsight-web`, `10-shardsight-web`, each at 1.0.0 and
+  1.0.1), and nine `stillm4ddpocs-*` proof-of-concept publications on 999.9.x
+  lure versions. Also `@syncraft-labs/core`, `/react` and `/vue` at 0.4.1,
+  `@usaa-grp-personal-profile/personal-profile-common@999.0.0` (a
+  dependency-confusion lure aimed at an internal scope of a real financial
+  institution, version-pinned rather than blocked by name), four
+  `*-testkit` / `*-testing-utils` names, `create-coin@20.1.1`, the bare name
+  `internallib_v902`, and the PyPI typosquat `scrambleeeer@0.1.0`, a fourth
+  spelling in a family the feed already carries as `scrambleeer`.
 
 ### Changed
 
@@ -206,6 +220,108 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   disables nothing.
 
 ### Fixed
+
+- **A scan that examined ZERO files is no longer reported as clean.**
+  ([#205](https://github.com/homeofe/supply-chain-guard/issues/205)) Measured
+  before the change, on an empty directory versus this repository's own two-file
+  clean fixture: the `badge` artefacts were byte-identical
+  (`{"message":"clean","color":"brightgreen"}` for both), the `sarif`, `gitlab`
+  and `junit` artefacts were identical after normalising timestamps and the
+  target path, and `scan <empty> --fail-on critical` exited 0. Those four
+  formats read neither `summary.filesScanned` nor `summary.totalFiles`, so they
+  described what was found and never how much was looked at. `scan()` now raises
+  `SCAN_ZERO_COVERAGE` when no file was examined, and that rule is in
+  `PARTIAL_SCAN_RULES`, so the existing partial-coverage path fires: the badge
+  reads `partial`/orange, SARIF sets `executionSuccessful: false`, the GitLab
+  scan status is `failure`, JUnit gains its `SCAN_INCOMPLETE` error case, and the
+  exit code is 1. Every realistic cause of a zero-file scan is an ordinary CI
+  accident, so this was reachable without an attacker: a checkout step that did
+  not run, a working directory set to the wrong path, a sparse checkout, or a
+  container that mounted an empty volume. An ordinary Java, C#, Ruby, PHP,
+  Kotlin, Swift or plain-HTML tree is a different state: files exist, this
+  scanner simply does not read their extensions. That used to share the same
+  predicate (`filesScanned === 0`) and would have flipped those repositories
+  from exit 0 / brightgreen to exit 1 / orange with remediation text naming
+  only causes that do not apply. It now raises `SCAN_NO_SCANNABLE_FILES`
+  (informational, not partial). Only an empty tree is `SCAN_ZERO_COVERAGE`.
+- **SARIF, GitLab and JUnit now state their own coverage denominator.**
+  ([#205](https://github.com/homeofe/supply-chain-guard/issues/205)) The SARIF
+  run always carries an `invocations[0]` entry whose `properties.coverage` gives
+  `filesScanned` and `totalFiles`; the GitLab report always carries a coverage
+  message in `scan.messages`, at `warn` level when the count is zero; JUnit always
+  emits a `<properties>` block with both counts. A report that examined a real
+  tree says so too, which is what makes the zero case legible.
+- **An attestation whose DSSE envelope carries no signature is no longer graded
+  as valid provenance.**
+  ([#188](https://github.com/homeofe/supply-chain-guard/issues/188)) The
+  `signatures` member of the envelope was never read, so `signatures: []`, an
+  envelope with no `signatures` key, and one carrying attacker-supplied bytes all
+  returned the same result as a signed one, and a statement naming an arbitrary
+  builder was reported as valid SLSA provenance at Level 3. Those three cases are
+  now `kind: "malformed"` and raise the new `SLSA_ATTESTATION_UNSIGNED` finding
+  (medium). `AttestationResult` gained `structurallyValid`, `signatureStatus`
+  (`not-applicable` / `absent` / `present-unverified`) and `checksNotPerformed`.
+  **This tool still verifies no signature**: no key material, Fulcio certificate
+  chain or Rekor inclusion proof is checked, so a syntactically valid but
+  untrusted signature remains indistinguishable from a trusted one. That limit is
+  now carried into every output format by the new `SLSA_SIGNATURE_NOT_VERIFIED`
+  finding (info) and by `SLSAAssessment.notAssessed`, where before it appeared in
+  no format at all.
+- **A subject with an empty digest set is classified as malformed.**
+  ([#189](https://github.com/homeofe/supply-chain-guard/issues/189)) The subject
+  test was `digest && typeof digest === "object"`, which in JavaScript is also
+  satisfied by `{}` and by `[]`, so a statement that binds to no artefact was
+  graded `valid: true, kind: "slsa", subjectCount: 1`. A digest set must now be a
+  non-empty map of non-empty string algorithm names to non-empty string values,
+  and `subjectCount` counts only subjects that satisfy it.
+- **SLSA Level 3 is no longer granted from a regex over raw workflow text.**
+  ([#190](https://github.com/homeofe/supply-chain-guard/issues/190)) Every
+  workflow file was concatenated and matched as text, so a repository that
+  published nothing was graded 3/3 when `npm publish --provenance` appeared only
+  inside a `# TODO:` comment and an unrelated CodeQL job happened to hold
+  `id-token: write`. Reference matching now runs over comment-stripped content,
+  and the npm-native Level 3 path requires the `--provenance` publish step and the
+  `id-token: write` permission to resolve to the SAME job, parsed with this
+  project's own `src/workflow-ast.ts` and GitHub's real permission semantics: a
+  job-level `permissions:` block replaces the workflow-level one, so a publish job
+  that declares its own permissions without `id-token` does not inherit it. A
+  caller job that holds `id-token: write` and `uses:` a LOCAL reusable workflow
+  whose job runs the publish is credited, because GitHub passes the caller's
+  permissions through; a remote `owner/repo/...@ref` is not, even when a local
+  file of the same name is present. The slsa-github-generator Level 3 path has
+  the same bound on FILES that the npm-native path has on jobs: the generator
+  reference and the `workflow_call` trigger must belong to the same workflow
+  file, so a callable workflow in one file plus a generator mention in another
+  is no longer a 3.
+- **A malformed attestation can no longer coexist with a 3/3 headline in the same
+  report.** ([#190](https://github.com/homeofe/supply-chain-guard/issues/190)) A
+  present provenance file that does not parse as a usable statement now caps the
+  level at 2, instead of leaving the grade and the `SLSA_PROVENANCE_INVALID`
+  finding contradicting each other in one report.
+- **The SLSA level is no longer published without the checks behind it.**
+  ([#188](https://github.com/homeofe/supply-chain-guard/issues/188),
+  [#190](https://github.com/homeofe/supply-chain-guard/issues/190)) `ScanReport`
+  carries `slsaAssessment` with `level`, `basis` (what produced the grade, naming
+  the job where one applies) and `notAssessed` (signature verification, digest
+  binding, and the build-platform properties SLSA v1.0 Build L3 defines, none of
+  which a static read of a repository can establish). The text format renders both
+  under the bar, the caveats from Level 2 up; JSON, SARIF and JUnit carry them
+  unconditionally. JUnit emits `slsa-level`, `slsa-basis` and `slsa-not-assessed`
+  as properties; previously it emitted the level and the caveats and omitted
+  `basis`, which was the check that produced the number.
+- **`HERMETIC_BUILD_PATTERNS` is gone.**
+  ([#190](https://github.com/homeofe/supply-chain-guard/issues/190)) It matched
+  `/reusable_workflow/` and `/workflow_call/`. `workflow_call` is the trigger that
+  makes a workflow callable, carries no isolation property, and adding that one
+  line to any workflow moved the grade; `reusable_workflow` is not a workflow key
+  at all. Hermeticity is also not a SLSA v1.0 Build L3 requirement, having been
+  dropped from the Build track. The signal is now read structurally from the
+  parsed `on:` triggers and named for what it detects.
+- **The SLSA level for a `github` scan target was graded against a deleted
+  directory.** `slsaLevel` was computed inside the returned object literal, which
+  evaluates after the cloned temp directory is removed, while `verifySLSA` had run
+  earlier against the real checkout. One report could therefore carry a level and
+  findings that disagreed. The assessment is now taken before cleanup.
 
 - **The generated SBOM now validates against the official CycloneDX 1.6 JSON
   schema.** `hashes[].content` carried the base64 string npm writes into the

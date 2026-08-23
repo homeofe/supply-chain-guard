@@ -79,6 +79,30 @@ function makeEmptyReport(): ScanReport {
   });
 }
 
+/**
+ * A report that carries the SLSA assessment the renderers are supposed to
+ * publish next to the number. makeReport() omits slsaAssessment, so deleting
+ * the SARIF `slsa` property, the JUnit slsa-* properties, or the text
+ * NOT-ASSESSED / from: blocks used to leave the targeted suite fully green.
+ */
+function makeAssessedReport(overrides: Partial<ScanReport> = {}): ScanReport {
+  return makeReport({
+    slsaLevel: 3,
+    slsaAssessment: {
+      level: 3,
+      basis: [
+        'job "publish" in release.yml runs `npm publish --provenance` and has `id-token: write` in effect',
+      ],
+      notAssessed: [
+        "cryptographic signature verification: never checked in this fixture",
+        "digest binding: never checked in this fixture",
+      ],
+      attestation: { present: false, valid: false, structurallyValid: false },
+    },
+    ...overrides,
+  });
+}
+
 // ─── JSON format ──────────────────────────────────────────────────────────────
 
 describe("formatReport – JSON", () => {
@@ -892,5 +916,65 @@ describe("partial-scan verdict contract", () => {
     expect(getFindingsExitCode([{ severity: "medium" }])).toBe(0);
     expect(getFindingsExitCode([{ severity: "high" }])).toBe(1);
     expect(getFindingsExitCode([{ severity: "critical" }])).toBe(2);
+  });
+});
+
+describe("a published artefact states what was not assessed", () => {
+  /**
+   * Issues 188/190 exist because ignorance rendered as a pass. The assessment
+   * is computed; these tests pin that it actually REACHES the artefact. Each
+   * assertion names the line a reviewer deletes to turn THIS test red.
+   */
+
+  it("renders the basis and the NOT-ASSESSED block in the text report", () => {
+    // Anchors: the `from:` loop and the `NOT ASSESSED:` loop in formatText.
+    const output = stripAnsi(formatReport(makeAssessedReport(), "text"));
+    expect(output).toContain("from:");
+    expect(output).toContain('job "publish" in release.yml');
+    expect(output).toContain("NOT ASSESSED:");
+    expect(output).toContain("cryptographic signature verification");
+  });
+
+  it("carries slsa.level, slsa.basis and slsa.notAssessed on the SARIF invocation", () => {
+    // Anchor: `slsa: slsaProperties(report)` in formatSarif.
+    const parsed = JSON.parse(formatReport(makeAssessedReport(), "sarif")) as {
+      runs: Array<{
+        invocations: Array<{
+          properties: {
+            slsa?: { level: number; basis: string[]; notAssessed: string[] };
+          };
+        }>;
+      }>;
+    };
+    const slsa = parsed.runs[0].invocations[0].properties.slsa;
+    expect(slsa).toBeDefined();
+    expect(slsa?.level).toBe(3);
+    expect(slsa?.basis.join(" ")).toContain('job "publish"');
+    expect(slsa?.notAssessed.join(" ")).toContain("signature verification");
+  });
+
+  it("carries slsa-level, slsa-basis and slsa-not-assessed as JUnit properties", () => {
+    // Anchors: the three `supply-chain-guard:slsa-*` property lines in formatJunit.
+    const output = formatReport(makeAssessedReport(), "junit");
+    expect(output).toContain('name="supply-chain-guard:slsa-level" value="3"');
+    expect(output).toContain('name="supply-chain-guard:slsa-basis"');
+    expect(output).toContain('job &quot;publish&quot; in release.yml');
+    expect(output).toContain('name="supply-chain-guard:slsa-not-assessed"');
+    expect(output).toContain("cryptographic signature verification");
+  });
+
+  it("states the zero-coverage caveat, not only the file counts", () => {
+    // Anchor: the extra sentence in coverageLine() when filesScanned === 0.
+    // "0 of 0 files" alone is not the caveat: that count can stay while the
+    // sentence that says this is not a clean verdict is deleted.
+    const zero = makeEmptyReport();
+    zero.summary.filesScanned = 0;
+    zero.summary.totalFiles = 0;
+    const gitlab = JSON.parse(formatReport(zero, "gitlab")) as {
+      scan: { messages: Array<{ level: string; value: string }> };
+    };
+    expect(gitlab.scan.messages[0].level).toBe("warn");
+    expect(gitlab.scan.messages[0].value).toContain("not a clean verdict");
+    expect(formatReport(zero, "junit")).toContain("not a clean verdict");
   });
 });

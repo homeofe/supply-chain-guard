@@ -149,7 +149,14 @@ export {
   resolveNpmAlias,
   lockfileEntryName,
 } from "./sbom-generator.js";
-export { verifySLSA, getSLSALevel, parseAttestation } from "./slsa-verifier.js";
+export {
+  verifySLSA,
+  getSLSALevel,
+  assessSLSA,
+  parseAttestation,
+  SLSA_NOT_ASSESSED,
+} from "./slsa-verifier.js";
+export type { AttestationResult, SLSAAssessment, SignatureStatus } from "./slsa-verifier.js";
 export { toOsvRecords, parsePackageValue } from "./osv-export.js";
 export { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 export { scanMcpConfigs, scanMcpConfigContent, hasMcpConfigFiles, MCP_CONFIG_FILES } from "./mcp-scanner.js";
