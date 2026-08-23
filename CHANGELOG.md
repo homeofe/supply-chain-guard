@@ -73,6 +73,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   survived four months. The page also records the open question of whether the
   store should gain a CLI surface, be left library-first, or be dropped in favour
   of consumers owning it.
+- **CI now runs this scanner over this repository, inside the required `Build and
+  Test` check.** Every previous `scan` invocation in the pipeline pointed at a
+  four-line fixture `package.json` and asserted only that the CLI emitted parseable
+  JSON. That is a liveness probe, not an inspection: none of the three status
+  checks branch protection requires on `main` read a line of this tree, so every
+  rule this tool enforces on its consumers was unenforced on its own source, and
+  the check that gates an npm release proved nothing about the content of that
+  release. The new step runs the freshly built CLI from the checkout root at
+  `--fail-on critical`, on every leg of the Node matrix and behind no `if:`
+  condition, and it refuses to report a verdict until it can show it inspected
+  this repository: it compares `filesScanned` against the number of TypeScript
+  sources the checkout tracks under `src/`, so a step accidentally repointed at a
+  fixture fails instead of passing green on one file. Measured cost is about 9
+  seconds of scanner time, in a job that already runs `npm ci`, `npm audit`, `tsc`,
+  the full suite with coverage and a clean-room tarball install. The threshold, the
+  wiring constraint that makes self-scan suppression apply, and the open decision
+  about tightening the threshold are all written next to the step.
 - **BREAKING for TypeScript consumers of the library API.**
   `SecurityMetrics.slaComplianceRate` widened from `number` to `number | null`,
   and `SecurityMetrics.mttrCritical` was removed. `mttrCritical` was declared
@@ -514,6 +531,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `refs/tags/v*` is the control for the latter and remains an open owner decision on
   https://github.com/homeofe/supply-chain-guard/issues/167.
 
+- **`README_LURE_CRACK` no longer fires on a hyphenated package name quoted in
+  prose.** The alternative covering unlimited-usage lure phrasing allowed zero
+  spaces between its two words, so the concatenated form matched wherever those
+  letters appeared, including inside a package name in the middle of a sentence.
+  Any changelog or advisory naming the real malicious package `nolimit-agent`
+  therefore earned a critical finding for describing malware accurately, and
+  security changelogs are exactly the documents this rule reads. That alternative
+  now carries a hyphen guard on both sides, which is the entire measured
+  false-positive shape: a hyphen on either side means the match is one segment of
+  a longer identifier token rather than a word in a sentence. Detection is not
+  narrowed. Both the spaced and the concatenated lure phrasings still fire, and
+  the rule's other alternatives are untouched. The exact strings are pinned in
+  `src/__tests__/issue-173-self-scan-gate.test.ts` rather than quoted here: this
+  rule reads `CHANGELOG.md`, so spelling them out would raise a finding in these
+  very release notes. Found by the first automated self-scan of this repository,
+  on this project's own changelog.
+- **`src/__tests__/file-digest.test.ts` is recognised as one of this package's own
+  inert detector fixtures during a self-scan.** It quotes two shipped
+  `KNOWN_MALICIOUS_HASHES` entries verbatim, and it has to: its assertions are
+  about how those exact digests are routed, and an invented digest proves nothing
+  about a shipped one. Sixteen sibling test files quoting shipped indicators were
+  already on that allowlist, so the omission was an oversight rather than a
+  decision. It produced three of the four findings the first real self-scan
+  returned.
+- **Removed a policy suppression that suppressed nothing.**
+  `.supply-chain-guard.yml` carried a `SHAI_HULUD_CRED_STEAL` entry that matched no
+  finding. Measured on the tree as it stood before these fixes, this repository
+  reported 11 findings with the policy file absent and 4 with it present, and that
+  rule appeared in neither set; it had been added defensively next to its sibling
+  `SHAI_HULUD_WORM`, which does fire. A suppression that matches nothing is
+  standing permission for a finding no reviewer has ever seen, and since a report
+  exposes only a `suppressedCount` and not the entries behind it, nothing made the
+  drift visible. It survived because the self-scan was run by hand and never wired
+  into CI.
 - **A corrupt scanner state file is now a reported failure instead of a clean
   empty baseline.** Both stores under `.scg-history/` ended their read in
   `catch { return []; }`, which is the value the absent case returns, so
