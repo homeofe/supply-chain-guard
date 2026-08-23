@@ -688,18 +688,65 @@ const NOT_INVENTORIED_MANIFESTS: Array<[file: string, ecosystem: string]> = [
  * not read. Returns `"<file> (<ecosystem>)"` entries, deduplicated by file, in
  * the order of the table above so the string is stable across runs.
  */
+/** Directories that never hold a manifest worth reporting, and that every
+ *  real project has. Skipping them is what keeps the walk cheap. */
+const MANIFEST_WALK_SKIP = new Set([
+  "node_modules", ".git", ".hg", ".svn", "dist", "build", "out", "coverage",
+  "vendor", "target", ".venv", "venv", "__pycache__", ".tox", ".next",
+  ".cache", ".gradle", ".idea", ".vscode",
+]);
+
+/** Depth ceiling and report ceiling. The sentence this feeds is a signal to a
+ *  human, not an inventory, so it stops well before exhaustiveness. */
+const MANIFEST_WALK_MAX_DEPTH = 4;
+const MANIFEST_WALK_MAX_REPORTED = 25;
+
 export function detectUninventoriedManifests(projectDir: string): string[] {
+  // Walks rather than checking only the root. In a monorepo - the layout most
+  // likely to hold more than one ecosystem - pyproject.toml and Cargo.toml sit
+  // under packages/* or services/*, never at the top, so a root-only check
+  // reported nothing there and the document went on asserting an empty
+  // inventory. That is issue 195 surviving in the case it matters most.
+  const wanted = new Map(NOT_INVENTORIED_MANIFESTS);
   const found: string[] = [];
-  for (const [file, ecosystem] of NOT_INVENTORIED_MANIFESTS) {
-    let present = false;
+  const seen = new Set<string>();
+
+  const walk = (dir: string, rel: string, depth: number): void => {
+    if (depth > MANIFEST_WALK_MAX_DEPTH || found.length >= MANIFEST_WALK_MAX_REPORTED) return;
+    let entries: fs.Dirent[];
     try {
-      present = fs.existsSync(path.join(projectDir, file));
+      entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-      present = false;
+      // Unreadable directory: reported nowhere here on purpose. Coverage gaps
+      // are the scanner's to report, and it already does; inventing a second
+      // channel for them would put the same fact in two places.
+      return;
     }
-    if (present) found.push(`${file} (${ecosystem})`);
+    for (const entry of entries) {
+      if (found.length >= MANIFEST_WALK_MAX_REPORTED) return;
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (MANIFEST_WALK_SKIP.has(entry.name) || entry.name.startsWith(".")) continue;
+        walk(path.join(dir, entry.name), childRel, depth + 1);
+      } else if (wanted.has(entry.name) && !seen.has(childRel)) {
+        seen.add(childRel);
+        found.push(`${childRel} (${wanted.get(entry.name)})`);
+      }
+    }
+  };
+
+  try {
+    walk(projectDir, "", 0);
+  } catch {
+    return found;
   }
-  return found;
+  // Deterministic order: shallowest first, then alphabetical, so the sentence
+  // does not change between runs on the same tree.
+  return found.sort((a, b) => {
+    const da = a.split("/").length;
+    const db = b.split("/").length;
+    return da === db ? a.localeCompare(b) : da - db;
+  });
 }
 
 /**

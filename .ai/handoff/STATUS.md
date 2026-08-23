@@ -1,3 +1,27 @@
+## Two review findings on the SBOM cluster: an unenforced checksum and a root-only walk
+
+Adversarial review found the conformance proof anchored to three vendored
+CycloneDX schema files whose integrity nothing checked. `.gitattributes`
+justified pinning them to LF by saying that otherwise "every recorded checksum
+would stop matching, so the one check that says 'this is still the official
+schema' could no longer be run" - asserting a check that did not exist. The
+checksums sat in the fixtures README and were never compared to anything.
+`src/__tests__/vendored-schema-integrity.test.ts` is that check. It parses the
+expected values out of the README rather than carrying a second copy, because
+two copies of a checksum is how one of them quietly stops matching. Mutation
+proof: append one byte to a schema, exit 1; restore, exit 0.
+Second finding: `detectUninventoriedManifests()` looked only at the project
+root. A monorepo keeps `pyproject.toml` and `Cargo.toml` under `packages/*` or
+`services/*`, so issue 195 survived intact in the layout most likely to hold
+more than one ecosystem - while the README stated every such file is named. It
+now walks, skipping `node_modules` and friends, bounded at depth 4 and 25
+reported entries.
+WHAT THIS DOES NOT COVER: the walk is bounded, so a manifest deeper than four
+levels is still not named, and that is deliberate rather than an oversight - an
+unbounded traversal inside a scanner becomes the slowest part of a scan and then
+gets switched off. The bound is pinned by a test, so raising it is a decision
+someone makes rather than a change someone discovers.
+
 ## SBOM cluster follow-up: the incident evidence document that was already there
 
 Model: claude-opus-5. Branch fix/sbom-correctness-cluster. No version bump.

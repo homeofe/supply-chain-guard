@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787452836",
-    "timestamp": "2026-08-23T02:40:37Z",
-    "commit": "b933436",
+    "session_id": "cli-1787473790",
+    "timestamp": "2026-08-23T08:29:51Z",
+    "commit": "2dbc250",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:22a9397e9741fe64a06b5a9f1821793624c6486e93c1e8d696894e9250d2c90b",
-      "updated": "2026-08-23T02:40:36Z",
-      "lines": 4110,
-      "summary": "Model: claude-opus-5. Branch fix/sbom-correctness-cluster. No version bump."
+      "checksum": "sha256:51477e2fd1b0305ef8a8158faf430da4e7ffa507678645d7f6a8d0424651e4d9",
+      "updated": "2026-08-23T08:29:48Z",
+      "lines": 4134,
+      "summary": "Adversarial review found the conformance proof anchored to three vendored"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:b1a3c171d239cca496bd0bc581edebc8597d34d92a2bcb2c33948e9218817b16",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
-      "updated": "2026-08-23T02:40:36Z",
+      "updated": "2026-08-23T08:29:50Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:898c646d79ff18c87e719c6b5c0a7535fbfd17c76cde6a2831a93c277fb7a3fb",
-      "updated": "2026-08-23T02:40:36Z",
+      "checksum": "sha256:16dac91ce27b0fac891160aaecbd5ab238b683514365be7c27b6320ac130ba50",
+      "updated": "2026-08-23T08:29:50Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:eff464f833af0217c76f3aa9f7000eeff17ccafd0a77eefc27884c044c5f939e",
-      "updated": "2026-08-23T02:40:36Z",
+      "checksum": "sha256:3d8060e8c9d3fcf7bc82ce37f30b1a99483aa08b9db0fd88712bc5f45e4afe0d",
+      "updated": "2026-08-23T08:29:50Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: claude-opus-5. Branch fix/sbom-correctness-cluster. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Adversarial review found the conformance proof anchored to three vendored Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 50308,
-    "full_read": 62092
+    "manifest_plus_core": 50646,
+    "full_read": 62430
   }
 }
