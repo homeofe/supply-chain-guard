@@ -118,6 +118,119 @@ around a 10 s budget, and the losing run took 16573 ms. That belongs to T-012 in
 deleting the single line `persist-credentials: false` from `demo.yml` turns the
 contract red and vitest exits 1. The full suite is not run on Windows; required Linux
 CI is the verdict.
+## The scanned tree's own policy file is input, not configuration (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/internal-disclosure-config-containment. No
+version bump. Remediates
+https://github.com/homeofe/supply-chain-guard/issues/169; the pull request is
+https://github.com/homeofe/supply-chain-guard/pull/183 and the issue is left open
+for the owner to close.
+
+### What was actually wrong
+
+Not a missing check. The containment predicate this needed was already written in
+this repository, twice, and the deny-list loader used neither. The reasoning that
+allowed that is visible in the old comment beside the code: it asked whether the
+configured path STRING was safe to print, correctly concluded that a committed
+path is already public, and never asked the separate question of whether the
+CONTENTS at that path are inside the trust boundary.
+
+The same gap explains the regular-expression half. `MAX_MATCH_ATTEMPTS_PER_RULE`
+and the `performanceBudget` test helper bound the patterns this project wrote.
+Neither reached the patterns a scanned repository writes.
+
+`hashedTerms` and `suppress` were designed with the scanned tree's trust level in
+mind. `externalFile` and `patterns` were not, and `.supply-chain-guard.yml`
+travels inside a tree whose owner is routinely not the operator.
+
+### What changed
+
+`externalFile` from the committed config must resolve inside the scanned
+directory: absolute paths, `..` traversal and symlink escapes are refused BEFORE
+the file is opened, so the existence, permission and per-line reporting that
+follow a read cannot describe anything outside the tree. A committed regular
+expression is capped at 200 characters and refused when it quantifies a group
+that already contains a variable quantifier. What survives runs under a scan-wide
+wall-clock budget. Refusals are reported as `INTERNAL_DENYLIST_REFUSED` (medium),
+registered both in `PARTIAL_SCAN_RULES` and in the `coverage_rule` list in
+`action.yml`, so the Action fails closed on them.
+
+Containment reuses `isContainedPath` and `hasContainedExistingAncestor` from
+`src/pattern-scanner.ts`, now exported instead of copied. The shape classifier
+`hasNestedUnboundedQuantifier` was added beside the existing
+`hasBroadUnboundedConsumingGap` in `src/regex-complexity.ts` and reuses its
+parsing primitives.
+
+### Numbers worth keeping
+
+- The pathological committed pattern `/(a+)+$/` against a non-matching line built
+  from a run of 34 characters did NOT complete within a 60,000 ms budget before
+  the change.
+  After it, the same scan completes in under 300 ms and reports the refusal. At
+  the worst input the deny-list pass still inspects, a line of 1,998 characters,
+  it also completes in under 350 ms.
+- A legitimate deny-list of six ordinary entries over this project's own `src/`
+  tree (196 files, 96,133 lines, 5.23 MB) consumes 108 ms of the matcher budget.
+  That measurement is why the budget is 30 seconds and not two: overrunning is
+  reported and makes the scan partial, so a budget set too low fails loudly on a
+  clean repository.
+- 85 existing tests in `src/__tests__/internal-disclosure.test.ts` surrounded this
+  defect without covering it. Every one of them wrote its external file inside the
+  scan root with a bare relative name.
+
+### What this does NOT close, stated where the next reader meets it
+
+An independent review before merge measured three limits that the first draft of
+this entry, the CHANGELOG and two code comments all described as tighter than
+they are. All three are now stated in `README.md`, in `CHANGELOG.md`, in the doc
+comments on `hasNestedUnboundedQuantifier` and `SCANNED_TREE_MATCHER_BUDGET_MS`,
+and pinned by tests, and all three stay open on
+https://github.com/homeofe/supply-chain-guard/issues/169.
+
+- **The shape check is not exhaustive, so the third acceptance criterion is
+  partially met, not met.** `hasNestedUnboundedQuantifier` reads the source text,
+  which cannot see ambiguity arising from overlapping alternation. `/(a|a)+$/`,
+  `/(a|ab)+$/` and `/(a+){2,30}$/` are all accepted, all clear the
+  200-character cap, and all remain catastrophic. Measured here: `/(a|a)+$/`
+  against a non-matching line of 27 characters spends about 16 seconds inside a
+  single `exec`, and the budget is checked between matcher invocations, so it
+  cannot interrupt one. Closing this needs a matcher that can be stopped
+  mid-match, which is a different change.
+- **The check also over-refuses, and it over-refuses the common case.** The
+  chained-label hostname shape `/(?:[a-z0-9-]+\.)+corp\.example/` is refused
+  even though it is linear in practice, in `patterns` and in a gitignored
+  in-tree `externalFile` alike. Because the refusal is a coverage rule, a
+  consumer who has that pattern today meets this as a red build and a term that
+  silently stops being matched. `/[a-z0-9.-]+\.corp\.example/` is the accepted
+  rewrite, and both documents now say so before the upgrade rather than after.
+- **Containment is to the scanned directory and nothing narrower.** A committed
+  `externalFile: .git/config` stays inside the tree and is still read: verified
+  here, the load reports `INTERNAL_DENYLIST_INVALID_ENTRY` naming `.git/config
+  line 3` and the scan reports a redacted match naming `.git/config line 2`. So
+  the per-line compile-failure oracle and the whole-line guess-confirmation
+  oracle survive against whatever the runner wrote into the workspace, retargeted
+  from outside the tree to inside it. Redaction still holds.
+
+One policy consequence was taken without being flagged as one, and is the
+owner's to confirm: the issue asked for `INTERNAL_DENYLIST_REFUSED` to be a
+coverage rule so an attacker-supplied refusal fails the gate closed. The same
+rule now fails an operator's own build closed when their own pattern is refused.
+Whether that should stay build-breaking or become advisory is recorded on the
+issue.
+
+### Open, and deliberately not done here
+
+- The operator-supplied `SCG_INTERNAL_DISCLOSURE_FILE` source is untouched,
+  including its line-number reporting for a file outside the tree. That source is
+  chosen by whoever runs the scan, and per-line reporting is what makes a silently
+  broken deny-list visible. Recorded as a decision in the code, open for the owner
+  to revisit.
+- No size cap on the read that containment still allows. With containment the file
+  is inside the tree the runner already downloaded, so a cap bounds a memory copy
+  rather than a new capability. Separate change.
+- The published composite Action still declares no `timeout-minutes`. It is a
+  property of the Action rather than of this defect and changes behaviour for
+  every consumer, so it belongs in its own pull request.
 ## The em-dash rule was enforced on a set of files that held none of them (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/em-dash-rule-scope. No version bump.
