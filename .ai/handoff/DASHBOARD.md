@@ -16,7 +16,7 @@ Current package inventory and CI gate wiring are generated below.
 | Version | 5.28.1 |
 | Node engines | >=22.0.0 |
 | Source modules | 75 under `src/` |
-| Test files | 129 under `src/__tests__/` |
+| Test files | 130 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit gates | enforced in required CI - see below |
 
@@ -36,7 +36,10 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 | @elvatis_com/aahp | 3.10.0 |
 | @types/node | ^26.2.0 |
 | @vitest/coverage-v8 | ^4.1.10 |
+| ajv | ^8.20.0 |
+| ajv-formats | ^3.0.1 |
 | commander | ^14.0.3 |
+| packageurl-js | ^2.0.1 |
 | typescript | ^7.0.2 |
 | vitest | ^4.1.10 |
 
