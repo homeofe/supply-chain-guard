@@ -118,6 +118,104 @@ service CIDRs from this scanner's own detection corpus, a public agent-runtime
 product name it ships a scanner for, and the English words trust/intelligence/
 awareness in feature prose). v5.2.40 and v5.2.41 both carry the era's stub body,
 "See README.md for full changelog"; the anchor resolves to the corrected file.
+## Every checkout now states whether it keeps the token (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/checkout-credential-contract. No version bump.
+
+Addresses the first of the three items in
+https://github.com/homeofe/supply-chain-guard/issues/179. The other two are settled
+below rather than changed, and the reasons are the point.
+
+### What was true
+
+`actions/checkout` writes the job's `GITHUB_TOKEN` into `.git/config` as an
+`http.<origin>/.extraheader` basic-auth header unless the step sets
+`persist-credentials: false`. At the pinned v7.0.1 that input defaults to `true`.
+Measured at `1a141fe8322345dbd8ec3c449a402eedc3c6d83f`: 8 checkout steps across 4
+workflows, and `git grep -i 'persist-credentials'` over the whole repository exited
+1 with zero matches. Every one of them took the default.
+
+### Why it was not exploitable, which is the actual finding
+
+Five independent controls each closed a leg, and none of them is about checkout:
+every real `npm` invocation passes `--ignore-scripts`; there is no
+`pull_request_target`, `workflow_run` or `issue_comment` trigger anywhere, so a fork
+pull request can never hold a write token; `.dockerignore` excludes `.git` and the
+`Dockerfile` uses named `COPY`s, so the token cannot reach a published layer even
+though the build context is `.`; the three `upload-artifact` paths are narrow; and
+every `uses:` reference is pinned to a commit SHA.
+
+So this is defence in depth, and it is worth taking for exactly that reason: the
+token's absence was a property of five other decisions, any one of which could move
+without anyone connecting the move to a credential sitting in a workspace.
+
+### What changed
+
+All 8 steps now state their choice. Seven set `false`. One sets `true`:
+`ci.yml`'s `update-major-branch` job, whose only purpose is
+`git push origin "HEAD:refs/heads/${MAJOR}"`, the only push in this repository. git
+reads that credential from `.git/config`, so `false` there would not harden anything;
+it would freeze the floating `v5` branch that every Action consumer resolves. The
+reason is written on the step itself, not only in the test.
+
+`src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism, 6 assertions.
+It treats an omitted key as a failure rather than as a default, because from outside
+a missing key and a considered `true` are indistinguishable and only one of them is a
+decision. An exception is valid only if the job it names actually runs a remote git
+command, so the allowlist cannot become a place to park inconvenient steps. The
+converse is asserted too: a job that DOES run one must be an exception, so this
+contract cannot break a release push by "hardening" it. And the number of steps the
+block walker classified must equal the number of `actions/checkout` lines in the same
+files, so a walker that silently stopped resolving steps fails instead of passing
+vacuously.
+
+### The two items that were not changed, and why
+
+**`delete_branch_on_merge` is `false` and no pull request can change it.** It is a
+repository setting on GitHub, not a file. Recorded as T-020 in `NEXT_ACTIONS.md` with
+both options written out, and in `docs/ci-and-release.md` under "Settings that live
+on GitHub, not in this repository", because this project keeps zero open issues and
+the issue tracker is therefore the one place it would not survive. Measured cost
+today: across 114 merged pull requests, 112 branches were removed anyway and 2
+survived.
+
+**The AAHP CLI pin was left at 3.9.2 here on purpose, because bumping it is already
+in flight in https://github.com/homeofe/supply-chain-guard/pull/186 and the bump
+does not work alone.** Verified by
+execution rather than by reading the release notes: with 3.10.0 installed in a
+checkout of this repository, `aahp verify . --level ci` with no base reports
+`FAIL: Level ci requires an explicit base commit via --base SHA or AAHP_BASE_SHA`
+and one blocking issue, where 3.9.2 on the same tree printed
+`OK: No source files changed outside .ai/handoff/` and passed. So bumping the pin
+without also passing `AAHP_BASE_SHA` in `aahp-verify.yml` turns a REQUIRED status
+check red on every run. Two changes to one workflow from two branches at once is how
+one of them gets lost, so this branch touches only the `with:` block of that
+workflow's checkout step and leaves the `env:` and the pin to the branch that owns
+them.
+
+Worth recording separately: the pin sitting one release behind is not a broken
+mechanism. `.github/dependabot.yml` scans npm weekly on Monday and has opened bump
+pull requests for this exact package before. 3.10.0 published on a Friday, the
+measurement was taken on the Saturday, and the next scheduled scan was the Monday.
+The bound that follows is now written down in `docs/ci-and-release.md` rather than
+left to be rediscovered: up to seven days plus merge latency, against a CLI whose
+median gap between its 17 published versions is 4 days.
+
+### Verification
+
+Found on the way past, and recorded rather than fixed: `compat (Node 22)` is FLAKY on
+`multi-line-pattern-engine.test.ts > keeps exact greedy/lazy endpoints on 5 MiB
+repeated completions`. It failed on unmodified `main` at `1a141fe`, failed again on a
+branch changing only CI metadata, and passed on that same branch one amend later, while
+`compat (Node 20)` passed every time. It is a wall-clock assertion with a 15 s timeout
+around a 10 s budget, and the losing run took 16573 ms. That belongs to T-012 in
+`NEXT_ACTIONS.md`, where the three runs are now tabulated.
+
+`npx vitest run src/__tests__/workflow-checkout-credentials.test.ts` and
+`src/__tests__/workflow-trigger-contract.test.ts`, both green, plus a mutation proof:
+deleting the single line `persist-credentials: false` from `demo.yml` turns the
+contract red and vitest exits 1. The full suite is not run on Windows; required Linux
+CI is the verdict.
 ## The npm scanner took its feed from the reporting accessor (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch perf/issue-177-npm-scanner-feed-reuse. No version bump.

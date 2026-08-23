@@ -60,6 +60,10 @@ jobs:
             slug: arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # This job holds packages: write. It authenticates to GHCR with an
+          # explicit password input, never with the checkout credential.
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
@@ -129,6 +133,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # The ancestry gate only reads history and fetches main. This
+          # repository is public, so an unauthenticated fetch resolves and
+          # the gate does not need the checkout token. Stated rather than
+          # inherited, because the action defaults this to true.
+          persist-credentials: false
 
       - name: Require the released commit to be on main
         run: node scripts/check-release-ancestry.mjs
