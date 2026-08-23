@@ -13816,10 +13816,58 @@ export interface FeedLimitOverrides {
  * entries merged. Used by "feed stats" to distinguish bundled vs effective
  * entry counts; scripts/generate-feed.mjs derives the publishable feed.json
  * from the same array (parsed out of this source file, single source of truth).
+ *
+ * Returns a FRESH ARRAY on every call, deliberately: callers of this accessor
+ * are reporting and export paths that may sort, filter or append. If you only
+ * READ the feed - in particular if you hand it to a matcher whose lookup index
+ * is memoized on the array's identity - call getBundledFeedRef() instead, or
+ * every call rebuilds that index from scratch. See issue 177:
+ * https://github.com/homeofe/supply-chain-guard/issues/177
  */
 export function getBundledFeed(): FeedIOC[] {
   return [...BUNDLED_FEED];
 }
+
+/**
+ * The bundled (compiled-in) IOC feed as a SHARED, frozen array: one object
+ * identity for the whole process, so an identity-keyed index built over it stays
+ * valid. Read-only; use getBundledFeed() if you need an array you may modify.
+ *
+ * Why this accessor exists. The bare-npm lookup index in install-guard.ts is
+ * memoized in a WeakMap keyed on the feed array's IDENTITY (see
+ * bareNpmIndexCache). getBundledFeed() hands out a new array per call, so a
+ * caller that used it as a scan-time feed source could never hit that cache and
+ * rebuilt the whole 12,962-entry index instead. Measured on the npm scanner
+ * path before this accessor existed: 2 rebuilds per scanNpmPackage() call, 6
+ * across a three-package run in one process, where 1 is sufficient.
+ *
+ * ENFORCED ASSUMPTION, not a documented one: no caller mutates a bundled feed
+ * array in place. Object.freeze makes push/sort/splice/pop throw in strict mode
+ * (all compiled output here is strict) rather than silently invalidating every
+ * index derived from this array. loadThreatIntel() and getBundledFeed() both
+ * take a spread copy before doing anything, so neither is affected.
+ *
+ * RECORDED DECISION - the freeze is SHALLOW, entry objects are not frozen:
+ *   - Cost measured on this feed at 12,962 entries: shallow 0.0014 ms, deep
+ *     (freezing every entry) 1.32 ms, paid at first use by every process that
+ *     loads this module, including paths that never touch this accessor.
+ *   - Risk: entries are shared by reference into the arrays returned by
+ *     getBundledFeed() and loadThreatIntel(), both of which this package
+ *     exports. Deep-freezing them would turn any embedder that annotates or
+ *     normalizes an entry in place from working code into a thrown TypeError,
+ *     which is a breaking change for a published library and out of scope for a
+ *     performance fix.
+ *   - What is therefore NOT guaranteed: mutating ioc.value on an entry after an
+ *     index has been built would desynchronize that index from the entries. No
+ *     code in src/ does this (checked: no assignment to a feed entry field
+ *     outside tests). If that ever changes, deep-freezing here is the fix, and
+ *     the 1.32 ms is the price.
+ */
+export function getBundledFeedRef(): readonly FeedIOC[] {
+  return BUNDLED_FEED_REF;
+}
+
+const BUNDLED_FEED_REF: readonly FeedIOC[] = Object.freeze(BUNDLED_FEED);
 
 // ---------------------------------------------------------------------------
 // Feed loading

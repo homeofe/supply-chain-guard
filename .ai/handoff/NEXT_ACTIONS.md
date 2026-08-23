@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, two owner decisions are blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
+Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
 
 Current version: **v5.28.1**
 
@@ -16,7 +16,8 @@ Current version: **v5.28.1**
 
 AAHP 3.9.1 adoption and the verified security hardening are complete. Five
 follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
-matrix, and the repository setting in T-020, which no pull request can change.
+matrix (T-013), and whether `scg npm` should read the refreshed feed the way
+`scg scan` does (T-020).
 
 | Status | Count |
 |--------|-------|
@@ -77,72 +78,10 @@ real 5 MiB wall-clock gate.
 **Files:** `src/correlated-pattern-matchers.ts`, `src/patterns.ts`,
 `src/internal-disclosure.ts`, and performance tests.
 
-**Current state, measured 2026-08-22 and not yet investigated: this gate is FLAKY on
-the `compat (Node 22)` leg, and a flaky gate on a required context is a defect in its
-own right.** `src/__tests__/multi-line-pattern-engine.test.ts > matchPatternInContent >
-keeps exact greedy/lazy endpoints on 5 MiB repeated completions` carries a 15 s vitest
-timeout around an internal 10 s throughput budget. Three consecutive observations:
-
-| run | ref | `compat (Node 22)` |
-| --- | --- | --- |
-| 32526691691 | `main` at `1a141fe` | fail, the test took 16573 ms and blew the 15 s timeout |
-| 32587440725 | a branch changing only CI metadata | fail, same test, same leg |
-| 32589153908 | the same branch, one amend later | pass, leg completed in 1m42s |
-
-`compat (Node 20)` passed in all three. So this is not a Node 22 incompatibility and
-not a branch: it is a wall-clock assertion sitting close enough to its ceiling that
-shared-runner load decides the verdict, and when it loses it takes the required
-`Build and Test` context down with it. A reviewer meeting that context red on an
-unrelated pull request should read this first and re-run before believing it.
-
 **Acceptance criteria:**
 - [ ] Reproducible baseline and coverage-mode profiles identify the dominant matcher costs.
-- [ ] The Node 22 leg passes this test, or the wall-clock budget is restated with the measurement that justifies the new number.
 - [ ] Any multiplier change is justified by measured data and keeps the real 5 MiB wall-clock gate unchanged.
 - [ ] Focused performance and correctness regressions pass on supported Node lines.
-
----
-
-## T-020: Turn on `delete_branch_on_merge` (OWNER ACTION, not a code change)
-
-**Blocked by:** an owner action in the repository settings on GitHub. This is not a
-file anywhere in the tree, so no pull request can satisfy it and no gate can assert
-it. It is recorded here because this project deliberately keeps zero open issues,
-which makes the issue tracker the one place it would not survive.
-
-**Goal:** make merged branches disappear server-side, unconditionally, rather than
-as a side effect of whatever client performed the merge.
-
-**Measured 2026-08-22:**
-
-```
-gh api repos/<owner>/supply-chain-guard --jq '.delete_branch_on_merge'
-# false
-```
-
-**Why it is worth doing while it is still cheap.** Removal is currently client-side,
-and `.ai/handoff/CONVENTIONS.md` documents the exact way that fails: a local branch
-still held by a worktree makes the merge command's local delete fail, and the REMOTE
-branch then survives while the error names only the local one. The setting removes
-the client from the loop. The present cost is genuinely small and the number belongs
-here rather than in an argument: across 114 merged pull requests, 112 branches were
-removed anyway and 2 survived, roughly a 2 percent accumulation rate. Small is the
-reason to do it now, not a reason to leave it.
-
-**The options, so the decision is a decision and not an omission:**
-
-1. Turn it on. Merged branches are deleted by GitHub; the client-side failure mode in
-   `CONVENTIONS.md` stops being able to leak a remote branch. Nothing else changes:
-   protected branches are never deleted, and the setting has no effect on `main` or
-   on the floating `v5` branch.
-2. Leave it off deliberately, and say so here, so the next reader stops re-deriving
-   the question. If this is the choice, the branch-hygiene section of `CONVENTIONS.md`
-   is the only mechanism, and it stays load-bearing.
-
-**Acceptance criteria:**
-- [ ] `gh api repos/<owner>/supply-chain-guard --jq '.delete_branch_on_merge'` returns `true`, or option 2 is recorded here with the reason.
-- [ ] The two branches that outlived their merged pull requests are removed, each confirmed MERGED through the GitHub API first. Every pull request here is squash-merged, so `git branch --merged`, `git cherry` and `git rev-list main..branch` all report merged work as unmerged and must not be used for this.
-- [ ] `docs/ci-and-release.md` ("Settings that live on GitHub, not in this repository") records the resulting state.
 
 ---
 
@@ -157,6 +96,43 @@ the production extraction backend or weakening Linux coverage.
 - [ ] An in-process deterministic fixture builder replaces external `zip` only in tests.
 - [ ] All 14 currently skipped/failing fixture tests pass on Windows without a PATH-installed zip executable.
 - [ ] The same fixtures and the full suite pass in required Linux CI.
+
+---
+
+## T-020: Decide whether `scg npm` should see refreshed feed entries (BLOCKED on owner)
+
+**Goal:** Settle a coverage asymmetry that is currently silent, one way or the
+other, deliberately and with tests.
+
+**Blocked by:** Owner decision. This changes what the scanner DETECTS, so it is
+not an implementation detail an agent should pick.
+
+**The measurement.** `src/npm-scanner.ts` reads the bundled feed only.
+`src/scanner.ts` and `src/install-guard.ts` read `loadThreatIntel()`, which
+merges the cache `scg feed refresh` writes. With one synthetic entry in a
+temporary cache directory: bundled 12,962 entries against 12,963 merged; the
+added IOC is a MISS on the npm path and a HIT on the scan path, while a control
+name taken from the bundled feed hits on both. So `scg npm <package>` does not
+see IOCs added by `feed refresh` and `scg scan` does.
+
+**The two options**, both written next to the code in `src/npm-scanner.ts`:
+
+- **A. Keep the bundled feed.** `scg npm` stays hermetic and returns the same
+  verdict on every machine, and never sees a refreshed IOC.
+- **B. Switch to `loadThreatIntel()`.** Coverage matches `scg scan`; index reuse
+  is preserved because that function returns the shared array; the verdict now
+  depends on local cache state.
+
+**Not a performance question.** Issue 177 made this scanner reuse one feed
+reference and left the choice of WHICH feed untouched, on purpose.
+
+**Files:** `src/npm-scanner.ts` (`checkPackageName`, `checkDependencies`), and a
+focused test either way.
+
+**Acceptance criteria:**
+- [ ] The owner records A or B, with the reason, in this file.
+- [ ] The chosen behavior is asserted by a test that fails if the feed source is switched back.
+- [ ] `docs/` states which feed `scg npm` consults, so a user can predict whether `feed refresh` affects it.
 
 ---
 
