@@ -93,6 +93,9 @@ jobs:
         with:
           # Full history so the AI-attribution gate can walk the PR commit range.
           fetch-depth: 0
+          # No job step here talks to the remote, so the checkout token has no
+          # reason to stay in .git/config next to third-party build and test code.
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -251,6 +254,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # `docker build .` sends the build context to the daemon; keeping the
+          # token out of .git/config is the second lock behind .dockerignore.
+          persist-credentials: false
 
       # Both stages, explicitly. Building only the final image would still exercise
       # the builder, but naming it separately means a compile failure is reported as
@@ -370,6 +377,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Publishing authenticates by OIDC, not by the checkout token.
+          persist-credentials: false
           # Full history, and NOT optional. The ancestry gate below cannot decide
           # ancestry in a shallow checkout, so it refuses to answer rather than
           # answering from the handful of commits a depth-1 fetch happens to hold.
@@ -470,6 +479,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # This job holds contents: write, but reaches GitHub through `gh` with an
+          # explicit GH_TOKEN, never through git. Nothing here needs the credential
+          # in .git/config.
+          persist-credentials: false
 
       - name: Extract changelog for this version
         id: changelog
@@ -514,6 +528,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # THE ONE CHECKOUT IN THIS REPOSITORY THAT KEEPS ITS CREDENTIAL.
+          # Every other checkout sets persist-credentials: false, and
+          # src/__tests__/workflow-checkout-credentials.test.ts fails the build if
+          # one of them stops. This step is the single named exception, because the
+          # job's only purpose is the `git push origin` below - the only push in the
+          # repository - and git reads that credential from .git/config. Setting it
+          # to false here does not harden anything; it breaks the v5 fast-forward
+          # below, and every consumer resolving that floating major ref then keeps
+          # getting the previous release.
+          persist-credentials: true
 
       # Floating major-version branch so `uses: homeofe/supply-chain-guard@v5`
       # always resolves to the latest v5.x.y release. This is a BRANCH, not a

@@ -93,6 +93,65 @@ declares, checks the packaged CLI reports the expected version, and runs a real 
 from inside the image. It never pushes. Before it existed, the first build of any
 Dockerfile or base image change happened during the release itself.
 
+### Checkout credentials
+
+`actions/checkout` writes the job's `GITHUB_TOKEN` into `.git/config` as an
+`http.<origin>/.extraheader` basic-auth header, and every later step in that job can
+read it. At the pinned v7.0.1 the `persist-credentials` input **defaults to `true`**,
+so the safe state is not a state this repository can reach once. Every checkout step
+ever added has to opt out again, or the default comes back with nobody noticing.
+
+Every checkout step here therefore states its choice explicitly, and an omitted key is
+treated as a defect rather than as a default. That is the whole point: from outside,
+a missing key and a considered `true` look identical, and only one of them is a
+decision. There is exactly one step that keeps the credential.
+
+| workflow | job | value | why |
+| --- | --- | --- | --- |
+| `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `v5` branch every Action consumer resolves |
+| the other seven steps | | `false` | no step in those jobs talks to a remote |
+
+`src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism. It walks each
+checkout step's own indented block in the raw file text and fails when a step declares
+nothing, when a step keeps the credential without being a named exception, when an
+exception names a job that runs no remote git command, when a job that DOES run one is
+not an exception (which is how this contract could otherwise break a release push),
+and when the number of steps it managed to classify is smaller than the number of
+`actions/checkout` lines in the same files. That last one exists so that "I could not
+look" can never report as "I looked and it was fine".
+
+Nothing here was exploitable when it was measured, and the reason is worth writing
+down, because each part of it is a control that could move: every real `npm` call
+passes `--ignore-scripts`, there is no `pull_request_target`, `workflow_run` or
+`issue_comment` trigger anywhere, `.dockerignore` excludes `.git` and the `Dockerfile`
+uses named `COPY`s so the token cannot reach a published layer, the `upload-artifact`
+paths are narrow, and every `uses:` is pinned to a commit SHA. Defence in depth means
+the token is not there to be reached if one of those stops holding.
+
+## Settings that live on GitHub, not in this repository
+
+Two properties this project depends on cannot be expressed in any tracked file, so
+they are recorded here and have to be checked against the API rather than read from
+the tree.
+
+```
+gh api repos/<owner>/supply-chain-guard --jq '.delete_branch_on_merge'
+gh api repos/<owner>/supply-chain-guard/branches/main/protection --jq '.enforce_admins.enabled'
+```
+
+**`delete_branch_on_merge` is `false`, and it should be `true`.** Measured 2026-08-22.
+Branch removal is currently client-side, which is why `.ai/handoff/CONVENTIONS.md`
+has to document a failure mode at all: a local branch still held by a worktree makes
+the merge command's local delete fail, and the remote branch then survives while the
+error names only the local one. The server-side setting makes removal unconditional
+and independent of whatever client merged. Turning it on is an owner action in the
+repository settings; a pull request cannot do it.
+
+The current cost is small and the number is worth having rather than guessing at:
+over 114 merged pull requests, 112 branches were removed anyway and 2 survived, an
+accumulation rate near 2 percent. Small is the argument for doing it now, not the
+argument for leaving it.
+
 ## Validation gates
 
 `npm run build` is not just `tsc`. Its `prebuild` runs three groups, and a red gate is
@@ -110,6 +169,20 @@ exists because `npx --no-install` suppresses a download but still resolves a
 **globally installed** `aahp` on PATH, so a checkout with a missing `node_modules`
 silently ran a different version and printed `Governance OK`. A gate that fails open
 is worse than no gate, because it manufactures the evidence of its own success.
+
+That preflight answers whether the CLI speaking is the one pinned. It deliberately
+does **not** answer whether the pin is still current, and nothing in `prebuild`
+should: `npm run build` has no network dependency today, and a currency check that
+queries a registry would trade a reproducible offline build for a gate that fails
+when the network does. Currency is Dependabot's job instead, and it demonstrably
+does it for this exact package. The bound that follows from `.github/dependabot.yml`
+is worth stating rather than leaving as a surprise: the npm ecosystem is scanned
+**weekly, on Monday**, so between scans the pin can sit behind the newest release
+for up to seven days plus however long the bump pull request waits to be merged.
+Measured over the CLI's 17 published versions, the median gap between releases is
+4 days, so one to two releases behind is the normal in-between state and is not a
+signal of anything. Shortening the interval to `daily` is the lever if that bound
+is ever judged too loose.
 
 It then runs seven config-driven gates, all declared in `aahp.config.json`:
 
@@ -129,13 +202,15 @@ fix it with `npm run feed:generate`. And `check:handoff` goes red whenever the t
 file inventory changes, including a dependency bump: fix it with
 `npm run handoff:refresh`.
 
-There are also two contract tests that are ordinary suite members but worth knowing
+There are also three contract tests that are ordinary suite members but worth knowing
 about, because they fail on configuration rather than on code:
 
 - `src/__tests__/node-version-contract.test.ts` holds every Node declaration in the
   repository to `docs/node-support.md`.
 - `src/__tests__/workflow-trigger-contract.test.ts` holds the workflows to the
   event-to-workflow matrix at the top of this file.
+- `src/__tests__/workflow-checkout-credentials.test.ts` holds every checkout step to
+  the credential table above.
 
 And one script that validates the artifact rather than the working tree:
 `scripts/validate-package.sh` packs the tarball, checks its contents against the
