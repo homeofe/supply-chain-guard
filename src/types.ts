@@ -127,6 +127,34 @@ export interface ScanReport {
    * green 3/3. Renderers that show the level must show this beside it.
    */
   slsaAssessment?: SLSAAssessment;
+  /** Git commit hash of scanned working tree (v5.29, issue #208) */
+  commit?: string;
+  /** Git branch name of scanned working tree (v5.29, issue #208) */
+  branch?: string;
+  /** Git remote repository URL of scanned working tree (v5.29, issue #208) */
+  repositoryUri?: string;
+  /** Detection set version, entry count, generation date and cache merge status (v5.29, issue #208) */
+  detectionSet?: DetectionSetProvenance;
+}
+
+/**
+ * Metadata identifying the threat intelligence / detection set in effect for a scan (v5.29, issue #208).
+ */
+export interface DetectionSetProvenance {
+  /** Package version of the bundled feed */
+  bundledVersion: string;
+  /** Number of entries in the bundled feed */
+  bundledEntryCount: number;
+  /** Generation timestamp of the feed */
+  generatedAt?: string;
+  /** Whether a refreshed local cache was merged into the active feed */
+  cacheMerged: boolean;
+  /** Effective total entry count (bundled + fresh cache) */
+  effectiveEntryCount: number;
+  /** Cache file path if merged */
+  cachePath?: string;
+  /** Cache refresh timestamp if merged */
+  cacheRefreshedAt?: string;
 }
 
 // ---------------------------------------------------------------------------

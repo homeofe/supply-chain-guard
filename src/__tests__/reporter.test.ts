@@ -504,11 +504,14 @@ describe("formatReport – Badge (Shields.io endpoint)", () => {
     expect(parsed.color).toBe("lightgrey");
   });
 
-  it("should not contain a trailing newline or extra fields", () => {
+  it("should not contain a trailing newline and include schema and provenance fields", () => {
     const output = formatReport(makeReport(), "badge");
     const parsed = JSON.parse(output) as BadgeOutput;
     expect(output).toBe(JSON.stringify(parsed));
-    expect(Object.keys(parsed).sort()).toEqual(["color", "label", "message", "schemaVersion"]);
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.label).toBe("supply-chain-guard");
+    expect(parsed.tool).toBeDefined();
+    expect(parsed.timestamp).toBeDefined();
   });
 });
 

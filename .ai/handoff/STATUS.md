@@ -1,22 +1,21 @@
-## 2026-08-23: Issue 202 (Directory Scan Trust Breakdown Renormalisation)
+## 2026-08-23: Issue 208 (Provenance Metadata and Detection Set Version Across All Report Formats)
 
-Do not start v6.0.0. Zero-open-issues is not met.
+Do not start v6.0.0. Zero-open-issues is met once Issue 208 is merged!
 
 ### Already on GitHub / Closed Issues
 All closed-issue acceptance boxes were reconciled against origin/main on GitHub
-by editing issue bodies. Done for: 205, 204, 203 (merged via PR #225), 201 (merged via PR #224),
+by editing issue bodies. Done for: 205, 204, 203 (merged via PR #225), 202 (merged via PR #226), 201 (merged via PR #224),
 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176,
 175, 174, 173, 172, 171, 170, 169, 167, 168.
 
-### Open issues remaining: 202 (in progress), 208
+### Open issues remaining: 208 (addressed by this branch)
 
-This change addresses Issue #202:
-- Mode-aware Trust Breakdown in `src/trust-breakdown.ts`: marks Publisher Trust and Release Process as `assessed: false` in local directory scans when no relevant anomaly signals were gathered.
-- Indicator details: does not emit affirmative assertions ("Established publisher account", "Clean release artifacts") when dimensions were not assessed.
-- Renormalised overall score: weights overall trust score across assessed dimensions (Code Quality and Dependency Trust) rather than bounding malware above 50/100 through unexamined 100/100 constants.
-- Text renderer in `src/reporter.ts`: renders `[not assessed]` for unassessed dimensions.
-- Updated README.md to state which scan modes populate all 4 dimensions.
-- Added tests in `src/__tests__/trust-breakdown.test.ts` verifying unassessed indicator details, renormalisation, and text report rendering.
+This change addresses Issue #208:
+- Git revision provenance: `src/scanner.ts` extracts HEAD commit, branch, and remote URL when target is a git repository.
+- Detection set provenance: `src/threat-intel.ts` exports `FEED_GENERATED_AT` and `getDetectionSetProvenance()`, reporting bundled version, entry count, generation timestamp, and cache merge status.
+- `feed.json` & `scripts/generate-feed.mjs`: `feed.json` carries a distinct `generatedAt` timestamp, and `FEED_DOC_KEYS` validates it.
+- All 9 report formats in `src/reporter.ts` surface tool version, timestamp, git commit provenance, and detection set identity. SARIF emits `run.invocations[].startTimeUtc` and `run.versionControlProvenance[]`.
+- Added test suite `src/__tests__/provenance.test.ts` asserting provenance across all 9 formats.
 
 
 

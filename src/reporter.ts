@@ -344,6 +344,19 @@ function formatText(report: ScanReport): string {
   }
   lines.push(metaRow("Duration", `${report.durationMs}ms`));
   lines.push(metaRow("Time", report.timestamp));
+  lines.push(
+    metaRow(
+      "Commit",
+      report.commit
+        ? `${report.commit}${report.branch ? ` (${report.branch})` : ""}`
+        : "[not a git repository]",
+    ),
+  );
+  if (report.detectionSet) {
+    const ds = report.detectionSet;
+    const dsInfo = `v${ds.bundledVersion} (${ds.effectiveEntryCount} entries${ds.cacheMerged ? `, merged cache` : ""}${ds.generatedAt ? `, generated ${ds.generatedAt}` : ""})`;
+    lines.push(metaRow("Detection Set", dsInfo));
+  }
   if (report.partialScan) {
     lines.push(metaRow("Status", "\x1b[33mPARTIAL - coverage incomplete\x1b[0m"));
   }
@@ -667,9 +680,17 @@ function formatMarkdown(report: ScanReport): string {
   lines.push("");
   lines.push(`| Property | Value |`);
   lines.push(`|----------|-------|`);
+  lines.push(`| Tool | \`${mdCell(report.tool || "supply-chain-guard v5.28.1")}\` |`);
   lines.push(`| Target | \`${mdCell(report.target)}\` |`);
   lines.push(`| Type | ${mdText(report.scanType)} |`);
   lines.push(`| Time | ${mdText(report.timestamp)} |`);
+  lines.push(`| Commit | \`${mdCell(report.commit ?? "none (not a git repository)")}\` |`);
+  if (report.detectionSet) {
+    const ds = report.detectionSet;
+    lines.push(
+      `| Detection Set | \`v${mdCell(ds.bundledVersion)} (${ds.effectiveEntryCount} entries${ds.cacheMerged ? ", merged cache" : ""}${ds.generatedAt ? `, generated ${ds.generatedAt}` : ""})\` |`,
+    );
+  }
   lines.push(`| Duration | ${mdText(report.durationMs)}ms |`);
   lines.push(
     report.partialScan
@@ -892,6 +913,8 @@ function formatSarif(report: ScanReport): string {
   const invocations = [
     {
       executionSuccessful: !report.partialScan,
+      startTimeUtc: report.timestamp,
+      endTimeUtc: report.timestamp,
       toolExecutionNotifications: notifications,
       properties: {
         ...(report.policyEffect ? { policyEffect: report.policyEffect } : {}),
@@ -905,22 +928,38 @@ function formatSarif(report: ScanReport): string {
   // NIS2 bullet names SARIF as a format the incident record is retained in, and
   // before this the whole document contained no incident name, no confidence
   // and no indicator list.
-  const runProperties =
+  const incidentList =
     report.incidents && report.incidents.length > 0
+      ? report.incidents.map((incident) => ({
+          id: incident.id,
+          name: incident.name,
+          severity: incident.severity,
+          confidence: incident.confidence,
+          indicators: incident.indicators,
+          matchedIndicatorsCount: incident.matchedIndicatorsCount ?? incident.indicators.length,
+          totalIndicatorsCount: incident.totalIndicatorsCount ?? incident.indicators.length,
+          narrative: incident.narrative,
+          findingCount: incident.findings.length,
+        }))
+      : undefined;
+
+  const runProperties =
+    incidentList || report.detectionSet
       ? {
-          incidents: report.incidents.map((incident) => ({
-            id: incident.id,
-            name: incident.name,
-            severity: incident.severity,
-            confidence: incident.confidence,
-            indicators: incident.indicators,
-            matchedIndicatorsCount: incident.matchedIndicatorsCount ?? incident.indicators.length,
-            totalIndicatorsCount: incident.totalIndicatorsCount ?? incident.indicators.length,
-            narrative: incident.narrative,
-            findingCount: incident.findings.length,
-          })),
+          ...(incidentList ? { incidents: incidentList } : {}),
+          ...(report.detectionSet ? { detectionSet: report.detectionSet } : {}),
         }
       : undefined;
+
+  const versionControlProvenance = report.commit
+    ? [
+        {
+          repositoryUri: report.repositoryUri ?? report.target,
+          revisionId: report.commit,
+          ...(report.branch ? { branch: report.branch } : {}),
+        },
+      ]
+    : undefined;
 
   const sarif = {
     $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
@@ -937,6 +976,7 @@ function formatSarif(report: ScanReport): string {
         },
         invocations,
         results,
+        ...(versionControlProvenance ? { versionControlProvenance } : {}),
         ...(runProperties ? { properties: runProperties } : {}),
       },
     ],
@@ -1063,6 +1103,37 @@ function buildIncidentAnnotations(
  * scan, both offered as the same artefact by the README.
  */
 function formatSbom(report: ScanReport): string {
+  const provenanceProperties: SbomProperty[] = [
+    {
+      name: "supply-chain-guard:commit",
+      value: report.commit ?? "none (not a git repository)",
+    },
+    ...(report.detectionSet
+      ? [
+          {
+            name: "supply-chain-guard:detection-set:version",
+            value: report.detectionSet.bundledVersion,
+          },
+          {
+            name: "supply-chain-guard:detection-set:entry-count",
+            value: String(report.detectionSet.effectiveEntryCount),
+          },
+          ...(report.detectionSet.generatedAt
+            ? [
+                {
+                  name: "supply-chain-guard:detection-set:generated-at",
+                  value: report.detectionSet.generatedAt,
+                },
+              ]
+            : []),
+          {
+            name: "supply-chain-guard:detection-set:cache-merged",
+            value: String(report.detectionSet.cacheMerged),
+          },
+        ]
+      : []),
+  ];
+
   const partialScanProperty = {
     name: "supply-chain-guard:scan-status",
     value: "partial",
@@ -1137,18 +1208,15 @@ function formatSbom(report: ScanReport): string {
 
     const withVulns = {
       ...document,
-      ...(report.partialScan || policyEffectProperties.length > 0
-        ? {
-            metadata: {
-              ...metadata,
-              properties: [
-                ...(metadata.properties ?? []),
-                ...(report.partialScan ? [partialScanProperty] : []),
-                ...policyEffectProperties,
-              ],
-            },
-          }
-        : {}),
+      metadata: {
+        ...metadata,
+        properties: [
+          ...(metadata.properties ?? []),
+          ...provenanceProperties,
+          ...(report.partialScan ? [partialScanProperty] : []),
+          ...policyEffectProperties,
+        ],
+      },
       vulnerabilities: [...(document.vulnerabilities ?? []), ...findingVulnerabilities],
       ...(annotations.length > 0 ? { annotations } : {}),
     };
@@ -1211,14 +1279,11 @@ function formatSbom(report: ScanReport): string {
         name: report.target,
         "bom-ref": "target",
       },
-      ...(report.partialScan || policyEffectProperties.length > 0
-        ? {
-            properties: [
-              ...(report.partialScan ? [partialScanProperty] : []),
-              ...policyEffectProperties,
-            ],
-          }
-        : {}),
+      properties: [
+        ...provenanceProperties,
+        ...(report.partialScan ? [partialScanProperty] : []),
+        ...policyEffectProperties,
+      ],
     },
     components: [] as unknown[],
     vulnerabilities: fallbackVulnerabilities,
@@ -1278,6 +1343,11 @@ function formatBadge(report: ScanReport): string {
     label: "supply-chain-guard",
     message,
     color,
+    tool: report.tool || "supply-chain-guard v5.28.1",
+    version: report.tool ? (report.tool.includes("@") ? report.tool.split("@")[1] : report.tool.replace(/^supply-chain-guard v?/, "")) : "5.28.1",
+    timestamp: report.timestamp,
+    commit: report.commit ?? "none",
+    detectionSet: report.detectionSet,
   });
 }
 
@@ -1397,6 +1467,18 @@ function formatGitlab(report: ScanReport): string {
           level: (report.summary?.filesScanned === 0 ? "warn" : "info") as "warn" | "info",
           value: coverageLine(report),
         },
+        {
+          level: "info" as const,
+          value: `Commit: ${report.commit ?? "none (not a git repository)"}`,
+        },
+        ...(report.detectionSet
+          ? [
+              {
+                level: "info" as const,
+                value: `Detection set: v${report.detectionSet.bundledVersion} (${report.detectionSet.effectiveEntryCount} entries${report.detectionSet.cacheMerged ? ", merged cache" : ""})`,
+              },
+            ]
+          : []),
         ...(report.policyEffect
           ? [{ level: "warn" as const, value: policyEffectLine(report.policyEffect) }]
           : []),
@@ -1443,7 +1525,7 @@ function formatJunit(report: ScanReport): string {
   const lines: string[] = [];
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');
   lines.push(
-    `<testsuite name="supply-chain-guard" tests="${testCount}" failures="${failureCount}" errors="${errorCount}" time="${timeSeconds}">`,
+    `<testsuite name="supply-chain-guard" timestamp="${xmlEscape(report.timestamp)}" tests="${testCount}" failures="${failureCount}" errors="${errorCount}" time="${timeSeconds}">`,
   );
 
   // Run metadata belongs in <properties>, which every JUnit consumer renders
@@ -1452,6 +1534,31 @@ function formatJunit(report: ScanReport): string {
   // (unreleased, issue 205): the coverage properties are ALWAYS emitted, so a JUnit
   // artefact states its own denominator instead of only what was found.
   lines.push("  <properties>");
+  lines.push(
+    `    <property name="supply-chain-guard:tool-version" value="${xmlEscape(report.tool || "supply-chain-guard v5.28.1")}"/>`,
+  );
+  lines.push(
+    `    <property name="supply-chain-guard:timestamp" value="${xmlEscape(report.timestamp)}"/>`,
+  );
+  lines.push(
+    `    <property name="supply-chain-guard:commit" value="${xmlEscape(report.commit ?? "none (not a git repository)")}"/>`,
+  );
+  if (report.detectionSet) {
+    lines.push(
+      `    <property name="supply-chain-guard:detection-set:version" value="${xmlEscape(report.detectionSet.bundledVersion)}"/>`,
+    );
+    lines.push(
+      `    <property name="supply-chain-guard:detection-set:entry-count" value="${xmlEscape(String(report.detectionSet.effectiveEntryCount))}"/>`,
+    );
+    if (report.detectionSet.generatedAt) {
+      lines.push(
+        `    <property name="supply-chain-guard:detection-set:generated-at" value="${xmlEscape(report.detectionSet.generatedAt)}"/>`,
+      );
+    }
+    lines.push(
+      `    <property name="supply-chain-guard:detection-set:cache-merged" value="${xmlEscape(String(report.detectionSet.cacheMerged))}"/>`,
+    );
+  }
   const coverage = coverageProperties(report);
   lines.push(
     `    <property name="supply-chain-guard:files-scanned" value="${xmlEscape(coverage.filesScanned ?? "not-recorded")}"/>`,
@@ -1601,11 +1708,13 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
 <body>
 <div class="container">
   <header>
-    <h1>supply-chain-guard Scan Report</h1>
+    <h1>${escapeHtml(report.tool || "supply-chain-guard v5.28.1")} Scan Report</h1>
     <div class="meta">
       <span>Target: ${escapeHtml(report.target)}</span>
       <span>Type: ${report.scanType}</span>
       <span>Time: ${report.timestamp}</span>
+      <span>Commit: ${escapeHtml(report.commit ?? "none (not a git repository)")}</span>
+      ${report.detectionSet ? `<span>Detection Set: v${escapeHtml(report.detectionSet.bundledVersion)} (${report.detectionSet.effectiveEntryCount} entries${report.detectionSet.cacheMerged ? ", merged cache" : ""}${report.detectionSet.generatedAt ? `, generated ${escapeHtml(report.detectionSet.generatedAt)}` : ""})</span>` : ""}
       <span>Duration: ${report.durationMs}ms</span>
     </div>
   </header>
@@ -1660,7 +1769,7 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
   ` : ""}
 
   <footer>
-    Generated by <a href="https://github.com/homeofe/supply-chain-guard">supply-chain-guard</a> v5.28.1
+    Generated by <a href="https://github.com/homeofe/supply-chain-guard">${escapeHtml(report.tool || "supply-chain-guard v5.28.1")}</a>
   </footer>
 </div>
 <script>

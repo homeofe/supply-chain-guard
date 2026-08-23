@@ -80,7 +80,7 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, getDetectionSetProvenance } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
@@ -960,9 +960,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try { saveRiskHistory(scanDir, { timestamp: new Date().toISOString(), score, findings: filteredFindings, summary, riskLevel, recommendations, target, scanType, tool: `supply-chain-guard v${TOOL_VERSION}`, durationMs: Date.now() - startTime }); } catch { /* skip */ }
   }
 
-  // Read before the temp directory is removed: a github scan's scanDir lives
-  // inside it, and an assessment taken afterwards would silently grade an
-  // empty path as Level 0.
+  // Read provenance and SLSA assessment before the temp directory is removed:
+  // a github scan's scanDir lives inside it, and an assessment taken afterwards
+  // would silently grade an empty path as Level 0 / non-git.
+  const gitProv = resolveGitProvenance(scanDir);
+  const detectionSet = getDetectionSetProvenance();
   const slsaAssessment = assessSLSA(scanDir);
 
   // Cleanup temp directory
@@ -1004,7 +1006,61 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // number without the checks that were and were not run behind it.
     slsaLevel: slsaAssessment.level,
     slsaAssessment,
+    // v5.29 (issue #208): Scanned commit provenance and detection set metadata
+    commit: gitProv.commit,
+    branch: gitProv.branch,
+    repositoryUri: gitProv.repositoryUri,
+    detectionSet,
   };
+}
+
+/**
+ * Resolve git commit revision, branch, and remote URL if scanDir is a git repository (v5.29, issue #208).
+ */
+function resolveGitProvenance(scanDir: string): {
+  commit?: string;
+  branch?: string;
+  repositoryUri?: string;
+} {
+  try {
+    const isGit =
+      execSync("git rev-parse --is-inside-work-tree", {
+        cwd: scanDir,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim() === "true";
+    if (!isGit) return {};
+
+    const commit = execSync("git rev-parse HEAD", {
+      cwd: scanDir,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+
+    let branch: string | undefined;
+    try {
+      const b = execSync("git rev-parse --abbrev-ref HEAD", {
+        cwd: scanDir,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+      if (b && b !== "HEAD") branch = b;
+    } catch {}
+
+    let repositoryUri: string | undefined;
+    try {
+      const u = execSync("git config --get remote.origin.url", {
+        cwd: scanDir,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+      if (u) repositoryUri = u;
+    } catch {}
+
+    return { commit: commit || undefined, branch, repositoryUri };
+  } catch {
+    return {};
+  }
 }
 
 /**

@@ -76,15 +76,24 @@ export function extractBundledEntries(root = repoRoot) {
   return entries;
 }
 
+/** Extract FEED_GENERATED_AT from src/threat-intel.ts. */
+export function extractFeedGeneratedAt(root = repoRoot) {
+  const source = readFileSync(join(root, "src", "threat-intel.ts"), "utf8");
+  const m = source.match(/FEED_GENERATED_AT\s*=\s*"([^"]+)"/);
+  return m ? m[1] : "2026-08-23T00:00:00.000Z";
+}
+
 /** Build the publishable feed document (deterministic, offline). */
 export function buildFeed(root = repoRoot) {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const entries = extractBundledEntries(root);
+  const generatedAt = extractFeedGeneratedAt(root);
   return {
     schema: 1,
     package: "supply-chain-guard",
     version: pkg.version,
     entryCount: entries.length,
+    generatedAt,
     entries,
   };
 }

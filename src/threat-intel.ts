@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Finding, ThreatIntelSource } from "./types.js";
+import type { Finding, ThreatIntelSource, DetectionSetProvenance } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // IOC feed entry
@@ -29,6 +29,12 @@ export interface FeedIOC {
 export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
   confidence?: number;
 };
+
+/**
+ * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
+ * Pure function of feed updates; preserved across builds.
+ */
+export const FEED_GENERATED_AT = "2026-08-23T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -14105,7 +14111,7 @@ export async function updateThreatFeed(
 // Anything outside these sets means the file is NOT our inert data format and
 // must be scanned normally - an attacker cannot smuggle code past the check by
 // naming a file feed.json, because any extra key or non-scalar value fails it.
-const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp"]);
+const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
 // Mirrors the FeedIOC interface (plus the legacy "note"/"ecosystem" keys). It
 // MUST list every field the feed can carry: "source" and "lastSeen" are part of
 // FeedIOC, and entries imported from upstream advisory databases populate
@@ -14599,4 +14605,42 @@ function mergeFeeds(base: FeedIOC[], additions: FeedIOC[]): FeedIOC[] {
     }
   }
   return merged;
+}
+
+/**
+ * Get provenance metadata for the active detection set / threat intelligence feed (v5.29, issue #208).
+ */
+export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProvenance {
+  const cacheBase = cacheDir ?? CACHE_DIR;
+  const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
+
+  let cacheMerged = false;
+  let effectiveEntryCount = BUNDLED_FEED.length;
+  let cacheRefreshedAt: string | undefined;
+
+  try {
+    const stat = fs.statSync(cachePath);
+    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
+      timestamp: string;
+      entries: FeedIOC[];
+    };
+    const age = Date.now() - new Date(cached.timestamp).getTime();
+    if (age < CACHE_TTL_MS && Array.isArray(cached.entries)) {
+      const activeFeed = loadThreatIntel(cacheDir);
+      cacheMerged = true;
+      effectiveEntryCount = activeFeed.length;
+      cacheRefreshedAt = cached.timestamp;
+    }
+  } catch {
+    // No cache or invalid cache
+  }
+
+  return {
+    bundledVersion: "5.28.1",
+    bundledEntryCount: BUNDLED_FEED.length,
+    generatedAt: FEED_GENERATED_AT,
+    cacheMerged,
+    effectiveEntryCount,
+    ...(cacheMerged ? { cachePath, cacheRefreshedAt } : {}),
+  };
 }
