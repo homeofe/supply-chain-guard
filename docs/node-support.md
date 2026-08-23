@@ -13,10 +13,9 @@ Change the policy here and the gate names every file that has to follow.
   "baseline": 22,
   "enginesFloor": "22.0.0",
   "supportedMajors": [22, 24],
-  "transitionMajors": [20],
-  "transitionRemovedIn": "5.29.0",
+  "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "5.29.0",
+  "activeLtsReviewedIn": "6.1.0",
   "publishMajor": 22,
   "runtimeMajor": 22,
   "devBaseline": 22

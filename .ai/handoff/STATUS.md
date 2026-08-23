@@ -1,6 +1,21 @@
+## 2026-08-23: Release v6.0.0 (Zero Open Issues, Node 22+ Baseline, Complete Provenance, SBOM & SLSA Hardening)
+
+Major release v6.0.0. Zero-open-issues requirement achieved across all issues (#169-#208) and PR acceptance criteria (#185-#227).
+
+### Major Release Invariants & Highlights
+- **Zero open issues:** 100% of open issues resolved, merged, and reconciled on GitHub.
+- **Node support baseline:** Node 22 canonical baseline and Node 24 Active LTS enforced; Node 20 transition lane retired.
+- **Full provenance metadata across 9 formats (#208):** Tool version, scan timestamp, git revision SHA/branch/origin URL, and threat feed generation vintage and cache merge status emitted across text, JSON, markdown, SARIF, SBOM, HTML, badge, GitLab, and JUnit.
+- **CycloneDX 1.6 SBOM correctness cluster (#221, #191-#200):** Hexadecimal hashes, canonical RFC purls, lockfile component names, specifier annotation properties, and incident cluster survival across SARIF/SBOM/markdown.
+- **SLSA attestation & evidence-backed posture (#220, #188-#190):** Envelope structural validation (`structurallyValid`), AST-level workflow comment stripping, and explicit posture score disclosure.
+- **Offline boundary & network disclosure (#201, #224):** Fully documented offline architecture and explicit network boundaries.
+- **Calibrated correlation confidence (#203, #225):** Incident confidence mapped accurately to indicator match ratios.
+- **Directory scan trust renormalisation (#202, #226):** Mode-aware trust scoring for offline directory targets.
+- **Single SLA compliance definition (#172, #209, #194, #223):** Unified time-to-breach SLA calculation and triage pair-scoped evaluation.
+
 ## 2026-08-23: Issue 208 (Provenance Metadata and Detection Set Version Across All Report Formats)
 
-Do not start v6.0.0. Zero-open-issues is met once Issue 208 is merged!
+Zero-open-issues met and PR #227 merged!
 
 ### Already on GitHub / Closed Issues
 All closed-issue acceptance boxes were reconciled against origin/main on GitHub

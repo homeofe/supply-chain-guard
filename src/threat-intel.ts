@@ -14636,7 +14636,7 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
   }
 
   return {
-    bundledVersion: "5.28.1",
+    bundledVersion: "6.0.0",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,

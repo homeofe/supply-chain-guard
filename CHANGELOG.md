@@ -3,9 +3,11 @@
 All notable changes to supply-chain-guard are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The latest release is at the
-top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v5` branch).
+top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release + `v6` branch).
 
 ## [Unreleased]
+
+## [6.0.0] - 2026-08-23
 
 ### Added
 
@@ -4536,7 +4538,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v5.28.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.0...HEAD
+[6.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.0
 [5.28.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.1
 [5.28.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.0
 [5.27.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.27.0

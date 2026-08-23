@@ -22,7 +22,7 @@ const FORMATS = [
 
 function createSampleReport(overrides?: Partial<ScanReport>): ScanReport {
   const detectionSet: DetectionSetProvenance = {
-    bundledVersion: "5.28.1",
+    bundledVersion: "6.0.0",
     bundledEntryCount: 13046,
     generatedAt: "2026-08-23T00:00:00.000Z",
     cacheMerged: false,
@@ -30,7 +30,7 @@ function createSampleReport(overrides?: Partial<ScanReport>): ScanReport {
   };
 
   return {
-    tool: "supply-chain-guard v5.28.1",
+    tool: "supply-chain-guard v6.0.0",
     timestamp: "2026-08-23T12:34:56.789Z",
     target: "test-target",
     scanType: "directory",
@@ -62,21 +62,21 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
     for (const fmt of FORMATS) {
       const output = formatReport(report, fmt);
       expect(
-        output.includes("5.28.1") || output.includes("supply-chain-guard"),
+        output.includes("6.0.0") || output.includes("supply-chain-guard"),
         `Format "${fmt}" must state tool version`,
       ).toBe(true);
 
       // Verify specific format representations
       if (fmt === "sarif") {
         const sarif = JSON.parse(output);
-        expect(sarif.runs[0].tool.driver.version).toBe("5.28.1");
+        expect(sarif.runs[0].tool.driver.version).toBe("6.0.0");
       } else if (fmt === "junit") {
-        expect(output).toContain('property name="supply-chain-guard:tool-version" value="supply-chain-guard v5.28.1"');
+        expect(output).toContain('property name="supply-chain-guard:tool-version" value="supply-chain-guard v6.0.0"');
       } else if (fmt === "badge") {
         const badge = JSON.parse(output);
         expect(badge.version || badge.tool).toBeDefined();
       } else if (fmt === "markdown") {
-        expect(output).toContain("| Tool | `supply-chain-guard v5.28.1` |");
+        expect(output).toContain("| Tool | `supply-chain-guard v6.0.0` |");
       }
     }
   });
@@ -167,7 +167,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
         const sarif = JSON.parse(output);
         expect(sarif.runs[0].properties.detectionSet).toEqual(report.detectionSet);
       } else if (fmt === "junit") {
-        expect(output).toContain('property name="supply-chain-guard:detection-set:version" value="5.28.1"');
+        expect(output).toContain('property name="supply-chain-guard:detection-set:version" value="6.0.0"');
         expect(output).toContain('property name="supply-chain-guard:detection-set:entry-count" value="13046"');
         expect(output).toContain('property name="supply-chain-guard:detection-set:generated-at" value="2026-08-23T00:00:00.000Z"');
         expect(output).toContain('property name="supply-chain-guard:detection-set:cache-merged" value="false"');
@@ -176,7 +176,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
         const dsVer = sbom.metadata.properties.find(
           (p: { name: string }) => p.name === "supply-chain-guard:detection-set:version",
         );
-        expect(dsVer?.value).toBe("5.28.1");
+        expect(dsVer?.value).toBe("6.0.0");
         const dsCount = sbom.metadata.properties.find(
           (p: { name: string }) => p.name === "supply-chain-guard:detection-set:entry-count",
         );
@@ -192,7 +192,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
   it("distinguishes a scan with a refreshed merged cache from bundled feed alone", () => {
     const bundledOnlyReport = createSampleReport({
       detectionSet: {
-        bundledVersion: "5.28.1",
+        bundledVersion: "6.0.0",
         bundledEntryCount: 13046,
         generatedAt: "2026-08-23T00:00:00.000Z",
         cacheMerged: false,
@@ -202,7 +202,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
 
     const mergedCacheReport = createSampleReport({
       detectionSet: {
-        bundledVersion: "5.28.1",
+        bundledVersion: "6.0.0",
         bundledEntryCount: 13046,
         generatedAt: "2026-08-23T00:00:00.000Z",
         cacheMerged: true,
@@ -241,7 +241,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
     expect(feedJson.generatedAt).toBeDefined();
     expect(feedJson.generatedAt).toBe(FEED_GENERATED_AT);
     expect(typeof feedJson.generatedAt).toBe("string");
-    expect(feedJson.version).toBe("5.28.1");
+    expect(feedJson.version).toBe("6.0.0");
   });
 
   it("integration: scan() captures git provenance from a git working tree and marks non-git clean", async () => {
@@ -261,7 +261,7 @@ describe("Issue #208 - Provenance metadata across all report formats", () => {
       const gitReport = await scan({ target: tmpGit, scanType: "directory" });
       expect(gitReport.commit).toBe(gitHead);
       expect(gitReport.detectionSet).toBeDefined();
-      expect(gitReport.detectionSet?.bundledVersion).toBe("5.28.1");
+      expect(gitReport.detectionSet?.bundledVersion).toBe("6.0.0");
 
       const nonGitReport = await scan({ target: tmpNonGit, scanType: "directory" });
       expect(nonGitReport.commit).toBeUndefined();

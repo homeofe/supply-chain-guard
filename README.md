@@ -121,9 +121,7 @@ Multi-dimension trust scoring for package and repository inspections:
 
 **Requires Node.js 22 or newer.** Every release runs its complete test suite, and
 installs and executes its own packed tarball, on Node 22 and on Node 24, the current
-Active LTS. Node 20 reached end of life on
-2026-04-30; it still installs and is still covered by CI as a transition lane, but it
-is out of support and that lane is removed in 5.29.0. Full policy, including what the
+Active LTS. Full policy, including what the
 package is published from and what the Action and container image run on:
 [`docs/node-support.md`](docs/node-support.md).
 
@@ -144,7 +142,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v5.28.1
+    rev: v6.0.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -176,7 +174,7 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:5.28.1 scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.0.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
@@ -857,7 +855,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v5.28.1
+      - uses: homeofe/supply-chain-guard@v6.0.0
         with:
           fail-on: critical
           comment-on-pr: true
@@ -890,15 +888,15 @@ The interval is the cheap half. The half that actually decides the outcome is
 whether somebody merges the pull request, and no setting in this file supplies
 that.
 
-### `@v5`, and what it does and does not guarantee
+### `@v6`, and what it does and does not guarantee
 
-`@v5` also works and stays supported. It is a floating **branch**, fast-forwarded
+`@v6` also works and stays supported. It is a floating **branch**, fast-forwarded
 to each release by CI, and the composite action on it pins an exact npm version
-that is bumped and build-gated on every release. So `@v5` is not `latest`: every
+that is bumped and build-gated on every release. So `@v6` is not `latest`: every
 resolution still installs one exact, release-gated version.
 
-The caveat is what happens after a major. If the v5 line stops being released once
-v6 ships, `@v5` keeps resolving a frozen action that pins an old npm version, and
+The caveat is what happens after a major. If the v6 line stops being released once
+v7 ships, `@v6` keeps resolving a frozen action that pins an old npm version, and
 the IOC feed it installs stops updating. For a scanner that is a silent
 false-negative generator, and nothing in your workflow would report it. An exact
 pin is what turns that into a reviewable out-of-date dependency instead.
@@ -945,7 +943,7 @@ two are never confused. If a deliberately frozen rule set is the intent, exclude
 the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v5.28.1
+- uses: homeofe/supply-chain-guard@v6.0.0
   with:
     exclude-rules: THREAT_FEED_STALE
 ```
