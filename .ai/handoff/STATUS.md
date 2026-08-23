@@ -1,3 +1,20 @@
+## SBOM: the licences, dependency relationships and bom-refs the lockfile already carried
+
+The generated CycloneDX document was omitting three things the npm lockfile already
+holds: per-component licence expressions, the dependency graph, and stable
+bom-refs. A consumer feeding it to a licence-compliance tool got a well-formed
+document that answered "unknown" for every component, which is worse than
+refusing, because it reads as a measurement.
+`src/sbom-generator.ts` now emits all three, `src/types.ts` carries the shapes,
+and `src/policy-engine.ts` takes the shared `SUPPRESS_PLACEHOLDER_REASON`
+constant rather than a second literal copy of the same placeholder text - two
+spellings of one placeholder is how one of them quietly stops matching.
+WHAT THIS DOES NOT COVER, so the next reader does not overestimate it: the
+licence data is only as good as the lockfile's. A package that declares no
+licence still produces a component with no licence expression; the document now
+distinguishes "the lockfile did not say" from "we did not look", but it cannot
+invent the answer. Ecosystems other than npm are unaffected by this change.
+
 ## 2026-08-23 - declare merge=union for the handoff append-log
 
 `.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by
