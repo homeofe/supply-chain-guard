@@ -35,6 +35,19 @@ suppress:
   - rule: SHAI_HULUD_WORM
     reason: doc-generator template in scripts/scg-handoff-docs.mjs describes this repo's npm publish pipeline; detection stays active for scanned user projects
 
+    # Two prose files quote the literal base64-decode-then-eval construct while
+    # DESCRIBING the EVAL_ATOB rule and a measurement made against it. They are
+    # documentation of the detection, not the thing detected. Both are scoped by
+    # path: a real occurrence anywhere else in this tree, including src/, still
+    # fails the self-scan at critical. Detection is untouched for user projects.
+    - rule: EVAL_ATOB
+      path: CHANGELOG.md
+      reason: changelog entry quotes the base64-decode-then-eval construct while describing the EVAL_ATOB rule and the measured effect of rules.disable on it; prose about the detection, not a payload
+
+    - rule: EVAL_ATOB
+      path: .ai/handoff/STATUS.md
+      reason: handoff note quotes the same construct while recording that measurement; prose about the detection, not a payload
+
   # The DOCKER_NPM_GLOBAL suppression that used to sit here is gone: the rule
   # now inspects the package specs and no longer fires on our image's local
   # tarball install. Fixing the rule beat documenting an exception for it.
