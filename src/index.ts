@@ -84,7 +84,17 @@ export { detectTrustSignals } from "./trust-signals.js";
 // lookup index built over it survives. Exported because an embedder that hands
 // getBundledFeed() to a matcher hits exactly the defect issue 177 records.
 export { loadThreatIntel, updateThreatFeed, checkThreatIntel, matchPackageIOC, getBundledFeed, getBundledFeedRef, FEED_REMOTE_LIMITS, type FeedLimitOverrides } from "./threat-intel.js";
-export { feedStats, refreshFeed, parseFeedPayload, DEFAULT_FEED_URL } from "./feed.js";
+export {
+  feedStats,
+  refreshFeed,
+  parseFeedPayload,
+  DEFAULT_FEED_URL,
+  feedFreshness,
+  feedStalenessFindings,
+  FEED_STALE_AFTER_DAYS,
+  FEED_STALE_RULE,
+  type FeedFreshness,
+} from "./feed.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
 export { listOrgRepos, analyzeOrgFindings } from "./org-scanner.js";

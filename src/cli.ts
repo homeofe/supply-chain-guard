@@ -826,26 +826,56 @@ const feedCmd = program
 
 feedCmd
   .command("stats")
-  .description("Show IOC entry counts by type and severity (offline)")
+  .description("Show IOC entry counts, and how old the rule set is, by type and severity (offline)")
   .option("-f, --format <format>", "Output format: text, json", "text")
   .action(async (opts: { format: string }) => {
     try {
       const { getBundledFeed, loadThreatIntel } = await import("./threat-intel.js");
-      const { feedStats } = await import("./feed.js");
+      const { feedStats, feedFreshness, FEED_STALE_AFTER_DAYS } = await import("./feed.js");
       const bundled = getBundledFeed();
       const effective = loadThreatIntel();
       const stats = feedStats(effective);
+      // Age of what a scan would actually match against, and of the pin on its
+      // own, so the two are distinguishable: a refreshed cache can make an old
+      // pin current, and only the pair shows that.
+      const freshness = feedFreshness(effective);
+      const bundledFreshness = feedFreshness(bundled);
 
       if (opts.format === "json") {
         console.log(
-          JSON.stringify({ bundledEntries: bundled.length, ...stats }, null, 2),
+          JSON.stringify(
+            {
+              bundledEntries: bundled.length,
+              ...stats,
+              freshness,
+              bundledFreshness,
+              staleAfterDays: FEED_STALE_AFTER_DAYS,
+            },
+            null,
+            2,
+          ),
         );
         return;
       }
 
+      const describeAge = (f: typeof freshness): string =>
+        f.ageDays === null || f.newestIndicator === null
+          ? "unknown (no indicator carries a usable date)"
+          : `${f.ageDays} day(s), newest indicator ${f.newestIndicator}${f.stale ? "  [STALE]" : ""}`;
+
       console.log(`\n  Threat-intel feed statistics:\n`);
       console.log(`  Bundled entries:   ${bundled.length}`);
       console.log(`  Effective entries: ${stats.total} (bundled + fresh cache)`);
+      console.log(`\n  Rule-set age (stale after ${FEED_STALE_AFTER_DAYS} days):`);
+      console.log(`    bundled with this version  ${describeAge(bundledFreshness)}`);
+      console.log(`    effective at scan time     ${describeAge(freshness)}`);
+      if (freshness.stale) {
+        console.log(
+          `\n  This rule set is stale. Scanning is offline, so indicators published\n` +
+            `  after that date cannot be detected. Update the package, or run\n` +
+            `  \`supply-chain-guard feed refresh\` before scanning.`,
+        );
+      }
       console.log(`\n  By type:`);
       for (const [type, count] of Object.entries(stats.byType)) {
         console.log(`    ${type.padEnd(10)} ${count}`);

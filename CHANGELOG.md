@@ -46,6 +46,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- **Corrected the README claim that nothing in this tool reports a frozen rule
+  set.** That was true when it was written and is no longer, so the paragraph now
+  describes what the scan reports and what an exact pin still does not buy.
+
 - **The scope of a triage decision now has exactly one implementation,
   `src/triage-scope.ts`, and both consumers ask it.** The defect above was not a
   missing file check: the same feature shipped two key widths over the same
@@ -159,6 +163,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `network error:` prefix, and a rejected status now reads `HTTPS request failed
   with status 404 for <url>` instead of `HTTP 404`. Both still name the URL and
   still leave the previous cache untouched.
+
 - **Benchmark evidence in this project's own artefacts now carries counts, never
   consumer repository names.** Two `CHANGELOG.md` entries (v5.2.40, v5.2.41) cited
   a private repository and an internal issue number as the provenance of a security

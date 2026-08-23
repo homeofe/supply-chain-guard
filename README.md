@@ -845,14 +845,49 @@ pin is what turns that into a reviewable out-of-date dependency instead.
 **Be precise about what an exact pin does and does not buy you, because a frozen
 exact pin is the same silent false negative.** It ages exactly as quietly. This
 scanner runs offline against the IOC feed bundled with the pinned version, so a
-pin that stops moving freezes the detection rules at that date, and neither the
-exit code, the risk score nor the check name changes to say so. The scan output
-carries no age for the feed it just used. What an exact pin buys is a *place*
-where the staleness becomes reviewable: the bump pull request. That is a
-different claim from the staleness being visible on its own, and the measurement
-above is what the difference costs. If those pull requests are opened and
-superseded without ever being merged, the pin is frozen, the rule set is ageing,
-and nothing in this tool will tell you.
+pin that stops moving freezes the detection rules at that date. What an exact pin
+buys is a *place* where the staleness becomes reviewable: the bump pull request.
+That is a different claim from the staleness being visible on its own, and the
+measurement above is what the difference costs. If those pull requests are opened
+and superseded without ever being merged, the pin is frozen and the rule set is
+ageing.
+
+**The scan itself now says so.** Every scan measures how old the rule set it just
+matched against actually is, and reports `THREAT_FEED_STALE` (medium) once the
+newest indicator in that rule set is more than 30 days old. The finding carries
+the measured age and the newest indicator's date, it raises the risk score off
+zero and the risk level off `clean`, and it is named in eight of the nine report
+formats and in the Action's pull request comment, which renders whichever
+`format` you set (`markdown` by default). It is derived offline from the feed
+itself, so it travels with the pin: an installation that never updates reports
+its own age without needing a network call, a registry lookup, or anything
+configured by the consumer.
+
+Where it appears, exactly, because "every format" would be one format too many:
+`text`, `json`, `markdown`, `sarif`, `sbom`, `html`, `gitlab` and `junit` all
+carry the rule id `THREAT_FEED_STALE`, and all but `junit` carry the full
+description as well. The ninth format, `badge`, does not: the Shields.io endpoint
+payload is `{schemaVersion, label, message, color}` derived from the findings
+summary counts, so it never names a rule. What you see there instead is the
+badge for an otherwise clean repository turning from `clean`/`brightgreen` into
+`1 medium`/`yellow` - the condition is visible, but not identifiable, and a
+badge is the one surface where that matters least. In `junit` the rule id is a
+passing `<testcase>` rather than a `<failure>`, because only `critical` and
+`high` become failures there.
+
+The measurement is taken over the rule set the scan *used*, not over the version
+number. A consumer running `supply-chain-guard feed refresh` before each scan
+merges the published feed for 24 hours and is correctly reported as current even
+on an old pin. `supply-chain-guard feed stats` prints both ages side by side, the
+one bundled with the installed version and the effective one at scan time, so the
+two are never confused. If a deliberately frozen rule set is the intent, exclude
+the rule by name:
+
+```yaml
+- uses: homeofe/supply-chain-guard@v5.28.1
+  with:
+    exclude-rules: THREAT_FEED_STALE
+```
 
 ### Action Inputs
 
@@ -925,12 +960,19 @@ The bundled IOC feed ships with every release, and the same data is published as
 is ingested, not at the next release:
 
 ```bash
-supply-chain-guard feed stats     # entry counts by type and severity
+supply-chain-guard feed stats     # entry counts by type and severity, plus rule-set age
 supply-chain-guard feed refresh   # pull the latest published feed into the local cache
 supply-chain-guard feed osv       # export malicious-package IOCs as OSV records
 ```
 
 A refreshed feed is merged into every scan for the next 24 hours automatically.
+
+**Rule-set age:** `feed stats` reports two ages, the one bundled with the
+installed version and the effective one at scan time, and marks either `[STALE]`
+past 30 days. `--format json` returns the same values as `bundledFreshness` and
+`freshness` (`newestIndicator`, `ageDays`, `datedEntries`, `stale`) for a
+workflow that wants to assert on them directly. Both are computed offline, from
+the feed itself.
 
 **OSV export:** `feed osv` emits the feed's malicious-package indicators (npm,
 PyPI-adjacent, Go, RubyGems, Packagist, crates.io, NuGet) as [OSV-schema](https://ossf.github.io/osv-schema/)

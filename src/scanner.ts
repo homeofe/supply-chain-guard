@@ -90,6 +90,7 @@ import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
+import { feedFreshness, feedStalenessFindings } from "./feed.js";
 import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
 import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
@@ -699,6 +700,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const trustSignals = detectTrustSignals(scanDir);
     findings.push(...trustSignals);
   }
+
+  // Report the age of the rule set this scan actually matched against. Every
+  // other finding describes the scanned repository; this one describes what
+  // the scanner was able to look for, which until now no output carried. It is
+  // measured over `threatFeed` (the merged bundled + refreshed-cache list that
+  // checkThreatIntel and matchPackageIOC consumed above), so a consumer that
+  // refreshes the feed is reported current even on an old pin, and a consumer
+  // on a frozen pin is told so instead of receiving another green check.
+  // Carries no `file`, so the path-ignore filter below leaves it in place.
+  findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own
