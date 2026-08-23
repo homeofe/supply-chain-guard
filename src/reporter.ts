@@ -1248,6 +1248,9 @@ function formatJunit(report: ScanReport): string {
       `    <property name="supply-chain-guard:slsa-level" value="${xmlEscape(report.slsaAssessment.level)}"/>`,
     );
     lines.push(
+      `    <property name="supply-chain-guard:slsa-basis" value="${xmlEscape(report.slsaAssessment.basis.join("; "))}"/>`,
+    );
+    lines.push(
       `    <property name="supply-chain-guard:slsa-not-assessed" value="${xmlEscape(report.slsaAssessment.notAssessed.join("; "))}"/>`,
     );
   }

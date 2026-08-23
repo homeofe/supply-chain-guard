@@ -237,7 +237,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   exit code is 1. Every realistic cause of a zero-file scan is an ordinary CI
   accident, so this was reachable without an attacker: a checkout step that did
   not run, a working directory set to the wrong path, a sparse checkout, or a
-  container that mounted an empty volume.
+  container that mounted an empty volume. An ordinary Java, C#, Ruby, PHP,
+  Kotlin, Swift or plain-HTML tree is a different state: files exist, this
+  scanner simply does not read their extensions. That used to share the same
+  predicate (`filesScanned === 0`) and would have flipped those repositories
+  from exit 0 / brightgreen to exit 1 / orange with remediation text naming
+  only causes that do not apply. It now raises `SCAN_NO_SCANNABLE_FILES`
+  (informational, not partial). Only an empty tree is `SCAN_ZERO_COVERAGE`.
 - **SARIF, GitLab and JUnit now state their own coverage denominator.**
   ([#205](https://github.com/homeofe/supply-chain-guard/issues/205)) The SARIF
   run always carries an `invocations[0]` entry whose `properties.coverage` gives
@@ -278,7 +284,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `id-token: write` permission to resolve to the SAME job, parsed with this
   project's own `src/workflow-ast.ts` and GitHub's real permission semantics: a
   job-level `permissions:` block replaces the workflow-level one, so a publish job
-  that declares its own permissions without `id-token` does not inherit it.
+  that declares its own permissions without `id-token` does not inherit it. A
+  caller job that holds `id-token: write` and `uses:` a LOCAL reusable workflow
+  whose job runs the publish is credited, because GitHub passes the caller's
+  permissions through; a remote `owner/repo/...@ref` is not, even when a local
+  file of the same name is present. The slsa-github-generator Level 3 path has
+  the same bound on FILES that the npm-native path has on jobs: the generator
+  reference and the `workflow_call` trigger must belong to the same workflow
+  file, so a callable workflow in one file plus a generator mention in another
+  is no longer a 3.
 - **A malformed attestation can no longer coexist with a 3/3 headline in the same
   report.** ([#190](https://github.com/homeofe/supply-chain-guard/issues/190)) A
   present provenance file that does not parse as a usable statement now caps the
@@ -292,7 +306,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   binding, and the build-platform properties SLSA v1.0 Build L3 defines, none of
   which a static read of a repository can establish). The text format renders both
   under the bar, the caveats from Level 2 up; JSON, SARIF and JUnit carry them
-  unconditionally.
+  unconditionally. JUnit emits `slsa-level`, `slsa-basis` and `slsa-not-assessed`
+  as properties; previously it emitted the level and the caveats and omitted
+  `basis`, which was the check that produced the number.
 - **`HERMETIC_BUILD_PATTERNS` is gone.**
   ([#190](https://github.com/homeofe/supply-chain-guard/issues/190)) It matched
   `/reusable_workflow/` and `/workflow_call/`. `workflow_call` is the trigger that

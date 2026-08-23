@@ -1,3 +1,32 @@
+## Independent review of the remaining #220 findings: they reproduced, and they are closed
+
+The handover asked a second reader to contradict the two vacuous-test findings
+that kept #220 unmerged. They held.
+
+1. The mechanism carrying "not assessed" into a published artefact was
+   untested. Deleting the SARIF `slsa` invocation property, the JUnit
+   `slsa-level` / `slsa-not-assessed` properties, the text `NOT ASSESSED:` /
+   `from:` blocks, the zero-coverage caveat sentence, or the GitLab `warn`
+   level left reporter.test.ts, issue-205-zero-coverage.test.ts and
+   slsa-verifier.test.ts green. Those tests now exist, and the JUnit renderer
+   now also emits `slsa-basis` (the acceptance box claimed every renderer
+   showed it; JUnit showed the level and omitted the checks that produced it).
+2. `rejects an array digest rather than an algorithm-to-value map` called
+   `writeSubjectDigest([])`. An empty array is already rejected by the
+   `entries.length === 0` check. `Object.entries(["deadbeef"])` is
+   `[["0","deadbeef"]]`, which would pass that check and the string-value
+   check; the test now uses that input, so deleting `Array.isArray` turns it
+   red.
+3. The slsa-github-generator Level 3 path still combined a generator mention
+   in one file with `workflow_call` in another. Same bound as the npm-native
+   path, on files rather than jobs: both signals must now live in one
+   workflow file. Split-file stays at 2 via the Level 2 generator pattern.
+
+`delete_branch_on_merge` is now `true` on this repository (the handover
+recorded `false`). The worktree at `_scg-wt-sbomfix` still holds
+`fix/sbom-correctness-cluster` and still has to be removed before merging
+#221.
+
 ## Provenance published through a reusable workflow was rejected
 
 Issue 190's fix required the `npm publish --provenance` step and the

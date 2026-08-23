@@ -88,6 +88,29 @@ jobs:
     expect(getSLSALevel(tmpDir)).toBe(3);
   });
 
+  it("does not grant Level 3 when the generator and workflow_call live in different files", () => {
+    // Same pair of signals as the test above, split across two workflows.
+    // Combining them over the concatenated corpus is the same defect issue 190
+    // reported for the npm-native path: a callable CodeQL workflow plus a
+    // generator mention in an unrelated release file is not a builder invocation.
+    mkWorkflow(tmpDir, "callable.yml", `
+on:
+  workflow_call:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`);
+    mkWorkflow(tmpDir, "release.yml", `
+on: push
+jobs:
+  slsa:
+    uses: slsa-framework/slsa-github-generator@abc1234567890abcdef1234567890abcdef123456
+`);
+    expect(getSLSALevel(tmpDir)).toBe(2);
+  });
+
   it("should return 3 when slsa-github-generator SHA + a VALID provenance statement", () => {
     mkWorkflow(tmpDir, "release.yml", `
 jobs:
@@ -403,7 +426,12 @@ describe("parseAttestation - subject digest set", () => {
   });
 
   it("rejects an array digest rather than an algorithm-to-value map", () => {
-    writeSubjectDigest([]);
+    // A NON-empty array: Object.entries(["deadbeef"]) is [["0","deadbeef"]],
+    // which would pass the length and string-value checks. The Array.isArray
+    // guard is the only thing that rejects this shape. An empty array is
+    // already rejected by the length check that the empty-object test pins,
+    // so writeSubjectDigest([]) would stay green if Array.isArray were deleted.
+    writeSubjectDigest(["deadbeef"]);
     expect(parseAttestation(tmpDir).kind).toBe("malformed");
   });
 

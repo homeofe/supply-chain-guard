@@ -33,8 +33,10 @@
  *     workflow file, so a commented-out `# TODO: npm publish --provenance`
  *     produced a 3, and the `--provenance` step and the `id-token: write`
  *     permission never had to belong to the same job (or even the same file).
- *     Text matching now runs over comment-stripped content, and the npm-native
- *     Level 3 path resolves both signals inside one parsed job.
+ *     Text matching now runs over comment-stripped content, the npm-native
+ *     Level 3 path resolves both signals inside one parsed job, and the
+ *     slsa-github-generator Level 3 path requires the generator reference and
+ *     the workflow_call trigger to belong to the same workflow file.
  *
  * WHAT THIS MODULE NEVER DOES - on every path, at every level. `SLSA_NOT_ASSESSED`
  * below is carried in `SLSAAssessment.notAssessed` into the report so the number
@@ -670,24 +672,26 @@ export function assessSLSA(dir: string): SLSAAssessment {
 
   let level = 1;
 
-  const generatorRef = SLSA_GENERATOR_PATTERNS.some((p) => p.test(corpus));
-  // `workflow_call` is the TRIGGER that makes a workflow callable by another
-  // workflow. It is NOT an isolation or hermeticity property, and hermeticity
-  // is not a SLSA v1.0 Build L3 requirement (it was dropped from the Build
-  // track). It is named here for what it is: the caller/callee split the
-  // slsa-github-generator builder is invoked through. This release renamed this from
-  // HERMETIC_BUILD_PATTERNS, which also matched a bare `reusable_workflow`
-  // string that is not a workflow key at all.
-  const calledAsReusableWorkflow = workflows.some((workflow) =>
-    workflow.ast.triggers.includes("workflow_call"),
+  // Both signals must live in ONE workflow file. Matching the generator over
+  // the concatenated corpus and `workflow_call` over every file's triggers is
+  // the same defect the npm-native path had: a CodeQL workflow that happens
+  // to be callable, plus a generator mention in an unrelated release file,
+  // is not a SLSA L3 builder invocation.
+  const generatorAsReusable = workflows.find((workflow) => {
+    const refsGenerator = SLSA_GENERATOR_PATTERNS.some((p) => p.test(workflow.text));
+    const calledAsReusable = workflow.ast.triggers.includes("workflow_call");
+    return refsGenerator && calledAsReusable;
+  });
+  const generatorRef = workflows.some((workflow) =>
+    SLSA_GENERATOR_PATTERNS.some((p) => p.test(workflow.text)),
   );
 
-  if (generatorRef && (calledAsReusableWorkflow || attestation.structurallyValid)) {
+  if (generatorAsReusable || (generatorRef && attestation.structurallyValid)) {
     level = 3;
     basis.push("a workflow references the slsa-framework/slsa-github-generator builder");
     basis.push(
-      calledAsReusableWorkflow
-        ? "a workflow declares the workflow_call trigger, so the builder is invoked as a reusable workflow"
+      generatorAsReusable
+        ? `the same workflow (${generatorAsReusable.name}) declares the workflow_call trigger, so the builder is invoked as a reusable workflow`
         : "a structurally valid SLSA provenance statement is present in the tree",
     );
   } else {

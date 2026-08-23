@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787474339",
-    "timestamp": "2026-08-23T08:38:59Z",
-    "commit": "436d68c",
+    "session_id": "cli-1787476429",
+    "timestamp": "2026-08-23T09:13:49Z",
+    "commit": "20003a6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3ab00eb538e99e7272e00228dad128ef3d31b6d2b5c554807c250eed6a6c98e8",
-      "updated": "2026-08-23T08:38:57Z",
-      "lines": 4260,
-      "summary": "Issue 190's fix required the `npm publish --provenance` step and the"
+      "checksum": "sha256:1b651a6f2f9395e8c0962ab96badbe96e4d12fc6b0a4659f7da5042e5695a219",
+      "updated": "2026-08-23T09:10:25Z",
+      "lines": 4289,
+      "summary": "The handover asked a second reader to contradict the two vacuous-test findings"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:b1a3c171d239cca496bd0bc581edebc8597d34d92a2bcb2c33948e9218817b16",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
-      "updated": "2026-08-23T08:38:58Z",
+      "updated": "2026-08-23T09:13:49Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:02f39cdc957c143fe22dcff2d07b7599abd2bc4e66cacecddd7ee73091d9528a",
-      "updated": "2026-08-23T08:38:58Z",
+      "updated": "2026-08-23T09:13:49Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:97bf3c38d6425dc222208ed04805853be25875848094f232ff02b7305ff63dd5",
-      "updated": "2026-08-23T08:38:58Z",
+      "updated": "2026-08-23T09:13:49Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Issue 190's fix required the `npm publish --provenance` step and the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "The handover asked a second reader to contradict the two vacuous-test findings Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 52147,
-    "full_read": 63912
+    "manifest_plus_core": 52449,
+    "full_read": 64214
   }
 }
