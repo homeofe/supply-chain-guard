@@ -55,6 +55,17 @@ const AAHP = fs.readFileSync(
   "utf-8",
 );
 
+/**
+ * The governance config that carries the FILE copy of the disclosure rule. The
+ * workflow copy below must stay its byte-identical twin, so the config is the one
+ * source both are compared against rather than a third hardcoded spelling here.
+ */
+const DISCLOSURE_RULE = (
+  JSON.parse(
+    fs.readFileSync(path.join(REPO, "aahp.config.json"), "utf-8"),
+  ) as { forbiddenPatterns: Array<{ id: string; pattern: string; include: string[] }> }
+).forbiddenPatterns.find((r) => r.id === "consumer-repo-disclosure")!;
+
 /** The three contexts branch protection requires, and the file that must produce each. */
 const REQUIRED: Array<[string, string]> = [
   ["Build and Test", ".github/workflows/ci.yml"],
@@ -234,7 +245,11 @@ describe("workflow trigger contract", () => {
   it("the attribution pattern is identical in both workflows", () => {
     // The two copies are twins by design; drift means one surface silently stops
     // matching what the other rejects.
-    const pat = (y: string) => y.match(/PATTERN='([^']+)'/)?.[1];
+    // `\bPATTERN=` and not `PATTERN=`: this workflow now also defines
+    // DISCLOSURE_PATTERN, whose NAME ENDS IN `PATTERN`. An unanchored match takes
+    // the first hit in the file, so the day the two steps swap order this would
+    // quietly start comparing the wrong variable and still report green.
+    const pat = (y: string) => y.match(/\bPATTERN='([^']+)'/)?.[1];
     expect(pat(CI)).toBeTruthy();
     expect(pat(META)).toBe(pat(CI));
   });
@@ -248,5 +263,106 @@ describe("workflow trigger contract", () => {
     // runner and fails on a Windows clone, which is a test that reports on the
     // checkout rather than on the thing it claims to assert.
     expect(META).toMatch(/- name: No AI attribution in PR title or body\s+if: github\.actor != 'dependabot\[bot\]'/);
+  });
+});
+/**
+ * The disclosure rule has two copies with two different inputs. The file copy runs
+ * inside "Build and Test" and reads tracked files. The workflow copy below runs
+ * inside "PR metadata policy" and reads the pull request title and body, which are
+ * not files and which no file gate can ever see. A merged PR body cannot be
+ * retracted, so the metadata copy is the one guarding the unrecoverable surface.
+ */
+describe("consumer-repo disclosure gate", () => {
+  // Assembled at runtime, never written as the literal shape: this test file is
+  // itself inside the file rule's include list, so spelling a real reference here
+  // would fail the very gate the test exists to verify.
+  const ORG = "elvatis";
+
+  // Built from the CONFIG pattern, and with the "g" flag deliberately dropped. A
+  // /g/ regex is stateful across .test() calls, so reusing one inside a loop skips
+  // every other fixture and reports a pass it never earned.
+  const re = () => new RegExp(DISCLOSURE_RULE.pattern, "i");
+  const metaPattern = () => META.match(/DISCLOSURE_PATTERN='([^']+)'/)?.[1];
+
+  it("the PR title and body are gated, not only the files", () => {
+    expect(META).toContain("No consumer repository names in PR title or body");
+    expect(metaPattern()).toBeTruthy();
+  });
+
+  it("the workflow pattern is the POSIX-ERE twin of the config rule", () => {
+    // Drift means one published surface silently stops rejecting what the other
+    // still rejects, and nothing in a green build would say so.
+    expect(metaPattern()).toBe(DISCLOSURE_RULE.pattern);
+  });
+
+  it("the metadata copy lives under a different required check than the file copy", () => {
+    // The file copy reaches CI through prebuild -> check:aahp, which is "Build and
+    // Test". If this copy moved there too, one check would be both the gate and the
+    // thing it guards, and a single skip would take out both halves at once.
+    expect(META).toContain("DISCLOSURE_PATTERN");
+    expect(CI).not.toContain("DISCLOSURE_PATTERN");
+  });
+
+  it("the file rule covers the workflow files that define the metadata rule", () => {
+    // Measured before this was added: injecting a reference into a workflow file
+    // left `check:aahp` green, because no glob in the list reached .github/workflows.
+    expect(DISCLOSURE_RULE.include).toContain(".github/workflows/*.yml");
+  });
+
+  it("dependabot is exempted at step level, not job level", () => {
+    // A skipped JOB reports a non-success conclusion for its required context; a
+    // skipped STEP leaves the job conclusive. Same reasoning as the sibling step.
+    expect(META).toMatch(
+      /- name: No consumer repository names in PR title or body\s+if: github\.actor != 'dependabot\[bot\]'/,
+    );
+  });
+
+  it("the title and body reach the script as env vars, never as interpolation", () => {
+    // ${{ github.event.pull_request.body }} inside a run: block is substituted by
+    // Actions BEFORE bash parses the script, so a body carrying shell
+    // metacharacters executes on the runner. Both steps must read quoted "$VAR".
+    //
+    // Asserted per LINE rather than with a cross-file regex: a `[\s\S]*` bridge
+    // from a `run:` marker reaches the NEXT step's legitimate env block and reports
+    // a hit that is not a finding. The real property is that every interpolation of
+    // these two fields sits on an env assignment, so that is what is checked.
+    // Comment lines are excluded, and that is not a loophole: YAML comments are
+    // never substituted and never execute. The workflow documents this exact rule
+    // by quoting the dangerous form in prose, so a filter that did not skip `#`
+    // lines would flag the warning against the hazard as the hazard itself.
+    const interpolations = META.split(/\r?\n/).filter(
+      (l) =>
+        !l.trimStart().startsWith("#") &&
+        /\$\{\{\s*github\.event\.pull_request\.(title|body)\s*\}\}/.test(l),
+    );
+    expect(interpolations.length).toBeGreaterThanOrEqual(2);
+    for (const line of interpolations) {
+      expect(line.trim(), line).toMatch(/^PR_(TITLE|BODY): /);
+    }
+  });
+
+  it("fires on every disclosure shape that actually reached a published surface", () => {
+    for (const shape of [
+      `Measured against ${ORG}/atlas: 10 criticals`,   // the merged-PR-body shape
+      `regression seen in ${ORG}-trust`,               // hyphenated form
+      `https://github.com/${ORG}/ideabase/issues/24`,  // full URL form
+      `See ${ORG.toUpperCase()}/Atlas`,                // case-insensitive
+      `Remediates a finding (${ORG}/ideabase#24).`,    // the v5.2.41 CHANGELOG line
+    ]) {
+      expect(re().test(shape), shape).toBe(true);
+    }
+  });
+
+  it("stays silent on what this project publishes on purpose", () => {
+    // Every one of these is deliberately public. A gate that flags them gets
+    // switched off, which is strictly worse than not having it.
+    for (const ok of [
+      `email: emre.kohler@${ORG}.com`,        // SECURITY.md contact
+      `the pinned @${ORG}_com/aahp CLI`,      // published npm scope
+      `Copyright 2026 Elvatis - Emre Kohler`, // LICENSE holder
+      `never name a consumer repository`,     // prose describing the rule
+    ]) {
+      expect(re().test(ok), ok).toBe(false);
+    }
   });
 });

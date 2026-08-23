@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787447021",
-    "timestamp": "2026-08-23T01:03:41Z",
-    "commit": "f0c8131",
+    "session_id": "cli-1787442669",
+    "timestamp": "2026-08-22T23:51:09Z",
+    "commit": "8fd5b12",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b3226b450ca74cdf244e98f40c8da733dff92533f167c4fcd780603173083967",
-      "updated": "2026-08-23T01:02:58Z",
-      "lines": 3766,
+      "checksum": "sha256:67b8b4c276d97f9e73b549f50aa884ea779716c7bc24440780ea2dd63eb35bb1",
+      "updated": "2026-08-22T23:50:00Z",
+      "lines": 3829,
       "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:62f9ce73d7ba44028ef131098513699ec72031129a75cf464a1124e27ad871dc",
-      "updated": "2026-08-23T01:02:47Z",
+      "updated": "2026-08-22T23:50:00Z",
       "lines": 224,
-      "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
+      "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
-      "updated": "2026-08-23T01:03:40Z",
+      "updated": "2026-08-22T23:51:09Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,20 +42,20 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3b3e9fd9f53982b74e7327734eb7d16c97a1dab30435fad1fb699fbca70a3ff8",
-      "updated": "2026-08-23T01:03:40Z",
+      "updated": "2026-08-22T23:51:09Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:6e7eb507d15cbd5e4de93b9f990ce7fc2346016abb5ef419eaf6f8a14f609a1e",
-      "updated": "2026-08-23T01:03:40Z",
+      "updated": "2026-08-22T23:51:09Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
-      "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
-      "updated": "2026-08-23T01:02:26Z",
-      "lines": 249,
+      "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
+      "updated": "2026-08-22T23:49:40Z",
+      "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 45853,
-    "full_read": 57505
+    "manifest_plus_core": 41509,
+    "full_read": 53159
   }
 }

@@ -31,6 +31,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   list form still disables and still excludes, it is simply reported as
   undocumented. Nothing is vetoed: a narrowing without a written reason costs a
   line in the report rather than nothing at all.
+- **The consumer-name rule is now enforced on the pull request title and body**,
+  not only on files. The `consumer-repo-disclosure` gate reads tracked files, so
+  it could never see PR metadata - which is the surface that cannot be retracted,
+  since a merged body stays indexed. A POSIX-ERE twin of the same pattern now runs
+  in the `PR metadata policy` required check, which is the only workflow triggered
+  by `edited` and therefore the only one that sees a body rewrite. The two copies
+  sit under different required check names on purpose, so neither can stand in for
+  the other, and a test asserts they stay byte-identical.
+- **The file gate now also covers `.github/workflows/*.yml`.** Measured before the
+  change: injecting a cross-repository reference into a workflow file left
+  `check:aahp` green, because no glob in the rule's include list reached that
+  directory.
 
 ### Changed
 

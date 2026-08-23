@@ -115,6 +115,14 @@ names, because that list, in a public config file, would itself be the
 disclosure it exists to prevent. A consumer named without that prefix will not
 trip it, so the rule above is the real control and the gate is the backstop.
 
+That gate reads **files**. A pull request title and body are not files, so it
+has never been able to see them - and they are the surface you cannot take back,
+because a merged body stays indexed for good. The `PR metadata policy` required
+check therefore carries a second copy of the same pattern, reading the title and
+body from the event payload. The two copies are deliberately under **different**
+required check names, so neither one going green for its own reasons can stand
+in for the other, and `workflow-trigger-contract.test.ts` asserts they are
+byte-identical twins.
 ### No em dashes in tracked files
 
 The em dash (U+2014) is banned. Write a hyphen `-` or a colon `:` instead. The

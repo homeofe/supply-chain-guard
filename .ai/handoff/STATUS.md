@@ -104,6 +104,69 @@ that pin absent against empty. Restored, 34 pass.
 2. **Whether the triage store gets a CLI surface.** Options and the argument for
    each are written down at the end of `docs/triage-decisions.md`, next to the
    format they concern, rather than here.
+## PR bodies are now gated too, and the published surfaces were re-checked (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch fix/pr-body-disclosure-gate. No version bump.
+
+Follow-up to the section below. Two things: the earlier finding was re-verified
+against the surfaces that are actually published, and the two coverage holes that
+verification exposed were closed.
+
+### The published surfaces, re-checked
+
+The previous session recorded that the two `CHANGELOG.md` entries were "on their
+way to an indexed surface" because `CHANGELOG.md` becomes the GitHub Release body
+verbatim. That mechanism is real, but it did **not** apply to those two releases.
+The published bodies of v5.2.40 and v5.2.41 (both 2026-06-28) contain one line
+pointing at the README and nothing else - the CHANGELOG-as-release-body pipeline
+came later. **Nothing needs to be retracted from either release body.**
+
+The exposure those two entries did produce was somewhere else. Until 2026-07-02
+the changelog lived in `README.md`, and `README.md` is in `package.json`'s `files`
+array, so it ships inside every npm tarball. Four published versions carry the
+reference in their README: **5.2.40, 5.2.41, 5.2.42 and 5.2.44**. npm tarballs are
+immutable, so this is the one copy that cannot be edited - only deprecated. That
+is an owner decision and nothing was done about it here.
+
+### Two holes the re-check exposed, both now closed
+
+- **The gate could not see a pull request title or body.** It reads tracked files;
+  PR metadata is not a file. That is the surface that cannot be retracted at all,
+  and it is where the largest known disclosure in this repository still sits. A
+  POSIX-ERE twin of the same pattern now runs in the `PR metadata policy` required
+  check - the only workflow triggered by `edited`, so the only one that can see a
+  body rewrite. It sits under a **different** required check name than the file
+  copy on purpose, so neither can stand in for the other.
+- **The gate did not cover `.github/workflows/*.yml`.** Measured by mutation before
+  the change: a cross-repository reference injected into a workflow file left
+  `check:aahp` green. That glob is now in the rule's include list, and the same
+  mutation now fails the build.
+
+### Proven, in both directions
+
+Replayed against real data rather than fixtures: the new predicate fires on all
+three merged PR bodies that carry a disclosure and stays silent on the five most
+recent clean ones. The pattern was also run through the same `grep -Eiq` the
+runner executes, over 11 cases - five reference shapes that must fire, and six
+things this project publishes on purpose that must not (the maintainer contact
+address, the npm scope, the LICENSE holder line, prose describing the rule
+itself). Each file-scope mutation asserts the substitution actually changed the
+file first, because a mutation that fails to apply looks exactly like a gate that
+passed.
+
+One trap worth recording: the include-list anchor used for the config edit is
+**not unique** - the `ai-attribution` rule ends its list on the same string and
+appears first in the file. A plain replace would have widened the wrong rule and
+left this one untouched, with the gate still reporting three rules and still
+passing. The uniqueness assertion caught it; the edit is scoped to the slice that
+starts at the rule's own id.
+
+### Needs a decision (owner)
+
+- The four immutable npm tarballs above (5.2.40, 5.2.41, 5.2.42, 5.2.44).
+- The three merged PR bodies that name consumer repositories. Still not edited -
+  editing a merged body is the owner's call. The new gate prevents the next one;
+  it cannot retract these.
 ## SLA compliance had two definitions and shipped the wrong one (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/issue-172-sla-single-definition. No version bump.
