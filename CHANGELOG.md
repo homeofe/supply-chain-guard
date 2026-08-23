@@ -295,6 +295,76 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Security
 
+- **The `internalDisclosure` section of the committed policy file is now treated as
+  input from the scanned tree, not as operator configuration.** That file travels
+  inside the repository under test, and scanning a repository somebody else owns is
+  the ordinary case for this tool, so a single committed line could previously make
+  the scanner read a file anywhere on the runner and compile a pattern with no bound
+  on how long it could run.
+  - `internalDisclosure.externalFile` must now resolve inside the scanned
+    directory. An absolute path, a relative path that climbs out with `..`, and a
+    path that leaves through a symbolic link are all refused **before the file is
+    opened**, so the existence, permission and per-line reporting that follow a read
+    can no longer describe anything outside the tree. Containment reuses the
+    predicate the rest of the scanner already applies to every path it reads
+    (`isContainedPath`, `hasContainedExistingAncestor` in `src/pattern-scanner.ts`),
+    rather than adding a second, subtly different one.
+  - A regular expression from `internalDisclosure.patterns`, or from an
+    `externalFile` inside the tree, is capped at 200 characters and refused when it
+    quantifies a group that already contains a variable quantifier (`(a+)+`,
+    `(a?)*`). That shape takes exponential time to report no match: measured
+    against a non-matching line built from a run of 34 characters it did not
+    finish inside a 60 second budget, and the published composite Action declares
+    no `timeout-minutes`, so it would have run to the workflow limit on a
+    consumer's runner. No such run is known to have happened; this is a latent
+    defect found by reading the code and reproduced locally, not an incident.
+  - Whatever survives those checks runs under a wall-clock budget for the whole
+    scan (`SCANNED_TREE_MATCHER_BUDGET_MS`, 30 seconds, measured against 108 ms for
+    this project's own source tree with six ordinary entries). On overrun the file reports
+    `INTERNAL_DISCLOSURE_TRUNCATED` instead of continuing. The budget is checked
+    between matcher invocations and therefore cannot interrupt one already running,
+    which is why the compile-time refusal above is the first layer and not the only
+    one.
+  - New rule `INTERNAL_DENYLIST_REFUSED` (medium) reports every refusal. It is a
+    coverage rule, so it marks the scan partial and the Action's `coverage_rule`
+    gate fails closed on it, in `action.yml` as well as in `PARTIAL_SCAN_RULES`.
+  - **The `SCG_INTERNAL_DISCLOSURE_FILE` environment variable is deliberately
+    unchanged.** It is set by whoever runs the scan, so it may still name an
+    absolute path outside the tree, carry any pattern, and report the line number of
+    an entry that cannot be compiled. Removing that per-line reporting would cost
+    exactly the transparency the feature exists for; the decision is recorded next
+    to the code.
+  - **Upgrade note, and the one that can turn a green build red.** The shape
+    check refuses more than it strictly has to, and the shape it most often
+    refuses is the ordinary way to write an internal hostname:
+    `/(?:[a-z0-9-]+\.)+corp\.example/` is a quantified group holding a `+`, so it
+    is refused, in `patterns` and in a gitignored in-tree `externalFile` alike,
+    even though it is linear in practice. Rewrite it as
+    `/[a-z0-9.-]+\.corp\.example/`, which matches the same hosts and is accepted.
+    Left as it is, the term stops being looked for, the scan is marked partial,
+    and the published Action exits 1 on a partial scan independently of
+    `fail-on`. That coverage-rule registration is deliberate for a refusal caused
+    by the scanned tree; whether an operator's own rejected pattern should also
+    break the build, or be advisory, is open on
+    [issue 169](https://github.com/homeofe/supply-chain-guard/issues/169).
+  - **What this does not close.** The shape check reads the source text, so it
+    cannot see ambiguity that comes from overlapping alternation:
+    `/(a|a)+$/` and `/(a|ab)+$/` are accepted, clear the 200-character cap, and
+    are still catastrophic, as is a bounded outer repetition such as
+    `/(a+){2,30}$/`. The wall-clock budget is checked between matcher
+    invocations, so it cannot interrupt a match already running. Availability
+    from a committed pattern is narrowed, not closed. Containment is likewise to
+    the scanned directory and nothing narrower, so a committed
+    `externalFile: .git/config` stays inside the tree and is still read, with
+    matches redacted as before. Both remain open on
+    [issue 169](https://github.com/homeofe/supply-chain-guard/issues/169).
+  - `DenyMatcher` gains a required `origin` field and `InternalDisclosureRuntime` a
+    required `scannedTreeBudgetMs`. Both are produced by
+    `loadInternalDisclosureConfig` and `emptyInternalDisclosureRuntime`; only code
+    that builds those objects by hand is affected.
+
+
+
 - **The publish path now proves the tagged commit is on `main` before anything is
   published** (`scripts/check-release-ancestry.mjs`, run by the `publish` job in
   `ci.yml` before `npm publish` and by the `merge` job in `docker.yml` before the image
