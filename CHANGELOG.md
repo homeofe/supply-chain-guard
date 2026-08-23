@@ -43,6 +43,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   change: injecting a cross-repository reference into a workflow file left
   `check:aahp` green, because no glob in the rule's include list reached that
   directory.
+- **Threat feed: 38 package IOCs imported from the GitHub Advisory Database**
+  (2026-08-14 to 2026-08-23), covering 37 npm and 1 PyPI indicator, 22 of them
+  corroborated by OSV. The largest clusters are `totp-utils` (8 versions of a
+  one-time-password helper), a ten-entry dependency-confusion set of the form
+  `<digit>-<verb>sight-web` (`2-loadsight-web`, `3-buildsight-web`,
+  `6-viewsight-web`, `8-fetchsight-web`, `10-shardsight-web`, each at 1.0.0 and
+  1.0.1), and nine `stillm4ddpocs-*` proof-of-concept publications on 999.9.x
+  lure versions. Also `@syncraft-labs/core`, `/react` and `/vue` at 0.4.1,
+  `@usaa-grp-personal-profile/personal-profile-common@999.0.0` (a
+  dependency-confusion lure aimed at an internal scope of a real financial
+  institution, version-pinned rather than blocked by name), four
+  `*-testkit` / `*-testing-utils` names, `create-coin@20.1.1`, the bare name
+  `internallib_v902`, and the PyPI typosquat `scrambleeeer@0.1.0`, a fourth
+  spelling in a family the feed already carries as `scrambleeer`.
 
 ### Changed
 
