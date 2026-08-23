@@ -160,34 +160,45 @@ describe("scan() surfaces rule-set staleness", () => {
   });
 
   it("adds the finding and raises the score for a stale rule set, and nothing else", async () => {
-    // The point of the whole change: the stale run is the one that used to come
-    // back indistinguishable from the current one. Both directions are scanned
-    // here against the SAME repository, so the only variable is the feed's age
-    // and the delta cannot be anything the repository contributed.
-    const { scan } = await import("../scanner.js");
+    // Pin the clock to NOW. The fixtures below are built with daysAgo(), which
+    // is relative to NOW, but scan() reaches the production path and reads the
+    // real Date.now(). Without this the reported age is 400 + (today - NOW),
+    // so the assertion passed on the day it was written and went red the next
+    // one. toFake is limited to Date so real timers still run and the async
+    // scan below is unaffected.
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    try {
+      // The point of the whole change: the stale run is the one that used to come
+      // back indistinguishable from the current one. Both directions are scanned
+      // here against the SAME repository, so the only variable is the feed's age
+      // and the delta cannot be anything the repository contributed.
+      const { scan } = await import("../scanner.js");
 
-    mockState.feedOverride = [ioc(daysAgo(1))];
-    const current = await scan({ target: dir, format: "json", noHistory: true });
+      mockState.feedOverride = [ioc(daysAgo(1))];
+      const current = await scan({ target: dir, format: "json", noHistory: true });
 
-    mockState.feedOverride = [ioc(daysAgo(400))];
-    const stale = await scan({ target: dir, format: "json", noHistory: true });
+      mockState.feedOverride = [ioc(daysAgo(400))];
+      const stale = await scan({ target: dir, format: "json", noHistory: true });
 
-    expect(current.findings.filter((f) => f.rule === FEED_STALE_RULE)).toHaveLength(0);
+      expect(current.findings.filter((f) => f.rule === FEED_STALE_RULE)).toHaveLength(0);
 
-    const reported = stale.findings.filter((f) => f.rule === FEED_STALE_RULE);
-    expect(reported).toHaveLength(1);
-    expect(reported[0].severity).toBe("medium");
-    expect(reported[0].description).toContain("400 days old");
+      const reported = stale.findings.filter((f) => f.rule === FEED_STALE_RULE);
+      expect(reported).toHaveLength(1);
+      expect(reported[0].severity).toBe("medium");
+      expect(reported[0].description).toContain("400 days old");
 
-    // The report visibly changes: score up, risk level off whatever the clean
-    // run reported. Without that, the finding would exist and still be invisible
-    // to a gate reading only the score.
-    expect(stale.score).toBeGreaterThan(current.score);
+      // The report visibly changes: score up, risk level off whatever the clean
+      // run reported. Without that, the finding would exist and still be invisible
+      // to a gate reading only the score.
+      expect(stale.score).toBeGreaterThan(current.score);
 
-    // No other rule appears or disappears because of the feed's age.
-    const rules = (r: typeof stale): string[] =>
-      [...new Set(r.findings.map((f) => f.rule))].sort();
-    expect(rules(stale).filter((r) => r !== FEED_STALE_RULE)).toEqual(rules(current));
+      // No other rule appears or disappears because of the feed's age.
+      const rules = (r: typeof stale): string[] =>
+        [...new Set(r.findings.map((f) => f.rule))].sort();
+      expect(rules(stale).filter((r) => r !== FEED_STALE_RULE)).toEqual(rules(current));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("honours the documented escape hatch for a deliberately frozen rule set", async () => {
