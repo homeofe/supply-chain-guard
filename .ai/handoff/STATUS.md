@@ -1,23 +1,24 @@
-## 2026-08-23: Issue 201 (Network Operating Model Disclosure) and Issue Reconciliation
+## 2026-08-23: Issue 203 (Correlation Confidence Scoring Calibration & Indicator Counts)
 
 Do not start v6.0.0. Zero-open-issues is not met.
 
 ### Already on GitHub / Closed Issues
 All closed-issue acceptance boxes were reconciled against origin/main on GitHub
-by editing issue bodies. Done for: 205, 204, 200, 199, 198, 197, 196, 195, 194,
-193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171,
-170, 169, 167 (closed with ancestry check in publish job), 168 (closed with
-policyEffect disclosure across report formats).
+by editing issue bodies. Done for: 205, 204, 201 (merged via PR #224), 200, 199,
+198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176,
+175, 174, 173, 172, 171, 170, 169, 167, 168.
 
-### Open issues remaining: 201 (in progress), 202, 203, 208
+### Open issues remaining: 203 (in progress), 202, 208
 
-This change addresses Issue #201:
-- Updated README.md Operating model section: clearly defines offline commands (scan on local path, guard, feed stats) vs networked commands (npm/pypi/vscode download, confusion dependency lookups, repo/org gh subprocesses, monitor, feed refresh, scan with remote git url or --check-registry).
-- Discloses in README that `confusion` transmits declared dependency names to public registries.
-- Discloses in README that `repo` and `org` invoke the `gh` CLI using ambient GitHub credentials.
-- Documented `scan --check-registry` as a networked opt-in check.
-- Fixed `socket.yml` networkAccess comment block (removed nonexistent file reference and slsa-verifier, accurately listed dependency-confusion and github-trust-scanner).
-- Added `src/__tests__/scanner-offline-contract.test.ts` asserting that `scan` on a local path makes 0 network calls.
+This change addresses Issue #203:
+- Calibrated compound incident confidence calculation in `src/correlation-engine.ts`: weights baseline member finding confidence against match ratio (`matchedRules.length / rule.rules.length`) plus rule boost, preventing immediate saturation at 1.0 on minimum matches.
+- Strict ordering: full matches yield higher confidence (up to 1.0) than partial/minimum matches.
+- Distributed confidence: only rules where `minMatch === total` (3 of 19) report 100% on minimum match; the other 16 produce distinct, calibrated confidence scores.
+- Added `matchedIndicatorsCount` and `totalIndicatorsCount` to `IncidentCluster` type and populated them in `correlateFindings`.
+- Updated text and SARIF formatters to render indicator counts `(matched/total)`.
+- Updated README.md wording regarding calibrated confidence scoring.
+- Added unit tests in `src/__tests__/correlation-engine.test.ts` asserting strict ordering, minority 100% on minMatch, and indicator counts.
+
 
 
 ## Closeout after #220 and #221: SLA findings reach the report, and riskTrend includes now

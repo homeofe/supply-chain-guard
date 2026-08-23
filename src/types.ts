@@ -840,6 +840,10 @@ export interface IncidentCluster {
   narrative: string;
   /** Rule IDs involved */
   indicators: string[];
+  /** Number of indicators matched (v5.29) */
+  matchedIndicatorsCount?: number;
+  /** Total number of indicators defined in the correlation rule (v5.29) */
+  totalIndicatorsCount?: number;
 }
 
 export interface TrustIndicator {

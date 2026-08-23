@@ -33,7 +33,7 @@ interface CorrelationRule {
   narrative: string;
 }
 
-const CORRELATION_RULES: CorrelationRule[] = [
+export const CORRELATION_RULES: CorrelationRule[] = [
   // --- Known campaigns ---
   {
     rules: ["GLASSWORM_MARKER", "EVAL_ATOB", "ENV_EXFILTRATION", "SOLANA_MAINNET"],
@@ -298,6 +298,11 @@ export function correlateFindings(findings: Finding[]): CorrelationResult {
       // Collect all findings matching this correlation
       const clusterFindings = findings.filter((f) => matchedRules.includes(f.rule));
 
+      // Measure baseline member finding confidence before individual boost
+      const baseMemberConfidence =
+        clusterFindings.reduce((sum, f) => sum + (f.confidence ?? 0.8), 0) /
+        clusterFindings.length;
+
       // Boost confidence on matched findings, and record membership.
       //
       // v5.30: membership is a LIST. A finding can be an indicator of several
@@ -313,24 +318,36 @@ export function correlateFindings(findings: Finding[]): CorrelationResult {
         f.confidence = Math.min(1.0, (f.confidence ?? 0.8) + rule.confidenceBoost);
       }
 
-      // Calculate compound confidence
-      const avgConfidence = clusterFindings.reduce(
-        (sum, f) => sum + (f.confidence ?? 0.8), 0,
-      ) / clusterFindings.length;
+      // Calculate compound incident confidence (Issue #203).
+      //
+      // Rather than clamping to 1.0 immediately from boosted member findings,
+      // incident confidence measures match strength by weighting base member
+      // confidence against the fraction of the defined attack chain observed
+      // (matchedRules.length / rule.rules.length) plus the rule's boost.
+      const matchRatio = matchedRules.length / rule.rules.length;
+      const rawIncidentConfidence =
+        baseMemberConfidence * (0.4 + 0.6 * matchRatio) +
+        rule.confidenceBoost * matchRatio;
+      const incidentConfidence = Math.min(
+        1.0,
+        Math.max(0.05, Math.round(rawIncidentConfidence * 100) / 100),
+      );
 
       incidents.push({
         id,
         name: rule.incident,
         severity: rule.severity,
-        confidence: Math.min(1.0, avgConfidence),
+        confidence: incidentConfidence,
         findings: clusterFindings,
         narrative: rule.narrative,
         indicators: matchedRules,
+        matchedIndicatorsCount: matchedRules.length,
+        totalIndicatorsCount: rule.rules.length,
       });
 
       riskBoost += Math.round(rule.confidenceBoost * 30);
       insights.push(
-        `${rule.incident}: ${matchedRules.length}/${rule.rules.length} indicators matched (confidence ${(avgConfidence * 100).toFixed(0)}%)`,
+        `${rule.incident}: ${matchedRules.length}/${rule.rules.length} indicators matched (confidence ${(incidentConfidence * 100).toFixed(0)}%)`,
       );
     }
   }

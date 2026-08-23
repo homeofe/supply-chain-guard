@@ -574,9 +574,11 @@ function formatText(report: ScanReport): string {
       const conf  = Math.round(incident.confidence * 100);
       const color = SEVERITY_COLORS[incident.severity];
       const label = `[${incident.severity.toUpperCase()}]`;
+      const matched = incident.matchedIndicatorsCount ?? incident.indicators.length;
+      const total = incident.totalIndicatorsCount ?? incident.indicators.length;
       lines.push(boxRow(`  ${color}${BOLD}${label}${RESET}  ${BOLD}${trunc(incident.name, W - label.length - 20)}${RESET}  ${DIM}${conf}% confidence${RESET}`));
       lines.push(boxRow(`  ${DIM}${trunc(incident.narrative, W - 2)}${RESET}`));
-      lines.push(boxRow(`  Indicators: ${DIM}${trunc(incident.indicators.join(", "), W - 14)}${RESET}`));
+      lines.push(boxRow(`  Indicators (${matched}/${total}): ${DIM}${trunc(incident.indicators.join(", "), W - 20)}${RESET}`));
       lines.push(boxBlank());
     }
     lines.push(boxBot());
@@ -909,6 +911,8 @@ function formatSarif(report: ScanReport): string {
             severity: incident.severity,
             confidence: incident.confidence,
             indicators: incident.indicators,
+            matchedIndicatorsCount: incident.matchedIndicatorsCount ?? incident.indicators.length,
+            totalIndicatorsCount: incident.totalIndicatorsCount ?? incident.indicators.length,
             narrative: incident.narrative,
             findingCount: incident.findings.length,
           })),

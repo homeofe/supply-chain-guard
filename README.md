@@ -797,8 +797,9 @@ chain security. The relevant capabilities are:
 - **Supply chain risk:** typosquatting, dependency confusion, compromised
   packages, and malicious GitHub Actions in CI/CD workflows.
 - **Incident evidence:** the correlation engine links individual findings into
-  named attack chains with confidence scores. The incident record itself, with
-  its name, confidence, indicator list and narrative, is carried by three
+  named attack chains with confidence scores calibrated to indicator match
+  completeness. The incident record itself, with its name, confidence, indicator
+  counts (matched and total), list and narrative, is carried by three
   formats: **JSON** (`incidents` on the report), **SARIF** (the incident list on
   `runs[0].properties`, and the incidents each result belongs to in that
   result's property bag) and **CycloneDX** (one `annotations` entry per
