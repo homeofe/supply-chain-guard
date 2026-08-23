@@ -1,8 +1,1177 @@
+## 2026-08-23 - declare merge=union for the handoff append-log
+
+`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by
+one block and nothing else. Eight sibling repositories in this estate already
+declare `merge=union` for it; this one did not, and the two that lacked it are
+exactly the two where twenty-two rebases on 2026-08-23 each resolved this file by
+hand.
+
+It does not stop a pull request going CONFLICTING - GitHub does not honour merge
+drivers server-side, measured 2026-07-31 - so this removes the hand resolution,
+not the merge. `MANIFEST.json` is deliberately left without a driver: it is
+generated state, and the correct resolution is to take main's copy and recompute
+the changed entries, which no driver can do.
+
 # supply-chain-guard: Current State
 
 > Updated 2026-08-20 (release v5.27.0). This is one current snapshot, not a session
 > log. Historical detail belongs in CHANGELOG.md, generated LOG.md, LOG-ARCHIVE.md,
 > and git history.
+
+---
+
+## A triage decision is a (rule, file) pair, and only one consumer knew it (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/triage-decision-scope-key. No version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/171
+
+### What was wrong
+
+`calculateMetrics` built its resolved set from `d.findingRule` alone, so one
+resolved decision removed every finding of that rule from `openCritical`,
+`openHigh` and `topRiskContributors`, including findings in files nobody had
+triaged. `TriageDecision.findingFile` exists to scope a decision to a file and
+was never read there.
+
+The root cause is not a missing file check. `git log -- src/metrics.ts` returns a
+single commit, the one that created the file, and the correct (rule, file) key
+was written the same day in the same feature over the same array, in
+`checkTriageGovernance`. One feature shipped two key widths and only one
+survived. Both read the identical decisions array on the same scan, so one JSON
+report could carry `"openCritical": 0` beside "2 critical finding(s) have no
+assigned owner or triage decision".
+
+It survived four months because every case in `metrics.test.ts` used at most one
+finding per rule and never set `file` on either side. With one instance per rule
+a rule-keyed set and a pair-keyed set give identical answers, so the suite could
+not tell the two implementations apart and stayed green under either. The green
+suite was part of the finding.
+
+### What changed
+
+The scope rule now has exactly one implementation, `src/triage-scope.ts`, and
+both consumers ask it. Sharing a key STRING between the two call sites would
+have fixed the counts and left the divergence one edit away, so no consumer
+builds a key at all; they ask "does any of these decisions cover this finding?".
+`buildTriageScope` is exported for library consumers, who are the only way to
+use the store since it has no CLI subcommand.
+
+One behaviour change came with it: `CRITICAL_FINDING_NO_OWNER` joined
+`file ?? ""` into its key, so a decision carrying no `findingFile` matched only
+findings that carry no file and every instance in a real file stayed "unowned".
+It now covers them, which is what an absent `findingFile` has always meant on
+the metrics side. Absent and empty stay different, and each branch has a test.
+
+`docs/triage-decisions.md` is new: the store, its format and its scope rule were
+documented nowhere.
+
+### Evidence
+
+Paired end to end through the built CLI on one fixture, three critical
+`EVAL_ATOB` findings in three files, one resolved decision naming `src/a.js`,
+same command both times:
+
+| | before | after |
+| --- | --- | --- |
+| `summary.critical` | 3 | 3 |
+| `metrics.openCritical` | 0 | 2 |
+| `topRiskContributors` | `CRITICAL_FINDING_NO_OWNER` | `EVAL_ATOB`, `CRITICAL_FINDING_NO_OWNER` |
+| process exit code | 2 | 2 |
+
+Variant with the decision naming `vendor/not-scanned.js`, a path no finding
+carries: `openCritical` 0 before, 3 after. Variant with no `findingFile` at all:
+0 before, 0 after, which is the behaviour that had to be preserved.
+
+No gate moved. `getReportExitCode` reads `report.summary`, `report.findings` and
+`report.partialScan`, never `metrics`, and the fixture exits 2 in both columns.
+The wrong number reached `--format json`, `--json-output` and library consumers.
+
+Mutation proof, both branches of the new module, run on the three affected test
+files: replacing the file-scoped lookup with a rule-level one reddens 11 of 34;
+replacing `d.findingFile === undefined` with `!d.findingFile` reddens the 2 cases
+that pin absent against empty. Restored, 34 pass.
+
+### Open for the maintainer
+
+1. **The severity label on the issue.** It carries `priority: high`. The measured
+   blast radius is narrower than that: no gate, no exit code, no finding and no
+   human-facing report format was affected, and reaching the defect at all
+   requires opting into a store with no CLI surface. Against calling it low: a
+   security KPI reading 0 next to three live critical findings in the same
+   payload is exactly the number a dashboard or a compliance report trusts, and
+   the failure is silent and permanent once a stale decision exists. The call is
+   the maintainer's; the fix does not depend on it.
+2. **Whether the triage store gets a CLI surface.** Options and the argument for
+   each are written down at the end of `docs/triage-decisions.md`, next to the
+   format they concern, rather than here.
+## The scanner now scans this repository (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-173-self-scan-gate. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/173
+
+CI built the scanner, started it, and confirmed it emitted parseable JSON against
+a four-line fixture `package.json`. It never pointed the scanner at this
+repository, so every rule this tool enforces on its consumers was unenforced on
+its own tree, and none of the three status checks branch protection requires on
+`main` read a line of it. The omission dates from the first commit: no commit in
+the history of `.github/workflows/` ever removed such a step, because none ever
+added one.
+
+The class matters more than the instance: a smoke test that proves the tool RUNS
+reads exactly like a check that the tool PASSES. Both are green, and only one of
+them looked at your code.
+
+### What the first real self-scan found
+
+Four critical findings, all four self-referential false positives. Nothing was
+hiding behind the missing gate, which is a measured result and not an assumption.
+The cost was elsewhere. `.supply-chain-guard.yml` had been maintained for a
+self-scan that never ran, and it had already drifted: one of its five
+suppressions matched nothing. Two product-level false positives had also shipped
+undetected, one of which fires on any adopter whose changelog names a package
+like the real malicious `nolimit-agent`.
+
+All four are fixed rather than suppressed. A gate introduced on a red tree is a
+gate somebody turns off. The tree now reports zero findings at every severity,
+plus seven suppressions each carrying a written reason.
+
+### The wiring constraint, which is the part that is easy to get wrong
+
+The step must run the locally built CLI from the checkout root.
+`isOwnPackageRoot` compares the resolved target against the scanner's own install
+root, and only a match applies `SELF_SCAN_INERT_FILES` and loads the policy file
+from this directory. Reaching the same tree through a container mount, which
+looks like the cheap option because the docker job already mounts one, switches
+both off and reports roughly 1700 self-referential findings. That is measured.
+Anyone rewiring this should read the comment above the step first.
+
+The step also carries a positive control, and that is the load-bearing half: a
+scan of the wrong directory finds nothing and exits 0, so a green step that
+inspected nothing looks exactly like a green step that inspected a clean tree.
+It compares `filesScanned` against the count of TypeScript sources the checkout
+tracks under `src/`. Verified by execution: repointed at the old fixture, the
+scan is green at `critical` and the control fails the step anyway.
+
+### Open for the owner
+
+The threshold is `--fail-on critical`, and that is a choice rather than a
+ceiling. With these fixes the tree is clean at every severity, so `--fail-on
+info` would also pass today. `critical` was chosen because it is the severity at
+which a finding is a regression rather than a backlog item, and because it
+already covers the only recurring finding source here, the threat-intelligence
+releases that add real indicators to `CHANGELOG.md` and `feed.json`. Tightening
+to `high` or lower is a live option once the step has enough history to show what
+appears at those severities. The decision and its tradeoff are recorded next to
+the step in `ci.yml`, not only here.
+
+### Not addressed
+
+The docker job still scans only the fixture; making it scan the checkout is the
+wiring that produces the 1700 findings, so it needs the self-scan trust model to
+work through a mount first. Suppression visibility is also untouched: a report
+exposes only a `suppressedCount` and not the entries behind it, which is exactly
+why the inert suppression stayed invisible.
+## PR bodies are now gated too, and the published surfaces were re-checked (2026-08-21, unreleased)
+
+Model: claude-opus-5. Branch fix/pr-body-disclosure-gate. No version bump.
+
+Follow-up to the section below. Two things: the earlier finding was re-verified
+against the surfaces that are actually published, and the two coverage holes that
+verification exposed were closed.
+
+### The published surfaces, re-checked
+
+The previous session recorded that the two `CHANGELOG.md` entries were "on their
+way to an indexed surface" because `CHANGELOG.md` becomes the GitHub Release body
+verbatim. That mechanism is real, but it did **not** apply to those two releases.
+The published bodies of v5.2.40 and v5.2.41 (both 2026-06-28) contain one line
+pointing at the README and nothing else - the CHANGELOG-as-release-body pipeline
+came later. **Nothing needs to be retracted from either release body.**
+
+The exposure those two entries did produce was somewhere else. Until 2026-07-02
+the changelog lived in `README.md`, and `README.md` is in `package.json`'s `files`
+array, so it ships inside every npm tarball. Four published versions carry the
+reference in their README: **5.2.40, 5.2.41, 5.2.42 and 5.2.44**. npm tarballs are
+immutable, so this is the one copy that cannot be edited - only deprecated. That
+is an owner decision and nothing was done about it here.
+
+### Two holes the re-check exposed, both now closed
+
+- **The gate could not see a pull request title or body.** It reads tracked files;
+  PR metadata is not a file. That is the surface that cannot be retracted at all,
+  and it is where the largest known disclosure in this repository still sits. A
+  POSIX-ERE twin of the same pattern now runs in the `PR metadata policy` required
+  check - the only workflow triggered by `edited`, so the only one that can see a
+  body rewrite. It sits under a **different** required check name than the file
+  copy on purpose, so neither can stand in for the other.
+- **The gate did not cover `.github/workflows/*.yml`.** Measured by mutation before
+  the change: a cross-repository reference injected into a workflow file left
+  `check:aahp` green. That glob is now in the rule's include list, and the same
+  mutation now fails the build.
+
+### Proven, in both directions
+
+Replayed against real data rather than fixtures: the new predicate fires on all
+three merged PR bodies that carry a disclosure and stays silent on the five most
+recent clean ones. The pattern was also run through the same `grep -Eiq` the
+runner executes, over 11 cases - five reference shapes that must fire, and six
+things this project publishes on purpose that must not (the maintainer contact
+address, the npm scope, the LICENSE holder line, prose describing the rule
+itself). Each file-scope mutation asserts the substitution actually changed the
+file first, because a mutation that fails to apply looks exactly like a gate that
+passed.
+
+One trap worth recording: the include-list anchor used for the config edit is
+**not unique** - the `ai-attribution` rule ends its list on the same string and
+appears first in the file. A plain replace would have widened the wrong rule and
+left this one untouched, with the gate still reporting three rules and still
+passing. The uniqueness assertion caught it; the edit is scoped to the slice that
+starts at the rule's own id.
+
+### Needs a decision (owner)
+
+- The four immutable npm tarballs above (5.2.40, 5.2.41, 5.2.42, 5.2.44).
+- The three merged PR bodies that name consumer repositories. Still not edited -
+  editing a merged body is the owner's call. The new gate prevents the next one;
+  it cannot retract these.
+## SLA compliance had two definitions and shipped the wrong one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-172-sla-single-definition. No version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/172.
+
+### What was wrong
+
+`slaComplianceRate` in `src/metrics.ts` computed `resolved / not-new`, a
+resolution rate, under an SLA name. The real deadline logic lived in
+`src/sla-engine.ts`. The two had never been executed against the same input in
+the same process, in code or in a test, so they disagreed in both directions for
+every release from v4.8.0 (2026-04-04) to v5.28.1:
+
+| Decisions | Old rate | `checkSlaCompliance` |
+|-----------|----------|----------------------|
+| two accepted-risk | 0 | 0 breaches |
+| all in-remediation, inside deadline | 0 | 0 breaches |
+| one `new`, 30 days past a 24h SLA | 100 | 1 breach |
+| none at all | 100 | 0 breaches |
+
+The third row was not in the issue and is the dangerous direction: the metric
+excluded `new` from its denominator while the engine evaluated it, so a report
+could show 100 percent compliance next to real breaches.
+
+### What changed
+
+One definition, `slaVerdict` in `src/sla-engine.ts`, returning
+`compliant | at-risk | breached | unmeasurable`. `checkSlaCompliance` builds its
+findings from it and `src/metrics.ts` counts its verdicts. `slaComplianceRate`
+became `number | null`, floored rather than rounded, so the published invariant
+is exact: when the rate is non-null, it is 100 if and only if the engine reports
+zero breaches over the same decisions. `mttrCritical` was removed from
+`SecurityMetrics`; it was assigned `undefined` unconditionally and was always
+absent from JSON output.
+
+The "when non-null" qualifier is a correction. An earlier revision of this entry,
+the CHANGELOG entry, the `SecurityMetrics` doc comment and the pull request body
+all stated the biconditional unrestricted, and unrestricted it is false in one
+direction. Executed on this branch, 2026-08-22: an empty decision set gives
+`checkSlaCompliance` 0 breaches and `slaComplianceRate` `null`, not 100; two
+decisions whose `decidedAt` cannot be parsed give the same pair; and the control,
+one `resolved` decision, gives 0 breaches and 100. So zero breaches does not
+imply 100. The other direction needs no qualifier: 100 does imply zero breaches.
+The code and the tests were already right about this. The cross-check in
+`src/__tests__/sla-engine.test.ts` asserts the weaker, correct form,
+`if (breaches === 0) expect(rate === null || rate === 100).toBe(true)`; only the
+prose overreached, and only the prose changed.
+
+Both are breaking for TypeScript consumers of the library API and nothing else:
+no gate, exit code, workflow, Action input or output, non-JSON report format or
+MCP field reads either one. The CHANGELOG entry says so plainly.
+
+### Assumptions now written next to the code, not left implicit
+
+- `resolved`, `false-positive` and `accepted-risk` are compliant by status with
+  no date read. An accepted risk is a recorded decision not to remediate, so it
+  has no deadline to miss. The alternative, that acceptance should expire and be
+  re-approved, needs an expiry field on `TriageDecision` that does not exist and
+  is an owner decision.
+- An unparseable `decidedAt` is `unmeasurable`, excluded from both sides of the
+  rate rather than counted as compliant, so a corrupt triage store reports "not
+  measured" instead of "perfect".
+- A `decidedAt` in the future is compliant. Clock skew between machines writing a
+  committed triage file is ordinary and any future-dating cut-off would be an
+  invented number.
+- `at-risk` is inside the SLA. The 0.8 warning fraction is named
+  `AT_RISK_FRACTION` and documented as the pre-existing value it is.
+- `Math.floor` rather than `Math.round`, because rounding lets one breach in 200
+  decisions report as 100.
+
+### Two gaps found and deliberately not closed here
+
+1. **`checkSlaCompliance` has no caller**, so `SLA_BREACH_CRITICAL` and
+   `SLA_AT_RISK` cannot reach a scan report at all. Filed as
+   https://github.com/homeofe/supply-chain-guard/issues/194 (T-021). It is the
+   structural reason the contradiction above stayed invisible from the CLI: only
+   one of the two definitions ever ran. Wiring it in changes risk score and exit
+   code for adopters of triage, which is a decision, not a patch.
+2. **`TriageDecision.dueDate` is never consulted** by either the engine or the
+   metric; the deadline is derived from the rule id. The field is declared and
+   accepted from the triage store, so it looks like it works. This is now stated
+   in a comment at the line that would have to change. Honouring it would move
+   the deadline for every project that already sets it, so it is an owner call.
+
+### Owner decision recorded, not deferred
+
+The issue's acceptance criteria required that the empty decision set stop
+returning 100. The two ways to do that are a nullable type (chosen) or a rename
+to `resolutionRate` keeping the old arithmetic (rejected: it preserves a number
+nothing consumed, under a second name, and leaves the SLA field missing). The
+nullable type is breaking for TypeScript consumers, so the release carrying it
+should be at least a minor bump with the CHANGELOG note that is already written.
+## Every checkout now states whether it keeps the token (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/checkout-credential-contract. No version bump.
+
+Addresses the first of the three items in
+https://github.com/homeofe/supply-chain-guard/issues/179. The other two are settled
+below rather than changed, and the reasons are the point.
+
+### What was true
+
+`actions/checkout` writes the job's `GITHUB_TOKEN` into `.git/config` as an
+`http.<origin>/.extraheader` basic-auth header unless the step sets
+`persist-credentials: false`. At the pinned v7.0.1 that input defaults to `true`.
+Measured at `1a141fe8322345dbd8ec3c449a402eedc3c6d83f`: 8 checkout steps across 4
+workflows, and `git grep -i 'persist-credentials'` over the whole repository exited
+1 with zero matches. Every one of them took the default.
+
+### Why it was not exploitable, which is the actual finding
+
+Five independent controls each closed a leg, and none of them is about checkout:
+every real `npm` invocation passes `--ignore-scripts`; there is no
+`pull_request_target`, `workflow_run` or `issue_comment` trigger anywhere, so a fork
+pull request can never hold a write token; `.dockerignore` excludes `.git` and the
+`Dockerfile` uses named `COPY`s, so the token cannot reach a published layer even
+though the build context is `.`; the three `upload-artifact` paths are narrow; and
+every `uses:` reference is pinned to a commit SHA.
+
+So this is defence in depth, and it is worth taking for exactly that reason: the
+token's absence was a property of five other decisions, any one of which could move
+without anyone connecting the move to a credential sitting in a workspace.
+
+### What changed
+
+All 8 steps now state their choice. Seven set `false`. One sets `true`:
+`ci.yml`'s `update-major-branch` job, whose only purpose is
+`git push origin "HEAD:refs/heads/${MAJOR}"`, the only push in this repository. git
+reads that credential from `.git/config`, so `false` there would not harden anything;
+it would freeze the floating `v5` branch that every Action consumer resolves. The
+reason is written on the step itself, not only in the test.
+
+`src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism, 6 assertions.
+It treats an omitted key as a failure rather than as a default, because from outside
+a missing key and a considered `true` are indistinguishable and only one of them is a
+decision. An exception is valid only if the job it names actually runs a remote git
+command, so the allowlist cannot become a place to park inconvenient steps. The
+converse is asserted too: a job that DOES run one must be an exception, so this
+contract cannot break a release push by "hardening" it. And the number of steps the
+block walker classified must equal the number of `actions/checkout` lines in the same
+files, so a walker that silently stopped resolving steps fails instead of passing
+vacuously.
+
+### The two items that were not changed, and why
+
+**`delete_branch_on_merge` is `false` and no pull request can change it.** It is a
+repository setting on GitHub, not a file. Recorded as T-020 in `NEXT_ACTIONS.md` with
+both options written out, and in `docs/ci-and-release.md` under "Settings that live
+on GitHub, not in this repository", because this project keeps zero open issues and
+the issue tracker is therefore the one place it would not survive. Measured cost
+today: across 114 merged pull requests, 112 branches were removed anyway and 2
+survived.
+
+**The AAHP CLI pin was left at 3.9.2 here on purpose, because bumping it is already
+in flight in https://github.com/homeofe/supply-chain-guard/pull/186 and the bump
+does not work alone.** Verified by
+execution rather than by reading the release notes: with 3.10.0 installed in a
+checkout of this repository, `aahp verify . --level ci` with no base reports
+`FAIL: Level ci requires an explicit base commit via --base SHA or AAHP_BASE_SHA`
+and one blocking issue, where 3.9.2 on the same tree printed
+`OK: No source files changed outside .ai/handoff/` and passed. So bumping the pin
+without also passing `AAHP_BASE_SHA` in `aahp-verify.yml` turns a REQUIRED status
+check red on every run. Two changes to one workflow from two branches at once is how
+one of them gets lost, so this branch touches only the `with:` block of that
+workflow's checkout step and leaves the `env:` and the pin to the branch that owns
+them.
+
+Worth recording separately: the pin sitting one release behind is not a broken
+mechanism. `.github/dependabot.yml` scans npm weekly on Monday and has opened bump
+pull requests for this exact package before. 3.10.0 published on a Friday, the
+measurement was taken on the Saturday, and the next scheduled scan was the Monday.
+The bound that follows is now written down in `docs/ci-and-release.md` rather than
+left to be rediscovered: up to seven days plus merge latency, against a CLI whose
+median gap between its 17 published versions is 4 days.
+
+### Verification
+
+Found on the way past, and recorded rather than fixed: `compat (Node 22)` is FLAKY on
+`multi-line-pattern-engine.test.ts > keeps exact greedy/lazy endpoints on 5 MiB
+repeated completions`. It failed on unmodified `main` at `1a141fe`, failed again on a
+branch changing only CI metadata, and passed on that same branch one amend later, while
+`compat (Node 20)` passed every time. It is a wall-clock assertion with a 15 s timeout
+around a 10 s budget, and the losing run took 16573 ms. That belongs to T-012 in
+`NEXT_ACTIONS.md`, where the three runs are now tabulated.
+
+`npx vitest run src/__tests__/workflow-checkout-credentials.test.ts` and
+`src/__tests__/workflow-trigger-contract.test.ts`, both green, plus a mutation proof:
+deleting the single line `persist-credentials: false` from `demo.yml` turns the
+contract red and vitest exits 1. The full suite is not run on Windows; required Linux
+CI is the verdict.
+## The npm scanner took its feed from the reporting accessor (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch perf/issue-177-npm-scanner-feed-reuse. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/177
+
+### What was actually wrong
+
+Not the cache. `bareNpmIndexCache` in `src/install-guard.ts` is correct, and the
+hoist that pulls the feed out of the dependency loop works. The defect was one
+level up: `src/npm-scanner.ts` sourced its feed from `getBundledFeed()`, whose
+documented job is reporting and export and which therefore returns a defensive
+copy per call. The index is memoized on the array's IDENTITY, so a new array per
+call meant the index was rebuilt from all 12,962 entries every time. Every other
+scanner takes its feed from `loadThreatIntel()`, which returns the shared array
+and says so. This scanner was the only one that did not, and nothing in the types
+or the tests distinguished the two accessors.
+
+The second cost was the same shape: `MALICIOUS_PACKAGE_PATTERNS` is exported as
+`string[]`, so the loop compiled all 34 patterns per dependency, while
+`validateRegexStringSet` had already compiled them at module load and thrown the
+results away.
+
+### Measured, before and after
+
+Both trees built and driven through the same harness, three process runs each.
+
+| | before | after |
+|---|---|---|
+| index builds, three package scans in one process | 6 | 1 |
+| index builds per `scanNpmPackage()` | 2 | 0 or 1 |
+| 112 dependencies, ms in the two feed-consuming functions, warm | 8.41 / 8.37 / 8.15 | 0.19 / 0.21 / 0.24 |
+| 200 dependencies, same | 9.72 / 7.99 / 10.01 | 0.26 / 0.32 / 0.25 |
+| first scan shape in a fresh process, 112 dependencies | 15.9 to 17.7 | 9.3 to 10.5 |
+| short-lived heap over 20 such scans | 4.75 MB each | 0.16 MB each |
+
+112 is the largest dependency count observed on the registry across express,
+eslint, webpack, typescript, `@angular/cli` and react-scripts.
+
+**No end-to-end speed-up is claimed.** The same three real registry scans took
+1,063 / 4,593 / 9,187 ms before and 1,447 / 10,066 / 15,645 ms after, which is
+download variance, not a regression: an npm scan is network bound and the saving
+is well under one percent of it. The value is in the MCP server, where the
+process is long lived and the waste repeated per request, and in removing the
+divergence itself.
+
+### What is now enforced rather than documented
+
+`getBundledFeedRef()` returns `Object.freeze(BUNDLED_FEED)`, so a structural
+mutation throws instead of silently invalidating every derived index. The freeze
+is shallow by a recorded decision written next to the accessor: deep-freezing
+12,962 entries costs 1.32 ms against 0.0014 ms, and those entry objects are
+shared by reference into what `getBundledFeed()` and `loadThreatIntel()` return,
+so freezing them would be a breaking change for embedders.
+
+### Open decision for the owner
+
+`scg npm <package>` reads the bundled feed only and therefore never sees IOCs
+added by `feed refresh`, while `scg scan` does. Verified here: bundled 12,962
+entries against 12,963 merged with a synthetic refreshed entry, a MISS on the
+npm path and a HIT on the scan path, with a control name from the bundled feed
+hitting on both. That is a coverage question, not a performance one, and it was
+deliberately left unchanged. Tracked as T-020, with both options written next to
+the code that would change.
+
+Also for the owner: the issue carries `bug` and `priority: medium`. Nothing here
+produced a wrong verdict, so `enhancement` and `priority: low` fit the measured
+impact better. The labels were left alone.
+
+### Environment note
+
+`src/__tests__/campaigns.test.ts` fails two tests on this Windows machine,
+"Phantom Bot C2 domain" and "the GlassWASM delivery host". Identical failures,
+same two names and the same 2 failed / 337 passed count, on the unmodified tree
+at the same commit. Pre-existing and unrelated; Linux CI gives the real verdict.
+## The scanned tree's own policy file is input, not configuration (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/internal-disclosure-config-containment. No
+version bump. Remediates
+https://github.com/homeofe/supply-chain-guard/issues/169; the pull request is
+https://github.com/homeofe/supply-chain-guard/pull/183 and the issue is left open
+for the owner to close.
+
+### What was actually wrong
+
+Not a missing check. The containment predicate this needed was already written in
+this repository, twice, and the deny-list loader used neither. The reasoning that
+allowed that is visible in the old comment beside the code: it asked whether the
+configured path STRING was safe to print, correctly concluded that a committed
+path is already public, and never asked the separate question of whether the
+CONTENTS at that path are inside the trust boundary.
+
+The same gap explains the regular-expression half. `MAX_MATCH_ATTEMPTS_PER_RULE`
+and the `performanceBudget` test helper bound the patterns this project wrote.
+Neither reached the patterns a scanned repository writes.
+
+`hashedTerms` and `suppress` were designed with the scanned tree's trust level in
+mind. `externalFile` and `patterns` were not, and `.supply-chain-guard.yml`
+travels inside a tree whose owner is routinely not the operator.
+
+### What changed
+
+`externalFile` from the committed config must resolve inside the scanned
+directory: absolute paths, `..` traversal and symlink escapes are refused BEFORE
+the file is opened, so the existence, permission and per-line reporting that
+follow a read cannot describe anything outside the tree. A committed regular
+expression is capped at 200 characters and refused when it quantifies a group
+that already contains a variable quantifier. What survives runs under a scan-wide
+wall-clock budget. Refusals are reported as `INTERNAL_DENYLIST_REFUSED` (medium),
+registered both in `PARTIAL_SCAN_RULES` and in the `coverage_rule` list in
+`action.yml`, so the Action fails closed on them.
+
+Containment reuses `isContainedPath` and `hasContainedExistingAncestor` from
+`src/pattern-scanner.ts`, now exported instead of copied. The shape classifier
+`hasNestedUnboundedQuantifier` was added beside the existing
+`hasBroadUnboundedConsumingGap` in `src/regex-complexity.ts` and reuses its
+parsing primitives.
+
+### Numbers worth keeping
+
+- The pathological committed pattern `/(a+)+$/` against a non-matching line built
+  from a run of 34 characters did NOT complete within a 60,000 ms budget before
+  the change.
+  After it, the same scan completes in under 300 ms and reports the refusal. At
+  the worst input the deny-list pass still inspects, a line of 1,998 characters,
+  it also completes in under 350 ms.
+- A legitimate deny-list of six ordinary entries over this project's own `src/`
+  tree (196 files, 96,133 lines, 5.23 MB) consumes 108 ms of the matcher budget.
+  That measurement is why the budget is 30 seconds and not two: overrunning is
+  reported and makes the scan partial, so a budget set too low fails loudly on a
+  clean repository.
+- 85 existing tests in `src/__tests__/internal-disclosure.test.ts` surrounded this
+  defect without covering it. Every one of them wrote its external file inside the
+  scan root with a bare relative name.
+
+### What this does NOT close, stated where the next reader meets it
+
+An independent review before merge measured three limits that the first draft of
+this entry, the CHANGELOG and two code comments all described as tighter than
+they are. All three are now stated in `README.md`, in `CHANGELOG.md`, in the doc
+comments on `hasNestedUnboundedQuantifier` and `SCANNED_TREE_MATCHER_BUDGET_MS`,
+and pinned by tests, and all three stay open on
+https://github.com/homeofe/supply-chain-guard/issues/169.
+
+- **The shape check is not exhaustive, so the third acceptance criterion is
+  partially met, not met.** `hasNestedUnboundedQuantifier` reads the source text,
+  which cannot see ambiguity arising from overlapping alternation. `/(a|a)+$/`,
+  `/(a|ab)+$/` and `/(a+){2,30}$/` are all accepted, all clear the
+  200-character cap, and all remain catastrophic. Measured here: `/(a|a)+$/`
+  against a non-matching line of 27 characters spends about 16 seconds inside a
+  single `exec`, and the budget is checked between matcher invocations, so it
+  cannot interrupt one. Closing this needs a matcher that can be stopped
+  mid-match, which is a different change.
+- **The check also over-refuses, and it over-refuses the common case.** The
+  chained-label hostname shape `/(?:[a-z0-9-]+\.)+corp\.example/` is refused
+  even though it is linear in practice, in `patterns` and in a gitignored
+  in-tree `externalFile` alike. Because the refusal is a coverage rule, a
+  consumer who has that pattern today meets this as a red build and a term that
+  silently stops being matched. `/[a-z0-9.-]+\.corp\.example/` is the accepted
+  rewrite, and both documents now say so before the upgrade rather than after.
+- **Containment is to the scanned directory and nothing narrower.** A committed
+  `externalFile: .git/config` stays inside the tree and is still read: verified
+  here, the load reports `INTERNAL_DENYLIST_INVALID_ENTRY` naming `.git/config
+  line 3` and the scan reports a redacted match naming `.git/config line 2`. So
+  the per-line compile-failure oracle and the whole-line guess-confirmation
+  oracle survive against whatever the runner wrote into the workspace, retargeted
+  from outside the tree to inside it. Redaction still holds.
+
+One policy consequence was taken without being flagged as one, and is the
+owner's to confirm: the issue asked for `INTERNAL_DENYLIST_REFUSED` to be a
+coverage rule so an attacker-supplied refusal fails the gate closed. The same
+rule now fails an operator's own build closed when their own pattern is refused.
+Whether that should stay build-breaking or become advisory is recorded on the
+issue.
+
+### Open, and deliberately not done here
+
+- The operator-supplied `SCG_INTERNAL_DISCLOSURE_FILE` source is untouched,
+  including its line-number reporting for a file outside the tree. That source is
+  chosen by whoever runs the scan, and per-line reporting is what makes a silently
+  broken deny-list visible. Recorded as a decision in the code, open for the owner
+  to revisit.
+- No size cap on the read that containment still allows. With containment the file
+  is inside the tree the runner already downloaded, so a cap bounds a memory copy
+  rather than a new capability. Separate change.
+- The published composite Action still declares no `timeout-minutes`. It is a
+  property of the Action rather than of this defect and changes behaviour for
+  every consumer, so it belongs in its own pull request.
+## The em-dash rule was enforced on a set of files that held none of them (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/em-dash-rule-scope. No version bump.
+
+An audit reported 77 em dashes across 17 files "with no check enforcing the
+rule". Half of that was wrong in a way worth keeping: a check did exist, it ran
+on every pull request, and it sat inside a required status check. It was green,
+truthfully, because the `em-dash` rule's `include` list named six pathspecs and
+those six matched none of the 17 files. The gate answered the question it was
+asked. Nobody had noticed the question had drifted away from the rule.
+
+### What was actually wrong
+
+Three things, in the order they matter.
+
+1. **Opt-in scope fails open.** Every file created after the rule was written
+   was outside it by default, silently. The `include` list is now the single
+   pathspec `*`, so a file is covered the moment git tracks it and the only way
+   out is a reviewed entry.
+2. **A config line read like a mechanism and was not one.** `exclude` held
+   `CHANGELOG.md`, which every reader took for the reason the changelog went
+   unchecked. It was inert: a non-empty `include` REPLACES the gate's default
+   file set, so `CHANGELOG.md` was never in scope for `exclude` to remove.
+   Deleting that line alone changed nothing, which was verified before it was
+   removed.
+3. **The only written statement of the rule was the gate's own `message`
+   field**, and it said "banned in docs". Under that wording the 49 source
+   occurrences were not violations at all. `CONTRIBUTING.md` now carries the
+   scope, and the two narrower scopes that were rejected, with the reason for
+   each.
+
+### The scope decision, and why the other two were rejected
+
+Documentation only was rejected because the one occurrence with measurable reach
+outside this project was not in documentation: it is in `src/slsa-verifier.ts`,
+in the sentence a scan prints for a project with no build script, and it lands
+in the SARIF report adopters upload to GitHub code scanning. Documentation plus
+emitted strings was rejected because no gate can express it, so the rule would
+have gone back to being a review convention, which is the state that let the 77
+accumulate. Every tracked file was chosen because it is the only one of the
+three a gate can decide.
+
+### The second gate, and what it deliberately is not
+
+`scripts/check-em-dash-scope.mjs` runs inside `check:aahp`, before the AAHP
+gates. It never reads file content and never searches for U+2014. There is still
+exactly one em-dash rule and it lives in `aahp.config.json`. The script answers
+the question that rule cannot ask about itself: does its scope still cover the
+repository? It exits 1 when a tracked file is uncovered and unexplained, and 2
+when it cannot determine the answer at all, which includes a pathspec that
+matches nothing and an `exclude` entry that subtracts nothing.
+
+Two files are exempt, each with its reason in `SCOPE_EXCEPTIONS`: the binary
+demo GIF, because a chance byte sequence in compressed image data is not prose,
+and the handoff archive, because its own header declares its entries preserved
+verbatim. Both hold zero occurrences today, so both preserve rather than
+suppress.
+
+### Assumption recorded, so it is not re-derived
+
+The handoff-archive exemption rests on an inference, not on a written policy:
+the file states it is append-only with older entries "preserved below verbatim",
+and that is read as a reason not to rewrite them. The inference is written next
+to the exemption. Anyone who disagrees deletes the `SCOPE_EXCEPTIONS` entry and
+the matching `exclude` line together, and the file is simply covered.
+
+### Open for the owner
+
+Nothing blocks this change. One item is deliberately left out of it: the AAHP
+CLI gate reads each file inside `try { readFileSync } catch { continue }`, so a
+file it cannot read is skipped in silence rather than failing. That is the same
+fail-open class, it ships to every consumer of the governance CLI, and it is not
+this repository's file to fix. It belongs upstream as its own piece of work.
+## A policy-narrowed scan can no longer pass for a clean one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-168-policy-visibility. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/168
+
+### What was actually wrong
+
+The issue's title is about the trust boundary: policy is read from the tree being
+scanned, so a proposed change can disable the rule that would flag it. That much
+is deliberate and unchanged here, because moving it is an owner decision.
+
+The defect that was fixed is the second one underneath it, and it is the reason
+the first one is dangerous rather than merely awkward: the narrowing was
+**silent**. Measured on a directory containing `eval(atob(...))`:
+
+- `rules.disable: [EVAL_ATOB]` took the scan from exit 2 with one critical to
+  exit 0 with none. `suppressedCount` reached 1, but nothing named the rule, and
+  the markdown report, which is the Action's default format and the body of the
+  pull request comment it posts by default, contained the word "suppress" zero
+  times.
+- `ignore: ["app.js"]` was quieter still. `ignore` prunes files before any rule
+  opens them, so `suppressedCount` stayed 0 and **all nine** output formats were
+  silent. Nothing distinguished that report from a genuinely clean one.
+
+The second variant is the severe one, and the issue mentions it only in passing.
+A fix that covered `rules.disable` alone would have passed its own tests while
+leaving the quieter path exactly as it was.
+
+### What changed
+
+- `ScanReport.policyEffect` carries the loaded config's effect as structured
+  metadata: config file, disabled rules, ignored globs, suppressed rules, each
+  with its written reason when one exists. Built by `describePolicyEffect()` in
+  `src/policy-engine.ts`, attached in `src/scanner.ts` next to the policy load.
+  It is `undefined` when the config narrows nothing, so its presence always means
+  something was switched off.
+- All nine formats render it: text, JSON, markdown, SARIF, SBOM, HTML, badge,
+  GitLab and JUnit. Markdown places it **above** the summary, because that is the
+  rendering a reviewer reads before deciding a green check means the change is
+  clean. SARIF carries it as a run-level notification plus
+  `invocations[0].properties`. The badge appends `(policy-narrowed)`, since
+  "clean" on a scan whose config removed a rule is the most misleading string
+  this tool can publish.
+- The v5.2.40 rule is intact and is asserted by a test: policy METADATA is
+  surfaced, suppressed FINDINGS still never enter SARIF, SBOM or GitLab.
+- `POLICY_DISABLE_NO_REASON` and `POLICY_IGNORE_NO_REASON` (medium) bring
+  `rules.disable` and `ignore` up to the audit bar `suppress` has met since v5.3.
+  Both sections now accept a reason-carrying mapping form alongside the list
+  form. Nothing is vetoed: the bare form still disables and still excludes, it is
+  simply reported as undocumented.
+- `README.md` and `action.yml` state where policy is read from and what that
+  means on a `pull_request` event. That was documented nowhere. The README also
+  corrects a `rules.disable` example written as a one-line flow sequence, a form
+  the parser reports as `POLICY_UNKNOWN_KEY` and which disables nothing.
+
+### Evidence
+
+`src/__tests__/issue-168-policy-visibility.test.ts`, 14 tests. The reproduction
+was re-run against a pristine build of the cited commit and against the fixed
+build, same fixtures, same commands: before, `ignore:` produced zero mentions in
+all nine formats; after, all nine name `app.js`, and the `rules.disable` fixture
+names `EVAL_ATOB` in all nine.
+
+Mutation proof: deleting only the `ignoredGlobs` half of `describePolicyEffect`
+leaves the `rules.disable` test green and reddens the `ignore` test, which is the
+mutation that would have caught a decorative fix.
+
+### Still open, and deliberately so
+
+The gate still exits 0 on both fixtures. Making the bypass **loud** is what this
+change does; making it **impossible** means giving the scanner a trusted policy
+source outside the scanned tree, which changes the tool's trust boundary and is
+recorded in the issue as needing the owner. `ScanOptions.policyFile` exists in
+the type and is read by nothing, which is where that work would start.
+## A corrupt state file was a clean baseline, in both stores (2026-08-22, unreleased)
+
+A corrupt state store no longer reads as a clean baseline in either of the two stores.
+Branch `fix/issue-175-risk-history-unreadable`, no version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/175.
+
+Both readers under `.scg-history/` ended in `catch { return []; }`, the same
+value the absent case returns, so "no history yet" and "the store could not be
+read" were one outcome. Reproduced end to end, then re-run against the branch.
+
+### What was measured
+
+Fixture: a project whose recorded risk climbs over ten scans. Removing the last
+120 bytes of `risk-history.json` took the scan from exit 1, level `high`, three
+trend findings, to exit 0, level `low`, none. The suppressed findings are all
+`high` and the default gate with no `--fail-on` is `summary.high > 0`, so the
+gate stopped detecting a regression it detected the day before, in silence.
+
+The triage store was measured too rather than assumed to be the weaker twin, and
+it is not weaker. A truncated `triage-decisions.json` took the same scan from
+exit 1 with two `high` governance findings to exit 0 with none, and reported
+`metrics.slaComplianceRate` 100 where the intact store gave 0. That number is
+the sharper harm: the corrupt file did not only hide a verdict, it manufactured
+a compliant one. That measurement is why both stores are fixed in one change.
+
+Two on-disk states, `null` and `{}`, never reached either `catch`, because both
+readers ended in an `as` cast. They threw an unhandled `TypeError` and produced
+no report at all. Four cases across the two stores, all closed by validating the
+declared entry shape.
+
+Evidence destruction was real and is closed: the truncated file still held nine
+recoverable entries and the next plain scan replaced it with one.
+
+### Decisions a later reader should not have to re-derive
+
+All of these are written next to the code they constrain, not only here.
+
+- Severity `high` on both new findings is derived, not chosen: the findings each
+  one replaces are `high` and the default gate is `summary.high > 0`, so
+  `medium` would reproduce the defect one layer down. Recorded at
+  `riskHistoryUnreadableFinding` in `src/continuous-monitor.ts`.
+- `saveRiskHistory` throws rather than overwriting an unreadable store;
+  `saveTriageDecisions` deliberately does not. The first does a read, append and
+  write, so refusing preserves recoverable entries; the second replaces the file
+  wholesale from its caller's list, so refusing would remove the only supported
+  repair path while preventing no measured loss. Recorded at both call sites.
+- `loadRiskHistory` and `loadTriageDecisions` are deprecated in place rather
+  than re-typed, because both are published API in `src/index.ts`.
+- The three-way reader lives in `src/state-dir.ts`, next to the directory both
+  stores write into, so a third store does not rediscover the rule.
+
+### Open, and it is an owner decision
+
+`SecurityMetrics.riskTrend` and `SecurityMetrics.slaComplianceRate` still read
+`stable` and 100 when a store is unreadable, because neither type has a member
+meaning "unknown". The report is marked `partialScan` and the finding text says
+in words that the metrics came from an empty store, which is what keeps this
+from being a silent wrong answer. Widening either type is a breaking change for
+library and JSON consumers, so it belongs in a major rather than a defect fix.
+The choice and its cost are recorded on `calculateMetrics` in `src/metrics.ts`.
+
+Separately, `saveRiskHistory` still writes with a plain `writeFileSync` onto the
+live path, with no temp file and rename anywhere in `src/`, so an interrupted
+scan can still manufacture the corruption this change now reports. Reporting it
+is in scope here; making it unmanufacturable is a separate change.
+## The engines floor had no ceiling, so the matrix never ran the Active LTS (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/176-compat-matrix-reaches-active-lts. No version bump.
+Reported as https://github.com/homeofe/supply-chain-guard/issues/176
+
+### What the report said, and what was actually wrong
+
+The report compared `.github/workflows/ci.yml` against `package.json` and found a
+Node 20 leg below an `engines.node` floor of `>=22.0.0`. Every count in it
+re-derives exactly. Its conclusion does not follow: `docs/node-support.md` declares
+`supportedMajors` and `transitionMajors` as disjoint lists, the gate already asserted
+a transition major is strictly below the floor, and `README.md` tells consumers the
+package requires Node 22 or newer. The Node 20 leg is a dated, gate-enforced
+transition lane, deleted in 5.29.0 by an assertion that fails the build. It stays.
+
+The report's own measurement contained the real defect, one line below its headline:
+**legs above the floor, 0 of 2.** `engines.node` is a floor with no ceiling, so
+`>=22.0.0` claims Node 22 and every major after it, and the matrix stopped at 22. Read
+against the upstream `nodejs/Release` schedule on 2026-08-22, Node 22 had been in
+Maintenance LTS since 2025-10-21 and Node 24 had been Active LTS since 2025-10-28. The
+only major the project supported was the one already in maintenance, and the major
+consumers are migrating onto was claimed and never executed. `@types/node` is on the
+Node 26 API surface, so an API available only above Node 22 would have type-checked
+clean, passed both legs, and failed in a consumer's hands.
+
+### What changed
+
+`docs/node-support.md` gains `activeLtsMajor` (24) and `activeLtsReviewedIn` (5.29.0),
+`supportedMajors` becomes `[22, 24]`, and the `compat` matrix becomes 20, 22 and 24.
+`src/__tests__/node-version-contract.test.ts` gains ten cases: five that assert the
+claim reaches the top of its own range and carries a re-read deadline, and five that
+assert the workflow comment keeps naming the policy vocabulary. That comment called the
+matrix "every Node major this package supports" four lines above a pointer to the policy
+whose subject is that supported and tested are different lists, which is the most
+plausible reason this report exists at all.
+
+Restoring the exact pre-change configuration turns exactly the two new upward cases red
+and leaves the other 36 green, which is the demonstration that nothing in the repository
+could see this before.
+
+### Decisions recorded in the repository, not here
+
+Both live in `docs/node-support.md` so the next reader meets them at the code:
+
+- **Why the bound is the Active LTS**, with the two rejected alternatives and their
+  costs. `engines.node` deliberately keeps no upper bound, so majors above the Active
+  LTS (Node 26 today) are claimed and not executed. That residual is stated, and the
+  alternative that would close it is written out with exactly what to change.
+- **Why `activeLtsMajor` is hand-copied rather than fetched**, what the gate can and
+  cannot catch about a hand-copied fact, and why the deadline is `5.29.0`.
+
+### What adding the third leg exposed, and why it had to be fixed here
+
+The Node 24 leg went red on its first run, and the cause was not Node 24. The perf case
+`keeps exact greedy/lazy endpoints on 5 MiB repeated completions` in
+`src/__tests__/multi-line-pattern-engine.test.ts` timed out at 15,070ms against a bare
+`timeout: 15_000`. Measured across the three legs of that single run: Node 20 8,734ms,
+Node 22 13,622ms, Node 24 15,070ms. The same case had already failed the **Node 22** leg
+on `main` at `1a141fe`, at 15,137ms, with no Node 24 anywhere. The budget sits inside the
+runner's own noise band, so it reports noise, not an algorithmic regression.
+
+Underneath that is a real inconsistency. `npm run test:coverage`, the only command the
+compat legs run, sets `SCG_VITEST_COVERAGE=1` in `vitest.config.ts`, which makes
+`performanceBudget` multiply by five. So the assertion inside that test allowed 50,000ms
+while the harness killed it at 15,000ms: **the guard could never be reached under the
+command CI actually runs.** Both `it` options in that file now use
+`performanceBudget(15_000)`, which is what every sibling perf test already did. Outside a
+coverage run `performanceBudget` is the identity, so `npm test` is bit for bit unchanged,
+and the algorithmic guard, `performanceBudget(10_000)`, is untouched.
+
+### Open for the owner
+
+The same bare-literal pattern is still elsewhere, deliberately left because it is outside
+this change and touching a dozen test files in a Node matrix pull request would be worse
+than naming it. Counted, not estimated:
+
+- **2 files import `performanceBudget` and still use a bare `timeout:` literal**, which is
+  exactly the inconsistency fixed above: `src/__tests__/core-broad-gap-matchers.test.ts`
+  and `src/__tests__/internal-disclosure.test.ts`.
+- **10 further files use a bare `timeout:` literal** without importing it. Some of those
+  have no scaled assertion to disagree with, so they need reading rather than rewriting.
+
+A gate could assert that no file importing `performanceBudget` also carries a bare
+`timeout:` literal. It is not added here, because it would be red on the two files above
+on the day it landed, and a gate that ships red teaches people to ignore it.
+## Docker base image pinning: one parser, three verdicts (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-174-docker-base-image-pinning. Issue
+https://github.com/homeofe/supply-chain-guard/issues/174. No version bump.
+
+`DOCKER_UNPINNED_BASE` was one regex and it was narrower than its own five tag
+words. Measured on the released rule over 19 representative `FROM` lines: 5
+flagged, and those 5 were exactly the five bare literal words. Three shapes
+inside the rule's own stated scope scanned clean:
+
+- `FROM --platform=$BUILDPLATFORM node:latest`, because `\S+` bound to the flag
+  token. End to end through the CLI: risk score 2, zero high findings,
+  `--fail-on high` exit 0, on a line carrying a literal `:latest`.
+- `node:lts-alpine`, `nginx:stable-alpine`, `nginx:mainline-alpine`,
+  `node:current-slim`, because the alternation ended at `(?:\s|$)`. The suffixed
+  forms are the upstream rolling tags and the ones people write.
+- `FROM scratch-base:latest` and `FROM scratchpad:latest`, because `(?!scratch)`
+  had no token boundary.
+
+Widening the regex was not available: two of the three misses are structural,
+and `validatePatternSet` rejects the obvious widened forms at module load as a
+broad unbounded consuming gap. All three `FROM` rules now share one
+`correlatedMatcher`. It strips instruction flags, joins backslash continuations,
+drops comment lines, tracks `AS <stage>` names in file order, and exempts
+`scratch` only as a whole token. Because the three rules read the same parse,
+they can no longer disagree about what a build-stage reference is.
+
+### The two decisions, both recorded in the repository
+
+Both are written into `docs/ARCHITECTURE.md`, "Base Image Pinning (decision
+record)", and summarised next to the code in `src/dockerfile-scanner.ts`. Neither
+lives only in a pull request.
+
+1. **Tiering.** The issue asked for one rule at `high` for every `FROM` line
+   without a digest. Not taken. `high` is what the default gate fails on
+   (`getReportExitCode` returns 1 when `summary.high > 0`), so one high tier
+   flips every ordinary version-tagged Dockerfile in every consumer from pass to
+   fail in one release, for a risk that has not changed. Instead
+   `DOCKER_UNPINNED_BASE` stays `high` for a moving channel tag and the new
+   `DOCKER_TAG_NOT_DIGEST` reports a tag without a digest at `low`, mirroring
+   `GHA_UNPINNED_ACTION` / `GHA_TAG_NOT_SHA`. Default gate, `--fail-on high` and
+   `--fail-on medium` unchanged; `--fail-on low`, `--fail-on info` and the risk
+   score do change.
+2. **Compose.** `image:` values stay out of scope, said out loud in each rule's
+   `description`, in README.md and in `docs/ARCHITECTURE.md`. Nine of nine
+   Docker rules are anchored on a Dockerfile instruction keyword, so a Compose
+   file returns nothing from the Docker rule set while the README used to list
+   it as a scanned Docker target. The blocker for implementing it is recorded:
+   a service that also declares `build:` uses `image:` to name what it BUILDS,
+   and telling the two apart needs service-block structure, which this project
+   has no YAML parser for.
+
+### Deliberate behaviour changes a consumer will see
+
+- Newly reported at `high`: `--platform` lines carrying a channel tag, suffixed
+  channel tags, `scratch`-prefixed names, and `FROM ubuntu AS base` (no tag).
+- Newly reported at `low`: every `FROM` line with a tag and no digest.
+- No longer reported: a build-stage reference (`FROM builder`), a commented-out
+  `FROM`, and `FROM` appearing inside another instruction.
+- A `FROM` line carrying an embedded carriage return still classifies. Writing
+  the instruction regex the obvious way, anchored with `$`, would have made
+  `FROM node:latest\rEXTRA` scan clean, because JavaScript's `.` stops at a line
+  terminator. The released regex did report it, so this would have been a
+  regression introduced by the fix rather than a gap left in place. Caught while
+  reading the finished parser, not by the test suite, which is the argument for
+  reading a structural rewrite line by line before shipping it.
+- The report-level "pin base images by digest" recommendation in `src/scanner.ts`
+  now also fires for `DOCKER_TAG_NOT_DIGEST`, so a report whose only base-image
+  finding is the new tier is not left without a recommendation.
+- This repository's own `Dockerfile` stays clean: both `FROM` lines are digest
+  pinned, and a self-scan reports zero `DOCKER_*` findings.
+
+### Open for the owner
+
+Nothing blocks the merge. One judgement is worth a second opinion: whether
+`DOCKER_TAG_NOT_DIGEST` should ship at `low` or at `medium`. `low` was chosen
+because it matches the in-repo Actions precedent and leaves every existing gate
+where it was. `medium` would make it visible to `--fail-on medium` consumers and
+is a one-word change in `src/dockerfile-scanner.ts`; the trade-off is written out
+in `docs/ARCHITECTURE.md`.
+## Feed acquisition is bounded, on both paths (2026-08-22, unreleased)
+
+Branch fix/issue-170-feed-timeout-and-size-cap. No version bump.
+Closes https://github.com/homeofe/supply-chain-guard/issues/170 once reviewed.
+
+### What was wrong, and where the issue was incomplete
+
+The issue named one function, `updateThreatFeed`, which is exported library API
+that no CLI command calls. The command the README documents,
+`supply-chain-guard feed refresh`, went through a SECOND downloader in
+`src/feed.ts` with the same two defects and no backstop of any kind. Fixing only
+the function the acceptance criteria name would have closed the issue green with
+the shipped command unchanged.
+
+Measured on the base commit against a loopback peer that sends headers and then
+stalls: `feed refresh` ran 150 seconds with empty stdout, empty stderr and no
+exit, and was killed at the cap. The identical command against a healthy peer
+finished in 0.28 seconds. A 64 MiB chunked body was accepted in full.
+
+### Root cause
+
+Not a forgotten timeout. `src/remote-download.ts` already existed and already
+implemented every bound this issue asks for, and `src/npm-scanner.ts`,
+`src/pypi-scanner.ts` and `src/vscode-scanner.ts` already used it. Registry
+acquisition was hardened behind that shared module; feed acquisition was the one
+caller that never adopted it, and nothing in the build requires a new outbound
+request to go through it.
+
+A contributing cause sits in the tests. `src/__tests__/feed.test.ts` mocks
+`node:https` wholesale and delivers the whole body in one tick, so none of its
+six `refreshFeed` tests could observe a stall. The suite passed around the
+defect rather than over it.
+
+### What changed
+
+- `FEED_REMOTE_LIMITS` in `src/threat-intel.ts`, beside the cache constants:
+  32 MiB, 30 s, 5 redirects. The byte figure is roughly ten times the published
+  feed; the other two are the values the registry scanners already use.
+- `refreshFeed` delegates to `fetchHttpsBuffer`. The hand-rolled request is gone,
+  and with it a second defect in the same function: it decoded each chunk
+  separately, so a multi-byte UTF-8 sequence split across a chunk boundary became
+  replacement characters.
+- `updateThreatFeed` keeps the global `fetch` and its quarantine-and-continue
+  validation, and gains an `AbortSignal` deadline, a `Content-Length` refusal
+  before the body is touched, and a running byte count while streaming.
+- Both take an optional per-call limit override; both default to the constant.
+- New suite `src/__tests__/issue-170-feed-bounds.test.ts` drives a real loopback
+  server rather than a mock, because a mock that answers in one tick cannot
+  represent a peer that stalls.
+
+### The one decision left for the owner
+
+`updateThreatFeed` was hardened in place rather than turned into a wrapper over
+`refreshFeed`. The wrapper would remove the second implementation, which is the
+better end state, but it is a behavioural change to exported, documented API:
+`parseFeedPayload` hard-rejects a bad entry where `updateThreatFeed` quarantines
+it and continues, and the error strings differ. That belongs in its own change
+with its own changelog entry, not smuggled in behind a timeout fix.
+
+Also for the owner: the acceptance criteria on the issue are satisfied by the
+`updateThreatFeed` half alone and need rewriting to name `src/feed.ts` as well,
+or the next reader will conclude the CLI path was out of scope.
+## Threat-intel sweep 2026-08-22: a 4,363-entry backfill answered with one rule (unreleased)
+
+Model: claude-opus-5. Branch threat-intel/2026-08-22. No version bump.
+
+The scheduled import proposed 4,409 new IOCs and refused to exit clean: at the
+default `--limit 250`, 2,659 of the remainder would age out of the `--days 14`
+window before any later run could reach them.
+
+### What the backlog actually was
+
+4,363 of the 4,409 were a single publisher's namespace, `@zalastax/nolb-*`,
+backfilled into the GitHub Advisory Database on 2026-08-14 from
+ossf/malicious-packages. All are all-versions ranges on names published in
+Jan/Feb 2023. The real signal in the window was the other 46.
+
+Two registry checks decided the response, and the first one was misleading on its
+own. A liveness check said the packages exist, are not unpublished, and predate
+the advisory by three years, which reads as a live gap. Reading the version
+contents corrected it: they are npm SECURITY HOLDING PACKAGES. Of a 14-name
+spread sample, 12 carry only a `0.0.1-security` placeholder and 2 still have
+their original 2023 version alongside it. So the payload is largely gone and the
+names have no legitimate release history, which is what makes a bare-name rule
+safe here, the same reasoning the SANDWORM_MODE set already uses.
+
+Taken as feed entries, they would have grown the bundled feed 34% (12,962 to
+17,325) and added roughly 1 MB to `feed.json`, shipped to every consumer, for one
+publisher's taken-down 2023 squats. They are covered by one anchored pattern in
+`MALICIOUS_PACKAGE_PATTERNS` instead, and the 46 real entries were imported
+normally through the project's own writer.
+
+### Needs a decision
+
+**`MALICIOUS_PACKAGE_PATTERNS` does not reach the generic directory scan.** It is
+read by the npm-scanner name check and its `package.json` fallback. The directory
+scan in `scanner.ts` matches exact feed names only, deliberately, because the
+pattern table holds broad rules such as `^[a-z]{20,}$` that would produce false
+positives there. That is the surface the GitHub Action runs, so a
+pattern-only campaign is invisible to it.
+
+Taken-down names make the residual gap small in this case, but the general
+question is open and it is not this job's call to settle: should the directory
+scan consult a NARROW subset of the pattern table, or should any campaign that
+matters on that surface always be paid for in feed entries? Today's answer was
+the pattern, on the grounds that the names are dead. A live campaign of this
+shape would need the other answer, and there is currently nothing that forces
+that choice to be made deliberately.
+
+Second, smaller: the importer has no way to exclude a namespace, so every future
+run will re-propose these 4,363 and refuse to exit clean until they age out
+around 2026-08-28. Runs in that window need `--allow-backlog` or a namespace
+filter in `scripts/import-threat-feed.mjs`.
+
+### Enrichment (STEP 1b) found nothing addable
+
+Socket, Aikido, StepSecurity, safedep, OX Security and The Hacker News were all
+checked for write-ups newer than the v5.28.1 sweep. Every atomic indicator they
+publish is already in the blocklist: the keyv/cacheable Shai-Hulud domains and
+both payload hashes, the arrayref build-time dropper, WEL1DROPPER, the Alibaba
+RAT cluster, Joyfill and the fake Corepack site. The one genuinely new cluster,
+`@postman-cse`, had its advisory published 2026-08-22 00:44 UTC and has no vendor
+write-up yet, so there were no atomic indicators to add beyond the version pins.
+## The release trigger lived in a ref namespace the gates never reach (2026-08-22)
+
+Branch fix/release-ancestry-gate. No version bump. Closes the ancestry half of the
+release-authority finding; two named items stay open for the owner.
+
+### What was true before
+
+Branch protection on `main` requires three contexts. Only one of them, `Build and
+Test`, can exist on a `refs/tags/*` push: required status checks, branch protection
+and `enforce_admins` are all properties of `refs/heads/main`, and `aahp-verify` and
+`PR metadata policy` have no tag-ref run in their histories. `needs: build` did already
+hold the `publish` job until the compat matrix and the container build and scan passed,
+but none of that says where the commit lives, and the one pre-publish check that looked
+at the tag, `Validate immutable release tag`, compares the tag string against
+`package.json`. That check is satisfied by any commit at all whose version field
+matches, so it too carries no information about where the commit lives.
+
+`docs/ci-and-release.md` says to tag the merged commit on `main` and never the
+pre-merge commit. That sentence was written down on 2026-08-20, in the 5.28.0 release;
+135 of the 138 tags to date predate it, so as a written rule in the release runbook it
+governed at most the last three releases. This repository squash-merges, so those two commits always have
+different shas while the content looks identical. Nothing went wrong: measured
+2026-08-22, all 138 semver tags to date are ancestors of `main` and none is not, which
+is what a convention looks like right up until the release where it is not. This closes
+a latent defect, not an incident.
+
+### What changed
+
+`scripts/check-release-ancestry.mjs` fetches `main` and refuses the release unless the
+commit being published is an ancestor of it. It runs in `ci.yml`'s `publish` job before
+every other step, and in `docker.yml`'s `merge` job before the image tags move, because
+that workflow carries its own tag trigger and moves `:latest` on its own. Both jobs now
+check out with `fetch-depth: 0`; the gate refuses to answer in a shallow checkout rather
+than answering from the few commits a depth-1 fetch happens to hold, which is the most
+plausible way it could have decayed into a silent pass.
+
+Each outcome has its own exit code, and "cannot answer" (2, 3, 4, 5) is deliberately a
+different code from "answered no" (6). `src/__tests__/release-ancestry.test.ts` asserts
+the exact codes against real git repositories, and asserts the wiring on comment-stripped
+YAML: with the step deleted, the raw file still contains the script path in a comment, so
+a text search would have reported a gate that no longer runs.
+
+### Still open, and both are owner decisions
+
+1. Whether `aahp-verify.yml` should gain a `tags:` trigger so the handoff gate evaluates
+   the released commit. That changes what a release must satisfy.
+2. Whether a repository ruleset should restrict creation of `refs/tags/v*`. That is an
+   access-control change and needs an explicit bypass list.
+
+Neither is required for the ancestry gate to close the hole. Both are recorded on
+https://github.com/homeofe/supply-chain-guard/issues/167, which this pull request does
+not close.
+
+### What the gate does not reach
+
+Actions runs a workflow from the file present at the pushed ref, so the gate binds only
+tags whose commit already contains it. Two consequences, both stated in the gate script
+header and above the `publish` job rather than only here: a tag cut from a commit that
+predates this change still publishes ungated, and an actor who controls the commit
+controls its `ci.yml` and can omit the step. The gate closes the accident. Only the tag
+ruleset closes the deliberate case.
 
 ---
 

@@ -20,7 +20,7 @@ import {
 import { hasBroadUnboundedConsumingGap } from "./regex-complexity.js";
 export { isPatternApplicableToFile } from "./pattern-applicability.js";
 
-/** Matches the scanner's own source files — used to prevent self-scan false positives. */
+/** Matches the scanner's own source files - used to prevent self-scan false positives. */
 const SCANNER_SRC = /(?:patterns|scanner|playbooks|correlation-engine|ioc-blocklist|threat-intel|remediation-engine|secret-simulator|workflow-modeler|config-scanner|install-hook-scanner|github-trust-scanner|dependency-confusion|attack-graph|reporter|active-validation|solana-monitor|solana-watchlist|slsa-verifier|sbom-generator)\.(ts|js)$/;
 
 // v5.2.21: documentation files (.md/.markdown/.txt/.rst) legitimately discuss
@@ -2253,6 +2253,31 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // and are NOT matched.
   "^(claud-code|cloude-code|cloude|crypto-locale|crypto-reader-info|detect-cache|format-defaults|hardhta|locale-loader-pro|naniod|node-native-bridge|opencraw|parse-compat|rimarf|scan-store|secp256|suport-color|veim|yarsg)$",
 
+  // @zalastax/nolb-* name-reservation flood (GitHub Advisory Database backfill,
+  // August 2026). OpenSSF malicious-packages classified this one publisher's bulk
+  // namespace-squat as CWE-506 and GHSA backfilled it on 2026-08-14: 4,363 advisories
+  // in a single import window, every one an all-versions range (`> 0`) on a name of
+  // the form @zalastax/nolb-<suffix>, all published Jan/Feb 2023.
+  //
+  // Registry-verified 2026-08-22: these are npm SECURITY HOLDING PACKAGES. 12 of a
+  // 14-name spread sample carry only a 0.0.1-security placeholder; 2 still have their
+  // original 2023 version alongside it. So the payload is largely gone and the names
+  // have no legitimate release history - the same situation as the SANDWORM_MODE set
+  // above, where holding-package status is what makes a bare-name rule safe.
+  //
+  // ONE anchored rule rather than 4,363 feed entries: that would be a 34% feed growth
+  // (12,962 -> 17,325) and about 1 MB on feed.json for one publisher's taken-down 2023
+  // squats. Every advisory in the scope carries the nolb- prefix (1,000/1,000 sampled
+  // from ossf/malicious-packages) and the rule is anchored to it, so a non-nolb
+  // @zalastax package does NOT match. A named-publisher namespace rule like the
+  // BufferZoneCorp Go rule above, not the scoped catch-all rejected below.
+  //
+  // LIMIT, on purpose: MALICIOUS_PACKAGE_PATTERNS is read by the npm-scanner name
+  // check and its package.json fallback, NOT by the generic directory scan, which
+  // matches exact feed names only. Taken-down names make that residual gap small,
+  // but it is a gap and not a claim of full coverage.
+  "^@zalastax\\/nolb-[a-z0-9._-]+$",
+
   // NOTE: there is deliberately NO scoped-package catch-all here.
   // A rule of the shape "^@(?!<allowlist>)/.*$" matched 94% of every scoped
   // package on npm, so `scg npm <any scoped package>` exited 1 with riskLevel
@@ -3787,8 +3812,41 @@ export const LURE_PATTERNS: PatternEntry[] = [
   },
   {
     name: "readme-lure-crack",
+    // The `no limits` alternative carries a hyphen guard on both sides, and
+    // only that alternative. `\s*` permits zero spaces, which is what lets the
+    // prose lure "no message limits" also match the six letters "nolimit"
+    // wherever they appear - including inside a hyphenated PACKAGE NAME quoted
+    // in prose. That is not hypothetical: `nolimit-agent` is a real malicious
+    // npm package, so any changelog or advisory that names it earned a CRITICAL
+    // finding for describing malware accurately. Security-focused changelogs
+    // are exactly the documents this rule reads.
+    //
+    // The guard is `(?<!-)` / `(?!-)` and nothing wider, because a hyphen on
+    // either side is the entire measured false-positive shape: it means the
+    // match is one segment of a longer identifier token (`nolimit-agent`,
+    // `agent-nolimit`, `@scope/nolimit-agent`) rather than a word in a
+    // sentence. Underscore needs no guard - `\b` already blocks `nolimit_agent`
+    // because `_` is a word character - and `no-limits` never matched, because
+    // `\s*` does not match a hyphen.
+    //
+    // Detection is not narrowed. Every lure phrasing still fires, including the
+    // spaced forms ("no limits", "no message limits", "no limit"), the
+    // single-token form ("nolimits build"), and prose that happens to be
+    // followed by a dash ("no limits - download now"). The other alternatives
+    // are untouched. src/__tests__/issue-173-self-scan-gate.test.ts pins both
+    // directions.
+    //
+    // NOTE FOR WHOEVER DOCUMENTS THIS RULE NEXT. onlyFilePattern below includes
+    // CHANGELOG, and CI now scans this repository's own tree, so writing any of
+    // the phrasings above verbatim into CHANGELOG.md raises a real critical
+    // finding and turns the build red. That is the rule working, not a bug: lure
+    // phrasing in a changelog is exactly what it is for. Release notes about this
+    // rule therefore describe the phrasings instead of quoting them, and the
+    // literal strings live in the test file named above, which is exempt through
+    // notTestFile. This was measured, not predicted: the first draft of the
+    // release note for this very fix was caught by the new gate.
     pattern:
-      "\\b(?:crack(?:ed)?|keygen|license\\s*bypass|no\\s*(?:message\\s*)?limits?|unlock(?:ed)?\\s*(?:features?|enterprise|pro|premium))\\b",
+      "\\b(?:crack(?:ed)?|keygen|license\\s*bypass|(?<!-)no\\s*(?:message\\s*)?limits?(?!-)|unlock(?:ed)?\\s*(?:features?|enterprise|pro|premium))\\b",
     description:
       "README contains crack/keygen/unlock language. Malware repos promise premium features to lure downloads.",
     severity: "critical",
@@ -4313,4 +4371,31 @@ if (duplicateCoreRules.length > 0) {
 }
 
 validateRegexStringSet("MALICIOUS_PACKAGE_PATTERNS", MALICIOUS_PACKAGE_PATTERNS);
+
+/**
+ * MALICIOUS_PACKAGE_PATTERNS compiled once, at module load.
+ *
+ * The scanners test every dependency name against the whole table, and building
+ * a RegExp is compilation, not allocation. Compiling the table inside that loop
+ * repeated the work per dependency; this array is the same work done once. See
+ * https://github.com/homeofe/supply-chain-guard/issues/177
+ *
+ * NO FLAGS, deliberately, and this is the trap in an otherwise trivial change.
+ * validateRegexStringSet above compiles with "g" because it only needs to know
+ * that each pattern parses. A "g" regex carries lastIndex ACROSS .test() calls,
+ * so a shared compiled instance would return true, false, true, false on
+ * repeated calls with the same matching name - a silent false negative in a
+ * malicious-package-name matcher, which is the worst failure this project has.
+ * Measured on the real table entry "^(cros-env|cross-env-shell|crossenv)$":
+ * four .test("crossenv") calls give true,true,true,true with no flag and
+ * true,false,true,false with "g". Reusing an instance is only safe because
+ * there is no flag; issue-177-npm-scanner-index-reuse.test.ts asserts both the
+ * flags and the four-call determinism at the real call sites.
+ *
+ * Import-time safety: validateRegexStringSet has already thrown on any entry
+ * that does not compile, so this map introduces no new failure mode.
+ */
+export const MALICIOUS_PACKAGE_REGEXES: readonly RegExp[] = Object.freeze(
+  MALICIOUS_PACKAGE_PATTERNS.map((pattern) => new RegExp(pattern)),
+);
 validateRegexStringSet("PYPI_TYPOSQUAT_PATTERNS", PYPI_TYPOSQUAT_PATTERNS);

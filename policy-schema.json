@@ -12,12 +12,27 @@
       "additionalProperties": false,
       "properties": {
         "disable": {
-          "description": "Rule ids to disable entirely. Disabled findings are dropped and counted as suppressed.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[A-Z][A-Z0-9_]*$"
-          }
+          "description": "Rule ids to disable entirely. A disabled rule's findings are dropped from the report before they are counted, so every entry is named in the scan report's policy block in all nine output formats. Prefer the mapping form 'RULE_ID: <why>', which records the justification; the bare list form still works and is reported as POLICY_DISABLE_NO_REASON.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[A-Z][A-Z0-9_]*$": {
+                  "description": "Why this rule is switched off (audit trail).",
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
         },
         "severityOverrides": {
           "description": "Map of rule id to the severity it should be reported with.",
@@ -81,9 +96,21 @@
       }
     },
     "ignore": {
-      "description": "Path globs (** / * / ?) whose matching files are skipped entirely by the scanner walk.",
-      "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "description": "Path globs (** / * / ?) whose matching files are skipped entirely by the scanner walk. Nothing about an ignored file reaches the report in any form, so every glob is named in the scan report's policy block in all nine output formats. Prefer the mapping form '<glob>: <why>', which records the justification; the bare list form still works and is reported as POLICY_IGNORE_NO_REASON.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "description": "Why this path is not scanned (audit trail).",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
     },
     "internalDisclosure": {
       "description": "Deny-list for the internal-disclosure rule family (INTERNAL_*). The built-in shape rules need none of this; this section is for names only your project knows. A list of internal hostnames committed to a public repository is itself the leak, so prefer hashedTerms (publishable) or externalFile (never published) over patterns.",
@@ -103,12 +130,12 @@
           "type": "boolean"
         },
         "patterns": {
-          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive.",
+          "description": "Plaintext literals (3 characters or more) or /regex/flags entries kept in the committed config. Only for repositories that are private, or terms that are not sensitive. Because this file travels inside the scanned tree, a regex here is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier; a refusal is reported as INTERNAL_DENYLIST_REFUSED (medium), which marks the scan partial. That refusal includes the ordinary chained-label hostname shape '(?:[a-z0-9-]+\\.)+corp\\.example'; write '[a-z0-9.-]+\\.corp\\.example' instead. The check is not exhaustive, so an accepted pattern is not a guarantee about matching time.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
         "externalFile": {
-          "description": "Path to an UNPUBLISHED file (gitignored, or provisioned by CI) with one entry per line: '#' comments, 'sha256:<digest>', '/regex/flags', or a plain literal. Matches are reported redacted. The SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same without touching this file. A configured path that is absent is reported as INTERNAL_DENYLIST_UNAVAILABLE (info).",
+          "description": "Path to an UNPUBLISHED file (gitignored, or provisioned by CI) with one entry per line: '#' comments, 'sha256:<digest>', '/regex/flags', or a plain literal. Matches are reported redacted. The SCG_INTERNAL_DISCLOSURE_FILE environment variable does the same without touching this file. A configured path that is absent is reported as INTERNAL_DENYLIST_UNAVAILABLE (info). The path must stay inside the scanned directory: an absolute path, a path that climbs out with '..', and a path that leaves through a symbolic link are all refused unread and reported as INTERNAL_DENYLIST_REFUSED (medium). Use SCG_INTERNAL_DISCLOSURE_FILE for a file held outside the tree. Regex entries in a file reached this way are bounded exactly like 'patterns' above, including the refusal of the chained-label hostname shape.",
           "type": "string",
           "minLength": 1
         }

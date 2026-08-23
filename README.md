@@ -73,7 +73,9 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 ### Infrastructure & CI/CD
 - GitHub Actions: unpinned actions, secrets exfiltration, encoded payloads, curl piping
 - Agentic workflows (GitLost class): AI-agent steps and gh-aw `.github/workflows/*.md` that ingest untrusted issue/PR text, hold a cross-repo token, and can post publicly - the prompt-injection data-leak posture
-- Dockerfile: curl pipe, unpinned base images, hardcoded secrets, SUID bits
+- Dockerfile / Containerfile: curl pipe, base images on a moving channel tag or without a digest,
+  hardcoded secrets, SUID bits. Compose `image:` values are out of scope for every Docker rule
+  (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#base-image-pinning-decision-record))
 - Terraform/IaC: inline scripts, external modules, hardcoded secrets
 - Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
 - Git hooks and submodule security
@@ -117,7 +119,9 @@ Links individual findings into incident-level attack chains:
 
 ## Installation
 
-**Requires Node.js 22 or newer.** Node 20 reached end of life on
+**Requires Node.js 22 or newer.** Every release runs its complete test suite, and
+installs and executes its own packed tarball, on Node 22 and on Node 24, the current
+Active LTS. Node 20 reached end of life on
 2026-04-30; it still installs and is still covered by CI as a transition lane, but it
 is out of support and that lane is removed in 5.29.0. Full policy, including what the
 package is published from and what the Action and container image run on:
@@ -148,6 +152,22 @@ repos:
 The scanner writes its risk history to `.scg-history/` in the scanned repo;
 it is not written when `--no-history` is set, which the hook now uses. For
 plain scans without that flag, add the folder to your `.gitignore`.
+
+**If a file in `.scg-history/` cannot be read, the scan says so and fails.** The
+two stores there, `risk-history.json` and `triage-decisions.json`, are the
+baseline that trend, forecast and triage-governance rules compare against. A
+store that is absent is a first scan and stays silent, which is the normal case
+on a fresh checkout or a hosted runner. A store that exists but does not parse,
+because a scan was interrupted mid-write or the file was edited by hand, is lost
+evidence, and the two are deliberately not reported the same way: the scan emits
+`RISK_HISTORY_UNREADABLE` or `TRIAGE_STORE_UNREADABLE` at `high`, sets
+`partialScan: true`, and exits nonzero regardless of `--fail-on`, because an
+unusable baseline is an indeterminate result rather than a clean one. The
+unreadable file is left on disk rather than overwritten, so complete entries can
+still be recovered from it, usually by closing the truncated JSON array by hand.
+Delete the file to start a new baseline once you have decided the old trend is
+expendable. `--no-history` does not silence this: that flag stops the write, not
+the read, so a corrupt store still degrades the verdict and is still reported.
 
 The hook scans the repository root on every commit and fails on high or critical findings.
 
@@ -290,9 +310,13 @@ Practically: the default gate exits non-zero on `critical` and `high` only, so *
 
 ```yaml
 rules:
-  disable: [INTERNAL_PRIVATE_IP, INTERNAL_HOSTNAME, INTERNAL_SERVICE_ENDPOINT,
-            INTERNAL_GIT_REMOTE, INTERNAL_DEV_PATH, INTERNAL_SINGLE_LABEL_URL]
+  disable:
+    INTERNAL_PRIVATE_IP: RFC1918 addresses are expected in this repository's fixtures
+    INTERNAL_HOSTNAME: internal names are already covered by a separate review
 ```
+
+The parser reads block style only; a flow sequence on one line
+(`disable: [A, B]`) is reported as `POLICY_UNKNOWN_KEY` and disables nothing.
 
 ### False-positive controls
 
@@ -416,6 +440,29 @@ SCG_INTERNAL_DISCLOSURE_FILE=~/.config/scg/internal-terms supply-chain-guard sca
 
 The external file is one entry per line, `#` for comments, `sha256:<digest>` for a hashed entry, `/pattern/flags` for a regex, anything else is a case-insensitive literal. If the file is configured but absent (a shared CI runner that never received it), you get an `INTERNAL_DENYLIST_UNAVAILABLE` finding at `info` severity rather than silence: a deny-list that quietly stopped running looks exactly like a repository that is clean. An entry that cannot be compiled is reported the same way (`INTERNAL_DENYLIST_INVALID_ENTRY`, medium). Neither finding ever prints the entry, and the environment variable is named but its value is not, because a path can itself contain an account name.
 
+**The two sources are not equally trusted, and the difference is deliberate.** `SCG_INTERNAL_DISCLOSURE_FILE` is set by whoever runs the scan, so it may name any path on the machine and carry any pattern. `internalDisclosure.externalFile` and `internalDisclosure.patterns` live in the committed policy file, which travels inside the repository being scanned, and scanning a repository you do not own is the ordinary case for this tool. Entries from there are therefore bounded:
+
+- `externalFile` must stay inside the scanned directory. An absolute path is refused, a relative path that climbs out with `..` is refused, and so is one that leaves through a symbolic link. The file is not opened, so nothing about a path outside the tree reaches the report. The bound is the scanned directory and nothing narrower: a path that stays inside it is still read, `.git/config` included, so a committed `externalFile` can still point at whatever your runner wrote into the workspace. Matches from it stay redacted.
+- A regular expression from `patterns`, **or from an `externalFile` that is inside the tree**, is capped at 200 characters and refused when it quantifies a group that already contains a variable quantifier (`(a+)+`, `(a?)*`, and the like). That shape can take exponential time to report no match, so one committed line would otherwise occupy a runner until the workflow times out.
+- Whatever survives those checks runs under a wall-clock budget for the whole scan. On overrun the file reports `INTERNAL_DISCLOSURE_TRUNCATED` rather than running on.
+
+A refusal is an `INTERNAL_DENYLIST_REFUSED` finding at `medium` severity, and like every other coverage finding it marks the scan partial rather than passing quietly. In the published Action a partial scan exits 1 on its own, independently of `fail-on`. None of this applies to the environment-variable source.
+
+**Two limits of the shape check, both worth knowing before you upgrade.**
+
+It refuses more than it has to, and the shape it most often refuses is the ordinary one. A chained label group is how an internal hostname is normally written, and it is rejected even though it is linear in practice:
+
+```yaml
+internalDisclosure:
+  patterns:
+    - /(?:[a-z0-9-]+\.)+corp\.example/   # REFUSED: quantified group holding "+"
+    - /[a-z0-9.-]+\.corp\.example/       # accepted, and matches the same hosts
+```
+
+If you have the first form today, in `patterns` or in your own gitignored `externalFile`, rewrite it before you upgrade. Left as it is, the term stops being looked for, the scan becomes partial, and the Action exits 1.
+
+It also refuses less than it has to, so an accepted pattern is not a promise about time. The check reads the source text, which cannot see ambiguity that comes from overlapping alternation, so `/(a|a)+$/` and `/(a|ab)+$/` are accepted and are still catastrophic, and the wall-clock budget cannot interrupt a match that is already running. Availability from a committed pattern is narrowed here, not closed; the remaining case is tracked on [issue 169](https://github.com/homeofe/supply-chain-guard/issues/169).
+
 **One more note on the paradox.** `allowlist.domains` also answers `INTERNAL_HOSTNAME`, `INTERNAL_SERVICE_ENDPOINT` and `INTERNAL_GIT_REMOTE` for a given host, which is convenient and publishes the host name. If that is not acceptable, suppress by path instead, which names nothing:
 
 ```yaml
@@ -431,9 +478,12 @@ Create `.supply-chain-guard.yml` in your project root to customize behavior:
 
 ```yaml
 rules:
+  # Every disabled rule needs a written reason, the same bar `suppress` has met
+  # since v5.3. The bare list form (`- HEX_ARRAY`) still disables the rule and is
+  # reported as POLICY_DISABLE_NO_REASON.
   disable:
-    - HEX_ARRAY
-    - CHARCODE_OBFUSCATION
+    HEX_ARRAY: minified vendor bundles in this repository, reviewed 2026-08
+    CHARCODE_OBFUSCATION: same bundles, same review
   severityOverrides:
     GHA_UNPINNED_ACTION: medium
 
@@ -451,10 +501,13 @@ allowlist:
     # says who publishes the code, not that every version of it is safe.
     - my-org
 
-# Skip files matched by these path globs (** / * / ?) during the scan.
+# Skip files matched by these path globs (** / * / ?) during the scan. These
+# files are never opened, so nothing about them reaches the report except the
+# policy block below. Each glob needs a written reason; the bare list form
+# (`- vendor/**`) still skips the path and is reported as POLICY_IGNORE_NO_REASON.
 ignore:
-  - vendor/**
-  - "**/*.min.js"
+  "vendor/**": third-party code, tracked by the upstream project's own scanning
+  "**/*.min.js": build output, scanned at source instead
 
 suppress:
   - rule: RELEASE_EXE_ARTIFACT
@@ -471,6 +524,37 @@ baseline:
 Findings can also be suppressed inline with a comment on the line directly
 above them: `// scg-ignore-next-line RULE reason` (JS/TS) or
 `# scg-ignore-next-line RULE` (Python/YAML/shell).
+
+### Where the policy is read from, and what that means on a pull request
+
+The policy file is read **from the directory being scanned**, and from nowhere
+else. There is no flag, environment variable or Action input that points the
+scanner at a policy outside the scan target.
+
+On a `pull_request` event the checkout materialises the **head of the proposing
+branch**, so the policy that governs the scan is the one on the branch under
+review, not the one on your default branch. A change that adds
+`.supply-chain-guard.yml` alongside the code it excuses is applying its own
+policy to itself. Anyone who can push a branch can therefore narrow the scan of
+that branch.
+
+That is a property of reading policy from the tree, and it is stated here rather
+than left to be discovered. What it is **not** is silent:
+
+- Every narrowing is named in the report, in **all nine output formats**,
+  including the markdown pull request comment the Action posts by default.
+  A scan narrowed by policy can no longer be mistaken for a clean scan in any
+  format, including `ignore:`, which removes files before any rule opens them
+  and used to leave no trace anywhere.
+- A narrowing declared without a written reason is reported as a finding
+  (`POLICY_DISABLE_NO_REASON`, `POLICY_IGNORE_NO_REASON`,
+  `POLICY_SUPPRESSION_NO_REASON`), so an undocumented exclusion costs a line in
+  the report rather than nothing.
+
+If your threat model includes an untrusted proposer, the controls that actually
+hold are outside this tool: require review on `.supply-chain-guard.yml` through
+`CODEOWNERS`, or scan a base-ref checkout in a separate job. Treat a policy file
+in a pull request diff as a change to your security gate, because it is one.
 
 ## Baseline Diffing (v4.4)
 
@@ -566,7 +650,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 | RubyGems | `scan` | Gemfile, Gemfile.lock (malicious-gem IOCs, http/git sources) |
 | Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
 | NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
-| Docker | `scan` | Dockerfile, docker-compose.yml, Containerfile |
+| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. `docker-compose.yml` is read, but every Docker rule is anchored on a Dockerfile instruction keyword, so Compose `image:` values are not covered |
 | Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets) |
 | VS Code | `vscode` | .vsix files, activation events, dangerous APIs |
 | GitHub Actions | `scan` | .github/workflows/*.yml |
@@ -862,6 +946,16 @@ URL, hash, or package name), never a regular expression. All ingestion paths
 validate each entry against its type's shape and quarantine anything invalid -
 a malformed or hostile feed entry can neither crash a scan nor flood it with
 garbage matches, and a rejected refresh never overwrites the previous cache.
+
+**Acquisition bounds:** both download paths are bounded before anything is
+parsed or written. An absolute 30 second deadline covers DNS, connect, headers
+and the body read; the response is capped at 32 MiB, refused on a declared
+`Content-Length` over the cap before a byte is read and counted again while
+streaming when no length is declared; at most 5 redirects are followed and every
+hop is revalidated. An inactivity timeout would not be enough, because a peer
+that keeps trickling bytes never triggers one. Every bound fails closed and
+loudly: the download is abandoned, one line naming the bound goes to stderr, the
+command exits non-zero, and the previous cache stays in effect.
 
 ### Where the feed comes from
 

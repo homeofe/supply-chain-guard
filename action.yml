@@ -6,6 +6,20 @@ branding:
   icon: "shield"
   color: "red"
 
+# POLICY SOURCE, stated because a consumer cannot see it from the inputs below.
+#
+# The scanner reads .supply-chain-guard.yml (or .yaml / .scg.yml / .scg.yaml)
+# from the DIRECTORY IT SCANS. There is no input here that points it anywhere
+# else. On a pull_request event the checkout is the HEAD of the proposing
+# branch, so the policy applied to the scan is the proposing branch's policy: a
+# change can ship a config that narrows the scan of that same change.
+#
+# It cannot do so silently. Every rule disabled, path ignored and rule
+# suppressed by the loaded config is named in the scan report in every output
+# format, including the markdown body of the pull request comment this Action
+# posts by default, and a narrowing with no written reason is reported as a
+# finding. See the "Where the policy is read from" section of the README for
+# the controls that apply when the proposer is untrusted.
 inputs:
   path:
     description: "Path to scan (defaults to repository root)"
@@ -174,7 +188,10 @@ runs:
             or . == "NPM_NO_ARTIFACT"
             or . == "INTERNAL_DENYLIST_UNAVAILABLE"
             or . == "INTERNAL_DENYLIST_INVALID_ENTRY"
-            or . == "POLICY_INVALID_INTERNAL_TERM";
+            or . == "INTERNAL_DENYLIST_REFUSED"
+            or . == "POLICY_INVALID_INTERNAL_TERM"
+            or . == "RISK_HISTORY_UNREADABLE"
+            or . == "TRIAGE_STORE_UNREADABLE";
           type == "object"
           and (.summary | type == "object")
           and (.findings | type == "array")

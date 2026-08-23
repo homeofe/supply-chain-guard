@@ -93,6 +93,65 @@ declares, checks the packaged CLI reports the expected version, and runs a real 
 from inside the image. It never pushes. Before it existed, the first build of any
 Dockerfile or base image change happened during the release itself.
 
+### Checkout credentials
+
+`actions/checkout` writes the job's `GITHUB_TOKEN` into `.git/config` as an
+`http.<origin>/.extraheader` basic-auth header, and every later step in that job can
+read it. At the pinned v7.0.1 the `persist-credentials` input **defaults to `true`**,
+so the safe state is not a state this repository can reach once. Every checkout step
+ever added has to opt out again, or the default comes back with nobody noticing.
+
+Every checkout step here therefore states its choice explicitly, and an omitted key is
+treated as a defect rather than as a default. That is the whole point: from outside,
+a missing key and a considered `true` look identical, and only one of them is a
+decision. There is exactly one step that keeps the credential.
+
+| workflow | job | value | why |
+| --- | --- | --- | --- |
+| `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `v5` branch every Action consumer resolves |
+| the other seven steps | | `false` | no step in those jobs talks to a remote |
+
+`src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism. It walks each
+checkout step's own indented block in the raw file text and fails when a step declares
+nothing, when a step keeps the credential without being a named exception, when an
+exception names a job that runs no remote git command, when a job that DOES run one is
+not an exception (which is how this contract could otherwise break a release push),
+and when the number of steps it managed to classify is smaller than the number of
+`actions/checkout` lines in the same files. That last one exists so that "I could not
+look" can never report as "I looked and it was fine".
+
+Nothing here was exploitable when it was measured, and the reason is worth writing
+down, because each part of it is a control that could move: every real `npm` call
+passes `--ignore-scripts`, there is no `pull_request_target`, `workflow_run` or
+`issue_comment` trigger anywhere, `.dockerignore` excludes `.git` and the `Dockerfile`
+uses named `COPY`s so the token cannot reach a published layer, the `upload-artifact`
+paths are narrow, and every `uses:` is pinned to a commit SHA. Defence in depth means
+the token is not there to be reached if one of those stops holding.
+
+## Settings that live on GitHub, not in this repository
+
+Two properties this project depends on cannot be expressed in any tracked file, so
+they are recorded here and have to be checked against the API rather than read from
+the tree.
+
+```
+gh api repos/<owner>/supply-chain-guard --jq '.delete_branch_on_merge'
+gh api repos/<owner>/supply-chain-guard/branches/main/protection --jq '.enforce_admins.enabled'
+```
+
+**`delete_branch_on_merge` is `false`, and it should be `true`.** Measured 2026-08-22.
+Branch removal is currently client-side, which is why `.ai/handoff/CONVENTIONS.md`
+has to document a failure mode at all: a local branch still held by a worktree makes
+the merge command's local delete fail, and the remote branch then survives while the
+error names only the local one. The server-side setting makes removal unconditional
+and independent of whatever client merged. Turning it on is an owner action in the
+repository settings; a pull request cannot do it.
+
+The current cost is small and the number is worth having rather than guessing at:
+over 114 merged pull requests, 112 branches were removed anyway and 2 survived, an
+accumulation rate near 2 percent. Small is the argument for doing it now, not the
+argument for leaving it.
+
 ## Validation gates
 
 `npm run build` is not just `tsc`. Its `prebuild` runs three groups, and a red gate is
@@ -110,6 +169,20 @@ exists because `npx --no-install` suppresses a download but still resolves a
 **globally installed** `aahp` on PATH, so a checkout with a missing `node_modules`
 silently ran a different version and printed `Governance OK`. A gate that fails open
 is worse than no gate, because it manufactures the evidence of its own success.
+
+That preflight answers whether the CLI speaking is the one pinned. It deliberately
+does **not** answer whether the pin is still current, and nothing in `prebuild`
+should: `npm run build` has no network dependency today, and a currency check that
+queries a registry would trade a reproducible offline build for a gate that fails
+when the network does. Currency is Dependabot's job instead, and it demonstrably
+does it for this exact package. The bound that follows from `.github/dependabot.yml`
+is worth stating rather than leaving as a surprise: the npm ecosystem is scanned
+**weekly, on Monday**, so between scans the pin can sit behind the newest release
+for up to seven days plus however long the bump pull request waits to be merged.
+Measured over the CLI's 17 published versions, the median gap between releases is
+4 days, so one to two releases behind is the normal in-between state and is not a
+signal of anything. Shortening the interval to `daily` is the lever if that bound
+is ever judged too loose.
 
 It then runs seven config-driven gates, all declared in `aahp.config.json`:
 
@@ -129,13 +202,15 @@ fix it with `npm run feed:generate`. And `check:handoff` goes red whenever the t
 file inventory changes, including a dependency bump: fix it with
 `npm run handoff:refresh`.
 
-There are also two contract tests that are ordinary suite members but worth knowing
+There are also three contract tests that are ordinary suite members but worth knowing
 about, because they fail on configuration rather than on code:
 
 - `src/__tests__/node-version-contract.test.ts` holds every Node declaration in the
   repository to `docs/node-support.md`.
 - `src/__tests__/workflow-trigger-contract.test.ts` holds the workflows to the
   event-to-workflow matrix at the top of this file.
+- `src/__tests__/workflow-checkout-credentials.test.ts` holds every checkout step to
+  the credential table above.
 
 And one script that validates the artifact rather than the working tree:
 `scripts/validate-package.sh` packs the tarball, checks its contents against the
@@ -192,6 +267,46 @@ like any other. In order:
 9. Tag the **merged** commit on `main`, never the pre-merge commit, and push the tag.
    Pushing the tag is what triggers publish, the GitHub Release, the `v5` fast-forward
    and the multi-arch image build.
+
+   This step is now enforced rather than remembered. Both publish paths run
+   `scripts/check-release-ancestry.mjs` before anything leaves the runner: the `publish`
+   job in `ci.yml` before `npm publish`, and the `merge` job in `docker.yml` before the
+   image tags move. It fails the release if the tagged commit is not an ancestor of
+   `origin/main`.
+
+   To get the same answer locally before tagging, without burning a version number, run
+   `npm run check:release-ancestry -- --commit HEAD` from the merged commit. **The
+   `--commit` argument is required outside GitHub Actions.** Without it the script falls
+   back to `$GITHUB_SHA`, which is empty on a workstation, and it exits `2` with "No
+   commit to check" rather than passing on nothing: verified by running both forms on
+   2026-08-22. Exit `0` means the commit is on `main` and exit `6` means it is not; every
+   other code means the question could not be answered, and they are listed in the script
+   header.
+
+   The branch is not overridable from either workflow. Both call the script with no
+   arguments, so it always checks against `main`. A release cut from a maintenance branch
+   would exit `6`, and authorising one means passing `--branch` in the workflow, which is
+   a deliberate edit rather than something that can happen by accident. That matches the
+   two-branch model in step 10 below.
+
+   Why it is needed: required status checks are a property of `refs/heads/main` and are
+   never evaluated on a `refs/tags/*` push, so of the three contexts branch protection
+   requires, only `Build and Test` runs on the released commit. `needs: build` did already
+   make `publish` wait for the full compat matrix and the container build and scan, but
+   none of that says where the commit lives, and the tag validator that already existed
+   compares the tag string against `package.json` and is satisfied by any commit whose
+   version field matches. Because this repository squash-merges, the local pre-merge
+   commit always has a different sha from the one on `main` while its content looks
+   identical, so tagging the wrong one would have published four channels with a fully
+   green run and no failing step.
+
+   That has not happened here. Measured on 2026-08-22, all 138 semver tags published to
+   date are ancestors of `main`, and none is not. The gate closes a latent hole rather
+   than cleaning up after an incident. Note also what it cannot close: Actions runs a
+   workflow from the file present at the pushed ref, so the gate binds only tags whose
+   commit already contains it, and an actor who controls the commit can omit the step.
+   Restricting who may create `refs/tags/v*` is the control for that case and is an open
+   owner decision on https://github.com/homeofe/supply-chain-guard/issues/167.
 10. Delete the branch and confirm it is gone on **both** sides. When a release is
     finished the repository has exactly two branches, `main` and `v5`, no open pull
     requests and no open issues.

@@ -41,6 +41,48 @@ describe("Triage Engine", () => {
     expect(gov.some((f) => f.rule === "CRITICAL_FINDING_NO_OWNER")).toBe(false);
   });
 
+  // ── Ownership is scoped to (rule, file), the same way metrics are ──────
+  //
+  // This check and calculateMetrics read the same decisions array on the same
+  // scan. They used to key it at different widths, so one report could say
+  // "openCritical: 0" beside "2 critical finding(s) have no assigned owner".
+  // Both now ask src/triage-scope.ts. See
+  // https://github.com/homeofe/supply-chain-guard/issues/171
+  //
+  // Fixtures below need a `file` on the findings: with one finding per rule and
+  // no file anywhere, a rule-keyed lookup and a (rule, file)-keyed lookup give
+  // identical answers, which is why the cases above cannot see the difference.
+
+  it("should flag a critical finding in a file the decision does not name", () => {
+    const findings: Finding[] = [
+      { ...makeFinding("EVAL_ATOB"), file: "src/a.js" },
+      { ...makeFinding("EVAL_ATOB"), file: "src/b.js" },
+    ];
+    const decisions: TriageDecision[] = [{
+      findingRule: "EVAL_ATOB", findingFile: "src/a.js", status: "triaged", owner: "security-team",
+      decidedAt: new Date().toISOString(),
+    }];
+    const gov = checkTriageGovernance(findings, decisions);
+    expect(gov.some((f) => f.rule === "CRITICAL_FINDING_NO_OWNER")).toBe(true);
+  });
+
+  it("should treat a decision with no findingFile as owning the rule everywhere", () => {
+    // Behaviour change shipped with the shared scope rule. The previous key
+    // joined `file ?? ""`, so a rule-wide decision matched only findings that
+    // carry no file and every instance in a real file stayed "unowned". An
+    // absent findingFile means the decision is not scoped to a file at all.
+    const findings: Finding[] = [
+      { ...makeFinding("EVAL_ATOB"), file: "src/a.js" },
+      { ...makeFinding("EVAL_ATOB"), file: "src/b.js" },
+    ];
+    const decisions: TriageDecision[] = [{
+      findingRule: "EVAL_ATOB", status: "triaged", owner: "security-team",
+      decidedAt: new Date().toISOString(),
+    }];
+    const gov = checkTriageGovernance(findings, decisions);
+    expect(gov.some((f) => f.rule === "CRITICAL_FINDING_NO_OWNER")).toBe(false);
+  });
+
   it("should flag risk acceptances without expiry", () => {
     const decisions: TriageDecision[] = [{
       findingRule: "HEX_ARRAY", status: "accepted-risk", reason: "Low risk",
