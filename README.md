@@ -802,6 +802,10 @@ chain security. The relevant capabilities are:
   incident, whose `subjects` are the `vulnerabilities` entries it groups). The
   text renderer prints it as a panel. The markdown, HTML, badge, GitLab and
   JUnit formats carry the individual findings only, not the incident record.
+  For a ready-made evidence document rather than a machine format, `scan
+  --export-incident-md` writes a markdown incident report to stdout: risk score,
+  every detected incident with its confidence, narrative and indicator list, the
+  critical findings, and the response playbooks.
 - **Configuration exposure:** IaC, Dockerfile, and `.npmrc` / `.yarnrc` scanning
   surfaces misconfiguration before deployment.
 

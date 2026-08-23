@@ -1,3 +1,21 @@
+## SBOM cluster follow-up: the incident evidence document that was already there
+
+Model: claude-opus-5. Branch fix/sbom-correctness-cluster. No version bump.
+Follow-up to the entry below, addressing the second comment on issue 200.
+
+`scan --export-incident-md` has shipped for several releases and writes exactly
+the artefact the NIS2 bullet describes: risk score, each detected incident with
+its confidence, narrative and indicator list, the critical findings, and the
+response playbooks. The README named it nowhere, so the bullet promised less
+than the tool does while pointing at formats that carried nothing. Verified by
+running it against the issue's own fixture before writing the sentence. It is now
+named in the NIS2 bullet. No behaviour changed; this is documentation of an
+existing flag.
+
+WHAT THIS DOES NOT COVER: the flag is still absent from the CLI options table and
+from the GitHub Action inputs. It is mentioned where a reader looking for
+incident evidence will be, not everywhere it could be listed.
+
 ## SBOM: the document was well formed and wrong, in seven places at once
 
 Model: claude-opus-5. Branch fix/sbom-correctness-cluster. No version bump.

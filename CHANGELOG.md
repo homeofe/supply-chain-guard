@@ -293,6 +293,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `subjects` are the bom-refs of the vulnerability entries it groups, and each
   of those entries carries a `supply-chain-guard:incident` property, so the link
   is navigable in both directions.
+- **`scan --export-incident-md` is documented.** The flag has shipped for
+  several releases and writes a markdown incident report (risk score, each
+  incident with confidence, narrative and indicators, the critical findings and
+  the response playbooks) that is closer to a retainable evidence document than
+  any of the machine formats. The README mentioned it nowhere. It is now named in
+  the NIS2 incident-evidence bullet. No behaviour changed.
 - **A finding that is an indicator of two incidents no longer reports membership
   in one.** `correlationId` was written inside the correlation loop and
   overwritten on each pass, so a finding listed under `incident-1` carried
