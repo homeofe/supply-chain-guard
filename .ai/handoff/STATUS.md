@@ -1,3 +1,28 @@
+## Zero coverage and an unread language are not the same state
+
+The first version of the issue-205 fix fired on `filesScanned === 0`. That is a
+different predicate from the one the issue describes. Issue 205 is a scan of an
+EMPTY TREE - a checkout that did not run, a wrong working directory, a sparse
+checkout, an empty mounted volume.
+An ordinary Java, C#, Ruby, PHP, Kotlin, Swift or plain-HTML repository has
+files that simply carry no scannable extension, so it also landed on
+`filesScanned === 0`. Measured on a two-file Maven project: exit 0 became exit 1
+and a brightgreen badge became orange, with remediation text naming only causes
+that did not apply to it.
+That is a false positive reaching every adopter whose language is not in the
+scanned set, and a control that fails ordinary use gets switched off - taking
+the real issue-205 protection down with it.
+Split into the two states:
+  allFiles.length === 0                     -> SCAN_ZERO_COVERAGE, partial, fails.
+  allFiles.length > 0 and filesScanned == 0 -> SCAN_NO_SCANNABLE_FILES, informational.
+The second is deliberately NOT in PARTIAL_SCAN_RULES: "this tool does not read
+that language" is a statement about the tool, not a coverage gap in the run. It
+still says so out loud, so it cannot be read as a clean verdict either.
+WHAT THIS DOES NOT COVER: a scan whose coverage is merely LOW rather than zero -
+one file of a thousand because ignore globs pruned the rest - is still reported
+as a complete verdict. A proportional coverage floor needs a threshold nobody
+has chosen, and guessing one here would repeat the mistake this entry records.
+
 ## No green without evidence: four controls that reported success without doing the work
 
 Branch fix/no-green-without-evidence. Model claude-opus-5. No version bump; the

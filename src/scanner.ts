@@ -752,7 +752,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // PARTIAL_SCAN_RULES, so the flag below picks it up and every renderer that
   // already honours partial coverage reports it. Deleting either this push or
   // that PARTIAL_SCAN_RULES entry restores the false green.
-  if (filesScanned === 0) {
+  // Two different things were conflated here. Issue 205 is a scan of an EMPTY
+  // TREE - a checkout that did not run, a wrong working directory, a sparse
+  // checkout, an empty mounted volume. A repository written in a language this
+  // scanner does not read is NOT that: it has files, they simply carry no
+  // scannable extension. Firing the same blocking finding on both turned exit 0
+  // into exit 1 and a brightgreen badge into an orange one for every ordinary
+  // Java, C#, Ruby, PHP, Kotlin, Swift or plain-HTML project, with remediation
+  // text naming only causes that do not apply. Measured on a two-file Maven
+  // project before this split.
+  if (allFiles.length === 0) {
     findings.push({
       rule: "SCAN_ZERO_COVERAGE",
       description:
@@ -766,6 +775,29 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         "Treat this result as not assessed, never as clean. Check that the checkout ran, that the " +
         "scan target is the intended directory, and that depth limits, ignore globs or a sparse " +
         "checkout have not excluded the whole tree, then run the scan again.",
+    });
+  }
+
+  // The tree has content, none of it in the scannable set. Informational and
+  // deliberately NOT in PARTIAL_SCAN_RULES: "this tool does not read that
+  // language" is a statement about the tool, not a coverage gap in the run, and
+  // treating it as partial fails builds that are behaving correctly. It still
+  // says so out loud, so it cannot be mistaken for a clean verdict either.
+  if (allFiles.length > 0 && filesScanned === 0) {
+    findings.push({
+      rule: "SCAN_NO_SCANNABLE_FILES",
+      description:
+        `No file was examined: 0 of ${allFiles.length} in-scope files carry an extension ` +
+        "this scanner reads. The tree is not empty; its contents are outside the scanned set. " +
+        "This result says nothing about the source, and it is not a clean verdict.",
+      severity: "info",
+      confidence: 1,
+      category: "info",
+      match: "no scannable files",
+      recommendation:
+        "Treat this as not assessed for source patterns rather than as clean. Dependency, " +
+        "workflow and provenance checks still ran wherever their inputs existed. If this " +
+        "project should be pattern-scanned, its language is not yet in the scanned set.",
     });
   }
 

@@ -164,3 +164,58 @@ describe("issue 205: a scan of zero files is never indistinguishable from a clea
     expect(getReportExitCode(await scanClean())).toBe(0);
   });
 });
+
+describe("a tree this scanner does not read is not a zero-coverage scan", () => {
+  /**
+   * The first version of the issue-205 fix fired on `filesScanned === 0`, which
+   * is a different predicate from "the tree was empty". An ordinary Java, C#,
+   * Ruby, PHP, Kotlin, Swift or plain-HTML repository has files that simply
+   * carry no scannable extension, so it landed on the blocking finding and
+   * flipped exit 0 -> 1 and brightgreen -> orange, with remediation text naming
+   * only causes that did not apply to it.
+   *
+   * A control that fails ordinary use gets switched off, and it would have taken
+   * the real issue-205 protection down with it. These two tests pin the split.
+   */
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-nonjs-"));
+    fs.mkdirSync(path.join(dir, "src"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src", "App.java"), "public class App {}");
+    fs.writeFileSync(path.join(dir, "pom.xml"), "<project></project>");
+  });
+  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("does not report a coverage gap, and does not fail the run", async () => {
+    const report = await scan({ target: dir, format: "json", noHistory: true });
+    const rules = report.findings.map((f) => f.rule);
+
+    expect(report.summary.totalFiles).toBeGreaterThan(0);
+    expect(report.summary.filesScanned).toBe(0);
+
+    // The distinction the first fix collapsed.
+    expect(rules).not.toContain("SCAN_ZERO_COVERAGE");
+    expect(rules).toContain("SCAN_NO_SCANNABLE_FILES");
+
+    // And it must not be treated as partial: this is a statement about the
+    // tool, not a coverage gap in the run.
+    expect(report.partialScan).toBeUndefined();
+    expect(getReportExitCode(report)).toBe(0);
+    expect(formatReport(report, "badge")).toContain("brightgreen");
+  });
+
+  it("control: a genuinely empty tree still reports the coverage gap", async () => {
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), "scg-empty-"));
+    try {
+      const report = await scan({ target: empty, format: "json", noHistory: true });
+      const rules = report.findings.map((f) => f.rule);
+      expect(rules).toContain("SCAN_ZERO_COVERAGE");
+      expect(rules).not.toContain("SCAN_NO_SCANNABLE_FILES");
+      expect(report.partialScan).toBe(true);
+      expect(getReportExitCode(report)).toBe(1);
+      expect(formatReport(report, "badge")).not.toContain("brightgreen");
+    } finally {
+      fs.rmSync(empty, { recursive: true, force: true });
+    }
+  });
+});
