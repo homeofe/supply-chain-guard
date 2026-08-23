@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787442669",
-    "timestamp": "2026-08-22T23:51:09Z",
-    "commit": "8fd5b12",
+    "session_id": "cli-1787451431",
+    "timestamp": "2026-08-23T02:17:12Z",
+    "commit": "fa81f70",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3b931207673d79085834df94b1c1c3728571720875ab3b7ff338e9114c908b34",
-      "updated": "2026-08-22T23:50:00Z",
-      "lines": 4011,
-      "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
+      "checksum": "sha256:efd3bceae896abbf891730638ee0873d2e79b8947a4a7b54aafbdca6ae3f5034",
+      "updated": "2026-08-23T02:15:54Z",
+      "lines": 4112,
+      "summary": "Branch fix/no-green-without-evidence. Model claude-opus-5. No version bump; the"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:b1a3c171d239cca496bd0bc581edebc8597d34d92a2bcb2c33948e9218817b16",
-      "updated": "2026-08-22T23:50:00Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 250,
-      "summary": "Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
+      "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
-      "updated": "2026-08-22T23:51:09Z",
+      "updated": "2026-08-23T02:17:11Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-22T22:19:07Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-22T22:19:07Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:c97f48058d55f1b6f14e369797338c7ce63d059c5c6a1fd845e265fda68b39e5",
-      "updated": "2026-08-22T23:51:09Z",
+      "checksum": "sha256:e97f53d704f8ca8e5175c7ad1abb059e1ba4a23aca03c9d468ad300302ed4ac6",
+      "updated": "2026-08-23T02:17:11Z",
       "lines": 72,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:6786e9ca37ad8cad2cf05536df04f70d92ff4ddba8b2c9b5d0c1fb00f8e48424",
-      "updated": "2026-08-22T23:51:09Z",
+      "checksum": "sha256:eff464f833af0217c76f3aa9f7000eeff17ccafd0a77eefc27884c044c5f939e",
+      "updated": "2026-08-23T02:17:11Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
-      "updated": "2026-08-22T23:49:40Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-22T22:19:07Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-22T22:19:07Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-22T22:19:07Z",
+      "updated": "2026-08-23T01:55:51Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Branch fix/no-green-without-evidence. Model claude-opus-5. No version bump; the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 41509,
-    "full_read": 53159
+    "manifest_plus_core": 50321,
+    "full_read": 62086
   }
 }

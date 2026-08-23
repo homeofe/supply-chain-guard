@@ -105,6 +105,25 @@ function stripComment(line: string): string {
   return line;
 }
 
+/**
+ * Strip YAML comments from a whole file, line by line, preserving line count
+ * and every non-comment byte (unreleased, issue 190).
+ *
+ * For rules that ask "does this repository DO x", a `#` comment is the one
+ * thing in a workflow that provably does nothing: GitHub never executes it,
+ * and a `#` inside a `run:` block scalar is a shell comment, which the runner
+ * also does not execute. So a text matcher that has to stay a text matcher
+ * (an action reference can appear at `jobs.<id>.uses`, at `steps[].uses`, or
+ * in a reusable-workflow call, and one regex covers all three) should at least
+ * never match a line the runner will not run.
+ *
+ * This is NOT a substitute for structure. It cannot tell which JOB a signal
+ * belongs to; a caller that needs that must use parseWorkflow().
+ */
+export function stripYamlComments(content: string): string {
+  return content.replace(/\r/g, "").split("\n").map(stripComment).join("\n");
+}
+
 function stripQuotes(v: string): string {
   const t = v.trim();
   if ((t.startsWith('"') && t.endsWith('"') && t.length >= 2) ||

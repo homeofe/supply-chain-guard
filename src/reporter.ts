@@ -62,6 +62,67 @@ function policyEffectLine(effect: PolicyEffect): string {
   return `${POLICY_EFFECT_HEADLINE} Config: ${effect.configFile}. ${parts.join(". ")}.`;
 }
 
+/**
+ * The coverage denominator, for the machine formats (unreleased, issue 205).
+ *
+ * `filesScanned` and `totalFiles` are computed on every scan and reach the
+ * report, but SARIF, GitLab and JUnit never read either one. A verdict with no
+ * denominator describes only what was FOUND, never how much was LOOKED AT, so
+ * "nothing found in 0 files" and "nothing found in a real tree" produced the
+ * same artefact. `null` means the report carried no summary at all - which is
+ * "could not answer", and is deliberately not rendered as 0.
+ */
+function coverageProperties(report: ScanReport): {
+  filesScanned: number | null;
+  totalFiles: number | null;
+  scanType: string;
+} {
+  return {
+    filesScanned: report.summary?.filesScanned ?? null,
+    totalFiles: report.summary?.totalFiles ?? null,
+    scanType: report.scanType,
+  };
+}
+
+/** One line stating the denominator, for formats that carry strings not objects. */
+function coverageLine(report: ScanReport): string {
+  const scanned = report.summary?.filesScanned;
+  const total = report.summary?.totalFiles;
+  if (scanned === undefined || total === undefined) {
+    return "Coverage: not recorded in this report.";
+  }
+  if (scanned === 0) {
+    return `Coverage: 0 of ${total} files were examined. This result describes nothing about the target and is not a clean verdict.`;
+  }
+  return `Coverage: ${scanned} of ${total} files were examined.`;
+}
+
+/**
+ * The SLSA grade together with what produced it and what was never checked
+ * (unreleased, issues 188/190). A bare level cannot express "not assessed", so no
+ * format may render the number without this beside it.
+ */
+function slsaProperties(report: ScanReport): {
+  level: number;
+  basis: string[];
+  notAssessed: string[];
+  attestation?: { present: boolean; kind?: string; structurallyValid: boolean; signatureStatus?: string };
+} | undefined {
+  const assessment = report.slsaAssessment;
+  if (!assessment) return undefined;
+  return {
+    level: assessment.level,
+    basis: [...assessment.basis],
+    notAssessed: [...assessment.notAssessed],
+    attestation: {
+      present: assessment.attestation.present,
+      kind: assessment.attestation.kind,
+      structurallyValid: assessment.attestation.structurallyValid,
+      signatureStatus: assessment.attestation.signatureStatus,
+    },
+  };
+}
+
 /** Default CLI gate semantics for a collection of findings. */
 export function getFindingsExitCode(
   findings: ReadonlyArray<Pick<Finding, "severity">>,
@@ -298,6 +359,29 @@ function formatText(report: ScanReport): string {
       const slsaCol = report.slsaLevel >= 3 ? "\x1b[32m" : report.slsaLevel === 2 ? "\x1b[36m" : report.slsaLevel === 1 ? "\x1b[33m" : "\x1b[31m";
       const slsaBar = slsaCol + mkBar(report.slsaLevel, 3, 24) + RESET;
       lines.push(boxRow(`  ${DIM}SLSA${RESET}        ${slsaBar}  ${slsaCol}${BOLD}${report.slsaLevel}/3${RESET}`));
+      // (unreleased, issues 188/190): the bar used to be the whole story. A full green
+      // 3/3 was produced by an unsigned attestation, and by a commented-out
+      // publish step, with nothing beside it to say what had been checked. The
+      // grade is a posture score from a static read, and now says so here.
+      if (report.slsaAssessment) {
+        const detail = (label: string, colour: string, item: string) => {
+          const wrapped = wrapText(`${label} ${item}`, W - 6);
+          wrapped.forEach((line, i) =>
+            lines.push(boxRow(`    ${colour}${i === 0 ? line : `  ${line}`}${RESET}`)),
+          );
+        };
+        for (const item of report.slsaAssessment.basis) detail("from:", DIM, item);
+        // The caveat block is rendered from Level 2 up: that is where the tool
+        // starts making a provenance claim a reader can over-read. Levels 0 and
+        // 1 assert no provenance, so the same nine lines there would be noise
+        // that trains readers to skip the block. Every MACHINE format carries
+        // `notAssessed` unconditionally, so nothing is lost from an artefact.
+        if (report.slsaLevel >= 2) {
+          for (const item of report.slsaAssessment.notAssessed) {
+            detail("NOT ASSESSED:", "\x1b[33m", item);
+          }
+        }
+      }
     }
     if (report.sbomDocument) {
       lines.push(boxRow(`  ${DIM}SBOM${RESET}        CycloneDX 1.6  ·  ${report.sbomDocument.components.length} components`));
@@ -767,18 +851,22 @@ function formatSarif(report: ScanReport): string {
   // output. What goes in here is policy METADATA - which rules and paths the
   // config removed - which is the opposite of leaking a suppressed result and
   // is the only way a SARIF consumer can tell a narrowed scan from a clean one.
-  const invocations =
-    notifications.length > 0
-      ? [
-          {
-            executionSuccessful: !report.partialScan,
-            toolExecutionNotifications: notifications,
-            ...(report.policyEffect
-              ? { properties: { policyEffect: report.policyEffect } }
-              : {}),
-          },
-        ]
-      : undefined;
+  //
+  // (unreleased, issue 205): the invocation is now ALWAYS emitted, because it is the
+  // only place a SARIF artefact can state its own denominator. A SARIF file
+  // with zero results and no coverage was byte-identical whether it examined a
+  // clean tree or nothing at all.
+  const invocations = [
+    {
+      executionSuccessful: !report.partialScan,
+      toolExecutionNotifications: notifications,
+      properties: {
+        ...(report.policyEffect ? { policyEffect: report.policyEffect } : {}),
+        coverage: coverageProperties(report),
+        ...(report.slsaAssessment ? { slsa: slsaProperties(report) } : {}),
+      },
+    },
+  ];
 
   const sarif = {
     $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
@@ -793,7 +881,7 @@ function formatSarif(report: ScanReport): string {
             rules,
           },
         },
-        ...(invocations ? { invocations } : {}),
+        invocations,
         results,
       },
     ],
@@ -1080,13 +1168,20 @@ function formatGitlab(report: ScanReport): string {
       // info|warn|fatal). A custom key would also validate, since the scan object
       // does not set additionalProperties:false, but only this one is rendered by
       // the GitLab security UI, and rendering is the entire point here.
-      ...(report.policyEffect
-        ? {
-            messages: [
-              { level: "warn" as const, value: policyEffectLine(report.policyEffect) },
-            ],
-          }
-        : {}),
+      //
+      // (unreleased, issue 205): the coverage line is ALWAYS present, so a GitLab
+      // report states its own denominator. Warn rather than info when the
+      // denominator is zero: a report of nothing examined must not read calmer
+      // than the gate it represents.
+      messages: [
+        {
+          level: (report.summary?.filesScanned === 0 ? "warn" : "info") as "warn" | "info",
+          value: coverageLine(report),
+        },
+        ...(report.policyEffect
+          ? [{ level: "warn" as const, value: policyEffectLine(report.policyEffect) }]
+          : []),
+      ],
     },
     vulnerabilities,
   };
@@ -1134,16 +1229,37 @@ function formatJunit(report: ScanReport): string {
 
   // Run metadata belongs in <properties>, which every JUnit consumer renders
   // and which leaves the tests/failures/errors counts untouched (v5.29).
+  //
+  // (unreleased, issue 205): the coverage properties are ALWAYS emitted, so a JUnit
+  // artefact states its own denominator instead of only what was found.
+  lines.push("  <properties>");
+  const coverage = coverageProperties(report);
+  lines.push(
+    `    <property name="supply-chain-guard:files-scanned" value="${xmlEscape(coverage.filesScanned ?? "not-recorded")}"/>`,
+  );
+  lines.push(
+    `    <property name="supply-chain-guard:total-files" value="${xmlEscape(coverage.totalFiles ?? "not-recorded")}"/>`,
+  );
+  lines.push(
+    `    <property name="supply-chain-guard:coverage" value="${xmlEscape(coverageLine(report))}"/>`,
+  );
+  if (report.slsaAssessment) {
+    lines.push(
+      `    <property name="supply-chain-guard:slsa-level" value="${xmlEscape(report.slsaAssessment.level)}"/>`,
+    );
+    lines.push(
+      `    <property name="supply-chain-guard:slsa-not-assessed" value="${xmlEscape(report.slsaAssessment.notAssessed.join("; "))}"/>`,
+    );
+  }
   if (report.policyEffect) {
-    lines.push("  <properties>");
     lines.push(
       `    <property name="supply-chain-guard:policy-config" value="${xmlEscape(report.policyEffect.configFile)}"/>`,
     );
     lines.push(
       `    <property name="supply-chain-guard:policy-effect" value="${xmlEscape(policyEffectLine(report.policyEffect))}"/>`,
     );
-    lines.push("  </properties>");
   }
+  lines.push("  </properties>");
 
   if (report.partialScan) {
     lines.push('  <testcase name="SCAN_INCOMPLETE" classname="supply-chain-guard">');

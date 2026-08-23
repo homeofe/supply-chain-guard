@@ -1,3 +1,104 @@
+## No green without evidence: four controls that reported success without doing the work
+
+Branch fix/no-green-without-evidence. Model claude-opus-5. No version bump; the
+comments say "unreleased" rather than naming a release nobody has chosen yet.
+
+Issues 205, 188, 189 and 190 are one defect with four faces: an output that
+cannot say "I did not check this", so ignorance renders as a pass. All four were
+reproduced at HEAD fa81f70 before anything was edited, and the reproduction
+output is in the pull request body.
+
+### What changed
+
+- **A scan of zero files is no longer a clean verdict** (issue 205).
+  `src/scanner.ts` raises `SCAN_ZERO_COVERAGE` when `filesScanned === 0`, and
+  that rule joins `PARTIAL_SCAN_RULES` in `src/pattern-scanner.ts`, so the
+  existing partial-coverage path fires in every renderer that already honours
+  it. Measured before: the badge for an empty directory was byte-identical to
+  the badge for a clean two-file tree, and `--fail-on critical` exited 0. After:
+  `partial`/orange, and exit 1. `action.yml` carries the same rule list and a
+  test enforces that the two stay identical, so the Action's coverage schema was
+  updated with it.
+- **SARIF, GitLab and JUnit now state their own denominator** (issue 205). The
+  SARIF invocation is now always emitted and carries a `coverage` property bag;
+  GitLab always carries a coverage message, warn-level when the count is zero;
+  JUnit always emits a `<properties>` block with the file counts. Those three
+  formats read neither `filesScanned` nor `totalFiles` before, which is why they
+  could not tell nothing from nothing-found.
+- **An unsigned DSSE envelope is no longer valid provenance** (issue 188). The
+  `signatures` member was never read. `signatures: []`, a missing key, and
+  entries with no `sig` value are now `kind: "malformed"` and raise a new
+  `SLSA_ATTESTATION_UNSIGNED` finding. `AttestationResult` gained
+  `structurallyValid`, `signatureStatus` and `checksNotPerformed`; the boolean
+  named `valid` is kept as a deprecated alias so no consumer breaks.
+- **An empty or non-string digest set is malformed** (issue 189). The old test
+  was `digest && typeof digest === "object"`, satisfied by both `{}` and `[]`.
+  `isUsableDigestSet` now requires a non-empty map of non-empty strings, and
+  `subjectCount` counts only subjects that pass it.
+- **A commented-out publish step no longer grades a repository 3/3** (issue 190).
+  Level 2 and the generator reference are matched over comment-stripped workflow
+  text; the npm-native Level 3 path resolves `npm publish --provenance` and
+  `id-token: write` inside ONE parsed job, using the repository's own
+  `src/workflow-ast.ts` and GitHub's real permission semantics (a job-level
+  block REPLACES the workflow-level one). `HERMETIC_BUILD_PATTERNS` is gone: it
+  matched `workflow_call`, which is a trigger and not an isolation property, and
+  hermeticity is not a SLSA v1.0 Build L3 requirement at all.
+- **A malformed attestation can no longer coexist with a 3/3 headline** in the
+  same report; it caps the level at 2.
+- **`SLSAAssessment`** (`level`, `basis`, `notAssessed`, `attestation`) is on the
+  report and rendered by the text, JSON, SARIF and JUnit formats, so the number
+  never appears without the checks that produced it and the three this tool
+  never performs.
+
+### Two existing assertions were CHANGED, not added
+
+Both locked in a defect, and both are called out in place with the reason:
+
+- `src/__tests__/slsa-verifier.test.ts`: "should treat --provenance +
+  id-token:write split across two workflow files as L3" asserted 3 for a
+  configuration that cannot mint provenance at runtime. It now asserts 2.
+- `src/__tests__/scanner.test.ts`: "should return a clean report for an empty
+  directory" asserted precisely the behaviour issue 205 reports. It now asserts
+  the coverage signal. The security half of it is unchanged.
+
+### WHAT THIS DOES NOT COVER
+
+- **No signature is verified.** Nothing here fetches key material, walks a
+  Fulcio chain, or checks a Rekor inclusion proof. A syntactically valid but
+  untrusted signature is still indistinguishable from a trusted one, and issue
+  188's acceptance criterion asking for those three states to be distinguishable
+  is only two-thirds met: absent is now distinguishable, forged is not. Real
+  verification means choosing trust roots and adding a network or bundled-root
+  dependency to a supply-chain tool, which is an owner decision.
+- **The field named `valid` still exists** and still reads as a verification
+  verdict. Renaming it outright breaks every published consumer of the exported
+  API, so it is deprecated in place rather than removed. Owner decision.
+- **The output is still labelled "SLSA Level"** and still renders as `n/3`.
+  Issue 190 argues the number should not be published under a specification's
+  name when it cannot mean the specification's level. That is a public-facing
+  rename touching README, badge and JSON consumers. Owner decision; only the
+  qualifying text was added.
+- **Low coverage is not partial coverage.** One file scanned out of a thousand,
+  because ignore globs pruned the rest, is still reported as a complete verdict.
+  Only zero is treated as a gap. A proportional floor needs a threshold nobody
+  has chosen.
+- **`subjectCount` is a count of digested subjects, not of verified ones.** No
+  digest is compared against any artefact, in the tree or published.
+- **The full suite was not run locally.** Only the files touched plus their
+  neighbours were, and `src/__tests__/vscode-scanner.test.ts` fails 14 tests here
+  for a missing `zip` binary, identically on unmodified `main`. CI on Linux is
+  the authoritative verdict.
+
+### Noticed in passing, fixed, and NOT covered by a test
+
+`slsaLevel` was computed inside the returned object literal, which is evaluated
+AFTER `fs.rmSync(tempDir)`. For a `github` scan target the SLSA level was
+therefore graded against a directory that had just been deleted, while
+`verifySLSA` had run much earlier against the real checkout, so the level and the
+findings in one report could disagree. The assessment is now taken before the
+cleanup. This is not covered by a new test: exercising it needs a real clone, and
+this branch adds no networked test.
+
 ## SBOM: the licences, dependency relationships and bom-refs the lockfile already carried
 
 The generated CycloneDX document was omitting three things the npm lockfile already

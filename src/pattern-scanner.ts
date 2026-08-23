@@ -71,6 +71,11 @@ export const PARTIAL_SCAN_RULES: ReadonlySet<string> = new Set([
   // complete clean scan.
   "RISK_HISTORY_UNREADABLE",
   "TRIAGE_STORE_UNREADABLE",
+  // A scan that opened zero files is the widest coverage gap there is: it is
+  // not "a configured check could not be evaluated", it is "nothing was
+  // evaluated". Without this entry the strongest caveat the tool has stays
+  // silent in precisely the case where coverage is zero (unreleased, issue 205).
+  "SCAN_ZERO_COVERAGE",
 ]);
 
 /**

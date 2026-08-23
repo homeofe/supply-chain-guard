@@ -2,6 +2,10 @@
  * supply-chain-guard type definitions
  */
 
+// Type-only, so it is erased at compile time and creates no runtime cycle with
+// slsa-verifier.ts (which imports Finding from here).
+import type { SLSAAssessment } from "./slsa-verifier.js";
+
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
 
 export interface Finding {
@@ -99,6 +103,14 @@ export interface ScanReport {
   sbomDocument?: SbomDocument;
   /** SLSA provenance level 0-3 (v4.9) */
   slsaLevel?: number;
+  /**
+   * What `slsaLevel` was computed from, and which checks were never run (unreleased).
+   *
+   * The number alone cannot express "not assessed", which is what let an
+   * unsigned attestation and a commented-out publish step both render as a full
+   * green 3/3. Renderers that show the level must show this beside it.
+   */
+  slsaAssessment?: SLSAAssessment;
 }
 
 // ---------------------------------------------------------------------------

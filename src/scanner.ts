@@ -101,7 +101,7 @@ import {
   PROVENANCE_PATTERNS,
 } from "./patterns.js";
 import { generateSbomDocument } from "./sbom-generator.js";
-import { verifySLSA, getSLSALevel } from "./slsa-verifier.js";
+import { verifySLSA, assessSLSA } from "./slsa-verifier.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
@@ -741,6 +741,34 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     return true;
   });
 
+  // A scan that opened NO file is a verdict with no denominator (unreleased, issue
+  // 205). Every realistic cause is an ordinary CI accident - a checkout step
+  // that did not run, a working directory set to the wrong path, a sparse
+  // checkout, a container that mounted an empty volume - and until this finding
+  // existed the badge, SARIF, GitLab and JUnit artefacts of such a run were
+  // byte-identical to those of a real clean tree.
+  //
+  // This is the ONE place zero coverage is detected. SCAN_ZERO_COVERAGE is in
+  // PARTIAL_SCAN_RULES, so the flag below picks it up and every renderer that
+  // already honours partial coverage reports it. Deleting either this push or
+  // that PARTIAL_SCAN_RULES entry restores the false green.
+  if (filesScanned === 0) {
+    findings.push({
+      rule: "SCAN_ZERO_COVERAGE",
+      description:
+        `No file was examined: ${filesScanned} of ${allFiles.length} in-scope files were scanned. ` +
+        "This result describes nothing about the target and cannot be a clean verdict.",
+      severity: "info",
+      confidence: 1,
+      category: "info",
+      match: "zero coverage",
+      recommendation:
+        "Treat this result as not assessed, never as clean. Check that the checkout ran, that the " +
+        "scan target is the intended directory, and that depth limits, ignore globs or a sparse " +
+        "checkout have not excluded the whole tree, then run the scan again.",
+    });
+  }
+
   // Preserve completeness independently of policy, baseline, or severity filters.
   // A user may hide the informational finding, but that cannot turn a partial
   // evaluation into a complete report.
@@ -893,6 +921,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try { saveRiskHistory(scanDir, { timestamp: new Date().toISOString(), score, findings: filteredFindings, summary, riskLevel, recommendations, target, scanType, tool: `supply-chain-guard v${TOOL_VERSION}`, durationMs: Date.now() - startTime }); } catch { /* skip */ }
   }
 
+  // Read before the temp directory is removed: a github scan's scanDir lives
+  // inside it, and an assessment taken afterwards would silently grade an
+  // empty path as Level 0.
+  const slsaAssessment = assessSLSA(scanDir);
+
   // Cleanup temp directory
   if (tempDir) {
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -927,8 +960,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     metrics,
     // v4.9: CycloneDX 1.6 SBOM from actual dependency inventory
     sbomDocument: generateSbomDocument(scanDir, filteredFindings, policySuppressed),
-    // v4.9: SLSA provenance level
-    slsaLevel: getSLSALevel(scanDir),
+    // v4.9: SLSA provenance level. Unreleased: the level and the record of what
+    // produced it come from ONE assessment, so a renderer can never show the
+    // number without the checks that were and were not run behind it.
+    slsaLevel: slsaAssessment.level,
+    slsaAssessment,
   };
 }
 
