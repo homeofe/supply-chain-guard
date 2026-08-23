@@ -298,9 +298,18 @@ export function correlateFindings(findings: Finding[]): CorrelationResult {
       // Collect all findings matching this correlation
       const clusterFindings = findings.filter((f) => matchedRules.includes(f.rule));
 
-      // Boost confidence on matched findings
+      // Boost confidence on matched findings, and record membership.
+      //
+      // v5.30: membership is a LIST. A finding can be an indicator of several
+      // incidents - DEAD_DROP_STEAM is one of both the Claude Code leak
+      // campaign and the generic infostealer chain - and the single-valued
+      // `correlationId` was overwritten on each pass, so a finding listed under
+      // incident-1 carried "incident-2" and pointed away from the record it
+      // belonged to. `correlationId` is kept as correlationIds[0] for consumers
+      // that already read it.
       for (const f of clusterFindings) {
-        f.correlationId = id;
+        f.correlationIds = [...(f.correlationIds ?? []), id];
+        f.correlationId = f.correlationIds[0];
         f.confidence = Math.min(1.0, (f.confidence ?? 0.8) + rule.confidenceBoost);
       }
 

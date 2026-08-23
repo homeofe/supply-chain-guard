@@ -22,3 +22,10 @@
 # rebases in one session, every one of them resolving this file by hand, in the
 # two repositories that lacked this line while eight siblings had it.
 .ai/handoff/STATUS.md merge=union
+
+# Vendored CycloneDX JSON schemas: unmodified upstream copies whose SHA-256 is
+# recorded in src/__tests__/fixtures/cyclonedx/README.md. With core.autocrlf=true
+# a Windows checkout would rewrite them to CRLF and every recorded checksum would
+# stop matching, so the one check that says "this is still the official schema"
+# could no longer be run.
+src/__tests__/fixtures/cyclonedx/*.json text eol=lf

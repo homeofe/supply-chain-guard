@@ -227,7 +227,7 @@ supply-chain-guard scan ./project --format html   # Standalone HTML report
 supply-chain-guard scan ./project --format markdown # Markdown (for PR comments)
 supply-chain-guard scan ./project --format sarif  # SARIF 2.1.0 (GitHub Code Scanning)
 supply-chain-guard scan ./project --format sbom   # CycloneDX 1.6 SBOM with real dependency inventory
-supply-chain-guard scan ./project --sbom-output sbom.json  # Write SBOM to file separately
+supply-chain-guard scan ./project --sbom-output sbom.json  # The same SBOM, written to a file instead of stdout
 supply-chain-guard scan ./project --format badge   # Shields.io endpoint JSON
 supply-chain-guard scan ./project --format gitlab  # GitLab Dependency Scanning report (security-report-schemas 15.2.4, see examples/gitlab-ci.yml)
 supply-chain-guard scan ./project --format markdown --json-output canonical.json  # Same scan, human report plus canonical JSON
@@ -696,7 +696,18 @@ supply-chain-guard contributes to each of those activities:
 
 - **Component inventory:** generates a [CycloneDX 1.6](https://cyclonedx.org/)
   SBOM from the real resolved dependency tree, as a machine-readable component
-  list you can attach to technical documentation.
+  list you can attach to technical documentation. The inventory is built from
+  **npm only**, and specifically from `package-lock.json` (lockfile version 2 or
+  later) for the full transitive tree, falling back to the direct dependencies
+  declared in `package.json`. `pnpm-lock.yaml`, `yarn.lock` and `bun.lockb` are
+  **not** read, and neither is any non-npm manifest: a Python, Cargo, Go,
+  RubyGems, Composer or NuGet project produces an SBOM with no components from
+  that ecosystem. Every such file that is present is named in the document, in
+  `metadata.properties`, alongside an `inventory-coverage` value of
+  `full-transitive`, `direct-only` or `none`, so an inventory that was never
+  taken is never mistaken for a product that ships nothing. The scanner's threat
+  detection covers all the ecosystems listed at the top of this README; only the
+  SBOM inventory is npm-scoped.
 - **Dependency risk:** detects known-malicious packages and versions,
   typosquatting, dependency confusion, and compromised publisher activity, at
   scan time and at install time.
@@ -708,6 +719,13 @@ supply-chain-guard contributes to each of those activities:
 # Write a CycloneDX 1.6 SBOM alongside the scan report
 supply-chain-guard scan ./project --sbom-output sbom.json
 ```
+
+`--sbom-output <file>` and `--format sbom` produce the SAME document for the
+same scan: the same components, the same dependency graph, the same
+`vulnerabilities` entries and the same incident annotations. Only the
+`serialNumber` and the timestamps differ, because each invocation is its own
+run. The two exist so an SBOM can be written to a file while the scan report
+itself goes to stdout in another format.
 
 #### What the SBOM carries, and what it says it could not assess
 
@@ -745,6 +763,21 @@ verbatim in `analysis.detail`. No `analysis.justification` is emitted: that
 field is a fixed enum that a free-text reason cannot be mapped to. A suppression
 with no recorded reason produces a statement that says exactly that.
 
+Component hashes are hexadecimal digests, decoded from the base64 Subresource
+Integrity value npm writes into the lockfile, because that is the encoding the
+CycloneDX `hash-content` pattern requires. An integrity part whose algorithm is
+not one this generator maps, or whose payload does not decode to the digest
+length its algorithm requires, is dropped and reported on the component rather
+than emitted, and counted at the document level. purls are canonical: the npm
+scope is the purl namespace and the separator after it is a literal `/`.
+
+Where the inventory came from `package.json` because no lockfile was present, a
+component carries `version` and `purl` only when the manifest declares one exact
+version. A range, a dist-tag such as `latest`, a git or URL specifier and a
+`workspace:` protocol are constraints, not versions: those components carry
+neither field, a `supply-chain-guard:version` property records why, and
+`supply-chain-guard:declared-specifier` keeps the declared string verbatim.
+
 Supplier and author are not emitted. `package-lock.json` does not carry either
 field, and the SBOM generator reads only `package-lock.json` and `package.json`,
 so there is nothing to populate them from without a registry lookup.
@@ -761,8 +794,14 @@ chain security. The relevant capabilities are:
 - **Supply chain risk:** typosquatting, dependency confusion, compromised
   packages, and malicious GitHub Actions in CI/CD workflows.
 - **Incident evidence:** the correlation engine links individual findings into
-  named attack chains with confidence scores, and reports are exportable as
-  SARIF, JSON, and CycloneDX for retention alongside an incident record.
+  named attack chains with confidence scores. The incident record itself, with
+  its name, confidence, indicator list and narrative, is carried by three
+  formats: **JSON** (`incidents` on the report), **SARIF** (the incident list on
+  `runs[0].properties`, and the incidents each result belongs to in that
+  result's property bag) and **CycloneDX** (one `annotations` entry per
+  incident, whose `subjects` are the `vulnerabilities` entries it groups). The
+  text renderer prints it as a panel. The markdown, HTML, badge, GitLab and
+  JUnit formats carry the individual findings only, not the incident record.
 - **Configuration exposure:** IaC, Dockerfile, and `.npmrc` / `.yarnrc` scanning
   surfaces misconfiguration before deployment.
 

@@ -20,6 +20,25 @@
  *   resolved to a component;
  * - the subject's `version` and `purl` are omitted, with a property saying why,
  *   when no package.json declared a version.
+ *
+ * WHAT THIS FILE WILL NOT DO (v5.30): it will not emit a value the CycloneDX
+ * 1.6 schema rejects, and it will not let an unread ecosystem look like an
+ * empty one:
+ *
+ * - `hashes[].content` is the hex digest the schema's `hash-content` pattern
+ *   requires, decoded from npm's base64 `integrity`; a digest whose decoded
+ *   length does not match its algorithm is dropped and counted, never emitted;
+ * - purls are canonical: the npm scope is the purl namespace and the `/` after
+ *   it is a literal separator, not `%2F`;
+ * - a component's name comes from the lockfile entry's `name` field or the
+ *   segment after the LAST `node_modules/`, so a nested duplicate is findable
+ *   under its own name and a workspace member under its declared one;
+ * - without a lockfile, a dependency SPECIFIER is never printed as a resolved
+ *   version: `version` and `purl` are omitted and the declared specifier is
+ *   recorded in a property;
+ * - `metadata.properties` carries `inventory-coverage` and, when any are
+ *   present, `not-inventoried`, so "this ecosystem was not read" is a distinct
+ *   statement from "this project has no components".
  */
 
 import * as fs from "node:fs";
@@ -111,14 +130,83 @@ const LICENSE_NOT_ASSESSED: SbomProperty = {
 };
 
 /**
- * Build a Package URL (purl) for an npm package.
+ * Build a canonical Package URL (purl) for an npm package.
+ *
+ * The npm scope is the purl NAMESPACE, and the `/` between namespace and name
+ * is a literal separator that purl does not percent encode. Encoding it as
+ * `%2F` (what this function did before v5.30) produces a string that parses
+ * without throwing but decomposes into namespace `undefined` and a name
+ * containing a slash, so it never equals the canonical purl and never matches
+ * advisory data keyed on the namespace/name pair.
+ *
+ * Encoding rules mirror the purl specification's reference implementation
+ * (`packageurl-js`), which the test suite compares every emitted purl against:
+ *
+ * - namespace: `encodeURIComponent`, then `%3A` back to `:` and `%2F` back to `/`
+ * - name: `encodeURIComponent`
+ * - version: `encodeURIComponent`, then `%3A` back to `:` and `%2B` back to `+`
+ * - the npm purl type lowercases namespace and name (the component's own `name`
+ *   field keeps the declared casing; only the purl is normalised)
  */
 function npmPurl(name: string, version: string): string {
-  // Scoped packages: @scope/name → pkg:npm/%40scope%2Fname@version
-  const encodedName = name.startsWith("@")
-    ? name.replace("@", "%40").replace("/", "%2F")
-    : name;
-  return `pkg:npm/${encodedName}@${version}`;
+  let namespace: string | undefined;
+  let bare = name;
+  if (name.startsWith("@")) {
+    const slash = name.indexOf("/");
+    if (slash > 0) {
+      namespace = name.slice(0, slash);
+      bare = name.slice(slash + 1);
+    }
+  }
+
+  const encNamespace = namespace
+    ? encodeURIComponent(namespace.toLowerCase()).replace(/%3A/g, ":").replace(/%2F/g, "/")
+    : undefined;
+  const encName = encodeURIComponent(bare.toLowerCase());
+  const encVersion = encodeURIComponent(version).replace(/%3A/g, ":").replace(/%2B/g, "+");
+
+  return encNamespace
+    ? `pkg:npm/${encNamespace}/${encName}@${encVersion}`
+    : `pkg:npm/${encName}@${encVersion}`;
+}
+
+/**
+ * The version string a `package.json` dependency value states outright.
+ *
+ * Returns undefined for everything that is not one exact version, which is most
+ * of what npm accepts: ranges (`^1.2.3`, `>=1.0.0 <2.0.0`, `1.x`, `*`),
+ * dist-tags (`latest`), git/URL specifiers, `workspace:` and `file:` protocols.
+ * Before v5.30 those were turned into a "version" by deleting one leading
+ * non-digit character, which produced `atest` from `latest` and, worse,
+ * presented `^1.2.3` as the resolved version 1.2.3.
+ *
+ * The pattern is deliberately strict semver: an exact `1.2.3`, `1.2.3-beta.2`
+ * or `1.2.3+build.4` is a factual statement about one release, and anything
+ * else is a constraint that only a lockfile can resolve.
+ */
+export function exactVersionOf(specifier: string): string | undefined {
+  const text = specifier.trim();
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(text) ? text : undefined;
+}
+
+/**
+ * Resolve an `npm:` alias specifier to the package it actually names.
+ *
+ * `"alias-dep": "npm:real-package@4.5.6"` installs `real-package`, so the
+ * component identifies `real-package`; the alias key is only how this project
+ * refers to it. Returns undefined for anything that is not an alias.
+ */
+export function resolveNpmAlias(
+  specifier: string,
+): { name: string; specifier: string } | undefined {
+  const text = specifier.trim();
+  if (!text.startsWith("npm:")) return undefined;
+  const rest = text.slice(4);
+  if (rest === "") return undefined;
+  // The separator is the last "@" that is not the scope marker at index 0.
+  const at = rest.lastIndexOf("@");
+  if (at <= 0) return { name: rest, specifier: "*" };
+  return { name: rest.slice(0, at), specifier: rest.slice(at + 1) };
 }
 
 /**
@@ -144,23 +232,124 @@ export function encodeLicense(value: unknown): SbomLicenseEntry | undefined {
   return { license: { name: text } };
 }
 
+type SbomHash = NonNullable<SbomComponent["hashes"]>[number];
+
 /**
- * Parse integrity hash (sha512-<base64> or sha1-<base64>) into CycloneDX format.
+ * How many hex characters a digest of each algorithm must have. CycloneDX 1.6
+ * constrains `hashes[].content` with
+ * `^([a-fA-F0-9]{32}|{40}|{64}|{96}|{128})$`, so a value of any other length
+ * fails schema validation for the whole document.
  */
-function parseIntegrity(
-  integrity: string,
-): Array<{ alg: "SHA-256" | "SHA-512" | "SHA-1"; content: string }> {
-  const results: Array<{ alg: "SHA-256" | "SHA-512" | "SHA-1"; content: string }> = [];
-  for (const part of integrity.split(" ")) {
-    if (part.startsWith("sha512-")) {
-      results.push({ alg: "SHA-512", content: part.slice(7) });
-    } else if (part.startsWith("sha256-")) {
-      results.push({ alg: "SHA-256", content: part.slice(7) });
-    } else if (part.startsWith("sha1-")) {
-      results.push({ alg: "SHA-1", content: part.slice(5) });
+const DIGEST_HEX_LENGTH: Record<SbomHash["alg"], number> = {
+  "SHA-1": 40,
+  "SHA-256": 64,
+  "SHA-384": 96,
+  "SHA-512": 128,
+};
+
+/**
+ * The Subresource Integrity prefixes npm writes, mapped to the CycloneDX
+ * `hash-alg` enum value for each. A prefix that is not here is reported, never
+ * guessed: emitting the payload under a neighbouring algorithm would assert a
+ * digest the lockfile never made.
+ */
+const INTEGRITY_PREFIXES: Array<[string, SbomHash["alg"]]> = [
+  ["sha512-", "SHA-512"],
+  ["sha384-", "SHA-384"],
+  ["sha256-", "SHA-256"],
+  ["sha1-", "SHA-1"],
+];
+
+export interface ParsedIntegrity {
+  hashes: SbomHash[];
+  /**
+   * Integrity parts that produced no hash: an algorithm prefix this generator
+   * does not map (`sha384-`, a future one), or a payload that did not decode to
+   * a digest of the length the algorithm requires. Counted so the document can
+   * say the field was not assessed instead of silently carrying fewer hashes.
+   */
+  rejected: string[];
+}
+
+/**
+ * Parse an npm `integrity` value (`sha512-<base64> sha1-<base64>`) into
+ * CycloneDX 1.6 hashes.
+ *
+ * The npm value is base64. CycloneDX requires HEX: the `hash-content` pattern
+ * in bom-1.6.schema.json admits only `[a-fA-F0-9]` runs of 32/40/64/96/128
+ * characters. Passing the base64 through unchanged (what this did before
+ * v5.30) makes every component with a hash fail schema validation, which is
+ * every component npm resolved from a registry.
+ *
+ * A part whose payload does not base64-decode to exactly the digest length its
+ * algorithm requires is REJECTED rather than emitted: a hash of the wrong
+ * length is not a weaker claim, it is a false one, and it would take the whole
+ * document out of conformance again.
+ */
+export function parseIntegrity(integrity: string): ParsedIntegrity {
+  const hashes: SbomHash[] = [];
+  const rejected: string[] = [];
+
+  for (const part of integrity.split(/\s+/)) {
+    if (part === "") continue;
+
+    const dash = part.indexOf("-");
+    const prefix = dash === -1 ? "" : part.slice(0, dash + 1);
+    const known = INTEGRITY_PREFIXES.find(([p]) => p === prefix);
+    if (!known) {
+      rejected.push(prefix === "" ? part : prefix.slice(0, -1));
+      continue;
     }
+
+    const alg = known[1];
+    const payload = part.slice(prefix.length);
+    // Buffer.from(..., "base64") never throws; it stops at the first character
+    // outside the alphabet, so the decoded LENGTH is the check that matters.
+    const hex = Buffer.from(payload, "base64").toString("hex");
+    if (hex.length !== DIGEST_HEX_LENGTH[alg]) {
+      rejected.push(prefix.slice(0, -1));
+      continue;
+    }
+    hashes.push({ alg, content: hex });
   }
-  return results;
+
+  return { hashes, rejected };
+}
+
+/**
+ * The package name a lockfile entry is really about.
+ *
+ * npm lockfile keys are filesystem paths, not package names. Stripping ONE
+ * leading `node_modules/` (what this did before v5.30) leaves
+ * `middle/node_modules/@acme/dep` for a nested duplicate - a name no consumer
+ * can find the package under - and leaves a workspace member named after its
+ * directory, `packages/app`, while the entry's own `name` field carries
+ * `@acme/app`.
+ *
+ * Order matters: the entry's declared `name` wins, because it is the only
+ * authoritative source and it is what workspace entries carry. Otherwise the
+ * segment after the LAST `node_modules/` is the package, which is exactly how
+ * npm nests duplicates. A key that is neither (a workspace member with no
+ * declared name) falls back to its last path segment, and the caller records
+ * that the name was derived from a path rather than declared.
+ */
+export function lockfileEntryName(
+  pkgPath: string,
+  declaredName: unknown,
+): { name: string; derivedFromPath: boolean } {
+  if (typeof declaredName === "string" && declaredName.trim() !== "") {
+    return { name: declaredName.trim(), derivedFromPath: false };
+  }
+  const marker = "node_modules/";
+  const last = pkgPath.lastIndexOf(marker);
+  if (last !== -1) {
+    return { name: pkgPath.slice(last + marker.length), derivedFromPath: false };
+  }
+  const slash = pkgPath.lastIndexOf("/");
+  return {
+    name: slash === -1 ? pkgPath : pkgPath.slice(slash + 1),
+    derivedFromPath: slash !== -1,
+  };
 }
 
 /**
@@ -211,6 +400,12 @@ interface Inventory {
   unresolvedEdges?: number;
   componentsWithLicense: number;
   graphStatus: string;
+  /** How complete this inventory is, in one machine-readable token. */
+  coverage: "full-transitive" | "direct-only";
+  /** Components whose version the source could not resolve (package.json path). */
+  componentsWithoutVersion: number;
+  /** Integrity parts that produced no hash, keyed by what was rejected. */
+  rejectedHashes: Map<string, number>;
 }
 
 /**
@@ -245,13 +440,23 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
   const components: SbomComponent[] = [];
   const emitted = new Set<string>();
   let componentsWithLicense = 0;
+  const rejectedHashes = new Map<string, number>();
 
   for (const [pkgPath, pkg] of Object.entries(packages)) {
     // Skip the root package entry (empty string key)
     if (pkgPath === "" || !pkg.version) continue;
 
-    // Extract name from path like "node_modules/foo" or "node_modules/@scope/bar"
-    const name = pkgPath.replace(/^node_modules\//, "");
+    // The lockfile key is a filesystem path. The package NAME comes from the
+    // entry's own `name` field, or from the segment after the last
+    // "node_modules/" - see lockfileEntryName().
+    const { name, derivedFromPath } = lockfileEntryName(pkgPath, pkg.name);
+    const properties: SbomProperty[] = [];
+    if (derivedFromPath) {
+      properties.push({
+        name: "supply-chain-guard:component-name",
+        value: `derived-from-lockfile-path: the entry "${pkgPath}" declares no name field, so the last path segment was used`,
+      });
+    }
 
     const component: SbomComponent = {
       type: "library",
@@ -263,8 +468,15 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
     };
 
     if (pkg.integrity) {
-      const hashes = parseIntegrity(pkg.integrity);
+      const { hashes, rejected } = parseIntegrity(pkg.integrity);
       if (hashes.length > 0) component.hashes = hashes;
+      for (const r of rejected) {
+        rejectedHashes.set(r, (rejectedHashes.get(r) ?? 0) + 1);
+        properties.push({
+          name: "supply-chain-guard:integrity",
+          value: `not-assessed: the lockfile integrity value carries a "${r}" digest this generator does not encode as a CycloneDX hash`,
+        });
+      }
     }
 
     const license = encodeLicense(pkg.license);
@@ -272,8 +484,10 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
       component.licenses = [license];
       componentsWithLicense++;
     } else {
-      component.properties = [LICENSE_NOT_ASSESSED];
+      properties.push(LICENSE_NOT_ASSESSED);
     }
+
+    if (properties.length > 0) component.properties = properties;
 
     components.push(component);
     emitted.add(pkgPath);
@@ -323,6 +537,9 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
     unresolvedEdges,
     componentsWithLicense,
     graphStatus: "resolved-from-package-lock.json",
+    coverage: "full-transitive",
+    componentsWithoutVersion: 0,
+    rejectedHashes,
   };
 }
 
@@ -335,6 +552,15 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
  * omitted silently. The subject's own direct edges ARE known here, so the
  * graph is emitted as partial: one entry for the subject, and no entry for any
  * dependency, which states that nothing was concluded about their edges.
+ *
+ * WHAT THIS PATH WILL NOT DO (v5.30): it will not present a SPECIFIER as a
+ * resolved version. A package.json dependency value is a constraint, and only a
+ * lockfile says which release satisfied it. `version` and `purl` are therefore
+ * emitted only for a value that is one exact semver; every other value leaves
+ * both fields absent and records the declared specifier in a property. That is
+ * a visibly incomplete component, which is the point: `^1.2.3` rendered as
+ * version 1.2.3 reads as a fact and is wrong in either direction against an
+ * advisory range.
  */
 function readPackageJsonInventory(packageJsonPath: string): Inventory | undefined {
   let raw: string;
@@ -353,27 +579,51 @@ function readPackageJsonInventory(packageJsonPath: string): Inventory | undefine
 
   const components: SbomComponent[] = [];
   const seen = new Set<string>();
+  let componentsWithoutVersion = 0;
 
   const addDeps = (
     deps: Record<string, string> | undefined,
     scope: SbomComponent["scope"],
   ) => {
     if (!deps) return;
-    for (const [name, versionRange] of Object.entries(deps)) {
-      if (seen.has(name)) continue;
-      seen.add(name);
-      // Strip semver range operators to get a clean version string
-      const version = versionRange.replace(/^[^0-9]/, "") || versionRange;
+    for (const [declaredKey, rawSpecifier] of Object.entries(deps)) {
+      if (seen.has(declaredKey)) continue;
+      seen.add(declaredKey);
+
+      // "npm:real-package@4.5.6" installs real-package under the alias key.
+      const alias = resolveNpmAlias(rawSpecifier);
+      const name = alias ? alias.name : declaredKey;
+      const specifier = alias ? alias.specifier : rawSpecifier;
+      const version = exactVersionOf(specifier);
+
+      const properties: SbomProperty[] = [LICENSE_NOT_ASSESSED];
+      if (alias) {
+        properties.push({
+          name: "supply-chain-guard:alias",
+          value: `declared in package.json as "${declaredKey}": "${rawSpecifier}"`,
+        });
+      }
+      if (!version) {
+        componentsWithoutVersion++;
+        properties.push({
+          name: "supply-chain-guard:version",
+          value: `not-assessed: package.json declares "${rawSpecifier}", which is a specifier and not a resolved version; no package-lock.json was available to resolve it`,
+        });
+      }
+      properties.push({
+        name: "supply-chain-guard:declared-specifier",
+        value: rawSpecifier,
+      });
+
       components.push({
         type: "library",
-        // Dependency names are unique across the four maps because of `seen`,
-        // so the name is a safe bom-ref on this path.
-        "bom-ref": name,
+        // Dependency KEYS are unique across the four maps because of `seen`, so
+        // the key is a safe bom-ref even when an alias makes `name` differ.
+        "bom-ref": declaredKey,
         name,
-        version,
-        purl: npmPurl(name, version),
+        ...(version ? { version, purl: npmPurl(name, version) } : {}),
         scope,
-        properties: [LICENSE_NOT_ASSESSED],
+        properties,
       });
     }
   };
@@ -391,7 +641,94 @@ function readPackageJsonInventory(packageJsonPath: string): Inventory | undefine
     componentsWithLicense: 0,
     graphStatus:
       "partial: direct dependencies of the subject only; without package-lock.json the transitive edges were not assessed",
+    coverage: "direct-only",
+    componentsWithoutVersion,
+    rejectedHashes: new Map(),
   };
+}
+
+/**
+ * Manifests and lockfiles that declare components this generator does NOT
+ * read, mapped to the ecosystem a reader would name them by.
+ *
+ * The list exists so that "this ecosystem was not inventoried" can be stated as
+ * a fact about a file that is present, rather than left to look like "this
+ * project has no components". A Python service scanned before v5.30 got a
+ * well-formed CycloneDX 1.6 document with `components: []` and exit 0, and
+ * nothing in it distinguished the two.
+ *
+ * npm lockfiles other than package-lock.json are in this list too: a pnpm tree
+ * falls back to package.json and yields the direct dependencies only, so the
+ * lockfile that WOULD have given the full tree has to be named as unread.
+ */
+const NOT_INVENTORIED_MANIFESTS: Array<[file: string, ecosystem: string]> = [
+  ["pnpm-lock.yaml", "npm (pnpm lockfile)"],
+  ["yarn.lock", "npm (yarn lockfile)"],
+  ["bun.lockb", "npm (bun lockfile)"],
+  ["bun.lock", "npm (bun lockfile)"],
+  ["requirements.txt", "PyPI"],
+  ["Pipfile.lock", "PyPI"],
+  ["poetry.lock", "PyPI"],
+  ["pyproject.toml", "PyPI"],
+  ["Cargo.toml", "Cargo"],
+  ["Cargo.lock", "Cargo"],
+  ["go.mod", "Go"],
+  ["go.sum", "Go"],
+  ["Gemfile.lock", "RubyGems"],
+  ["composer.json", "Composer"],
+  ["composer.lock", "Composer"],
+  ["packages.config", "NuGet"],
+  ["pom.xml", "Maven"],
+  ["build.gradle", "Gradle"],
+  ["build.gradle.kts", "Gradle"],
+];
+
+/**
+ * Which dependency manifests exist in `projectDir` that the SBOM generator does
+ * not read. Returns `"<file> (<ecosystem>)"` entries, deduplicated by file, in
+ * the order of the table above so the string is stable across runs.
+ */
+export function detectUninventoriedManifests(projectDir: string): string[] {
+  const found: string[] = [];
+  for (const [file, ecosystem] of NOT_INVENTORIED_MANIFESTS) {
+    let present = false;
+    try {
+      present = fs.existsSync(path.join(projectDir, file));
+    } catch {
+      present = false;
+    }
+    if (present) found.push(`${file} (${ecosystem})`);
+  }
+  return found;
+}
+
+/**
+ * One sentence describing how complete a generated document's inventory is,
+ * derived from the document itself rather than from a second copy of the
+ * decision. The CLI prints it next to the component count, because a bare count
+ * cannot distinguish an empty inventory from an unread one.
+ */
+export function describeInventoryCoverage(doc: SbomDocument): string {
+  const prop = (suffix: string): string | undefined =>
+    doc.metadata.properties?.find((p) => p.name === `${PROP}:${suffix}`)?.value;
+
+  const coverage = prop("inventory-coverage") ?? "unknown";
+  const notInventoried = prop("not-inventoried");
+  const unresolved = prop("components-without-resolved-version");
+
+  const parts: string[] = [];
+  if (coverage.startsWith("full-transitive")) {
+    parts.push("full transitive inventory from package-lock.json");
+  } else if (coverage.startsWith("direct-only")) {
+    parts.push("DIRECT DEPENDENCIES ONLY, read from package.json; transitive components not inventoried");
+    if (unresolved && unresolved !== "0") {
+      parts.push(`${unresolved} of them carry no resolved version (package.json declares a range or a tag)`);
+    }
+  } else {
+    parts.push("NOTHING WAS INVENTORIED: no npm manifest this generator reads was found");
+  }
+  if (notInventoried) parts.push(`not inventoried: ${notInventoried}`);
+  return parts.join("; ");
 }
 
 /**
@@ -517,6 +854,45 @@ export function generateSbomDocument(
         "not-assessed: no readable npm manifest (package-lock.json v2+ or package.json) in the scanned directory",
     },
   ];
+
+  // How complete this inventory is, as one token a consumer can branch on. The
+  // "none" value is the one that matters: without it an empty `components`
+  // array is indistinguishable from a product that ships no third-party code.
+  properties.push({
+    name: `${PROP}:inventory-coverage`,
+    value:
+      inventory?.coverage === "full-transitive"
+        ? "full-transitive: every entry of package-lock.json (v2+)"
+        : inventory?.coverage === "direct-only"
+          ? "direct-only: the dependencies package.json declares; transitive components were NOT inventoried"
+          : "none: no npm manifest this generator reads (package-lock.json v2+ or package.json) was found, so NOTHING was inventoried - an empty component list here is not a statement that this project has no components",
+  });
+
+  // Manifests that are present and declare components this generator does not
+  // read. Stated as a fact about files on disk, so a Python, Cargo or Go
+  // project is never handed an empty inventory with no explanation.
+  const uninventoried = detectUninventoriedManifests(projectDir);
+  if (uninventoried.length > 0) {
+    properties.push({
+      name: `${PROP}:not-inventoried`,
+      value: uninventoried.join(", "),
+    });
+  }
+
+  if (inventory && inventory.componentsWithoutVersion > 0) {
+    properties.push({
+      name: `${PROP}:components-without-resolved-version`,
+      value: String(inventory.componentsWithoutVersion),
+    });
+  }
+  if (inventory && inventory.rejectedHashes.size > 0) {
+    properties.push({
+      name: `${PROP}:integrity-digests-not-encoded`,
+      value: [...inventory.rejectedHashes.entries()]
+        .map(([alg, n]) => `${alg}:${n}`)
+        .join(", "),
+    });
+  }
   if (inventory?.unresolvedEdges !== undefined) {
     properties.push({
       name: `${PROP}:dependency-edges-unresolved`,

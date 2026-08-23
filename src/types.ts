@@ -27,8 +27,24 @@ export interface Finding {
    * forge URLs, developer paths) as opposed to a credential or a payload.
    */
   category?: "malware" | "supply-chain" | "config" | "trust" | "info" | "disclosure";
-  /** Correlation cluster ID (v4.2) */
+  /**
+   * Correlation cluster ID (v4.2).
+   *
+   * Single-valued and therefore lossy: a finding can be an indicator of more
+   * than one incident. It is kept for consumers that already read it and is
+   * always `correlationIds[0]`. Read `correlationIds` to get every incident the
+   * finding belongs to.
+   */
   correlationId?: string;
+  /**
+   * Every incident this finding is an indicator of (v5.30).
+   *
+   * Before v5.30 only `correlationId` existed and the correlation loop
+   * overwrote it, so a finding listed under two incidents reported membership
+   * in whichever one was written last - an evidence record whose own members
+   * pointed at a different record.
+   */
+  correlationIds?: string[];
   /** Why this was flagged (v4.4) */
   rationale?: string;
   /** Evidence snippet (v4.4) */
@@ -133,10 +149,34 @@ export interface SbomComponent {
    */
   "bom-ref": string;
   name: string;
-  version: string;
-  /** Package URL (pkg:npm/name@version or pkg:pypi/name@version) */
-  purl: string;
-  hashes?: Array<{ alg: "SHA-256" | "SHA-512" | "SHA-1"; content: string }>;
+  /**
+   * Resolved version (v5.30: optional).
+   *
+   * Omitted when the source could not resolve one - the package.json fallback
+   * reading a range such as `^1.2.3`, a dist-tag such as `latest`, or a git
+   * specifier. CycloneDX 1.6 requires only `type` and `name` on a component, so
+   * an absent version is schema-valid, and a `supply-chain-guard:version`
+   * property on the same component records why it is absent. A range printed in
+   * this field would read as a factual claim about what ships.
+   */
+  version?: string;
+  /**
+   * Package URL (v5.30: optional).
+   *
+   * Emitted only alongside a resolved `version`: a purl carrying a range, a
+   * dist-tag or a truncated specifier is not the identifier any consumer will
+   * match on, so nothing is emitted rather than something unmatchable.
+   */
+  purl?: string;
+  /**
+   * Integrity digests, HEX encoded (v5.30).
+   *
+   * CycloneDX 1.6 constrains `hashes[].content` to a hexadecimal digest.
+   * npm's lockfile `integrity` field is base64 (Subresource Integrity), so the
+   * generator decodes it; a digest whose decoded length does not match its
+   * algorithm is dropped and counted rather than emitted.
+   */
+  hashes?: Array<{ alg: "SHA-256" | "SHA-384" | "SHA-512" | "SHA-1"; content: string }>;
   /**
    * Declared licences (v5.29). Absent means the source manifest declared none;
    * in that case a `supply-chain-guard:license` property records that the field
@@ -170,6 +210,33 @@ export interface VexStatement {
     detail?: string;
   };
   affects?: Array<{ ref: string; versions?: string[] }>;
+  /**
+   * Free-form name/value pairs on the vulnerability entry (v5.30).
+   *
+   * CycloneDX 1.6 defines `affects[].ref` as a reference to a bom-ref in the
+   * same document and gives a vulnerability no field for a source location, so
+   * the file and line a finding came from are recorded here while `affects`
+   * keeps pointing at a component that actually exists. Incident membership is
+   * carried here too, one entry per incident the finding belongs to.
+   */
+  properties?: SbomProperty[];
+}
+
+/**
+ * One CycloneDX 1.6 annotation (v5.30).
+ *
+ * The slot the spec provides for commentary about other objects in the same
+ * document, which is what a correlated incident is: a statement about a set of
+ * vulnerability entries rather than an inventory fact. `subjects` are bom-refs
+ * of entries in this document, so an incident is reachable from the entries it
+ * groups and vice versa.
+ */
+export interface SbomAnnotation {
+  "bom-ref": string;
+  subjects: string[];
+  annotator: { component: { type: string; name: string; version: string } };
+  timestamp: string;
+  text: string;
 }
 
 export interface SbomDocument {
@@ -205,6 +272,11 @@ export interface SbomDocument {
    */
   dependencies?: SbomDependency[];
   vulnerabilities?: VexStatement[];
+  /**
+   * Correlated incidents, one annotation each (v5.30). Absent when the scan
+   * correlated nothing, which is a different statement from an empty array.
+   */
+  annotations?: SbomAnnotation[];
 }
 
 // ---------------------------------------------------------------------------

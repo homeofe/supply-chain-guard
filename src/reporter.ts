@@ -7,11 +7,18 @@
 import { randomUUID } from "node:crypto";
 import type {
   Finding,
+  IncidentCluster,
   PolicyEffect,
   PolicyEffectEntry,
+  SbomAnnotation,
+  SbomComponent,
+  SbomProperty,
   ScanReport,
   Severity,
 } from "./types.js";
+
+/** bom-ref of the component every SBOM this tool emits is about. */
+const SUBJECT_BOM_REF = "target";
 
 const PARTIAL_SCAN_WARNING =
   "Scan incomplete: one or more configured checks or files could not be fully evaluated. No clean verdict can be established until coverage gaps are resolved.";
@@ -729,6 +736,20 @@ function formatSarif(report: ScanReport): string {
       message: { text: finding.description },
     };
 
+    // v5.30: incident membership on the result itself. SARIF 2.1.0 property
+    // bags are the standard slot for tool-specific correlation data, and
+    // without it a SARIF consumer sees only the flat finding list - which is
+    // the thing the correlation engine exists to turn into evidence.
+    const incidentIds = incidentIdsOf(finding);
+    if (incidentIds.length > 0) {
+      result.properties = {
+        incidentIds,
+        incidentNames: incidentIds.map(
+          (id) => report.incidents?.find((i) => i.id === id)?.name ?? id,
+        ),
+      };
+    }
+
     if (finding.file) {
       const region: Record<string, number> = {};
       if (finding.line) {
@@ -780,6 +801,25 @@ function formatSarif(report: ScanReport): string {
         ]
       : undefined;
 
+  // v5.30: the incident list itself, on the run's property bag. The README's
+  // NIS2 bullet names SARIF as a format the incident record is retained in, and
+  // before this the whole document contained no incident name, no confidence
+  // and no indicator list.
+  const runProperties =
+    report.incidents && report.incidents.length > 0
+      ? {
+          incidents: report.incidents.map((incident) => ({
+            id: incident.id,
+            name: incident.name,
+            severity: incident.severity,
+            confidence: incident.confidence,
+            indicators: incident.indicators,
+            narrative: incident.narrative,
+            findingCount: incident.findings.length,
+          })),
+        }
+      : undefined;
+
   const sarif = {
     $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
     version: "2.1.0" as const,
@@ -795,6 +835,7 @@ function formatSarif(report: ScanReport): string {
         },
         ...(invocations ? { invocations } : {}),
         results,
+        ...(runProperties ? { properties: runProperties } : {}),
       },
     ],
   };
@@ -817,9 +858,107 @@ function severityRank(severity: Severity): number {
 }
 
 /**
+ * Every incident a finding is an indicator of.
+ *
+ * `correlationIds` is the field to read; `correlationId` is the pre-v5.30
+ * single-valued one, kept working for reports parsed from older JSON.
+ */
+function incidentIdsOf(finding: Finding): string[] {
+  if (finding.correlationIds && finding.correlationIds.length > 0) {
+    return finding.correlationIds;
+  }
+  return finding.correlationId ? [finding.correlationId] : [];
+}
+
+/**
+ * The bom-ref of the component a finding's file belongs to, or the subject.
+ *
+ * CycloneDX 1.6 defines `vulnerabilities[].affects[].ref` as a reference to a
+ * bom-ref in the SAME document. Before v5.30 this was `finding.file`, a path
+ * relative to the scanned tree, so every reference resolved to nothing and a
+ * consumer walking the graph could attribute no finding to any component. The
+ * schema does not catch it: `refLinkType` is an unconstrained string.
+ *
+ * Prefix matching is attempted only when the inventory came from
+ * package-lock.json, because only then are bom-refs relative paths
+ * ("node_modules/@babel/parser", "packages/app"). On the package.json fallback
+ * a bom-ref is a bare dependency key, and matching a file path against those
+ * would attribute findings to components by coincidence.
+ *
+ * The deepest matching component wins, so a file inside a nested duplicate is
+ * attributed to the nested copy rather than to the hoisted one.
+ */
+function resolveAffectedRef(
+  file: string | undefined,
+  components: SbomComponent[],
+  refsArePaths: boolean,
+): string {
+  if (!file || !refsArePaths) return SUBJECT_BOM_REF;
+  const normalized = file.replace(/\\/g, "/").replace(/^\.\//, "");
+  let best = SUBJECT_BOM_REF;
+  let bestLength = -1;
+  for (const component of components) {
+    const ref = component["bom-ref"];
+    if (normalized !== ref && !normalized.startsWith(`${ref}/`)) continue;
+    if (ref.length > bestLength) {
+      best = ref;
+      bestLength = ref.length;
+    }
+  }
+  return best;
+}
+
+/**
+ * One CycloneDX annotation per correlated incident.
+ *
+ * The incident is not inventory - it is commentary about a set of entries
+ * already in the document - and `annotations` is the slot CycloneDX 1.6
+ * provides for exactly that. `subjects` are the bom-refs of the vulnerability
+ * entries the incident groups, so the link is navigable in both directions:
+ * from the incident to its indicators, and from each entry via its
+ * `supply-chain-guard:incident` properties.
+ *
+ * An incident whose findings all ended up suppressed contributes no subjects
+ * and is dropped, because an annotation about nothing is not evidence.
+ */
+function buildIncidentAnnotations(
+  incidents: IncidentCluster[] | undefined,
+  subjectsByIncident: Map<string, string[]>,
+  timestamp: string,
+  toolVersion: string,
+): SbomAnnotation[] {
+  const annotations: SbomAnnotation[] = [];
+  for (const incident of incidents ?? []) {
+    const subjects = [...new Set(subjectsByIncident.get(incident.id) ?? [])];
+    if (subjects.length === 0) continue;
+    annotations.push({
+      "bom-ref": `scg-${incident.id}`,
+      subjects,
+      annotator: {
+        component: { type: "application", name: "supply-chain-guard", version: toolVersion },
+      },
+      timestamp,
+      text:
+        `Correlated incident ${incident.id}: ${incident.name}. ` +
+        `Severity ${incident.severity}, compound confidence ${(incident.confidence * 100).toFixed(0)}%. ` +
+        `Indicators (${incident.indicators.length}): ${incident.indicators.join(", ")}. ` +
+        `${incident.narrative} ` +
+        `Correlated by supply-chain-guard from findings in this scan; this is not advisory data.`,
+    });
+  }
+  return annotations;
+}
+
+/**
  * Format as CycloneDX 1.6 JSON SBOM.
  * Uses the sbomDocument generated from actual package.json/lockfile if available,
  * otherwise falls back to a findings-based SBOM.
+ *
+ * v5.30: this is the ONE renderer behind both documented SBOM commands.
+ * `--sbom-output <file>` used to serialise `report.sbomDocument` directly and
+ * therefore shipped a file with no `vulnerabilities` key at all, while
+ * `--format sbom` merged the findings in - two different documents from one
+ * scan, both offered as the same artefact by the README.
  */
 function formatSbom(report: ScanReport): string {
   const partialScanProperty = {
@@ -843,12 +982,59 @@ function formatSbom(report: ScanReport): string {
 
   // v4.9: use the proper CycloneDX 1.6 document if available
   if (report.sbomDocument) {
-    const metadata = report.sbomDocument.metadata as typeof report.sbomDocument.metadata & {
-      properties?: Array<{ name: string; value: string }>;
-    };
-    // Attach scan findings as vulnerabilities to the real SBOM
+    const document = report.sbomDocument;
+    const metadata = document.metadata;
+    const refsArePaths =
+      metadata.properties?.some(
+        (p) =>
+          p.name === "supply-chain-guard:sbom:component-source" &&
+          p.value === "package-lock.json",
+      ) ?? false;
+
+    const subjectsByIncident = new Map<string, string[]>();
+    const findingVulnerabilities = report.findings
+      .filter((f) => !f.suppressed)
+      .map((finding, idx) => {
+        const bomRef = `scg-finding-${idx}`;
+        const properties: SbomProperty[] = [];
+        // CycloneDX gives a vulnerability no field for a source location, so
+        // the path lives here while `affects` keeps pointing at a bom-ref that
+        // exists. Dropping the path would lose the only thing that says WHERE.
+        if (finding.file) {
+          properties.push({ name: "supply-chain-guard:file", value: finding.file });
+        }
+        if (finding.line !== undefined) {
+          properties.push({ name: "supply-chain-guard:line", value: String(finding.line) });
+        }
+        for (const incidentId of incidentIdsOf(finding)) {
+          properties.push({ name: "supply-chain-guard:incident", value: incidentId });
+          const subjects = subjectsByIncident.get(incidentId) ?? [];
+          subjects.push(bomRef);
+          subjectsByIncident.set(incidentId, subjects);
+        }
+        return {
+          "bom-ref": bomRef,
+          id: finding.rule,
+          source: { name: "supply-chain-guard" },
+          ratings: [{ severity: finding.severity, method: "other" }],
+          description: finding.description,
+          recommendation: finding.recommendation,
+          affects: [
+            { ref: resolveAffectedRef(finding.file, document.components, refsArePaths) },
+          ],
+          ...(properties.length > 0 ? { properties } : {}),
+        };
+      });
+
+    const annotations = buildIncidentAnnotations(
+      report.incidents,
+      subjectsByIncident,
+      metadata.timestamp,
+      metadata.tools.components[0]?.version ?? "5.28.1",
+    );
+
     const withVulns = {
-      ...report.sbomDocument,
+      ...document,
       ...(report.partialScan || policyEffectProperties.length > 0
         ? {
             metadata: {
@@ -861,25 +1047,51 @@ function formatSbom(report: ScanReport): string {
             },
           }
         : {}),
-      vulnerabilities: [
-        ...(report.sbomDocument.vulnerabilities ?? []),
-        ...report.findings
-          .filter((f) => !f.suppressed)
-          .map((finding, idx) => ({
-            "bom-ref": `scg-finding-${idx}`,
-            id: finding.rule,
-            source: { name: "supply-chain-guard" },
-            ratings: [{ severity: finding.severity, method: "other" }],
-            description: finding.description,
-            recommendation: finding.recommendation,
-            affects: finding.file ? [{ ref: finding.file }] : [{ ref: "target" }],
-          })),
-      ],
+      vulnerabilities: [...(document.vulnerabilities ?? []), ...findingVulnerabilities],
+      ...(annotations.length > 0 ? { annotations } : {}),
     };
     return JSON.stringify(withVulns, null, 2);
   }
 
   // Fallback: findings-based SBOM (legacy, no lockfile present)
+  const fallbackSubjectsByIncident = new Map<string, string[]>();
+  const fallbackVulnerabilities = report.findings
+    .filter((f) => !f.suppressed)
+    .map((finding, idx) => {
+      const bomRef = `vuln-${idx}`;
+      const properties: SbomProperty[] = [];
+      if (finding.file) {
+        properties.push({ name: "supply-chain-guard:file", value: finding.file });
+      }
+      if (finding.line !== undefined) {
+        properties.push({ name: "supply-chain-guard:line", value: String(finding.line) });
+      }
+      for (const incidentId of incidentIdsOf(finding)) {
+        properties.push({ name: "supply-chain-guard:incident", value: incidentId });
+        const subjects = fallbackSubjectsByIncident.get(incidentId) ?? [];
+        subjects.push(bomRef);
+        fallbackSubjectsByIncident.set(incidentId, subjects);
+      }
+      return {
+        "bom-ref": bomRef,
+        id: finding.rule,
+        source: { name: "supply-chain-guard" },
+        ratings: [{ severity: finding.severity, method: "other" }],
+        description: finding.description,
+        recommendation: finding.recommendation,
+        // This branch emits no components at all, so the subject is the only
+        // bom-ref anything can resolve to.
+        affects: [{ ref: SUBJECT_BOM_REF }],
+        ...(properties.length > 0 ? { properties } : {}),
+      };
+    });
+  const fallbackAnnotations = buildIncidentAnnotations(
+    report.incidents,
+    fallbackSubjectsByIncident,
+    report.timestamp,
+    "5.28.1",
+  );
+
   const sbom = {
     bomFormat: "CycloneDX",
     specVersion: "1.6",
@@ -907,15 +1119,8 @@ function formatSbom(report: ScanReport): string {
         : {}),
     },
     components: [] as unknown[],
-    vulnerabilities: report.findings.filter((f) => !f.suppressed).map((finding, idx) => ({
-      "bom-ref": `vuln-${idx}`,
-      id: finding.rule,
-      source: { name: "supply-chain-guard" },
-      ratings: [{ severity: finding.severity, method: "other" }],
-      description: finding.description,
-      recommendation: finding.recommendation,
-      affects: [{ ref: "target" }],
-    })),
+    vulnerabilities: fallbackVulnerabilities,
+    ...(fallbackAnnotations.length > 0 ? { annotations: fallbackAnnotations } : {}),
   };
 
   return JSON.stringify(sbom, null, 2);

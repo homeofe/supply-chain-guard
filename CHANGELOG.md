@@ -207,6 +207,99 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **The generated SBOM now validates against the official CycloneDX 1.6 JSON
+  schema.** `hashes[].content` carried the base64 string npm writes into the
+  lockfile `integrity` field, while the spec's `hash-content` pattern admits
+  only a hexadecimal digest, so every component with a hash failed. Measured on
+  this repository against the schema published at the `1.6` tag of the CycloneDX
+  specification repository: 119 of 119 components carried a hash, 0 of 119 were
+  in the required encoding, 119 schema errors before; 0 errors after. An
+  integrity part whose algorithm prefix is unmapped, or whose payload does not
+  decode to the digest length its algorithm requires, is now dropped and
+  reported on the component as `supply-chain-guard:integrity` rather than passed
+  through: a digest of the wrong length is a false claim, not a weaker one. A
+  new conformance suite validates every document shape the generator produces
+  against the vendored official schemas, so the class is closed rather than this
+  one instance of it.
+- **Scoped-package purls are canonical.** The `/` between an npm scope and the
+  package name is a purl separator and is not percent encoded; it was emitted as
+  `%2F`, which parses without throwing but decomposes to no namespace and a name
+  containing a slash, so it never matched advisory data keyed on the
+  namespace/name pair. Measured against `packageurl-js`, the purl
+  specification's reference implementation, on this repository's inventory: 55
+  of 119 purls canonical before, 119 of 119 after; all 64 differences were
+  scoped names. `pkg:npm/%40babel%2Fparser@7.29.7` is now
+  `pkg:npm/%40babel/parser@7.29.7`.
+- **Nested and workspace lockfile entries enter the SBOM under their package
+  name.** A component's name came from its lockfile key with one leading
+  `node_modules/` stripped, but lockfile keys are filesystem paths: a nested
+  duplicate became `middle/node_modules/@acme/dep` and a workspace member became
+  `packages/app` while its entry declared `@acme/app`. The name is now taken
+  from the entry's `name` field when it has one, otherwise from the segment
+  after the LAST `node_modules/`, so a duplicate older version is findable under
+  its own name and distinguished from the hoisted copy by version rather than by
+  path. `bom-ref` values remain the lockfile keys, which is what keeps them
+  unique and what the dependency graph resolves against.
+- **Without a lockfile, a dependency specifier is no longer presented as a
+  resolved version.** The fallback produced a version by deleting one leading
+  non-digit character, so `latest` shipped as `atest`, `npm:real-package@4.5.6`
+  as `pm:real-package@4.5.6`, `>=1.0.0 <2.0.0` as a purl containing a space,
+  and, the dangerous one because it looks entirely normal, `^1.2.3` as the
+  factual claim that version 1.2.3 ships. A component now carries `version` and
+  `purl` only when the manifest declares one exact version; otherwise both are
+  omitted, a `supply-chain-guard:version` property says why, and
+  `supply-chain-guard:declared-specifier` keeps the declared string verbatim. An
+  `npm:` alias is identified by the package it installs rather than by the alias
+  key. CycloneDX 1.6 requires only `type` and `name` on a component, so the
+  incomplete component is schema-valid.
+- **An ecosystem that was not inventoried no longer looks like an empty one.** A
+  Python, Cargo or Go project received a well-formed CycloneDX 1.6 document
+  asserting `components: []` and exit 0, with nothing in it distinguishing "this
+  product ships no third-party components" from "this generator reads only
+  `package-lock.json` and `package.json`". `metadata.properties` now carries
+  `supply-chain-guard:sbom:inventory-coverage`
+  (`full-transitive` / `direct-only` / `none`) and, when any are present,
+  `supply-chain-guard:sbom:not-inventoried` naming the manifests that exist and
+  were not read (`requirements.txt (PyPI)`, `Cargo.toml (Cargo)`, `go.mod (Go)`,
+  `pnpm-lock.yaml (npm (pnpm lockfile))` and the rest). The
+  `SBOM written to <file>` line prints the same sentence, so a bare component
+  count is never the only thing a reader sees.
+- **The two documented SBOM commands emit the same document.**
+  `--sbom-output <file>` serialised `report.sbomDocument` directly unless the
+  scan was partial, so the file carried no `vulnerabilities` key at all while
+  `--format sbom` carried one entry per finding: two artefacts from one scan,
+  presented by the README as the same thing. The FILE moved onto the shared
+  renderer, because the stdout document is the complete one and making stdout
+  match the file would have deleted the findings from the SBOM rather than
+  adding them to it. **This changes what `--sbom-output` writes for existing
+  adopters:** the file now contains the scan's findings as `vulnerabilities`,
+  and CycloneDX `annotations` when the scan correlated an incident.
+- **Every `vulnerabilities[].affects[].ref` resolves to a `bom-ref` in the same
+  document.** The reference was `finding.file`, a path relative to the scanned
+  tree, while CycloneDX defines the field as a reference to a bom-ref; no
+  component carried a path, so a consumer walking the graph could attribute no
+  finding to any component. Schema validation does not catch this, because
+  `refLinkType` is an unconstrained string. A finding in a file that belongs to
+  a component is now attributed to that component, deepest match first so a file
+  inside a nested duplicate goes to the nested copy; a finding in a file that
+  belongs to none is attributed to the subject, with the path kept in a
+  `supply-chain-guard:file` property rather than discarded.
+- **The correlated incident survives into SARIF and CycloneDX.** The README's
+  NIS2 bullet names SARIF, JSON and CycloneDX as formats an incident record is
+  retained in; only JSON carried one. SARIF now carries the incident list on
+  `runs[0].properties` (id, name, severity, confidence, indicators, narrative,
+  finding count) and each result names the incidents it belongs to in its own
+  property bag. CycloneDX carries one `annotations` entry per incident, whose
+  `subjects` are the bom-refs of the vulnerability entries it groups, and each
+  of those entries carries a `supply-chain-guard:incident` property, so the link
+  is navigable in both directions.
+- **A finding that is an indicator of two incidents no longer reports membership
+  in one.** `correlationId` was written inside the correlation loop and
+  overwritten on each pass, so a finding listed under `incident-1` carried
+  `"correlationId": "incident-2"` - an evidence record whose own members pointed
+  at a different record. Findings now carry `correlationIds`, every incident
+  they belong to; `correlationId` remains as `correlationIds[0]` for consumers
+  that already read it.
 - **The generated SBOM now carries the licences, the dependency relationships and
   the `bom-ref` values that `package-lock.json` already holds.** Every component
   was emitted without any of the three, so the artefact was a flat list that

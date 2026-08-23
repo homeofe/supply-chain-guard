@@ -314,14 +314,26 @@ program
           }
         }
 
-        // Write SBOM to separate file if requested
+        // Write SBOM to separate file if requested.
+        //
+        // v5.30 (issue 198): this goes through the SAME renderer as
+        // `--format sbom`. It used to serialise report.sbomDocument directly
+        // unless the scan was partial, so the file carried no `vulnerabilities`
+        // key at all while stdout carried one entry per finding - two
+        // different documents from one scan, both presented by the README as
+        // the same artefact. The FILE moved, because the stdout document is the
+        // complete one and making stdout match the file would have deleted the
+        // findings from the SBOM instead of adding them to it.
         if (opts.sbomOutput && report.sbomDocument) {
           const { writeFileSync } = await import("node:fs");
-          const sbomOutput = report.partialScan
-            ? formatReport(report, "sbom")
-            : JSON.stringify(report.sbomDocument, null, 2);
-          writeFileSync(opts.sbomOutput, sbomOutput, "utf-8");
-          console.error(`SBOM written to ${opts.sbomOutput} (CycloneDX 1.6, ${report.sbomDocument.components.length} components)`);
+          const { describeInventoryCoverage } = await import("./sbom-generator.js");
+          writeFileSync(opts.sbomOutput, formatReport(report, "sbom"), "utf-8");
+          // A bare component count cannot distinguish "this project has no
+          // components" from "this ecosystem was not read" (issue 195), so the
+          // coverage sentence the document itself carries is printed with it.
+          console.error(
+            `SBOM written to ${opts.sbomOutput} (CycloneDX 1.6, ${report.sbomDocument.components.length} components; ${describeInventoryCoverage(report.sbomDocument)})`,
+          );
         }
 
         // Show fix suggestions if requested

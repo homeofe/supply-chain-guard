@@ -76,6 +76,9 @@
     "@elvatis_com/aahp": "3.10.0",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "packageurl-js": "^2.0.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

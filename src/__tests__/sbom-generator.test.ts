@@ -21,6 +21,19 @@ function propertyValue(
   return doc.metadata.properties?.find((p) => p.name === name)?.value;
 }
 
+/**
+ * A REAL sha512 Subresource Integrity value and its hex form.
+ *
+ * The fixtures used to carry stand-ins such as "sha512-abc123==". Those decode
+ * to a handful of bytes, which is not a SHA-512 digest, so nothing in the test
+ * suite ever exercised the encoding the CycloneDX schema constrains. Generated
+ * with `crypto.createHash("sha512").update("supply-chain-guard fixture")`.
+ */
+const SHA512_INTEGRITY =
+  "sha512-jcAFFknyfkZaZb2DHeScupgoE6x139/wsyvAhtMQbbmuRSXkWqVch+IgHRLNSv5AfwUMYKSu+V5fNgUtzBrkDA==";
+const SHA512_HEX =
+  "8dc0051649f27e465a65bd831de49cba982813ac75dfdff0b32bc086d3106db9ae4525e45aa55c87e2201d12cd4afe407f050c60a4aef95e5f36052dcc1ae40c";
+
 let tmpDir: string;
 
 beforeEach(() => {
@@ -68,8 +81,8 @@ describe("generateSbomDocument", () => {
       lockfileVersion: 2,
       packages: {
         "": { name: "my-app", version: "1.0.0" },
-        "node_modules/express": { version: "4.18.3", integrity: "sha512-abc123==" },
-        "node_modules/commander": { version: "13.1.0", integrity: "sha512-def456==" },
+        "node_modules/express": { version: "4.18.3", integrity: SHA512_INTEGRITY },
+        "node_modules/commander": { version: "13.1.0", integrity: SHA512_INTEGRITY },
       },
     };
     fs.writeFileSync(path.join(tmpDir, "package-lock.json"), JSON.stringify(lockfile));
@@ -86,13 +99,16 @@ describe("generateSbomDocument", () => {
       lockfileVersion: 2,
       packages: {
         "": { name: "my-app" },
-        "node_modules/@types/node": { version: "22.0.0", integrity: "sha512-xyz==" },
+        "node_modules/@types/node": { version: "22.0.0", integrity: SHA512_INTEGRITY },
       },
     };
     fs.writeFileSync(path.join(tmpDir, "package-lock.json"), JSON.stringify(lockfile));
     const doc = generateSbomDocument(tmpDir, []);
     const typesNode = doc.components.find((c) => c.name === "@types/node");
-    expect(typesNode?.purl).toBe("pkg:npm/%40types%2Fnode@22.0.0");
+    // issue 193: the npm scope is the purl NAMESPACE and the separator after it
+    // is a literal "/". The old assertion pinned "%40types%2Fnode", which
+    // decomposes to no namespace and a name containing a slash.
+    expect(typesNode?.purl).toBe("pkg:npm/%40types/node@22.0.0");
   });
 
   it("should parse integrity hashes into CycloneDX format", () => {
@@ -100,7 +116,7 @@ describe("generateSbomDocument", () => {
       lockfileVersion: 2,
       packages: {
         "": {},
-        "node_modules/lodash": { version: "4.17.21", integrity: "sha512-v2kDE8oK3X==" },
+        "node_modules/lodash": { version: "4.17.21", integrity: SHA512_INTEGRITY },
       },
     };
     fs.writeFileSync(path.join(tmpDir, "package-lock.json"), JSON.stringify(lockfile));
@@ -108,6 +124,8 @@ describe("generateSbomDocument", () => {
     const lodash = doc.components.find((c) => c.name === "lodash");
     expect(lodash?.hashes).toBeDefined();
     expect(lodash?.hashes?.[0]?.alg).toBe("SHA-512");
+    // issue 191: CycloneDX requires hex, npm's integrity field is base64.
+    expect(lodash?.hashes?.[0]?.content).toBe(SHA512_HEX);
   });
 
   it("should fall back to package.json direct deps when no lockfile", () => {
@@ -233,7 +251,7 @@ const ISSUE_196_LOCKFILE = {
     "node_modules/express": {
       version: "4.18.3",
       license: "MIT",
-      integrity: "sha512-abc123==",
+      integrity: SHA512_INTEGRITY,
       dependencies: { "body-parser": "^1.20.2" },
       peerDependencies: { "never-installed-peer": "^1.0.0" },
     },
