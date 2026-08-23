@@ -16,7 +16,7 @@ import {
   FILE_PATTERNS,
   SUSPICIOUS_SCRIPTS,
   AUTO_RUN_LIFECYCLE_HOOKS,
-  MALICIOUS_PACKAGE_PATTERNS,
+  MALICIOUS_PACKAGE_REGEXES,
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
@@ -25,7 +25,7 @@ import {
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
-import { getBundledFeed } from "./threat-intel.js";
+import { getBundledFeedRef } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
 import {
   downloadHttpsFile,
@@ -227,15 +227,52 @@ export async function scanNpmPackage(
   };
 }
 
+// ---------------------------------------------------------------------------
+// OPEN DECISION FOR THE MAINTAINER, recorded here because this is where the
+// choice lives: this scanner reads the BUNDLED feed only.
+//
+// checkPackageName and checkDependencies below both take getBundledFeedRef().
+// scanner.ts and install-guard.ts instead take loadThreatIntel(), which merges
+// the refreshed cache that `scg feed refresh` writes. The consequence, measured
+// with a synthetic entry in a temporary cache directory and a positive control
+// name drawn from the bundled feed: bundled 12,962 entries versus merged 12,963;
+// the added IOC is a MISS on this path and a HIT on the scanner.ts path, while
+// the control name hits on both. So `scg npm <package>` does not see IOCs added
+// by `feed refresh`, and `scg scan` does.
+//
+// This is a COVERAGE question, not a performance one, and it is deliberately
+// NOT settled by the change that made this scanner reuse one feed reference
+// (issue 177). The two options, so the next reader does not have to rediscover
+// them:
+//   A. Keep the bundled feed here. `scg npm` then stays hermetic and gives the
+//      same verdict on any machine, at the cost of never seeing a refreshed IOC.
+//   B. Switch to loadThreatIntel(). Coverage matches `scg scan`, index reuse is
+//      preserved because loadThreatIntel returns the shared array, and the cost
+//      is that the verdict now depends on local cache state.
+// Whichever is chosen, it changes what this scanner DETECTS and belongs in its
+// own change with its own tests, not folded into a performance fix.
+// Tracked as T-020 in .ai/handoff/NEXT_ACTIONS.md.
+// ---------------------------------------------------------------------------
+
 /**
  * Check if the package name matches known malicious patterns.
+ *
+ * Exported for tests: this and checkDependencies are the two functions
+ * scanNpmPackage() calls once each per scan, and they are where the feed and
+ * the name-pattern table are consumed. Without direct handles the index-reuse
+ * invariant they carry (see issue-177-npm-scanner-index-reuse.test.ts) could
+ * only be asserted through a live registry fetch and a tarball extraction.
  */
-function checkPackageName(name: string, findings: Finding[]): void {
+export function checkPackageName(name: string, findings: Finding[]): void {
   // Exact-match first. This path used to rely entirely on name-shape regexes,
   // which is why it needed a scoped catch-all that flagged 94% of all scoped
   // packages. The bundled feed gives an exact verdict for every curated name,
   // scoped or not, with no false-positive surface.
-  const ioc = matchBareNpmIOC(name, undefined, getBundledFeed());
+  //
+  // getBundledFeedRef(), not getBundledFeed(): the matcher's lookup index is
+  // memoized on the feed array's identity, and a fresh copy per call rebuilds
+  // all 12,962 entries every time. See issue 177.
+  const ioc = matchBareNpmIOC(name, undefined, getBundledFeedRef());
   if (ioc) {
     const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
     findings.push({
@@ -248,8 +285,9 @@ function checkPackageName(name: string, findings: Finding[]): void {
     return;
   }
 
-  for (const pattern of MALICIOUS_PACKAGE_PATTERNS) {
-    const regex = new RegExp(pattern);
+  // Compiled once at module load, not once per candidate. Safe to reuse the
+  // instances only because they carry no "g" flag; see MALICIOUS_PACKAGE_REGEXES.
+  for (const regex of MALICIOUS_PACKAGE_REGEXES) {
     if (regex.test(name)) {
       findings.push({
         rule: "MALICIOUS_PACKAGE_NAME",
@@ -306,8 +344,10 @@ export function checkPackageScripts(
 
 /**
  * Check dependencies against known malicious package patterns.
+ *
+ * Exported for tests, for the same reason as checkPackageName above.
  */
-function checkDependencies(
+export function checkDependencies(
   pkg: NpmVersionData,
   findings: Finding[],
 ): void {
@@ -319,7 +359,9 @@ function checkDependencies(
   if (deps) allDeps.push(...Object.keys(deps));
   if (devDeps) allDeps.push(...Object.keys(devDeps));
 
-  const feed = getBundledFeed();
+  // Shared frozen reference, hoisted out of the loop: one index build for the
+  // whole process rather than one per scan. See issue 177 and getBundledFeedRef.
+  const feed = getBundledFeedRef();
   for (const dep of allDeps) {
     const depIoc = matchBareNpmIOC(dep, undefined, feed);
     if (depIoc) {
@@ -334,8 +376,9 @@ function checkDependencies(
       });
       continue;
     }
-    for (const pattern of MALICIOUS_PACKAGE_PATTERNS) {
-      const regex = new RegExp(pattern);
+    // Compiled once at module load; see MALICIOUS_PACKAGE_REGEXES for why the
+    // instances carry no flags and why that is what makes reuse correct.
+    for (const regex of MALICIOUS_PACKAGE_REGEXES) {
       if (regex.test(dep)) {
         findings.push({
           rule: "MALICIOUS_DEPENDENCY",

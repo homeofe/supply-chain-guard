@@ -4371,4 +4371,31 @@ if (duplicateCoreRules.length > 0) {
 }
 
 validateRegexStringSet("MALICIOUS_PACKAGE_PATTERNS", MALICIOUS_PACKAGE_PATTERNS);
+
+/**
+ * MALICIOUS_PACKAGE_PATTERNS compiled once, at module load.
+ *
+ * The scanners test every dependency name against the whole table, and building
+ * a RegExp is compilation, not allocation. Compiling the table inside that loop
+ * repeated the work per dependency; this array is the same work done once. See
+ * https://github.com/homeofe/supply-chain-guard/issues/177
+ *
+ * NO FLAGS, deliberately, and this is the trap in an otherwise trivial change.
+ * validateRegexStringSet above compiles with "g" because it only needs to know
+ * that each pattern parses. A "g" regex carries lastIndex ACROSS .test() calls,
+ * so a shared compiled instance would return true, false, true, false on
+ * repeated calls with the same matching name - a silent false negative in a
+ * malicious-package-name matcher, which is the worst failure this project has.
+ * Measured on the real table entry "^(cros-env|cross-env-shell|crossenv)$":
+ * four .test("crossenv") calls give true,true,true,true with no flag and
+ * true,false,true,false with "g". Reusing an instance is only safe because
+ * there is no flag; issue-177-npm-scanner-index-reuse.test.ts asserts both the
+ * flags and the four-call determinism at the real call sites.
+ *
+ * Import-time safety: validateRegexStringSet has already thrown on any entry
+ * that does not compile, so this map introduces no new failure mode.
+ */
+export const MALICIOUS_PACKAGE_REGEXES: readonly RegExp[] = Object.freeze(
+  MALICIOUS_PACKAGE_PATTERNS.map((pattern) => new RegExp(pattern)),
+);
 validateRegexStringSet("PYPI_TYPOSQUAT_PATTERNS", PYPI_TYPOSQUAT_PATTERNS);
