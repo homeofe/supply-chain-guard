@@ -104,6 +104,80 @@ that pin absent against empty. Restored, 34 pass.
 2. **Whether the triage store gets a CLI surface.** Options and the argument for
    each are written down at the end of `docs/triage-decisions.md`, next to the
    format they concern, rather than here.
+## The npm scanner took its feed from the reporting accessor (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch perf/issue-177-npm-scanner-feed-reuse. No version bump.
+Issue: https://github.com/homeofe/supply-chain-guard/issues/177
+
+### What was actually wrong
+
+Not the cache. `bareNpmIndexCache` in `src/install-guard.ts` is correct, and the
+hoist that pulls the feed out of the dependency loop works. The defect was one
+level up: `src/npm-scanner.ts` sourced its feed from `getBundledFeed()`, whose
+documented job is reporting and export and which therefore returns a defensive
+copy per call. The index is memoized on the array's IDENTITY, so a new array per
+call meant the index was rebuilt from all 12,962 entries every time. Every other
+scanner takes its feed from `loadThreatIntel()`, which returns the shared array
+and says so. This scanner was the only one that did not, and nothing in the types
+or the tests distinguished the two accessors.
+
+The second cost was the same shape: `MALICIOUS_PACKAGE_PATTERNS` is exported as
+`string[]`, so the loop compiled all 34 patterns per dependency, while
+`validateRegexStringSet` had already compiled them at module load and thrown the
+results away.
+
+### Measured, before and after
+
+Both trees built and driven through the same harness, three process runs each.
+
+| | before | after |
+|---|---|---|
+| index builds, three package scans in one process | 6 | 1 |
+| index builds per `scanNpmPackage()` | 2 | 0 or 1 |
+| 112 dependencies, ms in the two feed-consuming functions, warm | 8.41 / 8.37 / 8.15 | 0.19 / 0.21 / 0.24 |
+| 200 dependencies, same | 9.72 / 7.99 / 10.01 | 0.26 / 0.32 / 0.25 |
+| first scan shape in a fresh process, 112 dependencies | 15.9 to 17.7 | 9.3 to 10.5 |
+| short-lived heap over 20 such scans | 4.75 MB each | 0.16 MB each |
+
+112 is the largest dependency count observed on the registry across express,
+eslint, webpack, typescript, `@angular/cli` and react-scripts.
+
+**No end-to-end speed-up is claimed.** The same three real registry scans took
+1,063 / 4,593 / 9,187 ms before and 1,447 / 10,066 / 15,645 ms after, which is
+download variance, not a regression: an npm scan is network bound and the saving
+is well under one percent of it. The value is in the MCP server, where the
+process is long lived and the waste repeated per request, and in removing the
+divergence itself.
+
+### What is now enforced rather than documented
+
+`getBundledFeedRef()` returns `Object.freeze(BUNDLED_FEED)`, so a structural
+mutation throws instead of silently invalidating every derived index. The freeze
+is shallow by a recorded decision written next to the accessor: deep-freezing
+12,962 entries costs 1.32 ms against 0.0014 ms, and those entry objects are
+shared by reference into what `getBundledFeed()` and `loadThreatIntel()` return,
+so freezing them would be a breaking change for embedders.
+
+### Open decision for the owner
+
+`scg npm <package>` reads the bundled feed only and therefore never sees IOCs
+added by `feed refresh`, while `scg scan` does. Verified here: bundled 12,962
+entries against 12,963 merged with a synthetic refreshed entry, a MISS on the
+npm path and a HIT on the scan path, with a control name from the bundled feed
+hitting on both. That is a coverage question, not a performance one, and it was
+deliberately left unchanged. Tracked as T-020, with both options written next to
+the code that would change.
+
+Also for the owner: the issue carries `bug` and `priority: medium`. Nothing here
+produced a wrong verdict, so `enhancement` and `priority: low` fit the measured
+impact better. The labels were left alone.
+
+### Environment note
+
+`src/__tests__/campaigns.test.ts` fails two tests on this Windows machine,
+"Phantom Bot C2 domain" and "the GlassWASM delivery host". Identical failures,
+same two names and the same 2 failed / 337 passed count, on the unmodified tree
+at the same commit. Pre-existing and unrelated; Linux CI gives the real verdict.
 ## The scanned tree's own policy file is input, not configuration (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/internal-disclosure-config-containment. No

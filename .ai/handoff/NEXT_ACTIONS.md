@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, one owner decision is blocked, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
+Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
 
 Current version: **v5.28.1**
 
@@ -15,13 +15,14 @@ Current version: **v5.28.1**
 ## Status Summary
 
 AAHP 3.9.1 adoption and the verified security hardening are complete. Five
-follow-ups are ready. One decision is owner-blocked: the Node/Babel support
-matrix.
+follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
+matrix (T-013), and whether `scg npm` should read the refreshed feed the way
+`scg scan` does (T-020).
 
 | Status | Count |
 |--------|-------|
 | Ready | 5 |
-| Blocked | 1 |
+| Blocked | 2 |
 
 
 ---
@@ -95,6 +96,43 @@ the production extraction backend or weakening Linux coverage.
 - [ ] An in-process deterministic fixture builder replaces external `zip` only in tests.
 - [ ] All 14 currently skipped/failing fixture tests pass on Windows without a PATH-installed zip executable.
 - [ ] The same fixtures and the full suite pass in required Linux CI.
+
+---
+
+## T-020: Decide whether `scg npm` should see refreshed feed entries (BLOCKED on owner)
+
+**Goal:** Settle a coverage asymmetry that is currently silent, one way or the
+other, deliberately and with tests.
+
+**Blocked by:** Owner decision. This changes what the scanner DETECTS, so it is
+not an implementation detail an agent should pick.
+
+**The measurement.** `src/npm-scanner.ts` reads the bundled feed only.
+`src/scanner.ts` and `src/install-guard.ts` read `loadThreatIntel()`, which
+merges the cache `scg feed refresh` writes. With one synthetic entry in a
+temporary cache directory: bundled 12,962 entries against 12,963 merged; the
+added IOC is a MISS on the npm path and a HIT on the scan path, while a control
+name taken from the bundled feed hits on both. So `scg npm <package>` does not
+see IOCs added by `feed refresh` and `scg scan` does.
+
+**The two options**, both written next to the code in `src/npm-scanner.ts`:
+
+- **A. Keep the bundled feed.** `scg npm` stays hermetic and returns the same
+  verdict on every machine, and never sees a refreshed IOC.
+- **B. Switch to `loadThreatIntel()`.** Coverage matches `scg scan`; index reuse
+  is preserved because that function returns the shared array; the verdict now
+  depends on local cache state.
+
+**Not a performance question.** Issue 177 made this scanner reuse one feed
+reference and left the choice of WHICH feed untouched, on purpose.
+
+**Files:** `src/npm-scanner.ts` (`checkPackageName`, `checkDependencies`), and a
+focused test either way.
+
+**Acceptance criteria:**
+- [ ] The owner records A or B, with the reason, in this file.
+- [ ] The chosen behavior is asserted by a test that fails if the feed source is switched back.
+- [ ] `docs/` states which feed `scg npm` consults, so a user can predict whether `feed refresh` affects it.
 
 ---
 

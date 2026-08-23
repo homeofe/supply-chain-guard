@@ -242,7 +242,7 @@ export interface InstallCommandAnalysis {
 export function matchBareNpmIOC(
   name: string,
   version: string | undefined,
-  feed: FeedIOC[],
+  feed: readonly FeedIOC[],
 ): FeedIOC | null {
   // Candidates are held in original feed order, so "first match wins" is
   // preserved exactly, identical to the linear reference below.
@@ -266,7 +266,7 @@ export function matchBareNpmIOC(
 export function matchBareNpmIOCLinear(
   name: string,
   version: string | undefined,
-  feed: FeedIOC[],
+  feed: readonly FeedIOC[],
 ): FeedIOC | null {
   for (const ioc of feed) {
     if (ioc.type !== "package") continue;
@@ -303,12 +303,36 @@ interface IndexedBareNpmIOC {
  * real matcher once per entry, is quadratic in feed size - it went red on CI
  * during the v5.25.6 release and was carrying a 30s timeout as a stopgap.
  */
-const bareNpmIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedBareNpmIOC[]>>();
+const bareNpmIndexCache = new WeakMap<
+  readonly FeedIOC[],
+  Map<string, IndexedBareNpmIOC[]>
+>();
 
-function getBareNpmIndex(feed: FeedIOC[]): Map<string, IndexedBareNpmIOC[]> {
+/**
+ * How many times getBareNpmIndex has BUILT an index (a cache miss) since this
+ * module was loaded. Never reset; read the delta across the window you care
+ * about.
+ *
+ * This is production code and not a test hook by accident: "the index is built
+ * at most once per process for a given feed array" is the invariant the WeakMap
+ * above exists to provide, and it is invisible from the outside - a caller that
+ * defeats it gets correct results, just slowly, which is how issue 177 survived
+ * a passing test suite. Counting the misses is the only way to assert it.
+ * Cost is one integer increment on the miss path.
+ * https://github.com/homeofe/supply-chain-guard/issues/177
+ */
+let bareNpmIndexBuilds = 0;
+
+/** Cache misses in getBareNpmIndex since module load. See bareNpmIndexBuilds. */
+export function getBareNpmIndexBuildCount(): number {
+  return bareNpmIndexBuilds;
+}
+
+function getBareNpmIndex(feed: readonly FeedIOC[]): Map<string, IndexedBareNpmIOC[]> {
   const cached = bareNpmIndexCache.get(feed);
   if (cached) return cached;
 
+  bareNpmIndexBuilds++;
   const index = new Map<string, IndexedBareNpmIOC[]>();
   for (const ioc of feed) {
     if (ioc.type !== "package") continue;

@@ -181,6 +181,31 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   of the exported `calculateMetrics`, which is where a dashboard or a compliance
   report would have trusted it.
 
+- **The npm scanner rebuilt the whole bundled IOC index on every scan, and
+  recompiled the malicious-name pattern table once per dependency.** The bare-npm
+  matcher memoizes its lookup index in a `WeakMap` keyed on the feed array's
+  identity; `src/npm-scanner.ts` sourced its feed from `getBundledFeed()`, which
+  hands out a new array per call, so the cache could never hit. Measured across a
+  three-package run in one process: **6 index builds before, 1 after**, and per
+  scan **2 before, 0 or 1 after**. The name-pattern table is now compiled once at
+  module load as `MALICIOUS_PACKAGE_REGEXES` rather than inside the per-dependency
+  loop. On a synthetic package with 112 dependencies, the largest count observed
+  across express, eslint, webpack, typescript, `@angular/cli` and react-scripts,
+  the two functions a scan spends this work in cost a **median 8.15 to 8.41 ms per
+  scan before and 0.19 to 0.24 ms after** once warm, with the first scan in a
+  process still paying about 9 to 11 ms for the single index build. Short-lived
+  allocation over 20 such scans fell from **4.75 MB to 0.16 MB each**.
+  No verdict changes: the same entries are matched, in the same order.
+  **This is not a visible end-to-end speed-up and is not claimed as one.** An npm
+  scan is dominated by registry metadata, tarball download and per-file scanning,
+  measured here at 1.0 to 15.6 seconds, so the saving is well under one percent of
+  it. What it removes is repeated work and garbage, which matters most to the MCP
+  server, where the process is long lived and the cost repeated per request.
+  The compiled patterns deliberately carry **no flags**: a shared `RegExp` with the
+  `g` flag keeps `lastIndex` between `.test()` calls and would report a known
+  malicious name on every second check only, so reuse is safe precisely because
+  there is no flag. Both facts are asserted by
+  `src/__tests__/issue-177-npm-scanner-index-reuse.test.ts`.
 - **`DOCKER_UNPINNED_BASE` was narrower than its own five tag words, so a
   literal `:latest` could pass a `--fail-on high` gate with exit 0.** The rule
   was one regex,
