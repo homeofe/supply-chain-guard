@@ -221,6 +221,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **`checkSlaCompliance` now runs inside a scan.**
+  ([#194](https://github.com/homeofe/supply-chain-guard/issues/194)) The SLA
+  engine was exported and tested and had no caller, so `SLA_BREACH_CRITICAL`
+  and `SLA_AT_RISK` could never reach a report, an exit code, or the Action.
+  `scan()` now invokes it on the same triage decisions the governance check
+  already reads.
+- **`metrics.riskTrend` includes the current scan.**
+  ([#206](https://github.com/homeofe/supply-chain-guard/issues/206)) The KPI
+  was computed from the history loaded at the start of the scan, before this
+  run was appended, so it described the previous scan. A collapsed current
+  score could sit next to `riskTrend: "increasing"` in the same report while
+  `RISK_TREND_SPIKE` (which already took the current score) fired. The window
+  now includes the current score.
 - **A scan that examined ZERO files is no longer reported as clean.**
   ([#205](https://github.com/homeofe/supply-chain-guard/issues/205)) Measured
   before the change, on an empty directory versus this repository's own two-file

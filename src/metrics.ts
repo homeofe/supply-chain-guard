@@ -98,6 +98,7 @@ export function calculateMetrics(
   history: RiskHistoryEntry[],
   decisions: TriageDecision[],
   slaConfig?: SlaConfig,
+  currentScore?: number,
 ): SecurityMetrics {
   // Open findings by severity.
   //
@@ -117,12 +118,20 @@ export function calculateMetrics(
   // SLA compliance rate, from the one definition in src/sla-engine.ts
   const slaComplianceRate = slaComplianceRateOf(decisions, slaConfig);
 
-  // Risk trend
+  // Risk trend. The current scan is part of the window: history is loaded
+  // before this scan is written, so a window of history alone describes the
+  // previous scan. That is how riskTrend reported increasing at the moment
+  // risk collapsed (issue 206). `analyzeRiskTrend` already takes the current
+  // score; this KPI now does too.
   let riskTrend: "increasing" | "stable" | "decreasing" = "stable";
-  if (history.length >= 3) {
-    const recent = history.slice(-3).map((h) => h.score);
-    if (recent[2] > recent[0] + 5) riskTrend = "increasing";
-    else if (recent[2] < recent[0] - 5) riskTrend = "decreasing";
+  const scores =
+    currentScore === undefined
+      ? history.map((h) => h.score)
+      : [...history.map((h) => h.score), currentScore];
+  if (scores.length >= 3) {
+    const recent = scores.slice(-3);
+    if (recent[2]! > recent[0]! + 5) riskTrend = "increasing";
+    else if (recent[2]! < recent[0]! - 5) riskTrend = "decreasing";
   }
 
   // Top risk contributors (most frequent critical/high rules)

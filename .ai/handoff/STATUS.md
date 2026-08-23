@@ -1,3 +1,23 @@
+## Closeout after #220 and #221: SLA findings reach the report, and riskTrend includes now
+
+#220 and #221 are on main. Remaining open issues after that merge and the
+closes they implied: 167, 168, 194, 201, 202, 203, 206, 208. #179 was already
+done on main (persist-credentials: false on every checkout that does not
+push, delete_branch_on_merge true, AAHP pin 3.10.0) and was closed with that
+evidence.
+
+This change:
+
+- Issue 194: `scan()` calls `checkSlaCompliance` on the triage decisions.
+  A tree whose store is 30 days past SLA now raises `SLA_BREACH_CRITICAL`.
+- Issue 206: `calculateMetrics` takes the current score. Two history rows at
+  40 plus a current score of 0 report `decreasing`; the same history without
+  the current score still reports `stable`.
+
+Not in this change: 167 (ancestry gate already on main; aahp-verify on tags
+would fail because a tag of HEAD is a HEAD-equal base and 3.10.0 blocks
+that), 168 (policy-diff against the base ref), 201, 202, 203, 208.
+
 ## Remaining review findings on the SBOM cluster: they reproduced, and they are closed
 
 Independent re-read of the four leftovers on #221:

@@ -96,6 +96,7 @@ import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRi
 import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
 import { forecastRisk } from "./risk-forecast.js";
 import { calculateMetrics } from "./metrics.js";
+import { checkSlaCompliance } from "./sla-engine.js";
 import {
   OBFUSCATION_V3_PATTERNS,
   PROVENANCE_PATTERNS,
@@ -895,6 +896,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   const govFindings = checkTriageGovernance(findings, triageDecisions);
   findings.push(...govFindings);
+  // Issue 194: the SLA engine was exported and tested, and never called.
+  // SLA_BREACH_CRITICAL and SLA_AT_RISK therefore could not reach a scan
+  // report. Same decisions the governance check just read; same default SLA
+  // calculateMetrics uses. A configuration surface, if one is added, must
+  // reach both.
+  findings.push(...checkSlaCompliance(triageDecisions));
 
   // Pushed after checkTriageGovernance for the same reason as the history
   // finding above: the governance rules read the findings list, so a finding
@@ -943,7 +950,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // configuration surface is added, it must reach BOTH calculateMetrics and
   // checkSlaCompliance; wiring one and not the other reintroduces the split that
   // made slaComplianceRate contradict the SLA engine.
-  const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions);
+  const metrics = calculateMetrics(filteredFindings, riskHistory, triageDecisions, undefined, score);
 
   // Save risk history for trend tracking (skip temp dirs; --no-history lets
   // read-only callers like the pre-commit hook avoid writing state into the

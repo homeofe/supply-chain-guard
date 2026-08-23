@@ -58,6 +58,19 @@ describe("Metrics", () => {
     expect(m.riskTrend).toBe("increasing");
   });
 
+  it("includes the current scan in the trend window (issue 206)", () => {
+    // Two previous scans at 40. Without the current score the window is only
+    // two points and reports stable. With a collapsed current score of 0 the
+    // window is 40, 40, 0 and must report decreasing. That is the moment the
+    // KPI used to disagree with RISK_TREND_SPIKE in the same report.
+    const history: RiskHistoryEntry[] = [
+      { timestamp: "", score: 40, findingsCount: 4, criticalCount: 1 },
+      { timestamp: "", score: 40, findingsCount: 4, criticalCount: 1 },
+    ];
+    expect(calculateMetrics([], history, []).riskTrend).toBe("stable");
+    expect(calculateMetrics([], history, [], undefined, 0).riskTrend).toBe("decreasing");
+  });
+
   it("should identify top risk contributors", () => {
     const findings: Finding[] = [
       { rule: "EVAL_ATOB", description: "", severity: "critical", recommendation: "" },
