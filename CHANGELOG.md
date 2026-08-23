@@ -261,9 +261,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   (`full-transitive` / `direct-only` / `none`) and, when any are present,
   `supply-chain-guard:sbom:not-inventoried` naming the manifests that exist and
   were not read (`requirements.txt (PyPI)`, `Cargo.toml (Cargo)`, `go.mod (Go)`,
-  `pnpm-lock.yaml (npm (pnpm lockfile))` and the rest). The
-  `SBOM written to <file>` line prints the same sentence, so a bare component
-  count is never the only thing a reader sees.
+  `pnpm-lock.yaml (npm (pnpm lockfile))` and the rest). The default text report
+  prints the same sentence under the SBOM bar, and the `SBOM written to <file>`
+  line prints it too, so a bare component count is never the only thing a
+  reader sees.
 - **The two documented SBOM commands emit the same document.**
   `--sbom-output <file>` serialised `report.sbomDocument` directly unless the
   scan was partial, so the file carried no `vulnerabilities` key at all while

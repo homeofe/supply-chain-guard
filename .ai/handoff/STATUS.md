@@ -1,3 +1,23 @@
+## Remaining review findings on the SBOM cluster: they reproduced, and they are closed
+
+Independent re-read of the four leftovers on #221:
+
+1. The `!refsArePaths` guard is load-bearing and was untested. A package.json
+   fallback uses the declared key as the bom-ref, so prefix-matching `src`
+   against a finding in `src/app.js` would attribute that finding to an
+   unrelated dependency. A test now asserts the affects ref stays `target`;
+   deleting the guard turns it red.
+2. `expect(ids).toContain(steam?.correlationId)` could not fail under the
+   pre-change overwrite: the last-written incident is still one of `ids`. The
+   legacy field is now asserted to be `correlationIds[0]`, and not the last
+   entry, which is the overwrite the field used to do.
+3. `describeInventoryCoverage()` has three branches. Only `NOTHING WAS
+   INVENTORIED` was asserted. All three states are now named by a test that
+   calls the function.
+4. The CHANGELOG said a bare component count is never all a reader sees. That
+   sentence reached only the `--sbom-output` stderr line. The default text
+   report now prints the coverage sentence under the SBOM bar.
+
 ## Two review findings on the SBOM cluster: an unenforced checksum and a root-only walk
 
 Adversarial review found the conformance proof anchored to three vendored

@@ -16,6 +16,7 @@ import type {
   ScanReport,
   Severity,
 } from "./types.js";
+import { describeInventoryCoverage } from "./sbom-generator.js";
 
 /** bom-ref of the component every SBOM this tool emits is about. */
 const SUBJECT_BOM_REF = "target";
@@ -308,6 +309,12 @@ function formatText(report: ScanReport): string {
     }
     if (report.sbomDocument) {
       lines.push(boxRow(`  ${DIM}SBOM${RESET}        CycloneDX 1.6  ·  ${report.sbomDocument.components.length} components`));
+      // Issue 195: a bare count cannot distinguish an empty inventory from an
+      // unread one. The same sentence the --sbom-output stderr line prints
+      // belongs here too, or the default text report is still that bare count.
+      for (const line of wrapText(describeInventoryCoverage(report.sbomDocument), W - 6)) {
+        lines.push(boxRow(`    ${DIM}${line}${RESET}`));
+      }
     }
 
     lines.push(boxBlank());

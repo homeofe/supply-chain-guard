@@ -30,7 +30,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { generateSbomDocument } from "../sbom-generator.js";
+import { generateSbomDocument, describeInventoryCoverage } from "../sbom-generator.js";
 import { formatReport } from "../reporter.js";
 import { correlateFindings } from "../correlation-engine.js";
 import type { Finding, ScanReport, SbomDocument } from "../types.js";
@@ -588,6 +588,33 @@ describe("an unread ecosystem is not an empty one (issue 195)", () => {
     expect(result.stderr).toContain("NOTHING WAS INVENTORIED");
     expect(result.stderr).toContain("requirements.txt (PyPI)");
   });
+
+  it("describeInventoryCoverage names all three coverage states", () => {
+    fs.writeFileSync(path.join(tmpDir, "requirements.txt"), "requests==2.31.0\n");
+    expect(describeInventoryCoverage(generateSbomDocument(tmpDir, []))).toContain(
+      "NOTHING WAS INVENTORIED",
+    );
+
+    writeManifest({ name: "app", version: "1.0.0", dependencies: { commander: "^14.0.3" } });
+    expect(describeInventoryCoverage(generateSbomDocument(tmpDir, []))).toContain(
+      "DIRECT DEPENDENCIES ONLY",
+    );
+
+    writeLock({
+      lockfileVersion: 3,
+      packages: { "": {}, "node_modules/a": { version: "1.0.0" } },
+    });
+    expect(describeInventoryCoverage(generateSbomDocument(tmpDir, []))).toContain(
+      "full transitive inventory",
+    );
+  });
+
+  it("the default text report prints the coverage sentence, not only a component count", () => {
+    fs.writeFileSync(path.join(tmpDir, "requirements.txt"), "requests==2.31.0\n");
+    const output = formatReport(reportFor(generateSbomDocument(tmpDir, []), []), "text");
+    expect(output).toContain("0 components");
+    expect(output).toContain("NOTHING WAS INVENTORIED");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -685,6 +712,26 @@ describe("the two documented SBOM commands (issue 198)", () => {
     expect(schemaErrors(rendered)).toEqual([]);
   });
 
+  it("does not attribute a finding to a package.json key that happens to prefix the file path", () => {
+    // package.json fallback uses the declared key as the bom-ref. Prefix
+    // matching against those keys would pin a finding in src/app.js on a
+    // dependency named "src". The !refsArePaths guard is the only thing that
+    // stops that; deleting it turns this red while the lockfile attribution
+    // tests above stay green.
+    writeManifest({
+      name: "app",
+      version: "1.0.0",
+      dependencies: { src: "1.0.0", lib: "1.0.0" },
+    });
+    const doc = generateSbomDocument(tmpDir, []);
+    expect(doc.components.map((c) => c["bom-ref"])).toEqual(expect.arrayContaining(["src", "lib"]));
+    const rendered = JSON.parse(
+      formatReport(reportFor(doc, [finding({ rule: "IN_SRC", file: "src/app.js" })]), "sbom"),
+    );
+    const vuln = rendered.vulnerabilities.find((v: { id: string }) => v.id === "IN_SRC");
+    expect(vuln?.affects[0]?.ref).toBe("target");
+  });
+
   it("keeps source.name on every entry so these are not mistaken for advisories", () => {
     writeManifest({ name: "app", version: "1.0.0" });
     const doc = generateSbomDocument(tmpDir, []);
@@ -729,8 +776,13 @@ describe("NIS2 incident evidence survives export (issue 200)", () => {
       .map((i) => i.id)
       .sort();
     expect((steam?.correlationIds ?? []).slice().sort()).toEqual(ids);
-    // The legacy single-valued field must at least be one it belongs to.
-    expect(ids).toContain(steam?.correlationId);
+    const idsOnFinding = steam?.correlationIds ?? [];
+    expect(idsOnFinding.length).toBeGreaterThan(1);
+    // The legacy field is the FIRST incident, not "any of them". The pre-change
+    // overwrite wrote the LAST incident into correlationId, which is still one
+    // of `ids`, so toContain(correlationId) could not fail under that behaviour.
+    expect(steam?.correlationId).toBe(idsOnFinding[0]);
+    expect(steam?.correlationId).not.toBe(idsOnFinding[idsOnFinding.length - 1]);
   });
 
   it("SARIF carries the incident name, confidence and indicators", () => {
