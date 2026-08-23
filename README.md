@@ -214,6 +214,9 @@ supply-chain-guard org my-github-org
 # Scan only files changed since a commit (diff mode)
 supply-chain-guard scan ./project --since HEAD~5
 
+# Scan with registry version-drift check (requires network)
+supply-chain-guard scan ./project --check-registry
+
 # Monitor a Solana C2 wallet
 supply-chain-guard monitor <wallet-address> --once
 ```
@@ -812,12 +815,26 @@ chain security. The relevant capabilities are:
 ### Operating model
 
 Apache-2.0, no account required, and no telemetry: the scanner reports only to
-its own output. `scan` runs fully offline against the bundled threat feed, so it
-is suitable for air-gapped use. The commands that deliberately reach the network
-are the ones that exist to do so: `supply-chain-guard npm <pkg>` and
-`supply-chain-guard pypi <pkg>` fetch the package under inspection, and the feed
-refresh fetches updated indicators. Offline runs use the feed bundled with the
-installed version, so pin the version you intend to audit against.
+its own output.
+
+**Offline by default:**
+`scan` on a local path runs fully offline against the bundled threat feed (unless
+the opt-in `--check-registry` flag is passed), as do `guard`, `feed stats`, and
+all report formatters. These commands make zero network requests and are suitable
+for air-gapped and data-egress-restricted environments.
+
+**Networked commands and external disclosures:**
+The commands that reach the network do so deliberately for their specific functions:
+- `supply-chain-guard npm <pkg>` / `pypi <pkg>` / `vscode <ext>`: fetch and inspect remote packages and extensions from public registries (npm, PyPI, VS Code Marketplace, Open VSX).
+- `supply-chain-guard confusion <dir>`: inspects project dependency manifests and **transmits every declared dependency and devDependency package name to the public npm and PyPI registries** to determine whether private or internal packages are registered publicly.
+- `supply-chain-guard repo <url>` and `supply-chain-guard org <name>`: inspect remote GitHub repositories and organizations by invoking the `gh` CLI as a child process, using the caller's ambient GitHub credentials.
+- `supply-chain-guard monitor <wallet>`: polls public Solana RPC nodes for C2 wallet transaction activity.
+- `supply-chain-guard feed refresh`: downloads updated threat intelligence from the upstream repository into the local cache.
+- `supply-chain-guard scan <github-url>`: clones a remote repository via Git for analysis.
+- `supply-chain-guard scan . --check-registry`: opt-in flag that queries the public npm registry for the package's latest published version to detect version drift.
+
+Offline runs use the feed bundled with the installed version, so pin the version
+you intend to audit against.
 
 ## GitHub Action
 

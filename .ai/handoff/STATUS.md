@@ -1,35 +1,24 @@
-## Stopped 2026-08-23: limits, next agent pick-up
+## 2026-08-23: Issue 201 (Network Operating Model Disclosure) and Issue Reconciliation
 
 Do not start v6.0.0. Zero-open-issues is not met.
 
-### Already on GitHub (no local diff)
+### Already on GitHub / Closed Issues
+All closed-issue acceptance boxes were reconciled against origin/main on GitHub
+by editing issue bodies. Done for: 205, 204, 200, 199, 198, 197, 196, 195, 194,
+193, 192, 191, 190, 189, 188, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171,
+170, 169, 167 (closed with ancestry check in publish job), 168 (closed with
+policyEffect disclosure across report formats).
 
-Closed-issue acceptance boxes were reconciled against origin/main at 6e60e6f
-by editing the issue bodies. A box was ticked only with an artefact; otherwise
-it stayed open with a one-line reason and a destination. Done for: 205, 188,
-189, 190, 191, 192, 193, 195, 197, 198, 200, 179. Merged PR bodies also
-updated: 209, 207, 186 (runtime-proof box ticked), 218, 221. 185 and 187
-already had destinations (#167, #168).
+### Open issues remaining: 201 (in progress), 202, 203, 208
 
-NOT done: the other August closed issues still show every box open (204, 199,
-196, 180, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, and older ones).
-Same rule: evidence on main, then tick or leave with a reason. Do not tick a
-box whose artefact is a different design than the box named (example: #204
-asked for SARIF `result.suppressions[]`; what shipped is `policyEffect`
-metadata, and suppressed findings stay out of machine formats).
+This change addresses Issue #201:
+- Updated README.md Operating model section: clearly defines offline commands (scan on local path, guard, feed stats) vs networked commands (npm/pypi/vscode download, confusion dependency lookups, repo/org gh subprocesses, monitor, feed refresh, scan with remote git url or --check-registry).
+- Discloses in README that `confusion` transmits declared dependency names to public registries.
+- Discloses in README that `repo` and `org` invoke the `gh` CLI using ambient GitHub credentials.
+- Documented `scan --check-registry` as a networked opt-in check.
+- Fixed `socket.yml` networkAccess comment block (removed nonexistent file reference and slsa-verifier, accurately listed dependency-confusion and github-trust-scanner).
+- Added `src/__tests__/scanner-offline-contract.test.ts` asserting that `scan` on a local path makes 0 network calls.
 
-### Open work
-
-- PR #223 https://github.com/homeofe/supply-chain-guard/pull/223 closes 194
-  and 206. Do not merge until its CI is green AND main CI for 6e60e6f is
-  green. Main CI failed on Node 24 only: `should skip version pins and
-  comments in requirements.txt` timed out at 5s hitting PyPI. Node 20/22
-  passed. That flake is the shape of #201. Remove the worktree at
-  `_scg-wt-closeout` before merging #223.
-- Still open after #223: 167, 168, 201, 202, 203, 208.
-- 167: ancestry gate is already on main. Do not add aahp-verify on tags
-  without a base SHA that is not HEAD-equal; AAHP 3.10.0 blocks that.
-- Remote heads should be only main, v5, and this PR branch.
 
 ## Closeout after #220 and #221: SLA findings reach the report, and riskTrend includes now
 

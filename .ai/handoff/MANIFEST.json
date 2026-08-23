@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787478577",
-    "timestamp": "2026-08-23T09:49:37Z",
-    "commit": "0b65472",
+    "session_id": "cli-1787481209",
+    "timestamp": "2026-08-23T10:33:29Z",
+    "commit": "34f4795",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2c6ca856042b7658e9d2a91b7c3bff80cdb2f5199a90dacaa7c0597292d7c7b7",
-      "updated": "2026-08-23T09:49:35Z",
-      "lines": 4484,
+      "checksum": "sha256:a6dae695a4eabd8e0d0f5dbcc58acdc740b7e512ad09d67bb48324a1ddc5d761",
+      "updated": "2026-08-23T10:33:23Z",
+      "lines": 4473,
       "summary": "Do not start v6.0.0. Zero-open-issues is not met."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:b1a3c171d239cca496bd0bc581edebc8597d34d92a2bcb2c33948e9218817b16",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-23T03:19:33Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:3c1c0e5847ede7c2d648a3cba6ded0cb8d11faaea2442ca743c0331714530cd3",
-      "updated": "2026-08-23T09:49:37Z",
+      "updated": "2026-08-23T10:33:28Z",
       "lines": 156,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:2ccd74c6f2925d3f0b637e2da531c8089314ddd17c6dab3c8cbc044e2174e915",
-      "updated": "2026-08-23T09:49:37Z",
+      "checksum": "sha256:845218ee1698ebee4ba957408b51aa77a9d1b16699b5e352d80646d57916fbde",
+      "updated": "2026-08-23T10:33:28Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:b3e762ed8591c7a2c975379bf5b3924c8527de830b82b03f4f98c7b88a267781",
-      "updated": "2026-08-23T09:49:37Z",
+      "checksum": "sha256:7e68089c4b7c3148701e3a12c66587b97e27cc16fd54b27f731a859940ed5d06",
+      "updated": "2026-08-23T10:33:28Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-23T03:19:33Z",
       "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-23T09:34:11Z",
+      "updated": "2026-08-22T22:19:07Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "Do not start v6.0.0. Zero-open-issues is not met. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 54797,
-    "full_read": 66581
+    "manifest_plus_core": 54703,
+    "full_read": 66487
   }
 }
