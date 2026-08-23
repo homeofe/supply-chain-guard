@@ -1,3 +1,103 @@
+## Threat-intel sweep 2026-08-23: 38 package IOCs, no atomic indicators
+
+Model: claude-opus-5. Branch threat-intel/2026-08-23. No version bump.
+
+38 package IOCs imported from the GitHub Advisory Database, corroborated against
+OSV.dev (22 confirmed). 37 npm, 1 PyPI. No non-package indicator was added by
+hand this run, and that is a finding rather than a gap: see below.
+
+### The import had to be sliced again, and the reason is unchanged
+
+The plain rolling-window call still exits 2. Measured today: 5,955 advisories in
+the 14-day window, 4,401 of them "new", of which 4,363 are the `@zalastax/nolb-*`
+backfill that the 2026-08-22 sweep already resolved with one anchored pattern in
+`MALICIOUS_PACKAGE_PATTERNS`. The importer has no way to know those names are
+covered by a pattern rather than by feed entries, so it will keep counting them
+as new until they age out.
+
+Independently re-derived today rather than taken on trust, since the earlier
+finding is what the whole slicing decision rests on: the bulk is 4,363 of the
+5,083 advisories published on 2026-08-14, all npm, all all-versions ranges, and a
+20-name spread sample resolves 20/20 to npm security holding packages carrying
+only `0.0.1-security`. The underlying releases date from Jan 2023 and were
+unpublished in Feb 2023. Registry ownership now reads as npm's own holding
+account. So the conclusion of the previous sweep holds.
+
+**New, and what made this run cheaper:** the bulk was published inside a
+two-minute window, `2026-08-14T11:13:55Z` to `2026-08-14T11:16:08Z`, and the
+advisories API accepts a full ISO timestamp in the `published` range, not only a
+date. So the slice can cut around the flood instead of dropping the whole day:
+
+    npm run feed:import -- --since 2026-08-14T11:16:09Z --until 2026-08-23T23:59:59Z --limit 100000
+
+Only 6 non-zalastax advisories fall inside that two-minute window, and all 6 were
+verified already present in the feed, so nothing is lost by excluding it. The
+slice below it (2026-08-09 to 2026-08-14T11:13:54Z) was also run and returned 0
+new entries, so the whole genuine yield of the window is the 38 taken here.
+
+This still needs no importer change. **After roughly 2026-08-28 the block ages
+out and the plain `npm run feed:import` starts working again**; a later sweep
+should stop slicing rather than keep doing it out of habit.
+
+### What was imported
+
+The largest clusters: `totp-utils` (8 versions), a ten-entry dependency-confusion
+set of the form `<digit>-<verb>sight-web`, and nine `stillm4ddpocs-*`
+proof-of-concept publications on 999.9.x lure versions. Also the
+`@syncraft-labs/*` trio at 0.4.1, four `*-testkit` / `*-testing-utils` names,
+`create-coin@20.1.1`, the bare name `internallib_v902`, and
+`@usaa-grp-personal-profile/personal-profile-common@999.0.0`, a dependency
+confusion lure aimed at an internal scope of a real financial institution and so
+version-pinned rather than blocked by name.
+
+Incidental corroboration: the PyPI entry is `scrambleeeer@0.1.0`, a fourth
+spelling in a family the feed already carries as `scrambleeer`.
+
+Nothing was reported unmappable, nothing was skipped for an unresolvable
+ecosystem, and the page cap was not reached on either slice.
+
+### Why no atomic indicators were added
+
+The vendor sweep found no write-up published since the 2026-08-22 sweep that
+carries an indicator this feed does not already hold. Sources checked: Socket,
+Aikido, StepSecurity, The Hacker News, GitGuardian, JFrog, Elastic, Unit 42 and
+Zscaler. Every campaign currently on their front pages was cross-referenced and
+is already covered: Mastra scope takeover, Miasma LeoPlatform, ChainDrop /
+keyv-cacheable including the smart-contract C2 resolver, the Open VSX evil-twin
+set and its collection host, WEL1DROPPER, RedC2 4.0 and the Alibaba-tooling RAT
+set. The newest vendor post found anywhere in the sweep is dated 2026-08-21,
+which is inside the window the previous sweep already covered.
+
+`shai_hulululud@1.0.48596` remains deliberately out, on the reasoning recorded by
+the previous sweep. Re-confirmed today that no advisory database carries it.
+
+### NEEDS A DECISION: this repository is 24 branches over its own invariant
+
+Not caused by this sweep and not acted on by it, but it is the largest thing
+visibly wrong with the repo right now, and the release checklist says a finished
+deploy leaves exactly `main` and `v5`.
+
+`git ls-remote --heads origin` currently lists 24 branches besides those two:
+
+- **21 belong to MERGED pull requests** and should have been deleted with the
+  merge (#164, #165, #166, #181, #182, #183, #184, #185, #186, #187, #207, #209,
+  #210, #211, #212, #213, #214, #215, #216, #217, #218). `threat-intel/2026-08-22`
+  is among them, so the previous run of this task left its branch behind too.
+- **2 are the open pull requests** #220 and #221, which are legitimate.
+- **1 has no pull request at all**: `fix/issue-193-purl-namespace-separator`.
+  That one is not bookkeeping. It is either abandoned work or work that was never
+  proposed, and it should be looked at before it is deleted with the rest.
+
+This is the failure mode the checklist already warns about: `gh pr merge
+--delete-branch` leaves the remote branch behind when a worktree holds the local
+one, and it names only the local branch in the error, so it reads as harmless.
+Twenty-one at once suggests it is systematic rather than a one-off.
+
+Deliberately not fixed here: deleting branches is destructive, two pull requests
+are in flight from another session, and one branch has no pull request to prove
+its content is preserved. The safe check per branch is a tree diff against the
+release that shipped it, not `git branch --merged`, which lies under squash-merge.
+
 ## SBOM: the licences, dependency relationships and bom-refs the lockfile already carried
 
 The generated CycloneDX document was omitting three things the npm lockfile already
