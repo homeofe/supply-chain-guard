@@ -11,9 +11,9 @@
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3692e23eeb02d971381ab5cf47772defa15546df15704caf42abae86250536ac",
+      "checksum": "sha256:3c4fecc3d18ed0e610951db2bc2b2a5c5f9d798b2b8d138abbd5c5cbdd0105dd",
       "updated": "2026-08-22T23:50:00Z",
-      "lines": 3780,
+      "lines": 3843,
       "summary": "`.ai/handoff/STATUS.md` is prepend-only, so two branches almost always differ by"
     },
     "NEXT_ACTIONS.md": {
@@ -53,9 +53,9 @@
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
-      "checksum": "sha256:7812d41d930c2853dad134b4b498b87dd3497af9f2d391d26c6ba60d12ebd13f",
+      "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
       "updated": "2026-08-22T23:49:40Z",
-      "lines": 249,
+      "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
