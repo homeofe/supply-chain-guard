@@ -5,10 +5,10 @@
  * based on build configuration, GitHub Actions workflows, and attestation files.
  *
  * Levels:
- *   0 — No evidence of any build process
- *   1 — Build script present (Dockerfile, CI workflow)
- *   2 — Signed build or slsa-github-generator action used
- *   3 — Hermetic build + a VALID parsed provenance statement
+ *   0 - No evidence of any build process
+ *   1 - Build script present (Dockerfile, CI workflow)
+ *   2 - Signed build or slsa-github-generator action used
+ *   3 - Hermetic build + a VALID parsed provenance statement
  *
  * Scope (v5.15.0): provenance files are now PARSED and structurally validated
  * (in-toto Statement / DSSE envelope / Sigstore bundle -> SLSA predicate type +
@@ -404,7 +404,7 @@ export function verifySLSA(dir: string): Finding[] {
     findings.push({
       rule: "SLSA_LEVEL_0",
       description:
-        "No build script or CI workflow found — project has no verifiable build process (SLSA Level 0)",
+        "No build script or CI workflow found - project has no verifiable build process (SLSA Level 0)",
       severity: "info",
       recommendation:
         "Add a GitHub Actions workflow or Dockerfile to establish a reproducible build. " +
@@ -437,7 +437,7 @@ export function verifySLSA(dir: string): Finding[] {
         "workflow (`workflow_call`) and attach the `provenance.intoto.jsonl` to each release.",
     });
   }
-  // Level 3: no findings — fully compliant
+  // Level 3: no findings - fully compliant
 
   return findings;
 }

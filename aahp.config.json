@@ -142,17 +142,12 @@
       "id": "em-dash",
       "pattern": "\\u2014",
       "flags": "g",
-      "message": "em dash (U+2014) is banned in docs; use a hyphen '-' or colon ':' (SCG hard rule)",
+      "message": "em dash (U+2014) is banned in EVERY tracked file; use a hyphen '-' or a colon ':' (see the 'No em dashes in tracked files' section of CONTRIBUTING.md, which states the scope and the options weighed before it was chosen). The include list is the single pathspec '*' on purpose: scope is opt-OUT, so a file added tomorrow is covered the moment it is tracked. It was opt-IN until 2026-08-22, and the six pathspecs listed then happened to miss all 77 occurrences that existed in the repository, so this gate reported 'no matches' truthfully while the rule went unenforced (https://github.com/homeofe/supply-chain-guard/issues/178). Every entry in 'exclude' must carry a written reason in scripts/check-em-dash-scope.mjs; that script fails the build if an exclusion loses its justification, if an exclusion subtracts nothing (the state 'CHANGELOG.md' was in here, where it read like the reason the changelog was unchecked and was in fact inert), or if 'include' is ever narrowed so that a tracked file leaves scope in silence. The reasons live in that script and not here because the AAHP config schema sets additionalProperties:false on a forbiddenPatterns rule, so this object cannot carry a per-exclusion reason field.",
       "include": [
-        "README.md",
-        "CONTRIBUTING.md",
-        "SECURITY.md",
-        "CODE_OF_CONDUCT.md",
-        "docs/*.md",
-        ".ai/handoff/*.md"
+        "*"
       ],
       "exclude": [
-        "CHANGELOG.md",
+        "assets/demo.gif",
         ".ai/handoff/LOG-ARCHIVE.md"
       ]
     },

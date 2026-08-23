@@ -322,7 +322,7 @@ function formatText(report: ScanReport): string {
       lines.push(boxBlank());
     } else if (totalFindings === 0) {
       lines.push(boxBlank());
-      lines.push(boxRow(`  \x1b[32m${BOLD}✓  No findings — clean${RESET}`));
+      lines.push(boxRow(`  \x1b[32m${BOLD}✓  No findings - clean${RESET}`));
       lines.push(boxBlank());
     } else {
       const maxCount = Math.max(
@@ -387,7 +387,7 @@ function formatText(report: ScanReport): string {
       const avail  = W - label.length - 4;              // content width after indent
 
       lines.push(boxRow(`  ${color}${BOLD}${label}${RESET}  ${BOLD}${trunc(f.rule, avail)}${RESET}`));
-      // Description — word-wrapped
+      // Description - word-wrapped
       for (const dl of wrapText(f.description, avail)) {
         lines.push(boxRow(`  ${indent}${dl}`));
       }
@@ -395,7 +395,7 @@ function formatText(report: ScanReport): string {
         const loc = f.line ? `${f.file}:${f.line}` : f.file;
         lines.push(boxRow(`  ${indent}${DIM}${trunc(loc, avail)}${RESET}`));
       }
-      // Match — word-wrapped, first line gets "match  " tag
+      // Match - word-wrapped, first line gets "match  " tag
       if (f.match) {
         const matchTag = "match  ";
         const matchPad = " ".repeat(matchTag.length);
@@ -405,7 +405,7 @@ function formatText(report: ScanReport): string {
           lines.push(boxRow(`  ${indent}${DIM}${matchPad}${RESET}${matchLines[ml]}`));
         }
       }
-      // Fix — word-wrapped, first line gets "fix    " tag
+      // Fix - word-wrapped, first line gets "fix    " tag
       const fixTag = "fix    ";
       const fixPad = " ".repeat(fixTag.length);
       const fixLines = wrapText(f.recommendation, avail - fixTag.length);
