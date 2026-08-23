@@ -118,6 +118,98 @@ service CIDRs from this scanner's own detection corpus, a public agent-runtime
 product name it ships a scanner for, and the English words trust/intelligence/
 awareness in feature prose). v5.2.40 and v5.2.41 both carry the era's stub body,
 "See README.md for full changelog"; the anchor resolves to the corrected file.
+## SLA compliance had two definitions and shipped the wrong one (2026-08-22, unreleased)
+
+Model: claude-opus-5. Branch fix/issue-172-sla-single-definition. No version bump.
+Fixes https://github.com/homeofe/supply-chain-guard/issues/172.
+
+### What was wrong
+
+`slaComplianceRate` in `src/metrics.ts` computed `resolved / not-new`, a
+resolution rate, under an SLA name. The real deadline logic lived in
+`src/sla-engine.ts`. The two had never been executed against the same input in
+the same process, in code or in a test, so they disagreed in both directions for
+every release from v4.8.0 (2026-04-04) to v5.28.1:
+
+| Decisions | Old rate | `checkSlaCompliance` |
+|-----------|----------|----------------------|
+| two accepted-risk | 0 | 0 breaches |
+| all in-remediation, inside deadline | 0 | 0 breaches |
+| one `new`, 30 days past a 24h SLA | 100 | 1 breach |
+| none at all | 100 | 0 breaches |
+
+The third row was not in the issue and is the dangerous direction: the metric
+excluded `new` from its denominator while the engine evaluated it, so a report
+could show 100 percent compliance next to real breaches.
+
+### What changed
+
+One definition, `slaVerdict` in `src/sla-engine.ts`, returning
+`compliant | at-risk | breached | unmeasurable`. `checkSlaCompliance` builds its
+findings from it and `src/metrics.ts` counts its verdicts. `slaComplianceRate`
+became `number | null`, floored rather than rounded, so the published invariant
+is exact: when the rate is non-null, it is 100 if and only if the engine reports
+zero breaches over the same decisions. `mttrCritical` was removed from
+`SecurityMetrics`; it was assigned `undefined` unconditionally and was always
+absent from JSON output.
+
+The "when non-null" qualifier is a correction. An earlier revision of this entry,
+the CHANGELOG entry, the `SecurityMetrics` doc comment and the pull request body
+all stated the biconditional unrestricted, and unrestricted it is false in one
+direction. Executed on this branch, 2026-08-22: an empty decision set gives
+`checkSlaCompliance` 0 breaches and `slaComplianceRate` `null`, not 100; two
+decisions whose `decidedAt` cannot be parsed give the same pair; and the control,
+one `resolved` decision, gives 0 breaches and 100. So zero breaches does not
+imply 100. The other direction needs no qualifier: 100 does imply zero breaches.
+The code and the tests were already right about this. The cross-check in
+`src/__tests__/sla-engine.test.ts` asserts the weaker, correct form,
+`if (breaches === 0) expect(rate === null || rate === 100).toBe(true)`; only the
+prose overreached, and only the prose changed.
+
+Both are breaking for TypeScript consumers of the library API and nothing else:
+no gate, exit code, workflow, Action input or output, non-JSON report format or
+MCP field reads either one. The CHANGELOG entry says so plainly.
+
+### Assumptions now written next to the code, not left implicit
+
+- `resolved`, `false-positive` and `accepted-risk` are compliant by status with
+  no date read. An accepted risk is a recorded decision not to remediate, so it
+  has no deadline to miss. The alternative, that acceptance should expire and be
+  re-approved, needs an expiry field on `TriageDecision` that does not exist and
+  is an owner decision.
+- An unparseable `decidedAt` is `unmeasurable`, excluded from both sides of the
+  rate rather than counted as compliant, so a corrupt triage store reports "not
+  measured" instead of "perfect".
+- A `decidedAt` in the future is compliant. Clock skew between machines writing a
+  committed triage file is ordinary and any future-dating cut-off would be an
+  invented number.
+- `at-risk` is inside the SLA. The 0.8 warning fraction is named
+  `AT_RISK_FRACTION` and documented as the pre-existing value it is.
+- `Math.floor` rather than `Math.round`, because rounding lets one breach in 200
+  decisions report as 100.
+
+### Two gaps found and deliberately not closed here
+
+1. **`checkSlaCompliance` has no caller**, so `SLA_BREACH_CRITICAL` and
+   `SLA_AT_RISK` cannot reach a scan report at all. Filed as
+   https://github.com/homeofe/supply-chain-guard/issues/194 (T-021). It is the
+   structural reason the contradiction above stayed invisible from the CLI: only
+   one of the two definitions ever ran. Wiring it in changes risk score and exit
+   code for adopters of triage, which is a decision, not a patch.
+2. **`TriageDecision.dueDate` is never consulted** by either the engine or the
+   metric; the deadline is derived from the rule id. The field is declared and
+   accepted from the triage store, so it looks like it works. This is now stated
+   in a comment at the line that would have to change. Honouring it would move
+   the deadline for every project that already sets it, so it is an owner call.
+
+### Owner decision recorded, not deferred
+
+The issue's acceptance criteria required that the empty decision set stop
+returning 100. The two ways to do that are a nullable type (chosen) or a rename
+to `resolutionRate` keeping the old arithmetic (rejected: it preserves a number
+nothing consumed, under a second name, and leaves the SLA field missing). The
+nullable type is breaking for TypeScript consumers, so the release carrying it
+should be at least a minor bump with the CHANGELOG note that is already written.
 ## Every checkout now states whether it keeps the token (2026-08-22, unreleased)
 
 Model: claude-opus-5. Branch fix/checkout-credential-contract. No version bump.
