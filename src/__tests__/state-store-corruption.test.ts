@@ -61,7 +61,8 @@ function validHistoryJson(): string {
 
 /**
  * One expired risk acceptance and one stale in-remediation decision. Both
- * produce `high` governance findings, which is what lets the triage assertions
+ * produce `high` governance findings, and the breached in-remediation decision
+ * also produces a `critical` SLA finding, which is what lets the triage assertions
  * below check the gate rather than only the finding list.
  */
 function validTriageJson(): string {
@@ -302,9 +303,10 @@ describe("triage store: the same two cases, equally separated", () => {
 
     expect(rulesOf(report)).toContain("RISK_ACCEPTANCE_EXPIRED");
     expect(rulesOf(report)).toContain("STALE_CRITICAL_FINDING");
+    expect(rulesOf(report)).toContain("SLA_BREACH_CRITICAL");
     expect(rulesOf(report)).not.toContain("TRIAGE_STORE_UNREADABLE");
     expect(report.partialScan).toBeUndefined();
-    expect(getReportExitCode(report)).toBe(1);
+    expect(getReportExitCode(report)).toBe(2);
     // The true value for this fixture under the single SLA definition in
     // src/sla-engine.ts: two measurable decisions, one of them compliant.
     //
@@ -316,8 +318,8 @@ describe("triage store: the same two cases, equally separated", () => {
     // fixture is resolved, which is exactly why the old number was 0.
     //
     // The expired acceptance is still reported: RISK_ACCEPTANCE_EXPIRED is
-    // asserted above and the exit code is 1. The SLA rate is not the channel
-    // that carries it.
+    // asserted above, SLA_BREACH_CRITICAL is emitted (exit code 2). The SLA
+    // rate is not the channel that carries it.
     expect(report.metrics?.slaComplianceRate).toBe(50);
   });
 
