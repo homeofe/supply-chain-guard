@@ -305,8 +305,20 @@ describe("triage store: the same two cases, equally separated", () => {
     expect(rulesOf(report)).not.toContain("TRIAGE_STORE_UNREADABLE");
     expect(report.partialScan).toBeUndefined();
     expect(getReportExitCode(report)).toBe(1);
-    // The true value for this fixture: two decisions triaged, none resolved.
-    expect(report.metrics?.slaComplianceRate).toBe(0);
+    // The true value for this fixture under the single SLA definition in
+    // src/sla-engine.ts: two measurable decisions, one of them compliant.
+    //
+    // `accepted-risk` is compliant by `slaVerdict` regardless of its dueDate,
+    // and `in-remediation` decided 2026-01-01 is past its window, so the rate
+    // is 50. It was 0 before because the old formula in metrics.ts counted
+    // RESOLVED over NOT-NEW - a resolution rate carrying the name of SLA
+    // compliance, which is the defect this change removes. Nothing in this
+    // fixture is resolved, which is exactly why the old number was 0.
+    //
+    // The expired acceptance is still reported: RISK_ACCEPTANCE_EXPIRED is
+    // asserted above and the exit code is 1. The SLA rate is not the channel
+    // that carries it.
+    expect(report.metrics?.slaComplianceRate).toBe(50);
   });
 
   it("an absent store is silent and clean", async () => {
