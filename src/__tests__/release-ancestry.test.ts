@@ -178,7 +178,16 @@ describe("release ancestry gate: behaviour", () => {
     // commit's tree. It passes, because all it compares is the tag string against
     // package.json. That is why an ancestry gate had to be added rather than the
     // existing one tightened.
-    const oneLiner = CI.match(/node -e '([^']*)'/)?.[1];
+    // Anchored to the step that owns it, NOT to the first `node -e` in the
+    // file. The self-scan step added later also runs a `node -e`, and it sits
+    // earlier in ci.yml, so a positional match silently selected that one and
+    // executed it in a temp repo without its environment. Reading the real
+    // command out of ci.yml is the property worth keeping; selecting it by
+    // position was the part that could not survive a second command being added.
+    const VALIDATOR_STEP = "- name: Validate immutable release tag";
+    const stepAt = CI.indexOf(VALIDATOR_STEP);
+    expect(stepAt, `ci.yml no longer has a step named ${VALIDATOR_STEP}`).toBeGreaterThan(-1);
+    const oneLiner = CI.slice(stepAt).match(/node -e '([^']*)'/)?.[1];
     expect(oneLiner, "ci.yml no longer contains the tag validator one-liner").toBeTruthy();
 
     const validator = spawnSync(process.execPath, ["-e", oneLiner!], {
