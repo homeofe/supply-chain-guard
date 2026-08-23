@@ -58,6 +58,10 @@ export interface WfJob {
   needs: string[];
   permissions: WfPermissions;
   steps: WfStep[];
+  /** job-level `uses:` - a reusable-workflow call. The caller passes its own
+   *  permissions to the callee, so a job with no steps of its own can still be
+   *  the job that performs a privileged action. */
+  uses?: string;
   /** job-level `env:` map (in scope for EVERY step of this job) */
   env?: Record<string, string>;
 }
@@ -422,6 +426,8 @@ function parseJob(
 
     if (kv.key === "permissions") {
       job.permissions = parsePermissions(lines, j, jobChildIndent, kv.value);
+    } else if (kv.key === "uses") {
+      job.uses = kv.value ? kv.value.trim() : undefined;
     } else if (kv.key === "needs") {
       job.needs = parseNeeds(lines, j, jobChildIndent, kv.value);
     } else if (kv.key === "steps") {

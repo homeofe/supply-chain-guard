@@ -522,18 +522,99 @@ function jobHasOidcWrite(ast: WorkflowAst, job: WfJob): boolean {
  */
 function findNpmProvenanceJob(
   workflows: ParsedWorkflow[],
-): { file: string; jobId: string } | undefined {
+): { file: string; jobId: string; via?: string } | undefined {
+  const byPath = new Map<string, ParsedWorkflow>();
+  for (const w of workflows) {
+    const id = localUsesIdentity(w.name);
+    if (id) byPath.set(id, w);
+  }
+
+  const jobPublishesDirectly = (job: { steps: { run?: string }[] }): boolean =>
+    job.steps.some((step) => step.run !== undefined && NPM_PROVENANCE_PATTERN.test(step.run));
+
   for (const workflow of workflows) {
     for (const job of workflow.ast.jobs) {
-      const publishes = job.steps.some(
-        (step) => step.run !== undefined && NPM_PROVENANCE_PATTERN.test(step.run),
-      );
-      if (publishes && jobHasOidcWrite(workflow.ast, job)) {
+      if (!jobHasOidcWrite(workflow.ast, job)) continue;
+
+      if (jobPublishesDirectly(job)) {
         return { file: workflow.name, jobId: job.id };
+      }
+
+      // A caller job with no steps of its own still mints provenance when it
+      // calls a reusable workflow: GitHub passes the CALLER permissions to the
+      // callee, so `id-token: write` here is in effect there. Requiring both
+      // signals in one job's own steps rejected that configuration, which is a
+      // real and supported way to publish with provenance.
+      //
+      // Only LOCAL callees are resolved. A remote `owner/repo/...@ref` cannot be
+      // read from this checkout, and crediting a workflow nobody has looked at
+      // is exactly the over-grading this module exists to stop. Those are
+      // reported as not assessed instead.
+      if (job.uses) {
+        const calleeId = localUsesIdentity(job.uses);
+        const callee = calleeId ? byPath.get(calleeId) : undefined;
+        if (callee && callee.ast.jobs.some(jobPublishesDirectly)) {
+          return { file: callee.name, jobId: job.id, via: workflow.name };
+        }
       }
     }
   }
   return undefined;
+}
+
+/** `./.github/workflows/x.yml` and `.github/workflows/x.yml` name one file. */
+/**
+ * The identity of a LOCAL reusable workflow, for comparison.
+ *
+ * `uses:` gives a repository path (`./.github/workflows/publish.yml`) while a
+ * parsed workflow carries only its file name (`publish.yml`), so the two must
+ * be reduced to the same thing before they can be compared. Every local
+ * reusable workflow lives in .github/workflows/, so the file name IS the
+ * identity.
+ *
+ * A REMOTE reference (`owner/repo/.github/workflows/x.yml@ref`) returns undefined
+ * rather than a basename. Collapsing it would let a remote callee match a local
+ * file that merely shares a name, crediting a workflow nobody in this checkout
+ * has read - the over-grading this module exists to prevent.
+ */
+function localUsesIdentity(ref: string): string | undefined {
+  // No regex escape in here on purpose: an earlier version of this function was
+  // mangled in transit, and a silently broken normaliser makes every lookup miss
+  // without saying so.
+  const BACKSLASH = String.fromCharCode(92);
+  const withoutRef = ref.split("@")[0]!.split(BACKSLASH).join("/").trim();
+  const isLocal =
+    withoutRef.startsWith("./") || withoutRef.startsWith(".github/") ||
+    withoutRef.startsWith("/.github/");
+  // A bare file name is how a parsed workflow identifies itself.
+  const looksLikeBareFile = !withoutRef.includes("/");
+  if (!isLocal && !looksLikeBareFile) return undefined;
+  const segments = withoutRef.split("/").filter(Boolean);
+  return segments[segments.length - 1];
+}
+
+/** A job that holds `id-token: write` and calls a callee this checkout cannot
+ *  read. Not evidence of provenance, and not evidence against it - reported so
+ *  the grade is not silently lowered by something nobody looked at. */
+export function findUnreadableReusableCallers(
+  workflows: ParsedWorkflow[],
+): Array<{ file: string; jobId: string; uses: string }> {
+  const local = new Set<string>();
+  for (const w of workflows) {
+    const id = localUsesIdentity(w.name);
+    if (id) local.add(id);
+  }
+  const out: Array<{ file: string; jobId: string; uses: string }> = [];
+  for (const workflow of workflows) {
+    for (const job of workflow.ast.jobs) {
+      if (!job.uses || !jobHasOidcWrite(workflow.ast, job)) continue;
+      const id = localUsesIdentity(job.uses);
+      if (!id || !local.has(id)) {
+        out.push({ file: workflow.name, jobId: job.id, uses: job.uses });
+      }
+    }
+  }
+  return out;
 }
 
 /**

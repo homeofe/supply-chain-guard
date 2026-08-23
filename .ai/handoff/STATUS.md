@@ -1,3 +1,27 @@
+## Provenance published through a reusable workflow was rejected
+
+Issue 190's fix required the `npm publish --provenance` step and the
+`id-token: write` permission to resolve to the same job. Correct for a job that
+publishes from its own steps; wrong for a common real layout.
+A caller job holds the permission and does nothing but `uses:` a reusable
+workflow; the callee runs the publish. GitHub passes the CALLER permissions to
+the callee, so the token really is in effect at the publish step and that
+configuration really does mint Sigstore provenance. It was graded 2.
+A false negative is the safe direction of error, but silently under-grading is
+the same defect class as silently over-grading, so it is fixed: a caller job
+holding `id-token: write` whose `uses:` resolves to a LOCAL workflow with a
+publishing job now counts.
+THE BOUND THAT KEEPS THIS FROM BECOMING OVER-GRADING: only local callees are
+resolved. A remote `owner/repo/...@ref` cannot be read from the checkout, and a
+lookup that collapsed it to a bare file name would match a local file of the
+same name and credit a workflow nobody here has read. Remote refs keep their
+full form, fail the lookup, and are reported rather than credited. A test pins
+that refusal with a same-named local decoy present.
+FOUND WHILE VERIFYING, worth recording: the first implementation compiled,
+read correctly and did nothing, because the map was keyed on a parsed
+workflow's bare file name while `uses:` gives a repository path. Only running it
+on a real layout showed it - the diff looked right.
+
 ## Zero coverage and an unread language are not the same state
 
 The first version of the issue-205 fix fired on `filesScanned === 0`. That is a
