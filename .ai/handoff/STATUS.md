@@ -1,3 +1,67 @@
+## 2026-08-24: Release v6.0.1 (threat-intel patch)
+
+Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour
+change beyond the detection set. Model: claude-opus-5.
+
+Release steps followed per CLAUDE.md: CHANGELOG block + reference link + updated
+`[Unreleased]` compare base, version bumped at all 15 `versionSites` plus
+`package.json` and the lockfile via `npm install --package-lock-only`,
+`feed:generate`, `handoff:refresh`, green `npm run build`.
+
+### Two things worth knowing about the bump
+
+**The README contains CIDR ranges that look like the version.** `172.16.0.0/12`
+and `10.96.0.0/12` both contain the literal substring `6.0.0`, so a blanket
+`sed s/6.0.0/6.0.1/` over README.md silently corrupts the `INTERNAL_PRIVATE_IP`
+rule documentation and the universal-infrastructure-constants list. The bump was
+done with four targeted replacements instead (`rev: v`, the docker tag, and two
+`homeofe/supply-chain-guard@v` refs), and the two CIDR matches were verified
+untouched afterwards. `check:version-sync` would NOT have caught the corruption:
+it counts occurrences of the NEW version and never looks at what else changed.
+The same trap applies to any future 6.0.x bump.
+
+**`src/__tests__/provenance.test.ts` hardcoded the tool version 12 times** and was
+rewritten to read `pkg.version`, the pattern `reporter.test.ts` already uses. This
+is the exact failure that broke the v5.2.14 and v5.2.17 publishes.
+
+### Carried open item: bundledVersion is a version site that CANNOT be gated
+
+`getDetectionSetProvenance()` in `src/threat-intel.ts` returns a hardcoded
+`bundledVersion`, and that string is surfaced as the detection-set identity in all
+nine report formats. It is NOT in `aahp.config.json` versionSites, so
+`check:version-sync` has never covered it. It was correct for v6.0.0 only because
+someone bumped it by hand in the release commit (d4639fc), and it was bumped by
+hand again here.
+
+Adding it to `versionSites` was tried and REVERTED, because it does not work and
+would have been worse than the gap. `check-version-sync.mjs` asserts that the
+current version appears at least `minOccurrences` times as a substring, and
+`src/threat-intel.ts` holds 13,086 IOC entries whose values are arbitrary package
+versions - 19 of them already contain `6.0.1` (`awaitly-visualizer@6.0.1`,
+`pypi:ml-data-shared@16.0.1`, ...). Proof it is vacuous: with the entry added and
+`bundledVersion` deliberately mutated back to `"6.0.0"`, version-sync still
+reported `PASS ... matches all 16 configured version site(s)`. The schema's
+`boundary` option does not help either - the IOC values are exact version strings,
+not `6.0.19`-style substrings, so they match on word boundaries too.
+
+So this file cannot be gated by presence-counting, and a gate that always passes
+gives false assurance about a value that ships in every report.
+
+The real fix is a considered change, not a patch-release side quest, which is why
+it is written here rather than done:
+
+- Have `threat-intel.ts` read the version instead of restating it - either from a
+  small dedicated `src/version.ts` that IS gateable, or from `package.json`. This
+  removes the drift entirely rather than detecting it. Needs a decision about
+  importing `package.json` from shipped library code and the bundling implications.
+- Or teach `check-version-sync.mjs` to accept an anchored pattern per site
+  (`bundledVersion: "<version>"`) rather than a bare substring count. That fixes
+  the whole class, and would let other data-heavy files be gated too. It is an
+  upstream AAHP change, so it lands in `@elvatis_com/aahp` first.
+
+Until one of those happens, **`bundledVersion` must be bumped by hand in every
+release** and no gate will tell you if it is missed. The symptom would be silent:
+scans keep working and every report advertises a stale detection-set version.
 ## 2026-08-24: Threat-intel import (40 package IOCs), zalastax backlog re-confirmed as covered
 
 Scheduled daily threat-intel run. Model: claude-opus-5. No version bump - the

@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787557720",
-    "timestamp": "2026-08-24T07:48:41Z",
-    "commit": "d4639fc",
+    "session_id": "cli-1787559415",
+    "timestamp": "2026-08-24T08:16:56Z",
+    "commit": "cfc30c3",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:bc1df38f15d2bf85fe2bf55565ef5bfa398bf83542b18d570fe2e0cf56f623a9",
-      "updated": "2026-08-24T07:48:25Z",
-      "lines": 4574,
-      "summary": "Scheduled daily threat-intel run. Model: claude-opus-5. No version bump - the"
+      "checksum": "sha256:46957981492e2481f7b0ad81cac17c9e496a2fa40421e5e19dbba714da636c55",
+      "updated": "2026-08-24T08:16:52Z",
+      "lines": 4638,
+      "summary": "Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:d04e05a59aea2dac19eebee34f5376045fd69225199fbac13ec34489927640cd",
-      "updated": "2026-08-24T07:42:07Z",
+      "checksum": "sha256:99b3c74ac067882f150d75c10c32b8a1243a18cc48b5d3528defb1eb8945b4af",
+      "updated": "2026-08-24T08:07:34Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:25f3efd9858ac0edba0a98f897400108d085621ccc3099e5e339ab25f470f51e",
-      "updated": "2026-08-24T07:48:38Z",
-      "lines": 157,
+      "checksum": "sha256:b9cea649abd74a5d1f64230359138b2c5670859f2b203e48d4a032beef705e95",
+      "updated": "2026-08-24T08:16:54Z",
+      "lines": 158,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:7cdafc02a0ee3e62e3194b52fed91d576a8f599ff84f4e50cbdfac8e39f0d163",
-      "updated": "2026-08-24T07:48:38Z",
+      "checksum": "sha256:1bd2feb411a9bef95e1dd0440bb3dc377d2a4d189e436fbd0b65b1840aa96306",
+      "updated": "2026-08-24T08:16:54Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:4277597a91a3488c5802df65d991f531d78724625be6a770ceaa002680f8ecf6",
-      "updated": "2026-08-24T07:48:38Z",
+      "checksum": "sha256:57caa659649280f66e0cbd9c302d009964dc41128c5100ed9e4ad27965b4d0ef",
+      "updated": "2026-08-24T08:16:54Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Scheduled daily threat-intel run. Model: claude-opus-5. No version bump - the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 55783,
-    "full_read": 67593
+    "manifest_plus_core": 56498,
+    "full_read": 68329
   }
 }

@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (140, newest first)
+## Releases (141, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.0.1 | 2026-08-24 | 40 malicious-package IOCs imported from the GitHub Advisory Database and |
 | v6.0.0 | 2026-08-23 | Every scan report now names what the loaded policy switched off, in all nine |
 | v5.28.1 | 2026-08-21 | Threat feed: 84 package IOCs imported from the GitHub Advisory Database |
 | v5.28.0 | 2026-08-20 | docs/node-support.md: one authoritative, mechanically enforced Node support |

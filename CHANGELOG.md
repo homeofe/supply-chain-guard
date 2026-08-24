@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.0.1] - 2026-08-24
+
 ### Added
 
 - **40 malicious-package IOCs** imported from the GitHub Advisory Database and
@@ -27,7 +29,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 - **The import window was sliced to `--since 2026-08-15`** rather than run at the
   `--days 14` default. The default window still carries the 4,363-advisory
-  `@zalastax/nolb-*` backfill of 2026-08-14, which v5's anchored
+  `@zalastax/nolb-*` backfill of 2026-08-14, which the anchored
   `^@zalastax\/nolb-[a-z0-9._-]+$` rule already covers in full. The importer
   dedupes against the feed only, not against the pattern tables, so it re-proposes
   the whole flood on every run and reports it as an undrainable backlog. All 4,363
@@ -4565,7 +4567,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.1...HEAD
+[6.0.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.1
 [6.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.0
 [5.28.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.1
 [5.28.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.0
