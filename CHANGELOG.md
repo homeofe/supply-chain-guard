@@ -7,6 +7,33 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **40 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev (all 40 carry both a GHSA and a MAL- id, so all
+  land at confidence 1.0). They cover a dependency-confusion probe set published
+  at sentinel versions `99.0.0` / `99.0.1` (`sm-admin`, `sm-apikey-model`,
+  `sm-billing-form`, `sm-cart`, `sm-checkout`, `sm-oauth`, `sm-payment`,
+  `sm-session`) and at `999.9.12` (`amundi-compare`, `fund-calculator`,
+  `fund-list-filter`, `fund-portfolio`); the eight-version `conversa-sdk` set;
+  `message-compiler@9.2.0`; `@opap/player-kyc-widget@3.999.999`; three PyPI
+  entries (`envprovision` 1.2.0/1.3.0/1.4.0, `cryptgraphy@1.0.0`,
+  `mlflow-otel-instrumentor@1.1.0`); and six all-versions names that npm has
+  since converted to security-holding packages with no legitimate release
+  history (`identitysecuretokenserv`, `svelte-dim-kit`, `hydration-dim-kit`,
+  `totp-utils`, `@sdgdfgdfhhhfd/multiviewr`, `@sdgdfgdfhhhfd/chainvista`).
+
+### Changed
+
+- **The import window was sliced to `--since 2026-08-15`** rather than run at the
+  `--days 14` default. The default window still carries the 4,363-advisory
+  `@zalastax/nolb-*` backfill of 2026-08-14, which v5's anchored
+  `^@zalastax\/nolb-[a-z0-9._-]+$` rule already covers in full. The importer
+  dedupes against the feed only, not against the pattern tables, so it re-proposes
+  the whole flood on every run and reports it as an undrainable backlog. All 4,363
+  were re-checked against the shipped rule before the slice: every one matches and
+  none carries a version pin, so nothing is lost by leaving them out.
+
 ## [6.0.0] - 2026-08-23
 
 ### Added

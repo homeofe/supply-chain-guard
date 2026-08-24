@@ -1,3 +1,89 @@
+## 2026-08-24: Threat-intel import (40 package IOCs), zalastax backlog re-confirmed as covered
+
+Scheduled daily threat-intel run. Model: claude-opus-5. No version bump - the
+version belongs to the release, which the owner cuts.
+
+### What changed
+
+`npm run feed:import -- --since 2026-08-15 --limit 1000` added 40 package IOCs to
+`FEED_CHUNK_13` in `src/threat-intel.ts`, and `feed.json` was regenerated. Every
+one of the 40 carries both a GHSA and a MAL- id, so all import at confidence 1.0.
+Nothing was unmappable, and no ecosystem was skipped.
+
+Clusters, for whoever reads the diff:
+
+- Dependency-confusion probes at sentinel versions. `sm-*` (admin, apikey-model,
+  billing-form, cart, checkout, oauth, payment, session) at `99.0.0`/`99.0.1`, and
+  `amundi-compare` / `fund-calculator` / `fund-list-filter` / `fund-portfolio` at
+  `999.9.12`. The `99.x` / `999.9.x` shape is the standard "win the version
+  comparison against the internal registry" marker.
+- `conversa-sdk`, eight pinned versions from one advisory.
+- `message-compiler@9.2.0`, `@opap/player-kyc-widget@3.999.999`.
+- PyPI: `envprovision` 1.2.0/1.3.0/1.4.0, `cryptgraphy@1.0.0` (typosquat of
+  `cryptography`), `mlflow-otel-instrumentor@1.1.0`.
+- Six all-versions names, blocked bare: `identitysecuretokenserv`,
+  `svelte-dim-kit`, `hydration-dim-kit`, `totp-utils`,
+  `@sdgdfgdfhhhfd/multiviewr`, `@sdgdfgdfhhhfd/chainvista`.
+
+Each of those six was checked against the npm registry before accepting a
+bare-name block: all six now hold a single `0.0.1-security` version and nothing
+else, so there is no legitimate release history a name-level rule could catch.
+`message-compiler` was fully unpublished, and is version-pinned regardless.
+
+### Why the window was sliced
+
+The default `--days 14` run proposes 4,403 entries and dies on the undrainable
+backlog check: 4,363 of them are the `@zalastax/nolb-*` advisory backfill of
+2026-08-14, already handled on 2026-08-22 by the single anchored rule
+`^@zalastax\/nolb-[a-z0-9._-]+$` in `MALICIOUS_PACKAGE_PATTERNS`.
+
+Re-verified today rather than assumed: all 4,363 match that rule, 0 do not, and
+0 carry a version pin. So the slice loses nothing.
+
+### Carried open item: the importer cannot see the pattern tables
+
+The importer dedupes new entries against the feed and against bare-name feed
+IOCs, but not against `MALICIOUS_PACKAGE_PATTERNS`. So a family that was
+deliberately covered by one anchored rule instead of N feed entries is proposed
+again on every single run, and - once the family is big enough - trips the
+undrainable-backlog error and stops the whole import until a human slices the
+window by hand.
+
+This one ages out on 2026-08-28, so it stops being noise on its own. The general
+case does not: the next flood handled by a pattern rule will do exactly the same
+thing, and the failure mode is a scheduled run that halts rather than one that
+imports something wrong.
+
+Worth a decision by the owner, not by this job, because both directions have a
+real cost:
+
+- Teach the importer to test candidates against the pattern tables before
+  proposing them. Closes it properly, but couples the importer to `patterns.ts`
+  and its module-load validation.
+- Keep a small declined-list of advisory ids or name prefixes the importer skips
+  with a reason. Cheaper, but it is a second place that has to stay true.
+
+Doing nothing is also defensible: the slice is two flags and the run is
+supervised. It just means every future flood costs a manual diagnosis first.
+
+### Non-package enrichment: nothing addable today
+
+Searched Socket, Aikido, StepSecurity, JFrog, Checkmarx and the Hacker News recaps
+for write-ups on today's clusters. None has published on them yet - these are
+fresh advisories on names npm has already taken down, and the atomic indicators
+(C2 domain, C2 IP, hash, dead-drop, actor handle) are not in any source. Nothing
+was invented to fill the gap.
+
+Cross-checked the large recent campaigns for partial coverage while looking:
+keyv/cacheable, Shai-Hulud, node-ipc (`sh.azurestaticprovider[.]net`), TanStack
+(Session network) are all already present in `src/ioc-blocklist.ts` and the feed.
+No gap to extend.
+
+### Verification
+
+`npm run build` green (check:aahp + check:feed + check:handoff, then tsc).
+Targeted suites run locally; the full suite is CI's verdict per the repo rule.
+No pattern table was touched, so no module-load regex validation risk this run.
 ## 2026-08-23: Release v6.0.0 (Zero Open Issues, Node 22+ Baseline, Complete Provenance, SBOM & SLSA Hardening)
 
 Major release v6.0.0. Zero-open-issues requirement achieved across all issues (#169-#208) and PR acceptance criteria (#185-#227).
