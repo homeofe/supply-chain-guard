@@ -491,6 +491,17 @@ export const KNOWN_C2_IPS: string[] = [
   // Same campaign, reported by Wiz only - single-source, so the matching feed
   // entry carries confidence 0.85 rather than 1.0.
   "23.254.167.13",
+
+  // RedShell / RedC2 4.0 Linux implant, "streak" npm cluster (TrendAI, August 20 2026).
+  // One VPS carries the whole campaign on three ports: :8792 is the RedC2 command
+  // channel, :8060 exfiltration, :8888 payload download. The loopback fallback the
+  // implant falls back to when the VPS is unreachable (127[.]0[.]0[.]1:8792) is
+  // obviously NOT listed, and neither are the two public services the implant abuses
+  // for staging and egress checks (litterbox.catbox[.]moe, api.ipify[.]org) - both are
+  // shared infrastructure and blocking them would flag legitimate projects.
+  // Single-source for the atomic indicators (only TrendAI published them), so the feed
+  // entry carries 0.85; the 14-package list is corroborated by The Hacker News.
+  "217.60.77.63",
 ];
 
 // ---------------------------------------------------------------------------
@@ -979,6 +990,16 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // 64-char digests and the Linux one was re-confirmed by exact-string search.
   "7e486657f30594afda379b97030252a09a19fe8055e25c9e371544f59bd8e9e3": "Flooding Dropper WEL1DROPPER stage-2 payload, Linux x86-64 (SHA256)",
   "c214746c74cae8ece8bdaf69aa05da4db6ce013f9e77452d1eed1a002fd9ba00": "Flooding Dropper WEL1DROPPER stage-2 payload, macOS universal (SHA256)",
+
+  // RedShell / RedC2 4.0 Linux implant, "streak" npm cluster (TrendAI, August 20 2026).
+  // The ELF the trojan loader in dist/index.mjs unpacks and runs from dist/ or
+  // dist/internal/ under six rotating names (math-core.bin, math-calc.bin,
+  // calc-math.dat, calc-cache.bin, calc.bin, calc-mapping.bin), so the digest catches
+  // the payload the filename cannot. The loader is reached through require(), not a
+  // lifecycle hook, so --ignore-scripts does not stop it. Single-source (TrendAI); the
+  // digest round-tripped as a well-formed 64-char hex string and was re-confirmed by
+  // exact-string search before ingest.
+  "4537b1189ce419f1a595cf47216c03f80e9170ce80dad8d9227a1e52f9cb3466": "RedShell / RedC2 4.0 Linux implant, dist/internal/*.bin (SHA256)",
 
   // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" cross-platform RAT
   // (Aikido + LevelBlue, March 31 2026). The axios and plain-crypto-js versions were

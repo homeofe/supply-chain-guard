@@ -1,3 +1,48 @@
+## 2026-08-25: Threat-intel sweep (daily job, PR only - no release)
+
+Scheduled detection-set update. 107 package IOCs imported from the advisory
+databases plus 8 hand-added RedShell / RedC2 indicators, and a campaign test block
+for the latter. No version bump: the version belongs to the release, which the
+owner cuts. Model: claude-opus-5.
+
+### The zalastax backlog is now on its ninth sweep, unchanged
+
+Same diagnosis as 2026-08-21/23/24, re-derived rather than assumed. The `--days 14`
+window offered 4,470 new entries; 4,363 were `@zalastax/nolb-*` all carrying
+`firstSeen: 2026-08-14`, and that day contributes nothing else, so it is date-pure
+by new-entry count. All 4,363 were tested against the shipped anchored rule
+`^@zalastax\/nolb-[a-z0-9._-]+$`: 4,363 matched, 0 unmatched, 0 carrying a version
+pin. Two slices then took the whole real remainder - `--since 2026-08-11 --until
+2026-08-13` returned 0 and `--since 2026-08-15 --until 2026-08-25` returned 107,
+and 0 + 107 = 4,470 - 4,363 exactly, which is the arithmetic that proves nothing
+real was dropped.
+
+The root cause is still open and is NOT something the daily job should fix on its
+own: the importer dedupes candidates against the feed and against bare-name feed
+IOCs, but never against the pattern tables. Any family deliberately covered by one
+anchored rule instead of N feed entries is therefore re-proposed on every run, and
+once it is large enough it trips the undrainable-backlog error and halts the import
+until a human slices the window. Written up on 2026-08-24 with two candidate fixes
+(test candidates against the pattern tables before proposing them; or keep a
+declined-list of advisory ids / name prefixes). The zalastax block ages out of the
+14-day window around 2026-08-28, which makes the symptom disappear without fixing
+the cause - the next family covered by a pattern rule will reproduce it.
+
+### Needs a decision from the owner
+
+1. **Fix the importer/pattern-table blind spot, or accept the manual slice as
+   permanent?** The slice costs one diagnosis per run and is easy to get wrong in
+   the direction of silent loss. This is the third consecutive week it has been
+   raised.
+2. **`@medisend/*` at `-security-research` versions.** Five packages
+   (`@medisend/auth`, `@medisend/core`, `@medisend/shared`,
+   `@medisend/webview-bridge` at two versions) were imported from GHSA/OSV at
+   confidence 1.0, but the version string reads like a researcher's disclosure PoC
+   rather than live malware. They were left in because advisory-sourced package
+   IOCs are not second-guessed by this job, and the entries are version-pinned so
+   the legitimate namespace is unaffected. Worth a look before the next release if
+   the owner would rather this class were dropped.
+
 ## 2026-08-24: Release v6.0.1 (threat-intel patch)
 
 Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour

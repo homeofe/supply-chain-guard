@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787559415",
-    "timestamp": "2026-08-24T08:16:56Z",
-    "commit": "cfc30c3",
+    "session_id": "cli-1787643307",
+    "timestamp": "2026-08-25T07:35:09Z",
+    "commit": "22f11bb",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:46957981492e2481f7b0ad81cac17c9e496a2fa40421e5e19dbba714da636c55",
-      "updated": "2026-08-24T08:16:52Z",
-      "lines": 4638,
-      "summary": "Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour"
+      "checksum": "sha256:543076a0fc68bb95c1ec7e4873259810c102aa3745b79e1d937ccb787d0dbcba",
+      "updated": "2026-08-25T07:34:54Z",
+      "lines": 4683,
+      "summary": "Scheduled detection-set update. 107 package IOCs imported from the advisory"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:99b3c74ac067882f150d75c10c32b8a1243a18cc48b5d3528defb1eb8945b4af",
-      "updated": "2026-08-24T08:07:34Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:b9cea649abd74a5d1f64230359138b2c5670859f2b203e48d4a032beef705e95",
-      "updated": "2026-08-24T08:16:54Z",
+      "updated": "2026-08-25T07:35:06Z",
       "lines": 158,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-07-18T08:02:38Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-07-18T08:02:38Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:1bd2feb411a9bef95e1dd0440bb3dc377d2a4d189e436fbd0b65b1840aa96306",
-      "updated": "2026-08-24T08:16:54Z",
+      "updated": "2026-08-25T07:35:06Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:57caa659649280f66e0cbd9c302d009964dc41128c5100ed9e4ad27965b4d0ef",
-      "updated": "2026-08-24T08:16:54Z",
+      "updated": "2026-08-25T07:35:06Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:a0af51f3eeaa9a4536aecf030f0174437b7648f3e71acacc5aab137811935a65",
-      "updated": "2026-08-23T05:02:45Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 256,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-20T12:42:10Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-04T08:54:14Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-06-28T09:06:54Z",
+      "updated": "2026-08-25T07:25:08Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Patch release carrying the 40 malicious-package IOCs merged in #230. No behaviour Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Scheduled detection-set update. 107 package IOCs imported from the advisory Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 56498,
-    "full_read": 68329
+    "manifest_plus_core": 57043,
+    "full_read": 68874
   }
 }

@@ -4088,6 +4088,100 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // RedShell / RedC2 4.0 "streak" npm cluster (August 2026)
+  // =================================================================
+
+  describe("RedShell / RedC2 Linux implant, streak npm cluster (August 2026)", () => {
+    it("flags the RedC2 C2 VPS address", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const c2 = "217.60.77.63:8792";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding, "the RedC2 C2 address must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("flags the RedShell implant hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "notes.js"),
+        'const sha = "4537b1189ce419f1a595cf47216c03f80e9170ce80dad8d9227a1e52f9cb3466";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH");
+      expect(finding, "the RedShell implant hash must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // All fourteen packages TrendAI published must resolve, whether they reached the
+    // feed through the advisory databases or were added by hand from the write-up.
+    it("carries every published package of the cluster in the bundled feed", () => {
+      for (const name of [
+        "streak-metrics-math",
+        "kit-map-vim",
+        "streak-map-cache",
+        "streak-map-kit",
+        "map-streak-kit",
+        "streak-cache-map",
+        "streak-calc-metrics",
+        "streak-calc-math",
+        "streak-math-abz",
+        "streak-metricsaz",
+        "streak-math-metrics",
+        "streak-metricazbd",
+        "streak-metricsazb",
+        "streak-kit-map",
+      ]) {
+        expect(
+          matchPackageIOC(name, "1.0.0"),
+          `${name} must be a known-bad package`,
+        ).toBeDefined();
+      }
+    });
+
+    it("flags a manifest that depends on one of the hand-added packages", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "victim",
+          version: "1.0.0",
+          dependencies: { "streak-calc-math": "1.0.0" },
+        }),
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY");
+      expect(finding, "the RedShell dependency must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The implant stages through litterbox, checks egress through ipify, and falls
+    // back to loopback when its VPS is down. All three are shared or local
+    // infrastructure - ingesting them would flag legitimate projects, so the campaign
+    // is represented by the attacker-controlled VPS alone.
+    it("does NOT flag the public staging host, the IP-echo service or the loopback fallback", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        'const up = "https://litterbox.catbox.moe/resources/internals/api.php";\n' +
+          'const ip = "https://api.ipify.org?format=json";\n' +
+          'const dev = "127.0.0.1:8792";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hit = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP" || f.rule === "IOC_KNOWN_C2_DOMAIN",
+      );
+      expect(
+        hit,
+        "shared staging/egress services and loopback must not be blocked",
+      ).toBeUndefined();
+    });
+  });
+
+  // =================================================================
   // axios maintainer takeover / UNC1069 (March 2026)
   // =================================================================
 

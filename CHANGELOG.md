@@ -7,6 +7,64 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **107 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev (106 carry both a GHSA and a MAL- id and land at
+  confidence 1.0; one is GitHub-only at 0.9). The larger clusters are a
+  dependency-confusion set published at sentinel versions against real company
+  namespaces (`@immuta/pxl-components@99.99.0`/`99.99.1`,
+  `@elc-online/up-analytics@99.99.99`, `@gsas/gsas-sdk@999.9.15`,
+  `@temptation.js/utils@999.9.15`/`999.9.16`, `dpg-media-7ehemel@999.9.15`,
+  `web-advertising@999.9.15`/`999.9.16`, `digitalexp-style-module-l9@99.0.0`); a
+  second `sm-*` internal-namespace wave (`sm-admin`, `sm-apikey-model`,
+  `sm-billing-form`, `sm-cart`, `sm-checkout`, `sm-oauth`, `sm-payment`,
+  `sm-session`); a `dim`/`hydration`/`svelte` UI-package family
+  (`dim-hydration-ui@1.0.0`, `dims-hydration-ui`, `dims-svelte-ui`,
+  `hydration-dim-ui`, `hydration-ui-dim`, `svelte-dim-ui`, `svelte-ui-dim`); the
+  six-version `auth-otp` set and the five `@medisend/*` packages published at
+  `-security-research` versions; an AI-tooling lure group (`sidecar-mcp`,
+  `livemcp`, `mcp-real-chrome`, `openai-pr-reviewer`); a school-themed
+  name-farm of roughly twenty bare names (`desmoswork`, `classroomhomework`,
+  `schoollesson`, ...); and five PyPI entries (`msrcpoc@99.1.9`,
+  `multyproccess` 2.32.3 through 2.32.6).
+- **8 hand-added indicators for the RedShell / RedC2 4.0 campaign** (TrendAI,
+  2026-08-20; package list corroborated by The Hacker News, 2026-08-21). Fourteen
+  npm packages pose as dependency-free calendar and "streak" maths utilities and
+  work as advertised while `dist/index.mjs` side-loads an ELF implant from
+  `dist/internal/` under six rotating `.bin`/`.dat` names. The loader is reached
+  through `require()` rather than a lifecycle hook, so `--ignore-scripts` does not
+  stop it. Eight of the fourteen packages had already arrived through the advisory
+  databases; the six that never received a GHSA are added by hand
+  (`streak-calc-math`, `streak-math-abz`, `streak-math-metrics`,
+  `streak-metricsaz`, `streak-metricsazb`, `streak-metricazbd`), together with the
+  C2 VPS `217[.]60[.]77[.]63` (`:8792` commands, `:8060` exfiltration, `:8888`
+  payload) and the implant digest
+  `4537b1189ce419f1a595cf47216c03f80e9170ce80dad8d9227a1e52f9cb3466`. The atomic
+  indicators are single-source and carry confidence 0.85.
+- **A `campaigns.test.ts` block for RedShell / RedC2** covering the C2 address, the
+  implant hash, a manifest depending on a hand-added package, and the full
+  fourteen-package list, plus a negative test asserting that the loopback fallback
+  and the two public services the implant abuses are NOT flagged.
+
+### Changed
+
+- **The import window was sliced to `--since 2026-08-15`** rather than run at the
+  `--days 14` default, for the same reason as in 6.0.1: the default window still
+  carries the 4,363-advisory `@zalastax/nolb-*` backfill of 2026-08-14, which the
+  anchored `^@zalastax\/nolb-[a-z0-9._-]+$` rule already covers in full. All 4,363
+  were re-checked against the shipped rule before slicing: every one matches, none
+  carries a version pin, and 2026-08-14 contributes no other new entry, so the
+  slice is lossless. The complementary slice `--since 2026-08-11 --until
+  2026-08-13` was run and returned zero new entries.
+
+### Security
+
+- The RedShell staging host (`litterbox.catbox[.]moe`), the egress-check service
+  (`api.ipify[.]org`) and the implant's loopback C2 fallback are deliberately NOT
+  ingested. The first two are shared public infrastructure and the third is
+  localhost; blocking any of them would flag legitimate projects.
+
 ## [6.0.1] - 2026-08-24
 
 ### Added
