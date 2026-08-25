@@ -1,3 +1,52 @@
+## 2026-08-25: Release v6.0.2 (threat-intel patch)
+
+Patch release carrying the 115 IOCs merged in #234 (107 imported package IOCs plus
+8 hand-added RedShell / RedC2 indicators). No behaviour change beyond the detection
+set. Model: claude-opus-5.
+
+Release steps per CLAUDE.md: CHANGELOG block + reference link + updated
+`[Unreleased]` compare base, version bumped at all 15 `versionSites` plus
+`package.json`, the lockfile, the ungated `bundledVersion`, and the
+`NEXT_ACTIONS.md` "Current version" header; `feed:generate`, `handoff:refresh`,
+green `npm run build`.
+
+### The README CIDR trap fired again, and the guard worked
+
+Bumping 6.0.1 -> 6.0.2 is the second bump in a row where the OLD version string is
+a substring of documentation that must not change. README line 334 documents the
+Kubernetes service defaults `10.96.0.1` and `10.96.0.10`, and both contain the
+literal `6.0.1`. A blanket `sed s/6.0.1/6.0.2/` would have rewritten them to
+`10.96.0.2` / `10.96.0.20` and `check:version-sync` would still have reported PASS,
+because it only counts occurrences of the NEW version and never inspects what else
+moved. Every README site was replaced under an individual anchor instead
+(`rev: v`, the docker tag, and the two `homeofe/supply-chain-guard@v` refs), and
+the five affected constants were re-counted afterwards in both README.md and
+`src/internal-disclosure.ts`.
+
+The general shape, since it will recur on 6.0.3: enumerate every occurrence of the
+OLD version across the tree FIRST, classify each as tool-version or data, and only
+then write anchored replacements. `src/threat-intel.ts`, `src/ioc-blocklist.ts`,
+`feed.json` and the historical CHANGELOG entries all carry IOC version strings that
+match the tool version by coincidence - this release, `awaitly-visualizer@6.0.1`,
+`awaitly-postgres@6.0.1`, `bs58-33@6.0.1`, `pypi:mem8@6.0.1` and
+`@servicetitan/suppress-warnings@6.0.1` among them. The one-line diff on
+`src/threat-intel.ts` is the check that the anchor held.
+
+### Dependabot PRs folded in rather than merged separately
+
+#232 (`@vitest/coverage-v8` 4.1.10 -> 4.1.11) and #233 (`vitest` 4.1.10 -> 4.1.11)
+were pulled into this release commit and closed explicitly, the documented handling
+for this repo: every dependabot PR fails `check:handoff` on its own, because
+DASHBOARD.md embeds the dependency table and the bot never regenerates it. Closing
+them here keeps the "a release leaves zero open PRs" invariant.
+
+### Still carried, unchanged
+
+`bundledVersion` in `src/threat-intel.ts` remains a version site that cannot be
+gated - the full reasoning is in the 2026-08-24 entry below. It was bumped by hand
+again here. The importer/pattern-table blind spot behind the recurring
+`@zalastax/nolb-*` slice is also still open; see the sweep note below.
+
 ## 2026-08-25: Threat-intel sweep (daily job, PR only - no release)
 
 Scheduled detection-set update. 107 package IOCs imported from the advisory

@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.0.2] - 2026-08-25
+
 ### Added
 
 - **107 malicious-package IOCs** imported from the GitHub Advisory Database and
@@ -57,6 +59,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   carries a version pin, and 2026-08-14 contributes no other new entry, so the
   slice is lossless. The complementary slice `--since 2026-08-11 --until
   2026-08-13` was run and returned zero new entries.
+- **Test tooling bumped to vitest 4.1.11** (`vitest` and `@vitest/coverage-v8`),
+  folded into this release rather than merged as separate dependency PRs.
 
 ### Security
 
@@ -4625,7 +4629,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.2...HEAD
+[6.0.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.2
 [6.0.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.1
 [6.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.0
 [5.28.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v5.28.1
