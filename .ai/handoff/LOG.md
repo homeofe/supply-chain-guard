@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (142, newest first)
+## Releases (143, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.0.3 | 2026-08-26 | 164 malicious-package IOCs imported from the GitHub Advisory Database and |
 | v6.0.2 | 2026-08-25 | 107 malicious-package IOCs imported from the GitHub Advisory Database and |
 | v6.0.1 | 2026-08-24 | 40 malicious-package IOCs imported from the GitHub Advisory Database and |
 | v6.0.0 | 2026-08-23 | Every scan report now names what the loaded policy switched off, in all nine |

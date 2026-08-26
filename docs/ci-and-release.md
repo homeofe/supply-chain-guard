@@ -80,7 +80,7 @@ request code has permission to change protection.
 
 | file | trigger | responsibility |
 | --- | --- | --- |
-| `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, GitHub Release, `v5` branch fast-forward |
+| `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, GitHub Release, `vN` major-ref branch fast-forward |
 | `pr-metadata-policy.yml` | PR open/edit/reopen/sync | PR title and body attribution policy. No checkout, so it cannot execute PR code |
 | `aahp-verify.yml` | PR, push to `main` | the four-layer AAHP handoff gate, with no escape hatch at CI level |
 | `docker.yml` | semver tags | builds the image multi-arch on native runners and pushes it to ghcr |
@@ -108,7 +108,7 @@ decision. There is exactly one step that keeps the credential.
 
 | workflow | job | value | why |
 | --- | --- | --- | --- |
-| `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `v5` branch every Action consumer resolves |
+| `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `vN` branch every Action consumer resolves |
 | the other seven steps | | `false` | no step in those jobs talks to a remote |
 
 `src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism. It walks each
@@ -308,8 +308,11 @@ like any other. In order:
    Restricting who may create `refs/tags/v*` is the control for that case and is an open
    owner decision on https://github.com/homeofe/supply-chain-guard/issues/167.
 10. Delete the branch and confirm it is gone on **both** sides. When a release is
-    finished the repository has exactly two branches, `main` and `v5`, no open pull
-    requests and no open issues.
+    finished the repository carries `main` plus one floating major-ref branch per
+    released major (`v5`, `v6`, ...) and no topic branches at all, no open pull
+    requests and no open issues. The major refs are created and moved by CI, not by
+    hand; a leftover `release/*` or `threat-intel/*` branch is the thing this step
+    exists to catch.
 
 Two rules that have each cost a release:
 

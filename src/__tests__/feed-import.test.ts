@@ -381,6 +381,175 @@ describe("dedupe", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Decline list - families a human ruled out, so the importer stops re-proposing
+// ---------------------------------------------------------------------------
+
+describe("loadDeclineList", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-decline-"));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const write = (obj: unknown) =>
+    fs.writeFileSync(path.join(dir, "threat-feed-declined.json"), JSON.stringify(obj));
+
+  const valid = {
+    namePrefix: "@evilscope/nolb-",
+    reason: "a".repeat(30),
+    coveredBy: "b".repeat(30),
+  };
+
+  it("returns an empty list when the file is absent", async () => {
+    const { loadDeclineList } = await load();
+    expect(loadDeclineList(dir)).toEqual([]);
+  });
+
+  it("loads a well-formed entry", async () => {
+    const { loadDeclineList } = await load();
+    write({ declined: [valid] });
+    expect(loadDeclineList(dir)).toHaveLength(1);
+  });
+
+  it("throws on malformed JSON rather than failing open", async () => {
+    const { loadDeclineList } = await load();
+    fs.writeFileSync(path.join(dir, "threat-feed-declined.json"), "{ nope");
+    expect(() => loadDeclineList(dir)).toThrow(/not valid JSON/);
+  });
+
+  it("throws when the declined key is not an array", async () => {
+    const { loadDeclineList } = await load();
+    write({ declined: "everything" });
+    expect(() => loadDeclineList(dir)).toThrow(/"declined" array/);
+  });
+
+  it("rejects a prefix short enough to decline an unbounded set", async () => {
+    const { loadDeclineList } = await load();
+    write({ declined: [{ ...valid, namePrefix: "a" }] });
+    expect(() => loadDeclineList(dir)).toThrow(/at least 6 characters/);
+  });
+
+  it("requires both a reason and the coverage that replaces the entries", async () => {
+    const { loadDeclineList } = await load();
+    write({ declined: [{ namePrefix: "@evilscope/nolb-", coveredBy: "b".repeat(30) }] });
+    expect(() => loadDeclineList(dir)).toThrow(/"reason"/);
+    write({ declined: [{ namePrefix: "@evilscope/nolb-", reason: "a".repeat(30) }] });
+    expect(() => loadDeclineList(dir)).toThrow(/"coveredBy"/);
+  });
+
+  it("requires exactly one of namePrefix or ghsa", async () => {
+    const { loadDeclineList } = await load();
+    write({ declined: [{ ...valid, ghsa: "GHSA-aaaa-bbbb-cccc" }] });
+    expect(() => loadDeclineList(dir)).toThrow(/exactly one/);
+    write({ declined: [{ reason: "a".repeat(30), coveredBy: "b".repeat(30) }] });
+    expect(() => loadDeclineList(dir)).toThrow(/exactly one/);
+  });
+
+  it("accepts the decline list this repository actually ships", async () => {
+    const { loadDeclineList } = await load();
+    const shipped = loadDeclineList();
+    expect(shipped.length).toBeGreaterThan(0);
+    for (const entry of shipped) {
+      expect(entry.reason.length).toBeGreaterThanOrEqual(20);
+      expect(entry.coveredBy.length).toBeGreaterThanOrEqual(20);
+    }
+  });
+});
+
+describe("applyDeclineList", () => {
+  const rule = (over: Record<string, unknown> = {}) => ({
+    namePrefix: "@evilscope/nolb-",
+    reason: "a".repeat(30),
+    coveredBy: "b".repeat(30),
+    ...over,
+  });
+
+  it("is a no-op when nothing is declined", async () => {
+    const { applyDeclineList } = await load();
+    const entries = [{ type: "package", value: "brand-new", severity: "critical", confidence: 1 }];
+    expect(applyDeclineList(entries, []).kept).toBe(entries);
+  });
+
+  it("drops a declined family and tallies it per rule", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [
+        { type: "package", value: "@evilscope/nolb-aaa", severity: "critical", confidence: 1 },
+        { type: "package", value: "@evilscope/nolb-bbb@1.0.0", severity: "critical", confidence: 1 },
+        { type: "package", value: "genuinely-new", severity: "critical", confidence: 1 },
+      ],
+      [rule()],
+    );
+    expect(result.kept.map((e: FeedIOC) => e.value)).toEqual(["genuinely-new"]);
+    expect(result.declined).toBe(2);
+    expect(result.byRule).toEqual({ "@evilscope/nolb-": 2 });
+  });
+
+  it("anchors the prefix at the start of the name, never mid-string", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [{ type: "package", value: "not-@evilscope/nolb-aaa", severity: "critical", confidence: 1 }],
+      [rule()],
+    );
+    expect(result.declined).toBe(0);
+  });
+
+  it("does not let an npm prefix decline the same name on PyPI", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [{ type: "package", value: "pypi:@evilscope/nolb-aaa", severity: "critical", confidence: 1 }],
+      [rule()],
+    );
+    expect(result.declined).toBe(0);
+  });
+
+  it("declines a PyPI family when the prefix carries the ecosystem", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [{ type: "package", value: "pypi:evilfarm-aaa@1.0.0", severity: "critical", confidence: 1 }],
+      [rule({ namePrefix: "pypi:evilfarm-" })],
+    );
+    expect(result.declined).toBe(1);
+  });
+
+  it("declines by exact advisory id, ignoring the appended MAL- id", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [
+        {
+          type: "package",
+          value: "some-name",
+          severity: "critical",
+          confidence: 1,
+          source: "GHSA-aaaa-bbbb-cccc, MAL-2026-1",
+        },
+        {
+          type: "package",
+          value: "other-name",
+          severity: "critical",
+          confidence: 1,
+          source: "GHSA-dddd-eeee-ffff",
+        },
+      ],
+      [rule({ namePrefix: undefined, ghsa: "GHSA-aaaa-bbbb-cccc" })],
+    );
+    expect(result.kept.map((e: FeedIOC) => e.value)).toEqual(["other-name"]);
+  });
+
+  it("never declines a non-package indicator", async () => {
+    const { applyDeclineList } = await load();
+    const result = applyDeclineList(
+      [{ type: "domain", value: "@evilscope/nolb-aaa", severity: "critical", confidence: 1 }],
+      [rule()],
+    );
+    expect(result.declined).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Fetch layer (bounded, optional token) - injected fetchImpl, no network
 // ---------------------------------------------------------------------------
 

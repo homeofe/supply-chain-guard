@@ -1,0 +1,11 @@
+{
+  "$comment": "Import candidates the importer must stop re-proposing. See docs/threat-feed-sources.md, section 'The decline list'. A decline REMOVES a candidate from the import queue before --limit and before the undrainable-backlog check, so it must only ever name coverage that already exists elsewhere in the scanner. Every entry has to say where that coverage lives.",
+  "declined": [
+    {
+      "namePrefix": "@zalastax/nolb-",
+      "reason": "Name-reservation flood published to npm in Jan/Feb 2023 and bulk-loaded into the GitHub Advisory Database on 2026-08-14 as 4363 separate advisories. Importing them would grow the bundled feed by roughly a third and add about 1 MB to feed.json to catch names npm has already taken down. Because dedupe never consulted the pattern tables, this block was re-proposed on every run and tripped the undrainable-backlog error daily from 2026-08-15 onward, halting the whole import until a human sliced the window by hand.",
+      "coveredBy": "src/patterns.ts MALICIOUS_PACKAGE_PATTERNS, anchored rule ^@zalastax\\/nolb-[a-z0-9._-]+$ (added 2026-08-22). Verified 4363 of 4363 candidates matched it, none carrying a version pin.",
+      "declinedOn": "2026-08-26"
+    }
+  ]
+}

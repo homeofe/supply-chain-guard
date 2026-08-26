@@ -1,8 +1,10 @@
-## 2026-08-26: Threat-intel sweep 10 (164 package IOCs, no release)
+## 2026-08-26: Release v6.0.3 (threat-intel sweep 10 + importer decline list)
 
-Daily scheduled sweep. 164 malicious-package IOCs imported from the GitHub Advisory
-Database and corroborated against OSV.dev; no version bump, no tag, no publish. The
-release is the owner's call. Model: claude-opus-5.
+Started as the daily scheduled sweep: 164 malicious-package IOCs imported from the
+GitHub Advisory Database and corroborated against OSV.dev. The owner then asked for
+the two carried open items to be fixed and the release cut in the same pass, so this
+also closes the importer's daily red exit and the stale branch invariant, and ships
+as v6.0.3. Model: claude-opus-5.
 
 ### The zalastax backfill still dominates the window, and date-purity still held
 
@@ -65,23 +67,46 @@ and the Session seed nodes handled as documented), and TeamPCP. Nothing new was
 published in the 2026-08-24 to 2026-08-26 window that carries an atomic indicator
 this feed lacks. No hand-added IOCs in this PR.
 
-### Needs a decision from the owner
+### Both carried open items are now closed
 
-1. **The importer still never dedupes candidates against the pattern tables.** This
-   is the root cause of the daily red exit, flagged on 2026-08-24 and unchanged. Any
-   family deliberately covered by one anchored rule instead of N feed entries gets
-   re-proposed every run, and once it is large enough it trips the undrainable-backlog
-   error and halts the import until a human slices the window. Zalastax ageing out on
-   2026-08-28 removes this symptom but not the cause. The two candidate fixes are
-   unchanged: test candidates against the pattern tables before proposing them, or
-   keep a declined-list of advisory ids and name prefixes. The daily job does not make
-   that call itself.
-2. **The branch invariant in `CLAUDE.md` is now stale.** Both the repo `CLAUDE.md`
-   and the scheduled-task file still say a finished deploy leaves exactly `main` and
-   `v5`. Since v6 the remote carries `main`, `v5` and `v6`, which is correct for a
-   floating major-ref per major, but it means the documented verification step reads
-   as a failure every time. Worth updating the rule to "main plus one branch per
-   supported major" so the check stays usable.
+**1. The importer no longer re-proposes a family it will never take.** The root cause
+was that `dedupe` compares candidates against the committed feed and against nothing
+else, so a family deliberately covered by one anchored rule in `src/patterns.ts`
+instead of N feed entries is re-proposed forever. `threat-feed-declined.json` at the
+repository root now lists such families, each with a mandatory `reason` and a
+mandatory `coveredBy` naming the coverage that replaces them. Declines are applied
+after dedupe and before `--limit`, so a declined family neither eats the per-run
+budget nor counts as backlog. Seeded with `@zalastax/nolb-`. Verified end to end: an
+unsliced default `--dry-run`, which had failed for ten consecutive days, now reports
+`Declined: 4363 (@zalastax/nolb- x4363)` and exits 0.
+
+The other candidate fix, "skip anything the pattern tables match", was considered and
+REJECTED, and the reasoning is written into the code so it is not re-litigated:
+`MALICIOUS_PACKAGE_PATTERNS` is read by the npm-scanner name check and its
+package.json fallback, NOT by the generic directory scan, which matches exact feed
+names only. A pattern match is therefore not equivalent to feed coverage, and
+auto-skipping on one would quietly narrow detection. The tables also carry heuristics
+such as `^[a-z]{20,}$`, which would have swallowed genuinely new malware whose name
+happens to be long. Declining stays a per-family human decision, reviewable in a diff.
+
+Mutation proof: baseline 83/83 green, `applyDeclineList` stubbed to a no-op turns 3
+tests red, restored file byte-identical to the pre-mutation copy and green again.
+
+**2. The branch invariant is corrected where it is committed.** `docs/ci-and-release.md`
+and `.ai/handoff/CONVENTIONS.md` both said a finished deploy leaves exactly `main` and
+`v5`. CI derives the floating major ref from the tag
+(`git push origin HEAD:refs/heads/v${MAJOR}`), so v6.0.0 created `v6` by itself and
+`v5` stays frozen at the last v5 release because consumers still pin it. Both now read
+"`main` plus one major-ref branch per released major, and no topic branches", which is
+what the post-release check is actually for. The per-machine `CLAUDE.md` copy was
+updated too, but it is gitignored, so this paragraph is the durable record.
+
+### Carried forward
+
+Nothing from this session. The `@zalastax/nolb-*` block leaves the 14-day window on
+2026-08-28 on its own; with the decline list in place that no longer matters either
+way. If a future sweep reports a large backlog, do NOT assume zalastax: dump
+`--dry-run --json --limit 100000` and group by `firstSeen` and scope first.
 
 ## 2026-08-25: Release v6.0.2 (threat-intel patch)
 

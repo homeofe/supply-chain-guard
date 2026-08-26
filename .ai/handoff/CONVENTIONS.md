@@ -85,12 +85,23 @@ chore/<short-name>           → build, deps, tooling
 
 ### Branch hygiene: the invariant is three-sided
 
-A finished deploy leaves exactly `main` and `v5`. That is a statement about the
-REMOTE **and** the local checkout **and** the worktree list. Checking only
-`git ls-remote` has twice reported clean while stale local branches survived.
+A finished deploy leaves `main` plus one floating major-ref branch per released
+major, and nothing else. Today that is `main`, `v5` and `v6`: CI derives the branch
+name from the tag (`update-major-branch` pushes `HEAD:refs/heads/v${MAJOR}`), so a
+new one appears by itself at the first release of a new major and the previous one
+stays frozen at that major's last release, because consumers still pin it.
+
+The rule used to read "exactly `main` and `v5`", which was correct until v6.0.0
+shipped on 2026-08-23 and has read as a failure on every check since. What is
+actually forbidden is a leftover TOPIC branch (`release/*`, `threat-intel/*`, a
+merged feature branch), not the major refs.
+
+The invariant is three-sided: it is a statement about the REMOTE **and** the local
+checkout **and** the worktree list. Checking only `git ls-remote` has twice reported
+clean while stale local branches survived.
 
 ```
-git ls-remote --heads origin   # only main and v5
+git ls-remote --heads origin   # only main and the vN major refs
 git branch --list              # only main
 git worktree list              # only the shared checkout, on main
 ```

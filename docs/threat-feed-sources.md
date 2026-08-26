@@ -237,6 +237,48 @@ Deduplication is ecosystem-aware: `pypi:foo` and the bare npm `foo` are
 different packages and are never conflated. Duplicates inside a single incoming
 batch are collapsed too.
 
+## The decline list
+
+Deduplication compares candidates against the committed feed and against nothing
+else. It does not know that `src/patterns.ts` may already cover a whole family with
+one anchored rule instead of N feed entries. Such a family is therefore re-proposed
+on every run, and once it is large enough it trips the undrainable-backlog check and
+halts the import until a human slices the window by hand.
+
+`threat-feed-declined.json` at the repository root is the answer: a list of families
+a human has ruled out, with the reason and the coverage that replaces them. Entries
+are removed **after** deduplication and **before** `--limit`, so a declined family
+neither consumes the per-run budget nor counts as backlog the run is losing.
+
+```json
+{
+  "declined": [
+    {
+      "namePrefix": "@zalastax/nolb-",
+      "reason": "why these are not worth N feed entries",
+      "coveredBy": "where the coverage that replaces them lives"
+    }
+  ]
+}
+```
+
+An entry carries exactly one matcher, either `namePrefix` (matched against the
+ecosystem-qualified package name with the version stripped, so a non-npm family
+needs its `pypi:` / `ruby:` / `go:` prefix written in) or `ghsa` (one exact
+advisory id). `reason` and `coveredBy` are both mandatory and both non-trivial, a
+`namePrefix` shorter than six characters is rejected, and a malformed file is a
+hard error rather than a silent fall-back in either direction. Only `package`
+indicators are declinable.
+
+**What this deliberately is NOT: an automatic "skip anything the pattern tables
+match".** `MALICIOUS_PACKAGE_PATTERNS` is read by the npm-scanner name check and its
+package.json fallback, not by the generic directory scan, which matches exact feed
+names only. A pattern match is therefore not equivalent to feed coverage, and
+auto-skipping on one would quietly narrow detection. The tables also hold
+heuristics such as `^[a-z]{20,}$`, which would swallow genuinely new malware whose
+name happens to be long. Declining stays a per-family decision, written down with
+its justification and reviewable in the diff.
+
 ## Reviewing an import
 
 An import is a proposal, not a release. Read the diff before committing: the

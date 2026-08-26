@@ -42,7 +42,7 @@
 //   - Package names are re-validated against a conservative charset before
 //     they are ever serialized into a TypeScript source file.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { buildFeed, serializeFeed, extractBundledEntries } from "./generate-feed.mjs";
@@ -135,6 +135,18 @@ const ANONYMOUS_REQUEST_BUDGET = 60;
  * GitHub Actions GITHUB_TOKEN would allow if this import ever moves into CI.
  */
 const DEFAULT_MAX_PAGES = 750;
+
+/** Repo-root file listing import candidates a human has ruled out. See loadDeclineList. */
+const DECLINE_FILE = "threat-feed-declined.json";
+
+/**
+ * Shortest accepted `namePrefix` in the decline list.
+ *
+ * A decline silently removes candidates, so a two-character prefix would quietly
+ * suppress an unbounded set of future packages. Long enough to name a scope or a
+ * family, short enough for a real one like "@zalastax/nolb-".
+ */
+const MIN_DECLINE_PREFIX = 6;
 
 /**
  * Package names are serialized into a TypeScript source file, so the charset
@@ -337,6 +349,119 @@ export function dedupe(existing, incoming) {
   }
 
   return { added, duplicates, covered };
+}
+
+/**
+ * Load the decline list: import candidates a human has ruled out for good.
+ *
+ * WHY THIS EXISTS. `dedupe` compares candidates against the committed feed, and
+ * against nothing else. It has no idea that `src/patterns.ts` may already cover a
+ * whole family with one anchored rule instead of N feed entries. Any family handled
+ * that way is therefore re-proposed on every single run, and once it is large enough
+ * it trips the undrainable-backlog error and halts the import until a human slices
+ * the window by hand. That is the safe direction to fail, but it costs a manual
+ * diagnosis every day - ten consecutive times for the `@zalastax/nolb-*` block.
+ *
+ * WHY IT IS NOT "skip anything the pattern tables match". That was the other
+ * candidate fix and it is the wrong one. MALICIOUS_PACKAGE_PATTERNS is read by the
+ * npm-scanner name check and its package.json fallback, NOT by the generic directory
+ * scan, which matches exact feed names only - the table says so itself. So a pattern
+ * match is NOT equivalent to feed coverage, and auto-skipping on it would quietly
+ * narrow detection on the directory-scan path. Worse, the tables carry heuristics
+ * such as `^[a-z]{20,}$`, which would swallow genuinely new malware whose name
+ * happens to be long. Declining is therefore a per-family decision a human writes
+ * down with its reason, never something inferred.
+ *
+ * Returns [] when the file is absent. A malformed file THROWS: a decline list that
+ * silently fails open would re-flood the queue, and one that silently fails closed
+ * would drop real IOCs. Both are worse than refusing to run.
+ *
+ * @returns {Array<{namePrefix?: string, ghsa?: string, reason: string, coveredBy: string}>}
+ */
+export function loadDeclineList(root = repoRoot) {
+  const file = join(root, DECLINE_FILE);
+  if (!existsSync(file)) return [];
+
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    throw new Error(`${DECLINE_FILE} is not valid JSON: ${err.message}`);
+  }
+  const list = parsed?.declined;
+  if (!Array.isArray(list)) {
+    throw new Error(`${DECLINE_FILE} must contain a "declined" array`);
+  }
+
+  return list.map((entry, i) => {
+    const at = `${DECLINE_FILE} declined[${i}]`;
+    const namePrefix = entry?.namePrefix;
+    const ghsa = entry?.ghsa;
+    if ((namePrefix === undefined) === (ghsa === undefined)) {
+      throw new Error(`${at}: needs exactly one of "namePrefix" or "ghsa"`);
+    }
+    // Both fields are required, and the gate is deliberately blunt: an entry that
+    // cannot say what still covers the family has not been thought through, and a
+    // decline list is the one place in this pipeline where a careless line removes
+    // detection silently.
+    for (const field of ["reason", "coveredBy"]) {
+      if (typeof entry?.[field] !== "string" || entry[field].trim().length < 20) {
+        throw new Error(`${at}: "${field}" must be a string of at least 20 characters`);
+      }
+    }
+    if (namePrefix !== undefined) {
+      if (typeof namePrefix !== "string" || namePrefix.length < MIN_DECLINE_PREFIX) {
+        throw new Error(
+          `${at}: "namePrefix" must be a string of at least ${MIN_DECLINE_PREFIX} characters - ` +
+            `a short prefix would decline an unbounded set of future packages`,
+        );
+      }
+    } else if (typeof ghsa !== "string" || !/^GHSA-[a-z0-9-]+$/i.test(ghsa)) {
+      throw new Error(`${at}: "ghsa" must be a GHSA id`);
+    }
+    return { namePrefix, ghsa, reason: entry.reason, coveredBy: entry.coveredBy };
+  });
+}
+
+/**
+ * Drop candidates named by the decline list.
+ *
+ * Runs AFTER dedupe and BEFORE --limit, so a declined family neither consumes the
+ * per-run budget nor counts toward the undrainable-backlog check - which is the
+ * whole point, since it is that check the re-proposed family was tripping.
+ *
+ * Matching is on the ecosystem-qualified package NAME with the version stripped, so
+ * `pypi:` and friends must be written into the prefix for a non-npm family (a bare
+ * prefix means npm, exactly as in the feed itself). Non-package entries are never
+ * declinable: this mechanism exists for name families.
+ *
+ * @returns {{kept: Array<object>, declined: number, byRule: Record<string, number>}}
+ */
+export function applyDeclineList(entries, declined) {
+  if (!declined?.length) return { kept: entries, declined: 0, byRule: {} };
+
+  const byRule = {};
+  const kept = [];
+  for (const entry of entries) {
+    const rule = declined.find((d) => {
+      if (entry.type !== "package") return false;
+      if (d.namePrefix !== undefined) {
+        const { prefix, name } = splitPackageValue(entry.value);
+        return `${prefix}${name}`.startsWith(d.namePrefix);
+      }
+      // `source` is "GHSA-xxxx-xxxx-xxxx" or "GHSA-..., MAL-...", so compare the
+      // first token rather than substring-matching the whole field.
+      return String(entry.source ?? "").split(",")[0].trim().toLowerCase() === d.ghsa.toLowerCase();
+    });
+    if (!rule) {
+      kept.push(entry);
+      continue;
+    }
+    const key = rule.namePrefix ?? rule.ghsa;
+    byRule[key] = (byRule[key] ?? 0) + 1;
+  }
+
+  return { kept, declined: entries.length - kept.length, byRule };
 }
 
 /**
@@ -713,6 +838,10 @@ export async function importUpstreamFeed({
   const threatIntelPath = join(root, "src", "threat-intel.ts");
   const feedPath = join(root, "feed.json");
 
+  // Read before the fetch: a malformed decline list must fail on the spot rather
+  // than after several hundred upstream requests have been spent.
+  const declineList = loadDeclineList(root);
+
   // 1. Fetch (fatal on failure - nothing has been written yet).
   const { advisories, pages, truncated } = await fetchMalwareAdvisories({
     since: from,
@@ -743,7 +872,14 @@ export async function importUpstreamFeed({
 
   // 3. Dedupe against the feed that is actually committed.
   const existing = extractBundledEntries(root);
-  const { added, duplicates, covered } = dedupe(existing, mapped);
+  const { added: deduped, duplicates, covered } = dedupe(existing, mapped);
+
+  // 3b. Drop candidates a human has declined for good. Before --limit and before
+  // the undrainable check on purpose: a family that is covered elsewhere must not
+  // consume the per-run budget, and must not be counted as backlog this run is
+  // "losing" - it was never queued for import in the first place.
+  const { kept: added, declined, byRule: declinedByRule } = applyDeclineList(deduped, declineList);
+
   const capped = added.length > limit;
   const selected = capped ? added.slice(0, limit) : added;
 
@@ -772,6 +908,10 @@ export async function importUpstreamFeed({
     mapped: mapped.length,
     duplicates,
     covered,
+    // Candidates removed by threat-feed-declined.json, and the per-rule tally. These
+    // are NOT losses: each declined family names the coverage that replaces it.
+    declined,
+    declinedByRule,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
     corroboratedByOsv: [...osv.ids.keys()].length,
@@ -985,6 +1125,12 @@ if (isMain) {
     console.log(`  Advisories fetched:   ${report.advisoriesFetched} (${report.pages} page(s)${report.truncated ? ", page cap reached" : ""})`);
     console.log(`  Mapped to IOCs:       ${report.mapped}`);
     console.log(`  Already in the feed:  ${report.duplicates} duplicate, ${report.covered} covered by a bare-name IOC`);
+    if (report.declined > 0) {
+      const rules = Object.entries(report.declinedByRule)
+        .map(([rule, n]) => `${rule} x${n}`)
+        .join(", ");
+      console.log(`  Declined:             ${report.declined} (${rules}) - see ${DECLINE_FILE}`);
+    }
     console.log(`  Skipped:              ${report.skippedTotal} ${JSON.stringify(report.skipped)}`);
     console.log(`  OSV corroboration:    ${report.osvAvailable ? `${report.corroboratedByOsv} confirmed` : `unavailable (${report.osvError})`}`);
     console.log(

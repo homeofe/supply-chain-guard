@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.0.3] - 2026-08-26
+
 ### Added
 
 - **164 malicious-package IOCs** imported from the GitHub Advisory Database and
@@ -46,6 +48,39 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   name added in this batch was probed against the npm registry first; the sample
   checked came back as npm security holding packages, meaning the registry had
   already taken the name down.
+
+### Changed
+
+- **The feed importer can now be told to stop re-proposing a family it will never
+  take.** A new repo-root `threat-feed-declined.json` lists candidates a human has
+  ruled out, each with a mandatory `reason` and a mandatory `coveredBy` naming the
+  coverage that replaces them. Declines are applied after deduplication and before
+  `--limit`, so a declined family neither consumes the per-run budget nor counts
+  toward the undrainable-backlog check. An entry carries exactly one matcher, either
+  `namePrefix` (matched against the ecosystem-qualified package name with the version
+  stripped) or `ghsa` (one exact advisory id); a prefix under six characters is
+  rejected, and a malformed file is a hard error rather than a silent fall-back in
+  either direction. Documented in `docs/threat-feed-sources.md`.
+- Seeded that list with the `@zalastax/nolb-` name-reservation flood, which
+  `src/patterns.ts` has covered with a single anchored rule since v6.0.0 and which the
+  importer had no way to know about.
+
+### Fixed
+
+- **A default `npm run feed:import` exits clean again.** Deduplication compares
+  candidates against the committed feed and against nothing else, so the 4,363-entry
+  `@zalastax/nolb-*` block, deliberately covered by one pattern rule instead of 4,363
+  feed entries, was re-proposed on every run. From 2026-08-15 that was large enough to
+  trip the undrainable-backlog error, which halted the whole import until a human
+  sliced the window by hand: ten consecutive days of manual diagnosis for a queue that
+  contained nothing new. The decline list closes it at the cause. This was a stopped
+  import rather than a wrong one, so no detection was ever lost to it.
+- Corrected the branch-hygiene invariant in `docs/ci-and-release.md` and
+  `.ai/handoff/CONVENTIONS.md`. Both still read "a finished deploy leaves exactly
+  `main` and `v5`", which stopped being true when v6.0.0 shipped: CI derives the
+  floating major-ref branch from the tag, so the repository now correctly carries
+  `main`, `v5` and `v6`, and the documented post-release check reported a failure on
+  every release. What is actually forbidden is a leftover topic branch.
 
 ## [6.0.2] - 2026-08-25
 
@@ -4669,7 +4704,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.3...HEAD
+[6.0.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.3
 [6.0.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.2
 [6.0.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.1
 [6.0.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.0
