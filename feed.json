@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.2",
-  "entryCount": 13201,
+  "entryCount": 13365,
   "generatedAt": "2026-08-23T00:00:00.000Z",
   "entries": [
     {
@@ -106844,6 +106844,1318 @@
       "campaign": "RedC2",
       "source": "TrendAI",
       "firstSeen": "2026-08-20"
+    },
+    {
+      "type": "package",
+      "value": "pypi:rce-test@0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5j7w-88pp-6hpr, MAL-2026-14523",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:syntaxerror-package-12345@0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pg4p-fr45-wfxc, MAL-2026-14522",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "express-security-policy",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3hxc-wppf-m25r, MAL-2026-2828",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "array-shuffler-utils-99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-22jp-536p-wwgr, MAL-2026-14519",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "renovate-config-doctolib",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8327-2h3c-rm8g, MAL-2026-2830",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "fivem-tool-helper-v2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qgxc-chq8-gvrg, MAL-2026-14521",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "fivem-tool-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7jgv-5jq7-38g6, MAL-2026-14520",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "svelte-ui-cls",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q88r-gcjf-c3jc, MAL-2026-14518",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "hydration-ui-cls",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-596w-j9vp-pr5x, MAL-2026-14517",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraft-ytreceiver@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj4w-748x-8w4q, MAL-2026-14516",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraft-ytreceiver@0.2.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj4w-748x-8w4q, MAL-2026-14516",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraft-ytreceiver@0.3.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj4w-748x-8w4q, MAL-2026-14516",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraft-ytreceiver@0.4.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj4w-748x-8w4q, MAL-2026-14516",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:minecraft-ytreceiver@0.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj4w-748x-8w4q, MAL-2026-14516",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "wm-idp-sdk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hq9q-4jgc-997v, MAL-2026-4808",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "wm-eslint-fe",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-59qg-7f2g-4p3c, MAL-2026-14514",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "wm-lib-env-provider",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-54m9-xjx6-pf8x, MAL-2026-14515",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vue-template-compiler-plugin",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gvmg-cf54-7769, MAL-2026-3777",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vue-compiler-sfc-plugin",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v29w-qjvw-fm35, MAL-2026-4707",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "hexdrift",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4p5f-gmxw-44x3, MAL-2026-14508",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "foldmap",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q4hh-v9hg-92w7, MAL-2026-14507",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vortnode",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c3fw-fh7f-9h58, MAL-2026-5884",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "snapbuf",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-82xg-f5h2-7xf8, MAL-2026-14510",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-model",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p58m-2wrh-74xr, MAL-2026-10545",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "dim-hydration-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6797-g855-4767, MAL-2026-14429",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "dim-svelte-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w5m9-548m-c928, MAL-2026-14506",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-cls-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f6cw-gvwj-gw7f, MAL-2026-14511",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "hydration-cls-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q635-2q7j-grxm, MAL-2026-14489",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-logo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cw37-h4jm-63xh, MAL-2026-5714",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-cleaner",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rx9h-69c4-qhq5, MAL-2026-13463",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-proxy-prime-api-v1-account-overdraft-info@20.7.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-crw8-m6mj-q6qp, MAL-2026-12299",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-sme-operations-authorizations@20.8.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c4f8-h585-2c73, MAL-2026-12302",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-aggregator-api-v2-data-view-company-company-profile-mf-data-transformer@20.5.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-337w-cgvw-mpg3, MAL-2026-11550",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "r4wk-book",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jqfp-p3qc-cqm9, MAL-2026-14509",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "typedoc-xyz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v386-vp36-g4h2, MAL-2026-14513",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-eacq-company-service-v2-api-v1-identifiers-crm@20.6.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c75f-43pv-m83v, MAL-2026-12291",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tailwind-scrollbar-hider",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-869j-r989-xpvr, MAL-2026-14512",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-aggregator-sme-task-info@20.3.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9rfw-4796-p982, MAL-2026-12288",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-proxy-invest-symbols-list@20.4.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c38m-2rcq-3x56, MAL-2026-12298",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-customer-api-v2-customer-vip-status@20.9.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xcx3-rr77-frhq, MAL-2026-12290",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-aggregator-company-sme-main-timeline-loader-with-customers@20.3.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cj3v-xccc-76vq, MAL-2026-12287",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-products-taiga2-products-timeline@20.6.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9qvm-6gf4-j2qh, MAL-2026-12307",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-invest-box-account@20.8.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7c2j-v8mh-f457, MAL-2026-12293",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-counterfree@20.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5g8h-2mx8-cxhm, MAL-2026-12289",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-mf-sandbox@20.9.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p94g-www2-hw8r, MAL-2026-12304",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-procedure-engine-api-v1-procedure-info@20.6.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2pmw-74jm-69r8, MAL-2026-12295",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-getting-arrests@20.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2gv9-x25v-532x, MAL-2026-12292",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-data-services-role-app@20.9.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3qwr-p55r-5cjh, MAL-2026-12300",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "twork-mf-e2e-nitro@20.8.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3x7v-w9ww-h4vm, MAL-2026-12303",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tw-theme-kit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g2wq-vjqj-xc3h, MAL-2026-5935",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "new-eslint",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8h72-5mvw-5f6r, MAL-2026-6224",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "mjs-eslint",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r6f7-88jj-mg66, MAL-2026-6223",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "travel-core-utils-object",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m3rm-367q-8gf3, MAL-2026-12487",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "transform-es2015-sticky-regex",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2j63-q9jc-966c, MAL-2026-10136",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "video-crate-check",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gwcq-5jcj-p2x4, MAL-2026-14504",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "voice-crate-check",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3vqr-jqwr-7m6q, MAL-2026-14505",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "text-crate-check",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c5pr-66ph-gfp9, MAL-2026-14503",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-test.softwarecenter.metrics@20.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vwg2-5528-w9wc, MAL-2026-12278",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tms-x-headers@20.2.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-35hv-47hh-35xx, MAL-2026-12480",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-sme.platform.mobile.dynamicteasers.common@20.8.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6w5q-p9g3-26hf, MAL-2026-12270",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-ui-angular-addon-wysiwyg@20.7.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pmq9-57f4-g2v7, MAL-2026-12283",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-sme.rko.conversionpayments.web@20.3.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8g6h-h8m6-w7cq, MAL-2026-12274",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-sme.rko.authorization.common@20.5.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8q7h-2qw7-c3cr, MAL-2026-12273",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-mb.product.tgeofencing@20.9.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rg3c-9vx6-5mfh, MAL-2026-12268",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-terminal-kit-carousel@20.6.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g537-jjq6-mv8m, MAL-2026-11549",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-mb.reliability.android.events@20.5.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4rph-fx37-hfvw, MAL-2026-12269",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-sme.platform.web.companyprofile.metrics@20.2.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r3q8-h34r-9h8r, MAL-2026-12272",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-sme.rko.ta.ios.events@20.6.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9g84-6755-r9f2, MAL-2026-12276",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-terminal-kit-test-commons@20.9.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p8g2-ph77-f7r9, MAL-2026-12281",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-leasing.admin.events",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pwcq-5xh6-9383, MAL-2026-12266",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-investing.product.pulse",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-953w-4w4x-wp59, MAL-2026-12262",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-investaccounting.events.templatepage.mainpage",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-48jc-v3r3-h4fr, MAL-2026-12261",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "devplatform-rest-resources-v1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hmhf-45wm-x62q, MAL-2026-12745",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-eventea.projects.smartcam",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-946m-r2w5-9p55, MAL-2026-12260",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "bigops-timeline",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4v4p-9667-cjpw, MAL-2026-12844",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-dwh.chimera.base",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w72w-w3fh-946m, MAL-2026-12258",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "devplatform-spa",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-544p-6vr9-4r6g, MAL-2026-12754",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-dss.insurance.service",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h5ww-8cvp-mj62, MAL-2026-12257",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-statist-browser-typed-client-art.apps.reporegistry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3h58-7m84-65h5, MAL-2026-12253",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "bigops-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m9jg-f26q-5hmq, MAL-2026-12853",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "bigops-timers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q2qx-j3hh-f9p2, MAL-2026-12846",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-pwa-confac-types",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6rh3-gcq9-vmhv, MAL-2026-12252",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-pfp-integration-mobile-slider-icons",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6c78-688f-6vxq, MAL-2026-12250",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-pfp-block-mobile-panels",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gp62-rq95-4fg5, MAL-2026-12249",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-pfp-atom-styles-tiles",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9wpj-x935-r4fj, MAL-2026-12246",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-fb-rf-add-application",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pvc7-jp4m-6758, MAL-2026-12242",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-mutual-mgm-form",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6q5q-68cm-4f3c, MAL-2026-12244",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-component-page-loader",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3p77-c6f9-pffh, MAL-2026-12239",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "bigops-statements-timeline",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrfg-393h-v67j, MAL-2026-13250",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-mobile-separator",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rrcp-38vc-7qgw, MAL-2026-12235",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-otc@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-25gq-jqh3-6q7g, MAL-2026-14491",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "spotify-url-infos@3.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2g79-q87f-wwc9, MAL-2026-14492",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-mobile-documents",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-97hc-v95m-g3h9, MAL-2026-12234",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-form-desktop-sme-registration-ooo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m24w-7xcq-wvr8, MAL-2026-12231",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "devplatform-spa-plugin-s3-module-loader",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gr75-3hj7-ccxp, MAL-2026-12779",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-desktop-icons-horizontal",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gm9f-hg73-pmwf, MAL-2026-12228",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-desktop-features-banner",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rqq4-xpvf-6ch9, MAL-2026-12048",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tinkoff-boxy-atom-text-link",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wc79-x38v-pmr3, MAL-2026-12227",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "time-webkit-tag",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hq8m-4h47-frrh, MAL-2026-12226",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "time-linters-webapp-eslint-config",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xm67-8mvr-77j7, MAL-2026-12479",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tcb-web-copy-to-clipboard",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3pj2-pfvc-578w, MAL-2026-12475",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "tailwind-custom-forms",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4mgg-vhf5-9r79, MAL-2026-12221",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "taiga-ui-proprietary-navigation",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hgqj-cv8v-7c3m, MAL-2026-12474",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "devplatform-spa-tokens",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-67wj-rrpv-vxwq, MAL-2026-12785",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "swift-optimizer",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7vv3-8cx6-w4g3, MAL-2026-4677",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-view-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vv6v-hc8c-p5q9, MAL-2026-12471",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-streak-map",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-79hp-j55f-97h5, MAL-2026-14500",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-metric-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-86ww-mvrj-xx43, MAL-2026-12808",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-map-metric",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2p6v-xwhm-f5h6, MAL-2026-14499",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-hydration-streak",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9jcj-426x-9rmq, MAL-2026-14495",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-math-lib",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h6vq-775w-5ccg, MAL-2026-12469",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-intake-streaks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hjjx-chqx-6225, MAL-2026-14498",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-math-kit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xh5x-2q38-w88g, MAL-2026-12468",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-int-lib",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-266j-4pvf-xhwr, MAL-2026-12467",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-grid-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jwcj-rx9q-cxm8, MAL-2026-12807",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-goal-streaks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jvfh-h9rq-x29f, MAL-2026-14494",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-daykit",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7vmx-4mxx-6vxr, MAL-2026-12466",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-daykey-lib",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v22h-w6r5-jwfx, MAL-2026-12465",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-daybucket",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6hxq-4f7r-8562, MAL-2026-12464",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-streak-panel",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vvc8-cg5m-2pmp, MAL-2026-14501",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-streak-tracker",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mvgf-wmjm-6q56, MAL-2026-14502",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-day-primitives",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-792g-8w6v-23q8, MAL-2026-12463",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-daily-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8vjj-vq79-pf8g, MAL-2026-12461",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-insights-streak",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qf7v-g3vj-m3w2, MAL-2026-14497",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-count-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6qqq-g7qr-g756, MAL-2026-12460",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-insight-streaks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m4w5-mww4-j2vr, MAL-2026-14496",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-core-insights",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v7qq-2qm4-hcjx, MAL-2026-12459",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-core-bucket",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mpp6-fx3r-vwff, MAL-2026-12806",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "svelte-daily-streaks",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xvrp-wvcw-8jrp, MAL-2026-14493",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "streak-calendar-core",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6vcc-7wg6-pwfr, MAL-2026-12458",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "statist-browser-typed-client-sme.platform.web.teasers",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wc3c-f696-mj8v, MAL-2026-12310",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "statist-browser-typed-client-sme.platform.web.productsnavigation.events",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9v23-vh6j-pcw7, MAL-2026-12214",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "statist-browser-typed-client-nfs.grocery.mobile.events",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-82jq-m327-383g, MAL-2026-12074",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "statist-browser-typed-client-mb.product.analytics",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2947-fxx7-8vw5, MAL-2026-12211",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "mc-provider",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8r2v-hr8v-g7hw, MAL-2026-14305",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "supersig",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vjp6-7fgj-3cgm, MAL-2026-13461",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "mkb-manager",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wvpv-8v52-pgq7, MAL-2026-14490",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "mc-registry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-73h8-3qpw-h3wv, MAL-2026-14294",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "statist-browser-typed-client-hra.workplacer.events",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-679q-9657-vwr6, MAL-2026-12045",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "cat-embed-i18n-res@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rhrq-fjfx-w79w, MAL-2026-14471",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "cscasereadserv-paypal@3.4.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4mqc-vvm7-p2hw, MAL-2026-14472",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "ecobee-api@0.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-43wq-pqvv-wrfp, MAL-2026-14474",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "css-import-order@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wvcf-q8gp-q5fr, MAL-2026-14473",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "ecobee-home@0.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pgxr-6ccj-jvc7, MAL-2026-14475",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-images-analysis@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7v76-qr6c-f759, MAL-2026-14482",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "mham-js@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9g9c-6h9f-qh35, MAL-2026-14478",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-image-analysis@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9frw-xww8-fcr6, MAL-2026-14480",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-image-analysis@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9frw-xww8-fcr6, MAL-2026-14480",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-image-analysis@1.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9frw-xww8-fcr6, MAL-2026-14480",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "js-soul@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rmrh-vmhx-4v53, MAL-2026-14477",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-image-tracker@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gc66-9c4x-mwq7, MAL-2026-14481",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-image-tracker@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gc66-9c4x-mwq7, MAL-2026-14481",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:python-walletlibr-v@0.7.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pfrw-v3ch-6m8x, MAL-2026-14488",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "hyperion-react-native-testapp@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q4j8-mj3q-r8wq, MAL-2025-6727",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "modules-newline@0.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5prp-v9g3-92pq, MAL-2026-14483",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "spotify-url-resolovela@3.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p8q8-gj7w-c8jh, MAL-2026-14487",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "react-remove-properties@6.14.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3ppg-c7g5-4v3h, MAL-2026-14484",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-bug-tracker@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hr7f-wpph-3wjg, MAL-2026-14479",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "vite-plugin-bug-tracker@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hr7f-wpph-3wjg, MAL-2026-14479",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "ecobee2@0.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2hx9-wh72-ghxf, MAL-2026-14476",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "secretkey-2fa@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-53gx-pc7p-ww5j, MAL-2026-14485",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "secretkey-2fa@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-53gx-pc7p-ww5j, MAL-2026-14485",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "spf-analytics@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-688c-c373-7xcv, MAL-2026-14486",
+      "firstSeen": "2026-08-25"
+    },
+    {
+      "type": "package",
+      "value": "evm-validation@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8f2h-vv9f-2gg5, MAL-2026-14301",
+      "firstSeen": "2026-08-19"
     }
   ]
 }
