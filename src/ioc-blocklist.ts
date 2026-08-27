@@ -999,6 +999,17 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // lifecycle hook, so --ignore-scripts does not stop it. Single-source (TrendAI); the
   // digest round-tripped as a well-formed 64-char hex string and was re-confirmed by
   // exact-string search before ingest.
+  //
+  // Two further indicators from the same write-up are deliberately NOT signatures.
+  // The persistence marker (~/.config/.rsvc) is created by the ELF at runtime on the
+  // victim host, not by the package: TrendAI's own analysis has dist/index.mjs only
+  // re-exporting the date helpers, resolving the bundled binary and spawning it, so
+  // the string never appears in the artefact a scan can actually see. A rule for it
+  // would match a compromised machine after the fact, never the package under review.
+  // The six rotating payload paths (dist/*.bin, dist/internal/*.bin, calc-math.dat)
+  // are rejected separately: they are generic enough to hit clean builds, and the
+  // digest above already covers all six names. Re-derived 2026-08-27; do not add
+  // either as a pattern without new evidence that the loader itself carries them.
   "4537b1189ce419f1a595cf47216c03f80e9170ce80dad8d9227a1e52f9cb3466": "RedShell / RedC2 4.0 Linux implant, dist/internal/*.bin (SHA256)",
 
   // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" cross-platform RAT

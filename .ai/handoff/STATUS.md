@@ -1,3 +1,43 @@
+## 2026-08-27: RedShell detection-scope decision (both sweep-11 open items closed)
+
+Follow-up to #237. Both items the sweep left for the owner are resolved, one of them
+by finding it was already done. No behaviour change: this is a decision record.
+Model: claude-opus-5.
+
+### The persistence marker earns no rule, and the primary source settles it
+
+`~/.config/.rsvc` is NOT added as a signature. The deciding fact is where it is
+written: TrendAI's own analysis puts the marker in the compiled ELF at runtime on the
+victim host, and describes `dist/index.mjs` as only re-exporting the date helpers,
+resolving the bundled binary and spawning it with `cp.spawn({detached: true})`. The
+loader never carries the string, so a rule for it could only ever match a machine
+that is already compromised, never the package a scan is looking at. It would add a
+maintenance surface and zero detection.
+
+The six rotating payload paths (`dist/*.bin`, `dist/internal/*.bin`, `calc-math.dat`)
+are rejected on the separate ground that they are generic enough to hit clean builds,
+and the implant digest already covers all six names. That half was in fact already
+argued in the hash comment ("the digest catches the payload the filename cannot").
+
+Confirmed rather than assumed: the five RedShell tests in `campaigns.test.ts` pass,
+including the hash test, so `IOC_KNOWN_MALWARE_HASH` demonstrably fires on the
+payload the path rules would have targeted. The reasoning is now written into the
+hash block in `src/ioc-blocklist.ts` so a later sweep does not re-raise it.
+
+Precedent followed: `src/patterns.ts:2623`, where the SleeperGem daemon dir
+(`~/.local/share/gcm`) is deliberately not a signature because the real Git
+Credential Manager uses it too.
+
+### Correction: the second item was already closed in v6.0.3
+
+The sweep-11 note below lists `litterbox[.]catbox[.]moe` and `api[.]ipify[.]org` as
+needing a decision recorded. They already had one. `src/ioc-blocklist.ts` has carried
+it since the RedShell block landed in v6.0.3: the comment above `217.60.77.63` names
+both hosts, defanged, and states that blocking them would flag legitimate projects,
+alongside the same call on the `127[.]0[.]0[.]1:8792` loopback fallback. The sweep
+raised it as open without grepping for it first. No change was needed and none was
+made; the item is struck, not implemented.
+
 ## 2026-08-27: Threat-intel sweep 11 (34 IOCs, first clean importer run in ten sweeps)
 
 Daily scheduled sweep. 34 malicious-package IOCs imported from the GitHub Advisory
