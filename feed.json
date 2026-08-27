@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.3",
-  "entryCount": 13365,
+  "entryCount": 13399,
   "generatedAt": "2026-08-23T00:00:00.000Z",
   "entries": [
     {
@@ -108156,6 +108156,278 @@
       "confidence": 1,
       "source": "GHSA-8f2h-vv9f-2gg5, MAL-2026-14301",
       "firstSeen": "2026-08-19"
+    },
+    {
+      "type": "package",
+      "value": "node-pino",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w294-7cjj-7mvg, MAL-2026-6762",
+      "firstSeen": "2026-08-27"
+    },
+    {
+      "type": "package",
+      "value": "parallely",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rmhx-v9xh-x4jv, MAL-2026-11143",
+      "firstSeen": "2026-08-27"
+    },
+    {
+      "type": "package",
+      "value": "bnotify-web-sdk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h2p9-v9rw-px6c, MAL-2026-14551",
+      "firstSeen": "2026-08-27"
+    },
+    {
+      "type": "package",
+      "value": "dumb-binding-gyp-package",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p8h8-j624-2qhc, MAL-2026-14546",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "the_tax_free_cashier_is_at_9f",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4hc4-fpvc-7chp, MAL-2026-14549",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "shai_hulululud",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c83w-r5p2-qhmj, MAL-2026-14548",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "grandfather_of_the_desert",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fjvc-xq44-gq59, MAL-2026-14547",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "tset_racie",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7978-5fh2-74q2, MAL-2026-14550",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pybitjs@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wv93-5fvj-96j3, MAL-2026-14545",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:trongridet@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6q35-8j6x-jx75, MAL-2026-14542",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "self-certificates",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rwg4-cx82-h5hq, MAL-2026-14543",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "self-sign",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9jvg-g3cg-g557, MAL-2026-14544",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "chai-plus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2r27-f59g-4hcx, MAL-2026-14533",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "svelte-vli-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hxqf-cq68-wh37, MAL-2026-14541",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "hydration-vli-ui",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v229-xfmv-q98w, MAL-2026-14535",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "zenntechinc-cli@1.6.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6wh9-pcqw-jp9j, MAL-2026-14539",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "zenntechinc-cli@1.6.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6wh9-pcqw-jp9j, MAL-2026-14539",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "model-poc-suhail",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cpqg-wgv2-g29r, MAL-2026-3030",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "octopus-action@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xp3r-4585-7gx2, MAL-2026-14537",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "spotify-url-resolvers@3.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mg73-v34h-w9f9, MAL-2026-14538",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "mt-ts-serverless-starter@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23v8-vcgc-99v9, MAL-2026-14536",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "commonjs-code-token@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wq3w-3cqf-rjjj, MAL-2026-14534",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "commonjs-code-token@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wq3w-3cqf-rjjj, MAL-2026-14534",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "chai-as-org@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-54pw-m2xf-hj23, MAL-2026-14532",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "analytics-v2@4.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c4w9-3vw5-6h6w, MAL-2026-14531",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "@lordmega/baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-98ch-w7w3-xfq9, MAL-2026-14540",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "baileys-mbuilder",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8m87-xx52-4rjw, MAL-2026-14529",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "@fongsidev/scraper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cm89-9x7j-wr2g, MAL-2026-14527",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "baileys-inmemory-store",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gr9h-5xx6-g7cc, MAL-2026-14528",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "infomedia",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mpxq-q6j7-77jh, MAL-2026-14530",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:bigquery-agent-analytics-tracing@0.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3757-66f7-2vxg, MAL-2026-14524",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:bigquery-agent-analytics-tracing@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3757-66f7-2vxg, MAL-2026-14524",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "pypi:0xfighter3@0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w8cx-q6rx-qfj2, MAL-2026-14525",
+      "firstSeen": "2026-08-26"
+    },
+    {
+      "type": "package",
+      "value": "omniauth-recharge-rails-example@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-88ff-297x-5h43, MAL-2026-14526",
+      "firstSeen": "2026-08-26"
     }
   ]
 }

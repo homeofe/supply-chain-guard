@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **34 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev (all 34 carry both a GHSA and an OSV MAL- id and land
+  at confidence 1.0; 31 were additionally confirmed against the live OSV.dev API at
+  import time). 19 are npm name-blocks, 10 are npm version pins and 5 are PyPI
+  version pins.
+- Every one of the 19 bare npm names was probed against the registry before being
+  accepted, since a bare name blocks all versions: all 19 answer with a single
+  `0.0.1-security` placeholder, no maintainer and no release history, which is npm's
+  own takedown marker and positive evidence that nothing legitimate can be hit.
+- The largest cluster is a **five-entry wave against the Baileys WhatsApp library
+  ecosystem** (`@lordmega/baileys`, `baileys-mbuilder`, `baileys-inmemory-store`,
+  `@fongsidev/scraper`, `infomedia`), all five published inside the same 20-second
+  window on 2026-08-26.
+- A **five-entry Dune-themed set** (`shai_hulululud`, `grandfather_of_the_desert`,
+  `the_tax_free_cashier_is_at_9f`, `tset_racie`, `dumb-binding-gyp-package`)
+  published across 16 seconds the same evening. The names reference the Shai-Hulud
+  worm family this feed already tracks; no vendor write-up ties them to it and no
+  shared payload is claimed, so they are carried on advisory provenance alone.
+- `svelte-vli-ui` and `hydration-vli-ui`, extending the `cls`/`dim` UI-variant
+  name-farm first seen in v6.0.1, plus the `self-sign` / `self-certificates` pair
+  and the `chai-plus` / `chai-as-org@1.0.5` typosquats of the `chai` assertion
+  library.
+- **`zenntechinc-cli@1.6.4` and `@1.6.6` are version-pinned, not name-blocked.**
+  Unlike the rest of this batch the package is a live product with 20 legitimate
+  releases and an active maintainer; both flagged versions have since been
+  unpublished. A name-block would have flagged every clean release of a real
+  package. `spotify-url-resolvers@3.4.2` is pinned for the same reason.
+- PyPI additions are all version-pinned: `pybitjs@0.1.0`, `trongridet@0.0.1`,
+  `0xfighter3@0.1` and `bigquery-agent-analytics-tracing@0.0.0` / `@0.0.1`.
+
 ## [6.0.3] - 2026-08-26
 
 ### Added

@@ -1,3 +1,69 @@
+## 2026-08-27: Threat-intel sweep 11 (34 IOCs, first clean importer run in ten sweeps)
+
+Daily scheduled sweep. 34 malicious-package IOCs imported from the GitHub Advisory
+Database and corroborated against OSV.dev. No release cut; the version is untouched
+and stays at 6.0.3. Model: claude-opus-5.
+
+### The decline list worked, exactly as sweep 10 predicted
+
+This is the first sweep in ten that needed no window slicing and no manual
+diagnosis. The importer reported `Declined: 4363 (@zalastax/nolb- x4363)` and exited
+0 on the plain `--days 14` default. Sweep 10 predicted this run would be the last
+one needing the slice; instead the decline entry shipped in v6.0.3 removed the need
+outright, one sweep earlier than expected. No page cap, no backlog error, and
+nothing left waiting behind `--limit` (34 new against a limit of 250).
+
+Sweep 10's guidance still stands for the future: a large backlog reported from
+2026-08-29 onward is NOT zalastax, and the JSON dump grouped by `firstSeen` and
+scope is the first thing to run.
+
+### What the 34 entries are
+
+19 npm name-blocks, 10 npm version pins, 5 PyPI version pins. All 19 bare names were
+probed against the registry before being accepted, because a bare name blocks every
+version: all 19 answer with a single `0.0.1-security` placeholder, no maintainer and
+no release history. That is npm's own takedown marker, so the name-block cannot hit
+anything legitimate. Seventeen probes did the same job in sweep 9 and it is now the
+routine gate on importer output, not only on hand-added names.
+
+Two clusters are worth recording. Five entries hit the Baileys WhatsApp library
+ecosystem inside one 20-second publish window, and five more carry Dune-themed names
+referencing the Shai-Hulud family this feed already tracks. The Dune set has no
+vendor write-up behind it, so it is carried on advisory provenance alone with no
+family or campaign annotation and no claim of shared payload.
+
+The one entry that required judgement is `zenntechinc-cli`. Unlike everything else
+in the batch it is a live product with 20 legitimate releases and an active
+maintainer, so it is version-pinned at 1.6.4 and 1.6.6 rather than name-blocked. A
+name-block there would have flagged every clean release of a real package.
+`spotify-url-resolvers@3.4.2` is pinned on the same reasoning.
+
+### Enrichment found nothing addable
+
+STEP 1b turned up four August campaigns and every one is already fully covered:
+ChainDrop / keyv (domain, four dropper hashes, correlated matchers), Flooding
+Dropper / WEL1DROPPER, the Alibaba dev-toolchain RAT, and RedShell / RedC2. For
+RedShell the fuller write-up that appeared after sweep 10 now lists all 14 package
+names; a per-name check confirmed all 14 are already in the feed, eight of them
+having arrived through the advisory databases without the campaign annotation. No
+hand-added indicator this run.
+
+### Needs a decision from the owner
+
+1. **RedShell file-path indicators are still uncovered.** The TrendAI write-up lists
+   on-disk markers the feed has no rule for: the side-loaded ELF paths under
+   `dist/internal/` (`calc-cache.bin`, `calc-mapping.bin`, `calc-math.dat`,
+   `math-calc.bin`, `math-core.bin`, `calc.bin`) and the persistence marker
+   `~/.config/.rsvc`. These were left alone deliberately. Several of the paths are
+   generic enough to hit clean builds, and a pattern-table change is a considered
+   change rather than sweep work. `.rsvc` is the specific one and is probably safe
+   on its own. Worth a decision on whether the persistence marker earns a rule.
+2. **Two hosts in the RedShell IOC list were deliberately not ingested.**
+   `litterbox[.]catbox[.]moe` and `api[.]ipify[.]org` are legitimate shared services
+   the implant merely uses, not attacker infrastructure. Blocking either would be a
+   false positive against ordinary software. Recording the decision so a later sweep
+   does not treat the gap as an oversight and add them.
+
 ## 2026-08-26: Release v6.0.3 (threat-intel sweep 10 + importer decline list)
 
 Started as the daily scheduled sweep: 164 malicious-package IOCs imported from the

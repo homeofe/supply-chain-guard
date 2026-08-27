@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787734076",
-    "timestamp": "2026-08-26T08:47:57Z",
-    "commit": "aac4ce2",
+    "session_id": "cli-1787810972",
+    "timestamp": "2026-08-27T06:09:32Z",
+    "commit": "45b9a60",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:33a784be0a078b464a94dd64659645ed2308d988929b4b027b16bc5d1c61067c",
-      "updated": "2026-08-26T08:47:55Z",
-      "lines": 4842,
-      "summary": "Started as the daily scheduled sweep: 164 malicious-package IOCs imported from the"
+      "checksum": "sha256:b923912231597ada506bf6e3ca8f1c36780a5260d3700ef87aa9e0c1d76df464",
+      "updated": "2026-08-27T06:09:25Z",
+      "lines": 4908,
+      "summary": "Daily scheduled sweep. 34 malicious-package IOCs imported from the GitHub Advisory"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:a736218ca3acd89ba2e7974675ce38b71f63834c123c979cf505938dbc89deb8",
-      "updated": "2026-08-26T08:45:47Z",
+      "updated": "2026-08-26T08:53:07Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:d604647ad8e4e5b3f2cca5a37206a76fea6cae1f560e7f8a58c6adaafd71c4cc",
-      "updated": "2026-08-26T08:47:56Z",
+      "updated": "2026-08-27T06:09:32Z",
       "lines": 160,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,19 +42,19 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:f18c1f34533998cf25993b883548cd161c4995a25ec3e6666471dd8a224afcf2",
-      "updated": "2026-08-26T08:47:56Z",
+      "updated": "2026-08-27T06:09:32Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:05b932a888c5719893f64533d5d42545c7fea15e9a1a282cde67f74a111d24df",
-      "updated": "2026-08-26T08:47:56Z",
+      "updated": "2026-08-27T06:09:32Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-08-26T08:42:36Z",
+      "updated": "2026-08-26T08:53:07Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Started as the daily scheduled sweep: 164 malicious-package IOCs imported from the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Daily scheduled sweep. 34 malicious-package IOCs imported from the GitHub Advisory Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 58838,
-    "full_read": 70854
+    "manifest_plus_core": 59625,
+    "full_read": 71641
   }
 }
