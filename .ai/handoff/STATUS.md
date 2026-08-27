@@ -1,3 +1,47 @@
+## 2026-08-27: Release v6.0.4
+
+Cuts the sweep-11 content as v6.0.4 at the owner's go-ahead. Ships the 34
+malicious-package IOCs from #237 and the RedShell detection-scope decision record
+from #238. Patch release: no API change, no new modules. Model: claude-opus-5.
+
+SECURITY.md was deliberately not touched. Its Supported Versions table is keyed by
+major (`6.x`), so a patch adds no row. CONTRIBUTING.md likewise, since no module or
+file was added.
+
+### The version bump needed a precise replace, not a blanket one
+
+`src/threat-intel.ts` carries the IOC `@item-shop-data/client@56.0.3`, which contains
+the outgoing version as a substring. A blanket `6.0.3` to `6.0.4` replace would have
+silently rewritten that entry to `@56.0.4` and corrupted a live threat indicator,
+and version-sync would not have caught it because threat-intel.ts is not a version
+site. This is the same trap class as the README CIDRs, but with a detection
+consequence rather than a documentation one.
+
+The bump therefore ran a bounded regex, replacing the version only where it is not
+preceded or followed by a digit or dot, and asserted that IOC survived as an explicit
+canary afterwards.
+
+**The regex is NOT what makes this safe, and it must not be relied on as if it were.**
+The feed also carries seven IOCs whose own package version is the outgoing release
+number: `chai-as-operated@6.0.3`, `chai-as-predicted@6.0.3`, `chai-as-built@6.0.3`,
+`chai-as-synced@6.0.3`, `@tabrex/bs58@6.0.3`, `@ornikar/babel-preset-base@6.0.3` and
+`pypi:ml-nps-shared@6.0.3`. Every one of them is preceded by `@`, which is neither a
+digit nor a dot, so the bounded regex would have rewritten all seven and silently
+retargeted them at a version the attacker never published.
+
+They survived only because `src/threat-intel.ts` is not a version site and was never
+a replace target: the single line touched there is `bundledVersion`, by exact-string
+replace, and `feed.json` is regenerated from the module rather than edited. That
+exclusion is the actual control.
+
+So the rule for every future bump is the file list, not the pattern: never run a
+wholesale replace over `src/threat-intel.ts` or `feed.json`, bump `bundledVersion` by
+exact string, and regenerate the feed. The collision recurs at 6.0.5 and at every
+release whose number any IOC happens to use, which is common for a `6.0.x` line.
+
+`bundledVersion` in `src/threat-intel.ts` was bumped by hand as usual. It is not in
+`aahp.config.json` versionSites and no gate covers it.
+
 ## 2026-08-27: RedShell detection-scope decision (both sweep-11 open items closed)
 
 Follow-up to #237. Both items the sweep left for the owner are resolved, one of them
