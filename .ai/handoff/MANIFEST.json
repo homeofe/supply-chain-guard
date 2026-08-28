@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787813000",
-    "timestamp": "2026-08-27T06:43:20Z",
-    "commit": "17be494",
+    "session_id": "cli-1787894289",
+    "timestamp": "2026-08-28T05:18:09Z",
+    "commit": "43a4ce5",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:26fcbe3e560d8436d0f1328866f7b38c900e948dafe9a5f0aa553d1967509f20",
-      "updated": "2026-08-27T06:43:14Z",
-      "lines": 4992,
-      "summary": "Cuts the sweep-11 content as v6.0.4 at the owner's go-ahead. Ships the 34"
+      "checksum": "sha256:0cd10b0ae3c1bf70c74a275d96efa8196099febe2ff2b955f29b6db2c33b823b",
+      "updated": "2026-08-28T05:18:08Z",
+      "lines": 5065,
+      "summary": "Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:d6ee09e36ac77e933fde8fd3762b7c142b8cfa844b98fe77056dd0f7015bc785",
-      "updated": "2026-08-27T06:41:26Z",
+      "updated": "2026-08-27T06:48:08Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:65ab9347ce405c2ae0e2d91ddc2b2046b192962da80a174210d4e3d605feb0ef",
-      "updated": "2026-08-27T06:43:20Z",
+      "updated": "2026-08-28T05:18:09Z",
       "lines": 161,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:395075f7cc454fbe1377ecbe11ea92085184fcc245f509b335333bd9fb583465",
-      "updated": "2026-08-27T06:43:20Z",
+      "updated": "2026-08-28T05:18:09Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:f1e37f6652c6297f0e07380b1456c7b51c8bb3f73f73b33d06dc9857eb422f70",
-      "updated": "2026-08-27T06:43:20Z",
+      "updated": "2026-08-28T05:18:09Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Cuts the sweep-11 content as v6.0.4 at the owner's go-ahead. Ships the 34 Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 60571,
-    "full_read": 72608
+    "manifest_plus_core": 61371,
+    "full_read": 73408
   }
 }

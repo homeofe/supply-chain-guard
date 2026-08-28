@@ -345,6 +345,23 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // specific attacker host is listed; the hostwindsdns[.]com apex is a shared
   // hosting-provider domain and is deliberately NOT listed.
   "hwsrv-798836.hostwindsdns.com",
+
+  // Douqiu ("Fight Ball") gambling / pirate-streaming ring npm config server
+  // (Panther, May 5 2026). The config host that appears verbatim inside the base64
+  // JSON payload the @hd-team / @yuming2022 packages export
+  // ("domain": "hxxps://apiyf[.]dq87771[.]com"), so it is the one host of this
+  // campaign a package scan can actually encounter. Attacker-registered, no
+  // legitimate service behind it. Single-source (Panther), so the feed entry
+  // carries a reduced confidence.
+  //
+  // The write-up's ~70 further domains are deliberately NOT listed. They are the
+  // operator's Android/iOS app, landing-page, streaming and CDN tier, which a
+  // dependency scan never sees, and several sit on shared hosts (the
+  // obs[.]*[.]myhuaweicloud[.]com buckets) where an entry would flag unrelated
+  // projects. The APK digest is omitted on the same ground as the RedShell
+  // persistence marker: it can only ever match an artefact a package scan is not
+  // looking at.
+  "apiyf.dq87771.com",
 ];
 
 // ---------------------------------------------------------------------------

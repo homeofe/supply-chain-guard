@@ -1,3 +1,76 @@
+## 2026-08-28: Threat-intel sweep (advisory import + Douqiu ring)
+
+Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the
+owner cuts the release. Model: claude-opus-5.
+
+### What landed
+
+250 package IOCs from the advisory importer (237 npm, 13 PyPI) plus two hand-added
+pattern rules and one C2 domain. The importer reported no page-cap truncation and no
+undrainable backlog; the `@zalastax/nolb-` decline entry suppressed 4,363 candidates
+as designed, and no new decline entry was needed.
+
+### The bare-name probe caught one case the importer could not
+
+All 21 proposed bare names were probed against the npm registry, because a bare name
+blocks every version. 20 came back as `0.0.1-security` holding packages. The 21st,
+`tailwindcss-3d-animate`, was LIVE with a real maintainer account and three current
+versions, which is normally the signal to version-pin instead of name-block.
+
+It was name-blocked anyway, and the reason is worth keeping: the package was created
+2026-08-26 and its entire history is four versions inside twelve hours, the maintainer
+address is on a disposable domain, and the `repository` field points at an unrelated
+legitimate project it is impersonating. The advisory range is `>= 0`. So the
+"live package with a real maintainer" test was not measuring what it usually measures.
+The test that actually decided it was whether any clean release exists to protect, and
+none does.
+
+### The advisory database only saw a third of the Douqiu ring
+
+The eight `@hd-team/*` packages the importer added are config carriers for a gambling
+and pirate-streaming operation. The primary source documents 51 packages across THREE
+publisher scopes. GHSA catalogued only `@hd-team`, and npm took only `@hd-team` down.
+
+`@yuming2022` (43 packages, one with 3,274 published versions, newest 2025-12-08) and
+`@elton.bfw` are still live and still installable. They are now covered by two
+anchored publisher-namespace rules. The safety argument is npm's ownership model
+rather than takedown status: a scope belongs to exactly one account, so an anchored
+`^@scope/` rule cannot reach a package any unrelated party controls. This is the same
+shape as the `@zalastax/nolb-` rule and expressly not the scoped catch-all that
+`patterns.ts` rejects.
+
+`@hd-team` was deliberately NOT given a scope rule, so the feed's exact names stay the
+single source of truth for it and nothing double-reports. `campaigns.test.ts` asserts
+that split directly.
+
+### Only one of about 70 published domains was ingested
+
+The write-up carries a large domain list, but re-reading the primary source for the
+precise question - which hosts appear in the npm payload as opposed to the APK, the
+websites or the streaming tier - returned exactly one: `apiyf[.]dq87771[.]com`, quoted
+inside the base64 config blob. That is the only one a package scan can encounter, so
+it is the only one added. The rest would have been coverage the scanner cannot use,
+and several sit on shared cloud hosts where an entry flags unrelated projects.
+
+### Verification
+
+`campaigns.test.ts`, `regex-complexity.test.ts` and `pattern-applicability.test.ts`
+pass locally (451 passed). Two `IOC_KNOWN_C2_DOMAIN` tests fail on this Windows box
+(Phantom Bot `lhr[.]life`, GlassWASM `dodod[.]lat`); both were re-run on unmodified
+`main` and fail identically there, so they are the known local gap and not a
+regression. The full-suite verdict comes from CI on the PR.
+
+### Open for the owner
+
+Nothing blocking. Two items worth a decision when the release is cut:
+
+1. **355 advisory entries stayed behind `--limit 250`.** They remain inside the
+   `--days 14` window, so the next scheduled run takes the next batch. No action
+   needed unless the backlog should be drained in one release instead.
+2. **`@hd-team` has no scope rule by design.** If a later batch shows the ring
+   publishing `@hd-team` names the advisory database has not catalogued, that
+   decision should be revisited, since the feed covers exact names only.
+
 ## 2026-08-27: Release v6.0.4
 
 Cuts the sweep-11 content as v6.0.4 at the owner's go-ahead. Ships the 34

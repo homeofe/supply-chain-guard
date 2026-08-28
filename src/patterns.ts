@@ -2278,6 +2278,31 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // but it is a gap and not a claim of full coverage.
   "^@zalastax\\/nolb-[a-z0-9._-]+$",
 
+  // Douqiu ("Fight Ball") gambling / pirate-streaming ring using npm as a config
+  // server (Panther, May 5 2026). Three single-purpose attacker scopes publish
+  // packages that export nothing but a base64-encoded JSON blob of API endpoints,
+  // CDN tokens and load-balancing weights for the operator's mobile apps, on a
+  // 1.0.<YYYYMMDDHHMMSS> timestamp version scheme with an empty description.
+  //
+  // Registry-verified 2026-08-28, and this is precisely why the rules are needed:
+  // npm converted the @hd-team names into 0.0.1-security holding packages on
+  // 2026-08-27, but @yuming2022 and @elton.bfw are STILL LIVE under the ring's own
+  // publisher accounts and remain installable. @yuming2022/app-dnpkg-prod alone
+  // carries 3,274 published versions, the newest from 2025-12-08. The GitHub
+  // Advisory Database catalogued only the @hd-team subset, so the feed importer
+  // cannot reach either of these scopes at all.
+  //
+  // Scoped by PUBLISHER, which is what makes a namespace rule safe here: an npm
+  // scope is owned by exactly one account, so an anchored @scope rule cannot reach
+  // a package any unrelated party controls. Same shape as the @zalastax rule above,
+  // and expressly not the scoped catch-all rejected below.
+  //
+  // @hd-team deliberately gets NO scope rule: its eight advisory-catalogued names
+  // are already exact entries in the bundled feed, and a second rule over the same
+  // names would only double-report.
+  "^@yuming2022\\/[a-z0-9._-]+$",
+  "^@elton\\.bfw\\/[a-z0-9._-]+$",
+
   // NOTE: there is deliberately NO scoped-package catch-all here.
   // A rule of the shape "^@(?!<allowlist>)/.*$" matched 94% of every scoped
   // package on npm, so `scg npm <any scoped package>` exited 1 with riskLevel

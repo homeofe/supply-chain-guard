@@ -7,6 +7,48 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev. 237 are npm and 13 are PyPI; 21 are npm name-blocks
+  and 216 are npm version pins, spread over six packages (`@znan/wabot` 101,
+  `isite` 63, `@fleetbo/svro` 35, `pushgitquickx` 15, plus one pin each for
+  `@postman-cse/okta-aio-darwin-arm64` and `tailwindcss-form-styles`). The PyPI
+  entries cover nine packages, among them a four-name `flyteplugins-*` set
+  impersonating the Flyte plugin namespace and the `sap-quarterly-report` /
+  `ekx-report-utils` corporate-name lures.
+- Every one of the 21 bare npm names was probed against the registry before being
+  accepted, since a bare name blocks all versions. 20 answer with npm's own takedown
+  marker, a single `0.0.1-security` placeholder with no release history, which is
+  positive evidence that nothing legitimate can be hit. The exception is
+  `tailwindcss-3d-animate`, which is still live and was accepted anyway: its whole
+  publish history is four versions inside twelve hours from a throwaway maintainer
+  address, its `repository` field points at an unrelated legitimate project, and the
+  advisory range is `>= 0`, so there is no clean release to protect.
+- **Two live npm scopes of the Douqiu ("Fight Ball") gambling and pirate-streaming
+  ring**, which the advisory database does not reach at all. The eight `@hd-team/*`
+  names in this batch are one of three scopes the ring publishes from, and npm
+  converted those into holding packages on 2026-08-27; the other two are still
+  installable under the ring's own publisher accounts. Registry-verified 2026-08-28:
+  `@yuming2022` carries 43 packages, one of them with 3,274 published versions and a
+  release as recent as 2025-12-08, and `@elton.bfw` carries a third. Both are now
+  covered by an anchored publisher-namespace rule in `MALICIOUS_PACKAGE_PATTERNS`.
+  That shape is safe because an npm scope is owned by exactly one account, so the
+  rule cannot reach a package an unrelated party controls. `@hd-team` deliberately
+  gets no scope rule: its names are already exact feed entries, and a second rule
+  over them would only double-report.
+- **`apiyf[.]dq87771[.]com`** added to `KNOWN_C2_DOMAINS` and the bundled feed. It is
+  the Douqiu config-server host that appears verbatim inside the base64 JSON blob
+  those packages export, so it is the one host of the campaign a package scan can
+  actually encounter. Single-source, so it carries a reduced confidence. The
+  write-up's roughly 70 further domains are deliberately not ingested: they are the
+  operator's mobile-app, landing-page, streaming and CDN tier, which a dependency
+  scan never sees, and several sit on shared cloud hosts where an entry would flag
+  unrelated projects. The campaign's APK digest is omitted on the same ground as the
+  RedShell persistence marker, since it can only match an artefact a package scan is
+  not looking at.
+
+
 ## [6.0.4] - 2026-08-27
 
 ### Added

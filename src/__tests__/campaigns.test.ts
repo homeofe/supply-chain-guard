@@ -5183,4 +5183,135 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Douqiu npm config-server ring (Panther, May 2026)
+  // =================================================================
+
+  describe("Douqiu gambling-ring npm config server (May 2026)", () => {
+    // 51 packages across three single-purpose attacker scopes, each exporting only
+    // a base64 JSON blob of API endpoints, CDN tokens and load-balancing weights
+    // for the operator's mobile apps. Registry-verified 2026-08-28: npm converted
+    // the @hd-team names into 0.0.1-security holding packages on 2026-08-27, but
+    // @yuming2022 and @elton.bfw remain LIVE under the ring's own publisher
+    // accounts. The advisory database catalogued only the @hd-team subset, so the
+    // two live scopes are reachable by pattern alone.
+    //
+    // SURFACE: same as the @zalastax rule above - the npm-scanner name check and
+    // its package.json fallback, both of which read MALICIOUS_PACKAGE_PATTERNS.
+    // Asserted at the pattern level because both call sites sit behind a live
+    // registry fetch and neither containing function is exported.
+    const FLAGGED = [
+      "@yuming2022/app-dnpkg",
+      "@yuming2022/app-dnpkg-prod",
+      "@yuming2022/web-dnpkg-prod",
+      "@yuming2022/app-impkg-test",
+      "@yuming2022/seo-tracing",
+      "@elton.bfw/cloud",
+    ];
+
+    it("matches every documented package in the two live scopes", () => {
+      for (const name of FLAGGED) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(true);
+      }
+    });
+
+    it("does NOT reach neighbouring scopes or unscoped lookalikes", () => {
+      const legit = [
+        "@yuming2023/app-dnpkg", // adjacent scope name
+        "@elton/cloud",
+        "@eltonXbfw/cloud", // the dot must be a literal, not a wildcard
+        "yuming2022",
+        "app-dnpkg",
+        "@yuming2022", // scope without a package
+      ];
+      for (const name of legit) {
+        const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(name));
+        expect(hit, name).toBe(false);
+      }
+    });
+
+    // The @hd-team names are exact feed entries from the advisory import, so they
+    // deliberately get no scope pattern: a second rule over the same names would
+    // only double-report. This asserts that split stays as designed.
+    it("leaves @hd-team to the feed rather than a second scope rule", () => {
+      const hit = MALICIOUS_PACKAGE_PATTERNS.some((p) =>
+        new RegExp(p).test("@hd-team/app-dnpkg-beta"),
+      );
+      expect(hit, "no pattern must cover @hd-team").toBe(false);
+      expect(
+        matchBareNpmIOC("@hd-team/app-dnpkg-beta", "1.0.20260329125935", getBundledFeed()),
+        "the feed must still cover it by bare name",
+      ).toBeTruthy();
+    });
+
+    it("flags the config-server host the packages embed", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const cfg = { domain: "https://apiyf.dq87771.com", openFlag: true };\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN");
+      expect(finding, "the Douqiu config host must be flagged").toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag the shared cloud host the write-up also lists", async () => {
+      // The operator's static assets sit in Huawei OBS buckets. That apex fronts
+      // every OBS bucket on the platform, so it is deliberately not an entry, and
+      // a repo that merely references one must stay clean.
+      fs.writeFileSync(
+        path.join(tempDir, "assets.js"),
+        'const cdn = "https://example-bucket.obs.cn-south-1.myhuaweicloud.com/logo.png";\n',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")).toBe(false);
+    });
+  });
+
+  // =================================================================
+  // Advisory-database import, 2026-08-28 batch
+  // =================================================================
+
+  describe("Advisory-database import, 2026-08-28 batch", () => {
+    // Ecosystem routing is load-bearing: a missing feed prefix does not weaken
+    // detection, it inverts it, so each namespace is asserted against the one its
+    // advisory names and against the neighbouring one it must NOT reach.
+    it("routes the flyteplugins entries to the pypi namespace, not npm", () => {
+      const feed = getBundledFeed();
+      expect(matchPackageIOC("pypi", "flyteplugins-nsight", "2.6.10", feed)).toBeTruthy();
+      expect(matchPackageIOC("pypi", "flyteplugins-redis", "2.6.10", feed)).toBeTruthy();
+      expect(
+        matchPackageIOC("npm", "flyteplugins-redis", "2.6.10", feed),
+        "a pypi: entry must not match an npm package of the same name",
+      ).toBeNull();
+      expect(
+        matchPackageIOC("pypi", "flyteplugins-redis", "2.6.9", feed),
+        "a version the advisory never named must NOT match",
+      ).toBeNull();
+    });
+
+    it("pins the live hijack candidates by version rather than by name", () => {
+      const feed = getBundledFeed();
+      expect(matchBareNpmIOC("@fleetbo/svro", "0.0.2", feed)).toBeTruthy();
+      expect(
+        matchBareNpmIOC("@fleetbo/svro", "9.9.9", feed),
+        "a version the advisory never named must NOT match a version-pinned entry",
+      ).toBeNull();
+    });
+
+    // Bare-name entries block every version, so each of these was probed against
+    // the registry first: all four are npm security holding packages or, for
+    // tailwindcss-3d-animate, a name whose entire 12-hour publish history belongs
+    // to the campaign. None has a legitimate release to hit.
+    it("keeps the probed bare names reachable at every version", () => {
+      const feed = getBundledFeed();
+      for (const name of ["veloq", "morglog", "inspectstack", "tailwindcss-3d-animate"]) {
+        expect(matchBareNpmIOC(name, "1.0.0", feed), name).toBeTruthy();
+      }
+    });
+  });
+
 });
