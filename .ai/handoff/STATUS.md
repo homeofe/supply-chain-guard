@@ -1,3 +1,53 @@
+## 2026-08-28: Release v6.0.5
+
+Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the
+250 imported package IOCs, the two Douqiu publisher-namespace rules and the Douqiu
+config-server domain from #240. Patch release: no API change, no new modules.
+Model: claude-opus-5.
+
+SECURITY.md was deliberately not touched. Its Supported Versions table is keyed by
+major (`6.x`), so a patch adds no row. CONTRIBUTING.md likewise, since no module or
+file was added.
+
+### The version-bump collision recurred exactly as predicted, and widened
+
+The v6.0.4 note warned that this collision "recurs at 6.0.5 and at every release whose
+number any IOC happens to use". It did. `src/threat-intel.ts` carries FIVE IOC values
+containing the outgoing release number:
+
+- `pypi:yt-yson-bindings@66.0.4`
+- `chai-as-staged@6.0.4`
+- `chai-as-modified@6.0.4`
+- `eslint-plus@6.0.4`
+- `@ornikar/babel-preset-base@6.0.4`
+
+`yt-yson-bindings@66.0.4` is the one worth naming, because it defeats the bounded
+regex the v6.0.4 bump relied on. That regex refused to replace where the version is
+preceded by a digit or a dot, which protects `@66.0.4`. But the other four are all
+preceded by `@`, which is neither, so a bounded-regex bump over this file would still
+have rewritten four live IOCs to a version the attacker never published. The v6.0.4
+note reached the same conclusion and it held again here.
+
+So the control that actually works is the FILE LIST, not the pattern: `src/threat-intel.ts`
+and `feed.json` are never replace targets. This bump enumerated the 15 versionSites
+explicitly, asserted the expected occurrence count per file before touching it, changed
+`bundledVersion` by exact string, regenerated `feed.json` from the module, and then
+re-asserted all five IOC values survived as canaries. The canary check is cheap and it
+is the only step that would catch a silent corruption, since version-sync does not
+cover `src/threat-intel.ts`.
+
+`bundledVersion` remains ungated and hand-bumped, as before.
+
+### Carried open items
+
+- **355 advisory entries are still queued behind `--limit 250`.** They remain inside
+  the `--days 14` window, so the next scheduled run takes the next batch. Nothing is
+  lost; this is only worth acting on if the backlog should be drained in one release.
+- **`@hd-team` has no publisher-namespace rule, by design.** Its eight names are exact
+  feed entries, so a scope rule would only double-report. If a later batch shows the
+  Douqiu ring publishing `@hd-team` names the advisory database has not catalogued,
+  that decision needs revisiting, because the feed covers exact names only.
+
 ## 2026-08-28: Threat-intel sweep (advisory import + Douqiu ring)
 
 Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the

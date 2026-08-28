@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787894289",
-    "timestamp": "2026-08-28T05:18:09Z",
-    "commit": "43a4ce5",
+    "session_id": "cli-1787922156",
+    "timestamp": "2026-08-28T13:02:36Z",
+    "commit": "1e1b1de",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:0cd10b0ae3c1bf70c74a275d96efa8196099febe2ff2b955f29b6db2c33b823b",
-      "updated": "2026-08-28T05:18:08Z",
-      "lines": 5065,
-      "summary": "Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the"
+      "checksum": "sha256:dcf40d9d0b22976f3e62448fc68eabd2bfd525773da8e8bfe942d69a13f51201",
+      "updated": "2026-08-28T13:01:06Z",
+      "lines": 5115,
+      "summary": "Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:d6ee09e36ac77e933fde8fd3762b7c142b8cfa844b98fe77056dd0f7015bc785",
-      "updated": "2026-08-27T06:48:08Z",
+      "checksum": "sha256:03a673116556367a842047b955c33be33fd2da99c306cd17623d82e6aa7a1183",
+      "updated": "2026-08-28T13:02:34Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:65ab9347ce405c2ae0e2d91ddc2b2046b192962da80a174210d4e3d605feb0ef",
-      "updated": "2026-08-28T05:18:09Z",
-      "lines": 161,
+      "checksum": "sha256:a3b7916ae773fc140d296d66fb3b7ccb5b7d3e11c3ce9e705aa19302cd882fb1",
+      "updated": "2026-08-28T13:02:36Z",
+      "lines": 162,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:395075f7cc454fbe1377ecbe11ea92085184fcc245f509b335333bd9fb583465",
-      "updated": "2026-08-28T05:18:09Z",
+      "checksum": "sha256:d6108e0be8a439317f157ca23bb01d28d95259ea5d3652940c6cccaa7b9ece60",
+      "updated": "2026-08-28T13:02:36Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:f1e37f6652c6297f0e07380b1456c7b51c8bb3f73f73b33d06dc9857eb422f70",
-      "updated": "2026-08-28T05:18:09Z",
+      "checksum": "sha256:df86aaccbb19d8e9ed4ee1e166e9298ddef9f108db4cf4822eb3d36fc9697d19",
+      "updated": "2026-08-28T13:02:36Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Scheduled daily run. No version bump: the content sits under `## [Unreleased]` and the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 61371,
-    "full_read": 73408
+    "manifest_plus_core": 61879,
+    "full_read": 73936
   }
 }
