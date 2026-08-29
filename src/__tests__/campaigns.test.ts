@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
-import { MALICIOUS_PACKAGE_PATTERNS, PYPI_TYPOSQUAT_PATTERNS } from "../patterns.js";
+import {
+  CAMPAIGN_PATTERNS,
+  MALICIOUS_PACKAGE_PATTERNS,
+  PYPI_TYPOSQUAT_PATTERNS,
+} from "../patterns.js";
 import { matchPackageIOC, getBundledFeed } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 
@@ -508,6 +512,29 @@ describe("Campaign Signatures", () => {
         (f) => f.rule === "MINI_SHAI_HULUD_LOADER"
       );
       expect(finding).toBeDefined();
+    });
+
+    it("keeps the loader rule's whitespace-led headline match", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'const manifest = \'"preinstall": "bun setup.mjs"\';',
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "MINI_SHAI_HULUD_LOADER"))
+        .toBe(true);
+    });
+
+    it("bounds whitespace backtracking in the loader rule", () => {
+      const loader = CAMPAIGN_PATTERNS.find(
+        (pattern) => pattern.rule === "MINI_SHAI_HULUD_LOADER",
+      )!;
+      const probe = `"${" ".repeat(50_000)}setup.mjsX`;
+      const regex = new RegExp(loader.pattern, "g");
+      const started = performance.now();
+
+      expect(regex.test(probe)).toBe(false);
+      expect(performance.now() - started).toBeLessThan(250);
     });
 
     it("should detect a bun preinstall hook invoking setup.mjs", async () => {

@@ -10,6 +10,7 @@ vi.mock("node:child_process", () => ({ execFileSync: childProcess.execFileSync }
 import {
   ARCHIVE_MAX_ENTRIES,
   ARCHIVE_MAX_EXPANDED_BYTES,
+  ARCHIVE_MAX_PATH_COMPONENTS,
   ArchiveSecurityError,
   extractTar,
   extractTarGz,
@@ -431,6 +432,44 @@ describe("archive extraction preflight hardening", () => {
     ]));
 
     expect(() => preflightTarArchive(tar)).not.toThrow();
+  });
+
+  it("rejects oversized or excessively deep PAX paths before graph validation", () => {
+    const cases = [
+      ["oversized-pax.tar.gz", `${"a/".repeat(8_193)}payload.js`, /PAX path exceeds/],
+      [
+        "deep-pax.tar.gz",
+        `${Array.from({ length: ARCHIVE_MAX_PATH_COMPONENTS + 1 }, () => "a").join("/")}/payload.js`,
+        /path components/,
+      ],
+    ] as const;
+
+    for (const [name, memberPath, expected] of cases) {
+      const archive = fixture(name, makeTar([
+        { name: "PaxHeader", type: "x", data: paxRecord("path", memberPath) },
+        { name: "placeholder", data: "payload" },
+      ], true));
+      const started = performance.now();
+      expect(() => preflightTarArchive(archive)).toThrow(expected);
+      expect(performance.now() - started).toBeLessThan(250);
+    }
+  });
+
+  it("charges aggregate prefix work for many maximum-depth PAX paths", () => {
+    const prefix = Array.from(
+      { length: ARCHIVE_MAX_PATH_COMPONENTS - 1 },
+      () => "d",
+    ).join("/");
+    const entries: TarFixtureEntry[] = [];
+    for (let index = 0; index < 800; index++) {
+      entries.push(
+        { name: `PaxHeader-${index}`, type: "x", data: paxRecord("path", `${prefix}/${index}`) },
+        { name: `placeholder-${index}` },
+      );
+    }
+    const archive = fixture("aggregate-pax-work.tar.gz", makeTar(entries, true));
+
+    expect(() => preflightTarArchive(archive)).toThrow(/resolution work exceeds/);
   });
 
   it("uses stream order when PAX and GNU path overrides are mixed", () => {

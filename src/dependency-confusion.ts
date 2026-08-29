@@ -14,6 +14,7 @@ import * as https from "node:https";
 import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { readOptionalUtf8File } from "./pattern-scanner.js";
+import { isJsonObject } from "./json-utils.js";
 
 const TOOL_VERSION = "6.0.5";
 const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -139,7 +140,8 @@ export async function scanDependencyConfusion(
 
   // Find and read package.json
   const pkgJsonPath = resolvePackageJson(options.target);
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8")) as {
+  const parsedPackageJson: unknown = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
+  const pkgJson = (isJsonObject(parsedPackageJson) ? parsedPackageJson : {}) as {
     name?: string;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;

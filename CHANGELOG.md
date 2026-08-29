@@ -73,6 +73,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   reported "0 / 1 files scanned" with no finding and exit 0. The directory path has
   emitted a coverage finding for that state since v5; the package path now does too, at
   the same informational severity so it cannot fail a build that is behaving correctly.
+- PyPI threat-feed lookups now apply PEP 503 name normalization, so case and runs of
+  `-`, `_` or `.` cannot hide a version-pinned IOC in Poetry, uv or Pipenv lockfiles.
+- Archive preflight now caps normalized paths at 64 components and 16 KiB, and charges
+  prefix construction by its real component work. Deep PAX paths can no longer force
+  quadratic validation after bypassing the GNU long-name limit.
+- The Mini Shai-Hulud loader rule now bounds optional whitespace at 20 characters. This
+  preserves the rule's whitespace-led headline match while removing the long-space
+  backtracking path.
+- Valid JSON primitives such as `null` are rejected as manifest objects throughout the
+  core scanner, lockfile cross-checks, dependency-confusion scan, npm repository claim
+  check and SBOM generation instead of causing property-access exceptions.
+- Nested `poetry.lock`, `uv.lock` and `Pipfile.lock` files now receive the same IOC checks
+  as root lockfiles. Lockfile dispatch skips `vendor/` and `target/`, while raw digest
+  scanning of files in those trees remains intact.
 
 
 - **Six false positives that had been shipping for about two months.** All were

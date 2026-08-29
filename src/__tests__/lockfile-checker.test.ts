@@ -30,6 +30,16 @@ describe("Lockfile Checker (T-006)", () => {
     expect(findings[0]!.rule).toBe("LOCKFILE_PARSE_ERROR");
   });
 
+  it("does not cross-reference a null package.json", () => {
+    fs.writeFileSync(path.join(tempDir, "package.json"), "null");
+    fs.writeFileSync(
+      path.join(tempDir, "package-lock.json"),
+      JSON.stringify({ name: "test", lockfileVersion: 3, packages: {} }),
+    );
+
+    expect(() => checkLockfile(tempDir)).not.toThrow();
+  });
+
   it("should detect lockfile version 1 as a downgrade", () => {
     const lockfile = {
       name: "test",

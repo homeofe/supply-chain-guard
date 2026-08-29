@@ -76,8 +76,11 @@ function referenceMatch(
 ): FeedIOC | null {
   const eco = ecosystem.toLowerCase();
   const prefix = `${eco}:`;
-  const caseInsensitive = eco === "nuget";
-  const wantName = caseInsensitive ? name.toLowerCase() : name;
+  const normalizeName = (value: string): string => {
+    if (eco === "pypi") return value.toLowerCase().replace(/[-_.]+/g, "-");
+    return eco === "nuget" ? value.toLowerCase() : value;
+  };
+  const wantName = normalizeName(name);
 
   for (const ioc of entries) {
     if (ioc.type !== "package") continue;
@@ -86,9 +89,7 @@ function referenceMatch(
     const at = rest.lastIndexOf("@");
     const iocName = at > 0 ? rest.substring(0, at) : rest;
     const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
-    const nameMatches = caseInsensitive
-      ? iocName.toLowerCase() === wantName
-      : iocName === wantName;
+    const nameMatches = normalizeName(iocName) === wantName;
     if (!nameMatches) continue;
     if (iocVersion === undefined) return ioc;
     if (version !== undefined && iocVersion === version) return ioc;
@@ -186,17 +187,19 @@ describe("matchPackageIOC index parity", () => {
     }
   });
 
-  it("keeps NuGet case-insensitive and other ecosystems case-sensitive", () => {
+  it("applies NuGet case folding and PEP 503 normalization only where defined", () => {
     const f: FeedIOC[] = [
       { type: "package", value: "nuget:Newtonsoft.Json", severity: "critical", confidence: 1.0 },
-      { type: "package", value: "pypi:CaseSensitive", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "pypi:guardrails-ai@0.10.1", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "ruby:Case-Sensitive", severity: "critical", confidence: 1.0 },
     ];
     expect(matchPackageIOC("nuget", "newtonsoft.json", "1.0.0", f)).not.toBeNull();
     expect(matchPackageIOC("nuget", "NEWTONSOFT.JSON", "1.0.0", f)).not.toBeNull();
-    // PyPI entries are matched exactly here; PEP 503 normalization applies to
-    // the KNOWN_BAD_PYPI_VERSIONS blocklist, not to feed values.
-    expect(matchPackageIOC("pypi", "casesensitive", undefined, f)).toBeNull();
-    expect(matchPackageIOC("pypi", "CaseSensitive", undefined, f)).not.toBeNull();
+    for (const name of ["guardrails-ai", "guardrails_ai", "guardrails.ai", "GUARDRAILS_AI"]) {
+      expect(matchPackageIOC("pypi", name, "0.10.1", f), name).not.toBeNull();
+    }
+    expect(matchPackageIOC("ruby", "case-sensitive", undefined, f)).toBeNull();
+    expect(matchPackageIOC("ruby", "Case-Sensitive", undefined, f)).not.toBeNull();
   });
 
   it("does not match unprefixed npm entries through the prefixed lookup", () => {

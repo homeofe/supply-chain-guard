@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788000049",
-    "timestamp": "2026-08-29T10:40:49Z",
-    "commit": "32c69db",
+    "session_id": "cli-1788002082",
+    "timestamp": "2026-08-29T11:14:42Z",
+    "commit": "f5a0c19",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
       "checksum": "sha256:c6b7f25ab20fb57f72f9ae239efeb506d9a277d06c1bf4c0ffc5c0314bfda65f",
-      "updated": "2026-08-29T10:40:47Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 5413,
       "summary": "Model: claude-opus-5. Branch fix/silent-detection-failures. No version bump."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:03a673116556367a842047b955c33be33fd2da99c306cd17623d82e6aa7a1183",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:a3b7916ae773fc140d296d66fb3b7ccb5b7d3e11c3ce9e705aa19302cd882fb1",
-      "updated": "2026-08-29T10:40:49Z",
+      "updated": "2026-08-29T11:14:42Z",
       "lines": 162,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:864ef34ed2ddf64651213312e701e14ee42a2670bd796757af27366dd42842e6",
-      "updated": "2026-08-29T10:40:49Z",
+      "checksum": "sha256:7c4c941d1ac2dedd27682b6995b273eee94c64b2947d9cf8d4b920a640dd0b98",
+      "updated": "2026-08-29T11:14:42Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:09f7e557936f46e0d497dd9b10830af9402700afe7f928a27631abcd39105532",
-      "updated": "2026-08-29T10:40:49Z",
+      "checksum": "sha256:1bb8335ee95fb913eac634ba6bc3930ae2b341767bd06136d0c95766e288a719",
+      "updated": "2026-08-29T11:14:42Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-29T10:27:48Z",
+      "updated": "2026-08-29T11:11:31Z",
       "lines": 4,
       "summary": "{"
     }
@@ -81,6 +81,6 @@
   "token_budget": {
     "manifest_only": 85,
     "manifest_plus_core": 65454,
-    "full_read": 77511
+    "full_read": 77512
   }
 }

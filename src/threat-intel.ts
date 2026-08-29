@@ -15407,9 +15407,10 @@ export function checkThreatIntel(
  *   - bare name    ("ruby:knot-date-utils-rb") - matches every version
  *   - name@version ("nuget:Sicoob.Sdk@2.0.0")  - matches only that version
  *
- * NuGet package ids are case-insensitive, so the "nuget" ecosystem compares
- * names ignoring case. Other registries treat names as case-sensitive
- * (RubyGems/Packagist names are lowercase by convention).
+ * Package-name equivalence is ecosystem-specific. NuGet package ids are
+ * case-insensitive. PyPI applies PEP 503 normalization: ASCII case is folded
+ * and each run of hyphens, underscores, or dots is equivalent. Other
+ * registries retain exact name matching here.
  */
 export function matchPackageIOC(
   ecosystem: string,
@@ -15425,8 +15426,7 @@ export function matchPackageIOC(
   // but fall back to the reference scan rather than risk a false negative.
   if (eco.includes(":")) return matchPackageIOCLinear(entries, eco, name, version);
 
-  const caseInsensitive = eco === "nuget";
-  const wantName = caseInsensitive ? name.toLowerCase() : name;
+  const wantName = normalizePackageIOCName(eco, name);
 
   const candidates = getPackageIndex(entries).get(`${eco}:${wantName}`);
   if (!candidates) return null;
@@ -15456,8 +15456,7 @@ function matchPackageIOCLinear(
   version?: string,
 ): FeedIOC | null {
   const prefix = `${eco}:`;
-  const caseInsensitive = eco === "nuget";
-  const wantName = caseInsensitive ? name.toLowerCase() : name;
+  const wantName = normalizePackageIOCName(eco, name);
 
   for (const ioc of entries) {
     if (ioc.type !== "package") continue;
@@ -15468,9 +15467,7 @@ function matchPackageIOCLinear(
     const iocName = at > 0 ? rest.substring(0, at) : rest;
     const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
 
-    const nameMatches = caseInsensitive
-      ? iocName.toLowerCase() === wantName
-      : iocName === wantName;
+    const nameMatches = normalizePackageIOCName(eco, iocName) === wantName;
     if (!nameMatches) continue;
 
     if (iocVersion === undefined) return ioc;
@@ -15500,6 +15497,12 @@ interface IndexedIOC {
  */
 const packageIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedIOC[]>>();
 
+function normalizePackageIOCName(ecosystem: string, name: string): string {
+  if (ecosystem === "pypi") return name.toLowerCase().replace(/[-_.]+/g, "-");
+  if (ecosystem === "nuget") return name.toLowerCase();
+  return name;
+}
+
 function getPackageIndex(entries: FeedIOC[]): Map<string, IndexedIOC[]> {
   const cached = packageIndexCache.get(entries);
   if (cached) return cached;
@@ -15522,9 +15525,7 @@ function getPackageIndex(entries: FeedIOC[]): Map<string, IndexedIOC[]> {
     const iocName = at > 0 ? rest.substring(0, at) : rest;
     const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
 
-    // NuGet package ids are case-insensitive; every other ecosystem compares
-    // exactly, so only NuGet keys are folded.
-    const keyName = entryEco === "nuget" ? iocName.toLowerCase() : iocName;
+    const keyName = normalizePackageIOCName(entryEco, iocName);
     const key = `${entryEco}:${keyName}`;
 
     const bucket = index.get(key);

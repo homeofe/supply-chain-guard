@@ -4,17 +4,21 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
   scanPythonLockfiles,
+  scanPythonLockfileContent,
   scanPoetryLockContent,
   scanUvLockContent,
   scanPipfileLockContent,
   isPythonLockfile,
 } from "../python-lockfile-scanner.js";
+import { scan } from "../scanner.js";
 
 // Real bundled known-bad PyPI version (LiteLLM PyPI compromise, ioc-blocklist).
 // litellm@1.82.7 is compromised; a later version is clean.
 const BAD_NAME = "litellm";
 const BAD_VERSION = "1.82.7";
 const CLEAN_VERSION = "1.83.0";
+const PEP503_BAD_NAME = "guardrails-ai";
+const PEP503_BAD_VERSION = "0.10.1";
 
 describe("Python lockfile scanner", () => {
   let tmpDir: string;
@@ -33,6 +37,20 @@ describe("Python lockfile scanner", () => {
     expect(isPythonLockfile("Pipfile.lock")).toBe(true);
     expect(isPythonLockfile("package-lock.json")).toBe(false);
     expect(isPythonLockfile("requirements.txt")).toBe(false);
+  });
+
+  it("preserves a version-pinned feed IOC across every PEP 503 spelling and lockfile format", () => {
+    const cases = [
+      ["poetry.lock", `[[package]]\nname = "guardrails_ai"\nversion = "${PEP503_BAD_VERSION}"\n`],
+      ["uv.lock", `[[package]]\nname = "GUARDRAILS.AI"\nversion = "${PEP503_BAD_VERSION}"\n`],
+      ["Pipfile.lock", JSON.stringify({ default: { GUARDRAILS_AI: { version: `==${PEP503_BAD_VERSION}` } } })],
+    ] as const;
+
+    for (const [filename, content] of cases) {
+      const findings = scanPythonLockfileContent(filename, content, filename);
+      expect(findings.some((finding) => finding.rule === "PYTHON_MALICIOUS_PACKAGE"), filename)
+        .toBe(true);
+    }
   });
 
   describe("poetry.lock scanning", () => {
@@ -178,6 +196,25 @@ describe("Python lockfile scanner", () => {
 
     it("should return no findings for an empty directory", () => {
       expect(scanPythonLockfiles(tmpDir)).toHaveLength(0);
+    });
+
+    it("scans nested Python lockfiles but prunes vendor and target trees", async () => {
+      for (const directory of ["services/api", "vendor/copied", "target/generated"]) {
+        fs.mkdirSync(path.join(tmpDir, directory), { recursive: true });
+        fs.writeFileSync(
+          path.join(tmpDir, directory, "poetry.lock"),
+          `[[package]]\nname = "${PEP503_BAD_NAME}"\nversion = "${PEP503_BAD_VERSION}"\n`,
+        );
+      }
+
+      const report = await scan({ target: tmpDir, format: "text", noHistory: true });
+      const hits = report.findings.filter(
+        (finding) => finding.rule === "PYTHON_MALICIOUS_PACKAGE",
+      );
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.file).toBe("services/api/poetry.lock");
+      expect(hits[0]?.severity).toBe("critical");
+      expect(report.partialScan).not.toBe(true);
     });
   });
 });

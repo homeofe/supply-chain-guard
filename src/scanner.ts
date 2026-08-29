@@ -45,6 +45,7 @@ import {
 } from "./pattern-scanner.js";
 import type { FeedIOC } from "./threat-intel.js";
 import { checkLockfile } from "./lockfile-checker.js";
+import { isJsonObject, parseJsonObject } from "./json-utils.js";
 import {
   collectExtractedFiles,
   DEFAULT_EXTRACTED_WALK_MAX_ENTRIES,
@@ -64,7 +65,11 @@ import { scanGoFiles } from "./go-scanner.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
-import { scanPythonLockfiles } from "./python-lockfile-scanner.js";
+import {
+  isPythonLockfile,
+  scanPythonLockfileContent,
+  scanPythonLockfiles,
+} from "./python-lockfile-scanner.js";
 import { checkIOCBlocklist, checkBadVersion, checkFileDigest } from "./ioc-blocklist.js";
 import { analyzeGitHubTrust, parseGitHubUrl, scanReadmeLures } from "./github-trust-scanner.js";
 import {
@@ -424,7 +429,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // extensionless targets are first-class scanned files and obey the same
     // size/read contract as extension-based source files.
     let prefetchedContent: string | undefined;
-    const inlineContentTarget = isDockerFile(basename) || isConfigFile(basename);
+    const pathSegments = relativePath.split("/");
+    const nestedPythonLockfile =
+      relativePath.includes("/") &&
+      isPythonLockfile(basename) &&
+      !pathSegments.some((segment) => segment === "vendor" || segment === "target");
+    const inlineContentTarget =
+      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -452,6 +463,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (isConfigFile(basename)) {
         findings.push(...scanConfigFile(prefetchedContent, relativePath));
+      }
+      if (nestedPythonLockfile) {
+        findings.push(
+          ...scanPythonLockfileContent(
+            basename,
+            prefetchedContent,
+            relativePath,
+            threatFeed,
+          ),
+        );
       }
       // A Dockerfile FROM line and an .npmrc registry line are two of the
       // most common places an internal host name reaches a public repo, and
@@ -591,7 +612,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
       // Dependency risk analysis (v4.2)
       try {
-        const pkg = JSON.parse(content) as Record<string, unknown>;
+        const parsed: unknown = JSON.parse(content);
+        if (!isJsonObject(parsed)) throw new TypeError("package.json is not an object");
+        const pkg = parsed;
         const allDeps = {
           ...(pkg.dependencies as Record<string, string> | undefined),
           ...(pkg.devDependencies as Record<string, string> | undefined),
@@ -1183,12 +1206,8 @@ function checkPackageJson(
   relativePath: string,
   findings: Finding[],
 ): void {
-  let pkg: Record<string, unknown>;
-  try {
-    pkg = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
+  const pkg = parseJsonObject(content);
+  if (!pkg) return;
 
   const scripts = pkg.scripts as Record<string, string> | undefined;
   if (!scripts) return;
@@ -1318,12 +1337,8 @@ function checkBinaryDownloadScripts(
   relativePath: string,
   findings: Finding[],
 ): void {
-  let pkg: Record<string, unknown>;
-  try {
-    pkg = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
+  const pkg = parseJsonObject(content);
+  if (!pkg) return;
 
   const scripts = pkg.scripts as Record<string, string> | undefined;
   if (!scripts) return;
@@ -1758,12 +1773,8 @@ function checkKnownBadVersions(
   relativePath: string,
   findings: Finding[],
 ): void {
-  let pkg: Record<string, unknown>;
-  try {
-    pkg = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
+  const pkg = parseJsonObject(content);
+  if (!pkg) return;
 
   const allDeps = {
     ...(pkg.dependencies as Record<string, string> | undefined),
@@ -1809,12 +1820,8 @@ function checkLockfileBadVersions(
   findings: Finding[],
   feed: FeedIOC[],
 ): void {
-  let lock: Record<string, unknown>;
-  try {
-    lock = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
+  const lock = parseJsonObject(content);
+  if (!lock) return;
 
   // lockfile v2+ uses "packages" key
   const packages = lock.packages as Record<string, { version?: string }> | undefined;
@@ -1931,12 +1938,14 @@ function checkMaliciousDependencyNames(
   findings: Finding[],
   feed: FeedIOC[],
 ): void {
-  let pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; optionalDependencies?: Record<string, string>; peerDependencies?: Record<string, string> };
-  try {
-    pkg = JSON.parse(content);
-  } catch {
-    return;
-  }
+  const parsed = parseJsonObject(content);
+  if (!parsed) return;
+  const pkg = parsed as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+  };
   // Collect the package that is actually INSTALLED for each entry, not the key.
   // An npm alias ("utils": "npm:chalk-tempalte@1.0.0") installs the target while
   // the key is arbitrary attacker-chosen text, so keying off Object.keys() alone
@@ -1981,12 +1990,8 @@ function checkMonorepoPatterns(
   relativePath: string,
   findings: Finding[],
 ): void {
-  let pkg: Record<string, unknown>;
-  try {
-    pkg = JSON.parse(content) as Record<string, unknown>;
-  } catch {
-    return;
-  }
+  const pkg = parseJsonObject(content);
+  if (!pkg) return;
 
   // Only check if it has workspaces
   if (!pkg.workspaces) return;

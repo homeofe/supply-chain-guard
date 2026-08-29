@@ -47,6 +47,15 @@ describe("Core Scanner", () => {
     expect(report.partialScan).toBe(true);
   });
 
+  it("does not crash when package.json contains the valid JSON value null", async () => {
+    fs.writeFileSync(path.join(tempDir, "package.json"), "null");
+
+    const report = await scan({ target: tempDir, format: "text", noHistory: true });
+
+    expect(report.summary.filesScanned).toBe(1);
+    expect(report.sbomDocument.metadata.component.name).toBe(path.basename(tempDir));
+  });
+
   it("should detect GlassWorm marker variable", async () => {
     fs.writeFileSync(
       path.join(tempDir, "malicious.js"),

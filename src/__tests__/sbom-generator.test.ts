@@ -45,6 +45,18 @@ afterEach(() => {
 });
 
 describe("generateSbomDocument", () => {
+  it("treats a null package.json as unreadable manifest data", () => {
+    fs.writeFileSync(path.join(tmpDir, "package.json"), "null");
+
+    const doc = generateSbomDocument(tmpDir, []);
+
+    expect(doc.metadata.component.name).toBe(path.basename(tmpDir));
+    expect(propertyValue(doc, "supply-chain-guard:sbom:component-source")).toBe("none");
+    expect(propertyValue(doc, "supply-chain-guard:sbom:subject-version")).toMatch(
+      /no readable package\.json/,
+    );
+  });
+
   it("should return a valid CycloneDX 1.6 document", () => {
     fs.writeFileSync(
       path.join(tmpDir, "package.json"),

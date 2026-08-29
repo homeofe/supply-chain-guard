@@ -71,6 +71,19 @@ export function scanPythonLockfiles(dir: string): Finding[] {
   return findings;
 }
 
+/** Scan one already-read Python lockfile while preserving its tree-relative path. */
+export function scanPythonLockfileContent(
+  filename: string,
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  if (filename === POETRY_LOCK) return scanPoetryLockContent(content, relativePath, feed);
+  if (filename === UV_LOCK) return scanUvLockContent(content, relativePath, feed);
+  if (filename === PIPFILE_LOCK) return scanPipfileLockContent(content, relativePath, feed);
+  return [];
+}
+
 /**
  * Scan poetry.lock content (TOML [[package]] blocks).
  */

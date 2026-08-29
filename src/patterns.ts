@@ -2548,7 +2548,7 @@ export const CAMPAIGN_PATTERNS: PatternEntry[] = [
   },
   {
     name: "mini-shai-hulud-bun-loader",
-    pattern: "[\"'`/\\\\\\s\\[]\\s*(?:setup\\.mjs|execution\\.js)\\b",
+    pattern: "[\"'`/\\\\\\s\\[]\\s{0,20}(?:setup\\.mjs|execution\\.js)\\b",
     description:
       "Reference to setup.mjs or execution.js detected. Loader filenames used by the Mini Shai-Hulud preinstall worm to download Bun runtime and execute the credential stealer payload.",
     severity: "high",

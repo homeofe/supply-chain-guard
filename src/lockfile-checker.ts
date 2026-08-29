@@ -22,6 +22,7 @@
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import { parseJsonObject } from "./json-utils.js";
 import {
   optionalFileExists,
   readOptionalUtf8File,
@@ -127,13 +128,12 @@ export function checkNpmLockfile(dir: string): Finding[] {
   );
   if (rawLockfile === null) return findings;
 
-  let lockfile: Lockfile;
-  try {
-    lockfile = JSON.parse(rawLockfile) as Lockfile;
-  } catch {
+  const parsedLockfile = parseJsonObject(rawLockfile);
+  if (!parsedLockfile) {
     findings.push(parseErrorFinding("package-lock.json", "npm install"));
     return findings;
   }
+  const lockfile = parsedLockfile as Lockfile;
 
   // Check lockfile version
   checkLockfileVersion(lockfile, findings);
@@ -147,11 +147,7 @@ export function checkNpmLockfile(dir: string): Finding[] {
     findings,
   );
   if (rawPackageJson !== null) {
-    try {
-      packageJson = JSON.parse(rawPackageJson) as PackageJson;
-    } catch {
-      // If package.json is unparseable, skip cross-reference checks.
-    }
+    packageJson = (parseJsonObject(rawPackageJson) as PackageJson | undefined) ?? null;
   }
 
   // Check packages (lockfile v2/v3 format)

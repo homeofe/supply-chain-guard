@@ -16,6 +16,14 @@ describe("Dependency Confusion Detector", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it("does not crash when package.json contains null", async () => {
+    fs.writeFileSync(path.join(tempDir, "package.json"), "null");
+
+    const report = await scanDependencyConfusion({ target: tempDir, format: "text" });
+
+    expect(report.findings).toHaveLength(0);
+  });
+
   it("should return a clean report for well-known packages", async () => {
     fs.writeFileSync(
       path.join(tempDir, "package.json"),

@@ -44,6 +44,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
+import { isJsonObject, parseJsonObject } from "./json-utils.js";
 import type {
   Finding,
   SbomComponent,
@@ -425,12 +426,9 @@ function readLockfileInventory(lockfilePath: string): Inventory | undefined {
     return undefined;
   }
 
-  let lockfile: LockfileV2;
-  try {
-    lockfile = JSON.parse(raw) as LockfileV2;
-  } catch {
-    return undefined;
-  }
+  const parsedLockfile = parseJsonObject(raw);
+  if (!parsedLockfile) return undefined;
+  const lockfile = parsedLockfile as LockfileV2;
 
   const packages = lockfile.packages;
   if (!packages || lockfile.lockfileVersion === 1) {
@@ -570,12 +568,9 @@ function readPackageJsonInventory(packageJsonPath: string): Inventory | undefine
     return undefined;
   }
 
-  let pkg: PackageJson;
-  try {
-    pkg = JSON.parse(raw) as PackageJson;
-  } catch {
-    return undefined;
-  }
+  const parsedPackage = parseJsonObject(raw);
+  if (!parsedPackage) return undefined;
+  const pkg = parsedPackage as PackageJson;
 
   const components: SbomComponent[] = [];
   const seen = new Set<string>();
@@ -847,7 +842,9 @@ export function generateSbomDocument(
   const packageJsonPath = path.join(projectDir, "package.json");
   if (fs.existsSync(packageJsonPath)) {
     try {
-      const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as PackageJson;
+      const parsed: unknown = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+      if (!isJsonObject(parsed)) throw new TypeError("package.json is not an object");
+      const pkgJson = parsed as PackageJson;
       manifestParsed = true;
       if (pkgJson.name) projectName = pkgJson.name;
       if (typeof pkgJson.version === "string" && pkgJson.version.trim() !== "") {

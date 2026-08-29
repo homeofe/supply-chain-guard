@@ -11,6 +11,7 @@ import { gunzipSync, inflateRawSync } from "node:zlib";
 export const ARCHIVE_MAX_ENTRIES = 100_000;
 export const ARCHIVE_MAX_INPUT_BYTES = 128 * 1024 * 1024;
 export const ARCHIVE_MAX_EXPANDED_BYTES = 256 * 1024 * 1024;
+export const ARCHIVE_MAX_PATH_COMPONENTS = 64;
 
 const MAX_LINK_TARGET_BYTES = 16 * 1024;
 const ZIP_EOCD_MIN_SIZE = 22;
@@ -121,6 +122,9 @@ function portableMemberPathKey(memberPath: string): string {
 /** Normalize using POSIX semantics; reject host-dependent backslash handling. */
 function normalizeMemberPath(rawPath: string, label = "entry path", allowRoot = false): string {
   if (rawPath.length === 0 || rawPath.includes("\0")) unsafe(`${label} is empty or contains NUL`);
+  if (Buffer.byteLength(rawPath, "utf8") > MAX_LINK_TARGET_BYTES) {
+    unsafe(`${label} exceeds ${MAX_LINK_TARGET_BYTES} bytes`);
+  }
   if (rawPath.includes("\\")) unsafe(`${label} contains a backslash`);
   if (rawPath.startsWith("/") || /^[A-Za-z]:/.test(rawPath)) unsafe(`${label} is absolute`);
   const normalized: string[] = [];
@@ -129,6 +133,9 @@ function normalizeMemberPath(rawPath: string, label = "entry path", allowRoot = 
     if (component === "..") unsafe(`${label} traverses outside the extraction root`);
     validatePortableMemberComponent(component, label);
     normalized.push(component);
+    if (normalized.length > ARCHIVE_MAX_PATH_COMPONENTS) {
+      unsafe(`${label} exceeds ${ARCHIVE_MAX_PATH_COMPONENTS} path components`);
+    }
   }
   if (normalized.length === 0 && !allowRoot) unsafe(`${label} does not name an archive member`);
   return normalized.join("/");
@@ -136,6 +143,9 @@ function normalizeMemberPath(rawPath: string, label = "entry path", allowRoot = 
 
 function resolveRelativeTarget(linkPath: string, rawTarget: string): string {
   if (rawTarget.length === 0 || rawTarget.includes("\0")) unsafe(`link "${linkPath}" has an empty or NUL-containing target`);
+  if (Buffer.byteLength(rawTarget, "utf8") > MAX_LINK_TARGET_BYTES) {
+    unsafe(`link "${linkPath}" target exceeds ${MAX_LINK_TARGET_BYTES} bytes`);
+  }
   if (rawTarget.includes("\\")) unsafe(`link "${linkPath}" has a backslash-containing target`);
   if (rawTarget.startsWith("/") || /^[A-Za-z]:/.test(rawTarget)) unsafe(`link "${linkPath}" has an absolute target`);
   const components = linkPath.split("/");
@@ -148,6 +158,9 @@ function resolveRelativeTarget(linkPath: string, rawTarget: string): string {
     } else {
       validatePortableMemberComponent(component, `link "${linkPath}" target`);
       components.push(component);
+      if (components.length > ARCHIVE_MAX_PATH_COMPONENTS) {
+        unsafe(`link "${linkPath}" target exceeds ${ARCHIVE_MAX_PATH_COMPONENTS} path components`);
+      }
     }
   }
 
@@ -156,6 +169,13 @@ function resolveRelativeTarget(linkPath: string, rawTarget: string): string {
 
 function resolveHardlinkTarget(linkPath: string, rawTarget: string): string {
   return normalizeMemberPath(rawTarget, `hardlink "${linkPath}" target`);
+}
+
+function chargeResolutionWork(context: ArchiveResolutionContext, amount: number): void {
+  context.work += amount;
+  if (context.work > ARCHIVE_MAX_RESOLUTION_WORK) {
+    unsafe(`link resolution work exceeds ${ARCHIVE_MAX_RESOLUTION_WORK} component checks`);
+  }
 }
 
 /** Resolve the archive's virtual links, including symlink-then-child writes. */
@@ -183,10 +203,10 @@ function resolveVirtualPath(
     let replaced = false;
     const prefix: string[] = [];
     for (let index = 0; index < components.length; index++) {
-      context.work++;
-      if (context.work > ARCHIVE_MAX_RESOLUTION_WORK) {
-        unsafe(`link resolution work exceeds ${ARCHIVE_MAX_RESOLUTION_WORK} component checks`);
-      }
+      // Building and normalizing this prefix costs index + 1 component visits,
+      // not one. Charging the real unit prevents many medium-depth paths from
+      // bypassing the work budget after a single deep path is capped.
+      chargeResolutionWork(context, index + 1);
 
       prefix.push(components[index]!);
       const current = prefix.join("/");
@@ -229,6 +249,7 @@ function validateArchiveGraph(entries: ArchiveEntry[]): void {
   for (const entry of entries) {
     const components = entry.path.split("/");
     for (let length = 1; length < components.length; length++) {
+      chargeResolutionWork(resolutionContext, length);
       const ancestorPath = components.slice(0, length).join("/");
       const ancestor = byPath.get(portableMemberPathKey(ancestorPath));
       if (ancestor !== undefined && ancestor.kind !== "directory" && ancestor.kind !== "symlink") {
@@ -562,8 +583,13 @@ function parsePax(content: Buffer): TarOverrides {
     if (equals <= 0) unsafe("PAX record is malformed");
     const key = record.slice(0, equals);
     const value = record.slice(equals + 1);
-    if (key === "path") result.path = value;
-    else if (key === "linkpath") result.linkpath = value;
+    if (key === "path" || key === "linkpath") {
+      if (Buffer.byteLength(value, "utf8") > MAX_LINK_TARGET_BYTES) {
+        unsafe(`PAX ${key} exceeds ${MAX_LINK_TARGET_BYTES} bytes`);
+      }
+      if (key === "path") result.path = value;
+      else result.linkpath = value;
+    }
     else if (key === "size") {
       if (!/^(?:0|[1-9][0-9]*)$/.test(value)) unsafe("PAX size is invalid");
       result.size = checkedSafeInteger(BigInt(value), "PAX size");
