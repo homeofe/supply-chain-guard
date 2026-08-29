@@ -7,6 +7,57 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- **250 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev. 249 are npm and one is PyPI (`CalcBoxLite@1.0`);
+  148 are npm name-blocks and 101 are npm version pins. The batch is dominated by
+  four clusters:
+  - A **dependency-confusion sweep against internal corporate namespaces**, roughly
+    50 single-version pins published at implausibly high versions so they outrank
+    the real private package: `intuit-authz@55.0.0`, `qbo-ui-services@45.0.0`,
+    `confluence-editor@30.0.0`, `katal-logger@45.0.0`, `aura-instrumentation@45.0.0`,
+    `alimama-minisite@45.0.0`, `calcite-web@45.0.0`, `amplitude-experiment@55.0.0`
+    and `nx-app@9999.0.0-security-test` among them, plus a nine-name `grafeno-*` set
+    (`grafeno-sdk`, `grafeno-api`, `grafeno-core`, `grafeno-pix`, `grafeno-logger`,
+    `grafeno-auth`, `grafeno-client`, `grafeno-config`, `grafeno-utils`) at `1.0.0`
+    and `1.0.1`.
+  - A **2FA/MFA credential-lure cluster**: `2fa-secretkey` (7 versions),
+    `2fasecretkey` (3), `discord-mfa` (2), `mfacord` (2), `supersignaturenature` (2),
+    `secretkey2fa`, `mfakit`, plus the name-blocks `mfa-js` and `ozturk-mfa`.
+  - A **`js-tokens` typosquat cluster** (`js-tokens-array`, `js-array-tokens`,
+    `common-array-token`) and web3 lures (`eth-pino`, plus the name-blocks
+    `clmm-fee-audit`, `eip712-lite` and `borsh-lite`).
+  - A **142-name generated-identifier sweep** under the `3layerdipstack` prefix, all
+    published at `0.1.4` on 2026-08-26 and unpublished again on 2026-08-28.
+
+  Ten versions of `@7nohe/openapi-react-query-codegen` are version-pinned rather
+  than name-blocked, because that package has a legitimate release history.
+- Every one of the 148 bare npm names was probed against the registry before being
+  accepted, because a bare name blocks all versions. None of them has a legitimate
+  release: five answer with npm's own takedown marker (a lone `0.0.1-security`
+  placeholder and no maintainer), 48 return 404, and the remaining 95 return a
+  metadata stub whose `time` map records the single published version together with
+  its `unpublished` timestamp, with an empty `versions` map and no maintainer.
+  Nothing installable can be hit by these name-blocks.
+
+- `getFeedCacheState()` reports whether a refreshed feed cache is present, how many
+  entries it contributed, its age, and whether a refresh is due. `feed stats` shows
+  this in both text and JSON output, and says plainly that stale entries are still
+  being matched.
+- `npm run audit:blocklist` re-validates every bare-name npm block against the live
+  registry and fails when one points at a package that still has a real release
+  history. This is the standing check for the defect class above: a name-block is a
+  claim about the registry at the moment of ingestion, and nothing re-checked it
+  afterwards. Deliberately NOT part of `prebuild`, since it needs the network.
+  `blocklist-audit-allow.json` records the names that are blocked on purpose despite
+  looking live, each with a written reason.
+
+### Changed
+
+- `feed refresh` no longer claims that only "scans in the next 24h" merge the cached
+  entries, which is no longer true and was the source of the expiry behaviour above.
+
 ### Fixed
 
 - **Six false positives that had been shipping for about two months.** All were
@@ -38,25 +89,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   is monotonic: a malicious package@version does not become clean because the file
   describing it aged, so discarding it could only lower detection. Stale entries are
   now merged as usual, and the age is reported instead.
-
-### Added
-
-- `getFeedCacheState()` reports whether a refreshed feed cache is present, how many
-  entries it contributed, its age, and whether a refresh is due. `feed stats` shows
-  this in both text and JSON output, and says plainly that stale entries are still
-  being matched.
-- `npm run audit:blocklist` re-validates every bare-name npm block against the live
-  registry and fails when one points at a package that still has a real release
-  history. This is the standing check for the defect class above: a name-block is a
-  claim about the registry at the moment of ingestion, and nothing re-checked it
-  afterwards. Deliberately NOT part of `prebuild`, since it needs the network.
-  `blocklist-audit-allow.json` records the names that are blocked on purpose despite
-  looking live, each with a written reason.
-
-### Changed
-
-- `feed refresh` no longer claims that only "scans in the next 24h" merge the cached
-  entries, which is no longer true and was the source of the expiry behaviour above.
 
 ## [6.0.5] - 2026-08-28
 

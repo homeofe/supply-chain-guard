@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787992270",
-    "timestamp": "2026-08-29T08:31:10Z",
-    "commit": "6b3b02b",
+    "session_id": "cli-1787998950",
+    "timestamp": "2026-08-29T10:22:30Z",
+    "commit": "914d5f1",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:36ef3d0613b2a07cf89567ed745b37fa65cd09528039dd74a83cd77a2e11f33e",
-      "updated": "2026-08-29T08:31:08Z",
-      "lines": 5204,
+      "checksum": "sha256:2760f70209afe72c8f49a06bdbbdc74d9f2a4d79dc910c2d945b91c85662a494",
+      "updated": "2026-08-29T10:20:54Z",
+      "lines": 5344,
       "summary": "Branch `fix/feed-correctness-and-delivery`. Triggered by a request to review project"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:03a673116556367a842047b955c33be33fd2da99c306cd17623d82e6aa7a1183",
-      "updated": "2026-08-28T13:07:52Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:a3b7916ae773fc140d296d66fb3b7ccb5b7d3e11c3ce9e705aa19302cd882fb1",
-      "updated": "2026-08-29T08:31:09Z",
+      "updated": "2026-08-29T10:22:29Z",
       "lines": 162,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-07-18T08:02:38Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-07-18T08:02:38Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d6108e0be8a439317f157ca23bb01d28d95259ea5d3652940c6cccaa7b9ece60",
-      "updated": "2026-08-29T08:31:09Z",
+      "updated": "2026-08-29T10:22:29Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:df86aaccbb19d8e9ed4ee1e166e9298ddef9f108db4cf4822eb3d36fc9697d19",
-      "updated": "2026-08-29T08:31:09Z",
+      "updated": "2026-08-29T10:22:29Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-08-26T08:53:07Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-20T12:42:10Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-04T08:54:14Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-06-28T09:06:54Z",
+      "updated": "2026-08-29T10:20:53Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "Branch `fix/feed-correctness-and-delivery`. Triggered by a request to review project Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 63009,
-    "full_read": 75066
+    "manifest_plus_core": 64632,
+    "full_read": 76689
   }
 }
