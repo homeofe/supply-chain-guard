@@ -42,6 +42,11 @@
       "note": "dependency-confusion ScanReport.tool version"
     },
     {
+      "file": "src/threat-intel.ts",
+      "minOccurrences": 1,
+      "note": "bundled detection-set provenance version"
+    },
+    {
       "file": "README.md",
       "minOccurrences": 3,
       "note": "Install/usage version references plus the pinned ghcr image tag in the Docker usage example; all must move together or a reader copies a stale command."

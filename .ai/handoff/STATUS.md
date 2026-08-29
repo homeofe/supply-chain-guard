@@ -1,3 +1,29 @@
+## v6.0.6 release preparation (2026-08-29)
+
+Model: OpenAI Codex, GPT-5. Branch `codex/release-v6.0.6`.
+
+Patch release for the security and false-assurance remediations merged in #244,
+plus the current Unreleased threat-intelligence and feed-correctness work. The
+version moved together across package metadata, every CLI/scanner/reporter surface,
+the Action and examples, container documentation, MCP metadata, the generated feed,
+the lockfile, and the handoff set. `CHANGELOG.md` now carries the dated 6.0.6 block
+and its release reference; the Unreleased comparison starts at v6.0.6.
+
+The release dry run found that runtime detection-set provenance still reported
+6.0.5 even though all 15 configured version sites passed. `src/threat-intel.ts` now
+reports 6.0.6, and that value is the 16th `aahp.config.json` version site so the
+same omission blocks future release builds.
+
+Evidence before the release PR:
+
+- `npm run build`: seven AAHP gates, feed consistency, handoff consistency and
+  TypeScript compilation all pass.
+- `aahp doctor`: all six conformance gates pass.
+- The focused provenance integration suite passes 8/8 after the version-site fix.
+- Full Linux suite on openclaw: 138/138 test files and 3,294/3,294 tests pass.
+- Release PR: #245. Tagging and publication remain deliberately after its squash
+  merge, so the immutable tag will point at the commit that is actually on `main`.
+
 ## Silent detection failures: unread file types and an unread package (2026-08-29)
 
 Model: claude-opus-5. Branch fix/silent-detection-failures. No version bump.
