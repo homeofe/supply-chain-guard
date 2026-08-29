@@ -20,6 +20,7 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
+  makePackageCoverageFindings,
   truncateMatch,
 } from "./patterns.js";
 import { parseGitHubUrl } from "./github-trust-scanner.js";
@@ -177,6 +178,12 @@ export async function scanNpmPackage(
   } else {
     recordNpmNoArtifact(findings);
   }
+
+  // A package whose files were all outside the scannable set must not report as
+  // clean. The directory path has said so since issue 205; this path never did.
+  findings.push(
+    ...makePackageCoverageFindings(fileCounts.totalFiles, fileCounts.filesScanned),
+  );
 
   // Snapshot completeness before a severity filter can hide its informational
   // transparency finding, matching the PyPI scanner contract.

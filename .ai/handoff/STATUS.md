@@ -1,3 +1,72 @@
+## Silent detection failures: unread file types and an unread package (2026-08-29)
+
+Model: claude-opus-5. Branch fix/silent-detection-failures. No version bump.
+
+**Two measured defects, both in the class the tool exists to prevent: a clean
+verdict for something that was never read.**
+
+**1. The scannable set was 19 extensions.** A byte-identical payload scoring three
+critical findings in a `.js` file produced ZERO findings in `.mts .cts .ps1 .psm1
+.bat .cmd .rb .php .cs .vue .svelte .ipynb .zsh .fish`. Two of those are not a
+judgement call at all: `.mjs` and `.cjs` were read while their TypeScript siblings
+`.mts` and `.cts` were not, and three more are the source languages of ecosystems
+this scanner already ships dedicated scanners and feed IOCs for (RubyGems,
+Composer, NuGet). The Windows pair is a measured attack shape rather than a
+hypothetical: a `postinstall` of `cmd /c .\install.bat` produced no finding at all.
+
+Fifteen extensions added. Measured before and after on one payload: 14 file types
+went from 0 to 2 critical/high findings each, `.png` and `.lock` correctly still
+unread.
+
+**What this does NOT buy, stated plainly.** The rule tables are JS-shaped. A `.rb`
+file gains coverage for language-agnostic rules and for JavaScript smuggled inside
+it, which is the realistic dropper shape, but idiomatic Ruby exfiltration
+(`Net::HTTP.post(..., ENV["NPM_TOKEN"])`) still produces nothing. This was measured,
+and the malicious corpus entry was written to match what actually fires rather than
+asserting a Ruby capability that does not exist.
+
+**2. The three remote package scanners never got the issue-205 coverage contract.**
+`supply-chain-guard npm <pkg>` whose payload is a `.ps1` reported "0 / 1 files
+scanned", RISK 2/100 LOW, zero findings, exit 0. The directory path has emitted
+`SCAN_ZERO_COVERAGE` / `SCAN_NO_SCANNABLE_FILES` for that state since issue 205;
+`npm-scanner.ts`, `pypi-scanner.ts` and `vscode-scanner.ts` emitted neither. The
+skip at `src/npm-scanner.ts:742` was a bare `continue`, three lines above an
+oversized-file branch whose own comment says "surface the skip instead of silently
+dropping coverage (issue #54)".
+
+`makePackageCoverageFindings` now supplies that contract, wired into the npm path.
+
+**A severity decision was deliberately NOT re-litigated.** `src/scanner.ts:782-786`
+records a measured finding that treating "this tool does not read that language" as
+a partial scan turned exit 0 into exit 1 for every ordinary Java, C#, Ruby, PHP or
+Kotlin project. The new finding therefore stays `info` and stays out of
+`PARTIAL_SCAN_RULES`, matching the directory contract, and a test pins that so a
+later severity bump has to argue with the measurement rather than quietly win.
+
+**Evidence.**
+
+- Recall: 14 previously-blind file types now detect an identical payload.
+- Precision: 8 adversarially-written ordinary files in the new languages, using the
+  constructs that look malicious (`Invoke-WebRequest`, `powershell
+  -ExecutionPolicy Bypass`, `base64_encode`, `curl_exec`, `HttpClient`, env-var
+  secrets), produce ZERO non-info findings. Coverage went 1/9 to 9/9 files with the
+  verdict unchanged at low / score 1.
+- The precision corpus materialised only `.js` and `.json`, so it would have
+  reported green whether or not the new languages misfired. It now carries seven
+  benign and two malicious samples in the new types, both sides of the gate.
+- Performance: the scanner's own `src/` tree, 4908 ms to 4923 ms median of three
+  (+0.3%), identical 221/221 files and identical 1719 findings.
+- Mutation proof, five mutations, all caught, clean baseline and clean post-restore:
+  removing PowerShell, TypeScript-ESM or Ruby from the set, unwiring the coverage
+  helper from npm-scanner, and renaming the coverage rule id.
+- Full suite on the Linux box: 137/137 files, 3265 tests.
+
+**Not addressed here**, and tracked rather than implied: the PyPI and VS Code
+scanners have the same missing coverage contract as npm and are the obvious next
+call sites; `scg guard` still prints an affirmative "no known-bad packages" for
+`npm exec <critical IOC>`; and `SUSPICIOUS_SCRIPTS` has no Windows-shell coverage,
+so the `.bat` dropper is now READ but still not flagged on the script value itself.
+
 ## 2026-08-29: Feed correctness and delivery, after a project-health review
 
 Branch `fix/feed-correctness-and-delivery`. Triggered by a request to review project

@@ -59,6 +59,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   entries, which is no longer true and was the source of the expiry behaviour above.
 
 ### Fixed
+- **Fifteen file types were never read, so identical malware was invisible in them.**
+  A payload scoring three critical findings in a `.js` file produced zero findings in
+  `.mts`, `.cts`, `.ps1`, `.psm1`, `.psd1`, `.bat`, `.cmd`, `.rb`, `.php`, `.cs`,
+  `.vue`, `.svelte`, `.ipynb`, `.zsh` and `.fish`. `.mjs` and `.cjs` were already read
+  while their TypeScript siblings were not, and RubyGems, Composer and NuGet have
+  dedicated scanners and feed entries while their source was never opened. All fifteen
+  are now scanned. Note that the rule tables are JavaScript-shaped: a non-JS file gains
+  coverage for language-agnostic rules and for JavaScript embedded in it, which is the
+  realistic dropper shape, not full analysis of that language.
+- **`supply-chain-guard npm` could report a clean verdict for a package it never read.**
+  When every file in a downloaded artifact fell outside the scannable set, the npm path
+  reported "0 / 1 files scanned" with no finding and exit 0. The directory path has
+  emitted a coverage finding for that state since v5; the package path now does too, at
+  the same informational severity so it cannot fail a build that is behaving correctly.
+
 
 - **Six false positives that had been shipping for about two months.** All were
   bare-name package blocks, which flag EVERY version of a name.

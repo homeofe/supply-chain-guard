@@ -27,6 +27,104 @@ import type { Finding } from "../types.js";
 
 /** Ordinary code. Nothing here may produce a high or critical finding. */
 const LEGITIMATE: Record<string, string> = {
+  // ---------------------------------------------------------------------
+  // Languages added to SCANNABLE_EXTENSIONS. Each sample deliberately uses the
+  // constructs that LOOK like the malicious ones for that language - remote
+  // fetch, base64, process spawning, reading a secret from the environment -
+  // because that is where an over-broad rule misfires. Ordinary tooling code.
+  // ---------------------------------------------------------------------
+  "build.ps1": `#Requires -Version 5.1
+[CmdletBinding()]
+param([string]$Configuration = "Release")
+$ErrorActionPreference = "Stop"
+Invoke-WebRequest -Uri "https://dot.net/v1/dotnet-install.ps1" -OutFile "$env:TEMP/di.ps1"
+& "$env:TEMP/di.ps1" -Channel LTS
+$token = $env:NUGET_API_KEY
+if (-not $token) { Write-Warning "NUGET_API_KEY not set; skipping publish" }
+dotnet build ./src -c $Configuration
+`,
+
+  "install.bat": `@echo off
+setlocal enabledelayedexpansion
+if not exist "%~dp0node_modules" call npm ci --omit=dev
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build.ps1"
+endlocal
+`,
+
+  "release.rb": `# frozen_string_literal: true
+require "json"
+require "open-uri"
+require "base64"
+
+module Release
+  def self.metadata(gem_name)
+    JSON.parse(URI.open("https://rubygems.org/api/v1/gems/#{gem_name}.json").read)
+  end
+
+  def self.publish!(path)
+    ENV.fetch("GEM_HOST_API_KEY") { abort "GEM_HOST_API_KEY missing" }
+    system("gem", "push", path, exception: true)
+  end
+end
+`,
+
+  "Deploy.php": `<?php
+declare(strict_types=1);
+final class Deployer
+{
+    public function push(string $artifact): array
+    {
+        $ch = curl_init(getenv('DEPLOY_ENDPOINT') ?: 'https://api.example.com');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, base64_encode(file_get_contents($artifact)));
+        return json_decode(curl_exec($ch), true) ?? [];
+    }
+}
+`,
+
+  "TokenClient.cs": `using System;
+using System.Net.Http;
+using System.Text;
+
+public sealed class TokenClient
+{
+    private readonly HttpClient _http = new HttpClient();
+
+    public void Configure()
+    {
+        var secret = Environment.GetEnvironmentVariable("CLIENT_SECRET");
+        var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"client:{secret}"));
+        _http.DefaultRequestHeaders.Add("Authorization", $"Basic {basic}");
+    }
+}
+`,
+
+  "Uploader.vue": `<template>
+  <button :disabled="busy" @click="submit">Upload</button>
+</template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+const busy = ref(false);
+async function submit() {
+  busy.value = true;
+  try {
+    await fetch(import.meta.env.VITE_UPLOAD_URL, { method: "POST" });
+  } finally {
+    busy.value = false;
+  }
+}
+</script>
+`,
+
+  "helpers.mts": `import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+
+export async function digest(file: string): Promise<string> {
+  const buf = await readFile(file);
+  return createHash("sha256").update(buf).digest("hex");
+}
+`,
   // Every library repo has a release script. This was CRITICAL (SHAI_HULUD_WORM).
   "release.js": `const { execSync } = require("child_process");
 module.exports = function release() {
@@ -121,6 +219,32 @@ module.exports = { TABLE };
 
 /** Genuinely malicious code. Each entry must produce its expected rule. */
 const MALICIOUS: Record<string, { source: string; expect: string }> = {
+  // The recall half for the newly-read languages. Before SCANNABLE_EXTENSIONS was
+  // widened these files were not opened at all, so byte-identical payloads that
+  // score critical in a .js scored exit 0 here.
+  "dropper.ps1": {
+    expect: "EVAL_ATOB",
+    source: `$ErrorActionPreference = "SilentlyContinue"
+$p = eval(atob("Y29uc29sZS5sb2coMSk="));
+Invoke-Expression $p
+`,
+  },
+
+  // Deliberately a JS payload embedded in a Ruby file rather than idiomatic Ruby
+  // exfiltration. That is both the realistic dropper shape and an honest statement
+  // of what widening the extension set buys: the rule tables are JS-shaped, so a
+  // non-JS file gains coverage for language-agnostic rules and for JS smuggled
+  // inside it. Scanning .rb does NOT make this a Ruby analyser, and asserting a
+  // Ruby-syntax exfiltration rule here would encode a capability that does not exist.
+  "vendor_shim.rb": {
+    expect: "EVAL_ATOB",
+    source: `# frozen_string_literal: true
+# Dropped by the postinstall hook; the body is JavaScript, not Ruby.
+PAYLOAD = %q{
+  const r = eval(atob("Y29uc29sZS5sb2coMSk="));
+}
+`,
+  },
   "worm.js": {
     expect: "SHAI_HULUD_WORM",
     source: `const { execSync } = require("child_process");
