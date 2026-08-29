@@ -2070,6 +2070,30 @@ export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
     rule: "SCRIPT_PREINSTALL_EXEC",
     notTestFile: true,
   },
+  {
+    name: "windows-cmd-launcher",
+    pattern: "\\bcmd(?:\\.exe)?(?:\\s+/[dqs])*\\s+/(?:c|k)\\b[^\\r\\n]{0,2048}\\.(?:bat|cmd)\\b",
+    description: "install hook launches a Windows batch or command script",
+    severity: "medium",
+    rule: "SCRIPT_WINDOWS_CMD",
+    notTestFile: true,
+  },
+  {
+    name: "windows-powershell-script",
+    pattern: "\\b(?:powershell|pwsh)(?:\\.exe)?\\b[^\\r\\n]{0,2048}-(?:file|command)\\s+[^\\r\\n]{0,2048}\\.ps1\\b",
+    description: "install hook launches a PowerShell script",
+    severity: "medium",
+    rule: "SCRIPT_POWERSHELL_LAUNCH",
+    notTestFile: true,
+  },
+  {
+    name: "windows-powershell-encoded",
+    pattern: "\\b(?:powershell|pwsh)(?:\\.exe)?\\b[^\\r\\n]{0,2048}-(?:encodedcommand|enc)\\b",
+    description: "install hook launches encoded PowerShell",
+    severity: "critical",
+    rule: "SCRIPT_POWERSHELL_ENCODED",
+    notTestFile: true,
+  },
 ];
 
 // ---------------------------------------------------------------------------

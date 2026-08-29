@@ -80,6 +80,20 @@ describe("Install Guard", () => {
       expect(extractInstallSpecs("npm", ["add", "left-pad"]).installVerb).toBe(true);
     });
 
+    it("npm: exec checks the package it may download and execute", () => {
+      expect(extractInstallSpecs("npm", ["exec", BARE_BAD])).toEqual({
+        verb: "exec",
+        installVerb: true,
+        specs: [{ raw: BARE_BAD, name: BARE_BAD }],
+      });
+      expect(extractInstallSpecs("npm", ["exec", "--", `${PINNED_BAD}`, "--help"]).specs)
+        .toEqual([{ raw: PINNED_BAD, name: "axios", version: "1.14.1" }]);
+      expect(extractInstallSpecs(
+        "npm",
+        ["exec", `--package=${BARE_BAD}`, "--", "package-cli", "--help"],
+      ).specs).toEqual([{ raw: BARE_BAD, name: BARE_BAD }]);
+    });
+
     it("pnpm: add and install are install verbs", () => {
       const result = extractInstallSpecs("pnpm", ["add", "@scope/pkg@2.0.0"]);
       expect(result.installVerb).toBe(true);
@@ -120,6 +134,15 @@ describe("Install Guard", () => {
     it("should block a bare-name feed IOC regardless of version", () => {
       expect(analyzeInstallCommand("npm", ["install", BARE_BAD]).blocked).toBe(true);
       expect(analyzeInstallCommand("npm", ["install", `${BARE_BAD}@9.9.9`]).blocked).toBe(true);
+    });
+
+    it("should block a known-bad package launched via npm exec", () => {
+      const analysis = analyzeInstallCommand("npm", ["exec", BARE_BAD]);
+      expect(analysis.installVerb).toBe(true);
+      expect(analysis.blocked).toBe(true);
+      expect(analysis.verdicts[0]?.findings.some(
+        (finding) => finding.rule === "THREAT_INTEL_PACKAGE_IOC",
+      )).toBe(true);
     });
 
     it("should block a scoped bare-name feed IOC", () => {
@@ -187,6 +210,21 @@ describe("Install Guard", () => {
       expect(code).toBe(2);
       expect(spy.calls).toHaveLength(0);
       expect(log.mock.calls.flat().join("\n")).toContain("BLOCKED");
+    });
+
+    it("does not claim npm exec is clean when its package is known-bad", () => {
+      const spy = spawnSpy();
+      const log = vi.fn();
+      const code = runInstallGuard("npm", ["exec", BARE_BAD], {
+        dryRun: true,
+        spawn: spy.fn,
+        log,
+      });
+      const output = log.mock.calls.flat().join("\n");
+      expect(code).toBe(2);
+      expect(spy.calls).toHaveLength(0);
+      expect(output).toContain("THREAT_INTEL_PACKAGE_IOC");
+      expect(output).not.toContain("no known-bad packages");
     });
 
     it("--force should invoke the manager despite findings, with a warning", () => {
@@ -280,7 +318,7 @@ describe("v5.6.0 gate: install-verb bypasses are closed", () => {
     expect(a.specs.map((s) => s.name)).toEqual(["lodash"]);
   });
 
-  it("genuine non-install verbs still pass through unscanned", () => {
+    it("genuine non-package-bearing verbs still pass through unscanned", () => {
     expect(analyzeInstallCommand("npm", ["run", "build"]).installVerb).toBe(false);
     expect(analyzeInstallCommand("npm", ["ci"]).installVerb).toBe(false);
     expect(analyzeInstallCommand("yarn", ["install"]).installVerb).toBe(false);

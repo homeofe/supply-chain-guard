@@ -18,6 +18,7 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
+  makePackageCoverageFindings,
   truncateMatch,
   validatePatternSet,
 } from "./patterns.js";
@@ -506,6 +507,12 @@ export async function scanVscodeExtension(
         allFiles,
       );
     }
+
+    // A VSIX whose contents were never opened must not receive an affirmative
+    // clean verdict. This is the same contract as npm, PyPI, and directories.
+    findings.push(
+      ...makePackageCoverageFindings(fileCounts.totalFiles, fileCounts.filesScanned),
+    );
 
     const partialScan = hasPartialScanFinding(findings);
 

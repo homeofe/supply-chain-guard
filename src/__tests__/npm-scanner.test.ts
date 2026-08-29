@@ -182,6 +182,26 @@ describe("npm Scanner Patterns", () => {
       expect(matches).toBe(true);
     });
 
+    it.each([
+      "cmd /d /s /c .\\install.bat",
+      "cmd.exe /c scripts\\bootstrap.cmd",
+      "powershell -NoProfile -File .\\install.ps1",
+      "pwsh -Command ./bootstrap.ps1",
+    ])("should detect an auto-run Windows shell launcher: %s", (script) => {
+      const matches = SUSPICIOUS_SCRIPTS.some((pattern) =>
+        new RegExp(pattern.pattern, "i").test(script),
+      );
+      expect(matches).toBe(true);
+    });
+
+    it("should detect an encoded PowerShell launcher", () => {
+      const script = "powershell.exe -NoProfile -EncodedCommand SQBFAFgA";
+      const matches = SUSPICIOUS_SCRIPTS.some((pattern) =>
+        new RegExp(pattern.pattern, "i").test(script),
+      );
+      expect(matches).toBe(true);
+    });
+
     it("should not flag common build scripts", () => {
       const safeScripts = [
         "tsc",
@@ -189,6 +209,7 @@ describe("npm Scanner Patterns", () => {
         "npm run build",
         "echo done",
         "rimraf dist",
+        "node scripts/build-windows.js",
       ];
 
       for (const script of safeScripts) {

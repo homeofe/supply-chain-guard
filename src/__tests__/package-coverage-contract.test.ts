@@ -57,13 +57,17 @@ describe("package coverage contract", () => {
     expect(PARTIAL_SCAN_RULES.has("SCAN_NO_SCANNABLE_FILES")).toBe(false);
   });
 
-  it("is actually wired into the npm scanner", () => {
+  it("is actually wired into every remote package scanner", () => {
     // A pure helper nobody calls is the defect this suite exists to prevent, and
     // the repo has shipped exactly that before (four engines exported, never
     // invoked). Assert the call site, not just the function.
-    const src = fs.readFileSync(path.join(REPO, "src/npm-scanner.ts"), "utf-8");
-    expect(src).toContain("makePackageCoverageFindings(");
-    expect(src).toMatch(/findings\.push\(\s*\.\.\.makePackageCoverageFindings\(/);
+    for (const filename of ["npm-scanner.ts", "pypi-scanner.ts", "vscode-scanner.ts"]) {
+      const src = fs.readFileSync(path.join(REPO, "src", filename), "utf-8");
+      expect(src, filename).toContain("makePackageCoverageFindings(");
+      expect(src, filename).toMatch(
+        /findings\.push\(\s*\.\.\.makePackageCoverageFindings\(/,
+      );
+    }
   });
 });
 

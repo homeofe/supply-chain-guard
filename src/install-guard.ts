@@ -47,6 +47,10 @@ const INSTALL_VERBS: Record<PackageManager, ReadonlySet<string>> = {
   bun: new Set(["add", "install", "i", "a"]),
 };
 
+// npm exec may download a missing package and immediately execute it. It is
+// package-bearing even though npm does not call it an install command.
+const NPM_EXEC_VERBS: ReadonlySet<string> = new Set(["exec", "x"]);
+
 // Flags that consume the NEXT token as their value. Their value must not be
 // mistaken for the install verb or a package spec (v5.6.0 gate finding M3 and
 // its low-severity sibling: `npm --prefix ./x install evil` and
@@ -131,7 +135,8 @@ export function parseSpecToken(token: string): InstallPackageSpec | null {
 }
 
 /**
- * Extract package specs from manager args.
+ * Extract package specs from manager args, including npm exec packages that
+ * may be downloaded immediately before execution.
  *
  * The install verb is the first bare token that IS a known install verb,
  * found by scanning positionally while skipping flags, flag values, and the
@@ -148,6 +153,7 @@ export function extractInstallSpecs(
   const verbs = INSTALL_VERBS[manager];
   let verbIdx = -1;
   let verb: string | undefined;
+  let npmExec = false;
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -159,9 +165,15 @@ export function extractInstallSpecs(
     }
     if (verb === undefined) verb = a; // first bare token, for reporting
     if (verbs.has(a)) { verbIdx = i; verb = a; break; }
+    if (manager === "npm" && NPM_EXEC_VERBS.has(a)) {
+      verbIdx = i;
+      verb = a;
+      npmExec = true;
+      break;
+    }
     // `global` is a positional modifier (npm/yarn `global add`), not the verb.
     if (a === "global") continue;
-    // A different bare token before any install verb (run, ci, exec, a script
+    // A different bare token before any package-bearing verb (run, ci, a script
     // name, ...): not an install command, stop.
     break;
   }
@@ -170,6 +182,36 @@ export function extractInstallSpecs(
 
   const specs: InstallPackageSpec[] = [];
   const rest = args.slice(verbIdx + 1);
+  if (npmExec) {
+    // The first positional is the executable package; later positionals are
+    // arguments for that executable and must not be misreported as packages.
+    for (let i = 0; i < rest.length; i++) {
+      const token = rest[i];
+      if (token === "--") {
+        // After an explicit --package, everything beyond `--` is the command
+        // and its arguments. With no explicit package, `--` introduces the
+        // positional package form (`npm exec -- pkg`).
+        if (specs.length > 0) break;
+        continue;
+      }
+      if (token === "--package" || token === "-p") {
+        const spec = i + 1 < rest.length ? parseSpecToken(rest[++i]!) : null;
+        if (spec) specs.push(spec);
+        continue;
+      }
+      if (token.startsWith("--package=")) {
+        const spec = parseSpecToken(token.substring("--package=".length));
+        if (spec) specs.push(spec);
+        continue;
+      }
+      if (token.startsWith("-")) continue;
+      const spec = parseSpecToken(token);
+      if (spec) specs.push(spec);
+      break;
+    }
+    return { verb, installVerb: true, specs };
+  }
+
   for (let i = 0; i < rest.length; i++) {
     const token = rest[i];
     if (token.startsWith("-")) {
@@ -223,7 +265,7 @@ export interface InstallCommandAnalysis {
   manager: PackageManager;
   /** First non-flag manager arg (undefined when args are all flags/empty) */
   verb?: string;
-  /** True when the verb adds new packages from the command line */
+  /** True when the verb can acquire a package named on the command line */
   installVerb: boolean;
   specs: InstallPackageSpec[];
   /** One verdict per spec; findings empty = clean */

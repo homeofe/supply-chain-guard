@@ -87,6 +87,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - Nested `poetry.lock`, `uv.lock` and `Pipfile.lock` files now receive the same IOC checks
   as root lockfiles. Lockfile dispatch skips `vendor/` and `target/`, while raw digest
   scanning of files in those trees remains intact.
+- PyPI and VS Code package scans now emit the same zero-coverage finding as npm when
+  an artifact contains no file the scanner opened, instead of permitting an implicit
+  clean verdict for unread contents.
+- `supply-chain-guard guard npm exec <package>` now checks the package against threat
+  intelligence before npm can download and execute it, including the positional and
+  `--package` forms.
+- Auto-run npm lifecycle hooks now flag bounded Windows `cmd` batch launchers,
+  PowerShell script launchers, and encoded PowerShell commands. Windows payload files
+  were already opened by this release; their package-script execution edge is now
+  reported too.
 
 
 - **Six false positives that had been shipping for about two months.** All were

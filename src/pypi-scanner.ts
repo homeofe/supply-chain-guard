@@ -23,6 +23,7 @@ import {
   SCANNABLE_EXTENSIONS,
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
+  makePackageCoverageFindings,
   truncateMatch,
 } from "./patterns.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
@@ -134,6 +135,12 @@ export async function scanPypiPackage(
   const fileCounts = await scanPypiReleaseArtifacts(
     metadata.urls ?? [],
     findings,
+  );
+
+  // Match the npm and directory contracts: no opened package files is a
+  // coverage finding, never an implicit clean verdict.
+  findings.push(
+    ...makePackageCoverageFindings(fileCounts.totalFiles, fileCounts.filesScanned),
   );
 
   // Capture coverage before minimum-severity filtering can hide an
