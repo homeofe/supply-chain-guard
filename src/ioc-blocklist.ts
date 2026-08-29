@@ -1513,6 +1513,22 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["1.0.16"],
     description: "postmark-mcp hostile MCP server: developer-introduced hidden BCC of every outbound email to attacker-controlled address; 1.0.15 and earlier are clean (Sep 2025)",
   },
+  // --- Contagious Interview "Fake Font" hijacks (JFrog, June 29 2026) ----------
+  // Two LEGITIMATE npm packages whose maintainer account was abused to publish one
+  // poisoned release each on 2026-05-25, carrying a VS Code task that runs a payload
+  // disguised as public/fonts/fa-solid-400.woff2 and drops InvisibleFerret. npm has
+  // since removed both versions. Version-pinned, NOT name-blocked: registry-verified
+  // 2026-08-29, html-to-gutenberg has 10 clean releases (2025-07-11..2026-03-29) and
+  // fetch-page-assets 22 (2024-05-21..2026-03-29), all still installable. They were
+  // carried as bare names until 2026-08-29, which flagged every clean release.
+  "html-to-gutenberg": {
+    versions: ["4.2.11"],
+    description: "Contagious Interview Fake Font hijack: single poisoned release, 4.2.10 and earlier are clean (June 2026)",
+  },
+  "fetch-page-assets": {
+    versions: ["1.2.9"],
+    description: "Contagious Interview Fake Font hijack: single poisoned release, 1.2.8 and earlier are clean (June 2026)",
+  },
   // --- Mini Shai-Hulud @antv wave (May 19, 2026) -------------------------------
   // Compromised npm maintainer account "atool"; 637 versions across 317 packages
   // published 01:39-02:18 UTC on 2026-05-19. Payload: 498KB obfuscated Bun index.js

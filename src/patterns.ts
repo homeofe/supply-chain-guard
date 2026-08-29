@@ -2181,14 +2181,20 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(postcss-min|aes-decode-runner-pro)$",
 
   // Contagious Interview "Fake Font" npm + Go wave / InvisibleFerret (The Hacker News, June 29, 2026)
-  // DPRK Contagious Interview operation. Two attacker-uploaded npm packages and a cluster of
-  // 16 Go modules conceal a hidden VS Code task ("eslint-check") plus a JavaScript payload
-  // disguised as a web font (public/fonts/fa-solid-400.woff2) that deploys the InvisibleFerret
-  // Python backdoor, using TronGrid/Aptos blockchain transactions as a dead-drop resolver.
-  // The npm packages were uploaded 2026-05-25 and removed - bare-name indicators with no
-  // legitimate history. The font filename and task name are deliberately NOT used as
-  // signatures: both collide with legitimate FontAwesome assets / lint tasks (false positives).
-  "^(html-to-gutenberg|fetch-page-assets)$",
+  // DPRK Contagious Interview operation. A cluster of 16 Go modules conceals a hidden VS Code
+  // task ("eslint-check") plus a JavaScript payload disguised as a web font
+  // (public/fonts/fa-solid-400.woff2) that deploys the InvisibleFerret Python backdoor, using
+  // TronGrid/Aptos blockchain transactions as a dead-drop resolver. The font filename and task
+  // name are deliberately NOT used as signatures: both collide with legitimate FontAwesome
+  // assets / lint tasks (false positives).
+  //
+  // The two npm packages of this wave are NOT listed here, deliberately, and this table cannot
+  // express why. html-to-gutenberg and fetch-page-assets are HIJACK VICTIMS with exactly one
+  // poisoned release each (4.2.11 and 1.2.9); both packages are otherwise legitimate and still
+  // live. A bare name in this table blocks every version, so the entry that used to sit here
+  // was a false positive against ~30 clean releases. The two poisoned versions are carried as
+  // version-pinned feed IOCs in threat-intel.ts instead, which is the only form that can
+  // distinguish them. See the corresponding block there for the registry evidence.
   "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|amantsehay/a2sv-go-course|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)

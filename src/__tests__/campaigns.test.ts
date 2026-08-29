@@ -2060,12 +2060,65 @@ describe("Campaign Signatures", () => {
   // =================================================================
 
   describe("Contagious Interview Fake Font (June 2026)", () => {
-    it("should match the attacker-uploaded npm package names against the malicious-name patterns", () => {
+    // These two packages are HIJACK VICTIMS: JFrog names exactly one poisoned
+    // release each. They were carried as bare names until 2026-08-29, which
+    // blocked every clean release of two live, legitimate packages. The pair of
+    // positive/negative tests below is what keeps that from coming back.
+    it.each([
+      ["html-to-gutenberg", "4.2.11"],
+      ["fetch-page-assets", "1.2.9"],
+    ])("flags the single poisoned release %s@%s", async (name, version) => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { [name]: version },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION" || f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(finding, `${name}@${version} must be flagged`).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it.each([
+      ["html-to-gutenberg", "4.2.10"],
+      ["fetch-page-assets", "1.2.8"],
+    ])("does NOT flag the clean release %s@%s", async (name, version) => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { [name]: version },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hit = report.findings.find(
+        (f) =>
+          f.rule === "IOC_KNOWN_BAD_VERSION" ||
+          f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(
+        hit,
+        `${name}@${version} is a clean release of a live legitimate package and must not be flagged`
+      ).toBeUndefined();
+    });
+
+    it("does not carry either hijacked name as a bare malicious-name pattern", () => {
       for (const name of ["html-to-gutenberg", "fetch-page-assets"]) {
-        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
+        const matches = MALICIOUS_PACKAGE_PATTERNS.filter((pattern) =>
           new RegExp(pattern).test(name),
         );
-        expect(matches).toBe(true);
+        expect(
+          matches,
+          `a bare name pattern for ${name} blocks every clean version of a hijack victim`
+        ).toEqual([]);
       }
     });
 
@@ -2149,6 +2202,47 @@ describe("Campaign Signatures", () => {
           new RegExp(pattern).test(name),
         );
         expect(matches).toBe(true);
+      }
+    });
+
+    // The four ChocoPoC names were written into the feed WITHOUT the `pypi:`
+    // prefix, which in this feed means npm. `frint` is a real npm package (the
+    // Frint framework core plugin, 89 versions, 2016-2018), so the missing
+    // prefix blocked a legitimate library while detecting no PyPI malware.
+    it("does NOT flag the legitimate npm package frint", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { frint: "5.7.2" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hit = report.findings.find(
+        (f) =>
+          f.rule === "IOC_KNOWN_BAD_VERSION" ||
+          f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(
+        hit,
+        "npm frint is the Frint framework core plugin; the ChocoPoC IOC is the PyPI package of the same name"
+      ).toBeUndefined();
+    });
+
+    it("carries all four ChocoPoC package IOCs in the pypi namespace", async () => {
+      const { getBundledFeed } = await import("../threat-intel.js");
+      const feed = getBundledFeed();
+      for (const name of ["frint", "skytext", "slogsec", "logcrypt.cryptography"]) {
+        expect(
+          feed.some((i) => i.type === "package" && i.value === `pypi:${name}`),
+          `${name} must be carried as pypi:${name}`
+        ).toBe(true);
+        expect(
+          feed.some((i) => i.type === "package" && i.value === name),
+          `a bare ${name} entry means the npm namespace and is the inversion this guards`
+        ).toBe(false);
       }
     });
 

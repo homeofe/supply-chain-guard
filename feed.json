@@ -2507,20 +2507,22 @@
     },
     {
       "type": "package",
-      "value": "html-to-gutenberg",
+      "value": "html-to-gutenberg@4.2.11",
       "severity": "critical",
-      "confidence": 0.9,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
+      "source": "JFrog Security Research",
       "firstSeen": "2026-06-29"
     },
     {
       "type": "package",
-      "value": "fetch-page-assets",
+      "value": "fetch-page-assets@1.2.9",
       "severity": "critical",
-      "confidence": 0.9,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
+      "source": "JFrog Security Research",
       "firstSeen": "2026-06-29"
     },
     {
@@ -2741,7 +2743,7 @@
     },
     {
       "type": "package",
-      "value": "frint",
+      "value": "pypi:frint",
       "severity": "critical",
       "confidence": 0.9,
       "family": "ChocoPoC",
@@ -2750,7 +2752,7 @@
     },
     {
       "type": "package",
-      "value": "skytext",
+      "value": "pypi:skytext",
       "severity": "critical",
       "confidence": 0.9,
       "family": "ChocoPoC",
@@ -2759,7 +2761,7 @@
     },
     {
       "type": "package",
-      "value": "slogsec",
+      "value": "pypi:slogsec",
       "severity": "critical",
       "confidence": 0.9,
       "family": "ChocoPoC",
@@ -2768,7 +2770,7 @@
     },
     {
       "type": "package",
-      "value": "logcrypt.cryptography",
+      "value": "pypi:logcrypt.cryptography",
       "severity": "critical",
       "confidence": 0.9,
       "family": "ChocoPoC",

@@ -7,6 +7,57 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **Six false positives that had been shipping for about two months.** All were
+  bare-name package blocks, which flag EVERY version of a name.
+  - `frint`, `skytext`, `slogsec` and `logcrypt.cryptography` are PyPI packages that
+    were written into the bundled feed without the `pypi:` prefix. A bare value in
+    that feed means the npm namespace, so the entries were inverted exactly as
+    CONTRIBUTING and the project notes warn: the real PyPI malware was unreachable
+    through the feed, and the npm package of the same name was flagged critical.
+    `frint` is the Frint framework's core plugin, 89 versions published 2016-07-01 to
+    2018-09-11 by six maintainers, so any project depending on it was told it had
+    installed malware. All four are now carried as `pypi:` entries.
+    `PYPI_TYPOSQUAT_PATTERNS` already held them correctly, so PyPI scanning was
+    unaffected and the fix adds feed coverage rather than changing it.
+  - `html-to-gutenberg` and `fetch-page-assets` were carried as bare names in both
+    the feed and `MALICIOUS_PACKAGE_PATTERNS`. They are hijack victims, not
+    attacker-created names: JFrog names exactly one poisoned release each,
+    `html-to-gutenberg@4.2.11` and `fetch-page-assets@1.2.9`, uploaded 2026-05-25 and
+    since removed by npm. Registry-verified 2026-08-29, both packages remain live and
+    legitimate with 32 clean releases between them and no release at all inside the
+    campaign window. They are now version-pinned in `KNOWN_BAD_NPM_VERSIONS` and in
+    the feed, so the poisoned releases are still detected in a lockfile while the
+    clean ones are not flagged.
+
+- **A refreshed threat feed no longer expires silently.** `loadThreatIntel()` dropped
+  the entire cached feed once it passed 24 hours old and fell back to the bundled feed
+  without any warning, so `supply-chain-guard feed refresh` only helped for a day and
+  a user refreshing on any slower cadence was silently unprotected by it. Threat intel
+  is monotonic: a malicious package@version does not become clean because the file
+  describing it aged, so discarding it could only lower detection. Stale entries are
+  now merged as usual, and the age is reported instead.
+
+### Added
+
+- `getFeedCacheState()` reports whether a refreshed feed cache is present, how many
+  entries it contributed, its age, and whether a refresh is due. `feed stats` shows
+  this in both text and JSON output, and says plainly that stale entries are still
+  being matched.
+- `npm run audit:blocklist` re-validates every bare-name npm block against the live
+  registry and fails when one points at a package that still has a real release
+  history. This is the standing check for the defect class above: a name-block is a
+  claim about the registry at the moment of ingestion, and nothing re-checked it
+  afterwards. Deliberately NOT part of `prebuild`, since it needs the network.
+  `blocklist-audit-allow.json` records the names that are blocked on purpose despite
+  looking live, each with a written reason.
+
+### Changed
+
+- `feed refresh` no longer claims that only "scans in the next 24h" merge the cached
+  entries, which is no longer true and was the source of the expiry behaviour above.
+
 ## [6.0.5] - 2026-08-28
 
 ### Added

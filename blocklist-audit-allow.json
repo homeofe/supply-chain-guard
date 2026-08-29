@@ -1,0 +1,26 @@
+{
+  "$comment": [
+    "Names that scripts/audit-blocklist.mjs would otherwise report as suspected",
+    "false positives, because they still resolve on the npm registry with a real",
+    "release history, but which are deliberately blocked anyway.",
+    "",
+    "Every entry needs a written reason of at least 10 characters; the script",
+    "refuses to run otherwise. A reason must say WHAT justifies blocking every",
+    "version, not merely that someone decided to.",
+    "",
+    "The bar: an upstream malware advisory (GHSA + OSV MAL-) that classifies the",
+    "WHOLE package as malicious is sufficient. A vendor blog post naming specific",
+    "poisoned releases is NOT - that is a hijack, and hijacks get version pins.",
+    "",
+    "Entries here should be revisited when an advisory is withdrawn. Reviewed",
+    "2026-08-29 against the shipped feed."
+  ],
+  "names": {
+    "ecinc-cloud-moaxmpp": "GHSA-65hf-ffjr-7wpg / MAL-2025-6214 classifies the entire package as malware. 65 versions over 731 days, so the audit flags it, but the advisory covers all versions rather than a release range. Most uncomfortable entry in this file: worth re-checking if the advisory is ever withdrawn.",
+    "uol-simple-api-futebol": "GHSA-cmw3-w7ff-wvjv / MAL-2026-6087 classifies the entire package as malware, with no version range narrowing it.",
+    "custom-save-area-block": "GHSA-qjmg-vm87-pgxf / MAL-2026-6152 classifies the entire package as malware. Dormant since 2024-05-20, so a name block cannot collide with new legitimate releases.",
+    "personal-custom-button": "GHSA-rc5f-67q5-hfv2 / MAL-2026-6171 classifies the entire package as malware. Same maintainer and same dormancy as custom-save-area-block.",
+    "0e": "GHSA-ch8j-x95h-wqcv / MAL-2025-49456 classifies the entire package as malware. Dormant since 2021-11-12.",
+    "claude-cup": "GHSA-r663-w5qf-3552 / MAL-2026-5789 classifies the entire package as malware. The 42 releases inside 36 days are the campaign itself, not a legitimate history."
+  }
+}

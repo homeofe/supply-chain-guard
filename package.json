@@ -19,6 +19,7 @@
     "check:release-ancestry": "node scripts/check-release-ancestry.mjs",
     "handoff:refresh": "node scripts/scg-handoff-docs.mjs",
     "feed:generate": "node scripts/generate-feed.mjs",
+    "audit:blocklist": "node scripts/audit-blocklist.mjs",
     "feed:import": "node scripts/import-threat-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
     "prebuild": "npm run check:aahp && npm run check:feed && npm run check:handoff",

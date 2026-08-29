@@ -551,15 +551,24 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "package", value: "go:github.com/verana-labs/verana-blockchain@v0.10.1-dev.20", severity: "critical", confidence: 1.0, family: "MiasmaShaiHuludVariant", campaign: "Miasma LeoPlatform", firstSeen: "2026-06-26" },
 
   // Contagious Interview "Fake Font" npm + Go wave / InvisibleFerret (The Hacker News, June 29, 2026)
-  // DPRK Contagious Interview operation. Two attacker-uploaded npm packages (html-to-gutenberg,
-  // fetch-page-assets; uploaded 2026-05-25, since removed) and a cluster of 16 Go modules conceal
-  // a hidden VS Code task ("eslint-check") plus a JavaScript payload disguised as a web font
-  // (public/fonts/fa-solid-400.woff2) that drops the InvisibleFerret Python backdoor. TronGrid +
-  // Aptos blockchain transactions act as the dead-drop resolver; harvested data is packaged into
-  // ZIP archives and uploaded to a C2 server or a runtime-supplied Telegram bot. No file hashes,
-  // C2 domains, IPs, or wallet addresses were disclosed in the report.
-  { type: "package", value: "html-to-gutenberg", severity: "critical", confidence: 0.9, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "fetch-page-assets", severity: "critical", confidence: 0.9, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  // DPRK Contagious Interview operation. A hidden VS Code task ("eslint-check") plus a JavaScript
+  // payload disguised as a web font (public/fonts/fa-solid-400.woff2) drops the InvisibleFerret
+  // Python backdoor. TronGrid + Aptos blockchain transactions act as the dead-drop resolver;
+  // harvested data is packaged into ZIP archives and uploaded to a C2 server or a runtime-supplied
+  // Telegram bot. No file hashes, C2 domains, IPs, or wallet addresses were disclosed.
+  //
+  // VERSION-PINNED, corrected 2026-08-29. These two npm packages are HIJACK VICTIMS, not
+  // attacker-created names: JFrog names exactly one poisoned release each, html-to-gutenberg
+  // 4.2.11 and fetch-page-assets 1.2.9, both uploaded 2026-05-25. Both packages are legitimate
+  // work by their maintainer and are still live and installable - registry-verified 2026-08-29:
+  // html-to-gutenberg has 10 versions from 2025-07-11 to 2026-03-29 and fetch-page-assets has 22
+  // from 2024-05-21 to 2026-03-29, with ZERO releases inside the campaign window. They were
+  // previously carried as BARE NAMES here and in MALICIOUS_PACKAGE_PATTERNS, which blocked every
+  // clean version of both packages: a false positive that shipped from v5.x on 2026-06-29 until
+  // this correction. Pinning the two named releases keeps the real artifact detected - a lockfile
+  // still holding 4.2.11 or 1.2.9 is exactly what must be caught - without touching clean ones.
+  { type: "package", value: "html-to-gutenberg@4.2.11", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
+  { type: "package", value: "fetch-page-assets@1.2.9", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/lambda-platform/lambda", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/lambda-platform/ebarimt-rest-api", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/lambda-platform/dan", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
@@ -598,12 +607,21 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // hunt bugs. Malicious PyPI packages carry the payload (skytext ~2,400 downloads; frint), tied
   // by researchers to the same actor behind the late-2025 slogsec / logcrypt.cryptography packages.
   // Compiled payloads: gradient.so (Linux) / gradient.pyd (Windows). Upload server 91.132.163.78;
-  // Mapbox abused as a DoH dead drop (NOT blocked). Bare-name PyPI entries - fully malicious packages.
+  // Mapbox abused as a DoH dead drop (NOT blocked).
+  //
+  // ECOSYSTEM PREFIX CORRECTED 2026-08-29. Every one of these four is a PyPI package, and the
+  // entries were written WITHOUT the `pypi:` prefix, which in this feed means the npm namespace.
+  // That inverted them exactly as CLAUDE.md warns: the real PyPI malware was unreachable through
+  // the feed, while the npm name of the same string was flagged critical. `frint` is a real npm
+  // package - the Frint framework's core plugin, 89 versions published 2016-07-01 to 2018-09-11
+  // by six maintainers - so the missing prefix blocked a legitimate ten-year-old library from
+  // 2026-07-02 until this correction, and detected nothing in return. PYPI_TYPOSQUAT_PATTERNS
+  // already carried these four correctly, which is why the PyPI scanner path was unaffected.
   { type: "ip", value: "91.132.163.78", severity: "critical", confidence: 1.0, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
-  { type: "package", value: "frint", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
-  { type: "package", value: "skytext", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
-  { type: "package", value: "slogsec", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
-  { type: "package", value: "logcrypt.cryptography", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
+  { type: "package", value: "pypi:frint", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
+  { type: "package", value: "pypi:skytext", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2026-07-02" },
+  { type: "package", value: "pypi:slogsec", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
+  { type: "package", value: "pypi:logcrypt.cryptography", severity: "critical", confidence: 0.9, family: "ChocoPoC", campaign: "ChocoPoC Fake PoC Repos", firstSeen: "2025-11-01" },
 
   // PolinRider DPRK supply-chain campaign (Socket / The Hacker News / SecurityWeek, July 6, 2026)
   // North-Korea-linked cluster (Contagious Interview / Famous Chollima), active since Dec 2025,
@@ -14454,6 +14472,18 @@ const BUNDLED_FEED: FeedIOC[] = [
 // to the exact location loadThreatIntel() reads from.
 export const CACHE_DIR = ".scg-cache";
 export const FEED_CACHE_FILE = "threat-feed.json";
+/**
+ * How old a refreshed feed cache may get before `feed refresh` is due again.
+ *
+ * This is a REFRESH-DUE threshold, not an expiry. Until v6.0.6 it was an
+ * expiry: a cache older than this was dropped whole and the scan silently fell
+ * back to the bundled feed, so a user who ran `feed refresh` weekly was
+ * unprotected by it for six days out of seven and was never told. Threat intel
+ * is monotonic - a malicious package@version does not stop being malicious
+ * because the file describing it is two days old - so discarding it could only
+ * ever lower detection. Stale entries are now merged as usual and the staleness
+ * is reported through getFeedCacheState() for the CLI to surface.
+ */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
@@ -14553,6 +14583,31 @@ interface FeedCacheEntry {
 }
 let memoizedFeed: FeedCacheEntry | null = null;
 
+/** What the last loadThreatIntel() call found in the on-disk feed cache. */
+export interface FeedCacheState {
+  /** A readable cache file was present and parsed. */
+  present: boolean;
+  /** Entries merged from it, after validation. */
+  entryCount: number;
+  /** Age of the cached document, in ms. Undefined when absent or unparsable. */
+  ageMs?: number;
+  /** Age exceeds CACHE_TTL_MS: still used, but a refresh is due. */
+  stale: boolean;
+}
+
+let lastCacheState: FeedCacheState = { present: false, entryCount: 0, stale: false };
+
+/**
+ * State of the feed cache as of the last loadThreatIntel() call.
+ *
+ * Callers use this to tell a user that their refreshed intel is ageing. It is
+ * deliberately a separate accessor rather than a field on the returned array,
+ * because that array is shared and frozen-by-convention (see loadThreatIntel).
+ */
+export function getFeedCacheState(): FeedCacheState {
+  return { ...lastCacheState };
+}
+
 /**
  * Drop the memoized feed (and, with it, the derived package index).
  *
@@ -14604,16 +14659,19 @@ export function loadThreatIntel(
   if (memoizedFeed && memoizedFeed.key === key) return memoizedFeed.feed;
 
   let feed = [...BUNDLED_FEED];
+  let state: FeedCacheState = { present: false, entryCount: 0, stale: false };
 
-  // Try to load cached remote feed
+  // Try to load cached remote feed. Age does NOT gate the merge: see
+  // CACHE_TTL_MS. A stale cache is reported, never silently discarded.
   if (stat) {
     try {
       const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
         timestamp: string;
         entries: FeedIOC[];
       };
-      const age = Date.now() - new Date(cached.timestamp).getTime();
-      if (age < CACHE_TTL_MS && Array.isArray(cached.entries)) {
+      const parsedAt = new Date(cached.timestamp).getTime();
+      const age = Number.isFinite(parsedAt) ? Date.now() - parsedAt : undefined;
+      if (Array.isArray(cached.entries)) {
         // Quarantine invalid entries instead of trusting the cast: cached
         // remote data reaches the per-file scan loop, so a malformed entry
         // must never leave this function (issue #54).
@@ -14621,9 +14679,17 @@ export function loadThreatIntel(
           .filter(isValidFeedIOC)
           .map(normalizeFeedIOC);
         feed = mergeFeeds(feed, remoteEntries);
+        state = {
+          present: true,
+          entryCount: remoteEntries.length,
+          ageMs: age,
+          stale: age !== undefined && age >= CACHE_TTL_MS,
+        };
       }
     } catch { /* ignore corrupt cache */ }
   }
+
+  lastCacheState = state;
 
   memoizedFeed = { key, feed };
   return feed;

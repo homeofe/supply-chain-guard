@@ -27,6 +27,7 @@ import {
   matchPackageIOC,
   getBundledFeed,
   resetThreatIntelCache,
+  getFeedCacheState,
   FEED_CACHE_FILE,
   type FeedIOC,
 } from "../threat-intel.js";
@@ -418,11 +419,53 @@ describe("cached-feed consumption at scan time", () => {
     expect(matchPackageIOC("ruby", "evil-extra-gem-feed-test", "1.0.0", getBundledFeed())).toBeNull();
   });
 
-  it("does not merge a stale cache (older than 24h)", () => {
+  // Until v6.0.6 a cache older than 24h was DROPPED WHOLE and the scan silently
+  // fell back to the bundled feed. Threat intel is monotonic - a malicious
+  // package@version does not become clean because the file describing it aged -
+  // so discarding it could only lower detection, and it did so without telling
+  // anyone. A stale cache is now merged and reported as needing a refresh.
+  it("still merges a stale cache (older than 24h) rather than discarding it", () => {
     writeCache([EXTRA_DOMAIN_IOC], 48 * 60 * 60 * 1000);
     const feed = loadThreatIntel(tmpDir);
-    expect(feed.length).toBe(getBundledFeed().length);
-    expect(feed.some((i) => i.value === EXTRA_DOMAIN)).toBe(false);
+    expect(feed.length).toBe(getBundledFeed().length + 1);
+    expect(feed.some((i) => i.value === EXTRA_DOMAIN)).toBe(true);
+  });
+
+  it("reports a stale cache as refresh-due, with its age and entry count", () => {
+    writeCache([EXTRA_DOMAIN_IOC], 48 * 60 * 60 * 1000);
+    loadThreatIntel(tmpDir);
+    const state = getFeedCacheState();
+    expect(state.present).toBe(true);
+    expect(state.stale).toBe(true);
+    expect(state.entryCount).toBe(1);
+    expect(state.ageMs).toBeGreaterThanOrEqual(47 * 60 * 60 * 1000);
+  });
+
+  it("reports a fresh cache as not refresh-due", () => {
+    writeCache([EXTRA_DOMAIN_IOC]);
+    loadThreatIntel(tmpDir);
+    const state = getFeedCacheState();
+    expect(state.present).toBe(true);
+    expect(state.stale).toBe(false);
+    expect(state.entryCount).toBe(1);
+  });
+
+  it("reports no cache when none is present", () => {
+    loadThreatIntel(tmpDir);
+    const state = getFeedCacheState();
+    expect(state.present).toBe(false);
+    expect(state.entryCount).toBe(0);
+    expect(state.stale).toBe(false);
+  });
+
+  it("quarantines invalid entries in a stale cache just as in a fresh one", () => {
+    writeCache(
+      [EXTRA_DOMAIN_IOC, { type: "domain" } as never],
+      72 * 60 * 60 * 1000,
+    );
+    const feed = loadThreatIntel(tmpDir);
+    expect(feed.length).toBe(getBundledFeed().length + 1);
+    expect(getFeedCacheState().entryCount).toBe(1);
   });
 
   it("ignores a corrupt cache file", () => {

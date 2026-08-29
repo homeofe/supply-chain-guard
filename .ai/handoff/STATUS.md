@@ -1,3 +1,92 @@
+## 2026-08-29: Feed correctness and delivery, after a project-health review
+
+Branch `fix/feed-correctness-and-delivery`. Triggered by a request to review project
+health against a belief that adoption was declining. Model: claude-opus-5.
+
+### The premise did not hold, and that matters for what follows
+
+npm download data contradicts a decline. Monthly totals: 2026-03 420, 04 2,357,
+05 3,536, 06 4,215, 07 9,621, 08 8,735 through the 28th. Normalised per day, July is
+310/day and August 312/day, so the last two months are FLAT after strong growth, not
+falling. Weekly variance is 2-3x routinely (800, then 3,397, then 1,741), so no single
+week is a trend. The most recent week is the weakest in six, which is worth watching
+and is not evidence of decline.
+
+What the review did find is a genuine correctness problem and a genuine delivery
+problem. Neither is visible in the download curve.
+
+### Six false positives were shipping, and the mechanism is systemic
+
+An audit of all 2,746 bare-name npm blocks in the shipped feed against the live
+registry classified them: 1,739 npm takedown holdings, 839 live, 89 gone, 79
+unpublished stubs. Of the 839 live, 816 have a publish span under 14 days, which is
+campaign-shaped and correctly blocked. Twenty-three did not, and six of those had no
+advisory id at all: they were hand-added campaign enrichment.
+
+Three were wrong (see CHANGELOG for the full detail): the four ChocoPoC names lost
+their `pypi:` prefix and inverted into the npm namespace, blocking the ten-year-old
+`frint` framework plugin; and `html-to-gutenberg` / `fetch-page-assets` were
+name-blocked as "attacker-uploaded, since removed" when JFrog had in fact reported
+them as hijack victims with one poisoned release each. Both packages are still live
+with 32 clean releases between them.
+
+The mechanism is what should be recorded: **a bare-name block is a claim about the
+registry at one moment, and nothing ever re-checked it.** It decays in both
+directions - an attacker name can be released back to a legitimate owner, and a
+write-up can be misread at ingestion time. No offline gate can catch either, because
+the evidence lives in the registry rather than in the repo. `npm run audit:blocklist`
+is the answer to that and now exits 0 across all 2,734 remaining blocks.
+
+### The 24h cache expiry was the reason for the daily-release treadmill
+
+`loadThreatIntel()` dropped a refreshed feed cache whole once it passed 24h and said
+nothing. So `feed refresh` was only useful to someone running it daily, and the npm
+release was in practice the only reliable way to receive new IOCs. That explains the
+release cadence: 145 releases in about six months, 51 in July and 32 in August, and
+six consecutive days of 6.0.0 through 6.0.5. Every consumer with this package in
+devDependencies gets a dependency-update PR essentially every day, which is real
+adoption friction that no download graph would show as a cause.
+
+Stale entries are now merged and reported rather than discarded, which makes
+`feed refresh` useful at any cadence and removes the functional reason to release
+daily. The release cadence itself is a process decision and is NOT changed here.
+
+### Measurements, including one that contradicted the reviewer
+
+Taken on the Linux runner against this branch:
+
+- Full suite 136/137 under parallel load, 137/137 with the one failure re-run alone.
+  That failure is `beacon-miner.test.ts` "keeps nested and sequential geo-gate analysis
+  linear on 5 MiB", a timing test: 8.29s in isolation, failing only under contention.
+  Same known class as the v5.28.0 tag-run failure.
+- Mutation proofs, both with a clean baseline and a green post-restore:
+  reintroducing the stale-drop gate turns exactly the three new cache tests red;
+  removing the `pypi:` prefix turns the two ChocoPoC regression tests red, including
+  "does NOT flag the legitimate npm package frint".
+- Bundled feed cost: 13,650 entries, feed.json 2.92 MB, `dist/threat-intel.js` 2.35 MB
+  of a 7.46 MB unpacked package. Importing that module costs **101 ms** on every CLI
+  invocation and retains 3.93 MB of heap.
+- **Feed size is not a scan-throughput problem, contrary to the reviewer's own earlier
+  claim.** `checkThreatIntel` on a 104 KB file costs 4.72 ms at 500 entries and 9.44 ms
+  at 13,650: 27x the entries for 2x the cost, because the matcher is properly indexed
+  and a fixed per-call cost dominates. The cost of feed growth is startup time and
+  package size, not per-file matching. Any future argument for trimming the bundle
+  should rest on those two, not on scan speed.
+
+### Needs a decision from the owner
+
+- **Release cadence.** With the cache fix, same-day IOCs no longer require a release.
+  Moving threat-intel data to a slower release train (weekly, or only with code
+  changes) would cut dependency-update noise for every consumer. Not done here: it is
+  a process and distribution decision, not a code one.
+- **`ecinc-cloud-moaxmpp` is the least comfortable allowlist entry.** 65 versions over
+  731 days with a release as recent as 2026-06-07, blocked on the strength of
+  GHSA-65hf-ffjr-7wpg / MAL-2025-6214, which classifies the whole package as malware.
+  Upstream advisory was preferred over the local heuristic, but it deserves a second
+  look.
+- The five other allowlisted names are advisory-backed and dormant, so they are low
+  risk, but the file is the place to revisit them if an advisory is withdrawn.
+
 ## 2026-08-28: Release v6.0.5
 
 Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the

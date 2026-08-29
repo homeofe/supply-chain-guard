@@ -842,7 +842,7 @@ feedCmd
   .option("-f, --format <format>", "Output format: text, json", "text")
   .action(async (opts: { format: string }) => {
     try {
-      const { getBundledFeed, loadThreatIntel } = await import("./threat-intel.js");
+      const { getBundledFeed, loadThreatIntel, getFeedCacheState } = await import("./threat-intel.js");
       const { feedStats, feedFreshness, FEED_STALE_AFTER_DAYS } = await import("./feed.js");
       const bundled = getBundledFeed();
       const effective = loadThreatIntel();
@@ -852,6 +852,8 @@ feedCmd
       // pin current, and only the pair shows that.
       const freshness = feedFreshness(effective);
       const bundledFreshness = feedFreshness(bundled);
+      // Must be read AFTER loadThreatIntel(), which is what populates it.
+      const cache = getFeedCacheState();
 
       if (opts.format === "json") {
         console.log(
@@ -862,6 +864,12 @@ feedCmd
               freshness,
               bundledFreshness,
               staleAfterDays: FEED_STALE_AFTER_DAYS,
+              cache: {
+                present: cache.present,
+                entryCount: cache.entryCount,
+                ageHours: cache.ageMs === undefined ? null : Math.round(cache.ageMs / 3600000),
+                refreshDue: cache.stale,
+              },
             },
             null,
             2,
@@ -877,7 +885,19 @@ feedCmd
 
       console.log(`\n  Threat-intel feed statistics:\n`);
       console.log(`  Bundled entries:   ${bundled.length}`);
-      console.log(`  Effective entries: ${stats.total} (bundled + fresh cache)`);
+      console.log(`  Effective entries: ${stats.total} (bundled + refreshed cache)`);
+      if (cache.present) {
+        const hrs = cache.ageMs === undefined ? null : Math.round(cache.ageMs / 3600000);
+        console.log(
+          `  Refreshed cache:   ${cache.entryCount} entries` +
+            (hrs === null ? "" : `, ${hrs}h old`) +
+            (cache.stale ? "  [refresh due]" : ""),
+        );
+      } else {
+        console.log(
+          `  Refreshed cache:   none - run \`supply-chain-guard feed refresh\` for same-day IOCs`,
+        );
+      }
       console.log(`\n  Rule-set age (stale after ${FEED_STALE_AFTER_DAYS} days):`);
       console.log(`    bundled with this version  ${describeAge(bundledFreshness)}`);
       console.log(`    effective at scan time     ${describeAge(freshness)}`);
@@ -886,6 +906,13 @@ feedCmd
           `\n  This rule set is stale. Scanning is offline, so indicators published\n` +
             `  after that date cannot be detected. Update the package, or run\n` +
             `  \`supply-chain-guard feed refresh\` before scanning.`,
+        );
+      }
+      if (cache.stale) {
+        console.log(
+          `\n  The refreshed cache is over 24h old. Its ${cache.entryCount} entries are STILL\n` +
+            `  being matched - stale intel is not discarded - but anything published\n` +
+            `  since then is missing. Run \`supply-chain-guard feed refresh\` to top it up.`,
         );
       }
       console.log(`\n  By type:`);
@@ -917,7 +944,8 @@ feedCmd
       const result = await refreshFeed(opts.url ?? DEFAULT_FEED_URL, opts.cacheDir);
       console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
       console.log(`  Cache file: ${result.cachePath}`);
-      console.log(`  Scans in the next 24h automatically merge these entries.\n`);
+      console.log(`  Every scan from now on merges these entries over the bundled feed.`);
+      console.log(`  They do not expire; refresh daily to keep picking up new IOCs.\n`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`\n  Error: ${message}\n`);
