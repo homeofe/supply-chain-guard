@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1787922156",
-    "timestamp": "2026-08-28T13:02:36Z",
-    "commit": "1e1b1de",
+    "session_id": "cli-1787989880",
+    "timestamp": "2026-08-29T07:51:20Z",
+    "commit": "a1c0f6b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:dcf40d9d0b22976f3e62448fc68eabd2bfd525773da8e8bfe942d69a13f51201",
-      "updated": "2026-08-28T13:01:06Z",
-      "lines": 5115,
-      "summary": "Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the"
+      "checksum": "sha256:3815e566882ad09367be4b76847c3abb33183b12fe0aed520244d525cd19c1c9",
+      "updated": "2026-08-29T07:51:12Z",
+      "lines": 5256,
+      "summary": "Scheduled daily run. Imported 250 malicious-package IOCs from the GitHub Advisory"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:03a673116556367a842047b955c33be33fd2da99c306cd17623d82e6aa7a1183",
-      "updated": "2026-08-28T13:02:34Z",
+      "updated": "2026-08-28T13:07:52Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:a3b7916ae773fc140d296d66fb3b7ccb5b7d3e11c3ce9e705aa19302cd882fb1",
-      "updated": "2026-08-28T13:02:36Z",
+      "updated": "2026-08-29T07:51:19Z",
       "lines": 162,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d6108e0be8a439317f157ca23bb01d28d95259ea5d3652940c6cccaa7b9ece60",
-      "updated": "2026-08-28T13:02:36Z",
+      "updated": "2026-08-29T07:51:19Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:df86aaccbb19d8e9ed4ee1e166e9298ddef9f108db4cf4822eb3d36fc9697d19",
-      "updated": "2026-08-28T13:02:36Z",
+      "updated": "2026-08-29T07:51:19Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Scheduled daily run. Imported 250 malicious-package IOCs from the GitHub Advisory Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 61879,
-    "full_read": 73936
+    "manifest_plus_core": 63503,
+    "full_read": 75560
   }
 }

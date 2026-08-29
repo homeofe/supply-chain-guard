@@ -1,3 +1,144 @@
+## 2026-08-29: Threat-intel sweep
+
+Scheduled daily run. Imported 250 malicious-package IOCs from the GitHub Advisory
+Database, corroborated against OSV.dev (221 confirmed). No non-package indicator was
+added: STEP 1b found no vendor write-up published since the last run that carries an
+atomic indicator this engine does not already hold. No version bump, no release.
+Model: claude-opus-5.
+
+Changed files: `src/threat-intel.ts`, `feed.json`, `CHANGELOG.md` (under
+`[Unreleased]`), this file, plus the generated handoff set.
+
+### The bare-name share flipped, and the probe is what made it safe
+
+148 of the 250 entries are bare npm names, against 21 in the v6.0.5 batch. A bare name
+blocks every version, so each one was probed against `registry.npmjs.org` before being
+accepted. The result is unambiguous: five answer with npm's takedown marker (a lone
+`0.0.1-security` placeholder, no maintainer), 48 return 404, and 95 return a metadata
+stub carrying only `_id`, `name`, `time` and `_rev`, where the `time` map records the
+single published version alongside an `unpublished` block and the `versions` map is
+absent entirely.
+
+That third shape is the one worth recording, because a naive probe misreads it. A
+`GET` returns **200**, so a liveness check keyed on the status code calls it live; only
+reading `versions` (empty) and `time.unpublished` (present) shows the package is gone.
+142 of those 95-plus-48 are the `3layerdipstack<6 random chars>` family, every one
+published at `0.1.4` on 2026-08-26 and unpublished again on 2026-08-28. Nothing
+installable is reachable by any of the 148 name-blocks.
+
+### The advisory backlog tripled and is worth a decision
+
+The importer reports **1115 entries still queued behind `--limit 250`**, against 355
+after the 2026-08-28 run. The undrainable-backlog check did NOT fire, so nothing is
+aging out yet, and a `--limit 100000` dry run drains the whole window cleanly (1365
+candidates, `remaining 0`, `undrainable 0`). But at 250 per day and roughly 400 new
+advisories per day, the queue is growing faster than it drains.
+
+The queue splits cleanly in two, and the two halves need different answers.
+
+**902 bare names**, almost all of them generated-identifier sweeps: `3layerdipstack*`
+(407), `secure-test-browser*` (215), `classlink-*` (188) and `desmos-graphing-*` (69),
+879 between them. They share a signature: created 2026-08-26, a single version, and
+unpublished again on 2026-08-28.
+
+**463 version pins** across only 79 distinct packages, and `isite` alone is **354 of
+them** from one advisory, GHSA-hmvc-prpq-wwcr. `isite` is one package, not a name
+family: an earlier note in this file grouped it with the name sweeps by prefix, which
+was wrong.
+
+### Coverage for the generated-name families was checked, and there is none
+
+The 2026-08-29 note first recorded this as unverified. It has since been measured, so
+the open item can be stated as fact rather than as a suspicion.
+
+Every one of the 407 `3layerdipstack` candidates was tested against all 37 compiled
+rules in `MALICIOUS_PACKAGE_PATTERNS`: **0 of 407 match**. Same for the other three
+families, 0 of 215, 0 of 188 and 0 of 69. `src/patterns.ts` contains no literal
+mention of any of the four prefixes, and the only entropy check in the codebase
+(`analyzeEntropy`, called from `src/scanner.ts`) runs over file CONTENT, not over
+package names, so no generic name-shape heuristic reaches them either.
+
+**Therefore a `threat-feed-declined.json` entry for these families would remove
+coverage, not restate it.** There is no rule to name in `coveredBy`. The decision not
+to decline is now verified, not merely cautious, and it should not be revisited
+without first adding a rule that actually matches the family.
+
+### Needs a decision from the owner
+
+`isite` is the cheaper lever, and it is separate from the decline question. npm
+converted it into a `0.0.1-security` holding package on 2026-08-27 (registry-verified:
+one version, no maintainer, `description: "security holding package"`), so no
+installable release exists to protect. A single bare name-block would replace all 354
+pins and free 353 slots in one `--limit 250` batch, which is more than a day of drain.
+That is a hand-added enrichment, not something the importer will do, and it is the
+kind of change that wants a deliberate decision rather than a scheduled run.
+
+The generated-name families have no such shortcut. Draining them at 250/day is
+currently the only safe option; the alternative is writing an anchored rule per family
+(for example `^3layerdipstack[a-z0-9]{6}$`) and only then declining them against it.
+
+### `--limit 250` is the wrong instrument, and the owner flagged it
+
+Raised by the owner on 2026-08-29: advisory volume is climbing and will keep climbing,
+so a fixed daily cap cannot hold. That is right, and the measurements below say the cap
+is not actually protecting what its rationale claims.
+
+The documented reason for `--limit 250` is diff review-ability: not forcing a
+thousand-entry machine-generated diff into a public repo. But nobody reads either a
+250-line or a 1365-line generated diff line by line; what carries the review is the
+aggregate verification (registry probes on bare names, ecosystem-prefix correctness).
+Meanwhile the cap IS the only thing currently bounding growth of a bundled artifact,
+which is a different job that it does badly.
+
+Measured on this branch:
+
+- `feed.json` is **13,900 entries / 3.1 MB**, and `src/threat-intel.ts` is 15,525
+  lines, already split into `FEED_CHUNK_n` consts to dodge TS2590. The chunking is
+  itself a symptom.
+- **10,584 of 13,570 package entries are version pins.** 8,038 of those belong to
+  1,630 packages carrying more than one pin.
+- Drain is 250/day. The queue went 355 -> 1,115 in a single day.
+
+**Collapsing pin floods into name-blocks does not rescue this.** Of the 60 largest
+npm pin floods with no existing bare-name entry, only 22 packages (580 pins) are
+safely collapsible - npm-holding, unpublished stub, or 404. The other 38 (1,416 pins)
+are LIVE with large legitimate version histories (`@servicetitan/suppress-warnings`
+342 pins against 335 live versions, `@yeaft/webchat-agent` 147 against 1,672), so a
+bare name-block there would be a false positive. `isite` remains a valid one-off (it
+is npm-held), but there is no general compression lever here.
+
+**The plumbing for the real fix already exists.** `loadThreatIntel(cacheDir,
+remoteFeedUrl)` starts from `BUNDLED_FEED` and layers the remote feed on top, purely
+additively, with a size-bounded fetch and a TTL cache. So the bundle does not have to
+be the complete set: it can carry a recent or high-value slice while the full history
+lives in the hosted feed.
+
+The trade-off is real and is the owner's call, not a scheduled run's: trimming the
+bundle reduces coverage for anyone scanning offline or never fetching the remote feed,
+which is the default. That is a detection decision, not a packaging one.
+
+**Options, in the order they should be considered:**
+
+1. Raise `--limit` to match the arrival rate now (500-750) and accept linear bundle
+   growth. Buys time, solves nothing.
+2. Give the bundle a retention policy (for example: keep all name-blocks and all
+   non-package IOCs, keep version pins for N months, drop older pins whose package
+   npm has since taken down) and make the remote feed the complete record. Bounds the
+   shipped artifact. Needs a decision on default-offline coverage first.
+3. Add anchored rules for the generated-name families, then decline them against
+   those rules. Removes roughly 879 of the current 1,365 queued candidates at the
+   source. Cheapest win on queue pressure, but every rule is a real detection-surface
+   change and must clear the regex-shape validator.
+
+No change was made in this run: all three are considered changes and this is an
+ingestion run.
+
+### Carried forward
+
+- `bundledVersion` in `src/threat-intel.ts` is still ungated and hand-bumped at each
+  release, and `src/threat-intel.ts` / `feed.json` must stay off any version-replace
+  target list. Unchanged by this run, which bumps nothing.
+
 ## 2026-08-28: Release v6.0.5
 
 Cuts the 2026-08-28 threat-intel sweep as v6.0.5 at the owner's go-ahead. Ships the
