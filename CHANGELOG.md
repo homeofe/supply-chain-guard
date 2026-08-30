@@ -9,6 +9,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- Eight names that v6.0.6 pinned at a single implausibly high version
+  (`calcite-web`, `amplitude-experiment`, `intuit-authz`, `qbo-ui-services`,
+  `confluence-editor`, `katal-logger`, `alimama-minisite`, `nx-app`) are now also
+  blocked by bare name. Each was re-probed against the registry first: npm has since
+  seized all eight as security holding packages with no maintainer and no installable
+  version, so blocking every version cannot reach a legitimate release.
+
 - **`TYPOSQUAT_LEVENSHTEIN` now applies a homoglyph-aware leading-character guard.**
   A name is no longer reported as a typosquat when its first character differs from
   the target by something that is not a visual substitution. Measured with the new
@@ -37,6 +44,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   differs at position one.
 
 ### Added
+
+- **250 malicious-package IOCs** imported from the GitHub Advisory Database and
+  corroborated against OSV.dev: 249 npm and one PyPI (`pypi:flask-header-guard@1.0.0`).
+  246 are bare name-blocks and four are version pins (`grafeno-webhook`,
+  `grafeno-billing` and `grafeno-payments` at `1.0.0`, plus the PyPI entry). The batch
+  splits in two:
+  - **195 names in the `3layerdipstack` generated-identifier sweep**, continuing the
+    drain of a family first seen on 2026-08-26. This family has no anchored rule to
+    decline it against, so it is imported name by name.
+  - **51 dependency-confusion lures against real vendor namespaces**, among them
+    `amplitude-session-replay`, `amplitude-react-native`, `confluence-rest`,
+    `jira-projects-backbone`, `firestore-lite`, `calcite-web`, `intuit-authz`,
+    `ring-device-settings-library`, `aws-blog`, `sycm-vendors` and `gclassroom`.
+- **Three indicators for the npm bin entry harvesting campaign** (safedep,
+  2026-08-14), which the advisory importer could only ever cover in part because
+  advisories carry no atomic infrastructure:
+  - C2 apex `jchunt[.]top`, covering the wildcard host
+    `<package>.instances.poc.jchunt[.]top` that the postinstall stager POSTs a host
+    fingerprint to.
+  - C2 IP `152[.]53[.]138[.]110`, which that wildcard host resolves to.
+  - `xbox-one-webdriver-cli@1.0.0`, the one package of the campaign's 21 that was
+    not already pinned by the 2026-08-19 advisory batch.
 
 - **`scripts/measure-typosquat-fp.mjs`**, which makes the typosquat calibration
   reproducible. Every threshold in `dependency-risk-analyzer.ts` was justified by a

@@ -111,6 +111,83 @@ would make the heuristic structurally unable to generalise them. Removing them i
 therefore coupled to a calibration change worth about 24 further false positives, and it
 needs its own measurement against the 29,687-name corpus rather than an assumption. That
 is raised as a separate reviewable pull request and is not bundled here.
+## Threat-intel import, 2026-08-30
+
+Model: Claude Opus 5. Branch `threat-intel/2026-08-30`. Scheduled daily run. No
+version bump: the version belongs to the release, which the owner cuts.
+
+Imported 250 package IOCs (249 npm, one PyPI) and hand-added three atomic indicators
+for the npm bin entry harvesting campaign. Details in the CHANGELOG Unreleased block.
+
+### Every bare name was probed, and none had a legitimate release
+
+246 of the 250 imported entries are bare name-blocks, which block every version, so
+each was probed against `registry.npmjs.org` before being accepted. The result was
+unanimous: 93 npm security holding packages, 81 hard 404s, 72 published-then-
+unpublished. **Zero live packages with a real maintainer and a version history.**
+
+That matters more than usual this run, because 51 of the bare names read as live
+vendor packages: `amplitude-session-replay`, `confluence-rest`, `firestore-lite`,
+`calcite-web`, `intuit-authz`, `ring-device-settings-library`, `jira-projects-backbone`.
+Name shape predicted nothing; the probe settled all 51 the same way. `calcite-web`
+and `firestore-lite` were re-checked against the raw registry response by hand: both
+are holding packages created 2026-08-29 with an empty maintainer list and a single
+`0.0.1-security` placeholder.
+
+### Eight names moved from version pin to name block
+
+v6.0.6 pinned `calcite-web`, `amplitude-experiment`, `intuit-authz`, `qbo-ui-services`,
+`confluence-editor`, `katal-logger`, `alimama-minisite` and `nx-app` at a single
+implausibly high version. This run adds a bare block for each. That is a real widening,
+not bookkeeping: a bare block reaches every version, including any future one. It is
+justified here because npm has since seized all eight names, and npm does not release a
+seized name back to a publisher. Flagged because it is the one judgment call in the run
+rather than a mechanical import.
+
+### The bin entry harvesting campaign was only ever half-importable
+
+safedep published 21 packages on 2026-08-14 whose names are the BINARY names Google's
+scoped packages expose, so an internal build calling a bare `ngsw-config` rather than
+consuming `@angular/service-worker` resolves the public malicious one. Twenty of the 21
+arrived through the advisory importer on 2026-08-19 and were already version-pinned. The
+advisory database carries no C2, so the apex `jchunt[.]top`, the IP `152[.]53[.]138[.]110`
+and the missed 21st package are added by hand.
+
+Two deliberate exclusions, both asserted in `campaigns.test.ts` rather than merely
+intended:
+
+- `104[.]21[.]61[.]226` and `172[.]67[.]216[.]7`, which the write-up lists for the apex,
+  are shared Cloudflare edge addresses fronting millions of ordinary sites.
+- The npm publisher account `rootdaddy-msrc` is NOT added to
+  `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`. That matcher tests literally for
+  `github.com/<account>`, so an npm publisher handle there would be a category error
+  that never matches the thing it names, while risking a false positive on an unrelated
+  GitHub user of the same name.
+
+The 21 squatted names stay version-pinned rather than name-blocked, unlike the 246
+above, because they collide with real Google and Angular CLI binary names that those
+projects could legitimately publish. All 21 currently probe as unpublished.
+
+### Needs a decision from the owner
+
+**The `3layerdipstack` drain is now the whole run.** 195 of today's 250 slots went to
+that one family, leaving 55 for everything else, and 920 candidates are still queued.
+The 2026-08-29 note verified that declining the family would remove coverage, because
+0 of 407 candidates match any rule in `MALICIOUS_PACKAGE_PATTERNS` and there is nothing
+to name in `coveredBy`. That verification still holds and this run did not revisit it.
+
+The unblocked half of that decision is still open: adding an anchored rule such as
+`^3layerdipstack[a-z0-9]{5,6}$` to `MALICIOUS_PACKAGE_PATTERNS` and only then declining
+the family against it would free roughly 200 slots per run and shrink the bundled feed.
+Writing a pattern that blocks a name shape rather than a known name is a deliberate
+widening of the tool's behaviour, so it is left for the owner rather than taken by a
+scheduled job.
+
+**Advisory volume has a named cause.** The 2026-08-28 ThreatsDay recap reports that the
+GitHub Advisory Database now ingests OpenSSF `malicious-packages` across all eight
+ecosystems. The backlog growth the 2026-08-29 note flagged is therefore structural and
+will not subside, which sharpens the open question about `--limit 250` already recorded
+there.
 
 ## v6.0.6 release preparation (2026-08-29)
 

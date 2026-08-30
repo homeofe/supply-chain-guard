@@ -286,6 +286,16 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // are deliberately NOT listed - blocking a possible victim on an unresolved
   // attribution is exactly the false positive that gets a scanner switched off.
 
+  // npm bin entry harvesting (safedep, August 14 2026). 21 packages named after the
+  // BINARY names Google's scoped packages expose (ngsw-config, bazelisk, tfjs-inference
+  // and friends), so an internal build that calls the bare bin name resolves the public
+  // malicious package. The stager POSTs a host fingerprint over HTTPS to a per-package
+  // path under a wildcard host, hxxps://<pkg>.instances.poc.jchunt[.]top. Listed at the
+  // apex rather than at the published wildcard label: matching here is an unanchored
+  // substring test, so this one entry covers every subdomain without double-reporting.
+  // Attacker-registered throwaway .top, no legitimate service behind it.
+  "jchunt.top",
+
   // axios maintainer account takeover - UNC1069 / "Sapphire Sleet" cross-platform RAT
   // (Aikido + LevelBlue, March 31 2026). Extends coverage that previously only pinned
   // axios@1.14.1 / @0.30.4 and plain-crypto-js@4.2.1: this is the dropper's C2, reached
@@ -519,6 +529,13 @@ export const KNOWN_C2_IPS: string[] = [
   // Single-source for the atomic indicators (only TrendAI published them), so the feed
   // entry carries 0.85; the 14-package list is corroborated by The Hacker News.
   "217.60.77.63",
+
+  // npm bin entry harvesting (safedep, August 14 2026). The wildcard C2 host
+  // *.instances.poc.jchunt[.]top resolves here. The two Cloudflare addresses the
+  // write-up also lists for the apex (104[.]21[.]61[.]226 and 172[.]67[.]216[.]7) are
+  // deliberately NOT listed: those are shared Cloudflare edge IPs fronting millions of
+  // ordinary sites, and blocking them would flag unrelated projects on sight.
+  "152.53.138.110",
 ];
 
 // ---------------------------------------------------------------------------

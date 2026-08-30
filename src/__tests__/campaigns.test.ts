@@ -5435,4 +5435,68 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // npm Bin Entry Harvesting (safedep, August 14 2026)
+  // =================================================================
+
+  describe("npm Bin Entry Harvesting (August 2026)", () => {
+    it("should detect the wildcard C2 host at any subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "postinstall.js"),
+        'const url = "https://ngsw-config.instances.poc.jchunt.top/ngsw-config";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the C2 IP the wildcard host resolves to", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "config.js"),
+        'const host = "152.53.138.110";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The two Cloudflare edge addresses the write-up lists for the apex front
+    // millions of ordinary sites. Blocking them would flag unrelated projects, so
+    // they must stay out of the blocklist - asserted, not merely intended.
+    it("must NOT flag the shared Cloudflare edge IPs from the same write-up", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "cdn.js"),
+        'const edge = ["104.21.61.226", "172.67.216.7"];'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+        "shared Cloudflare edge IPs must never be treated as campaign infrastructure",
+      ).toBeUndefined();
+    });
+
+    // These names collide with real Google/Angular CLI binary names, so they are
+    // version-pinned rather than name-blocked: the malicious 1.0.0 must match and a
+    // version the campaign never published must not.
+    it("pins the bin-name squats by version, never by bare name", () => {
+      const feed = getBundledFeed();
+      for (const name of ["xbox-one-webdriver-cli", "ngsw-config", "bazelisk"]) {
+        expect(matchBareNpmIOC(name, "1.0.0", feed), name).toBeTruthy();
+        expect(
+          matchBareNpmIOC(name, "9.9.9", feed),
+          `${name}: a version the campaign never published must NOT match`,
+        ).toBeNull();
+      }
+    });
+  });
+
 });
