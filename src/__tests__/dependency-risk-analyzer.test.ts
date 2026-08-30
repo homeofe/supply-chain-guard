@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { analyzeDependencyRisks, levenshtein } from "../dependency-risk-analyzer.js";
+import {
+  analyzeDependencyRisks,
+  classifyTyposquat,
+  levenshtein,
+} from "../dependency-risk-analyzer.js";
 
 describe("Dependency Risk Analyzer", () => {
   describe("levenshtein", () => {
@@ -269,6 +273,60 @@ describe("Dependency Risk Analyzer", () => {
         expect(f.confidence).toBeGreaterThan(0);
         expect(f.confidence).toBeLessThanOrEqual(1);
       }
+    });
+  });
+
+  // The homoglyph-aware leading-character guard. Numbers come from
+  // scripts/measure-typosquat-fp.mjs over 31,200 real npm names: the guard removes
+  // 19 of 27 hits and loses none of the curated squats. These tests pin both halves
+  // of that result so a future change to the guard cannot quietly trade one for the
+  // other.
+  describe("leading-character guard", () => {
+    it("keeps every curated squat, including the leading homoglyph", () => {
+      const curated: Array<[string, string]> = [
+        ["lodas", "lodash"],
+        ["lodahs", "lodash"],
+        ["1odash", "lodash"], // leading 1-for-l: the case a blanket guard would lose
+        ["l0dash", "lodash"], // differs at position ONE, not zero
+        ["axois", "axios"],
+        ["raect", "react"],
+        ["yarsg", "yargs"],
+        ["chlak", "chalk"],
+        ["expres", "express"],
+      ];
+      for (const [squat, target] of curated) {
+        const hit = classifyTyposquat(squat);
+        expect(hit, `${squat} must still be classified as a typosquat`).toBeDefined();
+        expect(hit?.popular, `${squat} should point at ${target}`).toBe(target);
+      }
+    });
+
+    // Registry-sampled 2026-08-30: each of these is a live package with a real
+    // maintainer and a coherent description, one edit from a popular name only
+    // because its leading letter happens to differ. They are the dominant
+    // false-positive shape this guard exists to remove.
+    it("stops flagging live packages whose leading letter is simply different", () => {
+      for (const name of [
+        "focha", // Mocha wrapper by bahmutov
+        "meact", // Markdown React renderer
+        "xeact",
+        "zeact",
+        "xedis",
+        "xebug",
+        "zrequest",
+        "zrestify",
+      ]) {
+        expect(
+          classifyTyposquat(name),
+          `${name} is a real package, not a squat of a popular one`,
+        ).toBeUndefined();
+      }
+    });
+
+    it("still flags collisions that share the leading character", () => {
+      // rract is a taken-down squat ("Security placeholder" on the registry) and
+      // shares react's leading r, so the guard must not reach it.
+      expect(classifyTyposquat("rract")?.popular).toBe("react");
     });
   });
 });

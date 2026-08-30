@@ -7,6 +7,42 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- **`TYPOSQUAT_LEVENSHTEIN` now applies a homoglyph-aware leading-character guard.**
+  A name is no longer reported as a typosquat when its first character differs from
+  the target by something that is not a visual substitution. Measured with the new
+  `scripts/measure-typosquat-fp.mjs` over 31,200 real npm names:
+
+  | Variant | Flagged | Curated squats lost |
+  | --- | --- | --- |
+  | Without any guard | 27 | - |
+  | Blanket first-character guard | 8 | 1 (`1odash`) |
+  | Homoglyph-aware guard (shipped) | 8 | **0** |
+
+  The 19 suppressed names were sampled against the registry and are live packages
+  with real maintainers: `focha` (a Mocha wrapper), `meact` (a Markdown React
+  renderer), `xeact`, `zeact`, `xedis`, `xebug`, `zrequest`, `zrestify` and others.
+  All nine curated squats still hit, including `1odash`, whose leading `1`-for-`l`
+  is exactly what the homoglyph map is for.
+
+  This supersedes a comment that rejected any first-character predicate because
+  `1odash` and `l0dash` "both change character zero". Only `1odash` does; `l0dash`
+  differs at position one.
+
+### Added
+
+- **`scripts/measure-typosquat-fp.mjs`**, which makes the typosquat calibration
+  reproducible. Every threshold in `dependency-risk-analyzer.ts` was justified by a
+  false-positive count over real npm names, but the corpus and the counting were
+  never committed, so the numbers could not be re-checked after a change. The script
+  draws a corpus across 156 points of the npm replication index, caches it, and calls
+  the shipped classifier rather than a copy of it.
+- **`classifyTyposquat`** is now exported from `dependency-risk-analyzer.ts`. It is a
+  behaviour-preserving extraction of the decision that used to be inline, so the
+  heuristic can be measured and unit-tested directly instead of through a synthetic
+  manifest.
+
 ### Fixed
 
 - **Seven false positives removed from the typosquat tables and package IOC feed.** Each entry of
