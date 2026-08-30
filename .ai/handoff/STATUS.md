@@ -168,20 +168,72 @@ The 21 squatted names stay version-pinned rather than name-blocked, unlike the 2
 above, because they collide with real Google and Angular CLI binary names that those
 projects could legitimately publish. All 21 currently probe as unpublished.
 
+### The 3layerdipstack rule is added; the decline is deliberately NOT
+
+The owner asked for the anchored rule during this session, so
+`^3layerdipstack[a-z0-9]+$` now ships in `MALICIOUS_PACKAGE_PATTERNS`. It is added
+ALONGSIDE the 337 existing feed entries, never in place of them.
+
+Measured before writing it, across the union of the bundled feed and the live import
+queue: **407 distinct names, 407 match the rule, 0 carry a version pin.** The suffix is
+5 or 6 characters (179 and 228) drawn only from `[a-z0-9]`. The rule does not hard-code
+that length, because the family is still being published and a 7-character variant would
+otherwise slip past. All 407 probe as non-installable: 42 holding packages, 81 hard 404s
+and 72 published-then-unpublished among the 337 already carried, and all 70 still queued
+are holding packages.
+
+**The matching `threat-feed-declined.json` entry was NOT added.** The rule alone changes
+nothing about the import queue, because the importer's `dedupe` compares against the
+bundled feed and cannot see `patterns.ts`, so the family will keep being re-proposed
+until it is declined. Declining is the step that actually frees the roughly 200 slots per
+run, and it is also the step that removes coverage if the `coveredBy` claim is wrong. The
+claim is now measured rather than assumed, so the remaining question is not whether the
+rule matches but whether the owner accepts the reach tradeoff:
+
+The cost is measured rather than estimated. `MALICIOUS_PACKAGE_PATTERNS` is read by the
+npm-scanner name check and its package.json fallback, NOT by the generic directory scan,
+which matches exact feed names only. Running both paths against the built CLI:
+
+| Name | Covered by | `scg npm` name check | `scg scan <dir>` |
+| --- | --- | --- | --- |
+| `3layerdipstackm1j2h` | feed entry | `MALICIOUS_PACKAGE_NAME`, **critical** | flagged |
+| `3layerdipstackzq7v4` | rule only | `MALICIOUS_PACKAGE_NAME`, **high** | not flagged |
+
+So a declined name is still caught, but one severity level lower and on one path instead
+of two. The 337 names already in the feed keep the fuller coverage either way, because
+the rule was added alongside them. A decline would apply that downgrade to the 70 queued
+names and to every future member of the family. It is the same tradeoff the
+`@zalastax/nolb-` entry already accepts, and it is a narrowing rather than a loss, but it
+is a deliberate one and belongs to the owner. Both rows above are asserted in
+`campaigns.test.ts` so the tradeoff cannot silently change.
+
+To act on it, add to `threat-feed-declined.json`:
+
+```json
+{
+  "namePrefix": "3layerdipstack",
+  "reason": "Generated-identifier sweep backfilled into the GitHub Advisory Database in batches from 2026-08-26. 407 names catalogued so far, all published at 0.1.4 on 2026-08-26 and taken down within two days. Draining them through the importer consumed 195 of 250 slots on 2026-08-30 and would keep doing so.",
+  "coveredBy": "src/patterns.ts MALICIOUS_PACKAGE_PATTERNS, anchored rule ^3layerdipstack[a-z0-9]+$ (added 2026-08-30). Verified 407 of 407 candidates matched it, none version-pinned, and all 407 non-installable on the registry.",
+  "declinedOn": "2026-08-30"
+}
+```
+
+Then re-run `npm run feed:import -- --dry-run` and confirm it reports the decline and
+exits 0.
+
 ### Needs a decision from the owner
 
-**The `3layerdipstack` drain is now the whole run.** 195 of today's 250 slots went to
-that one family, leaving 55 for everything else, and 920 candidates are still queued.
-The 2026-08-29 note verified that declining the family would remove coverage, because
-0 of 407 candidates match any rule in `MALICIOUS_PACKAGE_PATTERNS` and there is nothing
-to name in `coveredBy`. That verification still holds and this run did not revisit it.
+**The `3layerdipstack` decline is the one open item.** 195 of today's 250 slots went to
+that one family, leaving 55 for everything else, and 70 of the family are still queued.
+The 2026-08-29 note recorded that declining it would remove coverage, because 0 of 407
+candidates matched any rule in `MALICIOUS_PACKAGE_PATTERNS` and there was nothing to name
+in `coveredBy`. **That blocker is now gone**: the anchored rule exists and is verified
+against all 407, as recorded in the section above.
 
-The unblocked half of that decision is still open: adding an anchored rule such as
-`^3layerdipstack[a-z0-9]{5,6}$` to `MALICIOUS_PACKAGE_PATTERNS` and only then declining
-the family against it would free roughly 200 slots per run and shrink the bundled feed.
-Writing a pattern that blocks a name shape rather than a known name is a deliberate
-widening of the tool's behaviour, so it is left for the owner rather than taken by a
-scheduled job.
+What is left is the decline entry itself, with the exact JSON to paste written out above.
+It frees roughly 200 slots per run, and its only cost is that future members of the
+family are covered by the pattern rule rather than by a feed entry, which is a narrower
+reach. That is the owner's call, not a scheduled job's.
 
 **Advisory volume has a named cause.** The 2026-08-28 ThreatsDay recap reports that the
 GitHub Advisory Database now ingests OpenSSF `malicious-packages` across all eight

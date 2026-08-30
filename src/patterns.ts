@@ -2351,6 +2351,39 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // but it is a gap and not a claim of full coverage.
   "^@zalastax\\/nolb-[a-z0-9._-]+$",
 
+  // 3layerdipstack* generated-identifier sweep (GitHub Advisory Database backfill,
+  // August 2026). One unscoped name family of the form 3layerdipstack<suffix>, every
+  // member published at 0.1.4 on 2026-08-26 and taken down two days later. GHSA has
+  // catalogued 407 of them so far and they arrive a few hundred at a time, which made
+  // this one family consume 195 of the 250 slots in the 2026-08-30 import.
+  //
+  // Registry-verified: all 407 are non-installable. The 337 already carried as feed
+  // entries probe as 42 npm security holding packages, 81 hard 404s and 72
+  // published-then-unpublished; the 70 still queued are holding packages without
+  // exception. Not one member of the family is a live package with a maintainer and a
+  // release history, so a name-shape rule cannot reach a legitimate release.
+  //
+  // ONE anchored rule rather than an unbounded stream of feed entries. The suffix is
+  // measured, not assumed: across all 407 names it is 5 or 6 characters (179 and 228)
+  // drawn only from [a-z0-9], and none carries a version pin. The rule deliberately
+  // does NOT hard-code that length, because the family is still being published and a
+  // 7-character variant would otherwise slip past; the literal prefix is distinctive
+  // enough to carry the anchoring on its own.
+  //
+  // LIMIT, on purpose, and the same one the @zalastax rule above carries:
+  // MALICIOUS_PACKAGE_PATTERNS is read by the npm-scanner name check and its
+  // package.json fallback, NOT by the generic directory scan, which matches exact feed
+  // names only. The 337 names already in the bundled feed keep that fuller coverage
+  // because this rule is added ALONGSIDE them, not in place of them.
+  //
+  // Measured, so the difference is not guessed at: a family name that HAS a feed entry
+  // reports MALICIOUS_PACKAGE_NAME at critical, while one covered by this rule alone
+  // reports the same rule at high. So the rule is a real backstop rather than an equal
+  // substitute, and dropping a name from the feed in favour of it costs one severity
+  // level and the directory-scan path. That is the tradeoff any decline-list entry
+  // naming this rule in coveredBy is accepting.
+  "^3layerdipstack[a-z0-9]+$",
+
   // Douqiu ("Fight Ball") gambling / pirate-streaming ring using npm as a config
   // server (Panther, May 5 2026). Three single-purpose attacker scopes publish
   // packages that export nothing but a base64-encoded JSON blob of API endpoints,

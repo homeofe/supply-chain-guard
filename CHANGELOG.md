@@ -67,6 +67,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   - `xbox-one-webdriver-cli@1.0.0`, the one package of the campaign's 21 that was
     not already pinned by the 2026-08-19 advisory batch.
 
+- **An anchored detection rule for the `3layerdipstack` name sweep**,
+  `^3layerdipstack[a-z0-9]+$` in `MALICIOUS_PACKAGE_PATTERNS`. The family is published
+  in batches and had grown to 407 catalogued names, 195 of which consumed most of this
+  import. The rule is added ALONGSIDE the existing feed entries, not in place of them,
+  so nothing loses the fuller coverage a feed entry carries. Verified: all 407 names
+  match it, none carries a version pin, and all 407 probe as non-installable (holding
+  packages, 404s, or published-then-unpublished).
 - **`scripts/measure-typosquat-fp.mjs`**, which makes the typosquat calibration
   reproducible. Every threshold in `dependency-risk-analyzer.ts` was justified by a
   false-positive count over real npm names, but the corpus and the counting were

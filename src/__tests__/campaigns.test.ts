@@ -9,6 +9,8 @@ import {
 } from "../patterns.js";
 import { matchPackageIOC, getBundledFeed } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
+import { checkPackageName } from "../npm-scanner.js";
+import type { Finding } from "../types.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -5432,6 +5434,86 @@ describe("Campaign Signatures", () => {
       for (const name of ["veloq", "morglog", "inspectstack", "tailwindcss-3d-animate"]) {
         expect(matchBareNpmIOC(name, "1.0.0", feed), name).toBeTruthy();
       }
+    });
+  });
+
+  // =================================================================
+  // 3layerdipstack generated-identifier sweep (August 2026)
+  // =================================================================
+
+  describe("3layerdipstack name sweep (August 2026)", () => {
+    const RULE = "^3layerdipstack[a-z0-9]+$";
+
+    it("ships the anchored rule in MALICIOUS_PACKAGE_PATTERNS", () => {
+      expect(MALICIOUS_PACKAGE_PATTERNS).toContain(RULE);
+    });
+
+    // The rule is what a threat-feed-declined.json entry would name in coveredBy, so
+    // the claim it rests on is asserted here rather than taken on trust: every name of
+    // the family carried in the bundled feed must match it.
+    it("matches every family name carried in the bundled feed", () => {
+      const re = new RegExp(RULE);
+      const family = getBundledFeed()
+        .filter((e) => e.type === "package" && e.value.startsWith("3layerdipstack"))
+        .map((e) => e.value);
+
+      expect(family.length).toBeGreaterThan(300);
+      const unmatched = family.filter((name) => !re.test(name));
+      expect(unmatched, `these family names are not covered by ${RULE}`).toEqual([]);
+    });
+
+    // A bare shape rule blocks every version of anything it matches, so it must stay
+    // anchored to the literal prefix and must not spill onto neighbouring names.
+    it("does not reach names outside the family", () => {
+      const re = new RegExp(RULE);
+      for (const name of [
+        "3layerdipstack",
+        "my-3layerdipstackabcde",
+        "3layerdipstack-utils",
+        "3layerdipstack/core",
+        "3layerdipstackABCDE",
+        "dipstack",
+      ]) {
+        expect(re.test(name), `${name} must NOT match`).toBe(false);
+      }
+    });
+
+    it("matches the observed 5- and 6-character suffixes", () => {
+      const re = new RegExp(RULE);
+      for (const name of ["3layerdipstackm1j2h", "3layerdipstack0dsxsc"]) {
+        expect(re.test(name), name).toBe(true);
+      }
+    });
+
+    // What a threat-feed-declined.json entry would actually be buying. A declined name
+    // has no feed entry, so this is the end-to-end proof that the rule alone still
+    // catches it - and the measure of what that costs.
+    it("catches a family name with no feed entry, at high rather than critical", () => {
+      const unlisted = "3layerdipstackzq7v4";
+      expect(
+        getBundledFeed().some((e) => e.value === unlisted),
+        "fixture must be a name the feed does NOT carry",
+      ).toBe(false);
+
+      const viaRule: Finding[] = [];
+      checkPackageName(unlisted, viaRule);
+      const ruleHit = viaRule.find((f) => f.rule === "MALICIOUS_PACKAGE_NAME");
+      expect(ruleHit, "the anchored rule must still catch an unlisted family name").toBeDefined();
+      expect(ruleHit?.severity).toBe("high");
+
+      const listed = "3layerdipstackm1j2h";
+      const viaFeed: Finding[] = [];
+      checkPackageName(listed, viaFeed);
+      expect(
+        viaFeed.find((f) => f.rule === "MALICIOUS_PACKAGE_NAME")?.severity,
+        "a name the feed carries must still outrank one covered by the rule alone",
+      ).toBe("critical");
+    });
+
+    it("does not fire on an unrelated package name", () => {
+      const findings: Finding[] = [];
+      checkPackageName("express", findings);
+      expect(findings.find((f) => f.rule === "MALICIOUS_PACKAGE_NAME")).toBeUndefined();
     });
   });
 
