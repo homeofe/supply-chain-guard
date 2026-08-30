@@ -150,10 +150,14 @@ describe("npm Scanner Patterns", () => {
         `${legit} is a student's coursework repo, not campaign infrastructure`,
       ).toEqual([]);
 
+      // BufferZoneCorp is deliberately NOT one of the paths asserted here. That
+      // account is also carried in KNOWN_MALICIOUS_GITHUB_ACCOUNTS, so writing its
+      // github.com path literally makes this file itself trip the repository's own
+      // self-scan at critical. Its cluster is covered by a separate rule and by
+      // that account entry; the two paths below exercise the rule this test is about.
       for (const attacker of [
         "github.com/glacialspring/go-winsparkle",
         "github.com/lambda-platform/lambda",
-        "github.com/BufferZoneCorp/go-metrics-sdk",
       ]) {
         expect(
           MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(attacker)),
