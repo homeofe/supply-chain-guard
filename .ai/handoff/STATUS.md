@@ -9,8 +9,9 @@ Every threshold in `dependency-risk-analyzer.ts` carries a false-positive count 
 real npm names in its comment. None of those numbers could be recomputed: the corpus was
 never committed and no script existed. A calibration you cannot re-run is the same kind
 of unverifiable claim as a `coveredBy` string, so `scripts/measure-typosquat-fp.mjs` now
-draws a corpus across 156 points of the npm replication index, caches it, and calls the
-SHIPPED classifier rather than a reimplementation that could drift.
+draws a corpus across 156 points of the npm replication index, caches it, and runs all
+three policies through the complete SHIPPED classifier rather than a reimplementation
+or a post-filtered result that could drift.
 
 To make that possible, the decision was extracted from the middle of
 `analyzeDependencyRisks` into an exported `classifyTyposquat`. Behaviour-preserving; the
@@ -24,7 +25,7 @@ Over 31,200 names:
 | --- | --- | --- |
 | no guard (previous behaviour) | 27 | - |
 | blanket first-character guard | 8 | 1 (`1odash`) |
-| homoglyph-aware guard (shipped) | 8 | 0 |
+| homoglyph-aware guard (shipped) | 8 | 0 of 9 |
 
 Two corrections came out of this rather than out of reasoning:
 
@@ -37,14 +38,20 @@ Two corrections came out of this rather than out of reasoning:
    Markdown React renderer, and `xeact`, `zeact`, `riact`, `xedis`, `xebug`, `zrequest`
    are live packages with real maintainers. They were the false positives.
 
+The recall number is deliberately scoped: zero of the nine evidence-backed squats are
+lost, but unrelated leading substitutions, insertions and deletions are intentionally
+outside the shipped high-severity heuristic. Same-leading edits and the declared
+homoglyph groups remain covered; exact feed and pattern verdicts are independent. Tests
+pin this boundary so it cannot be mistaken for a claim about every synthetic mutation.
+
 ### The comment this supersedes was factually wrong
 
 `dependency-risk-analyzer.ts` argued against ANY first-character predicate because
 patterns.ts curates `1odash` and `l0dash` and "both change character zero". Only
 `1odash` does. `l0dash` is l-0-d-a-s-h against l-o-d-a-s-h: identical at position zero,
-differing at position one. So the objection covered exactly one name, and a homoglyph
-map covers exactly that name. Both the old note and the arithmetic behind it are
-replaced.
+differing at position one. So the objection covered exactly one curated name, and a
+homoglyph group covers that case without the original one-value Map's duplicate-key
+overwrite. Both the old note and the arithmetic behind it are replaced.
 
 ### Deliberately NOT in this change
 

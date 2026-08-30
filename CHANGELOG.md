@@ -18,13 +18,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   | --- | --- | --- |
   | Without any guard | 27 | - |
   | Blanket first-character guard | 8 | 1 (`1odash`) |
-  | Homoglyph-aware guard (shipped) | 8 | **0** |
+  | Homoglyph-aware guard (shipped) | 8 | **0 of 9** |
 
   The 19 suppressed names were sampled against the registry and are live packages
   with real maintainers: `focha` (a Mocha wrapper), `meact` (a Markdown React
   renderer), `xeact`, `zeact`, `xedis`, `xebug`, `zrequest`, `zrestify` and others.
   All nine curated squats still hit, including `1odash`, whose leading `1`-for-`l`
   is exactly what the homoglyph map is for.
+
+  The zero is scoped to the nine evidence-backed squats, not every possible one-edit
+  mutation. Unrelated leading substitutions, insertions and deletions are intentionally
+  outside this high-severity heuristic after producing 19 false positives in the measured
+  corpus; same-leading edits and the declared `1/l/i`, `0/o`, `5/s`, `3/e`, and `4/a`
+  homoglyph groups remain covered. Exact threat-intelligence matches are independent.
 
   This supersedes a comment that rejected any first-character predicate because
   `1odash` and `l0dash` "both change character zero". Only `1odash` does; `l0dash`
@@ -36,12 +42,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   reproducible. Every threshold in `dependency-risk-analyzer.ts` was justified by a
   false-positive count over real npm names, but the corpus and the counting were
   never committed, so the numbers could not be re-checked after a change. The script
-  draws a corpus across 156 points of the npm replication index, caches it, and calls
-  the shipped classifier rather than a copy of it.
+  draws a corpus across 156 points of the npm replication index, caches it, and runs
+  all three leading-character policies through the complete shipped classifier rather
+  than pre-filtering with the final policy.
 - **`classifyTyposquat`** is now exported from `dependency-risk-analyzer.ts`. It is a
-  behaviour-preserving extraction of the decision that used to be inline, so the
-  heuristic can be measured and unit-tested directly instead of through a synthetic
-  manifest.
+  behaviour-preserving extraction of the decision that used to be inline and owns the
+  production safe-name guards, so the heuristic can be measured and unit-tested directly
+  instead of through a synthetic manifest.
 
 ### Fixed
 

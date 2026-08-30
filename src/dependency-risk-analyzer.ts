@@ -207,43 +207,23 @@ function osaDistance(a: string, b: string): number {
 }
 
 /**
- * Analyze dependencies for typosquatting and confusion risks.
- */
-/**
- * The TYPOSQUAT_LEVENSHTEIN decision, as a pure function over a single name.
- *
- * Extracted from the call site in `analyzeDependencyRisks` so the heuristic can be
- * MEASURED rather than argued about. Every threshold in this file is justified by a
- * false-positive count over real npm names, but until now the corpus and the counting
- * lived nowhere: the numbers in the comments could not be reproduced or re-checked
- * after a change. `scripts/measure-typosquat-fp.mjs` calls this function directly, so
- * the measurement exercises the shipped logic instead of a copy of it that can drift.
- *
- * The caller still owns the POPULAR_PACKAGES_SET / TYPOSQUAT_ALLOWLIST / length>=4
- * guards, because those are about whether a dependency is worth testing at all; this
- * function answers only "is this name one transposition-aware edit from a defended
- * target?".
- *
- * @param name Unscoped package name to classify.
- * @returns The closest target and its distance, or undefined when nothing matches.
- */
-/**
- * Character pairs that are a deliberate VISUAL substitution rather than a different
- * word. A leading "1" standing in for "l" is the entire point of "1odash"; a leading
- * "z" standing in for "r" is not a disguise, it is simply another name.
+ * Character groups that are deliberate VISUAL substitutions rather than different
+ * words. A group, rather than a one-value Map, is load-bearing: `l` is related to both
+ * `1` and `i`, and a Map silently overwrote one of those edges.
  *
  * Used only by the first-character guard below, and only in the leading position,
  * where a substitution is doing the most work: a reader scanning a lockfile anchors
  * on the first glyph.
  */
-const LEADING_HOMOGLYPHS = new Map<string, string>([
-  ["1", "l"], ["l", "1"],
-  ["0", "o"], ["o", "0"],
-  ["5", "s"], ["s", "5"],
-  ["3", "e"], ["e", "3"],
-  ["4", "a"], ["a", "4"],
-  ["i", "l"], ["l", "i"],
+const LEADING_HOMOGLYPH_GROUPS: ReadonlyArray<ReadonlySet<string>> = Object.freeze([
+  new Set(["1", "l", "i"]),
+  new Set(["0", "o"]),
+  new Set(["5", "s"]),
+  new Set(["3", "e"]),
+  new Set(["4", "a"]),
 ]);
+
+export type TyposquatLeadingPolicy = "none" | "same-leading" | "homoglyph-aware";
 
 /**
  * True when `name` differs from `target` at position zero by something that is NOT a
@@ -254,14 +234,14 @@ const LEADING_HOMOGLYPHS = new Map<string, string>([
  *
  *   as shipped without any guard      27 flagged
  *   blanket first-character guard      8 flagged, but LOSES "1odash"
- *   this homoglyph-aware guard         8 flagged, loses NOTHING
+ *   this homoglyph-aware guard         8 flagged, loses 0 of 9 curated squats
  *
  * All nine curated squats (lodas, lodahs, 1odash, l0dash, axois, raect, yarsg, chlak,
  * expres) still hit. The 19 suppressed names were sampled against the registry and are
  * live packages with real maintainers and coherent descriptions - focha (a Mocha
  * wrapper by bahmutov), meact (a Markdown React renderer), xeact, zeact, riact, xedis,
- * xebug, zrequest - not squats. They collide with a popular name only because one
- * leading letter happens to sit one edit away.
+ * xebug, zrequest - not squats. They collide with a popular name only because a
+ * leading edit happens to sit one edit away.
  *
  * This supersedes an earlier note in this file which argued against ANY first-character
  * predicate on the grounds that patterns.ts curates "1odash" and "l0dash" and that both
@@ -270,16 +250,45 @@ const LEADING_HOMOGLYPHS = new Map<string, string>([
  * guard homoglyph-aware rather than blanket removes the objection entirely, because the
  * one genuinely affected case is exactly the case a homoglyph map is for.
  */
-function leadingCharIsUnrelated(name: string, target: string): boolean {
+function leadingCharIsBlocked(
+  name: string,
+  target: string,
+  policy: TyposquatLeadingPolicy,
+): boolean {
   const a = name[0];
   const b = target[0];
-  if (a === undefined || b === undefined || a === b) return false;
-  return LEADING_HOMOGLYPHS.get(a) !== b;
+  if (policy === "none" || a === undefined || b === undefined || a === b) return false;
+  if (policy === "same-leading") return true;
+  return !LEADING_HOMOGLYPH_GROUPS.some((group) => group.has(a) && group.has(b));
 }
 
+/**
+ * The complete TYPOSQUAT_LEVENSHTEIN decision as a pure function over one name.
+ *
+ * The optional policy exists for calibration: the measurement script evaluates the
+ * previous, blanket, and shipped leading-character variants through this function.
+ * Every other production guard remains identical across those runs, so the comparison
+ * cannot drift from `analyzeDependencyRisks`.
+ *
+ * @param name Registry package name to classify.
+ * @param leadingPolicy Leading-character variant; defaults to the shipped policy.
+ * @returns The first distance-one target allowed by the selected policy.
+ */
 export function classifyTyposquat(
   name: string,
+  leadingPolicy: TyposquatLeadingPolicy = "homoglyph-aware",
 ): { popular: string; dist: number } | undefined {
+  // These are part of the shipped rule, not caller preconditions. The measurement
+  // script calls this function directly and must observe the exact same exclusions.
+  if (
+    name.startsWith("@") ||
+    POPULAR_PACKAGES_SET.has(name) ||
+    TYPOSQUAT_ALLOWLIST.has(name) ||
+    name.length < 4
+  ) {
+    return undefined;
+  }
+
   // At a ceiling of 1 every hit is the same distance, so there is no closer
   // match to search for and the first hit is reported. (Under the old 2-edit
   // ceiling this loop could report a distance-2 target while a distance-1 one
@@ -297,12 +306,13 @@ export function classifyTyposquat(
     // it loses yarsg, axois, raect and chlak.
     if (popular.length < 5) continue;
     if (Math.abs(name.length - popular.length) > 1) continue; // Quick skip
-    // A different leading letter that is not a visual substitution is a different
-    // name, not a disguise. See leadingCharIsUnrelated for the measurement.
-    if (leadingCharIsUnrelated(name, popular)) continue;
-
     const dist = osaDistance(name, popular);
-    if (dist > 0 && dist <= 1 && (!best || dist < best.dist)) {
+    if (
+      dist > 0 &&
+      dist <= 1 &&
+      !leadingCharIsBlocked(name, popular, leadingPolicy) &&
+      (!best || dist < best.dist)
+    ) {
       best = { popular, dist };
       break; // Distance 1 is the tightest possible hit; nothing can beat it.
     }
@@ -310,6 +320,9 @@ export function classifyTyposquat(
   return best;
 }
 
+/**
+ * Analyze dependencies for typosquatting and confusion risks.
+ */
 export function analyzeDependencyRisks(
   dependencies: Record<string, string>,
   relativePath: string,
@@ -362,40 +375,36 @@ export function analyzeDependencyRisks(
     // adjacent swap, so all of them still score 1 and are still caught.
     //
     // A first-character guard IS used, and it is homoglyph-aware rather than blanket;
-    // see leadingCharIsUnrelated for the measurement that settled its shape. The
+    // see leadingCharIsBlocked for the measurement that settled its shape. The
     // earlier note here rejected any such predicate because patterns.ts curates
     // "1odash" and "l0dash" and "both change character zero". Only "1odash" does, so
     // the objection applied to one name, and a homoglyph map covers precisely that
     // name. Measured, the guard removes 19 of 27 hits over 31,200 real npm names
-    // while losing none of the nine curated squats.
+    // while losing none of the nine curated squats. It intentionally no longer
+    // reports unrelated leading substitutions, insertions, or deletions; those edit
+    // shapes produced the measured false positives. Same-leading edits and declared
+    // homoglyph substitutions remain covered, and exact known-bad names still use
+    // the independent feed/pattern paths.
     //
-    // It remains a documented one-character bypass in published source, as any
-    // published heuristic is. That is acceptable here because this rule reports a
-    // SUSPICION at high, never a malware verdict: exact known-bad names are carried
-    // by the feed and by patterns.ts, which this guard does not touch.
+    // This is an explicit precision/recall boundary, not a claim that every synthetic
+    // one-edit mutation remains covered. It is acceptable here because this rule
+    // reports a SUSPICION at high, never a malware verdict: exact known-bad names are
+    // carried by the feed and by patterns.ts, which this guard does not touch.
     //
-    // Skip if the name is itself a known popular/safe package - prevents false
-    // positives where two legitimate popular packages are close in name (next/jest).
-    if (
-      !POPULAR_PACKAGES_SET.has(name) &&
-      !TYPOSQUAT_ALLOWLIST.has(name) &&
-      name.length >= 4
-    ) {
-      const best = classifyTyposquat(name);
+    const best = classifyTyposquat(name);
 
-      if (best) {
-        findings.push({
-          rule: "TYPOSQUAT_LEVENSHTEIN",
-          // The dependency name MUST stay the first quoted token: policy-engine.ts
-          // extracts it with /"([^"]+)"/ to honour user `allowlist.packages` rules.
-          description: `Dependency "${name}"${via} is ${best.dist} edit(s) away from popular package "${best.popular}". Likely a typosquat.`,
-          severity: "high",
-          file: relativePath,
-          confidence: 0.85,
-          category: "supply-chain",
-          recommendation: `Did you mean "${best.popular}"? Typosquatting replaces popular packages with malicious copies.`,
-        });
-      }
+    if (best) {
+      findings.push({
+        rule: "TYPOSQUAT_LEVENSHTEIN",
+        // The dependency name MUST stay the first quoted token: policy-engine.ts
+        // extracts it with /"([^"]+)"/ to honour user `allowlist.packages` rules.
+        description: `Dependency "${name}"${via} is ${best.dist} edit(s) away from popular package "${best.popular}". Likely a typosquat.`,
+        severity: "high",
+        file: relativePath,
+        confidence: 0.85,
+        category: "supply-chain",
+        recommendation: `Did you mean "${best.popular}"? Typosquatting replaces popular packages with malicious copies.`,
+      });
     }
 
     // Check if name is similar to another direct dependency.

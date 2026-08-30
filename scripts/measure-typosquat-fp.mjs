@@ -30,6 +30,9 @@ import { classifyTyposquat } from "../dist/dependency-risk-analyzer.js";
 const args = process.argv.slice(2);
 const REFRESH = args.includes("--refresh");
 const cacheIdx = args.indexOf("--cache");
+if (cacheIdx !== -1 && (!args[cacheIdx + 1] || args[cacheIdx + 1].startsWith("--"))) {
+  throw new Error("--cache requires a file path");
+}
 // Default under node_modules/.cache, NOT inside the tracked tree. A 31,000-name
 // corpus is a file full of arbitrary package names, and some of them inevitably
 // match a content heuristic: parked in scripts/ it made this repository's own
@@ -100,80 +103,58 @@ const CURATED_SQUATS = [
   "lodas", "lodahs", "1odash", "l0dash", "axois", "raect", "yarsg", "chlak", "expres",
 ];
 
-function firstCharDiffers(name, target) {
-  return name[0] !== target[0];
-}
-
-/**
- * Character pairs that are deliberate visual substitutions rather than a different
- * word. A leading "1" for "l" is the whole point of "1odash"; a leading "z" for "r"
- * is not a disguise, it is a different name.
- */
-const HOMOGLYPHS = new Map([
-  ["1", "l"], ["l", "1"],
-  ["0", "o"], ["o", "0"],
-  ["5", "s"], ["s", "5"],
-  ["3", "e"], ["e", "3"],
-  ["4", "a"], ["a", "4"],
-  ["i", "l"], ["l", "i"],
-]);
-
-/**
- * Homoglyph-aware variant: the first character may differ ONLY when the difference is
- * a known visual substitution. Keeps leading-homoglyph squats while dropping the
- * "different first letter entirely" collisions that dominate the false positives.
- */
-function firstCharDiffersNonHomoglyph(name, target) {
-  const a = name[0];
-  const b = target[0];
-  if (a === b) return false;
-  return HOMOGLYPHS.get(a) !== b;
-}
-
-const rows = [];
-for (const name of corpus) {
-  const hit = classifyTyposquat(name);
-  if (hit) rows.push({ name, ...hit });
-}
-
 const VARIANTS = [
-  ["as shipped today", () => false],
-  ["blanket first-char predicate", firstCharDiffers],
-  ["homoglyph-aware first-char", firstCharDiffersNonHomoglyph],
+  ["no guard (previous behavior)", "none"],
+  ["blanket first-char predicate", "same-leading"],
+  ["homoglyph-aware (shipped)", "homoglyph-aware"],
 ];
 
+// Every variant starts from the same corpus and calls the production classifier with
+// one explicit policy. The classifier owns the popular-name, allowlist, minimum-length,
+// distance, and leading-character guards, so this cannot pre-filter away the 27 -> 8
+// comparison or accidentally count names that the shipped analyzer exempts.
+const rowsByPolicy = new Map(VARIANTS.map(([, policy]) => [policy, []]));
+for (const name of corpus) {
+  for (const [, policy] of VARIANTS) {
+    const hit = classifyTyposquat(name, policy);
+    if (hit) rowsByPolicy.get(policy).push({ name, ...hit });
+  }
+}
+
 console.log("\n=== Flagged by TYPOSQUAT_LEVENSHTEIN over the corpus ===");
-for (const [label, drop] of VARIANTS) {
-  const kept = rows.filter((r) => !drop(r.name, r.popular));
-  console.log(`  ${label.padEnd(30)} ${String(kept.length).padStart(4)} flagged` +
-    `   (${rows.length - kept.length} suppressed)`);
+const rawRows = rowsByPolicy.get("none");
+for (const [label, policy] of VARIANTS) {
+  const rows = rowsByPolicy.get(policy);
+  console.log(`  ${label.padEnd(30)} ${String(rows.length).padStart(4)} flagged` +
+    `   (${rawRows.length - rows.length} suppressed)`);
 }
 
 console.log("\n=== Recall on the curated squats ===");
-console.log(`  ${"name".padEnd(10)} ${"today".padEnd(18)} ${"blanket".padEnd(10)} homoglyph-aware`);
+console.log(`  ${"name".padEnd(10)} ${"no guard".padEnd(18)} ${"blanket".padEnd(10)} shipped`);
 const lost = { blanket: 0, homoglyph: 0 };
 for (const squat of CURATED_SQUATS) {
-  const hit = classifyTyposquat(squat);
-  if (!hit) {
+  const raw = classifyTyposquat(squat, "none");
+  const blanket = classifyTyposquat(squat, "same-leading");
+  const shipped = classifyTyposquat(squat, "homoglyph-aware");
+  if (!raw) {
     console.log(`  ${squat.padEnd(10)} ${"miss".padEnd(18)} ${"-".padEnd(10)} -`);
     continue;
   }
-  const b = !firstCharDiffers(squat, hit.popular);
-  const h = !firstCharDiffersNonHomoglyph(squat, hit.popular);
-  if (!b) lost.blanket++;
-  if (!h) lost.homoglyph++;
+  if (!blanket) lost.blanket++;
+  if (!shipped) lost.homoglyph++;
   console.log(
-    `  ${squat.padEnd(10)} ${`HIT (${hit.popular})`.padEnd(18)} ` +
-      `${(b ? "HIT" : "LOST").padEnd(10)} ${h ? "HIT" : "LOST"}`,
+    `  ${squat.padEnd(10)} ${`HIT (${raw.popular})`.padEnd(18)} ` +
+      `${(blanket ? "HIT" : "LOST").padEnd(10)} ${shipped ? "HIT" : "LOST"}`,
   );
 }
 console.log(`\n  curated squats lost - blanket: ${lost.blanket}, homoglyph-aware: ${lost.homoglyph}`);
 
-const droppedByHomoglyph = rows.filter((r) => firstCharDiffersNonHomoglyph(r.name, r.popular));
-const keptByHomoglyph = rows.filter((r) => !firstCharDiffersNonHomoglyph(r.name, r.popular));
+const shippedRows = rowsByPolicy.get("homoglyph-aware");
+const shippedNames = new Set(shippedRows.map((row) => row.name));
+const droppedByHomoglyph = rawRows.filter((row) => !shippedNames.has(row.name));
 
 console.log("\n=== Suppressed by the homoglyph-aware predicate ===");
 for (const r of droppedByHomoglyph) console.log(`  ${r.name.padEnd(24)} <- "${r.popular}"`);
 
 console.log("\n=== Still flagged by the homoglyph-aware predicate ===");
-for (const r of keptByHomoglyph) console.log(`  ${r.name.padEnd(24)} <- "${r.popular}"`);
+for (const r of shippedRows) console.log(`  ${r.name.padEnd(24)} <- "${r.popular}"`);
