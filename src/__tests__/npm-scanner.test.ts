@@ -112,7 +112,7 @@ describe("npm Scanner Patterns", () => {
   });
   describe("Malicious package name detection", () => {
     it("should match known typosquatting names", () => {
-      const typosquats = ["lodas", "l0dash", "crossenv", "babelcli"];
+      const typosquats = ["1odash", "l0dash", "crossenv", "babelcli"];
 
       for (const name of typosquats) {
         const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
@@ -120,6 +120,52 @@ describe("npm Scanner Patterns", () => {
         );
         expect(matches).toBe(true);
       }
+    });
+
+    // Registry-verified 2026-08-30. These three sat in the typosquat alternations
+    // and are legitimate packages, so this table must NOT assert malware for them.
+    // "lodas" installs lodash for the user and uninstalls itself; "lodash-es-utils"
+    // is a hook-free wrapper around the real lodash-es; "cross-env-shell" is a
+    // defensive bin-name registration with 21,156 downloads/month and no scripts.
+    // Name-shape suspicion for them belongs to TYPOSQUAT_LEVENSHTEIN at high, which
+    // the dependency-risk-analyzer suite covers, not to a critical malware verdict.
+    it("must NOT assert malware for registry-verified legitimate packages", () => {
+      for (const name of ["lodas", "lodash-es-utils", "cross-env-shell"]) {
+        const matches = MALICIOUS_PACKAGE_PATTERNS.filter((pattern) =>
+          new RegExp(pattern).test(name),
+        );
+        expect(matches, `${name} must not match any malicious-name pattern`).toEqual([]);
+      }
+    });
+
+    // Inspected in full on 2026-08-30: 89 blobs, all Go coursework, committed by the
+    // account owner in 2024, and neither Contagious Interview artifact present
+    // (.vscode/tasks.json, public/fonts/fa-solid-400.woff2). A real person's public
+    // learning repository must not be listed as DPRK malware. The rest of that
+    // cluster stays covered.
+    it("must NOT flag the a2sv coursework repository, but keeps the real cluster", () => {
+      const legit = "github.com/amantsehay/a2sv-go-course";
+      expect(
+        MALICIOUS_PACKAGE_PATTERNS.filter((p) => new RegExp(p).test(legit)),
+        `${legit} is a student's coursework repo, not campaign infrastructure`,
+      ).toEqual([]);
+
+      for (const attacker of [
+        "github.com/glacialspring/go-winsparkle",
+        "github.com/lambda-platform/lambda",
+        "github.com/BufferZoneCorp/go-metrics-sdk",
+      ]) {
+        expect(
+          MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(attacker)),
+          `${attacker} must stay covered`,
+        ).toBe(true);
+      }
+
+      // The rule targets the attacker's fork, never the upstream project it copies.
+      expect(
+        MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test("github.com/gin-contrib/static")),
+        "the upstream gin-contrib/static must never match",
+      ).toBe(false);
     });
 
     it("should not flag common legitimate packages", () => {

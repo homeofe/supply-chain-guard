@@ -920,8 +920,8 @@ setup(
     it("should detect various typosquatted package names", () => {
       const typosquats = [
         "reqeusts", "requsets", "r3quests",
-        "crypt0graphy", "crytography",
-        "python-dateutill", "numppy", "numpi",
+        "crypt0graphy", "cryptograhpy",
+        "python-dateutill", "numppy", "numpie",
         "pandsa", "djang0", "dajngo",
         "urlib3", "colourama", "colrama",
         "setuptool", "flaskk", "flaask",
@@ -936,6 +936,20 @@ setup(
           }
         }
         expect(matched).toBe(true);
+      }
+    });
+
+    // Registry-verified 2026-08-30. All three are real PyPI projects that the
+    // typosquat alternations were flagging: "numpi" is muSpectre/NuMPI (MPI-parallel
+    // numerics, 2018, 29 releases), "crytography" is a defensive registration whose
+    // summary reads 'I think you meant "cryptography"', and "py-dateutil" is Tomi
+    // Pievilaeinen's dateutil packaging on bitbucket. Resemblance is not evidence.
+    it("must NOT flag registry-verified legitimate PyPI projects", () => {
+      for (const pkg of ["numpi", "crytography", "py-dateutil"]) {
+        const matches = PYPI_TYPOSQUAT_PATTERNS.filter((pattern) =>
+          new RegExp(pattern).test(pkg),
+        );
+        expect(matches, `${pkg} must not match any PyPI typosquat pattern`).toEqual([]);
       }
     });
 

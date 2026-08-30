@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788005919",
-    "timestamp": "2026-08-29T12:18:39Z",
-    "commit": "1cde6b0",
+    "session_id": "cli-1788079726",
+    "timestamp": "2026-08-30T08:48:47Z",
+    "commit": "37ffcbd",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:79a4147b90e00ee883fe7ab4fa8ffcf4eac6804481d69e346e3fb2e19d7243de",
-      "updated": "2026-08-29T12:18:31Z",
-      "lines": 5439,
-      "summary": "Model: OpenAI Codex, GPT-5. Branch `codex/release-v6.0.6`."
+      "checksum": "sha256:7b2645ea4ba09f10a54b2e13c697883a3e518d3616f1a2bac85966ab0199308d",
+      "updated": "2026-08-30T08:48:44Z",
+      "lines": 5488,
+      "summary": "Model: Claude Opus 5. Branch `fix/typosquat-false-positives`. No version bump."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:d52a4c529401524d98806a629adfe65b6afcf17f464aacdd0117817e1bce2792",
-      "updated": "2026-08-29T11:35:27Z",
+      "updated": "2026-08-29T12:23:42Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:61149dbb7dc016aede1641d59b5ba7429e7111eed1797c0725209c5283f16d73",
-      "updated": "2026-08-29T12:18:38Z",
+      "updated": "2026-08-30T08:48:46Z",
       "lines": 163,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:533fefdb267ede2fcd19eff5809641a9ca8453e746331e7ef347c42ef0c7a5c5",
-      "updated": "2026-08-29T12:18:38Z",
+      "updated": "2026-08-30T08:48:46Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:bcc5060be6251afcb5457403302a83468b036a4fafda44a7d8e23161eccd6b84",
-      "updated": "2026-08-29T12:18:38Z",
+      "updated": "2026-08-30T08:48:46Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: OpenAI Codex, GPT-5. Branch `codex/release-v6.0.6`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: Claude Opus 5. Branch `fix/typosquat-false-positives`. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 65709,
-    "full_read": 77788
+    "manifest_plus_core": 66247,
+    "full_read": 78326
   }
 }

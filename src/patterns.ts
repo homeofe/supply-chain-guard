@@ -2106,9 +2106,35 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // npm packages (v1.0.0-1.0.3) impersonating non-existent official payment
   // SDKs; anchored so only these exact names match, never legitimate wrappers.
   "^(paysafe-checkout|paysafe-vault|paysafe-js|paysafe-api|paysafe-node|paysafe-cards|paysafe-fraud|paysafe-kyc|paysafe-payments|skrill|skrill-sdk|skrill-payments|neteller)$",
-  // Typosquatting common packages
-  "^(lodas|1odash|l0dash|lodash-es-utils)$",
-  "^(cros-env|cross-env-shell|crossenv)$",
+  // Typosquatting common packages.
+  //
+  // Registry-verified 2026-08-30, and two names were REMOVED from these two rules
+  // because the verification showed they are legitimate packages, not squats. This
+  // table states a malicious verdict at critical, so membership needs evidence of
+  // malice, not merely a name that resembles a popular one:
+  //
+  //   "lodas"           - live since 2015 (maint invntrm, 463 downloads/month). Its
+  //                       index.js prints "Did you mean lodash?", runs "npm i -S
+  //                       lodash" for the user and then uninstalls itself. A helper,
+  //                       not a dropper. Still caught, correctly, as a name-shape
+  //                       suspicion by TYPOSQUAT_LEVENSHTEIN at high.
+  //   "lodash-es-utils" - live since 2024, 20 versions, 83 downloads/month. Ships
+  //                       only dist/index.mjs.min.js, types, LICENSE and README;
+  //                       no install hook, its one dependency is the real lodash-es,
+  //                       and it contains no child_process, eval, atob, bare-IP URL
+  //                       or process.env access. An ordinary wrapper.
+  //   "cross-env-shell" - 21,156 downloads/month, maintainer alxndrsn, repo
+  //                       alias-in-wonderland, NO scripts of any kind. A defensive
+  //                       registration of the bin name that cross-env exposes, by
+  //                       the researcher who documented npm binary confusion. The
+  //                       downloads are npx resolving the bin name, not victims.
+  //
+  // "crossenv" (the 2017 squat) and "cros-env" are untouched. Misspelling SHAPE is
+  // the job of TYPOSQUAT_LEVENSHTEIN in dependency-risk-analyzer.ts, which is
+  // calibrated against 29,687 real npm names and reports a suspicion at high; it is
+  // not the job of a hand-written alternation asserting malware at critical.
+  "^(1odash|l0dash)$",
+  "^(cros-env|crossenv)$",
   "^(bable-cli|babelcli)$",
   "^(event-streem|event_stream)$",
 
@@ -2219,7 +2245,24 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // was a false positive against ~30 clean releases. The two poisoned versions are carried as
   // version-pinned feed IOCs in threat-intel.ts instead, which is the only form that can
   // distinguish them. See the corresponding block there for the registry evidence.
-  "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|amantsehay/a2sv-go-course|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
+  //
+  // github.com/amantsehay/a2sv-go-course was REMOVED from this list on 2026-08-30.
+  // The repository is live and was inspected in full: 89 blobs, every one a Go file
+  // of A2SV coursework (calculator.go, palindrome.go, task_manager, library_management,
+  // clean-architecture exercises with tests and mocks), committed 2024-08-13..16 by
+  // the account owner. It carries NEITHER campaign artifact - no .vscode/tasks.json
+  // and no public/fonts/fa-solid-400.woff2 - anywhere in the tree, and no JavaScript
+  // at all. It is a real person's public learning repository that this table was
+  // calling DPRK malware.
+  //
+  // The rest of the cluster verified as attacker-controlled and is kept:
+  // lambda-platform/lambda and hngi/team-fierce-backend-golang are BLOCKED BY GITHUB
+  // for a terms-of-service violation (HTTP 403, blocked 2026-07-03); nine paths are
+  // gone (404); glacialspring/go-winsparkle and glacialspring/static both carry the
+  // identical 799-byte .vscode/tasks.json plus the woff2 payload, and "static" is a
+  // fork of gin-contrib/static whose injecting commit is backdated to the upstream
+  // 2018 history. The rule matches only the fork path, never gin-contrib/static.
+  "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
   // Six attacker-uploaded npm packages masquerading as Rollup polyfill tooling to facilitate
@@ -3058,11 +3101,27 @@ export const PYPI_TYPOSQUAT_PATTERNS: string[] = [
   // Fake Paysafe payment SDKs on PyPI (Socket, July 8, 2026) - 4 packages
   // (v1.0.0). PyPI normalizes "-" and "_", so both separators are matched.
   "^(paysafe[-_](kyc|payments|sdk|api))$",
-  // Typosquats of popular PyPI packages
+  // Typosquats of popular PyPI packages.
+  //
+  // Registry-verified 2026-08-30. Three names were REMOVED because PyPI shows them
+  // to be real projects rather than squats. Same bar as the npm table above: a
+  // resemblance is not evidence of malice.
+  //
+  //   "numpi"       - github.com/muSpectre/NuMPI, created 2018, not archived,
+  //                   "Utilities for MPI-parallel numerical calculations with
+  //                   Python", 29 releases, MIT, 5 dependencies. The name is
+  //                   "Numerical MPI", not a numpy misspelling.
+  //   "crytography" - author cyli, MIT, summary verbatim: 'I think you meant
+  //                   "cryptography"'. A defensive registration by a real person.
+  //   "py-dateutil" - author Tomi Pievilaeinen, bitbucket.org/cld/dateutil,
+  //                   Simplified BSD, v2.2. An old but genuine dateutil packaging.
+  //
+  // "numppy", "numpie", "crypt0graphy", "cryptograhpy", "python-dateutill" and
+  // "python3-dateutil" are untouched.
   "^(reqeusts|requsets|r3quests|reequests|requets)$",
-  "^(crypt0graphy|crytography|cryptograhpy)$",
-  "^(python-dateutill|python3-dateutil|py-dateutil)$",
-  "^(numppy|numpi|numpie)$",
+  "^(crypt0graphy|cryptograhpy)$",
+  "^(python-dateutill|python3-dateutil)$",
+  "^(numppy|numpie)$",
   "^(pandsa|pands)$",
   "^(djang0|dajngo|djnago)$",
   "^(urlib3|urllib33)$",
@@ -4513,7 +4572,7 @@ validateRegexStringSet("MALICIOUS_PACKAGE_PATTERNS", MALICIOUS_PACKAGE_PATTERNS)
  * so a shared compiled instance would return true, false, true, false on
  * repeated calls with the same matching name - a silent false negative in a
  * malicious-package-name matcher, which is the worst failure this project has.
- * Measured on the real table entry "^(cros-env|cross-env-shell|crossenv)$":
+ * Measured on the real table entry "^(cros-env|crossenv)$":
  * four .test("crossenv") calls give true,true,true,true with no flag and
  * true,false,true,false with "g". Reusing an instance is only safe because
  * there is no flag; issue-177-npm-scanner-index-reuse.test.ts asserts both the

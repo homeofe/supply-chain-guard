@@ -1,3 +1,52 @@
+## Typosquat false positives removed (2026-08-30)
+
+Model: Claude Opus 5. Branch `fix/typosquat-false-positives`. No version bump.
+
+### How they were found
+
+The name tables were audited by expansion rather than by reading. Every rule in
+`MALICIOUS_PACKAGE_PATTERNS` and `PYPI_TYPOSQUAT_PATTERNS` was expanded into its literal
+match set: **216 names, and no rule that could not be expanded**. Each name was then
+probed against its registry. That turns "does this rule over-match?" from a judgement
+call into a finite check.
+
+Fifteen names came back live. Seven are legitimate projects, listed in the CHANGELOG with
+their evidence. The decisive ones were settled by package CONTENT, not metadata:
+`lodas` ships an `index.js` that installs lodash for the user and removes itself, and
+`lodash-es-utils` ships only a minified bundle with no hook and no network access.
+`cross-env-shell` has no scripts at all and 21,156 downloads/month, which are `npx`
+resolving the bin name rather than victims.
+
+The worst of the seven is `github.com/amantsehay/a2sv-go-course`: a real person's public
+Go coursework repository, 89 files, no campaign artifact anywhere in the tree, listed as
+DPRK infrastructure by a public tool.
+
+### Why this happened, and what actually prevents a recurrence
+
+The regexes were never wrong. `^(numppy|numpi|numpie)$` matches exactly what it says. The
+defect is that a **resemblance was recorded as a verdict**: names were added to a table
+that asserts malware at critical because they looked like misspellings, with no registry
+check and, for the lodash rule, no cited source or date at all.
+
+The project already has the right mechanism for resemblance. `TYPOSQUAT_LEVENSHTEIN` in
+`dependency-risk-analyzer.ts` uses transposition-aware distance with a ceiling of one
+edit, is calibrated against 29,687 real npm names, reports at high, and carries its own
+dated allowlist that is scoped to exactly one rule. A hand-written alternation asserting
+critical is a second, worse implementation of that same idea.
+
+So the durable rule is: **`patterns.ts` carries evidence-backed names; misspelling shape
+belongs to the distance rule.** Both new test blocks assert the corrected behaviour by
+name, so a future re-add fails CI rather than shipping.
+
+### Follow-up opened separately
+
+`1odash` and `l0dash` are deliberately KEPT here. `dependency-risk-analyzer.ts` documents
+them as the reason it uses no first-character predicate, since a leading-homoglyph rule
+would make the heuristic structurally unable to generalise them. Removing them is
+therefore coupled to a calibration change worth about 24 further false positives, and it
+needs its own measurement against the 29,687-name corpus rather than an assumption. That
+is raised as a separate reviewable pull request and is not bundled here.
+
 ## v6.0.6 release preparation (2026-08-29)
 
 Model: OpenAI Codex, GPT-5. Branch `codex/release-v6.0.6`.

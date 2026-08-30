@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- **Seven false positives removed from the typosquat name tables.** Each entry of
+  `MALICIOUS_PACKAGE_PATTERNS` and `PYPI_TYPOSQUAT_PATTERNS` was expanded into its
+  literal match set (216 names, no rule left unexpandable) and every member probed
+  against its registry. Fifteen came back live, and seven of those are legitimate
+  projects that the tables were reporting as known malware:
+  - `cross-env-shell` (21,156 downloads/month) - a defensive registration of the bin
+    name `cross-env` exposes, no install scripts, by the researcher who documented
+    npm binary confusion.
+  - `lodas` - prints "Did you mean lodash?", installs lodash for the user and
+    uninstalls itself. Live since 2015.
+  - `lodash-es-utils` - a hook-free wrapper around the real `lodash-es`, with no
+    `child_process`, `eval`, `atob`, bare-IP URL or `process.env` access.
+  - `numpi` (PyPI) - `muSpectre/NuMPI`, MPI-parallel numerics, active since 2018.
+  - `crytography` (PyPI) - a defensive registration whose summary reads
+    'I think you meant "cryptography"'.
+  - `py-dateutil` (PyPI) - a genuine dateutil packaging on bitbucket.
+  - `github.com/amantsehay/a2sv-go-course` - a real person's public Go coursework
+    repository, 89 files, carrying neither Contagious Interview artifact. It was
+    listed as DPRK campaign infrastructure.
+
+  Misspelling SHAPE remains covered by `TYPOSQUAT_LEVENSHTEIN`, which is calibrated
+  against 29,687 real npm names and reports a suspicion at high rather than a malware
+  verdict at critical. `lodas` is still flagged by it; the other six are not
+  one-edit neighbours of anything and produced no finding to begin with.
+
+  The rest of each rule is untouched, including `crossenv`, `numppy`, `numpie`,
+  `crypt0graphy`, `cryptograhpy`, `python-dateutill`, `python3-dateutil`, and the
+  eleven remaining Go module paths of the Contagious Interview cluster, two of which
+  GitHub has blocked outright for a terms-of-service violation.
+
 ## [6.0.6] - 2026-08-29
 
 ### Added
