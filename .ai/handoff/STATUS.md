@@ -1,3 +1,32 @@
+## v6.0.7 release preparation (2026-08-30)
+
+Model: OpenAI Codex. Branch `codex/release-v6.0.7`.
+
+Patch release for the false-positive remediation merged in #247, the measured
+typosquat guard merged in #248, and the 2026-08-30 threat-intelligence batch
+merged in #246. The version moves together across package metadata, every
+CLI/scanner/reporter surface, the Action and examples, container documentation,
+MCP metadata, the generated feed, the lockfile, and the handoff set.
+`CHANGELOG.md` carries the dated 6.0.7 block and release reference, and the
+Unreleased comparison starts at v6.0.7.
+
+This release branch contains version, changelog, and generated-metadata changes
+only. The immutable `v6.0.7` tag and publication remain deliberately after the
+release PR's squash merge, so the tag can point at the exact commit on `main`.
+
+Evidence before the release PR:
+
+- `npm run build` passes all seven AAHP governance gates, feed consistency,
+  handoff consistency, and TypeScript compilation; all 16 governed version sites
+  report 6.0.7.
+- `aahp doctor`: all six conformance gates pass.
+- The full Windows run reaches 133/138 passing test files, 3,275 passing tests,
+  and 21 skips. Its 19 failures are environmental: 14 VS Code tests require the
+  absent `zip` executable, the two documented campaign fixtures do not resolve
+  their temporary paths on Windows, two Git/filesystem integration tests exceed
+  the five-second Windows limit, and one temporary-directory cleanup receives
+  Windows `EPERM`. The protected Linux PR matrix is the release gate.
+
 ## Typosquat heuristic: homoglyph-aware leading-character guard (2026-08-30)
 
 Model: Claude Opus 5. Branch `perf/typosquat-first-char-predicate`, stacked on

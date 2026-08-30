@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788084947",
-    "timestamp": "2026-08-30T10:15:47Z",
-    "commit": "cd2dd2f",
+    "session_id": "cli-1788086147",
+    "timestamp": "2026-08-30T10:35:48Z",
+    "commit": "11de61c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b45c811989d9d3f6d81657fc424c04f93e5375c175e56ba754d013a7afdd2b63",
-      "updated": "2026-08-30T10:15:19Z",
-      "lines": 5682,
-      "summary": "Model: Claude Opus 5. Branch `perf/typosquat-first-char-predicate`, stacked on"
+      "checksum": "sha256:3e4f54ac9ac3cdf13627ad61ff4145247b7a0b2df3aa1e710af71ce74cc49974",
+      "updated": "2026-08-30T10:34:57Z",
+      "lines": 5711,
+      "summary": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:d52a4c529401524d98806a629adfe65b6afcf17f464aacdd0117817e1bce2792",
-      "updated": "2026-08-30T10:05:44Z",
+      "checksum": "sha256:6a7b63088e57d63c5a28d76023e1466f013df75967a061674a8b62cdd1d0882a",
+      "updated": "2026-08-30T10:30:06Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:61149dbb7dc016aede1641d59b5ba7429e7111eed1797c0725209c5283f16d73",
-      "updated": "2026-08-30T10:15:46Z",
-      "lines": 163,
+      "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
+      "updated": "2026-08-30T10:35:47Z",
+      "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:533fefdb267ede2fcd19eff5809641a9ca8453e746331e7ef347c42ef0c7a5c5",
-      "updated": "2026-08-30T10:15:46Z",
+      "checksum": "sha256:6dc0d1d0e261eeeb6801dd0c92502bf67b619515604f0aa4e92519d1ffb82db4",
+      "updated": "2026-08-30T10:35:47Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:bcc5060be6251afcb5457403302a83468b036a4fafda44a7d8e23161eccd6b84",
-      "updated": "2026-08-30T10:15:46Z",
+      "checksum": "sha256:c436e1a25eb77975266de22290589077b06e634dd49df76eb8bf60f9e5b711bc",
+      "updated": "2026-08-30T10:35:47Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: Claude Opus 5. Branch `perf/typosquat-first-char-predicate`, stacked on Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 68477,
-    "full_read": 80556
+    "manifest_plus_core": 68759,
+    "full_read": 80860
   }
 }
