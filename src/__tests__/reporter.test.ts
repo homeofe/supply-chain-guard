@@ -297,6 +297,7 @@ describe("formatReport – Text", () => {
 
   it("should show risk score", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
+    expect(output).toContain("DETECTED RISK");
     expect(output).toContain("52 / 100");
     expect(output).toContain("HIGH");
   });
@@ -322,6 +323,61 @@ describe("formatReport – Text", () => {
     const output = stripAnsi(formatReport(makeReport(), "text"));
     expect(output).toContain("Remove the package");
     expect(output).toContain("Audit dependencies");
+  });
+
+  it("wraps long recommendations instead of truncating them", () => {
+    const recommendation =
+      "Resolve every configured coverage gap before treating this scan as a complete security verdict.";
+    const output = stripAnsi(
+      formatReport(makeReport({ recommendations: [recommendation] }), "text"),
+    );
+    expect(output).toContain("complete security verdict.");
+    expect(output).not.toContain("verdict…");
+  });
+
+  it("aligns long metadata labels and formats duration for humans", () => {
+    const output = stripAnsi(
+      formatReport(
+        makeReport({
+          durationMs: 1932,
+          detectionSet: {
+            bundledVersion: pkg.version,
+            effectiveEntryCount: 42,
+            cacheMerged: false,
+          },
+        }),
+        "text",
+      ),
+    );
+    expect(output).toContain("Detection Set  v");
+    expect(output).toContain("Duration       1.93 s");
+  });
+
+  it("groups repeated rule/file matches in text while preserving an all-findings mode", () => {
+    const repeated = Array.from({ length: 3 }, (_, index) => ({
+      rule: "THREAT_INTEL_MATCH",
+      description: `IOC ${index}`,
+      severity: "critical" as const,
+      file: "src/threat-intel.ts",
+      recommendation: "Investigate",
+    }));
+    const report = makeReport({
+      findings: repeated,
+      summary: { totalFiles: 1, filesScanned: 1, critical: 3, high: 0, medium: 0, low: 0, info: 0 },
+    });
+
+    const grouped = stripAnsi(formatReport(report, "text"));
+    expect(grouped).toContain("THREAT_INTEL_MATCH  ×3");
+    expect(grouped).toContain("3 findings grouped into 1 rule/file entries");
+
+    const complete = stripAnsi(formatReport(report, "text", { allFindings: true }));
+    expect(complete).not.toContain("grouped into");
+    expect(complete.match(/THREAT_INTEL_MATCH/g)).toHaveLength(3);
+  });
+
+  it("uses native path separators consistently in text output", () => {
+    const output = stripAnsi(formatReport(makeReport(), "text"));
+    expect(output).toContain(process.platform === "win32" ? "lib\\util.js" : "lib/util.js");
   });
 
   it("should show clean message for empty findings", () => {

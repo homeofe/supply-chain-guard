@@ -215,6 +215,9 @@ supply-chain-guard scan ./project --since HEAD~5
 # Scan with registry version-drift check (requires network)
 supply-chain-guard scan ./project --check-registry
 
+# Expand every repeated text finding (text groups by rule and file by default)
+supply-chain-guard scan ./project --all-findings
+
 # Monitor a Solana C2 wallet
 supply-chain-guard monitor <wallet-address> --once
 ```
@@ -576,12 +579,12 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 ║  supply-chain-guard                                                  v5.1.0 ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-  Target      ./suspicious-package
-  Type        directory  ·  18 / 18 files scanned
-  Duration    142ms
-  Time        2026-04-07T12:00:00.000Z
+  Target         ./suspicious-package
+  Type           directory  ·  18 / 18 files scanned
+  Duration       142 ms
+  Time           2026-04-07T12:00:00.000Z
 
-┌─────────────────────────────── RISK SCORE ─────────────────────────────────┐
+┌────────────────────────────── DETECTED RISK ───────────────────────────────┐
 │                                                                              │
 │   83 / 100   █████████████████████████████████░░░░░   CRITICAL             │
 │                                                                              │
@@ -627,7 +630,8 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 │  Dependencies    ████████████████████████████████████ 100/100              │
 │  Release         ██████████████████████████░░░░░░░░░  80/100               │
 │────────────────────────────────────────────────────────────────────────────│
-│  Overall         █████████████░░░░░░░░░░░░░░░░░░░░░░  48/100               │
+│  Assessed        █████████████░░░░░░░░░░░░░░░░░░░░░░  48/100               │
+│  4/4 trust dimensions assessed                                             │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────── CORRELATED INCIDENTS ───────────────────────────┐

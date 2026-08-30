@@ -43,9 +43,9 @@ const TSC = path.join(ROOT, "node_modules", "typescript", "bin", "tsc");
 const CANONICAL_CLONE_TARGET = "https://github.com/homeofe/supply-chain-guard.git";
 
 /**
- * Self-scan suppression is a trust decision. Local package.json and .git data
- * are target-controlled, so only the running package's physical root or a clone
- * initiated by scan() from the canonical HTTPS URL may receive it.
+ * Self-scan suppression is a trust decision. Local package.json, .git data,
+ * physical location and clone URL cannot grant it; only exact reviewed content
+ * at an exact inert path may receive the narrow exemption.
  *
  * Uses a real bundled feed IOC to exercise the suppression, so this file is
  * itself listed in SELF_SCAN_INERT_FILES.
@@ -107,11 +107,15 @@ describe("self-scan recognition (own source checkout)", () => {
     "https://github.com/homeofe/supply-chain-guard.git",
     "https://github.com/homeofe/supply-chain-guard/",
     "https://github.com/homeofe/supply-chain-guard.git/",
-  ])("suppresses own IOC files for a scanner-initiated canonical clone: %s", async (target) => {
-    writeCheckout(dir, OWN_PACKAGE);
-    const report = await scanScannerInitiatedClone(dir, target);
-    expect(iocFired(report.findings)).toBe(false);
-  });
+  ])(
+    "does not trust unverified content from a canonical clone URL: %s",
+    async (target) => {
+      writeCheckout(dir, OWN_PACKAGE);
+      const report = await scanScannerInitiatedClone(dir, target);
+      expect(iocFired(report.findings)).toBe(true);
+    },
+    15_000,
+  );
 
   it("still flags a third-party project that merely embeds the same IOC", async () => {
     writeCheckout(dir, { name: "some-other-app", version: "1.0.0" });
@@ -130,6 +134,53 @@ describe("self-scan recognition (own source checkout)", () => {
     expect(iocFired(report.findings)).toBe(true);
   });
 
+  it("recognises an unchanged reviewed source file by exact path and shipped digest", async () => {
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "ordinary-package", version: "1.0.0" }),
+    );
+    const relativePath = "src/__tests__/self-scan-recognition.test.ts";
+    const destination = path.join(dir, ...relativePath.split("/"));
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, ...relativePath.split("/")), destination);
+
+    const report = await scan({ target: dir, format: "json", noHistory: true });
+    expect(iocFired(report.findings)).toBe(false);
+  });
+
+  it("recognises reviewed source content across LF and CRLF checkouts", async () => {
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "ordinary-package", version: "1.0.0" }),
+    );
+    const relativePath = "src/__tests__/self-scan-recognition.test.ts";
+    const source = fs
+      .readFileSync(path.join(ROOT, ...relativePath.split("/")), "utf8")
+      .replaceAll("\r\n", "\n")
+      .replaceAll("\n", "\r\n");
+    const destination = path.join(dir, ...relativePath.split("/"));
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, source, "utf8");
+
+    const report = await scan({ target: dir, format: "json", noHistory: true });
+    expect(iocFired(report.findings)).toBe(false);
+  });
+
+  it("fails closed when a digest-recognised source file is modified", async () => {
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "ordinary-package", version: "1.0.0" }),
+    );
+    const relativePath = "src/__tests__/self-scan-recognition.test.ts";
+    const destination = path.join(dir, ...relativePath.split("/"));
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, ...relativePath.split("/")), destination);
+    fs.appendFileSync(destination, `\nconst modifiedC2 = "${FEED_DOMAIN}";\n`);
+
+    const report = await scan({ target: dir, format: "json", noHistory: true });
+    expect(iocFired(report.findings)).toBe(true);
+  });
+
   it.each([
     "https://github.com/attacker/supply-chain-guard",
     "https://github.com/homeofe/supply-chain-guard-mirror",
@@ -142,7 +193,7 @@ describe("self-scan recognition (own source checkout)", () => {
   it.each([
     "src/broad-gap-pattern-matchers.ts",
     "dist/broad-gap-pattern-matchers.js",
-  ])("suppresses only reviewed own-definition rules at %s", async (relativePath) => {
+  ])("does not exempt modified own-definition content at %s", async (relativePath) => {
     writeCheckout(dir, OWN_PACKAGE);
     const target = path.join(dir, ...relativePath.split("/"));
     fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -156,7 +207,7 @@ describe("self-scan recognition (own source checkout)", () => {
       report.findings.some(
         (finding) => finding.file === relativePath && finding.rule === "XZ_BUILD_INJECT",
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       report.findings.some(
         (finding) => finding.file === relativePath && finding.rule === "GLASSWORM_MARKER",
@@ -201,6 +252,7 @@ describe("built repository self-scan", () => {
   let cleanReport: ScanReport;
   let payloadReport: ScanReport;
   let untrustedPackageReport: ScanReport;
+  let modifiedLocalPackageReport: ScanReport;
 
   beforeAll(async () => {
     workdir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-built-selfscan-"));
@@ -263,12 +315,24 @@ describe("built repository self-scan", () => {
       `const c2 = "${FEED_DOMAIN}";\n`,
     );
 
+    // Any edit to a compiled counterpart must revoke its content-addressed
+    // local exemption, even when the path and package metadata still match.
+    fs.appendFileSync(
+      path.join(checkout, "dist", "broad-gap-pattern-matchers.js"),
+      "\n// locally modified\n",
+    );
+
     // The exact inert path suppresses IOC-table matches only. Independent
     // executable malware behavior at that path must still fire.
     fs.appendFileSync(
       path.join(checkout, "dist", "threat-intel.js"),
       '\neval(atob("ZXZhbA=="));\n',
     );
+    modifiedLocalPackageReport = await scan({
+      target: checkout,
+      format: "json",
+      noHistory: true,
+    });
     payloadReport = await scanScannerInitiatedClone(checkout, CANONICAL_CLONE_TARGET, "json");
   }, 60_000);
 
@@ -298,9 +362,19 @@ describe("built repository self-scan", () => {
       ),
     ).toBe(false);
   });
-  it("does not grant packaged-artifact suppression to an untrusted local copy", () => {
+  it("recognises an unchanged compiled counterpart by byte identity", () => {
     expect(
       untrustedPackageReport.findings.some(
+        (finding) =>
+          finding.rule === "SHAI_HULUD_WORM" &&
+          finding.file === "dist/broad-gap-pattern-matchers.js",
+      ),
+    ).toBe(false);
+  });
+
+  it("revokes compiled-file recognition after any local modification", () => {
+    expect(
+      modifiedLocalPackageReport.findings.some(
         (finding) =>
           finding.rule === "SHAI_HULUD_WORM" &&
           finding.file === "dist/broad-gap-pattern-matchers.js",

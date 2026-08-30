@@ -225,6 +225,7 @@ program
   .option("--sbom-output <file>", "Write CycloneDX 1.6 SBOM to a separate file")
   .option("--no-history", "Do not write risk history to .scg-history/ in the scanned repo")
   .option("--check-registry", "Compare the local package.json version against the npm registry 'latest' dist-tag (requires network; off by default)")
+  .option("--all-findings", "Show every finding in text output instead of grouping repeated rule/file matches")
   .action(
     async (
       target: string,
@@ -245,6 +246,7 @@ program
         sbomOutput?: string;
         history: boolean;
         checkRegistry?: boolean;
+        allFindings?: boolean;
       },
     ) => {
       try {
@@ -292,7 +294,9 @@ program
           const { exportIncidentMarkdown } = await import("./soc-exporter.js");
           console.log(exportIncidentMarkdown(report));
         } else {
-          const formatted = formatReport(report, options.format);
+          const formatted = formatReport(report, options.format, {
+            allFindings: opts.allFindings === true,
+          });
           // --output writes the report to a file (mirrors --sbom-output); status
           // messages still go to stderr so the file stays pure report content.
           if (opts.output) {

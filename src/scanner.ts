@@ -111,92 +111,12 @@ import { verifySLSA, assessSLSA } from "./slsa-verifier.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
+import {
+  isSelfScanInertFile,
+  isVerifiedSelfScanFile,
+} from "./self-scan-trust.js";
 
 const TOOL_VERSION = "6.0.7";
-
-/**
- * Exact files that contain this package's own inert detector definitions or
- * regression fixtures.
- * This allowlist is consulted only when the target is this package's physical
- * install root or a clone that this scanner initiated from the exact canonical
- * HTTPS repository URL. Basenames, suffixes, package metadata, and Git config
- * are never trust boundaries.
- */
-const SELF_SCAN_INERT_FILES = new Set([
-  "src/active-validation.ts",
-  "src/attack-graph.ts",
-  "src/broad-gap-pattern-matchers.ts",
-  "src/config-scanner.ts",
-  "src/correlation-engine.ts",
-  "src/dependency-confusion.ts",
-  "src/github-trust-scanner.ts",
-  "src/install-hook-scanner.ts",
-  "src/ioc-blocklist.ts",
-  "src/patterns.ts",
-  "src/playbooks.ts",
-  "src/remediation-engine.ts",
-  "src/reporter.ts",
-  "src/scanner.ts",
-  "src/secret-simulator.ts",
-  "src/threat-intel.ts",
-  "src/workflow-modeler.ts",
-  "src/__tests__/beacon-miner.test.ts",
-  "src/__tests__/campaigns.test.ts",
-  "src/__tests__/core-broad-gap-matchers.test.ts",
-  // Two real shipped KNOWN_MALICIOUS_HASHES entries are quoted verbatim as
-  // regression fixtures: a 40-hex Git object id that must stay OUT of the
-  // file-digest match set, and a sha256 that must stay reachable through the
-  // digest-TEXT matcher. Both assertions name the exact shipped digest, so the
-  // fixtures cannot be replaced with invented values without deleting the
-  // property they prove. Omitting this file from the list was an oversight
-  // rather than a decision: 16 sibling test files quoting shipped indicators
-  // are already listed.
-  "src/__tests__/file-digest.test.ts",
-  // Real go: IOC (github.com/BufferZoneCorp/...) used as a go.sum fixture.
-  "src/__tests__/go-scanner.test.ts",
-  "src/__tests__/infostealer-patterns.test.ts",
-  "src/__tests__/ioc-blocklist.test.ts",
-  "src/__tests__/issue-24-ioc-evasion.test.ts",
-  "src/__tests__/issue-54-hardening.test.ts",
-  "src/__tests__/mcp-scanner.test.ts",
-  // Real C2 domain IOC used as a fixture for the MCP indicator lookup and the
-  // policy domain-allowlist suppression tests (they need a genuine feed IOC).
-  "src/__tests__/mcp-server.test.ts",
-  "src/__tests__/policy-engine.test.ts",
-  // Uses a real bundled C2 domain as a fixture to test own-source recognition.
-  "src/__tests__/self-scan-recognition.test.ts",
-  "src/__tests__/threat-intel.test.ts",
-]);
-
-/**
- * TypeScript's exact runtime/declaration outputs for inert source modules.
- *
- * Keep generated code globally scannable. Only the compiled counterparts of
- * explicitly reviewed source definitions are inert during this package's own
- * scan. Test fixtures are intentionally excluded because tsconfig does not
- * compile them, and an arbitrary dist path must never inherit their exemption.
- */
-const SELF_SCAN_INERT_COMPILED_FILES = new Set(
-  [...SELF_SCAN_INERT_FILES]
-    .filter(
-      (relativePath) =>
-        relativePath.startsWith("src/") &&
-        !relativePath.startsWith("src/__tests__/") &&
-        relativePath.endsWith(".ts"),
-    )
-    .flatMap((relativePath) => {
-      const modulePath = relativePath.slice("src/".length, -".ts".length);
-      return [`dist/${modulePath}.js`, `dist/${modulePath}.d.ts`];
-    }),
-);
-
-function isSelfScanInertFile(relativePath: string): boolean {
-  const normalizedPath = relativePath.replace(/\\/g, "/");
-  return (
-    SELF_SCAN_INERT_FILES.has(normalizedPath) ||
-    SELF_SCAN_INERT_COMPILED_FILES.has(normalizedPath)
-  );
-}
 
 /**
  * Pattern literals in this matcher module deliberately spell out signatures
@@ -238,26 +158,6 @@ function isSelfScanInertPatternRule(
 /** Detect test / spec / fixture / mock files. Shared constant (was duplicated inline). */
 const TEST_FILE_REGEX = TEST_FILE_PATTERN;
 
-const SCANNER_PACKAGE_ROOT = fs.realpathSync(path.resolve(__dirname, ".."));
-
-function isOwnPackageRoot(scanDir: string): boolean {
-  try {
-    return fs.realpathSync(scanDir) === SCANNER_PACKAGE_ROOT;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Only the original target supplied to this scanner can establish trust for a
- * separate checkout. package.json and .git/config both live inside the scanned
- * trust boundary and are therefore forgeable. The clone path reaches this
- * predicate only after the generic GitHub URL validator has accepted it.
- */
-function isCanonicalOwnCloneTarget(target: string): boolean {
-  return /^https:\/\/github\.com\/homeofe\/supply-chain-guard(?:\.git)?\/?$/.test(target);
-}
-
 /**
  * Scan a local directory or GitHub repo for malware indicators.
  */
@@ -267,7 +167,6 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   let scanDir = target;
   let scanType: ScanReport["scanType"] = "directory";
   let tempDir: string | null = null;
-  let scannerInitiatedOwnClone = false;
 
   // If target is a GitHub URL, clone it
   if (target.startsWith("https://github.com/")) {
@@ -283,7 +182,6 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         `Refusing to clone: not a valid GitHub repository URL: ${target}`,
       );
     }
-    scannerInitiatedOwnClone = isCanonicalOwnCloneTarget(target);
     scanType = "github";
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-"));
     const cloneDir = path.join(tempDir, "repo");
@@ -308,8 +206,6 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (!stat.isDirectory()) {
     throw new Error(`Target is not a directory: ${scanDir}`);
   }
-
-  const scanningOwnPackage = isOwnPackageRoot(scanDir) || scannerInitiatedOwnClone;
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
   // same object is reused for the suppression passes further down.
@@ -530,12 +426,21 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // feed schema fails the check and the file is scanned normally.
     if (isInertThreatFeedFile(relativePath, content)) continue;
 
+    // No target gets repository-wide trust. Only an exact inert path whose
+    // content matches the manifest shipped with the running scanner receives a
+    // narrow exemption. Location, clone URL and metadata are irrelevant; any
+    // content edit fails closed and is scanned normally.
+    const trustedOwnFile =
+      isSelfScanInertFile(relativePath) &&
+      fileBytes !== undefined &&
+      isVerifiedSelfScanFile(relativePath, fileBytes);
+
     // Check file content patterns
     checkFilePatterns(
       content,
       relativePath,
       findings,
-      scanningOwnPackage,
+      trustedOwnFile,
     );
 
     // Internal topology disclosure: private addresses, internal-only
@@ -559,7 +464,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
 
     // Check beacon and miner patterns (T-008)
-    checkBeaconMinerPatterns(content, relativePath, findings, scanningOwnPackage);
+    checkBeaconMinerPatterns(content, relativePath, findings, trustedOwnFile);
 
     // Entropy analysis for obfuscated payloads (v4.0)
     const entropyFindings = analyzeEntropy(content, relativePath);
@@ -567,9 +472,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // IOC blocklist + threat-intel checks skip only reviewed scanner
     // definition/fixture paths and exact TypeScript-compiled counterparts.
-    const isOwnDefinitionOrFixture =
-      scanningOwnPackage && isSelfScanInertFile(relativePath);
-    if (!isOwnDefinitionOrFixture) {
+    if (!trustedOwnFile) {
       const iocFindings = checkIOCBlocklist(content, relativePath);
       findings.push(...iocFindings);
 
@@ -1149,7 +1052,7 @@ function checkFilePatterns(
   content: string,
   relativePath: string,
   findings: Finding[],
-  scanningOwnPackage: boolean,
+  trustedOwnFile: boolean,
 ): void {
   // Note: LURE_PATTERNS deliberately excluded here. README-style files are
   // already covered by scanReadmeLures() in github-trust-scanner.ts (called
@@ -1180,7 +1083,7 @@ function checkFilePatterns(
     );
     for (const hit of hits ?? []) {
       if (
-        scanningOwnPackage &&
+        trustedOwnFile &&
         isSelfScanInertPatternRule(relativePath, pattern.rule)
       ) {
         continue;
@@ -1383,7 +1286,7 @@ function checkBeaconMinerPatterns(
   content: string,
   relativePath: string,
   findings: Finding[],
-  scanningOwnPackage: boolean,
+  trustedOwnFile: boolean,
 ): void {
   for (const pattern of BEACON_MINER_PATTERNS) {
     const hits = matchPatternInFile(
@@ -1407,7 +1310,7 @@ function checkBeaconMinerPatterns(
   }
 
   // Multi-line protestware check: locale/timezone on one line, destructive on nearby lines
-  checkMultiLineProtestware(content, relativePath, findings, scanningOwnPackage);
+  checkMultiLineProtestware(content, relativePath, findings, trustedOwnFile);
 }
 
 /**
@@ -1418,11 +1321,11 @@ function checkMultiLineProtestware(
   content: string,
   relativePath: string,
   findings: Finding[],
-  scanningOwnPackage: boolean,
+  trustedOwnFile: boolean,
 ): void {
-  // Only this package or an identity-verified checkout may suppress exact
-  // definition/fixture paths and compiled counterparts. Basenames never qualify.
-  if (scanningOwnPackage && isSelfScanInertFile(relativePath)) return;
+  // Only an exact, content-verified own definition/fixture may skip this
+  // correlation. Basenames and repository metadata never qualify.
+  if (trustedOwnFile) return;
 
   const PROXIMITY = 15;
   const PROXIMITY_CHARS = 512;
@@ -2080,10 +1983,14 @@ export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
 
 function calculateScore(findings: Finding[]): number {
   // Deduplicate by rule - take the highest-severity instance per rule.
-  // Skip meta-governance findings that would circularly inflate the score.
+  // Skip informational observations and meta-governance findings that would
+  // circularly inflate the score. Info remains visible in the report but does
+  // not represent detected risk.
   const maxByRule = new Map<string, Severity>();
   for (const finding of findings) {
-    if (SCORE_EXCLUDED_RULES.has(finding.rule)) continue;
+    if (finding.severity === "info" || SCORE_EXCLUDED_RULES.has(finding.rule)) {
+      continue;
+    }
     const current = maxByRule.get(finding.rule);
     if (!current || SEVERITY_SCORES[finding.severity] > SEVERITY_SCORES[current]) {
       maxByRule.set(finding.rule, finding.severity);

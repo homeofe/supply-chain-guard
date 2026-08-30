@@ -41,12 +41,10 @@
  * self-scan allowlist, moves the tree from 0 critical findings to 2 and the step
  * from exit 0 to exit 1.
  *
- * A KNOWN, DELIBERATE BLIND SPOT, stated so that nobody discovers it by
- * surprise: an indicator planted inside one of the files named in
- * SELF_SCAN_INERT_FILES (src/scanner.ts) is invisible to this gate. That is
- * correct behaviour for a scanner whose own source spells out the signatures it
- * detects, but it means the gate covers this repository MINUS those named files,
- * and reviewing changes to them stays a human job.
+ * Reviewed inert files are exempt only while their bytes match the SHA-256
+ * manifest shipped by the running scanner. A planted indicator changes the
+ * digest and restores the normal scan for that file, so the exemption does not
+ * create a mutable local blind spot.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -71,7 +69,7 @@ function readText(relativePath: string): string {
 }
 
 const CI = readText(".github/workflows/ci.yml");
-const SCANNER_SOURCE = readText("src/scanner.ts");
+const SELF_SCAN_FILES = JSON.parse(readText("src/self-scan-files.json")) as string[];
 
 /** The body of one job under `jobs:`, from its key to the next job key. */
 function jobBlock(yaml: string, job: string): string {
@@ -245,7 +243,7 @@ describe("findings the first self-scan surfaced stay fixed (issue 173)", () => {
     // invented digest proves nothing about a shipped one. Sixteen sibling test
     // files doing the same thing were already on the allowlist, so this was an
     // oversight rather than a decision.
-    expect(SCANNER_SOURCE).toContain('"src/__tests__/file-digest.test.ts"');
+    expect(SELF_SCAN_FILES).toContain("src/__tests__/file-digest.test.ts");
 
     // Keep the entry honest. An allowlist entry naming a file that no longer
     // exists, or that no longer quotes a shipped indicator, is a standing

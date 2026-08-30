@@ -37,6 +37,20 @@ describe("Trust Breakdown", () => {
     expect(tb.dependencyTrust.score).toBeLessThanOrEqual(50);
   });
 
+  it("does not penalize informational lockfile inventory observations", () => {
+    const findings: Finding[] = [
+      {
+        rule: "LOCKFILE_ORPHANED_DEPENDENCY",
+        description: "normal npm transitive inventory",
+        severity: "info",
+        recommendation: "review",
+      },
+    ];
+    const tb = calculateTrustBreakdown(findings, "test", true, "directory");
+    expect(tb.dependencyTrust.score).toBe(100);
+    expect(tb.overallScore).toBe(100);
+  });
+
   it("should penalize suspicious releases", () => {
     const findings = [
       makeFinding("RELEASE_EXE_ARTIFACT", "critical"),

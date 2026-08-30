@@ -118,6 +118,12 @@ describe("CLI --help", () => {
     const { stdout } = cli(["--help"]);
     expect(stdout).toContain("watchlist");
   });
+
+  it("documents the opt-in complete text finding list", () => {
+    const { stdout, status } = cli(["scan", "--help"]);
+    expect(status).toBe(0);
+    expect(stdout).toContain("--all-findings");
+  });
 });
 
 // ─── scan – clean fixture ─────────────────────────────────────────────────────

@@ -83,4 +83,23 @@ describe("Risk Engine", () => {
     expect(calculateRiskDimensions([makeFinding("MCP_TOOL_POISONING", "high")]).ciCdRisk)
       .toBeGreaterThan(0);
   });
+
+  it("counts workflow-model and SLSA findings toward CI/CD risk", () => {
+    expect(
+      calculateRiskDimensions([
+        makeFinding("WORKFLOW_SECRET_TO_UPLOAD_PATH", "medium"),
+      ]).ciCdRisk,
+    ).toBeGreaterThan(0);
+    expect(
+      calculateRiskDimensions([makeFinding("SLSA_NO_PROVENANCE", "medium")]).ciCdRisk,
+    ).toBeGreaterThan(0);
+  });
+
+  it("does not round a non-zero weighted risk down to zero", () => {
+    const dims = calculateRiskDimensions([
+      { rule: "GHA_TAG_NOT_SHA", description: "test", severity: "low", recommendation: "test" },
+    ]);
+    expect(dims.ciCdRisk).toBe(1);
+    expect(dims.overallScore).toBe(1);
+  });
 });

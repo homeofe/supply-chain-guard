@@ -189,7 +189,12 @@ function calcDependencyTrust(findings: Finding[], hasLockfile: boolean): TrustDi
   }
 
   // Lockfile integrity
-  const lockIssues = findings.filter((f) => f.rule.startsWith("LOCKFILE_"));
+  // Informational lockfile inventory observations (notably npm v7+ flattened
+  // transitive dependencies) are not integrity failures and must not reduce
+  // trust. They remain visible in the findings list for manual review.
+  const lockIssues = findings.filter(
+    (f) => f.rule.startsWith("LOCKFILE_") && f.severity !== "info",
+  );
   if (lockIssues.length > 0) {
     score -= Math.min(30, lockIssues.length * 10);
     indicators.push({ name: "Lockfile issues", status: "yellow", detail: `${lockIssues.length} lockfile integrity issue(s)` });

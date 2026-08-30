@@ -5,6 +5,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import * as path from "node:path";
 import type {
   Finding,
   IncidentCluster,
@@ -216,6 +217,7 @@ const SEVERITY_ICONS: Record<Severity, string> = {
 export function formatReport(
   report: ScanReport,
   format: "text" | "json" | "markdown" | "sarif" | "sbom" | "html" | "badge" | "gitlab" | "junit",
+  options: { allFindings?: boolean } = {},
 ): string {
   const outputReport = normalizePartialReport(report);
   switch (format) {
@@ -237,7 +239,7 @@ export function formatReport(
       return formatJunit(outputReport);
     case "text":
     default:
-      return formatText(outputReport);
+      return formatText(outputReport, options);
   }
 }
 
@@ -251,7 +253,10 @@ function formatJson(report: ScanReport): string {
 /**
  * Format as human-readable text with box-drawing borders and visual gauges.
  */
-function formatText(report: ScanReport): string {
+function formatText(
+  report: ScanReport,
+  options: { allFindings?: boolean } = {},
+): string {
   const lines: string[] = [];
 
   // ── layout constants ───────────────────────────────────────────────────────
@@ -284,6 +289,13 @@ function formatText(report: ScanReport): string {
     }
     if (line.trim()) result.push(line.trimEnd());
     return result.length > 0 ? result : [plain.slice(0, maxWidth)];
+  };
+  const displayPath = (value: string) =>
+    path.sep === "\\" ? value.replace(/\//g, "\\") : value.replace(/\\/g, "/");
+  const displayDuration = (durationMs: number) => {
+    if (durationMs < 1000) return `${durationMs} ms`;
+    const precision = durationMs < 10_000 ? 2 : 1;
+    return `${(durationMs / 1000).toFixed(precision).replace(/\.0+$/, "")} s`;
   };
 
   // ── box-drawing helpers ────────────────────────────────────────────────────
@@ -334,7 +346,7 @@ function formatText(report: ScanReport): string {
 
   // ── METADATA ───────────────────────────────────────────────────────────────
   const metaRow = (key: string, val: string) =>
-    `  ${BOLD}${key.padEnd(10)}${RESET}${val}`;
+    `  ${BOLD}${key.padEnd(15)}${RESET}${val}`;
 
   lines.push(metaRow("Target", report.target));
   if (report.scanType === "directory" || report.scanType === "github") {
@@ -342,7 +354,7 @@ function formatText(report: ScanReport): string {
   } else {
     lines.push(metaRow("Type", report.scanType));
   }
-  lines.push(metaRow("Duration", `${report.durationMs}ms`));
+  lines.push(metaRow("Duration", displayDuration(report.durationMs)));
   lines.push(metaRow("Time", report.timestamp));
   lines.push(
     metaRow(
@@ -362,17 +374,22 @@ function formatText(report: ScanReport): string {
   }
   lines.push("");
 
-  // ── RISK SCORE ─────────────────────────────────────────────────────────────
+  // ── DETECTED RISK ──────────────────────────────────────────────────────────
   {
     const sc    = report.score;
     const scCol = report.partialScan ? "\x1b[33m" : scoreColor(sc);
-    const level = report.partialScan ? "PARTIAL" : report.riskLevel.toUpperCase();
+    const detectedLevel = report.riskLevel === "clean"
+      ? "NO FINDINGS"
+      : report.riskLevel.toUpperCase();
+    const level = report.partialScan
+      ? `${detectedLevel} · PARTIAL`
+      : detectedLevel;
     const BAR_W = 36;
     const filled = Math.round((sc / 100) * BAR_W);
     const gauge  = scCol + "█".repeat(filled) + DIM + "░".repeat(BAR_W - filled) + RESET;
     const scoreStr = `${sc} / 100`;
 
-    lines.push(boxTop("RISK SCORE"));
+    lines.push(boxTop("DETECTED RISK"));
     lines.push(boxBlank());
     lines.push(boxRow(`  ${scCol}${BOLD}${scoreStr}${RESET}   ${gauge}   ${BOLD}${scCol}${level}${RESET}`));
 
@@ -483,28 +500,59 @@ function formatText(report: ScanReport): string {
 
   // ── FINDINGS DETAIL ────────────────────────────────────────────────────────
   if (report.findings.length > 0) {
-    const sorted = [...report.findings].sort(
-      (a, b) => severityRank(b.severity) - severityRank(a.severity),
+    type TextFindingGroup = { finding: Finding; count: number };
+    const groups = new Map<string, TextFindingGroup>();
+    for (const finding of report.findings) {
+      const fileKey = finding.file ?? `description:${finding.description}`;
+      const key = `${finding.severity}\0${finding.rule}\0${fileKey}`;
+      const existing = groups.get(key);
+      if (options.allFindings || !existing) {
+        groups.set(options.allFindings ? `${key}\0${groups.size}` : key, {
+          finding,
+          count: 1,
+        });
+      } else {
+        existing.count++;
+      }
+    }
+    const sorted = [...groups.values()].sort(
+      (a, b) => severityRank(b.finding.severity) - severityRank(a.finding.severity),
     );
+    const collapsedCount = report.findings.length - sorted.length;
 
     lines.push(boxTop("FINDINGS"));
     lines.push(boxBlank());
+    if (collapsedCount > 0) {
+      const note =
+        `${report.findings.length} findings grouped into ${sorted.length} rule/file entries; ` +
+        "use --all-findings or --format json for every match.";
+      for (const noteLine of wrapText(note, W - 4)) {
+        lines.push(boxRow(`  ${DIM}${noteLine}${RESET}`));
+      }
+      lines.push(boxBlank());
+    }
 
     for (let i = 0; i < sorted.length; i++) {
-      const f      = sorted[i];
+      const group  = sorted[i]!;
+      const f      = group.finding;
       const color  = SEVERITY_COLORS[f.severity];
       const label  = `[${f.severity.toUpperCase()}]`;   // e.g. "[CRITICAL]" = 10
       const indent = " ".repeat(label.length + 2);
       const avail  = W - label.length - 4;              // content width after indent
+      const ruleLabel = group.count > 1 ? `${f.rule}  ×${group.count}` : f.rule;
 
-      lines.push(boxRow(`  ${color}${BOLD}${label}${RESET}  ${BOLD}${trunc(f.rule, avail)}${RESET}`));
+      lines.push(boxRow(`  ${color}${BOLD}${label}${RESET}  ${BOLD}${trunc(ruleLabel, avail)}${RESET}`));
       // Description - word-wrapped
       for (const dl of wrapText(f.description, avail)) {
         lines.push(boxRow(`  ${indent}${dl}`));
       }
       if (f.file) {
-        const loc = f.line ? `${f.file}:${f.line}` : f.file;
+        const shownPath = displayPath(f.file);
+        const loc = f.line ? `${shownPath}:${f.line}` : shownPath;
         lines.push(boxRow(`  ${indent}${DIM}${trunc(loc, avail)}${RESET}`));
+      }
+      if (group.count > 1) {
+        lines.push(boxRow(`  ${indent}${DIM}${group.count} matches grouped for this rule and file${RESET}`));
       }
       // Match - word-wrapped, first line gets "match  " tag
       if (f.match) {
@@ -555,7 +603,14 @@ function formatText(report: ScanReport): string {
     lines.push(tbRow("Dependencies", tb.dependencyTrust));
     lines.push(tbRow("Release",      tb.releaseProcess));
     lines.push(boxDiv());
-    lines.push(boxRow(`  ${"Overall".padEnd(14)}${trustColor(tb.overallScore)}${mkBar(tb.overallScore, 100, BAR_W)}${RESET}  ${trustColor(tb.overallScore)}${tb.overallScore}/100${RESET}`));
+    const assessedDimensions = [
+      tb.publisherTrust,
+      tb.codeQuality,
+      tb.dependencyTrust,
+      tb.releaseProcess,
+    ].filter((dimension) => dimension.assessed !== false).length;
+    lines.push(boxRow(`  ${"Assessed".padEnd(14)}${trustColor(tb.overallScore)}${mkBar(tb.overallScore, 100, BAR_W)}${RESET}  ${trustColor(tb.overallScore)}${tb.overallScore}/100${RESET}`));
+    lines.push(boxRow(`  ${DIM}${assessedDimensions}/4 trust dimensions assessed${RESET}`));
     lines.push(boxBot());
     lines.push("");
   }
@@ -572,12 +627,12 @@ function formatText(report: ScanReport): string {
     lines.push(boxTop("RISK DIMENSIONS"));
     lines.push(rdRow("Code Risk",   rd.codeRisk));
     lines.push(rdRow("Dep Risk",    rd.dependencyRisk));
-    lines.push(rdRow("Repo Trust",  rd.repoTrust));
+    lines.push(rdRow("Repo Risk",   rd.repoTrust));
     lines.push(rdRow("CI/CD Risk",  rd.ciCdRisk));
     if (rd.threatIntelMatches > 0) {
       lines.push(boxRow(`  ${SEVERITY_COLORS.critical}${BOLD}Threat Intel    ${rd.threatIntelMatches} match(es)${RESET}`));
     }
-    lines.push(boxRow(`  ${DIM}Confidence      ${Math.round(rd.confidence * 100)}%${RESET}`));
+    lines.push(boxRow(`  ${DIM}Signal confidence ${Math.round(rd.confidence * 100)}%${RESET}`));
     lines.push(boxBot());
     lines.push("");
   }
@@ -624,7 +679,11 @@ function formatText(report: ScanReport): string {
     lines.push(boxTop("RECOMMENDATIONS"));
     lines.push(boxBlank());
     for (const rec of report.recommendations) {
-      lines.push(boxRow(`  ›  ${trunc(rec, W - 5)}`));
+      const wrapped = wrapText(rec, W - 5);
+      lines.push(boxRow(`  ›  ${wrapped[0]}`));
+      for (const continuation of wrapped.slice(1)) {
+        lines.push(boxRow(`     ${continuation}`));
+      }
     }
     lines.push(boxBlank());
     lines.push(boxBot());

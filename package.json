@@ -16,13 +16,15 @@
     "lint": "tsc --noEmit",
     "check:aahp": "node scripts/check-aahp-pin.mjs && node scripts/check-em-dash-scope.mjs && npx --no-install aahp check .",
     "check:handoff": "node scripts/scg-handoff-docs.mjs --check",
+    "check:self-scan": "node scripts/generate-self-scan-manifest.mjs --check",
+    "self-scan:generate": "node scripts/generate-self-scan-manifest.mjs",
     "check:release-ancestry": "node scripts/check-release-ancestry.mjs",
     "handoff:refresh": "node scripts/scg-handoff-docs.mjs",
     "feed:generate": "node scripts/generate-feed.mjs",
     "audit:blocklist": "node scripts/audit-blocklist.mjs",
     "feed:import": "node scripts/import-threat-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
-    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:handoff",
+    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:handoff && npm run check:self-scan",
     "prepublishOnly": "npm run build",
     "prepare": "tsc"
   },
@@ -67,7 +69,8 @@
     "README.md",
     "LICENSE",
     "socket.yml",
-    "policy-schema.json"
+    "policy-schema.json",
+    "self-scan-manifest.json"
   ],
   "dependencies": {
     "commander": "^14.0.3"
