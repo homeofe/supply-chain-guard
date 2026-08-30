@@ -578,7 +578,6 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "package", value: "go:github.com/bm-197/chill", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/naol7/dist-task-scheduler", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/anatoli-derese/a2sv-excercise", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/amantsehay/a2sv-go-course", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/zainirfan13/graphql-client", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
   { type: "package", value: "go:github.com/hngi/team-fierce-backend-golang", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },

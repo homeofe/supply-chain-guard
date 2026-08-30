@@ -19,7 +19,9 @@ resolving the bin name rather than victims.
 
 The worst of the seven is `github.com/amantsehay/a2sv-go-course`: a real person's public
 Go coursework repository, 89 files, no campaign artifact anywhere in the tree, listed as
-DPRK infrastructure by a public tool.
+DPRK infrastructure by both a regex and a versionless `go:` feed IOC. Both detection
+paths are removed, and the `go.sum` scanner test retains a real campaign module beside
+the negative control.
 
 ### Why this happened, and what actually prevents a recurrence
 
@@ -34,9 +36,10 @@ edit, is calibrated against 29,687 real npm names, reports at high, and carries 
 dated allowlist that is scoped to exactly one rule. A hand-written alternation asserting
 critical is a second, worse implementation of that same idea.
 
-So the durable rule is: **`patterns.ts` carries evidence-backed names; misspelling shape
-belongs to the distance rule.** Both new test blocks assert the corrected behaviour by
-name, so a future re-add fails CI rather than shipping.
+So the durable rule is: **`patterns.ts` and `threat-intel.ts` carry evidence-backed
+names; misspelling shape belongs to the distance rule.** The new tests assert the
+corrected behaviour through both the tables and the public `go.sum` scanner path, so a
+future re-add fails CI rather than shipping.
 
 ### Follow-up opened separately
 

@@ -9,7 +9,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
-- **Seven false positives removed from the typosquat name tables.** Each entry of
+- **Seven false positives removed from the typosquat tables and package IOC feed.** Each entry of
   `MALICIOUS_PACKAGE_PATTERNS` and `PYPI_TYPOSQUAT_PATTERNS` was expanded into its
   literal match set (216 names, no rule left unexpandable) and every member probed
   against its registry. Fifteen came back live, and seven of those are legitimate
@@ -26,8 +26,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     'I think you meant "cryptography"'.
   - `py-dateutil` (PyPI) - a genuine dateutil packaging on bitbucket.
   - `github.com/amantsehay/a2sv-go-course` - a real person's public Go coursework
-    repository, 89 files, carrying neither Contagious Interview artifact. It was
-    listed as DPRK campaign infrastructure.
+    repository, 89 files, carrying neither Contagious Interview artifact. Its regex
+    entry and versionless `go:` feed IOC both listed it as DPRK campaign infrastructure
+    and have been removed.
 
   Misspelling SHAPE remains covered by `TYPOSQUAT_LEVENSHTEIN`, which is calibrated
   against 29,687 real npm names and reports a suspicion at high rather than a malware

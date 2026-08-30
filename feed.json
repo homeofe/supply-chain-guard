@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.6",
-  "entryCount": 13900,
+  "entryCount": 13899,
   "generatedAt": "2026-08-23T00:00:00.000Z",
   "entries": [
     {
@@ -2600,15 +2600,6 @@
     {
       "type": "package",
       "value": "go:github.com/anatoli-derese/a2sv-excercise",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/amantsehay/a2sv-go-course",
       "severity": "critical",
       "confidence": 0.95,
       "family": "InvisibleFerret",

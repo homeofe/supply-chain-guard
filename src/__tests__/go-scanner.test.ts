@@ -166,6 +166,22 @@ describe("Go Module Scanner", () => {
       expect(hits[0]?.description).toContain(MALICIOUS_MODULE);
     });
 
+    it("does not flag the verified a2sv coursework repo while retaining the real campaign", () => {
+      const legitimate = "github.com/amantsehay/a2sv-go-course";
+      const attacker = "github.com/glacialspring/go-winsparkle";
+      const content = [
+        `${legitimate} v1.0.0 h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`,
+        `${attacker} v1.0.0 h1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=`,
+      ].join("\n");
+
+      const hits = scanGoSumContent(content, "go.sum").filter(
+        (finding) => finding.rule === "GO_MALICIOUS_MODULE",
+      );
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.match).toBe(`${attacker}@v1.0.0`);
+      expect(hits[0]?.severity).toBe("critical");
+    });
+
     it("should not flag a clean go.sum (FP-safety)", () => {
       const content = [
         "github.com/gin-gonic/gin v1.9.1 h1:xxxx=",
