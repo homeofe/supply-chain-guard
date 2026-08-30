@@ -30,7 +30,15 @@ import { classifyTyposquat } from "../dist/dependency-risk-analyzer.js";
 const args = process.argv.slice(2);
 const REFRESH = args.includes("--refresh");
 const cacheIdx = args.indexOf("--cache");
-const CACHE = cacheIdx !== -1 ? args[cacheIdx + 1] : path.join("scripts", ".typosquat-corpus.json");
+// Default under node_modules/.cache, NOT inside the tracked tree. A 31,000-name
+// corpus is a file full of arbitrary package names, and some of them inevitably
+// match a content heuristic: parked in scripts/ it made this repository's own
+// self-scan report VIDAR_WALLET_THEFT against the measurement's cache. Scanners
+// skip node_modules, so the cache cannot pollute a scan of a checkout that ran it.
+const CACHE =
+  cacheIdx !== -1
+    ? args[cacheIdx + 1]
+    : path.join("node_modules", ".cache", "typosquat-corpus.json");
 
 /**
  * TWO-letter prefixes, not one.
