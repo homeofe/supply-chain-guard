@@ -1,3 +1,55 @@
+## Content-addressed self-scan and CLI risk consistency (2026-08-30)
+
+Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not
+merge on 2026-08-30. Review and merge, if accepted, on 2026-08-31 before the
+next release. No version bump: release preparation owns the next version and
+changelog block.
+
+The v6.0.7 four-project baseline exposed three connected false-assurance and
+presentation problems. Informational npm lockfile inventory contributed to the
+main risk score and reduced dependency trust; workflow/SLSA findings did not
+reach the CI/CD dimension; and a local checkout of this project produced 3,116
+findings, including 3,105 threat-intelligence self-matches. The text output also
+replaced the actual detected level with PARTIAL, mixed trust and risk labels,
+truncated recommendations, and expanded every repeated match.
+
+Self-recognition is now content-addressed per file, never repository-wide.
+`src/self-scan-files.json` lists reviewed inert definition/fixture paths and the
+shipped `self-scan-manifest.json` binds each source path to SHA-256. CRLF/LF is
+canonicalised for cross-platform source identity; compiled counterparts must
+byte-match the running installation. Project name, package metadata, Git remote,
+physical install location and canonical clone URL grant no trust. Any content
+edit fails closed to the normal scanner. `check:self-scan` is part of prebuild,
+so a reviewed-path edit requires explicit manifest regeneration and review.
+
+Scoring now excludes all informational findings while leaving them visible,
+dependency trust ignores informational `LOCKFILE_*` inventory, `WORKFLOW_*` and
+`SLSA_*` contribute to CI/CD risk, and non-zero weighted dimensions cannot round
+to zero. Text output groups repeated rule/file matches by default with
+`--all-findings` as the expansion control; machine formats are unchanged. The
+report says DETECTED RISK, preserves the actual level beside PARTIAL, distinguishes
+assessed trust dimensions, uses risk terminology for risk dimensions, renders
+native PowerShell paths and readable durations, and wraps recommendations.
+
+Measured with the built branch CLI and `--no-history`: AAHP moves from score 12
+to 10 (partial), aahp-runner 15 to 14, aahp-orchestrator 12 to 11, and this
+repository 100 with 3,116 findings to 5 with one history-derived finding. All
+four report dependency trust 100; this repository reports zero threat-intel
+matches. Existing findings in the three AAHP projects remain visible.
+
+Verification:
+
+- Windows: `npm run build` passes; the focused changed-area suite passes 131/131.
+- Linux openclaw, isolated `/tmp` checkout of implementation commit `f6149ce`:
+  `npm ci` reports zero vulnerabilities, `npm run build` passes, and all 139 test
+  files / 3,328 tests pass.
+- The Linux run confirms the two real IOC campaign fixtures that Windows endpoint
+  protection intercepts before scanning, and all VSIX fixtures requiring `zip`.
+- Regression coverage includes forged metadata, official/lookalike clone URLs,
+  exact source/compiled identity, LF/CRLF portability, fail-closed modifications,
+  arbitrary dist payloads, score/trust consistency, risk dimensions, text grouping,
+  wrapping, path display, and the new CLI flag.
+
 ## v6.0.7 release preparation (2026-08-30)
 
 Model: OpenAI Codex. Branch `codex/release-v6.0.7`.

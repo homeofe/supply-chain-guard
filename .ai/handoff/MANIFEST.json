@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788090457",
-    "timestamp": "2026-08-30T11:47:37Z",
-    "commit": "37b26d2",
+    "session_id": "cli-1788091420",
+    "timestamp": "2026-08-30T12:03:40Z",
+    "commit": "f6149ce",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3e4f54ac9ac3cdf13627ad61ff4145247b7a0b2df3aa1e710af71ce74cc49974",
-      "updated": "2026-08-30T11:36:31Z",
-      "lines": 5711,
-      "summary": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`."
+      "checksum": "sha256:65f111338b4f07adcf129ff511b21b32a74bd7f4f56540b3a5db8d49f620c6ad",
+      "updated": "2026-08-30T12:03:33Z",
+      "lines": 5763,
+      "summary": "Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:6a7b63088e57d63c5a28d76023e1466f013df75967a061674a8b62cdd1d0882a",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
-      "updated": "2026-08-30T11:47:37Z",
+      "updated": "2026-08-30T12:03:40Z",
       "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d2aa0abd069030dbeb01cab2e828f67ea5abebe0de9ce4b12f76708e4fafe711",
-      "updated": "2026-08-30T11:47:37Z",
+      "updated": "2026-08-30T12:03:40Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:9701398d6b22ee68682559d7c55ba5483da19fc2ae1ef15124207370c227732d",
-      "updated": "2026-08-30T11:47:37Z",
+      "updated": "2026-08-30T12:03:40Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 68759,
-    "full_read": 80862
+    "manifest_plus_core": 69315,
+    "full_read": 81418
   }
 }
