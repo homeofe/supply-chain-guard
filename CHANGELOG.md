@@ -56,6 +56,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- The 5 MiB core broad-gap performance test now applies the same coverage-aware
+  budget to its Vitest timeout that it already uses for its wall-clock
+  assertion. Under V8 instrumentation it could finish at the expected speed yet
+  fail at the fixed 30-second runner limit.
 - CI test commands now fail when an otherwise green Vitest run writes to
   `stderr`, on both supported Node matrix legs. Tests that intentionally exercise
   Solana retry warnings or a missing Action report now capture and assert those

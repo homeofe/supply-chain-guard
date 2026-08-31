@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788171034",
-    "timestamp": "2026-08-31T10:10:34Z",
-    "commit": "a3e4369",
+    "session_id": "cli-1788171964",
+    "timestamp": "2026-08-31T10:26:05Z",
+    "commit": "abe1898",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:edf1ae9b1fc158ff42d9a2a8c078947238758bf29f7fcbbbb44fbd5036cabaee",
-      "updated": "2026-08-31T10:09:10Z",
-      "lines": 5922,
-      "summary": "Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Release v6.0.8 remains"
+      "checksum": "sha256:2186956d4a6acaf3f0ff6ce0572d7eedd4d0f963ef4af32e9bef33992c65fd4e",
+      "updated": "2026-08-31T10:25:50Z",
+      "lines": 5933,
+      "summary": "Model: OpenAI Codex. Branch `codex/fix-coverage-timeout`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:6a7b63088e57d63c5a28d76023e1466f013df75967a061674a8b62cdd1d0882a",
-      "updated": "2026-08-30T11:36:31Z",
+      "updated": "2026-08-31T10:25:34Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
-      "updated": "2026-08-31T10:10:34Z",
+      "updated": "2026-08-31T10:26:03Z",
       "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:5c56b8e1f8d22c77280e8611b4f24550561bfbba712c42d601109f32d870b690",
-      "updated": "2026-08-31T10:10:34Z",
+      "updated": "2026-08-31T10:26:03Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:e2d9481d6d07c651ebf40871041b8f31c78658b462d5e64d9fc051f9aad31f95",
-      "updated": "2026-08-31T10:10:34Z",
+      "updated": "2026-08-31T10:26:03Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Release v6.0.8 remains Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: OpenAI Codex. Branch `codex/fix-coverage-timeout`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 70945,
-    "full_read": 83048
+    "manifest_plus_core": 71040,
+    "full_read": 83143
   }
 }

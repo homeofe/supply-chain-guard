@@ -334,7 +334,7 @@ describe("core broad-gap structural matchers", () => {
     expect(matchPatternInContent(legacyRegexOnly(pattern), source, "i"))
       .toHaveLength(1);
   });
-  it("covers every converted matcher on a concrete 5 MiB repeated-prefix near miss", { timeout: 30_000 }, () => {
+  it("covers every converted matcher on a concrete 5 MiB repeated-prefix near miss", { timeout: performanceBudget(30_000) }, () => {
     expect(Object.keys(nearMissUnits).sort()).toEqual([...CORE_BROAD_GAP_RULES].sort());
     const fiveMiB = 5 * 1024 * 1024;
     const started = performance.now();

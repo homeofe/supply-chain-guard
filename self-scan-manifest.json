@@ -4,7 +4,7 @@
   "files": {
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
     "src/__tests__/campaigns.test.ts": "c3911d4827e68224e740fd3d0e756288b82f1c3df567d2fb1031b08bfabfb573",
-    "src/__tests__/core-broad-gap-matchers.test.ts": "944eb1ebbd7a03b141f8994dd81782943fcccd1019cc217ac47265878c3d690b",
+    "src/__tests__/core-broad-gap-matchers.test.ts": "1d7bccb8772299f1a982af42a5924d786e39ff4cda914d0a2e9f43d81c04ae61",
     "src/__tests__/file-digest.test.ts": "d243581d251ad76b89a66605a31af39276f16aabc15db005f5963ce7ac2a8ccc",
     "src/__tests__/go-scanner.test.ts": "af680d4fea983dfd31b9d9c1327a899c67dc7467e81f59ca2b702f01297e167b",
     "src/__tests__/infostealer-patterns.test.ts": "b857995e71192fc7603ec2070223617e960d010daa602c724d2731a4cb28858f",
