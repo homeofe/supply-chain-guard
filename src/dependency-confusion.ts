@@ -16,7 +16,7 @@ import { SEVERITY_SCORES } from "./types.js";
 import { readOptionalUtf8File } from "./pattern-scanner.js";
 import { isJsonObject } from "./json-utils.js";
 
-const TOOL_VERSION = "6.0.7";
+const TOOL_VERSION = "6.0.8";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";

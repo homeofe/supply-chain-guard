@@ -1,3 +1,21 @@
+## v6.0.8 release preparation (2026-08-31)
+
+Model: OpenAI Codex. Branch `codex/release-v6.0.8`.
+
+Patch release for the content-aware self-scan and CLI risk alignment in #250,
+the 2026-08-31 intelligence batch in #251, exhaustive-by-default imports in
+#252, the multi-source feed rebuild in #253, and the clean-stderr CI gate in
+#254 plus the coverage-timeout correction in #255. The version moves together
+across package metadata, every governed CLI/scanner/reporter surface, the Action
+and examples, container documentation, MCP metadata, the generated feed,
+lockfile, self-scan manifest, and handoff set.
+`CHANGELOG.md` carries the dated 6.0.8 block and release reference, and the
+Unreleased comparison starts at v6.0.8.
+
+This branch contains version, changelog, and generated-metadata changes only.
+The immutable `v6.0.8` tag and publication remain after the release PR's squash
+merge, so the tag can point at the exact commit on `main`.
+
 ## Coverage-aware broad-gap timeout (2026-08-31)
 
 Model: OpenAI Codex. Branch `codex/fix-coverage-timeout`.
@@ -11,8 +29,8 @@ overhead during CI coverage runs.
 
 ## Fail CI on unexpected test diagnostics (2026-08-31)
 
-Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Release v6.0.8 remains
-paused until this change has passed CI and merged.
+Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Merged as PR #254 before
+v6.0.8 release preparation resumed.
 
 The successful post-merge run 33379804561 contained three kinds of error-shaped
 noise in its Test step: Vite warned that the CommonJS-loaded TypeScript config
