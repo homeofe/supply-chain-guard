@@ -670,7 +670,7 @@ There is one axis where it goes somewhere the others do not go at all. Credentia
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
-| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus campaign-IOC matching, fully local/offline | No | npm (incl. pnpm/yarn/bun lockfiles), PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform/IaC, VS Code extensions, GitHub Actions, GitHub repos | Yes (Apache-2.0) | No |
+| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | npm (incl. pnpm/yarn/bun lockfiles), PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform/IaC, VS Code extensions, GitHub Actions, GitHub repos | Yes (Apache-2.0) | No |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Known vulnerabilities in dependency inventories (OSV.dev database lookup) | Known-malicious versions via OSV MAL- entries only; no behavior or IOC analysis | Yes (offline mode available) | 11+ ecosystems, 19+ lockfile formats, container images, SBOM input | Yes (Apache-2.0) | No |
 | [Socket](https://socket.dev) | Proactive behavioral analysis of entire registries (SaaS) | Yes: 70+ risk types registry-wide, before advisories exist; engine is closed source and cloud-side | Yes | npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet, more; Actions workflows | CLI only (MIT); detection engine proprietary | Yes (except Firewall Free) |
 | [GuardDog](https://github.com/DataDog/guarddog) | Heuristic 0-10 risk scoring of individual packages (YARA + registry metadata) | Yes: heuristics only, no known-malware or campaign-IOC database; sandboxed scanning | No | npm, PyPI, Go, RubyGems, GitHub Actions, VS Code extensions | Yes (Apache-2.0) | No |
@@ -1065,17 +1065,21 @@ command exits non-zero, and the previous cache stays in effect.
 ### Where the feed comes from
 
 Curated entries are hand-added from vendor write-ups. Malicious-package entries
-are additionally imported from two public upstream databases, with no account
+are additionally discovered through two public upstream paths, with no account
 and no API key:
 
 - **[GitHub Advisory Database](https://github.com/advisories?query=type%3Amalware)** - malware
-  advisories (CWE-506), the primary source. Licensed
+  advisories (CWE-506), one discovery source. Licensed
   [CC BY 4.0](https://github.com/github/advisory-database); every imported entry
   carries its `GHSA-...` id in its `source` field.
-- **[OSV.dev](https://osv.dev/)** - corroboration only, never discovery. A package
-  that OSV also lists as malicious (a `MAL-` record from
-  [ossf/malicious-packages](https://github.com/ossf/malicious-packages),
-  Apache-2.0) is imported at confidence 1.0 instead of 0.9.
+- **[OpenSSF malicious-packages](https://github.com/ossf/malicious-packages)** -
+  independent discovery through OSV's incremental `MAL-` record exports. These
+  records aggregate origins including ecosystem analysis services and security
+  vendors, while retaining the original providers in every imported entry.
+  Licensed Apache-2.0.
+
+OSV querybatch separately corroborates GitHub-discovered packages. It is never
+used to corroborate an OpenSSF-discovered package against the same database.
 
 ```bash
 npm run feed:import -- --dry-run   # what the next refresh would add
@@ -1086,7 +1090,9 @@ Every imported entry is auditable: the `source` field names the public advisory
 it came from. A failed import writes nothing at all - the previous feed stays in
 effect and the process exits non-zero. The full mapping (ecosystem prefixes,
 version-range rules, which upstream fields deliberately stay unset) is in
-[docs/threat-feed-sources.md](docs/threat-feed-sources.md).
+[docs/threat-feed-sources.md](docs/threat-feed-sources.md); the source-adapter
+contract and trust boundaries are in
+[docs/feed-architecture.md](docs/feed-architecture.md).
 
 ## Install Guard
 

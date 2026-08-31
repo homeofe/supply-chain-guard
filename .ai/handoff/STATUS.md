@@ -1,3 +1,37 @@
+## Multi-source threat-feed rebuild (2026-08-31)
+
+Model: OpenAI Codex. Branch `codex/multi-source-feed-rebuild`. PR #253.
+No version bump: this must merge before the next release, whose preparation owns
+the version change.
+
+This begins rebuilding the supply-chain-guard feed around independent discovery
+adapters and preserved provenance. GitHub Advisory Database remains a direct
+source. OpenSSF malicious-packages is now a second direct discovery path through
+the bounded OSV data exports for npm, PyPI, Packagist, Go, RubyGems, crates.io,
+and NuGet. OSV querybatch only corroborates GitHub-only candidates, so the OSV
+database cannot corroborate records discovered from its own export.
+
+Imports are exhaustive when `--limit` is omitted. An explicit limit remains a
+manual review control, with fail-closed protection when the remaining rolling
+window cannot drain before entries age out. Every enabled discovery adapter must
+complete or the snapshot is rejected before files are written. Untrusted export
+bodies are bounded, exact cross-source overlaps retain GHSA/MAL identities and
+provider origins, and bounded version ranges are never widened to whole-package
+blocks without explicit version evidence.
+
+The fresh 14-day snapshot processed 1,882 GitHub advisories and 1,923 OpenSSF MAL
+records, merged 2,101 cross-source overlaps, and added 814 entries: 99 OpenSSF-only
+and 715 found by both discovery paths. The bundled feed now contains 15,219 entries.
+
+Verification:
+
+- Windows: `npm run build` and 190 focused feed, integrity, staleness, and
+  self-scan tests pass. Two campaign fixtures are intercepted by endpoint
+  protection before scanning; direct matcher probes pass.
+- Clean Linux openclaw checkout of commit `ca82767`: `npm ci` reports zero
+  vulnerabilities, `npm run build` passes, and all 139 test files / 3,353 tests
+  pass, including both campaign fixtures.
+
 ## Exhaustive threat-feed imports by default (2026-08-31)
 
 Model: OpenAI Codex. Branch `codex/unlimited-threat-feed-import`. PR #252.
