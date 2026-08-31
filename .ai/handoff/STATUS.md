@@ -1,3 +1,14 @@
+## Coverage-aware broad-gap timeout (2026-08-31)
+
+Model: OpenAI Codex. Branch `codex/fix-coverage-timeout`.
+
+The final v6.0.8 pre-release Linux run exposed a second fixed runner timeout:
+the 5 MiB core broad-gap performance case took 30.067 seconds under V8 coverage
+and was killed at 30 seconds, although its wall-clock assertion already uses the
+shared coverage-aware performance budget. Its Vitest timeout now uses that same
+helper, retaining 30 seconds without coverage and allowing instrumentation
+overhead during CI coverage runs.
+
 ## Fail CI on unexpected test diagnostics (2026-08-31)
 
 Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Release v6.0.8 remains
