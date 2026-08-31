@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (147, newest first)
+## Releases (148, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.0.8 | 2026-08-31 | The threat-feed pipeline is being rebuilt around discovery-source adapters. |
 | v6.0.7 | 2026-08-30 | Eight names that v6.0.6 pinned at a single implausibly high version |
 | v6.0.6 | 2026-08-29 | 250 malicious-package IOCs imported from the GitHub Advisory Database and |
 | v6.0.5 | 2026-08-28 | 250 malicious-package IOCs imported from the GitHub Advisory Database and |
