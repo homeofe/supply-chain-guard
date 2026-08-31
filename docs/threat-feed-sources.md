@@ -3,6 +3,9 @@
 Where the bundled IOC feed comes from, how upstream records are mapped onto the
 feed's own entry schema, and what the import deliberately refuses to do.
 
+The trust boundaries, adapter contract and staged storage migration are recorded
+in [feed-architecture.md](feed-architecture.md).
+
 The feed has two kinds of entries:
 
 | Kind | How it gets in | Provenance |
@@ -42,16 +45,40 @@ is malware", which is exactly the indicator class this scanner blocks.
   and travels with the data: every imported entry carries its `GHSA-...` id in
   the `source` field, and this page names the database.
 
-### 2. OSV.dev (corroboration only)
+### 2. OpenSSF malicious-packages through OSV exports (discovery)
+
+`GET https://storage.googleapis.com/osv-vulnerabilities/<ecosystem>/modified_id.csv`
+
+OpenSSF's malicious-package database is now an independent discovery source.
+For every enabled ecosystem, the importer selects `MAL-` records changed inside
+the requested window and fetches their individual OSV JSON records. This brings
+in reports from the database's upstream origins even when no GitHub advisory was
+discovered first. The repository and records are Apache-2.0.
+
+- Every index and selected record must load successfully. A partial OpenSSF
+  snapshot aborts the complete import before either feed file is written.
+- The `MAL-` id and validated `malicious-packages-origins` labels are retained in
+  the entry's `source` field.
+- An open-ended range introduced at zero maps to a bare package name. A bounded
+  range maps only through explicit `affected[].versions`; without that list it is
+  reported as unmappable rather than broadened.
+- One origin uses confidence 0.9; several distinct origins use 1.0. Accepted
+  malicious-package verdicts use the scanner's documented critical-severity
+  policy.
+- Exact GHSA/OpenSSF overlaps are merged before deduplication so both advisory
+  ids and the provider labels survive. A `ghsa-malware`-only OpenSSF origin is a
+  mirror and does not independently raise confidence.
+- The modified-index date controls backlog age. An older report changed today is
+  newly discoverable today and is not treated as already expired.
+
+### 3. OSV.dev querybatch (GitHub corroboration only)
 
 `POST https://api.osv.dev/v1/querybatch`
 
-One batched query per import run asks whether OSV also lists a package as
-malicious, i.e. whether it has a `MAL-` record (those originate from
-`ossf/malicious-packages`, Apache-2.0). This is **never** used for discovery:
-OSV can only raise the confidence of a package GitHub already flagged, so a
-`MAL-` record that applies to one version of an otherwise legitimate package
-can never turn into a whole-package block here.
+One batched query per import run asks whether OSV also lists a
+**GitHub-discovered** package as malicious. OpenSSF candidates never enter this
+query: the same OSV database exported them, so querying them back would let one
+source corroborate itself.
 
 - A package listed by both databases gets `confidence: 1.0` and a `source` of
   `GHSA-..., MAL-...`.
@@ -140,7 +167,8 @@ npm run feed:import -- --since 2026-07-20 --until 2026-07-21 --ecosystem npm --l
 | `--max-pages <n>` | 750 | Hard cap on upstream pages fetched; hitting it is fatal |
 | `--allow-truncated` | off | Import anyway when the page cap was hit |
 | `--timeout <ms>` | 15000 | Per-request timeout |
-| `--no-osv` | off | Skip the OSV corroboration query |
+| `--no-ossf` | off | Disable OpenSSF discovery for source-outage diagnosis; the resulting snapshot is intentionally incomplete |
+| `--no-osv` | off | Skip OSV corroboration of GitHub-discovered packages |
 | `--dry-run` | off | Report only |
 | `--json` | off | Machine-readable report |
 

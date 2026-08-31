@@ -7,7 +7,7 @@
 //   node scripts/import-threat-feed.mjs --days 30 --limit 500
 //   node scripts/import-threat-feed.mjs --json       -> machine-readable report
 //
-// SOURCES (both public, no account, no API key)
+// SOURCES (public, no account, no API key)
 //   1. GitHub Advisory Database, malware advisories only
 //      GET https://api.github.com/advisories?type=malware
 //      Reviewed by GitHub's security team, CWE-506 "Embedded Malicious Code".
@@ -17,12 +17,19 @@
 //      requests/hour. It needs no scopes. It is optional only for a window small
 //      enough to fit the 60-request anonymous budget; the default --max-pages
 //      (750) does not, so a default run REQUIRES one and fails fast without it.
-//   2. OSV.dev querybatch (corroboration only, never discovery)
+//   2. OpenSSF malicious-packages through OSV.dev data exports (discovery)
+//      The per-ecosystem modified_id.csv indexes discover MAL- records that
+//      changed inside the requested window. Individual records preserve their
+//      upstream origins (Amazon Inspector, ReversingLabs, Checkmarx, OpenSSF
+//      Package Analysis, GHSA and others) instead of flattening the database
+//      into one anonymous source. Any index or record fetch failure is fatal:
+//      publishing a partial discovery result would silently omit known malware.
+//   3. OSV.dev querybatch (corroboration only)
 //      POST https://api.osv.dev/v1/querybatch
-//      Confirms the package is also listed as malicious (a MAL- id, sourced
-//      from ossf/malicious-packages, Apache-2.0). A package confirmed by both
-//      databases gets confidence 1.0; GitHub-only gets 0.9. An OSV outage
-//      degrades gracefully - the import continues with GitHub-only provenance.
+//      Confirms a GitHub-discovered package is also listed as malicious. It is
+//      never applied to an OpenSSF-discovered candidate because that would let
+//      one database corroborate itself. An outage degrades gracefully because
+//      this call enriches provenance; it does not discover records.
 //
 // FAILURE MODE
 //   The upstream fetch is the only fatal step. Nothing is written until the
@@ -55,6 +62,8 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const GITHUB_ADVISORIES_URL = "https://api.github.com/advisories";
 export const OSV_QUERYBATCH_URL = "https://api.osv.dev/v1/querybatch";
+export const OSV_VULNERABILITIES_URL =
+  "https://storage.googleapis.com/osv-vulnerabilities";
 
 /** Attribution required by the GitHub Advisory Database licence (CC BY 4.0). */
 export const GITHUB_ATTRIBUTION =
@@ -62,6 +71,12 @@ export const GITHUB_ATTRIBUTION =
 /** Attribution for the corroborating database reached through OSV.dev. */
 export const OSV_ATTRIBUTION =
   "OSV.dev / OpenSSF malicious-packages (ossf/malicious-packages), Apache-2.0";
+
+/** Stable ids used in reports and candidate provenance. */
+export const DISCOVERY_SOURCE = {
+  GITHUB: "github-advisory-database",
+  OPENSSF: "openssf-malicious-packages",
+};
 
 /**
  * Upstream ecosystem -> feed value prefix.
@@ -93,6 +108,25 @@ export const OSV_ECOSYSTEM = {
   "nuget:": "NuGet",
 };
 
+/** Import ecosystem -> directory in OSV's public vulnerability export. */
+export const OSV_ECOSYSTEM_DIRECTORY = {
+  npm: "npm",
+  pip: "PyPI",
+  composer: "Packagist",
+  go: "Go",
+  rubygems: "RubyGems",
+  rust: "crates.io",
+  nuget: "NuGet",
+};
+
+/** OSV ecosystem -> import ecosystem and feed prefix. */
+export const OSV_IMPORT_ECOSYSTEM = Object.fromEntries(
+  Object.entries(OSV_ECOSYSTEM_DIRECTORY).map(([ecosystem, directory]) => [
+    directory,
+    { ecosystem, prefix: ECOSYSTEM_PREFIX[ecosystem] },
+  ]),
+);
+
 /**
  * Upstream severity -> feed severity. FeedIOC only has critical/high/medium,
  * so `low` and `unknown` land on `medium` (the floor) rather than being
@@ -117,6 +151,10 @@ export const CONFIDENCE_CORROBORATED = 1.0;
 
 /** GitHub's unauthenticated REST allowance, requests/hour. Authenticated is 5000. */
 const ANONYMOUS_REQUEST_BUDGET = 60;
+
+/** Bounds for untrusted OSV export bodies. Current indexes are below 10 MiB. */
+export const MAX_OSV_INDEX_BYTES = 32 * 1024 * 1024;
+export const MAX_OSV_RECORD_BYTES = 4 * 1024 * 1024;
 
 /**
  * Default hard cap on upstream pages per run.
@@ -273,6 +311,7 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
     // the entry is serialized into the feed.
     entry._ecosystemPrefix = prefix;
     entry._name = name;
+    entry._discoverySource = DISCOVERY_SOURCE.GITHUB;
     entries.push(entry);
   }
 
@@ -289,6 +328,166 @@ export function mapAdvisories(advisories, { ecosystems } = {}) {
     skipped.push(...result.skipped);
   }
   return { entries, skipped };
+}
+
+/** True when one OSV range says every version from the first release onward. */
+export function isWholePackageOsvRange(range) {
+  if (!range || !["SEMVER", "ECOSYSTEM"].includes(range.type)) return false;
+  const events = Array.isArray(range.events) ? range.events : [];
+  return (
+    events.length === 1 &&
+    typeof events[0]?.introduced === "string" &&
+    /^0(?:\.0)*$/.test(events[0].introduced)
+  );
+}
+
+/**
+ * Map one OpenSSF malicious-packages OSV record without broadening its range.
+ *
+ * A range that starts at zero and never ends is a whole-package verdict. Any
+ * other range is emitted only through the record's explicit `versions` list;
+ * an unexpanded bounded range is skipped rather than turned into a bare-name
+ * block. This is the OSV equivalent of mapAdvisory's conservative range rule.
+ */
+export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
+  const entries = [];
+  const skipped = [];
+  const id = record?.id;
+  const selected = ecosystems?.length ? new Set(ecosystems) : null;
+
+  if (typeof id !== "string" || !id.startsWith("MAL-") || !SAFE_ADVISORY_ID.test(id)) {
+    return { entries, skipped: [{ reason: "not-malware-record", detail: String(id) }] };
+  }
+  if (record.withdrawn) {
+    return { entries, skipped: [{ reason: "withdrawn", detail: id }] };
+  }
+
+  const firstSeen =
+    typeof record.published === "string" && /^\d{4}-\d{2}-\d{2}/.test(record.published)
+      ? record.published.slice(0, 10)
+      : undefined;
+  const origins = Array.isArray(record?.database_specific?.["malicious-packages-origins"])
+    ? [
+        ...new Set(
+          record.database_specific["malicious-packages-origins"]
+            .map((origin) => origin?.source)
+            .filter((source) => typeof source === "string" && /^[a-z0-9._-]{1,80}$/i.test(source)),
+        ),
+      ].sort()
+    : [];
+  const source = origins.length > 0 ? `${id} (${origins.join("+")})` : id;
+  // Several distinct origins can corroborate one OpenSSF record. A single
+  // OpenSSF origin retains the same conservative confidence as GitHub alone.
+  const confidence = origins.length >= 2 ? CONFIDENCE_CORROBORATED : CONFIDENCE_SINGLE_SOURCE;
+  const affected = Array.isArray(record.affected) ? record.affected : [];
+  if (affected.length === 0) {
+    skipped.push({ reason: "no-affected-package", detail: id });
+  }
+
+  for (const item of affected) {
+    const osvEcosystem = String(item?.package?.ecosystem ?? "");
+    const mappedEcosystem = OSV_IMPORT_ECOSYSTEM[osvEcosystem];
+    const name = item?.package?.name;
+
+    if (mappedEcosystem && selected && !selected.has(mappedEcosystem.ecosystem)) {
+      skipped.push({ reason: "ecosystem-filtered", detail: `${id} (${osvEcosystem || "none"})` });
+      continue;
+    }
+    if (!mappedEcosystem) {
+      skipped.push({ reason: "unsupported-ecosystem", detail: `${id} (${osvEcosystem || "none"})` });
+      continue;
+    }
+    if (!isSafePackageName(name)) {
+      skipped.push({ reason: "unsafe-package-name", detail: `${id} (${JSON.stringify(name)})` });
+      continue;
+    }
+
+    const ranges = Array.isArray(item.ranges) ? item.ranges : [];
+    const wholePackage = ranges.some(isWholePackageOsvRange);
+    const versions = Array.isArray(item.versions)
+      ? [...new Set(item.versions.filter((version) => typeof version === "string"))]
+      : [];
+    const mappedVersions = wholePackage ? [undefined] : versions;
+    if (mappedVersions.length === 0) {
+      skipped.push({ reason: "unmappable-version-range", detail: `${id} ${osvEcosystem}/${name}` });
+      continue;
+    }
+
+    for (const version of mappedVersions) {
+      if (version !== undefined && !SAFE_VERSION.test(version)) {
+        skipped.push({ reason: "unsafe-version", detail: `${id} ${name}@${version}` });
+        continue;
+      }
+      const entry = {
+        type: "package",
+        value: feedValue(mappedEcosystem.prefix, name, version),
+        // OpenSSF's definition requires incident-response-worthy impact. This
+        // is the scanner's explicit severity policy, not a value supplied by OSV.
+        severity: "critical",
+        confidence,
+        source,
+      };
+      if (firstSeen) entry.firstSeen = firstSeen;
+      entry._ecosystemPrefix = mappedEcosystem.prefix;
+      entry._name = name;
+      entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
+      entry._origins = origins;
+      if (typeof record._indexModified === "string") {
+        entry._queueDate = record._indexModified.slice(0, 10);
+      }
+      entries.push(entry);
+    }
+  }
+
+  return { entries, skipped };
+}
+
+/** Map several OpenSSF OSV records. */
+export function mapOsvMalwareRecords(records, { ecosystems } = {}) {
+  const entries = [];
+  const skipped = [];
+  for (const record of records) {
+    const result = mapOsvMalwareRecord(record, { ecosystems });
+    entries.push(...result.entries);
+    skipped.push(...result.skipped);
+  }
+  return { entries, skipped };
+}
+
+/**
+ * Merge exact candidates reported by several discovery adapters.
+ *
+ * This runs before dedupe against the committed feed so a newly discovered
+ * GHSA/OpenSSF overlap keeps both advisory ids and OpenSSF provider labels.
+ */
+export function coalesceCandidates(entries) {
+  const byKey = new Map();
+  let coalesced = 0;
+  for (const entry of entries) {
+    const key = `${entry.type}:${entry.value}`;
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, { ...entry });
+      continue;
+    }
+    coalesced++;
+    if (entry.source && entry.source !== current.source) {
+      current.source = current.source ? `${current.source}, ${entry.source}` : entry.source;
+    }
+    if (entry.confidence > current.confidence) current.confidence = entry.confidence;
+    if (
+      entry._discoverySource !== current._discoverySource &&
+      (entry._origins?.length === 0 || entry._origins?.some((origin) => origin !== "ghsa-malware"))
+    ) {
+      current.confidence = CONFIDENCE_CORROBORATED;
+    }
+    if (entry.firstSeen && (!current.firstSeen || entry.firstSeen < current.firstSeen)) {
+      current.firstSeen = entry.firstSeen;
+    }
+    if (entry._queueDate && !current._queueDate) current._queueDate = entry._queueDate;
+    if (entry._origins) current._origins = entry._origins;
+  }
+  return { entries: [...byKey.values()], coalesced };
 }
 
 // ---------------------------------------------------------------------------
@@ -482,17 +681,19 @@ export function applyDeclineList(entries, declined) {
  * meantime, so real inflow only makes the loss worse. The result is a lower
  * bound, which is the right direction for a security tool.
  *
- * Entries with no firstSeen are skipped rather than guessed at - the field
- * comes straight from the advisory's published_at and is almost always set.
+ * GitHub candidates use firstSeen because the queue is ordered by publication.
+ * OpenSSF candidates use the modified-index date carried in `_queueDate`, since
+ * an old report can become newly discoverable after an upstream update. Entries
+ * with neither date are skipped rather than guessed at.
  */
 export function countUndrainable(added, { limit, days, now = new Date() } = {}) {
   if (!Number.isFinite(limit) || limit <= 0 || !Number.isFinite(days)) return 0;
   const today = Date.parse(`${now.toISOString().slice(0, 10)}T00:00:00Z`);
   let count = 0;
   for (let i = limit; i < added.length; i++) {
-    const firstSeen = added[i]?.firstSeen;
-    if (!firstSeen) continue;
-    const published = Date.parse(`${firstSeen}T00:00:00Z`);
+    const queueDate = added[i]?._queueDate ?? added[i]?.firstSeen;
+    if (!queueDate) continue;
+    const published = Date.parse(`${queueDate}T00:00:00Z`);
     if (Number.isNaN(published)) continue;
     const ageDays = Math.floor((today - published) / 86400000);
     const daysLeftInWindow = days - ageDays;
@@ -603,6 +804,249 @@ export async function fetchMalwareAdvisories({
 }
 
 /**
+ * Parse one OSV per-ecosystem modified_id.csv index.
+ *
+ * The index is newest-first and contains every vulnerability class. Discovery
+ * deliberately accepts only MAL- ids and validates every selected line before
+ * constructing a URL from it.
+ */
+export function parseOsvModifiedIndex(text, { since, until } = {}) {
+  if (typeof text !== "string") throw new Error("OSV modified index is not text");
+  const entries = [];
+  const seen = new Set();
+  for (const [index, raw] of text.split(/\r?\n/).entries()) {
+    const line = raw.trim();
+    if (!line) continue;
+    const comma = line.indexOf(",");
+    if (comma <= 0) {
+      throw new Error(`OSV modified index line ${index + 1} is malformed`);
+    }
+    const modified = line.slice(0, comma);
+    const id = line.slice(comma + 1).trim();
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(modified)) {
+      throw new Error(`OSV modified index line ${index + 1} has an invalid timestamp`);
+    }
+    if (!id.startsWith("MAL-")) continue;
+    if (!SAFE_ADVISORY_ID.test(id)) {
+      throw new Error(`OSV modified index line ${index + 1} has an unsafe MAL id`);
+    }
+    const day = modified.slice(0, 10);
+    if (since && day < since) continue;
+    if (until && day > until) continue;
+    if (!seen.has(id)) {
+      seen.add(id);
+      entries.push({ id, modified });
+    }
+  }
+  return entries;
+}
+
+/** Read an untrusted response without allowing an unlimited body into memory. */
+async function readBoundedOsvBody(response, { maxBytes, format, url }) {
+  const declared = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new Error(
+      `OpenSSF/OSV export body exceeds ${maxBytes} bytes for ${url} (declared ${declared})`,
+    );
+  }
+
+  let text;
+  if (response.body?.getReader) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const parts = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error(`OpenSSF/OSV export body exceeds ${maxBytes} bytes for ${url}`);
+      }
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    text = parts.join("");
+  } else if (typeof response.text === "function") {
+    text = await response.text();
+  } else if (format === "json" && typeof response.json === "function") {
+    const json = await response.json();
+    const size = Buffer.byteLength(JSON.stringify(json), "utf8");
+    if (size > maxBytes) {
+      throw new Error(`OpenSSF/OSV export body exceeds ${maxBytes} bytes for ${url}`);
+    }
+    return json;
+  } else {
+    throw new Error(`OpenSSF/OSV export returned an unreadable ${format} body for ${url}`);
+  }
+
+  if (Buffer.byteLength(text, "utf8") > maxBytes) {
+    throw new Error(`OpenSSF/OSV export body exceeds ${maxBytes} bytes for ${url}`);
+  }
+  return format === "text" ? text : JSON.parse(text);
+}
+
+/** Fetch a response body with the importer's timeout and fail-closed semantics. */
+async function fetchOsvExport(url, { timeoutMs, fetchImpl, format, maxBytes }) {
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { "User-Agent": "supply-chain-guard-feed-import" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`OpenSSF/OSV export request failed: ${message}`);
+  }
+  if (!response.ok) {
+    throw new Error(`OpenSSF/OSV export returned HTTP ${response.status} for ${url}`);
+  }
+  try {
+    return await readBoundedOsvBody(response, { maxBytes, format, url });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("OpenSSF/OSV export body")) throw err;
+    throw new Error(`OpenSSF/OSV export returned an invalid ${format} body for ${url}`);
+  }
+}
+
+/** Run asynchronous jobs through a small fixed worker pool. */
+async function mapConcurrent(items, concurrency, worker) {
+  const output = new Array(items.length);
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      output[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return output;
+}
+
+/**
+ * Discover recently changed OpenSSF malicious-package records via OSV exports.
+ *
+ * Every enabled ecosystem index and every selected record must load
+ * successfully. A partial source snapshot rejects the whole import before the
+ * feed is touched. `concurrency` bounds simultaneous record requests; it does
+ * not cap how many records are imported.
+ */
+export async function fetchOsvMalwareRecords({
+  since,
+  until,
+  ecosystems,
+  timeoutMs = 15000,
+  concurrency = 12,
+  fetchImpl = globalThis.fetch,
+  baseUrl = OSV_VULNERABILITIES_URL,
+} = {}) {
+  const workers = positiveInt("OpenSSF concurrency", concurrency);
+  const selected = ecosystems?.length ? ecosystems : Object.keys(OSV_ECOSYSTEM_DIRECTORY);
+  const directories = selected.map((ecosystem) => ({
+    ecosystem,
+    directory: OSV_ECOSYSTEM_DIRECTORY[ecosystem],
+  }));
+  const indexes = await Promise.all(
+    directories.map(async ({ ecosystem, directory }) => {
+      if (!directory) throw new Error(`no OSV export directory for ecosystem ${ecosystem}`);
+      const url = `${baseUrl}/${encodeURIComponent(directory)}/modified_id.csv`;
+      const body = await fetchOsvExport(url, {
+        timeoutMs,
+        fetchImpl,
+        format: "text",
+        maxBytes: MAX_OSV_INDEX_BYTES,
+      });
+      return {
+        ecosystem,
+        directory,
+        entries: parseOsvModifiedIndex(body, { since, until }),
+      };
+    }),
+  );
+
+  // An OSV record can cover more than one ecosystem and consequently appear in
+  // several indexes. Fetch it once, from the first directory that named it.
+  const requests = [];
+  const seen = new Set();
+  for (const index of indexes) {
+    for (const { id, modified } of index.entries) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      requests.push({ id, modified, directory: index.directory });
+    }
+  }
+
+  const records = await mapConcurrent(requests, workers, async ({ id, modified, directory }) => {
+    const url = `${baseUrl}/${encodeURIComponent(directory)}/${encodeURIComponent(id)}.json`;
+    const record = await fetchOsvExport(url, {
+      timeoutMs,
+      fetchImpl,
+      format: "json",
+      maxBytes: MAX_OSV_RECORD_BYTES,
+    });
+    if (!record || typeof record !== "object" || record.id !== id) {
+      throw new Error(`OpenSSF/OSV export record ${id} returned an unexpected payload`);
+    }
+    return { ...record, _indexModified: modified };
+  });
+
+  return {
+    records,
+    indexes: indexes.length,
+    modifiedIds: requests.length,
+  };
+}
+
+/**
+ * Build the enabled discovery adapters. New verdict sources join this registry
+ * instead of adding source-specific branches to the orchestration below.
+ */
+export function createDiscoverySources({
+  since,
+  until,
+  ecosystems,
+  maxPages,
+  timeoutMs,
+  token,
+  fetchImpl,
+  useOssf = true,
+} = {}) {
+  const sources = [
+    {
+      id: DISCOVERY_SOURCE.GITHUB,
+      attribution: GITHUB_ATTRIBUTION,
+      discover: () =>
+        fetchMalwareAdvisories({
+          since,
+          until,
+          maxPages,
+          timeoutMs,
+          token,
+          fetchImpl,
+        }),
+      map: (result) => mapAdvisories(result.advisories, { ecosystems }),
+    },
+  ];
+  if (useOssf) {
+    sources.push({
+      id: DISCOVERY_SOURCE.OPENSSF,
+      attribution: OSV_ATTRIBUTION,
+      discover: () =>
+        fetchOsvMalwareRecords({
+          since,
+          until,
+          ecosystems,
+          timeoutMs,
+          fetchImpl,
+        }),
+      map: (result) => mapOsvMalwareRecords(result.records, { ecosystems }),
+    });
+  }
+  return sources;
+}
+
+/**
  * Ask OSV.dev which of these packages it also lists as malicious (MAL- ids).
  *
  * Corroboration only: OSV is never used to DISCOVER a package, so an OSV
@@ -678,8 +1122,18 @@ export function formatEntry(entry) {
 
 /** Strip the transient bookkeeping fields before serialization. */
 export function publicEntry(entry) {
-  const { _ecosystemPrefix, _name, ...rest } = entry;
+  const { _ecosystemPrefix, _name, _discoverySource, _queueDate, _origins, ...rest } = entry;
   return rest;
+}
+
+/** Advance the deterministic bundled-feed timestamp after a successful import. */
+export function updateFeedGeneratedAt(source, date) {
+  const replacement = `export const FEED_GENERATED_AT = "${date}T00:00:00.000Z";`;
+  const pattern = /export const FEED_GENERATED_AT = "\d{4}-\d{2}-\d{2}T00:00:00\.000Z";/;
+  if (!pattern.test(source)) {
+    throw new Error("FEED_GENERATED_AT marker not found in src/threat-intel.ts");
+  }
+  return source.replace(pattern, replacement);
 }
 
 /**
@@ -810,6 +1264,7 @@ export async function importUpstreamFeed({
   timeoutMs = 15000,
   token,
   useOsv = true,
+  useOssf = true,
   dryRun = false,
   allowTruncated = false,
   ecosystems,
@@ -845,15 +1300,24 @@ export async function importUpstreamFeed({
   // than after several hundred upstream requests have been spent.
   const declineList = loadDeclineList(root);
 
-  // 1. Fetch (fatal on failure - nothing has been written yet).
-  const { advisories, pages, truncated } = await fetchMalwareAdvisories({
+  // 1. Fetch every enabled discovery source. Promise.all is deliberate: any
+  // source failure rejects the whole snapshot before the feed is touched.
+  const sourceAdapters = createDiscoverySources({
     since: from,
     until,
+    ecosystems,
     maxPages,
     timeoutMs,
     token,
     fetchImpl,
+    useOssf,
   });
+  const sourceResults = await Promise.all(
+    sourceAdapters.map(async (adapter) => ({ adapter, result: await adapter.discover() })),
+  );
+  const githubResult = sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.GITHUB)?.result;
+  const { advisories = [], pages = 0, truncated = false } = githubResult ?? {};
+  const ossfResult = sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.OPENSSF)?.result;
 
   // 1b. Truncation is FATAL. The fetch is newest-first, so a page cap does not
   // leave a resumable backlog: the next run re-fetches the same newest pages and
@@ -870,12 +1334,28 @@ export async function importUpstreamFeed({
     );
   }
 
-  // 2. Map (pure).
-  const { entries: mapped, skipped } = mapAdvisories(advisories, { ecosystems });
+  // 2. Normalize every upstream shape to FeedIOC candidates through its adapter.
+  const mapped = [];
+  const skipped = [];
+  const discoverySources = {};
+  for (const { adapter, result } of sourceResults) {
+    const normalized = adapter.map(result);
+    mapped.push(...normalized.entries);
+    skipped.push(...normalized.skipped);
+    discoverySources[adapter.id] = {
+      attribution: adapter.attribution,
+      recordsFetched:
+        adapter.id === DISCOVERY_SOURCE.GITHUB ? result.advisories.length : result.records.length,
+      mapped: normalized.entries.length,
+      skipped: normalized.skipped.length,
+    };
+  }
+
+  const { entries: normalizedCandidates, coalesced } = coalesceCandidates(mapped);
 
   // 3. Dedupe against the feed that is actually committed.
   const existing = extractBundledEntries(root);
-  const { added: deduped, duplicates, covered } = dedupe(existing, mapped);
+  const { added: deduped, duplicates, covered } = dedupe(existing, normalizedCandidates);
 
   // 3b. Drop candidates a human has declined for good. Before --limit and before
   // the undrainable check on purpose: a family that is covered elsewhere must not
@@ -893,16 +1373,36 @@ export async function importUpstreamFeed({
   // 4. Corroborate with OSV (never fatal).
   let osv = { ids: new Map(), ok: true };
   if (useOsv && selected.length > 0) {
+    const githubPackages = selected.filter(
+      (entry) =>
+        entry._discoverySource === DISCOVERY_SOURCE.GITHUB &&
+        !String(entry.source ?? "").includes("MAL-"),
+    );
     osv = await crossReferenceOsv(
-      selected.map((e) => ({ prefix: e._ecosystemPrefix, name: e._name })),
+      githubPackages.map((e) => ({ prefix: e._ecosystemPrefix, name: e._name })),
       { timeoutMs, fetchImpl },
     );
-    for (const entry of selected) {
+    for (const entry of githubPackages) {
       const mal = osv.ids.get(`${entry._ecosystemPrefix}${entry._name}`);
       if (mal) {
         entry.source = `${entry.source}, ${mal}`;
         entry.confidence = CONFIDENCE_CORROBORATED;
       }
+    }
+  }
+
+  const additionsByDiscovery = {
+    githubOnly: 0,
+    openssfOnly: 0,
+    githubAndOpenssf: 0,
+  };
+  for (const entry of selected) {
+    if (entry._discoverySource === DISCOVERY_SOURCE.OPENSSF) {
+      additionsByDiscovery.openssfOnly++;
+    } else if (String(entry.source ?? "").includes("MAL-")) {
+      additionsByDiscovery.githubAndOpenssf++;
+    } else {
+      additionsByDiscovery.githubOnly++;
     }
   }
 
@@ -912,7 +1412,13 @@ export async function importUpstreamFeed({
     advisoriesFetched: advisories.length,
     pages,
     truncated,
+    ossfRecordsFetched: ossfResult?.records.length ?? 0,
+    ossfIndexesFetched: ossfResult?.indexes ?? 0,
+    ossfModifiedIds: ossfResult?.modifiedIds ?? 0,
+    discoverySources,
+    additionsByDiscovery,
     mapped: mapped.length,
+    coalesced,
     duplicates,
     covered,
     // Candidates removed by threat-feed-declined.json, and the per-rule tally. These
@@ -958,7 +1464,10 @@ export async function importUpstreamFeed({
   // 5. Build the new source in memory and prove it re-parses to exactly the
   //    entries we expect BEFORE anything touches the working tree.
   const original = readFileSync(threatIntelPath, "utf8");
-  const updated = applyEntries(original, selected, { date: from });
+  const updated = updateFeedGeneratedAt(
+    applyEntries(original, selected, { date: from }),
+    now.toISOString().slice(0, 10),
+  );
   writeFileSync(threatIntelPath, updated);
   try {
     const reparsed = extractBundledEntries(root);
@@ -1037,13 +1546,14 @@ function ecosystemList(raw) {
 }
 
 export function parseArgs(argv) {
-  const opts = { dryRun: false, json: false, useOsv: true };
+  const opts = { dryRun: false, json: false, useOsv: true, useOssf: true };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => argv[++i];
     if (arg === "--dry-run") opts.dryRun = true;
     else if (arg === "--json") opts.json = true;
     else if (arg === "--no-osv") opts.useOsv = false;
+    else if (arg === "--no-ossf") opts.useOssf = false;
     else if (arg === "--days") opts.days = positiveInt(arg, next());
     else if (arg === "--since") opts.since = next();
     else if (arg === "--until") opts.until = next();
@@ -1095,7 +1605,10 @@ const USAGE = `
                         2026-07-20/21 spike, where the npm half sampled 25/25 still
                         installable and the PyPI/NuGet halves 0/25 and 2/25.
     --timeout <ms>      Per-request timeout (default 15000)
-    --no-osv            Skip the OSV.dev corroboration query
+    --no-ossf           Disable OpenSSF MAL-record discovery. This makes the
+                        snapshot intentionally incomplete and is intended only
+                        for source-outage diagnosis.
+    --no-osv            Skip OSV.dev corroboration of GitHub-discovered packages
     --dry-run           Report only; write nothing
     --json              Machine-readable report on stdout
 
@@ -1134,7 +1647,11 @@ if (isMain) {
       console.log(`  Ecosystem filter:     ${report.ecosystems.join(", ")} only`);
     }
     console.log(`  Advisories fetched:   ${report.advisoriesFetched} (${report.pages} page(s)${report.truncated ? ", page cap reached" : ""})`);
+    console.log(`  OpenSSF MAL records:  ${report.ossfRecordsFetched} (${report.ossfIndexesFetched} ecosystem index(es))`);
     console.log(`  Mapped to IOCs:       ${report.mapped}`);
+    if (report.coalesced > 0) {
+      console.log(`  Cross-source overlap: ${report.coalesced} candidate(s) merged with provenance preserved`);
+    }
     console.log(`  Already in the feed:  ${report.duplicates} duplicate, ${report.covered} covered by a bare-name IOC`);
     if (report.declined > 0) {
       const rules = Object.entries(report.declinedByRule)
@@ -1151,6 +1668,13 @@ if (isMain) {
           : ""
       }`,
     );
+    if (report.added > 0) {
+      console.log(
+        `  Discovery split:     ${report.additionsByDiscovery.githubOnly} GitHub only, ` +
+          `${report.additionsByDiscovery.openssfOnly} OpenSSF only, ` +
+          `${report.additionsByDiscovery.githubAndOpenssf} both`,
+      );
+    }
     if (report.undrainable > 0) {
       console.log(
         `\n  WARNING: ${report.undrainable} of those ${report.remaining} will AGE OUT before any\n` +

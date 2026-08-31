@@ -31,7 +31,7 @@
     "src/reporter.ts": "ee39f0e5f68a54bf694bcd0c50322aee18b962d2ef1e8c5ea97a6dee43c60cb7",
     "src/scanner.ts": "20a38d39fc7c2be46e013f95f988fbb44955813b6cd7753ec5fd7227e0ebd381",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "37d74f4f911faa9daa0fa479233afed5f13f29adadc7054d4e98293be6f9e73b",
+    "src/threat-intel.ts": "3533c849827cf754f4e4721c0f47542f46a177e4918008d3e0abd71424857d58",
     "src/workflow-modeler.ts": "1ff70d4b2066a233b08a56e4d12c4b6736dc80e237dc19492aa1ed8568d90b9a"
   }
 }

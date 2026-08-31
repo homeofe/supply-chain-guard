@@ -55,12 +55,41 @@ function advisory(over: Partial<AdvisoryFixture> = {}): AdvisoryFixture {
 
 /** A fetchImpl that answers one page and then stops. */
 function singlePage(body: unknown, status = 200) {
-  return async () => ({
-    ok: status === 200,
-    status,
-    headers: { get: () => null },
-    json: async () => body,
-  });
+  return async (url?: string | URL) => {
+    if (String(url ?? "").includes("modified_id.csv")) {
+      return {
+        ok: status === 200,
+        status,
+        headers: { get: () => null },
+        text: async () => "",
+        json: async () => ({}),
+      };
+    }
+    return {
+      ok: status === 200,
+      status,
+      headers: { get: () => null },
+      json: async () => body,
+    };
+  };
+}
+
+function osvMalwareRecord(over: Record<string, unknown> = {}) {
+  return {
+    id: "MAL-2026-4242",
+    published: "2026-08-30T10:00:00Z",
+    modified: "2026-08-30T11:00:00Z",
+    affected: [
+      {
+        package: { ecosystem: "npm", name: "scg-fixture-ossf" },
+        ranges: [{ type: "SEMVER", events: [{ introduced: "0" }] }],
+      },
+    ],
+    database_specific: {
+      "malicious-packages-origins": [{ source: "amazon-inspector" }],
+    },
+    ...over,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +292,136 @@ describe("mapAdvisory", () => {
   });
 });
 
+describe("mapOsvMalwareRecord", () => {
+  it("maps a whole-package MAL record and preserves its original provider", async () => {
+    const { mapOsvMalwareRecord, publicEntry } = await load();
+    const result = mapOsvMalwareRecord(osvMalwareRecord());
+    expect(result.skipped).toEqual([]);
+    expect(publicEntry(result.entries[0])).toEqual({
+      type: "package",
+      value: "scg-fixture-ossf",
+      severity: "critical",
+      confidence: 0.9,
+      source: "MAL-2026-4242 (amazon-inspector)",
+      firstSeen: "2026-08-30",
+    });
+  });
+
+  it("uses explicit versions for a bounded range instead of blocking every version", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "PyPI", name: "scg-fixture-python" },
+            ranges: [
+              {
+                type: "ECOSYSTEM",
+                events: [{ introduced: "1.0.0" }, { fixed: "1.2.0" }],
+              },
+            ],
+            versions: ["1.0.0", "1.1.0"],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual([
+      "pypi:scg-fixture-python@1.0.0",
+      "pypi:scg-fixture-python@1.1.0",
+    ]);
+  });
+
+  it("rejects an unexpanded bounded range instead of broadening it", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-bounded" },
+            ranges: [{ type: "SEMVER", events: [{ introduced: "1.0.0" }, { fixed: "2.0.0" }] }],
+          },
+        ],
+      }),
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unmappable-version-range");
+  });
+
+  it("raises confidence when a MAL record has several distinct origins", async () => {
+    const { mapOsvMalwareRecord, CONFIDENCE_CORROBORATED } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        database_specific: {
+          "malicious-packages-origins": [
+            { source: "amazon-inspector" },
+            { source: "checkmarx" },
+            { source: "amazon-inspector" },
+          ],
+        },
+      }),
+    );
+    expect(result.entries[0].confidence).toBe(CONFIDENCE_CORROBORATED);
+    expect(result.entries[0].source).toBe("MAL-2026-4242 (amazon-inspector+checkmarx)");
+  });
+
+  it("skips withdrawn and non-MAL records", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    expect(
+      mapOsvMalwareRecord(osvMalwareRecord({ withdrawn: "2026-08-31T00:00:00Z" })).skipped[0]
+        .reason,
+    ).toBe("withdrawn");
+    expect(mapOsvMalwareRecord(osvMalwareRecord({ id: "GHSA-aaaa-bbbb-cccc" })).skipped[0].reason).toBe(
+      "not-malware-record",
+    );
+  });
+});
+
+describe("coalesceCandidates", () => {
+  it("retains GHSA, MAL id and provider provenance for cross-source overlap", async () => {
+    const { coalesceCandidates, mapAdvisory, mapOsvMalwareRecord } = await load();
+    const github = mapAdvisory(advisory()).entries[0];
+    const ossf = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+            ranges: [{ type: "SEMVER", events: [{ introduced: "0" }] }],
+          },
+        ],
+        database_specific: {
+          "malicious-packages-origins": [{ source: "amazon-inspector" }],
+        },
+      }),
+    ).entries[0];
+    const result = coalesceCandidates([github, ossf]);
+    expect(result.coalesced).toBe(1);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].source).toBe(
+      "GHSA-aaaa-bbbb-cccc, MAL-2026-4242 (amazon-inspector)",
+    );
+    expect(result.entries[0].confidence).toBe(1);
+  });
+
+  it("does not treat a GHSA mirror as independent corroboration", async () => {
+    const { coalesceCandidates, mapAdvisory, mapOsvMalwareRecord } = await load();
+    const github = mapAdvisory(advisory()).entries[0];
+    const ossf = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+            ranges: [{ type: "SEMVER", events: [{ introduced: "0" }] }],
+          },
+        ],
+        database_specific: {
+          "malicious-packages-origins": [{ source: "ghsa-malware" }],
+        },
+      }),
+    ).entries[0];
+    expect(coalesceCandidates([github, ossf]).entries[0].confidence).toBe(0.9);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Deduplication
 // ---------------------------------------------------------------------------
@@ -317,6 +476,19 @@ describe("countUndrainable", () => {
       value: `no-date-${Math.random()}`,
       severity: "critical",
       confidence: 1,
+    }));
+    expect(countUndrainable(added, { limit: 10, days: 14, now })).toBe(0);
+  });
+
+  it("uses an OpenSSF modified-index date when an old report becomes newly discoverable", async () => {
+    const { countUndrainable } = await load();
+    const added = Array.from({ length: 30 }, (_, i) => ({
+      type: "package",
+      value: `newly-indexed-${i}`,
+      severity: "critical",
+      confidence: 0.9,
+      firstSeen: "2022-01-01",
+      _queueDate: "2026-08-02",
     }));
     expect(countUndrainable(added, { limit: 10, days: 14, now })).toBe(0);
   });
@@ -634,6 +806,127 @@ describe("fetchMalwareAdvisories", () => {
   });
 });
 
+describe("OpenSSF OSV discovery", () => {
+  it("parses only MAL ids inside the requested modified-time window", async () => {
+    const { parseOsvModifiedIndex } = await load();
+    const index = [
+      "2026-08-31T12:00:00Z,MAL-2026-3",
+      "2026-08-30T12:00:00Z,GHSA-aaaa-bbbb-cccc",
+      "2026-08-29T12:00:00Z,MAL-2026-2",
+      "2026-08-01T12:00:00Z,MAL-2026-1",
+      "",
+    ].join("\n");
+    expect(parseOsvModifiedIndex(index, { since: "2026-08-29", until: "2026-08-30" })).toEqual([
+      { id: "MAL-2026-2", modified: "2026-08-29T12:00:00Z" },
+    ]);
+  });
+
+  it("rejects malformed selected index data", async () => {
+    const { parseOsvModifiedIndex } = await load();
+    expect(() => parseOsvModifiedIndex("not-a-csv-line", { since: "2026-08-01" })).toThrow(
+      /malformed/,
+    );
+    expect(() =>
+      parseOsvModifiedIndex("2026-08-31T12:00:00Z,MAL-2026-1/../../x", {
+        since: "2026-08-01",
+      }),
+    ).toThrow(/unsafe MAL id/);
+  });
+
+  it("fetches per-ecosystem indexes and each discovered record exactly once", async () => {
+    const { fetchOsvMalwareRecords } = await load();
+    const calls: string[] = [];
+    const fetchImpl = async (url: string | URL) => {
+      const value = String(url);
+      calls.push(value);
+      if (value.endsWith("npm/modified_id.csv")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            "2026-08-30T11:00:00Z,MAL-2026-4242\n2026-08-30T10:00:00Z,GHSA-aaaa-bbbb-cccc\n",
+        };
+      }
+      if (value.endsWith("PyPI/modified_id.csv")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => "2026-08-30T11:00:00Z,MAL-2026-4242\n2026-08-29T10:00:00Z,MAL-2026-4343\n",
+        };
+      }
+      const id = value.includes("MAL-2026-4242") ? "MAL-2026-4242" : "MAL-2026-4343";
+      return { ok: true, status: 200, json: async () => osvMalwareRecord({ id }) };
+    };
+    const result = await fetchOsvMalwareRecords({
+      since: "2026-08-29",
+      ecosystems: ["npm", "pip"],
+      fetchImpl,
+      baseUrl: "https://osv-export.example",
+    });
+    expect(result.indexes).toBe(2);
+    expect(result.modifiedIds).toBe(2);
+    expect(result.records.map((record: { id: string }) => record.id)).toEqual([
+      "MAL-2026-4242",
+      "MAL-2026-4343",
+    ]);
+    expect(calls.filter((url) => url.includes("MAL-2026-4242"))).toHaveLength(1);
+  });
+
+  it("fails closed when any selected record cannot be fetched", async () => {
+    const { fetchOsvMalwareRecords } = await load();
+    const fetchImpl = async (url: string | URL) => {
+      if (String(url).endsWith("modified_id.csv")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => "2026-08-30T11:00:00Z,MAL-2026-4242\n",
+        };
+      }
+      return { ok: false, status: 503, json: async () => ({}) };
+    };
+    await expect(
+      fetchOsvMalwareRecords({
+        since: "2026-08-29",
+        ecosystems: ["npm"],
+        fetchImpl,
+        baseUrl: "https://osv-export.example",
+      }),
+    ).rejects.toThrow(/HTTP 503/);
+  });
+
+  it("rejects an oversized modified index before reading it", async () => {
+    const { fetchOsvMalwareRecords, MAX_OSV_INDEX_BYTES } = await load();
+    let bodyRead = false;
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => String(MAX_OSV_INDEX_BYTES + 1) },
+      text: async () => {
+        bodyRead = true;
+        return "";
+      },
+    });
+    await expect(
+      fetchOsvMalwareRecords({
+        since: "2026-08-29",
+        ecosystems: ["npm"],
+        fetchImpl,
+        baseUrl: "https://osv-export.example",
+      }),
+    ).rejects.toThrow(/exceeds/);
+    expect(bodyRead).toBe(false);
+  });
+
+  it("registers OpenSSF as a discovery adapter by default", async () => {
+    const { createDiscoverySources } = await load();
+    const sources = createDiscoverySources({ fetchImpl: singlePage([]) });
+    expect(sources.map((source: { id: string }) => source.id)).toEqual([
+      "github-advisory-database",
+      "openssf-malicious-packages",
+    ]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // OSV corroboration - enrichment, never a gate
 // ---------------------------------------------------------------------------
@@ -774,6 +1067,15 @@ describe("applyEntries", () => {
       /marker not found/,
     );
   });
+
+  it("advances the bundled-feed timestamp deterministically", async () => {
+    const { updateFeedGeneratedAt } = await load();
+    const source = 'export const FEED_GENERATED_AT = "2026-08-23T00:00:00.000Z";\n';
+    expect(updateFeedGeneratedAt(source, "2026-08-31")).toBe(
+      'export const FEED_GENERATED_AT = "2026-08-31T00:00:00.000Z";\n',
+    );
+    expect(() => updateFeedGeneratedAt("", "2026-08-31")).toThrow(/marker not found/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -882,6 +1184,7 @@ describe("importUpstreamFeed failure mode", () => {
 
   const FAKE_THREAT_INTEL = [
     "export interface FeedIOC { type: string }",
+    'export const FEED_GENERATED_AT = "2026-08-23T00:00:00.000Z";',
     "const BUNDLED_FEED: FeedIOC[] = [",
     '  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },',
     "];",
@@ -912,7 +1215,7 @@ describe("importUpstreamFeed failure mode", () => {
       throw new Error("getaddrinfo ENOTFOUND api.github.com");
     };
 
-    await expect(importUpstreamFeed({ root: tmpRoot, fetchImpl })).rejects.toThrow(
+    await expect(importUpstreamFeed({ root: tmpRoot, useOssf: false, fetchImpl })).rejects.toThrow(
       /GitHub Advisory Database request failed/,
     );
 
@@ -929,7 +1232,9 @@ describe("importUpstreamFeed failure mode", () => {
       headers: { get: () => null },
       json: async () => ({}),
     });
-    await expect(importUpstreamFeed({ root: tmpRoot, fetchImpl })).rejects.toThrow(/HTTP 503/);
+    await expect(importUpstreamFeed({ root: tmpRoot, useOssf: false, fetchImpl })).rejects.toThrow(
+      /HTTP 503/,
+    );
     expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
   });
 
@@ -998,9 +1303,96 @@ describe("importUpstreamFeed failure mode", () => {
     expect(feed.entries[1].source).toBe("GHSA-1111-2222-3333");
   });
 
+  it("discovers OpenSSF MAL records independently and does not self-corroborate them", async () => {
+    const { importUpstreamFeed, CONFIDENCE_SINGLE_SOURCE } = await load();
+    let queryBatchCalls = 0;
+    const fetchImpl = async (url: string | URL) => {
+      const value = String(url);
+      if (value.includes("api.github.com")) {
+        return { ok: true, status: 200, headers: { get: () => null }, json: async () => [] };
+      }
+      if (value.endsWith("modified_id.csv")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => "2026-08-30T11:00:00Z,MAL-2026-4242\n",
+        };
+      }
+      if (value.includes("MAL-2026-4242.json")) {
+        return { ok: true, status: 200, json: async () => osvMalwareRecord() };
+      }
+      if (value.includes("api.osv.dev")) {
+        queryBatchCalls++;
+        return { ok: true, status: 200, json: async () => ({ results: [] }) };
+      }
+      throw new Error(`unexpected test URL: ${value}`);
+    };
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      ecosystems: ["npm"],
+      now: new Date("2026-08-31T00:00:00Z"),
+      fetchImpl,
+    });
+
+    expect(report.written).toBe(true);
+    expect(report.added).toBe(1);
+    expect(report.ossfRecordsFetched).toBe(1);
+    expect(report.discoverySources["openssf-malicious-packages"].mapped).toBe(1);
+    expect(report.additionsByDiscovery).toEqual({
+      githubOnly: 0,
+      openssfOnly: 1,
+      githubAndOpenssf: 0,
+    });
+    expect(report.entries[0].source).toBe("MAL-2026-4242 (amazon-inspector)");
+    expect(report.entries[0].confidence).toBe(CONFIDENCE_SINGLE_SOURCE);
+    expect(queryBatchCalls).toBe(0);
+  });
+
+  it("writes nothing when OpenSSF discovery is incomplete", async () => {
+    const { importUpstreamFeed } = await load();
+    const before = {
+      ts: fs.readFileSync(threatIntelPath),
+      feed: fs.readFileSync(feedPath),
+    };
+    const fetchImpl = async (url: string | URL) => {
+      const value = String(url);
+      if (value.includes("api.github.com")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          json: async () => [advisory()],
+        };
+      }
+      if (value.endsWith("modified_id.csv")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => "2026-08-30T11:00:00Z,MAL-2026-4242\n",
+        };
+      }
+      return { ok: false, status: 503, json: async () => ({}) };
+    };
+
+    await expect(
+      importUpstreamFeed({
+        root: tmpRoot,
+        ecosystems: ["npm"],
+        useOsv: false,
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/OpenSSF\/OSV export returned HTTP 503/);
+    expect(fs.readFileSync(threatIntelPath).equals(before.ts)).toBe(true);
+    expect(fs.readFileSync(feedPath).equals(before.feed)).toBe(true);
+  });
+
   it("still imports (at single-source confidence) when OSV is down", async () => {
     const { importUpstreamFeed, CONFIDENCE_SINGLE_SOURCE } = await load();
     const fetchImpl = async (url: string) => {
+      if (String(url).includes("modified_id.csv")) {
+        return { ok: true, status: 200, text: async () => "" };
+      }
       if (String(url).includes("osv.dev")) throw new Error("ECONNRESET");
       return {
         ok: true,
@@ -1018,6 +1410,9 @@ describe("importUpstreamFeed failure mode", () => {
   it("raises confidence to 1.0 when OSV corroborates the package", async () => {
     const { importUpstreamFeed, CONFIDENCE_CORROBORATED } = await load();
     const fetchImpl = async (url: string) => {
+      if (String(url).includes("modified_id.csv")) {
+        return { ok: true, status: 200, text: async () => "" };
+      }
       if (String(url).includes("osv.dev")) {
         return {
           ok: true,
@@ -1120,7 +1515,13 @@ describe("importUpstreamFeed failure mode", () => {
       };
     };
     await expect(
-      importUpstreamFeed({ root: tmpRoot, maxPages: 2, useOsv: false, fetchImpl: alwaysMorePages }),
+      importUpstreamFeed({
+        root: tmpRoot,
+        maxPages: 2,
+        useOsv: false,
+        useOssf: false,
+        fetchImpl: alwaysMorePages,
+      }),
     ).rejects.toThrow(/page cap reached/);
     // Inert failure: the source file is byte-identical.
     expect(fs.readFileSync(path.join(tmpRoot, "src", "threat-intel.ts"), "utf8")).toBe(before);
@@ -1150,6 +1551,7 @@ describe("importUpstreamFeed failure mode", () => {
       maxPages: 2,
       allowTruncated: true,
       useOsv: false,
+      useOssf: false,
       fetchImpl: alwaysMorePages,
     });
     expect(report.truncated).toBe(true);
@@ -1256,6 +1658,7 @@ describe("ecosystem filter", () => {
         path.join(tmpRoot, "src", "threat-intel.ts"),
         [
           "export interface FeedIOC { type: string }",
+          'export const FEED_GENERATED_AT = "2026-08-23T00:00:00.000Z";',
           "const BUNDLED_FEED: FeedIOC[] = [",
           '  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },',
           "];",
@@ -1323,6 +1726,7 @@ describe("parseArgs", () => {
       limit: 10,
       dryRun: true,
       useOsv: false,
+      useOssf: true,
       json: true,
     });
   });
@@ -1342,8 +1746,14 @@ describe("parseArgs", () => {
       maxPages: 7,
       dryRun: false,
       useOsv: true,
+      useOssf: true,
       json: false,
     });
+  });
+
+  it("allows OpenSSF discovery to be disabled explicitly for outage diagnosis", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--no-ossf"]).useOssf).toBe(false);
   });
 
   // The default window width is the whole point of the 5.19.0 change: it sets how

@@ -41,6 +41,9 @@ For the current module and test-file counts, see DASHBOARD.md (gate-kept fresh).
   avoiding false positives (whitelists, related-name and monorepo guards).
 - **Threat intel is data, not code**: IOCs live in `threat-intel.ts` /
   `ioc-blocklist.ts` and the published `feed.json`, versioned with the release.
+  Upstream discovery is a separate adapter pipeline with completeness-critical
+  GitHub and OpenSSF sources; its trust boundaries and storage migration are in
+  [feed-architecture.md](feed-architecture.md).
 - **SARIF + SBOM** for GitHub Security tab and supply-chain inventory integration.
 
 ## Base Image Pinning (decision record)

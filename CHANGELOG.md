@@ -9,6 +9,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The threat-feed pipeline is being rebuilt around discovery-source adapters.
+  GitHub malware advisories remain enabled, while OpenSSF malicious-packages is
+  now a second, independent discovery path through OSV's incremental
+  `modified_id.csv` exports. Provider labels such as Amazon Inspector,
+  ReversingLabs, Checkmarx and OpenSSF Package Analysis remain attached to each
+  imported `MAL-` record. Every enabled discovery source is completeness-critical:
+  a missing index, record error, malformed response or timeout aborts the run
+  before either feed file is changed.
+- OSV querybatch now corroborates GitHub-discovered candidates only. An
+  OpenSSF-discovered record is never queried against the database that exported
+  it, preventing one source from raising its own confidence. OpenSSF bounded
+  ranges import only explicitly enumerated versions; they are never broadened
+  into whole-package findings.
 - The threat-feed importer is now exhaustive by default. Running `npm run feed:import`
   imports every mappable, non-duplicate, non-declined advisory in the fetched window
   instead of silently applying a 250-entry daily review cap. `--limit <n>` remains an
@@ -17,6 +30,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Multi-source threat-intelligence rebuild snapshot for 2026-08-31: 814 new
+  package IOCs from a complete 14-day import across all seven supported
+  ecosystems. The batch contains 787 npm and 27 PyPI entries; 361 are
+  whole-package names and 453 are exact version pins. Of the additions, 715
+  were discovered by both GitHub and OpenSSF with both advisory ids preserved,
+  while 99 came from OpenSSF only and were invisible to the previous
+  GitHub-first importer. The run fetched 1,882 GitHub advisories and 1,923
+  OpenSSF MAL records, merged 2,101 cross-source overlaps, rejected 11 withdrawn
+  records, applied no entry limit and left no backlog.
 - Threat-intelligence batch for 2026-08-31: 250 package indicators imported from the
   GitHub Advisory Database (CWE-506) with OSV corroboration. All 236 bare-name entries
   were probed against the npm registry before acceptance - 226 are security holding
@@ -31,6 +53,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `MAL-2026-13470`; the other three are single-source and carry confidence 0.85. The
   `nixel[.]my[.]id` apex and the shared `raw[.]githubusercontent[.]com` host are
   deliberately excluded, with negative tests asserting they never match.
+
+### Fixed
+
+- Successful threat-feed imports now advance `FEED_GENERATED_AT` before
+  regenerating `feed.json`. Previously, a newly imported batch could retain an
+  older freshness timestamp even though its entries had changed.
 
 ## [6.0.7] - 2026-08-30
 
