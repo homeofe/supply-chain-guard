@@ -270,9 +270,9 @@ describe("mapAdvisory", () => {
 describe("countUndrainable", () => {
   // The advisory database bulk-publishes retrospective malware datasets: on
   // 2026-07-21 it landed 11,512 PyPI advisories in one day, and on 2026-07-27
-  // it landed 2,262 npm ones. --limit is sized for the steady-state flow
-  // (median ~35 advisories/day), so a spike leaves a remainder far larger than
-  // any future run can take before --days slides past it. Those entries are
+  // it landed 2,262 npm ones. An explicit --limit may be sized for the historical
+  // steady-state flow (median ~35 advisories/day), but a spike can leave a remainder
+  // far larger than any future run can take before --days slides past it. Those entries are
   // then lost for good, which is a silent false negative - the exact failure
   // the page-cap guard already treats as fatal.
   const now = new Date("2026-08-02T00:00:00Z");
@@ -1034,7 +1034,30 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.corroboratedByOsv).toBe(1);
   });
 
-  it("caps how many entries a single run may add", async () => {
+  it("imports every entry by default instead of leaving a hidden daily backlog", async () => {
+    const { importUpstreamFeed } = await load();
+    const many = Array.from({ length: 5 }, (_, i) =>
+      advisory({
+        ghsa_id: `GHSA-all${i}-bbbb-cccc`,
+        vulnerabilities: [
+          { package: { ecosystem: "npm", name: `scg-fixture-all-${i}` }, vulnerable_version_range: ">= 0" },
+        ],
+      }),
+    );
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      fetchImpl: singlePage(many),
+    });
+    expect(report.added).toBe(5);
+    expect(report.entries).toHaveLength(5);
+    expect(report.capped).toBe(false);
+    expect(report.limitApplied).toBeNull();
+    expect(report.remaining).toBe(0);
+    expect(report.undrainable).toBe(0);
+  });
+
+  it("caps how many entries a single run may add when --limit is explicit", async () => {
     const { importUpstreamFeed } = await load();
     const many = Array.from({ length: 5 }, (_, i) =>
       advisory({
@@ -1055,6 +1078,19 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.limitApplied).toBe(2);
     // The 3 left behind are recoverable by a later run, unlike a page-cap loss.
     expect(report.remaining).toBe(3);
+  });
+
+  it("rejects an invalid programmatic limit before fetching or writing", async () => {
+    const { importUpstreamFeed } = await load();
+    let fetched = false;
+    const fetchImpl = async () => {
+      fetched = true;
+      return singlePage([])();
+    };
+    await expect(
+      importUpstreamFeed({ root: tmpRoot, limit: 0, useOsv: false, fetchImpl }),
+    ).rejects.toThrow(/--limit expects a positive integer/);
+    expect(fetched).toBe(false);
   });
 
   // A page cap is NOT a resumable backlog. The query is published/desc, so the

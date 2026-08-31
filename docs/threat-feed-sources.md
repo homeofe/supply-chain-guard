@@ -124,7 +124,7 @@ rewritten file is re-parsed and entry-counted before `feed.json` is regenerated.
 
 ```bash
 npm run feed:import -- --dry-run          # report only, writes nothing
-npm run feed:import                       # last 14 days, max 250 new entries
+npm run feed:import                       # last 14 days, import every new entry
 npm run feed:import -- --days 30 --limit 500
 npm run feed:import -- --json             # machine-readable report
 npm run feed:import -- --since 2026-07-20 --until 2026-07-21 --ecosystem npm --limit 100000
@@ -136,7 +136,7 @@ npm run feed:import -- --since 2026-07-20 --until 2026-07-21 --ecosystem npm --l
 | `--since <YYYY-MM-DD>` | - | Explicit start date, overrides `--days` |
 | `--until <YYYY-MM-DD>` | - | Explicit end date |
 | `--ecosystem <list>` | all | Import only these ecosystems (comma-separated, repeatable) |
-| `--limit <n>` | 250 | Maximum new entries added in one run |
+| `--limit <n>` | unlimited | Optional maximum new entries added in one run |
 | `--max-pages <n>` | 750 | Hard cap on upstream pages fetched; hitting it is fatal |
 | `--allow-truncated` | off | Import anyway when the page cap was hit |
 | `--timeout <ms>` | 15000 | Per-request timeout |
@@ -150,18 +150,24 @@ as a response carries no `rel="next"`, so a quiet window costs about 3 requests
 regardless of how high `--max-pages` is; the cap only binds on an unusually busy
 window.
 
-### Why the page cap is fatal, and the limit is not
+### Why the page cap is fatal, and the optional limit is not
 
 The two caps fail in completely different ways, and only one of them is
 recoverable.
 
-`--limit` is a **review** bound. Entries over the limit are still in the window, so
-the next run picks them up and the report prints how many are waiting. That makes
-them recoverable, but only conditionally: a run drains at most `--limit` per run, so
-the leftovers survive only while `remaining <= limit * runs_left_before_they_expire`.
-On a burst window the arithmetic does not close and the excess ages out just as
-page-cap loss does. The difference is that the number is reported, so the operator
-can widen `--days`, raise `--limit`, or slice the window deliberately.
+By default there is no `--limit`: every mappable, non-duplicate, non-declined entry
+in the fetched window is imported. This is the correctness-oriented operating mode
+for the daily feed because a fixed batch size can be overtaken by sustained advisory
+volume and delay detection indefinitely.
+
+An explicitly supplied `--limit` is a **review** bound. Entries over that limit are
+still in the window, so the next run can pick them up and the report prints how many
+are waiting. That recovery is conditional: a limited run drains at most `--limit`
+per run, so leftovers survive only while
+`remaining <= limit * runs_left_before_they_expire`. On a burst window the arithmetic
+may not close and the excess ages out just as page-cap loss does. The importer reports
+that condition so the operator can widen `--days`, raise or remove `--limit`, or slice
+the window deliberately.
 
 `--max-pages` is a **correctness** bound. The upstream query sorts
 `published/desc`, so a page cap keeps the newest advisories and never fetches the
