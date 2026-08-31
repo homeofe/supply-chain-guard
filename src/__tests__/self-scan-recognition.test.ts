@@ -36,6 +36,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scan } from "../scanner.js";
 import type { ScanReport } from "../types.js";
+import { performanceBudget } from "./performance-budget.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -334,7 +335,7 @@ describe("built repository self-scan", () => {
       noHistory: true,
     });
     payloadReport = await scanScannerInitiatedClone(checkout, CANONICAL_CLONE_TARGET, "json");
-  }, 60_000);
+  }, performanceBudget(60_000));
 
   afterAll(() => {
     fs.rmSync(workdir, { recursive: true, force: true });

@@ -56,6 +56,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- CI test commands now fail when an otherwise green Vitest run writes to
+  `stderr`, on both supported Node matrix legs. Tests that intentionally exercise
+  Solana retry warnings or a missing Action report now capture and assert those
+  diagnostics instead of emitting error-shaped noise. The Vitest config is ESM
+  (`vitest.config.mts`), removing the Vite native-loader compatibility warning
+  rather than suppressing it. The built-repository self-scan hook now applies the
+  existing coverage-aware performance budget instead of retaining a fixed
+  60-second setup limit under V8 instrumentation.
 - Successful threat-feed imports now advance `FEED_GENERATED_AT` before
   regenerating `feed.json`. Previously, a newly imported batch could retain an
   older freshness timestamp even though its entries had changed.

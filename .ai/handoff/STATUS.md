@@ -1,3 +1,30 @@
+## Fail CI on unexpected test diagnostics (2026-08-31)
+
+Model: OpenAI Codex. Branch `codex/fail-on-test-stderr`. Release v6.0.8 remains
+paused until this change has passed CI and merged.
+
+The successful post-merge run 33379804561 contained three kinds of error-shaped
+noise in its Test step: Vite warned that the CommonJS-loaded TypeScript config
+will be unsupported by a future native config loader, Solana retry tests emitted
+expected rate-limit warnings, and Action fallback tests printed expected ENOENT
+stack traces. All 3,353 assertions passed, but a green job made those diagnostics
+indistinguishable from future regressions.
+
+`npm test` and `npm run test:coverage` now use one cross-platform wrapper that
+runs Vitest without console interception, streams diagnostics unchanged, and
+fails if an otherwise successful suite writes any byte to `stderr`. The two
+intentional diagnostic families are intercepted and asserted in their owning
+tests. Clean, noisy, and failing nested fixtures prove that the gate keeps clean
+runs green, turns noisy passes red, and preserves ordinary Vitest failures.
+Renaming the config to `vitest.config.mts` fixes the native-loader warning at its
+source.
+
+The first full Linux coverage rerun also exposed a separate fixed 60-second
+`beforeAll` timeout in the built-repository self-scan. Its setup took about 77
+seconds under V8 coverage after the feed grew to 15,219 entries. That hook now
+uses the repository's existing coverage-aware performance budget, preserving the
+60-second non-coverage limit while allowing instrumentation overhead.
+
 ## Multi-source threat-feed rebuild (2026-08-31)
 
 Model: OpenAI Codex. Branch `codex/multi-source-feed-rebuild`. PR #253.

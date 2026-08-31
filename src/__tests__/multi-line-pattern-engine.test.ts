@@ -454,7 +454,7 @@ exec(payload)
 
   // The harness timeout is scaled the same way the assertion inside it is. Without
   // that, the two disagree under the ONE command CI actually runs. `npm run
-  // test:coverage` sets SCG_VITEST_COVERAGE=1 (vitest.config.ts), which makes
+  // test:coverage` sets SCG_VITEST_COVERAGE=1 (vitest.config.mts), which makes
   // performanceBudget multiply by 5: the assertion below then allows 25s while a bare
   // `timeout: 15_000` killed the test at 15s, so the guard could never be reached and
   // the failure reported runner noise rather than an algorithmic regression. Outside a
