@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { WatchlistAlert } from "../types.js";
@@ -533,6 +533,16 @@ describe("Solana Monitor", () => {
   // ─── Rate-limit handling (T-007) ──────────────────────────
 
   describe("Rate-limit handling", () => {
+    let warningLog: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      warningLog = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      warningLog.mockRestore();
+    });
+
     it("should retry on HTTP 429 and succeed on the second attempt", async () => {
       mockRpcResponsesWithStatus([
         { status: 429, body: {} },
@@ -542,6 +552,8 @@ describe("Solana Monitor", () => {
       const results = await checkWallet("FakeAddr111", 5);
       expect(results).toEqual([]);
       expect(https.request).toHaveBeenCalledTimes(2);
+      expect(warningLog).toHaveBeenCalledTimes(1);
+      expect(warningLog).toHaveBeenCalledWith(expect.stringContaining("attempt 1/6"));
     });
 
     it("should retry on JSON-RPC -32005 and succeed", async () => {
@@ -553,6 +565,7 @@ describe("Solana Monitor", () => {
       const results = await checkWallet("FakeAddr111", 5);
       expect(results).toEqual([]);
       expect(https.request).toHaveBeenCalledTimes(2);
+      expect(warningLog).toHaveBeenCalledTimes(1);
     });
 
     it("should honor the Retry-After header when present", async () => {
@@ -569,6 +582,8 @@ describe("Solana Monitor", () => {
       await checkWallet("FakeAddr111", 5);
       // Retry-After: 2 -> 2000 ms (must override exponential backoff)
       expect(sleepCalls).toEqual([2000]);
+      expect(warningLog).toHaveBeenCalledTimes(1);
+      expect(warningLog).toHaveBeenCalledWith(expect.stringContaining("retrying in 2s"));
     });
 
     it("should give up after the maximum number of retries", async () => {
@@ -581,6 +596,7 @@ describe("Solana Monitor", () => {
         /HTTP 429|rate limited/i,
       );
       expect(https.request).toHaveBeenCalledTimes(6);
+      expect(warningLog).toHaveBeenCalledTimes(5);
     });
 
     it("should not retry on non-rate-limit errors", async () => {
@@ -590,6 +606,7 @@ describe("Solana Monitor", () => {
 
       await expect(checkWallet("FakeAddr111", 5)).rejects.toThrow("Invalid params");
       expect(https.request).toHaveBeenCalledTimes(1);
+      expect(warningLog).not.toHaveBeenCalled();
     });
 
     it("should treat 'too many requests' error messages as rate-limited", async () => {
@@ -601,6 +618,7 @@ describe("Solana Monitor", () => {
       const results = await checkWallet("FakeAddr111", 5);
       expect(results).toEqual([]);
       expect(https.request).toHaveBeenCalledTimes(2);
+      expect(warningLog).toHaveBeenCalledTimes(1);
     });
   });
 

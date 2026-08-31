@@ -4,7 +4,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PARTIAL_SCAN_RULES } from "../pattern-scanner.js";
 import pkg from "../../package.json";
 import { SCORE_EXCLUDED_RULES } from "../scanner.js";
@@ -102,12 +102,23 @@ async function runCommentScenario(scenario: CommentScenario): Promise<{
   };
   const context = { repo: { owner: "owner", repo: "repo" }, issue: { number: 1 } };
   const core = { info: () => undefined };
+  const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
   try {
     const execute = new AsyncFunction("require", "github", "context", "core", commentScript);
     await execute(nodeRequire, github, context, core);
+    if (scenario.report === undefined) {
+      expect(errorLog).toHaveBeenCalledTimes(1);
+      expect(errorLog).toHaveBeenCalledWith(
+        "Failed to read the bounded report excerpt:",
+        expect.objectContaining({ code: "ENOENT" }),
+      );
+    } else {
+      expect(errorLog).not.toHaveBeenCalled();
+    }
     return calls;
   } finally {
+    errorLog.mockRestore();
     for (const key of envKeys) {
       const value = previous.get(key);
       if (value === undefined) delete process.env[key];

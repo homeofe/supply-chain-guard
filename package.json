@@ -10,8 +10,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "node scripts/run-vitest-clean.mjs",
+    "test:coverage": "node scripts/run-vitest-clean.mjs --coverage",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "check:aahp": "node scripts/check-aahp-pin.mjs && node scripts/check-em-dash-scope.mjs && npx --no-install aahp check .",
