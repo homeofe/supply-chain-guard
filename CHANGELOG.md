@@ -7,6 +7,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- The threat-feed importer is now exhaustive by default. Running `npm run feed:import`
+  imports every mappable, non-duplicate, non-declined advisory in the fetched window
+  instead of silently applying a 250-entry daily review cap. `--limit <n>` remains an
+  explicit manual batching option with the existing backlog and age-out reporting;
+  JSON reports use `limitApplied: null` when no cap was requested.
+
 ### Added
 
 - Threat-intelligence batch for 2026-08-31: 250 package indicators imported from the

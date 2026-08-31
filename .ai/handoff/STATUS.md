@@ -1,3 +1,29 @@
+## Exhaustive threat-feed imports by default (2026-08-31)
+
+Model: OpenAI Codex. Branch `codex/unlimited-threat-feed-import`. PR #252.
+No version bump: this must merge before the next release, whose preparation owns
+the version change.
+
+The fixed 250-entry default was a review-size control applied inside the data
+ingestion path. Sustained advisory volume repeatedly exceeded that cap, delaying
+known-malware coverage and creating a risk that older entries would age out of the
+14-day fetch window. The importer is now exhaustive when `--limit` is omitted: it
+selects every mappable, non-duplicate, non-declined advisory returned by the bounded
+upstream fetch. `--limit <n>` remains available only as an explicit manual batching
+option, with the existing remaining/undrainable reporting. Exhaustive JSON reports
+use `limitApplied: null`; invalid programmatic limits fail before the first fetch.
+
+Verification:
+
+- Targeted Windows suite: all 85 feed-import tests pass, including exhaustive
+  default selection, explicit capped selection, JSON reporting, and fail-fast
+  programmatic validation.
+- A live authenticated dry-run fetched 1,865 advisories across 19 pages, mapped
+  2,651 entries, deduplicated/covered 1,953, and selected all 698 new entries with
+  `capped: false`, `remaining: 0`, and `undrainable: 0`; dry-run wrote nothing.
+- Clean Linux openclaw checkout: all 139 test files / 3,335 tests pass, followed by
+  all AAHP, feed, handoff, self-scan, and TypeScript build gates.
+
 ## Content-addressed self-scan and CLI risk consistency (2026-08-30)
 
 Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not

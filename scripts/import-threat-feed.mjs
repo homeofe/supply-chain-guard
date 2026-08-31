@@ -467,11 +467,11 @@ export function applyDeclineList(entries, declined) {
 /**
  * Count entries that --limit will never reach before they age out of --days.
  *
- * --limit is a steady-state budget, and it is correctly sized for the normal
- * flow (median ~35 advisories/day). But the advisory database periodically
- * bulk-publishes retrospective malware datasets - 11,512 PyPI advisories on
- * 2026-07-21, 2,262 npm ones on 2026-07-27 - and a spike leaves a remainder
- * far larger than any future run can drain before the window slides past it.
+ * An explicit --limit is a review budget. Even a limit sized for the historical
+ * normal flow (median ~35 advisories/day) can be overwhelmed when the advisory
+ * database periodically bulk-publishes retrospective malware datasets - 11,512
+ * PyPI advisories on 2026-07-21 and 2,262 npm ones on 2026-07-27. A spike leaves a
+ * remainder far larger than any future run can drain before the window slides past it.
  *
  * `added` is newest-first, so the entry at index `i` is reached on run
  * `floor(i / limit)`, i.e. that many days from now at one run per day. It
@@ -805,7 +805,7 @@ export async function importUpstreamFeed({
   days = 14,
   since,
   until,
-  limit = 250,
+  limit,
   maxPages = DEFAULT_MAX_PAGES,
   timeoutMs = 15000,
   token,
@@ -817,6 +817,9 @@ export async function importUpstreamFeed({
   fetchImpl = globalThis.fetch,
 } = {}) {
   const from = since ?? sinceDate(days, now);
+  // The programmatic API gets the same validation as the CLI. Undefined means
+  // exhaustive; every supplied value must be a real positive-integer cap.
+  const appliedLimit = limit === undefined ? null : positiveInt("--limit", limit);
 
   // Fail fast, before spending the anonymous budget. The anonymous REST allowance is
   // 60 requests/hour against 5000 authenticated, so a page budget above it cannot
@@ -880,8 +883,12 @@ export async function importUpstreamFeed({
   // "losing" - it was never queued for import in the first place.
   const { kept: added, declined, byRule: declinedByRule } = applyDeclineList(deduped, declineList);
 
-  const capped = added.length > limit;
-  const selected = capped ? added.slice(0, limit) : added;
+  // Exhaustive by default. A limit is only applied when the operator explicitly
+  // supplies --limit; using a fixed implicit batch size lets a sustained upstream
+  // arrival rate outrun the importer and leaves otherwise-known malware invisible
+  // to every scan until a later run (or forever if it ages out of the window).
+  const capped = appliedLimit !== null && added.length > appliedLimit;
+  const selected = capped ? added.slice(0, appliedLimit) : added;
 
   // 4. Corroborate with OSV (never fatal).
   let osv = { ids: new Map(), ok: true };
@@ -919,7 +926,10 @@ export async function importUpstreamFeed({
     osvError: osv.error ?? null,
     added: selected.length,
     capped,
-    limitApplied: limit,
+    // null is deliberate and JSON-safe: it means this run was exhaustive rather
+    // than relying on Infinity, which JSON.stringify would also turn into null but
+    // without making the contract explicit.
+    limitApplied: appliedLimit,
     daysApplied: days,
     // Which ecosystems this run was restricted to, or null for "all supported".
     // Recorded so a slice import is self-describing in the JSON report.
@@ -929,7 +939,7 @@ export async function importUpstreamFeed({
     // and dedupe removes what has already been taken, so each run advances into
     // the remainder. That is only true while the remainder is small enough to
     // drain before --days slides past it - see `undrainable`.
-    remaining: capped ? added.length - limit : 0,
+    remaining: capped ? added.length - appliedLimit : 0,
     // How many of `remaining` will age out of the window before any future run
     // can reach them. Non-zero means this run is silently dropping real malware
     // IOCs, which is the same failure the page-cap guard treats as fatal, so the
@@ -937,7 +947,7 @@ export async function importUpstreamFeed({
     // Only meaningful for the rolling --days window. An explicit --since/--until
     // IS the slicing recovery, so it is deliberately exempt.
     undrainable:
-      capped && !since && !until ? countUndrainable(added, { limit, days, now }) : 0,
+      capped && !since && !until ? countUndrainable(added, { limit: appliedLimit, days, now }) : 0,
     entries: selected.map(publicEntry),
     dryRun,
     written: false,
@@ -1057,7 +1067,8 @@ const USAGE = `
     --days <n>          Look-back window in days (default 14)
     --since <date>      Explicit start date (YYYY-MM-DD), overrides --days
     --until <date>      Explicit end date (YYYY-MM-DD)
-    --limit <n>         Maximum new entries to add in one run (default 250).
+    --limit <n>         Optional maximum new entries to add in one run. By default
+                        every new entry in the fetched window is imported.
                         Anything over the limit stays available to the next run
                         until it ages out of the --days window. If the remainder
                         is too large to drain before it ages out (a bulk-
