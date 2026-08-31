@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788168981",
-    "timestamp": "2026-08-31T09:36:21Z",
-    "commit": "80a1039",
+    "session_id": "cli-1788169549",
+    "timestamp": "2026-08-31T09:45:49Z",
+    "commit": "ca82767",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f47b892558874d8ec29f64d16dc9019ea365755f4789b1f9e210655f31851b70",
-      "updated": "2026-08-31T08:55:01Z",
-      "lines": 5861,
-      "summary": "Model: OpenAI Codex. Branch `codex/unlimited-threat-feed-import`. PR #252."
+      "checksum": "sha256:0077671e597d64730e2ddeda0a63087ccaf115545f397ed8a595d3b665a214cd",
+      "updated": "2026-08-31T09:45:42Z",
+      "lines": 5895,
+      "summary": "Model: OpenAI Codex. Branch `codex/multi-source-feed-rebuild`. PR #253."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:6a7b63088e57d63c5a28d76023e1466f013df75967a061674a8b62cdd1d0882a",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
-      "updated": "2026-08-31T09:36:20Z",
+      "updated": "2026-08-31T09:45:49Z",
       "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d2aa0abd069030dbeb01cab2e828f67ea5abebe0de9ce4b12f76708e4fafe711",
-      "updated": "2026-08-31T09:36:20Z",
+      "updated": "2026-08-31T09:45:49Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:9701398d6b22ee68682559d7c55ba5483da19fc2ae1ef15124207370c227732d",
-      "updated": "2026-08-31T09:36:20Z",
+      "updated": "2026-08-31T09:45:49Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: OpenAI Codex. Branch `codex/unlimited-threat-feed-import`. PR #252. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: OpenAI Codex. Branch `codex/multi-source-feed-rebuild`. PR #253. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 70323,
-    "full_read": 82426
+    "manifest_plus_core": 70659,
+    "full_read": 82762
   }
 }
