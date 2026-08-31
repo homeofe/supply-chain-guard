@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788086147",
-    "timestamp": "2026-08-30T10:35:48Z",
-    "commit": "11de61c",
+    "session_id": "cli-1788153084",
+    "timestamp": "2026-08-31T05:11:24Z",
+    "commit": "37b26d2",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3e4f54ac9ac3cdf13627ad61ff4145247b7a0b2df3aa1e710af71ce74cc49974",
-      "updated": "2026-08-30T10:34:57Z",
-      "lines": 5711,
-      "summary": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`."
+      "checksum": "sha256:c67ed636bde31c3e14222fa0a178dba373e2de5f7f7b00586cc87f22cad6e85b",
+      "updated": "2026-08-31T05:11:16Z",
+      "lines": 5784,
+      "summary": "Model: Claude Opus 5. Branch `threat-intel/2026-08-31`. No version bump - the version"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:6a7b63088e57d63c5a28d76023e1466f013df75967a061674a8b62cdd1d0882a",
-      "updated": "2026-08-30T10:30:06Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
-      "updated": "2026-08-30T10:35:47Z",
+      "updated": "2026-08-31T05:11:24Z",
       "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:6dc0d1d0e261eeeb6801dd0c92502bf67b619515604f0aa4e92519d1ffb82db4",
-      "updated": "2026-08-30T10:35:47Z",
+      "updated": "2026-08-31T05:11:24Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:c436e1a25eb77975266de22290589077b06e634dd49df76eb8bf60f9e5b711bc",
-      "updated": "2026-08-30T10:35:47Z",
+      "updated": "2026-08-31T05:11:24Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-08-30T10:05:44Z",
+      "updated": "2026-08-31T05:02:45Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Model: OpenAI Codex. Branch `codex/release-v6.0.7`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: Claude Opus 5. Branch `threat-intel/2026-08-31`. No version bump - the version Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 68759,
-    "full_read": 80860
+    "manifest_plus_core": 69505,
+    "full_read": 81606
   }
 }

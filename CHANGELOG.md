@@ -7,6 +7,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-08-31: 250 package indicators imported from the
+  GitHub Advisory Database (CWE-506) with OSV corroboration. All 236 bare-name entries
+  were probed against the npm registry before acceptance - 226 are security holding
+  packages and 10 are unpublished, so none can match a package with a legitimate
+  release history. The remaining 14 are version-pinned.
+
+- Operator infrastructure for the Baileys WhatsApp channel-farming campaign (safedep,
+  August 2026), which the advisory databases do not publish: the exfiltration host
+  `fiora[.]nixel[.]my[.]id`, the operator site `levvicode[.]cloud`, the runtime
+  follow-list dead drop under the `LevviCodeID` repository, and that account in
+  `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`. The exfiltration host is corroborated by OSV
+  `MAL-2026-13470`; the other three are single-source and carry confidence 0.85. The
+  `nixel[.]my[.]id` apex and the shared `raw[.]githubusercontent[.]com` host are
+  deliberately excluded, with negative tests asserting they never match.
+
 ## [6.0.7] - 2026-08-30
 
 ### Changed
