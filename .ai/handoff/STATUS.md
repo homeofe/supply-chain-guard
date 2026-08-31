@@ -49,6 +49,78 @@ Verification:
   exact source/compiled identity, LF/CRLF portability, fail-closed modifications,
   arbitrary dist payloads, score/trust consistency, risk dimensions, text grouping,
   wrapping, path display, and the new CLI flag.
+## Threat-intelligence batch 2026-08-31
+
+Model: Claude Opus 5. Branch `threat-intel/2026-08-31`. No version bump - the version
+belongs to the release, which the owner cuts.
+
+### What landed
+
+250 package IOCs from `npm run feed:import` (GitHub Advisory Database CWE-506,
+corroborated against OSV), plus three operator indicators added by hand for the
+Baileys WhatsApp channel-farming campaign and one malicious GitHub account.
+
+The importer reported `--limit 250 reached; 696 MORE are ready`. That is the normal
+capped-batch signal, not the undrainable-backlog error: no page-cap failure and no
+age-out warning, so the remaining 696 stay inside the `--days 14` window for the next
+runs. No decline entry was added and none was suppressed this run.
+
+### Every bare name was probed, and that is the load-bearing part
+
+236 of the 250 imported entries are bare names, and a bare name blocks every version,
+so the false-positive risk sits entirely there. All 236 were probed against
+`registry.npmjs.org`:
+
+| Registry state | Count | Meaning |
+| --- | --- | --- |
+| `security holding package` | 226 | npm has seized the name; nothing installable behind it |
+| unpublished / no versions | 10 | name resolves to no release at all |
+| live with a real maintainer | **0** | would have required a version pin instead |
+
+Zero live packages means no bare-name entry in this batch can reach a package with a
+legitimate release history. The other 14 entries are version-pinned (3 PyPI, 11 npm),
+which is safe by construction.
+
+### Hand-added: Baileys WhatsApp channel farming (safedep, August 2026)
+
+Malicious forks of the Baileys WhatsApp Web library subscribe the installer's paired
+WhatsApp session to operator-controlled channels and inject the operator's advertising
+URL into outgoing media. The poisoned package names already arrive through the importer;
+what the advisory databases never publish is the operator infrastructure:
+
+- `fiora[.]nixel[.]my[.]id` - exfiltration host, rebuilt from decimal char codes at
+  runtime. Two independent sources (safedep and OSV `MAL-2026-13470` for
+  `ynastore-baileys`), so confidence 1.0.
+- `levvicode[.]cloud` - operator site. Single-source, confidence 0.85.
+- `raw[.]githubusercontent[.]com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json` -
+  the remote follow-list, so the channel targets change without republishing a package.
+  Single-source, confidence 0.85.
+- `LevviCodeID` in `KNOWN_MALICIOUS_GITHUB_ACCOUNTS`. `FeedIOC` has no account type, so
+  this indicator exists only in the blocklist, matching how `navaLinh` and
+  `Vellia-Elyvia` are already handled.
+
+Deliberately excluded, with negative tests that assert it: the `nixel[.]my[.]id` apex
+(a personal domain) and the `raw[.]githubusercontent[.]com` host itself. The upstream
+Baileys maintainers are victims of impersonation and are not listed anywhere.
+
+### Coverage checked before adding
+
+The other campaigns surfaced while searching were already fully covered from earlier
+runs and needed nothing: ChainDrop / Mini Shai-Hulud (August 4), Flooding Dropper /
+WEL1DROPPER (August 7), the Alibaba developer-toolchain RAT, the mrmustard PyPI
+compromise, and npm bin entry harvesting (safedep, August 14, which already carries its
+own campaign tests).
+
+### Open for the owner
+
+- **696 imported entries are still queued behind `--limit 250`.** One run per day drains
+  250, so the queue clears in roughly three days provided nothing large arrives first.
+  Worth watching: if a future run starts reporting the age-out warning, that queue is
+  the reason, and the fix is a decline entry or a sliced window, not a raised limit.
+- **This branch was cut while [#250](https://github.com/homeofe/supply-chain-guard/pull/250)
+  (`codex/fix-scan-scoring-cli`) was open.** The two do not touch the same files, but
+  this batch appends to `CHANGELOG.md` under `[Unreleased]` and prepends here, so
+  whichever merges second resolves an append-log collision by keeping BOTH sides.
 
 ## v6.0.7 release preparation (2026-08-30)
 

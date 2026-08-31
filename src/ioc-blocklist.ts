@@ -372,6 +372,23 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // persistence marker: it can only ever match an artefact a package scan is not
   // looking at.
   "apiyf.dq87771.com",
+
+  // Baileys WhatsApp fork channel-farming campaign (safedep, August 2026). Malicious
+  // forks of the Baileys WhatsApp Web library silently make the installer's paired
+  // WhatsApp account follow operator-controlled channels, and several variants inject
+  // the operator's advertising URL into the bot's outgoing media. The packages
+  // themselves are already covered entry-by-entry in the bundled feed by the advisory
+  // importer; what is added here is the operator infrastructure behind them, which the
+  // advisory databases never publish.
+  //
+  // "fiora.nixel.my.id" is the exfiltration host the obfuscated forks rebuild from
+  // decimal char codes at runtime. Corroborated independently by the OSV entry for
+  // ynastore-baileys (MAL-2026-13470), so it carries full confidence. Only the
+  // attacker's own subdomain is listed - the nixel[.]my[.]id apex is not.
+  "fiora.nixel.my.id",
+  // Operator site of the LevviCode cluster. Single-source (safedep), so the matching
+  // feed entry carries a reduced confidence.
+  "levvicode.cloud",
 ];
 
 // ---------------------------------------------------------------------------
@@ -684,6 +701,14 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // attacker's repository: api[.]github[.]com is a legitimate shared host and is
   // deliberately NOT listed.
   "api.github.com/repos/Vellia-Elyvia/mydb/contents/db.json",
+
+  // Baileys WhatsApp fork channel-farming campaign (safedep, August 2026). The remote
+  // follow-list the forks fetch at runtime to decide which WhatsApp channels to
+  // subscribe the victim's session to, so the target set can be changed without
+  // republishing a package. Path-scoped to the attacker's repository:
+  // raw[.]githubusercontent[.]com is a legitimate shared host and is deliberately NOT
+  // listed. Single-source, so the matching feed entry carries confidence 0.85.
+  "raw.githubusercontent.com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1230,6 +1255,13 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // confidence 0.85.
   "navaLinh",
   "Vellia-Elyvia",
+
+  // Baileys WhatsApp fork channel-farming campaign (safedep, August 2026). Hosts the
+  // Levi4than control repository holding the remote follow-list the malicious forks
+  // pull at runtime. Attacker-created account, not a compromised maintainer: the
+  // upstream Baileys maintainers are VICTIMS of the impersonation and are deliberately
+  // NOT listed. Single-source, so the matching feed entry carries confidence 0.85.
+  "LevviCodeID",
 ];
 
 // ---------------------------------------------------------------------------

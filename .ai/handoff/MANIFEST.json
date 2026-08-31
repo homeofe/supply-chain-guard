@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788091420",
-    "timestamp": "2026-08-30T12:03:40Z",
-    "commit": "f6149ce",
+    "session_id": "cli-1788165515",
+    "timestamp": "2026-08-31T08:38:35Z",
+    "commit": "c55adb6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:65f111338b4f07adcf129ff511b21b32a74bd7f4f56540b3a5db8d49f620c6ad",
-      "updated": "2026-08-30T12:03:33Z",
-      "lines": 5763,
+      "checksum": "sha256:24bd1b3cc9cc39bd0f041d2a45187d404fceb6628f3ad767fdd0da2d8752df57",
+      "updated": "2026-08-31T08:38:13Z",
+      "lines": 5835,
       "summary": "Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:dd48100c98f5ef244df6ba509ddb035b881cf2127ab94454a598f5520a4a6222",
-      "updated": "2026-08-30T12:03:40Z",
+      "updated": "2026-08-31T08:38:34Z",
       "lines": 164,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d2aa0abd069030dbeb01cab2e828f67ea5abebe0de9ce4b12f76708e4fafe711",
-      "updated": "2026-08-30T12:03:40Z",
+      "updated": "2026-08-31T08:38:34Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:9701398d6b22ee68682559d7c55ba5483da19fc2ae1ef15124207370c227732d",
-      "updated": "2026-08-30T12:03:40Z",
+      "updated": "2026-08-31T08:38:34Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: OpenAI Codex. Branch `codex/fix-scan-scoring-cli`. Draft PR #250; do not Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 69315,
-    "full_read": 81418
+    "manifest_plus_core": 70061,
+    "full_read": 82164
   }
 }

@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.7",
-  "entryCount": 14152,
+  "entryCount": 14405,
   "generatedAt": "2026-08-23T00:00:00.000Z",
   "entries": [
     {
@@ -114458,6 +114458,2036 @@
       "campaign": "npm Bin Entry Harvesting",
       "source": "safedep",
       "firstSeen": "2026-08-14"
+    },
+    {
+      "type": "package",
+      "value": "redis-cookie-server",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jgx3-v64x-v2w5, MAL-2026-15602",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "eslint-prettier-js",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fp43-fcrg-6w93, MAL-2026-15601",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tronlinker@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-55gr-cx76-2q6q, MAL-2026-15588",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "generate-schema-ethers@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f45j-cpvf-37vh, MAL-2026-15594",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "fuels-typegen@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4f4x-3qvc-wffh, MAL-2026-15593",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "npx-oob-package@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2gqg-4mch-fmq5, MAL-2026-15597",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "grafeno-actions@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rcj7-44gp-9983, MAL-2026-15596",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "generate-schema-viem@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rrqc-jj9x-2m46, MAL-2026-15595",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "verify-contract-viem@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wgc5-g8h3-3grx, MAL-2026-15599",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "verify-contract-ethers@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7cgh-hfp8-2h8v, MAL-2026-15598",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "com.db.autobahn.notification-center-electron@88.88.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q6wc-5f8x-wwwj, MAL-2026-15590",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "cre-setup@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-85ff-72jm-25qf, MAL-2026-15591",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "fuels-core@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w76m-93w4-w9vj, MAL-2026-15592",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "autobahn-electron-probe@99.99.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8jx3-79xq-v4q4, MAL-2026-15589",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "@lucideproxy/svg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6j97-93gg-j7r8, MAL-2026-15600",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "@fidzzhost/baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vc2v-c8j2-qxg9, MAL-2026-15579",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "cloudfcrxz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p375-pmrj-262v, MAL-2026-15581",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "cloufcrxz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gxpc-36pf-vcrw, MAL-2026-15582",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "real-browser-plus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ffvr-gx62-j45m, MAL-2026-15587",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "h2-codex",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8h78-gfj3-qrp2, MAL-2026-15583",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "h3client",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-89vf-5xgx-fhq7, MAL-2026-15585",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "brat-codex",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-63wg-22hx-h5q4, MAL-2026-15580",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "h3-codex",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w6m7-6jhr-mfjc, MAL-2026-15584",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "originaldevelopmentstelemetry",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m8hq-jrvf-g8xm, MAL-2026-15586",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "pypi:auth-app-streamlit@2.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ff3f-7fvh-5cpv, MAL-2026-15577",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "pypi:trongridor@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vg2j-fq8r-2c48, MAL-2026-15578",
+      "firstSeen": "2026-08-30"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackefwqm",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8rf-3fff-4922, MAL-2026-14739",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackwu6ij",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7xjw-3r9c-8xj5, MAL-2026-14975",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackb68qiv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rw8p-vrvf-pvrh, MAL-2026-14692",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackgyrw9d",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q39x-pv4f-78w4, MAL-2026-14769",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack9d7ow",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7rmc-8xpq-6h8x, MAL-2026-14673",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack1a4xg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jjwp-474m-67wv, MAL-2026-14598",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackd3cxf7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5f2q-pw5g-x9pg, MAL-2026-14717",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackfkqbp4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ff6f-8mr3-gcww, MAL-2026-14751",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackdflm1d",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qw95-c8v2-5h42, MAL-2026-14725",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackd4npj",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m455-4wgc-cf3w, MAL-2026-14718",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackbxw4k",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrg5-p2gq-9fj9, MAL-2026-14700",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack7ezqzp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xw33-p2r3-56v7, MAL-2026-14655",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackbn8wg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v6cx-gmrr-fm3f, MAL-2026-14697",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackuew4bh",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-69wp-x7mf-38c6, MAL-2026-14944",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack8zg7y",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ppmx-rcxg-f87q, MAL-2026-14669",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackesxum",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hwxq-3hpv-9grv, MAL-2026-14744",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackdb90s",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g368-379f-4vgr, MAL-2026-14722",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackggjd8x",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g63f-463m-h9r4, MAL-2026-14766",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackudibkf",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc46-27vw-4vfr, MAL-2026-14943",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackjnh4m1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gxph-cp6j-9p53, MAL-2026-14790",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack7ke6fz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-99mm-gr34-p8pr, MAL-2026-14656",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackp9bua",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-799r-86ph-7cvj, MAL-2026-14870",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackqszzc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-299g-wfxf-8mm2, MAL-2026-14895",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackkysrek",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-89cf-7c2h-2xhg, MAL-2026-14808",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackxlmq6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r79g-8ch6-c8fj, MAL-2026-14983",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackzz0n4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrx6-9pjc-7p8g, MAL-2026-14998",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackvo9oet",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q6cp-r5f8-mv4v, MAL-2026-14966",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstacks42lb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fpf7-vcpc-6gf4, MAL-2026-14914",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackkg0gfy",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hm9q-c7r5-2c4h, MAL-2026-14800",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack5a7otk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vmc2-fqrw-cjvw, MAL-2026-14628",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackcvi67o",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gf3j-95fh-m3vv, MAL-2026-14715",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackftd8b",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vhfx-9qpf-9xrh, MAL-2026-14759",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackdci73",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fwhg-qm9h-6w77, MAL-2026-14723",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack8v1vs",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-569w-v6jw-6cw3, MAL-2026-14666",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack89dtg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hjg7-4wj8-5xmh, MAL-2026-14661",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackpfnj1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7cf5-7q37-67wx, MAL-2026-14874",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackv4z5q",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r78v-vxmx-5x7m, MAL-2026-14955",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackcbatl4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6mq9-4x4v-vq2f, MAL-2026-14704",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack4dhts",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mhqw-h859-5hjq, MAL-2026-14620",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackkege4f",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qvj6-fm47-wvxm, MAL-2026-14799",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack18hkx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gj24-pf9v-f3f2, MAL-2026-14597",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackx4y4fx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r7xp-g6cr-5hpq, MAL-2026-14979",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackf9oik",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h5px-cwhq-98vm, MAL-2026-14748",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackuayqn",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2cx4-prjh-p6x3, MAL-2026-14940",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack9vcxi9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mmm4-jqhv-898j, MAL-2026-14683",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack5tuhr5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qqcv-h8w7-6xrc, MAL-2026-14638",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackykas5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rh5c-8829-gw94, MAL-2026-14988",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack4hg6p",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x28f-24g5-5m4h, MAL-2026-14622",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackplnt8o",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-24jc-hpx8-rcvv, MAL-2026-14876",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackrc44f",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jc44-fp9g-7w3w, MAL-2026-14903",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstacklabm6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qjmr-mq4w-mhjq, MAL-2026-14816",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackq4ek0f",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cww2-g8p6-4wcg, MAL-2026-14885",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-at3x6r0d",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72qf-vv33-wpvw, MAL-2026-15478",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackwudpnc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g44f-7gvv-m7g8, MAL-2026-14976",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-7m6xp6w6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2q6p-5jrj-cx3x, MAL-2026-15476",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack9gdxi6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xq96-238h-36wg, MAL-2026-14674",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackqjq77e",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2hp3-336m-rpw7, MAL-2026-14891",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstacknk99g",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6xh2-x4wr-8889, MAL-2026-14844",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "estudiar-matematicas",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wvhv-9jqr-jfg6, MAL-2026-15259",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstacknqxij",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m2cj-2w9g-gv7m, MAL-2026-14847",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "chilly-mountain",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7jf3-h6fc-4939, MAL-2026-15001",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-t8vrii0t",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-27m6-r736-9cpm, MAL-2026-15485",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-cg2nzejt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mrvj-3ghc-r5pg, MAL-2026-15479",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack9nawzv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-76r6-7x8v-w2pv, MAL-2026-14677",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackkx7y2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fxfc-653g-xfvc, MAL-2026-14806",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack5dfkei",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pp5w-8h4m-rm8h, MAL-2026-14631",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack1ew1w",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rmpr-jj7h-qvxv, MAL-2026-14601",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack75faj",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f2f9-rhr4-9pw2, MAL-2026-14650",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstacknwgnpw",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6jc9-hvw3-g6p4, MAL-2026-14850",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-kg8byhpv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-53ph-r3pc-w4jm, MAL-2026-15482",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-3xt74ldh",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jrwj-6x3v-hq66, MAL-2026-15475",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-q0j9jdqv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8c88-r5cq-fv2j, MAL-2026-15483",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackvkl1hd",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fx3g-rp88-5gcm, MAL-2026-14962",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackta7o8u",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2xcj-j84x-59r5, MAL-2026-14926",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackfourm4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hjpx-6p66-8wwv, MAL-2026-14756",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstackryyay3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g73h-f6r2-2gqq, MAL-2026-14912",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack6mpbze",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-px4p-rqq3-34qx, MAL-2026-14645",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack9ma2d",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x6v4-m4vf-429h, MAL-2026-14676",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "3layerdipstack5r1sh",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3vc4-mrq3-92rr, MAL-2026-14637",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-e7jj8nht",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5g4j-jr5r-2g65, MAL-2026-15480",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-tyhez6rf",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xx4f-2vqq-vc7j, MAL-2026-15486",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-hufuztqe",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pmwv-mfqq-3p5w, MAL-2026-15222",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-gv9cg140",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2xgq-5xmh-rv43, MAL-2026-15220",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-9yn0tiwq",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gc56-cx88-8p36, MAL-2026-15209",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-y1aqhk2u",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3mxm-q5hm-v4pv, MAL-2026-15254",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-9w6qhtr4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cp4r-8rjh-8j2r, MAL-2026-15207",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-7l7x3nnm",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6vx4-jqf2-9hrh, MAL-2026-15204",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-ucnf033l",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8hwp-m893-mfp6, MAL-2026-15243",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-hycgbxao",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j36r-9qrf-cf53, MAL-2026-15223",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-900fv2np",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4777-f7mv-ffrh, MAL-2026-15205",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-czo3yc51",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-456f-6gxc-5j23, MAL-2026-15213",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-2gmv774y",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qwf6-6vhx-2rj4, MAL-2026-15194",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-xsts58sz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mp8m-2fj5-9fx4, MAL-2026-15252",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-fmb6dd87",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f8w9-3xq7-qmrc, MAL-2026-15218",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-3sp71tdg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-43hm-96q4-cpr4, MAL-2026-15197",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-l5t17nyz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wwh4-972c-phhg, MAL-2026-15230",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-53uzgn30",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cp4f-gv57-74wx, MAL-2026-15201",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-z79m5krq",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mjq9-gf94-h2h6, MAL-2026-15256",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-upran64i",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-22mp-5wrj-qp9h, MAL-2026-15244",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-9k03wszi",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r674-cx4h-7gr9, MAL-2026-15206",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-r4opzxol",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9w5x-v98c-3wpj, MAL-2026-15241",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-f90oqwwm",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p2qr-vgxj-4fxv, MAL-2026-15481",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-ah9dirwo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g3p8-76g2-h5h7, MAL-2026-15477",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-604nkzg5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvg3-m2vc-mr5j, MAL-2026-15202",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-k3itlw7s",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xx4v-247g-pqp2, MAL-2026-15226",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-vxn9jfje",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f588-wrj3-9vxj, MAL-2026-15487",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-4ctk1sud",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p7rv-7wxg-c335, MAL-2026-15199",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-9xaocjv2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hc29-58cv-gm9m, MAL-2026-15208",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-3ab6ghzv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c8pr-6jrv-252h, MAL-2026-15196",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-1ocr3byl",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9x9m-f523-6pq4, MAL-2026-15191",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-qqmn0bic",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7cmq-p5mp-qqpp, MAL-2026-15240",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-z0ky26le",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-98q3-pq2f-rcp9, MAL-2026-15255",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-fgm5m2nw",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hm63-h7j6-c347, MAL-2026-15217",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-xodr0yt2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-726h-gvfp-f7ff, MAL-2026-15250",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-imo7mjh4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2844-7ccx-339v, MAL-2026-15224",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-hl4k7wwb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hg4v-48m2-pmcq, MAL-2026-15221",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-krktmhwo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wpw7-88fx-h77j, MAL-2026-15228",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-lxtc2yo8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vcq6-5jj4-hwfv, MAL-2026-15231",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-6qcpuz5a",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v4wc-jq32-8xmg, MAL-2026-15203",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-dkkvj828",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2xjg-26pg-ffvm, MAL-2026-15215",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-24xpfja3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v9m3-7q67-xwv4, MAL-2026-15193",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-3zydr56h",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q3j2-p9vh-vc84, MAL-2026-15198",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-ewtz5c63",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wvjc-wfp3-w94j, MAL-2026-15216",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-j990vgop",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pwx5-mpg8-7wg4, MAL-2026-15225",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-o9a1phdu",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9q5x-cg93-qqw9, MAL-2026-15236",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-v01eezwb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-72p3-r4ch-f6cr, MAL-2026-15245",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-n4e8jp1j",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mw7c-fp2g-p5v7, MAL-2026-15234",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-tmb49zcp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5w7f-qxrj-v8mh, MAL-2026-15242",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-31ajc1r0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6cqr-r7cp-3hgp, MAL-2026-15195",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-zlkxgzq0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cjr4-qp4p-5jfr, MAL-2026-15257",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-abi6w1hy",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qp98-pfx5-j25p, MAL-2026-15211",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-vxtbz5de",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q447-95w8-v25f, MAL-2026-15247",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-d2xe9mki",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wp7v-jgm8-vvrj, MAL-2026-15214",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-l5lxfme2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wmrp-4v3v-qx94, MAL-2026-15229",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-0uw2z1ux",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qqq9-64cw-23wr, MAL-2026-15190",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-zqf21nqg",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5cmp-34vq-gxvx, MAL-2026-15258",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-vgq4y2qo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g6j6-pq6w-h6rm, MAL-2026-15246",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-m3pf2jmu",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-53v2-2vj4-66jq, MAL-2026-15232",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-kkzww3k1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fw2w-pm86-w5hp, MAL-2026-15227",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-w7am2h4f",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-82hf-rf96-mc65, MAL-2026-15248",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-o15wcfen",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4fxw-x97v-7g8v, MAL-2026-15235",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-fzdcyprv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-67qm-jxg3-5qvg, MAL-2026-15219",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-pjl185sb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mwfx-cfp2-337q, MAL-2026-15237",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-xfd8ozbr",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p8gh-j35m-gc49, MAL-2026-15249",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-q31vb5mk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8h6m-7jhh-pp9x, MAL-2026-15239",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "waxed-slightly-weathered-cut-copper-stairs-rsq09wdf",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gm6w-9grr-4qf8, MAL-2026-15484",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-xuxzyx1y",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r6ph-7x48-qhcr, MAL-2026-15253",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-pmvpzutq",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q43r-gq83-7x77, MAL-2026-15238",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-2ls71exe",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rjg6-ffr6-v8fw, MAL-2026-15013",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-xs937ohf",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vpc2-x76h-p687, MAL-2026-15251",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-csowy37o",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r594-8vxx-wrf8, MAL-2026-15060",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-mgsmua9q",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-698v-8g2p-gvwg, MAL-2026-15113",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-ye9hv1rp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v9cf-4849-fhmw, MAL-2026-15180",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5bhzaaq2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h6qg-265j-h454, MAL-2026-15023",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-c9l8m7yz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m2p6-qvgf-3q23, MAL-2026-15054",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-a4jd3pt5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-283r-2jx4-xgmr, MAL-2026-15210",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "desmos-graphing-b3cpqprr",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-66fp-9372-j4jv, MAL-2026-15212",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-v56d6aoz",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7pxc-2wmj-c92c, MAL-2026-15156",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-tbq8gn8g",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4ph8-838c-x7v3, MAL-2026-15146",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-lbh9r8oq",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wcr5-p9mx-4rrm, MAL-2026-15107",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-z1owf3wo",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xq2c-4gr5-p52g, MAL-2026-15186",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-1sbqnhys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-r3hv-53vv-c73v, MAL-2026-15010",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-icth7fnc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fcw3-6xmx-8j8j, MAL-2026-15091",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-rlofqkrd",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-75c6-g4h7-9cgf, MAL-2026-15138",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-k4nakbnt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j72h-v5f4-6jc8, MAL-2026-15102",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-vzhe1ult",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g39g-fx2q-m7q7, MAL-2026-15163",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-1xclw9bj",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fxhw-42m8-5xg8, MAL-2026-15012",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5kz6s5ta",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3cxw-3pf8-mch7, MAL-2026-15027",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-hceirb4w",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h7f9-ggp2-qx94, MAL-2026-15083",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-4d2zvwhb",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7xcg-mpgq-7hwp, MAL-2026-15021",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-uzimt3ve",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6xwj-pvp2-fvv9, MAL-2026-15155",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-qejnkyc6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jmv6-7cv2-8h87, MAL-2026-15124",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-idih6eh4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v2g4-pr33-wv87, MAL-2026-15092",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-gvxxr7vn",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q3vf-7vc6-mgpw, MAL-2026-15078",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-fr0zh2sv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5mxf-cq83-7c2p, MAL-2026-15075",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-fy6wub00",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qmfj-7684-p783, MAL-2026-15076",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-ewfmy87w",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-25rv-468f-3qcw, MAL-2026-15071",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-t5p3uu1o",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-49qp-8947-469f, MAL-2026-15145",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-0xj51osu",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g2q9-fxgw-7cf3, MAL-2026-15008",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-2n5caofp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7945-7j69-hqr8, MAL-2026-15014",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-dg6t1awu",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7q56-2c98-g322, MAL-2026-15066",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-cwhcq8dv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-gj27-444h-5ghr, MAL-2026-15061",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-9nxfp7hx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x4p4-5f67-gf3m, MAL-2026-15041",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-ejybc15w",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rcqr-fvhr-rg2j, MAL-2026-15069",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-xzg0d4g6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7f3w-4qj2-3x49, MAL-2026-15178",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-skdmdyhc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wmxm-477f-2g8q, MAL-2026-15141",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-6tjmt4am",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mpcx-58p6-w2gm, MAL-2026-15035",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-fp7poyii",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4g3w-62vg-8985, MAL-2026-15074",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-hpxf23yu",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-62gq-qh66-c3g9, MAL-2026-15086",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-b3kc8x9d",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-m4fm-vgx8-qmpg, MAL-2026-15047",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-s6pridbx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6qv8-28m3-f722, MAL-2026-15140",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-775iocrc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fgv2-748j-qh6f, MAL-2026-15036",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-wvr5eoop",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jmr8-gjgm-g275, MAL-2026-15171",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-y9cjgg19",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8rjv-2cvp-cp45, MAL-2026-15179",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-uudsbhsk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rp5r-9246-8wvr, MAL-2026-15154",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-2t2ozsy0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xvw7-px84-pqx2, MAL-2026-15016",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-4mjgbs9i",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-84p2-xg3p-7258, MAL-2026-15022",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-a68gv8mp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fj69-m375-8vvh, MAL-2026-15043",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-zgfuyabx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7p2j-69pp-wf6x, MAL-2026-15187",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-u2n0gqft",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xxg5-qrm8-r5jq, MAL-2026-15151",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-aki2aftl",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2fph-qq84-qcv8, MAL-2026-15045",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-66crblus",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rh4v-65m7-r4px, MAL-2026-15032",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-sliybcp6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3v2g-r5c9-q4vh, MAL-2026-15142",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5ciuoj5g",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6rqp-97fc-43vj, MAL-2026-15024",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5tvmx8a6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cvmg-hx7c-xx2c, MAL-2026-15029",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-rikzs2gv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8955-2392-8jc5, MAL-2026-15137",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-u5hbagi9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hj4g-42vj-8jrx, MAL-2026-15152",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5ymxe9bn",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4v63-p946-g843, MAL-2026-15030",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-yqzh7rhx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8vmj-42cx-8694, MAL-2026-15184",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-yiqm3f92",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-4gmf-6mcm-f6g4, MAL-2026-15182",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-chtm9stv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rw84-9q6m-px56, MAL-2026-15055",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-rloj3ls4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h58c-523m-3q2v, MAL-2026-15139",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-h7lrg5jc",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w46c-43xr-fcg7, MAL-2026-15081",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-miudxzw9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fw7p-6237-vvpm, MAL-2026-15115",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-kfovigbh",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p395-q3p9-f459, MAL-2026-15103",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-r6iheodx",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-q6q5-g8g4-9vv5, MAL-2026-15134",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-vhnhn5w0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qxpw-gxx7-hqv3, MAL-2026-15159",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-m7k74jsv",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j92c-362r-w599, MAL-2026-15111",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-qq62iaxh",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9f68-hw7h-8wmq, MAL-2026-15129",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-wktpjm2c",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-33gp-x258-jmfv, MAL-2026-15169",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-x9ht6k0r",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c675-pqjx-fx9c, MAL-2026-15173",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-5fkxmizt",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qhcv-gh2m-5m69, MAL-2026-15025",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-f5r03nln",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fmmr-3jh8-4c64, MAL-2026-15073",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "classlink-vfw41du0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6938-jv75-39v3, MAL-2026-15158",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "domain",
+      "value": "fiora.nixel.my.id",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "BaileysChannelFarm",
+      "campaign": "Baileys WhatsApp Channel Farming",
+      "source": "safedep, OSV MAL-2026-13470",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "domain",
+      "value": "levvicode.cloud",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "BaileysChannelFarm",
+      "campaign": "Baileys WhatsApp Channel Farming",
+      "source": "safedep",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "url",
+      "value": "raw.githubusercontent.com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "BaileysChannelFarm",
+      "campaign": "Baileys WhatsApp Channel Farming",
+      "source": "safedep",
+      "firstSeen": "2026-08-31"
     }
   ]
 }

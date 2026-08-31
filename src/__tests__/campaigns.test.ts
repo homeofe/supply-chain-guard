@@ -5581,4 +5581,81 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Baileys WhatsApp Channel Farming (safedep, August 2026)
+  // =================================================================
+
+  describe("Baileys WhatsApp Channel Farming (August 2026)", () => {
+    it("should detect the exfiltration host the obfuscated forks rebuild at runtime", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "send.js"),
+        'const endpoint = "https://fiora.nixel.my.id/";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the operator site", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "about.js"),
+        'const site = "https://levvicode.cloud/";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    it("should detect the remote follow-list dead drop", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "newsletter.js"),
+        'const list = await fetch("https://raw.githubusercontent.com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+    });
+
+    // raw[.]githubusercontent[.]com serves an enormous share of legitimate projects,
+    // and the Baileys maintainers being impersonated are victims. Only the attacker's
+    // own repository path may match - asserted, not merely intended.
+    it("must NOT flag the shared raw.githubusercontent.com host itself", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "fetch-readme.js"),
+        'const url = "https://raw.githubusercontent.com/WhiskeySockets/Baileys/refs/heads/master/README.md";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "a legitimate raw.githubusercontent.com path must never match the campaign dead drop",
+      ).toBeUndefined();
+    });
+
+    // The operator's advertising host is listed only at the attacker's own subdomain.
+    // The apex is someone's personal domain and must stay out of the blocklist.
+    it("must NOT flag the nixel.my.id apex", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "apex.js"),
+        'const home = "https://nixel.my.id/";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN"),
+        "only the attacker subdomain is an indicator, never the apex",
+      ).toBeUndefined();
+    });
+  });
+
 });
