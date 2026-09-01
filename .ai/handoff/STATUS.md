@@ -130,11 +130,11 @@ fails in a local `vitest` run rather than only under the governance CLI.
 
 Running the gate surfaced Layer 4: **5 of 5 TRUST.md verified entries are
 expired**, the newest since 2026-08-07. They warn and pass today because
- (added in AAHP 3.11.0) is off.
+`trustTtl.enforce` (added in AAHP 3.11.0) is off.
 
-That matters for sequencing.  is the natural next flag to
+That matters for sequencing. `trustTtl.enforce` is the natural next flag to
 reach for after this one, and turning it on in its current state would fail the
-build immediately, exactly as  would have without the
+build immediately, exactly as `verifyWorkflow.enforce` would have without the
 workflow fix in this branch. The trust rows need re-verifying and their TTLs
 resetting FIRST. Not done here: re-verifying a trust claim is a judgement about
 evidence, not a config edit.
