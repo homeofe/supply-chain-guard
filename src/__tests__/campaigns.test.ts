@@ -5658,4 +5658,86 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Shai-Hulud "Trinitite" - @7nohe/openapi-react-query-codegen (August 28, 2026)
+  // =================================================================
+
+  describe("Shai-Hulud Trinitite npm worm (August 2026)", () => {
+    it("detects the 3FWCvzduYZg.js stage-2 loader digest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hashlist.js"),
+        'const h = "b24d121667f21f492cb9db34fbfd515d5922a8dd30b9c45215c7220abbb10ca8";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the binding.gyp install-time dropper digest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "digest.js"),
+        'const d = "d3246926b20a8d021ed7de0ac8e9eee1dda986088f84ba18f31cb2042a121f5d";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the p00paboot staging fork reference", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const url = "https://github.com/p00paboot/openapi-react-query-codegen";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // Bare feed values are the npm namespace and resolve through matchBareNpmIOC(),
+    // not matchPackageIOC() - see the two-resolver note in "PyPI feed entries carry
+    // their ecosystem prefix" above.
+    it("version-pins the trojanized releases without blocking the package name", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("@7nohe/openapi-react-query-codegen", "3.0.4", feed),
+        "a published malicious version must match",
+      ).toBeTruthy();
+      expect(
+        matchBareNpmIOC("@7nohe/openapi-react-query-codegen", "1.6.2", feed),
+        "a clean release of a hijacked package must never match",
+      ).toBeNull();
+    });
+
+    // The vendor write-ups name the StepSecurity researchers who reported the attack
+    // in the same IOC section as the actor. Blocking a reporter is the exact failure
+    // mode the blocklist discipline exists to prevent.
+    it("must NOT flag the StepSecurity reporters named alongside the campaign", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "reporters.js"),
+        'const a = "https://github.com/varunsh-coder/harden-runner";\n' +
+          'const b = "https://github.com/h0x0er/demo";\n' +
+          'const c = "https://github.com/rohan-stepsecurity/x";\n' +
+          'const d = "https://github.com/actions-security-demo/y";\n'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"),
+        "researchers who reported the campaign must never be indicators",
+      ).toBeUndefined();
+    });
+  });
+
 });

@@ -1106,6 +1106,28 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "25ad700976873c76af785cb99b33c48db7df8b81f21d1e9e06b3676b9a9373ae": "arrayref 0.3.10 poisoned .crate artifact, build-time dropper (SHA256)",
   "61198155da51b838772eecf5bfaac6cbc4dcc388dccc56658fc28a8e831b34d4": "proc-macro1 1.0.107 .crate artifact, build-time dropper (SHA256)",
   "b5c1b5b0763a8809a644a8f92224653f0aca623a98eecc714d27f74b80fbe436": "proc-macro1 1.0.106 .crate artifact, build-time dropper (SHA256)",
+
+  // Shai-Hulud "Trinitite" / Mini Shai-Hulud wave on @7nohe/openapi-react-query-codegen
+  // (August 28, 2026). The ten package@version pins already cover a registry install;
+  // these digests catch a vendored, mirrored or already-unpacked copy.
+  //
+  // Every digest below was reconciled character-for-character across two independent
+  // write-ups before ingestion. That was not a formality: a first extraction of the
+  // v1.6.3 payload returned "...b2fbe1a1..." where two other sources return
+  // "...b2fba1e1...", and an exact-string search resolved the transposition against
+  // the second spelling. Only the reconciled form is stored.
+  "8e5d1af68ca340ae0c6e8132cb00c686ec2d60502c1994d94ce353d1472ad5a3": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 2.2.1 (SHA256)",
+  "b49afb7dba04cd99b357ce7c652c823a3707f28e130bd5c6645851a7adc030d6": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 0.5.4 (SHA256)",
+  "709af2fdeb50324229e94c44c679a0fab18bd8e17d3864405989c526cbb63ad8": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 0.5.5 (SHA256)",
+  "59370c67b54a0ccaedd265e2356f04540b2fba1e1845300ef6de4d5437d99380": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 1.6.3 (SHA256)",
+  "e1f1162ece9a6e6ea21a20399cbf31c563a8149d433a68711f4223870c203d5a": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 1.6.4 (SHA256)",
+  "b6012b2ff87f08f93ee53921c48db907ddbcf5461b03bb988083b01a36886237": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 2.2.2 (SHA256)",
+  "778d6f0058045d6a2ab9a7e1d3e3be8e7e6b4d9cc217d13949bf1dfbab759a7c": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 3.0.3 (SHA256)",
+  "b24d121667f21f492cb9db34fbfd515d5922a8dd30b9c45215c7220abbb10ca8": "Trinitite 3FWCvzduYZg.js stage-2 loader, @7nohe/openapi-react-query-codegen 3.0.4 (SHA256)",
+  // The dropper arrives as a file called binding.gyp, which is an ordinary node-gyp
+  // filename. Only this exact digest is blocked; the NAME is deliberately not a rule.
+  "d3246926b20a8d021ed7de0ac8e9eee1dda986088f84ba18f31cb2042a121f5d": "Trinitite binding.gyp install-time dropper, @7nohe/openapi-react-query-codegen (SHA256)",
+  "0d58f3434c55842fc41ad99656c20a295d46e7d16f432a122a5a094d7c1de0e2": "Trinitite trojanized npm tarball, @7nohe/openapi-react-query-codegen (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1262,6 +1284,16 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // upstream Baileys maintainers are VICTIMS of the impersonation and are deliberately
   // NOT listed. Single-source, so the matching feed entry carries confidence 0.85.
   "LevviCodeID",
+
+  // Shai-Hulud "Trinitite" wave on @7nohe/openapi-react-query-codegen (August 28, 2026).
+  // The actor forked the repository and drove a release workflow whose issue_comment
+  // trigger had no author-association gate. Corroborated by Socket and Endor Labs.
+  //
+  // The accounts named alongside this campaign in one vendor write-up
+  // (actions-security-demo, h0x0er, varunsh-coder, rohan-stepsecurity) are
+  // StepSecurity researchers and their demo org, not the actor. They are deliberately
+  // NOT listed: they appear in the write-up because they reported the attack.
+  "p00paboot",
 ];
 
 // ---------------------------------------------------------------------------
