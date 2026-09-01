@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.0.9] - 2026-09-01
+
 ### Changed
 
 - The pinned AAHP governance CLI moves from 3.10.0 straight to 3.12.0, skipping
@@ -5129,7 +5131,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.8...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.9...HEAD
+[6.0.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.9
 [6.0.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.8
 [6.0.7]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.7
 [6.0.6]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.6

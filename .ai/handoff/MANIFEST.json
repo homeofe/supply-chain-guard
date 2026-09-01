@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788248733",
-    "timestamp": "2026-09-01T07:45:34Z",
-    "commit": "b0c2646",
+    "session_id": "cli-1788251066",
+    "timestamp": "2026-09-01T08:24:27Z",
+    "commit": "9c104df",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a08140800b05f6b57493388ecfd018570d3611d4a442ae655eb5889acd701a26",
-      "updated": "2026-09-01T07:45:31Z",
-      "lines": 6090,
-      "summary": "Model: Claude Opus 5. Branch `chore/deps-aahp-3.12.0`."
+      "checksum": "sha256:508e6d1f81d2db76292ce77074292bedf8a880ad8f4e0019a30124aba76eb552",
+      "updated": "2026-09-01T08:24:24Z",
+      "lines": 6129,
+      "summary": "Model: Claude Opus 5. Branch `release/v6.0.9`."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:73d5036de06dcfcc84661e5c16e5e0cadeee7c072593f9b80306b5fd386f92c8",
-      "updated": "2026-08-31T10:42:06Z",
+      "checksum": "sha256:679bdf6d04837e97d0b81777b8294d0ff9c6f5afc3acc2a9f9e58826e41cf3e0",
+      "updated": "2026-09-01T08:22:21Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:a9939f0647fc8e6394976f01260d33e0ca9a782dd56f605c527415daaa0756cc",
-      "updated": "2026-09-01T07:45:33Z",
-      "lines": 165,
+      "checksum": "sha256:4e03e7a07becbf059f0b7b4063aa2415ba311627c1e5b367e36de946c8602080",
+      "updated": "2026-09-01T08:24:26Z",
+      "lines": 166,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:244f8df70c16fe2df455396d81f5be231869cf1426af3cb7e7261cf116512bd2",
-      "updated": "2026-09-01T07:45:33Z",
+      "checksum": "sha256:e2444e6ab12a561a0012d0da07060ad8df9a7576f26f481e7e9e501dfa870485",
+      "updated": "2026-09-01T08:24:26Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:33b43ad004d9b02b8df1fc412a46d56a5b046f28152807dff7e66c490113c50d",
-      "updated": "2026-09-01T07:45:33Z",
+      "checksum": "sha256:0cbdd29bde135355ee17329fcec96d81670fc6f82331685a22025205c36f4b8f",
+      "updated": "2026-09-01T08:24:26Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: Claude Opus 5. Branch `chore/deps-aahp-3.12.0`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: Claude Opus 5. Branch `release/v6.0.9`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 72642,
-    "full_read": 84765
+    "manifest_plus_core": 73068,
+    "full_read": 85214
   }
 }

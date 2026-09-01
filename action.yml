@@ -80,7 +80,7 @@ runs:
 
     - name: Install supply-chain-guard
       shell: bash
-      run: npm install -g supply-chain-guard@6.0.8 --ignore-scripts --no-audit --no-fund
+      run: npm install -g supply-chain-guard@6.0.9 --ignore-scripts --no-audit --no-fund
 
     - name: Run scan
       id: scan
