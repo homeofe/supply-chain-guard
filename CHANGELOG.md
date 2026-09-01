@@ -40,6 +40,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   destinations rather than attacker-registered names, and blocking the apexes
   would flag unrelated projects. One exfiltration domain is also omitted because
   two independent transcriptions of it differ by a single character.
+- `verifyWorkflow.enforce` is on. A verify workflow that can be skipped now fails
+  `aahp doctor` instead of being reported as advisory, so the hole above cannot
+  reopen silently. A repository-level shape assertion in
+  `workflow-trigger-contract.test.ts` states the same invariant independently, and
+  fails in a local test run rather than only under the governance CLI.
+
+### Fixed
+
+- **The AAHP handoff gate could be skipped entirely, and reported success when it
+  was.** Every step of the `aahp-verify` job carried
+  `if: github.actor != 'dependabot[bot]'`, checkout and `npm ci` and verify and
+  doctor alike, so a dependabot event ran one `echo` and reported success under
+  the name branch protection requires. The bypass was total rather than partial:
+  Layer 1 MANIFEST checksum integrity was skipped along with the Layer 2 drift
+  gate. From a pull request the result was indistinguishable from a pass, and on
+  2026-09-01 a dependabot pull request showed every check green while this gate
+  had verified nothing at all.
+
+  The steps now run unconditionally, and the exemption is not replaced by a
+  narrower condition: an exemption evaluated before the gate cannot be reviewed by
+  it. A pure dependency bump therefore fails Layer 2, which is the honest answer,
+  because dependabot cannot write `STATUS.md` and this repository already lands
+  dependency bumps by carrying them into a reviewed branch that does.
 
 ## [6.0.9] - 2026-09-01
 

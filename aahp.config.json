@@ -269,5 +269,8 @@
     "name": "@elvatis_com/aahp",
     "location": "devDependencies",
     "allowRange": false
+  },
+  "verifyWorkflow": {
+    "enforce": true
   }
 }

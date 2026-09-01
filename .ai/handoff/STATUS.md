@@ -66,6 +66,71 @@ republished legitimately by the real vendor, the entry becomes a false positive
 and should be narrowed then. A negative test asserts the vendor's live themes
 (`theme-toro`, `theme-kiss`) never match, so the blast radius is bounded to the
 four removed names.
+## Enforce the verify-workflow gate (2026-09-01)
+
+Model: Claude Opus 5. Branch `chore/enforce-verify-workflow`.
+No version bump. OPENED FOR REVIEW, NOT MERGED, at the owner's request: the
+intent is to land this tomorrow after the daily routine run.
+
+Closes the open item recorded in the AAHP 3.12.0 note earlier today.
+
+### What was actually wrong
+
+`aahp doctor` reported the finding as advisory, which undersells it. Every step
+of the `aahp-verify` job carried
+`if: github.actor != 'dependabot[bot]' && ...` - checkout, Node setup, Python
+setup, `npm ci`, the verify step AND the doctor step. On a dependabot event the
+job ran a single `echo` and reported success, under the exact check-run name
+branch protection requires.
+
+So the bypass was total, not partial: Layer 1 MANIFEST checksum integrity was
+skipped along with the Layer 2 drift gate. PR #257 earlier today is the evidence -
+every check green, gate never run.
+
+### Why the exemption was not replaced with a narrower one
+
+AAHP's own remediation text suggests putting the exemption inside the gate, keyed
+on the change, and it ships the mechanism for that:
+`handoffImpact.nonImpactingModifiedFiles`, a reviewed exact-file list checked by
+Layer 2 itself. Listing `package.json` and `package-lock.json` there would let a
+pure dependency bump pass Layer 2 while all four layers actually run.
+
+That was deliberately NOT done, for two reasons:
+
+1. It buys nothing operationally. Dependabot pull requests are already red on
+   `check:handoff`, because the generated DASHBOARD carries the dependency table
+   and dependabot cannot run `handoff:refresh`. They stay unmergeable either way,
+   and this repository already lands dependency bumps by carrying them into a
+   reviewed branch, as #260 did today.
+2. It would genuinely narrow the gate. `package.json` is not only dependencies:
+   it holds `engines`, `scripts` and `files`. An exemption on that file lets a
+   lone change to any of those land with no handoff note. Reading the shipped
+   Layer 2 source, a listed file is exempt whenever it is the only modification,
+   so this is not hypothetical.
+
+The honest outcome is that a dependency-only branch fails Layer 2, because it
+genuinely has not updated handoff state. If a green dependabot run is ever wanted
+more than the gate strength, `handoffImpact` is the supported route and this is
+the decision to revisit - not the actor condition, which cannot be reviewed by
+the gate because it is evaluated before it.
+
+### Verified both directions
+
+- Fix applied, `verifyWorkflow.enforce: true`: `aahp doctor` reports
+  `verify-workflow: pass`, "the gate runs unconditionally at --level ci", exit 0.
+- Mutation, one step-level `if:` re-added: `verify-workflow: fail`, exit 1, and
+  the new shape assertion in `workflow-trigger-contract.test.ts` goes red too.
+  Restored, both green again.
+
+The two checks are deliberately independent. `aahp doctor` reads the shipped
+CLI's rules; the test states this repository's expectation in this repository and
+fails in a local `vitest` run rather than only under the governance CLI.
+
+### Note for whoever merges this
+
+This pull request is itself the first real exercise of the unconditional gate, so
+its own `aahp-verify` run is the evidence that the workflow still passes for an
+ordinary human change.
 
 ## v6.0.9 release preparation (2026-09-01)
 

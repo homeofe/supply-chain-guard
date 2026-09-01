@@ -228,6 +228,33 @@ describe("workflow trigger contract", () => {
     expect(types).not.toContain("edited");
   });
 
+  it("the handoff gate is unconditional: no step in it may carry an if:", () => {
+    // The opposite of the metadata workflow's rule, and deliberately so. There, a
+    // step-level `if:` is correct, because the job must still run and report a
+    // conclusive context. Here the job IS the gate, so a condition on any step is
+    // a hole rather than an exemption.
+    //
+    // Every step in this job once carried `if: github.actor != 'dependabot[bot]'`,
+    // checkout and npm ci and verify and doctor alike, so a dependabot event ran a
+    // single echo and reported success under the REQUIRED check name. Layer 1
+    // MANIFEST checksum integrity was skipped along with the Layer 2 drift gate.
+    // On 2026-09-01 a dependabot pull request showed every check green having
+    // verified nothing, which is why this is asserted rather than assumed.
+    //
+    // `aahp doctor` enforces the same invariant (verifyWorkflow.enforce), but that
+    // gate reads the shipped CLI's own rules; this one states the repository's
+    // expectation in the repository, and fails in a local `vitest` run rather than
+    // only under the governance CLI.
+    const job = AAHP.slice(AAHP.indexOf("jobs:"));
+    const conditioned = [...job.matchAll(/^\s+if:.*$/gm)].map((m) => m[0].trim());
+    expect(
+      conditioned,
+      "a conditional step in aahp-verify lets the required check pass without running",
+    ).toEqual([]);
+    // continue-on-error would turn a real failure into a green context just as well.
+    expect(job).not.toMatch(/continue-on-error/);
+  });
+
   it("code validation does not run on ready_for_review either", () => {
     // It creates no new head sha and no job here is draft-gated, so a draft PR's
     // opened/synchronize runs already made the sha conclusive. Re-adding it starts a

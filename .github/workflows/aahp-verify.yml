@@ -26,6 +26,30 @@
 # malformed, unreadable or HEAD-equal base a blocking failure at --level ci), and
 # the workflow must actually pass it. Passing a base to an older CLI is a no-op.
 #
+# THE EXEMPTION USED TO SIT AROUND THE GATE, WHICH MEANT THERE WAS NO GATE.
+#
+# Every step below once carried `if: github.actor != 'dependabot[bot]'`, including
+# checkout, npm ci, verify AND doctor. On a dependabot event the job therefore ran
+# one echo and reported success, and the check-run name it reported success UNDER
+# was the required one. Layer 1 MANIFEST checksum integrity was skipped along with
+# the Layer 2 drift gate, so the bypass was total rather than partial.
+#
+# That is indistinguishable from a pass when read from the pull request: on
+# 2026-09-01 a dependabot pull request showed every check green while this gate had
+# verified nothing at all. A required check that reports success without running is
+# worse than an absent one, because it manufactures the evidence of its own success.
+#
+# The steps now run unconditionally. `aahp doctor`'s verify-workflow gate is
+# enforced (verifyWorkflow.enforce in aahp.config.json), so re-adding a step-level
+# condition here fails the build rather than silently reopening the hole.
+#
+# A pure dependency bump consequently FAILS Layer 2, which is the honest answer:
+# dependabot cannot write STATUS.md, and this repository already lands dependency
+# bumps by carrying them into a reviewed branch that does. If a green dependabot
+# run is ever wanted, the supported route is handoffImpact.nonImpactingModifiedFiles
+# in aahp.config.json, which keys the exception to the FILES CHANGED and is checked
+# by the gate, not to who pushed them and evaluated before it.
+#
 name: AAHP Verify
 
 on:
@@ -68,15 +92,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Dependabot exemption (handoff gate not applicable)
-        if: ${{ github.actor == 'dependabot[bot]' || github.event.head_commit.author.username == 'dependabot[bot]' }}
-        run: |
-          echo "Dependabot change detected: the AAHP handoff gate does not apply."
-          echo "A pure dependency bump introduces no handoff-state change."
-          echo "Security and build remain gated by the required Build and Test check."
-
       - name: Checkout code
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Full history so the content-drift gate can diff against the base.
@@ -86,24 +102,20 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
 
       - name: Set up Python 3
         # Layer 1 (lint-handoff) validates .ai/handoff/pii-allowlist.json with Python.
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.x'
 
       - name: Install dependencies (pinned AAHP CLI)
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         run: npm ci --ignore-scripts
 
       - name: Run aahp verify (CI level, no escape hatch)
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         run: npx --no-install aahp verify . --level ci
         env:
           # One operand per event, and every one of them names a commit that is NOT
@@ -114,5 +126,4 @@ jobs:
           AAHP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.base }}
 
       - name: Run aahp doctor (conformance gates)
-        if: ${{ github.actor != 'dependabot[bot]' && github.event.head_commit.author.username != 'dependabot[bot]' }}
         run: npx --no-install aahp doctor . --json
