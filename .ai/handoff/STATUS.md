@@ -1,3 +1,42 @@
+## v6.0.9 release preparation (2026-09-01)
+
+Model: Claude Opus 5. Branch `release/v6.0.9`.
+
+Patch release for the 2026-09-01 threat-intelligence batch in #259 and the AAHP
+3.12.0 / `@types/node` dependency bumps in #260. No API or behaviour change, so
+patch rather than minor. The version moves together across package metadata,
+every governed CLI/scanner/reporter surface, the Action and examples, container
+documentation, MCP metadata, the pre-commit hook, the generated feed, lockfile,
+self-scan manifest, and the handoff set. `CHANGELOG.md` carries the dated 6.0.9
+block and release reference, and the Unreleased comparison starts at v6.0.9.
+
+### One trap worth recording
+
+`src/threat-intel.ts` contains the string `6.0.8` TWICE, and only one of them is
+the project version. Line 9012 is a feed IOC,
+`@ornikar/babel-preset-base@6.0.8` (GHSA-x2q9-5wm2-wf59), whose package version
+happens to equal the release being superseded. A blanket substitution across the
+file would have silently rewritten a shipped threat indicator to a version the
+advisory never named, turning a real detection into a dead one. `version-sync`
+would not have caught it: the gate counts occurrences of the NEW version and
+would have been happier, not unhappier, for the extra match.
+
+Only `bundledVersion` was bumped in that file, and the release diff for it is
+exactly one line. This is the same class as the known README-CIDR trap, which did
+not fire this cycle because no CIDR in README contains `6.0.8`. Both are the same
+underlying rule: on this repository a version string is not a safe global
+substitution target, because the feed and the docs both legitimately contain
+version-shaped data.
+
+Every occurrence was surveyed per file before substituting, and the two source
+files with more matches than the configured `minOccurrences` (`reporter.ts` at 12
+against a floor of 5, `README.md` at 4 against 3) were read line by line to
+confirm each match was genuinely the project version.
+
+This branch contains version, changelog, and generated-metadata changes only. The
+immutable `v6.0.9` tag and publication follow the release PR's squash merge, so
+the tag points at the exact commit on `main`.
+
 ## Dependency bumps: AAHP 3.12.0 and @types/node 26.4.0 (2026-09-01)
 
 Model: Claude Opus 5. Branch `chore/deps-aahp-3.12.0`.
