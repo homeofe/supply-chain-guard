@@ -1,3 +1,92 @@
+## Threat-intelligence batch 2026-09-01
+
+Model: Claude Opus 5. Branch `threat-intel/2026-09-01`. Scheduled daily run.
+No version bump: the version belongs to the release.
+
+**4,465 package IOCs imported, 11 non-package indicators added by hand.**
+
+The import ran exhaustively over the default 14-day window: 6,219 GitHub
+advisories and 1,911 OpenSSF MAL records, 2,124 cross-source overlaps merged
+with provenance preserved, 4,307 OSV corroborations. Nothing was truncated,
+nothing was left behind a limit, nothing hit the decline list, and the
+undrainable-backlog guard did not fire. 32 records were skipped: 21 bounded
+version ranges the scanner cannot resolve and 11 withdrawn advisories.
+
+The Shai-Hulud "Trinitite" wave against `@7nohe/openapi-react-query-codegen`
+(August 28, 2026) contributed the hand-added set: ten payload digests and the
+`p00paboot` staging-fork account. The ten trojanized releases were already
+version-pinned from an earlier run, so this closes the atomic-indicator gap.
+
+### Needs a decision from the owner
+
+**The advisory databases have started an alphabetical bulk backfill, and it is
+not finished.** 4,430 of this batch's 4,465 entries carry a 2026-08-31
+publication date, and 4,398 of those are names beginning with "a". Yesterday's
+run over the same window length saw 1,882 advisories; today's saw 6,219. The
+shape is unmistakable: historical npm malware is being loaded into the advisory
+databases in alphabetical order, and the load has currently reached "a".
+
+If that continues letter by letter, the bundled feed does not grow by 29% once.
+It grows by that much repeatedly, and the daily import stops being a review-able
+diff. The feed is at 19,694 entries after this batch.
+
+This run imported the block rather than declining it, and that was the
+conservative choice available: a decline entry must name existing coverage that
+replaces it, these families (`alita-poke*`, `agus-*`, `aiboa-*`, `alfiansyah*`,
+`abu-poke*`) are covered by nothing else in the scanner, and declining without
+coverage would silently remove detection. Importing is reversible; declining
+wrongly is a false negative.
+
+What is worth deciding before the "b" wave lands:
+
+1. Is a feed on track for six figures of entries still the right carrier for
+   historical, already-taken-down npm names, or do bulk backfills belong behind
+   an anchored pattern family the way `@zalastax/nolb-` does?
+2. Per the measurement already recorded in this repo, feed size costs module
+   import time and package size rather than scan throughput. That cost is now
+   the binding one and is worth re-measuring after this batch.
+
+I did not act on either question; both change detection behaviour and belong to
+the owner.
+
+### Deliberate exclusions this run
+
+- `varunsh-coder`, `h0x0er`, `rohan-stepsecurity`, `actions-security-demo`.
+  One vendor write-up lists these in the same IOC section as the Trinitite
+  actor. They are the StepSecurity researchers and demo org who reported the
+  attack. A regression test asserts they are never flagged.
+- The `binding.gyp` filename. The dropper uses an ordinary node-gyp filename;
+  only the exact digest is blocked.
+- `169[.]254[.]169[.]254`, `169[.]254[.]170[.]2` and `127[.]0[.]0[.]1:8200`,
+  published as Trinitite indicators. These are cloud metadata and Vault
+  link-local endpoints, excluded for the same reason the ChainDrop set was.
+- `poopy[.]com` and `api[.]anthropic[.]com`, named in one write-up. The first is
+  an unrelated registered domain used as a decoy string, the second is recorded
+  by that write-up as unused by the payload.
+- `tcsbank[.]ru` / `cloudpayments[.]ru`, re-encountered via a WEL1DROPPER recap.
+  Already a recorded deliberate exclusion; unchanged.
+- Chrome extension id `mdondgockboebafloibbhjofmoedmnnn` (InstaSkip). No
+  `FeedIOC` type carries a browser-extension id and the scanner has no Chrome
+  surface, so there is nowhere for it to land.
+
+### Hash-transport correction worth keeping
+
+The 1.6.3 stage-2 loader digest came back as `...b2fbe1a1...` from one source
+and `...b2fba1e1...` from two others. Both are well-formed 64-character hex, so
+shape validation cannot separate them. An exact-string search returned the
+second spelling and nothing for the first, which settled it. Only the reconciled
+form is stored. This is the third time a fetched digest has arrived transposed;
+the two-source reconciliation step is doing real work and should stay mandatory.
+
+### Left on the table
+
+`trinnyyyy-*` (temp-directory prefix), `3FWCvzduYZg.js` and
+`is_it_this_simple.js` (dropped artefact names) are distinctive, published by
+three independent sources, and currently detected by nothing. They would be
+anchored additions to a pattern table. Pattern tables validate at module load
+and throw the scanner dead on a bad rule, so an unattended run is the wrong
+place to add them. They are a good candidate for a considered change.
+
 ## v6.0.8 release preparation (2026-08-31)
 
 Model: OpenAI Codex. Branch `codex/release-v6.0.8`.

@@ -7,6 +7,36 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-01: 4,465 new package IOCs from a
+  complete 14-day import, taking the bundled feed to 19,694 entries. All are
+  npm; 4,162 are whole-package names and 303 are exact version pins. 4,460 were
+  discovered by both GitHub and OpenSSF with both advisory ids preserved, 5 by
+  OpenSSF only, and 4,307 were corroborated by OSV. The batch is dominated by a
+  single upstream event: 4,430 of the entries carry a 2026-08-31 publication
+  date and 4,398 of those are names beginning with "a", which is a bulk
+  alphabetical backfill of historical npm malware into the advisory databases
+  rather than a new campaign. A 50-name registry probe of the block found 22
+  names already taken down by npm as security-holding packages and 28 live
+  single-version spam packages from throwaway maintainers, with no package
+  carrying a legitimate release history, so whole-package blocking is safe here.
+- IOC blocklist: the Shai-Hulud "Trinitite" wave against
+  `@7nohe/openapi-react-query-codegen` (August 28, 2026). Ten payload digests
+  (eight stage-2 loader variants, the install-time dropper and the trojanized
+  tarball) and the `p00paboot` staging-fork account. The ten trojanized releases
+  were already version-pinned, so this adds the atomic indicators that survive a
+  vendored, mirrored or already-unpacked copy.
+
+  Each digest was reconciled character-for-character across two independent
+  write-ups before ingestion. One extraction of the 1.6.3 loader digest differed
+  from two others by a single transposition, and an exact-string search resolved
+  it against the majority spelling; only the reconciled form is stored. The
+  accounts named beside the actor in one write-up belong to the StepSecurity
+  researchers who reported the attack and are deliberately excluded, with a
+  regression test asserting they are never flagged. The dropper's `binding.gyp`
+  filename is likewise matched by digest only, never by name.
+
 ## [6.0.8] - 2026-08-31
 
 ### Changed
