@@ -1,3 +1,53 @@
+## Dependency bumps: AAHP 3.12.0 and @types/node 26.4.0 (2026-09-01)
+
+Model: Claude Opus 5. Branch `chore/deps-aahp-3.12.0`.
+No version bump: the version belongs to the release.
+
+Supersedes both open dependabot PRs, which are closed rather than merged. #258
+proposed AAHP 3.11.0, which was already stale: 3.12.0 shipped on 2026-08-31 and
+is `latest` on npm, so the pin jumps 3.10.0 -> 3.12.0 directly. #257 proposed the
+same `@types/node` bump carried here.
+
+Both bumps are taken into this branch rather than merged from dependabot for the
+reason already recorded in this file: a dependabot bump changes the dependency
+table in the generated DASHBOARD, so `check:handoff` goes red on the bot's own
+branch and the bot cannot regenerate it.
+
+### Verified under the new pin
+
+All eight `aahp check` gates pass, and the banner reports `aahp v3.12.0`, so the
+pin preflight confirms the pinned copy is the one speaking rather than a global
+fallback. `aahp lint` clean. `aahp doctor` 7 of 7 pass.
+
+Two upstream changes were checked rather than assumed:
+
+- 3.11.0 added `trustTtl.enforce`, which gives verify Layer 4 a failing branch.
+  It is opt-in and absent from `aahp.config.json`, so expired trust rows still
+  warn and do not fail. Enabling it is a separate, deliberate decision.
+- 3.12.0 raises `engines.node` from `>=18` to `>=22`. This repository satisfies
+  that everywhere already: the CI matrix is 22 and 24, the publish job is 22, and
+  `engines.node` here is `>=22.0.0`. The Node 20 transition lane is gone, so the
+  floor cannot strand a leg.
+
+### Worth the owner's attention
+
+`aahp doctor` reports one advisory against `.github/workflows/aahp-verify.yml`,
+and it is not cosmetic. The dependabot exemption sits AROUND the gate step rather
+than inside it:
+
+    if: github.actor != 'dependabot[bot]' && ...
+
+On those events the job still reports success having verified nothing, and Layer
+1 MANIFEST checksum integrity is skipped along with the Layer 2 drift gate. That
+is visible in this session's evidence: PR #257 showed every check green while the
+verify gate had not actually run on it.
+
+The advisory is NOT ENFORCED today. It becomes a failing gate by setting
+`verifyWorkflow.enforce` in `aahp.config.json`, and the remediation AAHP suggests
+is to drop the `if:` and key the exemption on the change rather than on who
+pushed it. Both are deliberate changes to how this repository gates itself, so
+they are left for the owner rather than folded into a dependency bump.
+
 ## Threat-intelligence batch 2026-09-01
 
 Model: Claude Opus 5. Branch `threat-intel/2026-09-01`. Scheduled daily run.

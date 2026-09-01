@@ -66,11 +66,19 @@ describe("handoff staleness gate", () => {
     fs.mkdirSync(path.join(tmp, ".ai", "handoff"), { recursive: true });
 
     const aahpStub = path.join(tmp, "node_modules", "@elvatis_com", "aahp");
-    fs.mkdirSync(path.join(aahpStub, "scripts"), { recursive: true });
+    fs.mkdirSync(aahpStub, { recursive: true });
     fs.copyFileSync(path.join(aahpPkgRoot, "package.json"), path.join(aahpStub, "package.json"));
-    for (const f of ["aahp-config.mjs", "changelog-grammar.mjs", "aahp-manifest.sh", "_aahp-lib.sh"]) {
-      fs.copyFileSync(path.join(aahpPkgRoot, "scripts", f), path.join(aahpStub, "scripts", f));
-    }
+    // The whole scripts/ tree, not a hand-listed subset. The list used to name the
+    // four entry points the gate touches directly, which silently assumed those
+    // files had no internal imports of their own. AAHP 3.12.0 split
+    // validateConfigObject out of aahp-config.mjs into a new aahp-schema.mjs, and
+    // every test here died on ERR_MODULE_NOT_FOUND for a file the upgrade was
+    // never going to know to add. Copying the directory keeps the fixture what its
+    // header claims it is - populated from the ACTUALLY installed package - and
+    // survives the next upstream refactor. It is ~400 KB.
+    fs.cpSync(path.join(aahpPkgRoot, "scripts"), path.join(aahpStub, "scripts"), {
+      recursive: true,
+    });
 
     fs.copyFileSync(
       path.join(repoRoot, "scripts", "scg-handoff-docs.mjs"),
