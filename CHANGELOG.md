@@ -7,6 +7,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- The pinned AAHP governance CLI moves from 3.10.0 straight to 3.12.0, skipping
+  3.11.0. All eight `aahp check` gates, `aahp lint` and `aahp doctor` pass under
+  the new pin, and `check:aahp-pin` confirms 3.12.0 is the version that actually
+  speaks rather than a copy resolved from elsewhere. 3.11.0's `trustTtl.enforce`
+  is opt-in and absent from `aahp.config.json`, so Layer 4 behaviour is
+  unchanged. 3.12.0 raises its own `engines.node` floor from `>=18` to `>=22`,
+  which this repository already satisfies everywhere: the CI matrix runs 22 and
+  24, the publish job runs 22, and `engines.node` here is `>=22.0.0`.
+- `@types/node` moves from 26.2.0 to 26.4.0.
+
 ### Added
 
 - Threat-intelligence batch for 2026-09-01: 4,465 new package IOCs from a
