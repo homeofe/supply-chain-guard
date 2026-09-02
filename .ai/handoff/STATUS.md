@@ -1,3 +1,63 @@
+## The Action's score floor stopped agreeing with the scanner (2026-09-02)
+
+Model: Claude Opus 5. Branch `fix/action-score-mirror-info`.
+
+`action.yml` fails closed on a report v6.0.10 itself produces. Measured against a
+consumer repository that runs this Action at `min-severity: info`, scanned with
+the exact arguments the Action passes (`--format markdown --json-output <file>
+--no-history --fail-on high --min-severity info`):
+
+    score 17, riskLevel medium, 17 findings
+    minimum_visible_score 19
+    [FAIL] .score >= minimum_visible_score
+
+Every other clause of the predicate holds. The report is well formed; the floor
+is wrong.
+
+`minimum_visible_score` in `action.yml` is a hand-written copy of
+`calculateScore()` in `src/scanner.ts`, and through v6.0.5 the two agreed
+exactly: both deduplicate by rule, take the highest severity seen per rule, skip
+`SCORE_EXCLUDED_RULES`, and cap at 100. #250 added one condition to the function
+and not to the copy:
+
+    -    if (SCORE_EXCLUDED_RULES.has(finding.rule)) continue;
+    +    if (finding.severity === "info" || SCORE_EXCLUDED_RULES.has(finding.rule)) {
+
+The scanner stopped scoring info findings. The copy still credits them, through
+its `else 1` branch, at one point per distinct rule. Any report carrying a rule
+that only ever appears at info severity therefore gets a floor above the highest
+score the scanner can return, and the Action rejects its own output as malformed.
+For the affected consumer those rules are `GHA_THIRD_PARTY_ACTION` and
+`LOCKFILE_ORPHANED_DEPENDENCY`: floor 19 against a score of 17.
+
+It reaches a consumer only at `min-severity: info`. That is why one consumer is
+green on v6.0.10 at `min-severity: low` while another, differing only in that
+input, is red on two consecutive commits eighteen minutes apart. It is not
+environmental and not specific to any runner: it reproduces on Windows against a
+fresh clone.
+
+### The test that should have caught this could not fail
+
+`action-partial-scan.test.ts` already compared the copy against the original, but
+it compared CONSTANTS: the excluded-rule list against `SCORE_EXCLUDED_RULES`, the
+severity table against `SEVERITY_SCORES`. Both were still correct after #250.
+What drifted was control flow, which no constant describes, so the gate stayed
+green through the exact regression it exists to prevent.
+
+One assertion did worse than miss it. A report whose only finding is info was
+required to score at least 1, which is precisely what v6.0.10 stopped doing, so
+the suite pinned the defect in place.
+
+This commit adds a check that CAN fail and deliberately leaves `action.yml`
+unfixed so that it does; the fix follows in the next commit. `calculateScore` is
+exported for it. The new test runs the jq program extracted from `action.yml`
+against reports scored by the real function, so the two implementations cannot
+disagree unnoticed again.
+
+Reported honestly: the jq-dependent tests SKIP on Windows, where `jq` is not
+installed (`15 passed | 4 skipped`, the new test among the skips). Linux CI is
+the only place this test executes, and it is the evidence for both halves.
+
 ## v6.0.10 release preparation (2026-09-02)
 
 Model: Claude Opus 5. Branch `release/v6.0.10`.
