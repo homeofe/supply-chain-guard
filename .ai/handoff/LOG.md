@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (149, newest first)
+## Releases (150, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.0.10 | 2026-09-02 | Threat-intelligence batch for 2026-09-02: 398 new package IOCs from a complete |
 | v6.0.9 | 2026-09-01 | The pinned AAHP governance CLI moves from 3.10.0 straight to 3.12.0, skipping |
 | v6.0.8 | 2026-08-31 | The threat-feed pipeline is being rebuilt around discovery-source adapters. |
 | v6.0.7 | 2026-08-30 | Eight names that v6.0.6 pinned at a single implausibly high version |
