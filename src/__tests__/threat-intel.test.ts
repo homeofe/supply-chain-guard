@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { loadThreatIntel, checkThreatIntel, matchPackageIOC } from "../threat-intel.js";
 import type { FeedIOC } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 describe("Threat Intelligence", () => {
   it("should load bundled threat feed", () => {
@@ -123,7 +124,15 @@ describe("matchPackageIOC index parity", () => {
     expect(parsed.length).toBeGreaterThan(20);
   });
 
-  it("agrees with the reference scan for every real feed entry", () => {
+  // These two cases run the LINEAR reference implementation once per probe, so their
+  // cost is the feed size times the probe count and grows quadratically as the feed
+  // does. Vitest's default 5 s cap was never a deliberate budget for that: on
+  // 2026-09-02 the four-probe case took 5.243 s on a GitHub-hosted Node 22 runner at
+  // 20,140 entries and was killed, while the identical tree passed on Node 24 and on
+  // main. An explicit budget with real headroom is what keeps this a correctness test
+  // rather than a runner-speed test, and performanceBudget() keeps it meaningful under
+  // V8 coverage instrumentation the same way the core broad-gap case does.
+  it("agrees with the reference scan for every real feed entry", { timeout: performanceBudget(20_000) }, () => {
     for (const p of parsed) {
       expect(matchPackageIOC(p.eco, p.name, p.version, feed), `${p.eco}:${p.name}`).toBe(
         referenceMatch(feed, p.eco, p.name, p.version),
@@ -131,7 +140,7 @@ describe("matchPackageIOC index parity", () => {
     }
   });
 
-  it("agrees with the reference scan for wrong-version and case-flipped probes", () => {
+  it("agrees with the reference scan for wrong-version and case-flipped probes", { timeout: performanceBudget(60_000) }, () => {
     for (const p of parsed) {
       const flipped =
         p.name === p.name.toUpperCase() ? p.name.toLowerCase() : p.name.toUpperCase();

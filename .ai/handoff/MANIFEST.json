@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788334247",
-    "timestamp": "2026-09-02T07:30:48Z",
-    "commit": "e8a3e27",
+    "session_id": "cli-1788335838",
+    "timestamp": "2026-09-02T07:57:18Z",
+    "commit": "938b227",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:db8e6bd355c5b7de28a4bf6d6247b7cccdbb295cce00cb435207d2772fe042d9",
-      "updated": "2026-09-02T07:30:42Z",
-      "lines": 6198,
-      "summary": "Model: Claude Opus 5. Branch `threat-intel/2026-09-02`. No version bump: the"
+      "checksum": "sha256:5355246fa68681ec3efeeeaacd44b5db8bde21bec3f748b5109b9ca0a73f032f",
+      "updated": "2026-09-02T07:57:12Z",
+      "lines": 6309,
+      "summary": "Model: Claude Opus 5. Branch `chore/enforce-verify-workflow`, folded in while"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:679bdf6d04837e97d0b81777b8294d0ff9c6f5afc3acc2a9f9e58826e41cf3e0",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:4e03e7a07becbf059f0b7b4063aa2415ba311627c1e5b367e36de946c8602080",
-      "updated": "2026-09-02T07:30:47Z",
+      "updated": "2026-09-02T07:57:18Z",
       "lines": 166,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:e2444e6ab12a561a0012d0da07060ad8df9a7576f26f481e7e9e501dfa870485",
-      "updated": "2026-09-02T07:30:47Z",
+      "updated": "2026-09-02T07:57:18Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:0cbdd29bde135355ee17329fcec96d81670fc6f82331685a22025205c36f4b8f",
-      "updated": "2026-09-02T07:30:47Z",
+      "updated": "2026-09-02T07:57:18Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: Claude Opus 5. Branch `threat-intel/2026-09-02`. No version bump: the Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: Claude Opus 5. Branch `chore/enforce-verify-workflow`, folded in while Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 73827,
-    "full_read": 85973
+    "manifest_plus_core": 74996,
+    "full_read": 87142
   }
 }
