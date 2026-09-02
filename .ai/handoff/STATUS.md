@@ -1,3 +1,49 @@
+## v6.0.10 release preparation (2026-09-02)
+
+Model: Claude Opus 5. Branch `release/v6.0.10`.
+
+Patch release covering the 2026-09-02 threat-intelligence batch (#263), the
+unconditional AAHP verify gate (#262) and the index-parity timeout folded into
+it. No API or behaviour change, so patch rather than minor. The version moves
+together across package metadata, every governed CLI/scanner/reporter surface,
+the Action and examples, container documentation, MCP metadata, the pre-commit
+hook, the generated feed, the lockfile, the self-scan manifest and the handoff
+set. `CHANGELOG.md` carries the dated 6.0.10 block and its release reference, and
+the Unreleased comparison now starts at v6.0.10.
+
+### The version-substitution trap fired twice this cycle
+
+`src/threat-intel.ts` contains the string `6.0.9` THREE times and only one of
+them is the project version:
+
+- line 9006: `@ornikar/babel-preset-base@6.0.9` (GHSA-x2q9-5wm2-wf59), a shipped
+  threat indicator whose package version happens to equal the release being
+  superseded. This is the same entry that caught the v6.0.9 cycle one release
+  earlier, with the version one digit further along.
+- line 10339: `commonweb-flow@6.0.999` (GHSA-hvpr-vw2p-qhw6). This one is NEW to
+  this cycle and is worse than a whole-string collision: `6.0.9` is a PREFIX of
+  `6.0.999`, so a blanket substitution would have produced `6.0.1099` - an IOC
+  that matches nothing and looks plausible in review.
+- line 21899: `bundledVersion`, the only real site.
+
+The bump was scripted with a guarded pattern, `(?<![0-9.])6\.0\.9(?![0-9])`,
+and `threat-intel.ts` was handled by an exact `bundledVersion: "..."` match
+rather than by that pattern at all. Both at-risk IOC strings are asserted intact
+after the rewrite, and the file's diff for this release is exactly one line.
+
+`version-sync` would not have caught either: the gate counts occurrences of the
+NEW version, so a corrupted IOC makes it happier, not unhappier. The README CIDR
+trap did not fire this cycle - all four README matches are genuine version
+references - but the guarded pattern covers it either way.
+
+Every file with more matches than its configured `minOccurrences`
+(`reporter.ts` at 12 against a floor of 5, `README.md` at 4 against 3,
+`threat-intel.ts` at 3 against 1) was read line by line before substituting.
+
+This branch contains version, changelog and generated-metadata changes only. The
+immutable `v6.0.10` tag and publication follow the release PR's squash merge, so
+the tag points at the exact commit on `main`.
+
 ## Index-parity timeout raised off the Vitest default (2026-09-02)
 
 Model: Claude Opus 5. Branch `chore/enforce-verify-workflow`, folded in while
