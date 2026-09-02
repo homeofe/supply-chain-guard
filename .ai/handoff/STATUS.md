@@ -58,6 +58,22 @@ Reported honestly: the jq-dependent tests SKIP on Windows, where `jq` is not
 installed (`15 passed | 4 skipped`, the new test among the skips). Linux CI is
 the only place this test executes, and it is the evidence for both halves.
 
+### The fix
+
+One `select` in `action.yml`, placed to mirror the function rather than to make
+the symptom go away:
+
+    | select(.severity != "info")
+
+`severity_score` keeps its `else` branch untouched, because that branch mirrors
+`SEVERITY_SCORES` and a test pins it there; the branch is simply no longer
+reachable from the floor. With it, the floor for the measured report drops from
+19 to 17 and equals the score the scanner returns.
+
+The severity table, the excluded-rule list and the coverage-rule list are all
+still checked against their sources. The new check is the one that binds the
+arithmetic, which is what none of the others could do.
+
 ## v6.0.10 release preparation (2026-09-02)
 
 Model: Claude Opus 5. Branch `release/v6.0.10`.

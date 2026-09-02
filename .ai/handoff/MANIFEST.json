@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788373300",
-    "timestamp": "2026-09-02T18:21:40Z",
-    "commit": "a1cb346",
+    "session_id": "cli-1788373835",
+    "timestamp": "2026-09-02T18:30:35Z",
+    "commit": "d2eb3a4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9cea85e637b0bbaa494b41bdcc649db4b3aac9e37278468d335bcdf7010c3cde",
-      "updated": "2026-09-02T18:21:39Z",
-      "lines": 6415,
+      "checksum": "sha256:650f908283cb991631f11b5f82dff798c4adf2debfd4a38a3077a916a9e97214",
+      "updated": "2026-09-02T18:30:31Z",
+      "lines": 6431,
       "summary": "Model: Claude Opus 5. Branch `fix/action-score-mirror-info`."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:bde42b35e8032d3ec4973b02a944bf6d7f00c3e08b6d74edcad294d8526b1d2f",
-      "updated": "2026-09-02T18:21:40Z",
+      "updated": "2026-09-02T18:30:35Z",
       "lines": 167,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:1b049fee518895a762d695ac391bbdd229e0b8148ae02d22647ed85d16895916",
-      "updated": "2026-09-02T18:21:40Z",
+      "updated": "2026-09-02T18:30:35Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:eec46e7e67b6848b12e6f03ce4d8313b2ed0608d4a30e00a89870286b9cd5ac3",
-      "updated": "2026-09-02T18:21:40Z",
+      "updated": "2026-09-02T18:30:35Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: Claude Opus 5. Branch `fix/action-score-mirror-info`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 76076,
-    "full_read": 88244
+    "manifest_plus_core": 76215,
+    "full_read": 88383
   }
 }
