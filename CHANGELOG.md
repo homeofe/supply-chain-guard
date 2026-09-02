@@ -48,6 +48,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- The two `matchPackageIOC` index-parity cases now carry an explicit
+  coverage-aware timeout (20 s and 60 s through `performanceBudget()`) instead of
+  Vitest's default 5 s. They run the linear reference implementation once per
+  probe, so their cost is feed size times probe count and grows quadratically as
+  the feed does. At 20,140 entries the four-probe case took 5.243 s on a
+  GitHub-hosted Node 22 runner and was killed, while the identical tree passed on
+  Node 24 and on `main`. The default cap was never a deliberate budget for that
+  work, and an explicit one keeps these correctness tests from doubling as
+  runner-speed tests.
 - **The AAHP handoff gate could be skipped entirely, and reported success when it
   was.** Every step of the `aahp-verify` job carried
   `if: github.actor != 'dependabot[bot]'`, checkout and `npm ci` and verify and

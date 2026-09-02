@@ -1,3 +1,36 @@
+## Index-parity timeout raised off the Vitest default (2026-09-02)
+
+Model: Claude Opus 5. Branch `chore/enforce-verify-workflow`, folded in while
+rebasing this branch onto the 2026-09-02 threat-intelligence batch.
+
+The rebased branch went red on `compat (Node 22)` with a single failure:
+`matchPackageIOC index parity > agrees with the reference scan for wrong-version
+and case-flipped probes`, timed out at 5.243 s against Vitest's default 5 s cap.
+The identical tree passed on Node 24 in the same run, and `main` at the same feed
+size passed both legs, so this is runner variance against a cap that was never
+chosen for this work.
+
+Both parity cases run the LINEAR reference implementation once per probe. Their
+cost is feed size times probe count, so it grows quadratically with the feed, and
+today's batch moved the feed from 19,694 to 20,140 entries. The four-probe case
+was already sitting on the line.
+
+They now carry explicit budgets through the same `performanceBudget()` helper the
+core broad-gap case has used since #255: 20 s for the one-probe case, 60 s for the
+four-probe case. That is roughly twelve times the observed cost, so it absorbs
+both runner variance and a further doubling of the feed.
+
+This is a deliberate widening of a cap, not a masked failure. The assertions are
+unchanged and still compare the index against the reference implementation entry
+by entry; only the wall-clock ceiling moved.
+
+### Worth watching
+
+The real ceiling is the quadratic shape, not the timeout. If the feed keeps
+growing at the current rate the parity sweep will need to sample rather than
+enumerate, or the reference scan will need an index of its own. Raising the cap
+buys room; it does not remove the trend.
+
 ## Threat-intelligence batch 2026-09-02
 
 Model: Claude Opus 5. Branch `threat-intel/2026-09-02`. No version bump: the
