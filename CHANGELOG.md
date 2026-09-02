@@ -7,6 +7,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-02: 398 new package IOCs from a complete
+  14-day import, plus 48 hand-added indicators, taking the bundled feed to 20,140
+  entries. The imported set is 265 npm, 126 RubyGems and 7 PyPI; 303 are exact
+  version pins and 95 are whole-package names. 362 were discovered through
+  OpenSSF only, 31 through both advisory sources with both ids preserved, 5
+  through GitHub only, and 12 were corroborated by OSV. Every one of the 95
+  whole-package names was probed against the npm registry before being accepted:
+  92 are already taken down as npm security-holding packages and the remaining
+  three (`bamru`, `teate-thy-sonic-burne`, `chai-beta`) are fully unpublished
+  single-version packages with no installable release, so no package with a
+  legitimate history is blocked by name. The importer reported no cap of any
+  kind: nothing left behind a limit, no page-cap truncation and no undrainable
+  backlog.
+- IOC blocklist: the Packagist theme spyware chain (August 31, 2026). Thirteen
+  Composer themes aimed at Vietnamese movie and comic streaming sites inject a
+  visitor-fingerprinting JavaScript loader into every page the installing site
+  serves; iPhones on iOS 18.4 through 18.6.x are served a WebKit-to-kernel
+  exploit chain, and the August 12 redeploy added an iOS Keychain wallet-seed and
+  mnemonic stealer. Added: the 13 package names as `composer:` feed entries, 26
+  C2 domains (7 staging and beacon hosts, 19 exfiltration apexes), 2 beacon IPs,
+  the first-stage loader dead drop, and 6 payload digests. Single-vendor
+  research, so the atomic indicators carry confidence 0.85.
+
+### Changed
+
+- The Packagist entries deliberately exclude the write-up's ad-fraud and
+  gambling leg (`yunray[.]ai`, `cdn1[.]ai`, `cre-ads[.]com`, `im[.]ue8im[.]com`,
+  `xl0ph4qz[.]vip`): those are shared commercial services and redirect
+  destinations rather than attacker-registered names, and blocking the apexes
+  would flag unrelated projects. One exfiltration domain is also omitted because
+  two independent transcriptions of it differ by a single character.
+
 ## [6.0.9] - 2026-09-01
 
 ### Changed

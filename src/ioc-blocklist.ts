@@ -389,6 +389,57 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Operator site of the LevviCode cluster. Single-source (safedep), so the matching
   // feed entry carries a reduced confidence.
   "levvicode.cloud",
+
+  // Packagist theme spyware chain (Socket, August 31 2026). Thirteen Composer themes
+  // published into the Vietnamese movie-CMS ecosystem inject a JavaScript loader into
+  // every page the installing site serves. The loader fingerprints the visitor, ignores
+  // desktop browsers, scanners and direct arrivals, and serves iPhones a WebKit-to-kernel
+  // exploit chain that installs spyware; the August 12 2026 redeploy added an iOS
+  // Keychain wallet-seed and mnemonic stealer. Single-vendor research (Socket), so the
+  // matching feed entries carry 0.85 - but two independent news transcriptions of the
+  // vendor IOC table were diffed against each other and agree character for character on
+  // every value listed here.
+  //
+  // Exploit-chain staging and beacon hosts. Attacker-registered throwaway apexes and
+  // attacker-controlled subdomains only. cloudfareintcdn[.]com is a misspelling of
+  // Cloudflare with no legitimate service behind it.
+  "cloudfareintcdn.com",
+  "cdn.data-2919.com",
+  "cdn.data-2920.com",
+  "nqsaaskw.com",
+  "abfedgecanme.com",
+  "abfdns.com",
+  "galedns.com",
+  // Exfiltration C2. Random-label apexes, each reached in the payload as a www[.] host;
+  // the apex is what is listed, and because the match is a substring both forms are
+  // covered by one entry.
+  "0liwevrhxdc3s2xk00.com",
+  "39rwcybep-20pwozhvdrzzy.net",
+  "5wg3w278e3oamlohmcinrkh.live",
+  "dlosdekr1u18msmov51.net",
+  "ex0x40vmi8qyccxq.net",
+  "ioa7xqmhiz26fv5e.info",
+  "isbo31w1o7xk3fztvmgpbv.app",
+  "jhflt6l0dwminsl494836rb.org",
+  "kp2-3ur6pe4r8i2hj5.com",
+  "ljot1cem6jhzfu53yb9aj3h.app",
+  "ncalb1rzb2rq5-3zdx1.app",
+  "ov86ayb0fe4ep2b92-645o.com",
+  "qdh71-y6j7vxgw046v4cvgga.live",
+  "sx3cjniwo1bmtqs0vlj-va2f.app",
+  "sx8vuz4smtdol7pg.com",
+  "t9ffxu6zhf915fadjv1.app",
+  "vutjsf0sd9sdqt2rkzvgzv9a.org",
+  "w4iunvbdvjof39q-3.net",
+  "xtpj2bzxip6iq7n3bnz.info",
+  // Deliberately NOT listed from the same table. yunray[.]ai, cdn1[.]ai, cre-ads[.]com
+  // and im[.]ue8im[.]com belong to the ad-fraud and gambling-redirect leg: they are
+  // shared commercial services and redirect DESTINATIONS rather than attacker-registered
+  // names, so blocking the apexes would flag unrelated projects. xl0ph4qz[.]vip is the
+  // same leg. The twentieth exfiltration domain is omitted for a different reason: the
+  // two independent transcriptions of it differ by one character (...kxmx32hsqg against
+  // ...kxgmx32hsqg), and an indicator that cannot be pinned down exactly is a dead entry
+  // at best and a false positive at worst.
 ];
 
 // ---------------------------------------------------------------------------
@@ -553,6 +604,13 @@ export const KNOWN_C2_IPS: string[] = [
   // deliberately NOT listed: those are shared Cloudflare edge IPs fronting millions of
   // ordinary sites, and blocking them would flag unrelated projects on sight.
   "152.53.138.110",
+
+  // Packagist theme spyware chain (Socket, August 31 2026). The two hosts the injected
+  // loader beacons to on :4466. Listed as bare addresses because the port is not part of
+  // the match, and both sit in the same /16 of a hosting range the campaign rents rather
+  // than on shared CDN edge.
+  "23.225.48.20",
+  "23.225.52.67",
 ];
 
 // ---------------------------------------------------------------------------
@@ -709,6 +767,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // raw[.]githubusercontent[.]com is a legitimate shared host and is deliberately NOT
   // listed. Single-source, so the matching feed entry carries confidence 0.85.
   "raw.githubusercontent.com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json",
+
+  // Packagist theme spyware chain (Socket, August 31 2026). The first-stage loader the
+  // trojanized themes pull into every rendered page, named to pass as an ordinary jQuery
+  // build. Path-scoped to the attacker's own host so the entry cannot hit an unrelated
+  // asset on the same apex.
+  "union.macoms.la/jquery.min-3.6.8.js",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1128,6 +1192,18 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // filename. Only this exact digest is blocked; the NAME is deliberately not a rule.
   "d3246926b20a8d021ed7de0ac8e9eee1dda986088f84ba18f31cb2042a121f5d": "Trinitite binding.gyp install-time dropper, @7nohe/openapi-react-query-codegen (SHA256)",
   "0d58f3434c55842fc41ad99656c20a295d46e7d16f432a122a5a094d7c1de0e2": "Trinitite trojanized npm tarball, @7nohe/openapi-react-query-codegen (SHA256)",
+
+  // Packagist theme spyware chain (Socket, August 31 2026). The exploit landing page and
+  // the five staged JavaScript payloads behind it. The stage filenames are random
+  // twenty-character strings that rotate per deployment, so only the digests are blocked
+  // and no filename becomes a rule. Both independent transcriptions of the vendor table
+  // publish these six digests identically, and each is a well-formed 64-character SHA256.
+  "60b6771958cb7e553994ba6752f108575ba70e02d24affb51d8936a17eb0bf5e": "Packagist theme spyware chain, start-view.html exploit landing page (SHA256)",
+  "d9530e8cd79ac7b3d02b04e05426653afca7075fcf7424eec4d59c6e95745933": "Packagist theme spyware chain, a4tt4g37f36gdd7q7kdc.js renderer loader (SHA256)",
+  "92c7d246d2c163c076f783dcc19f87f5b9b9ac301b106b87a7aaea9346ce0052": "Packagist theme spyware chain, a84snnb6pknt3aflt01r.js iOS 18.4-18.5 RCE stage (SHA256)",
+  "f2fdfddbc436acc24a654092f5205b2c5bd3208b126b2c2754ac63e7aea22298": "Packagist theme spyware chain, 921w48jmeqvt3ygn0wwx.js kernel escape stage (SHA256)",
+  "9d6b58886189c0e23f706c32d3d8dda97b0b6d927ece6de07270813f070295b5": "Packagist theme spyware chain, 4ap5xpu18z70wwslqybu.js spyware payload (SHA256)",
+  "de539a63cbe27bbd4a7db30fc796cd6dc5309c02ef5e60a3c5cf0835e5601283": "Packagist theme spyware chain, qljbd9a1h4a83gw8lxcj.js iOS 18.6 and later worker (SHA256)",
 };
 
 // ---------------------------------------------------------------------------

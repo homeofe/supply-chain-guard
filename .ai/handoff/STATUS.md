@@ -1,3 +1,72 @@
+## Threat-intelligence batch 2026-09-02
+
+Model: Claude Opus 5. Branch `threat-intel/2026-09-02`. No version bump: the
+version belongs to the release.
+
+446 new feed entries, taking the bundled feed from 19,694 to 20,140. 398 come
+from the advisory importer over a complete 14-day window (265 npm, 126 RubyGems,
+7 PyPI; 303 exact version pins, 95 whole-package names). 48 were added by hand
+for one campaign the advisory databases cannot express.
+
+The importer hit none of its three caps this run: `remaining` 0, `truncated`
+false, `undrainable` 0, and the decline list suppressed nothing. 28 candidates
+were skipped upstream, 21 for a bounded version range the scanner cannot resolve
+and 7 as withdrawn advisories. Nothing was forced in by hand to compensate.
+
+Every one of the 95 whole-package names was probed against the npm registry
+before acceptance, because a bare name blocks every version. 92 returned npm's
+"security holding package" placeholder, which is positive evidence both that the
+name was malicious and that nothing legitimate can be hit. The other three
+(`bamru`, `teate-thy-sonic-burne`, `chai-beta`) are fully unpublished: each had
+exactly one version, it is gone, and no installable release remains.
+
+### The hand-added campaign
+
+Packagist theme spyware chain, published by Socket on 2026-08-31 and not covered
+anywhere in the repository beforehand (a repo-wide search for the vendor names
+returned nothing). Thirteen Composer themes aimed at Vietnamese movie and comic
+streaming sites inject a JavaScript loader into every page the installing site
+serves. The loader fingerprints the visitor and ignores desktop browsers,
+scanners and direct arrivals; iPhones on iOS 18.4 through 18.6.x get a
+WebKit-to-kernel exploit chain, and the 2026-08-12 redeploy added an iOS Keychain
+wallet-seed and mnemonic stealer.
+
+Added: 13 `composer:` package names, 26 C2 domains, 2 beacon IPs, 1 dead-drop
+URL, 6 payload digests. Confidence 0.85 on the atomic indicators because only one
+vendor did the research; 0.9 on the package names, because Packagist itself
+corroborates by having removed all thirteen.
+
+### Two indicators the vendor published and this batch does NOT carry
+
+Both are deliberate, and both are the same discipline the blocklist already
+applies elsewhere.
+
+- The ad-fraud and gambling leg (`yunray[.]ai`, `cdn1[.]ai`, `cre-ads[.]com`,
+  `im[.]ue8im[.]com`, `xl0ph4qz[.]vip`) is shared commercial infrastructure and
+  redirect destinations, not attacker-registered names. Blocking those apexes
+  would flag unrelated projects on sight. A negative test pins this.
+- One of the twenty exfiltration domains is omitted because two independent
+  transcriptions of the vendor IOC table disagree by exactly one character
+  (`...kxmx32hsqg` against `...kxgmx32hsqg`). The other 25 values in that table,
+  including all six SHA256 digests, were diffed programmatically and match
+  character for character. An indicator that cannot be pinned down exactly is a
+  dead entry at best and a false positive at worst, so it was dropped rather than
+  guessed.
+
+### Needs the owner's decision
+
+The four `ophimcms/theme-*` names are blocked bare, and `ophimcms` is a
+LEGITIMATE and still-active Packagist vendor with 20 live themes. The bare block
+is safe today only because Packagist has removed those four package names
+entirely (the metadata API returns 404 for all thirteen), and none of the four
+appears in the vendor's live package list. The usual rule for a hijacked
+legitimate namespace is to version-pin instead, but no source published version
+numbers, and inventing them is worse. If one of those four names is ever
+republished legitimately by the real vendor, the entry becomes a false positive
+and should be narrowed then. A negative test asserts the vendor's live themes
+(`theme-toro`, `theme-kiss`) never match, so the blast radius is bounded to the
+four removed names.
+
 ## v6.0.9 release preparation (2026-09-01)
 
 Model: Claude Opus 5. Branch `release/v6.0.9`.

