@@ -1,3 +1,18 @@
+## v6.0.11 release preparation (2026-09-03)
+
+Model: Gemini-3.8-Flash-high. Branch `release/v6.0.11`.
+
+Patch release covering:
+1. Daily threat intelligence batch for 2026-09-03 (#266): 43 package IOCs across npm and PyPI (20,183 total entries), with registry probes confirming holding-package status.
+2. Threat feed bulk backfill RFC and staging tooling (#267): adds `--filter-holding-packages` to filter out registry placeholder stubs and scripts for slice verification.
+3. Architecture, portability, and performance improvements (#268):
+   - CI stride sampling on `bare-npm-index-parity.test.ts` saving 70+ seconds in CI.
+   - Prebuilt compiler artifact reuse in `self-scan-recognition.test.ts` saving 30 seconds per test execution.
+   - Pure in-process zero-dependency zip archive builder (`zip-fixture-helper.ts`) resolving T-014 on Windows.
+   - Scanner threat feed detection parity (resolving T-020): `scg npm` defaults to `loadThreatIntel()`, with `--hermetic` CLI flag and `ScanOptions.hermetic` for strict determinism.
+   - Action score floor alignment (#265): ensures partial scans mirror core score floor accurately.
+   - Network bound and timeout error settlement hardening in `remote-download.ts`.
+
 ## Performance, Windows Portability, and Threat Parity Hardening (2026-09-03)
 
 Model: Gemini-3.8-Flash-high. Branch `perf-and-hardening/architectural-improvements`.
