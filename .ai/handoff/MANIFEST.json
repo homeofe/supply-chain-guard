@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788415850",
-    "timestamp": "2026-09-03T06:10:50Z",
-    "commit": "995c25d",
+    "session_id": "cli-1788418580",
+    "timestamp": "2026-09-03T06:56:21Z",
+    "commit": "a72a016",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:33f09323b53b9b487db25cdd18cd047f995c4290e20c3bcd751a248f31954c14",
-      "updated": "2026-09-03T06:10:47Z",
-      "lines": 6410,
+      "checksum": "sha256:2da92b8d7123be381647a3bf5251268cad840ff2161ca670d1241a9e2dce6411",
+      "updated": "2026-09-03T06:56:13Z",
+      "lines": 6491,
       "summary": "Model: Claude Opus 5. Branch `threat-intel/2026-09-03`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:4eec1aab29a1aeaa19e222fb8e3bf65b64cafa6ae754c02117425714f82b5cd1",
-      "updated": "2026-09-02T08:10:06Z",
+      "updated": "2026-09-03T06:51:48Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:bde42b35e8032d3ec4973b02a944bf6d7f00c3e08b6d74edcad294d8526b1d2f",
-      "updated": "2026-09-03T06:10:50Z",
+      "updated": "2026-09-03T06:56:20Z",
       "lines": 167,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:1b049fee518895a762d695ac391bbdd229e0b8148ae02d22647ed85d16895916",
-      "updated": "2026-09-03T06:10:50Z",
+      "updated": "2026-09-03T06:56:20Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:eec46e7e67b6848b12e6f03ce4d8313b2ed0608d4a30e00a89870286b9cd5ac3",
-      "updated": "2026-09-03T06:10:50Z",
+      "updated": "2026-09-03T06:56:20Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: Claude Opus 5. Branch `threat-intel/2026-09-03`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 76117,
-    "full_read": 88285
+    "manifest_plus_core": 76942,
+    "full_read": 89110
   }
 }
