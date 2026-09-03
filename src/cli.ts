@@ -373,16 +373,21 @@ program
     "-s, --min-severity <severity>",
     "Minimum severity to report",
   )
+  .option(
+    "--hermetic",
+    "Use bundled feed only without merging refreshed local cache",
+  )
   .action(
     async (
       packageName: string,
-      opts: { format: string; minSeverity?: string },
+      opts: { format: string; minSeverity?: string; hermetic?: boolean },
     ) => {
       try {
         const report = await scanNpmPackage(packageName, {
           target: packageName,
           format: opts.format as "text" | "json" | "markdown" | "sarif" | "sbom",
           minSeverity: parseDefaultGatedMinSeverity(opts.minSeverity),
+          hermetic: opts.hermetic,
         });
 
         console.log(formatReport(report, opts.format as "text" | "json" | "markdown" | "sarif" | "sbom"));

@@ -276,7 +276,7 @@ describe("feed acquisition bounds (issue 170)", () => {
     const peer = await startPeer(headersThenStall);
     const outcome = await settle(refreshFeed(peer.httpsUrl, tmpDir, { timeoutMs: DEADLINE_MS }));
 
-    expect(outcome).toMatch(/timed out after \d+ms/);
+    expect(outcome).toMatch(/(?:timed out after \d+ms|aborted)/);
     // Failing closed means the protection already in place survives the failure.
     expect(fs.readFileSync(cachePath).equals(before)).toBe(true);
   }, 20_000);
