@@ -1981,7 +1981,11 @@ export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
   "RISK_STAGNATION_HIGH",
 ]);
 
-function calculateScore(findings: Finding[]): number {
+// Exported for src/__tests__/action-partial-scan.test.ts, which checks that the
+// jq score floor in action.yml still agrees with this function. That floor is a
+// hand-written copy of the logic below, and a copy nobody compares is a copy
+// that drifts: v6.0.10 stopped scoring info findings here and the copy did not.
+export function calculateScore(findings: Finding[]): number {
   // Deduplicate by rule - take the highest-severity instance per rule.
   // Skip informational observations and meta-governance findings that would
   // circularly inflate the score. Info remains visible in the report but does
