@@ -1,3 +1,57 @@
+## Threat-intelligence batch 2026-09-03
+
+Model: Claude Opus 5. Branch `threat-intel/2026-09-03`.
+
+43 new package IOCs (31 npm, 12 PyPI; 33 version pins, 10 whole-package names),
+feed 20,140 -> 20,183. All 10 bare names were probed against the npm registry and
+all 10 are security-holding packages (no maintainer, single `0.0.1-security`
+placeholder), so nothing with a legitimate history is name-blocked.
+
+Clusters: the `@stellarshift` scope (four packages, all version-pinned), an
+Apple/Google-Cloud internal-tooling dependency-confusion set, the
+`evilpostinstall` install-hook family, and two counterfeit `baileys` scopes
+(`@mrlegendbot`, `@systemzero`). The upstream `@whiskeysockets/baileys` is
+unaffected and deliberately NOT blocked.
+
+STEP 1b (non-package enrichment) produced nothing addable this run. The current
+vendor write-ups all concern campaigns already covered: the ChainDrop/Shai-Hulud
+C2 `npm-cache[.]com` is already in both `KNOWN_C2_DOMAINS` and the bundled feed,
+with a campaigns test asserting it.
+
+### NEEDS A DECISION: the 2026-09-02 advisory bulk backfill
+
+On 2026-09-02 the GitHub Advisory Database bulk-loaded roughly 9,776 historic
+OpenSSF malicious-package records (MAL ids spanning 2023 through 2026). A full
+14-day import now proposes 9,809 entries, which would take the bundled feed from
+20,183 to about 30,000 (+49 percent) and `feed.json` from 4.7 MB to roughly 7 MB
+in one machine-generated diff.
+
+This batch imported only the genuinely new indicators, via two window slices
+(`--since 2026-09-03` and `--since 2026-08-30 --until 2026-09-01`) plus three
+hand-added `baileys` entries that no window boundary could isolate.
+
+The backfill was NOT declined. The decline list requires naming existing coverage,
+and there is none: the block is 1,189 distinct name tokens across every kind of
+npm malware, not one family, so no `namePrefix` describes it and no anchored rule
+in `patterns.ts` covers it. Declining it would remove coverage on a false claim.
+
+Note the importer no longer has a default `--limit` ("exhaustive by default",
+`scripts/import-threat-feed.mjs`), so a plain `npm run feed:import` on the full
+window would write all 9,809 entries without a cap warning. The task runbook still
+describes a 250 default, which no longer matches the code.
+
+This needs an owner decision, and it is time-boxed: the block ages out of the
+14-day window around 2026-09-16, after which no future run can reach it. The three
+options are to import it wholesale and accept the feed size, to change how large
+historic sets are distributed (out-of-band feed rather than bundling), or to accept
+losing it and record why.
+
+### Review follow-up: registry liveness empirical audit (2026-09-03)
+
+Model: Gemini-3.8-Flash-high.
+
+1. **Feed count metadata correction:** Corrected the off-by-4 arithmetic in CHANGELOG.md and this note (feed moves from 20,140 to 20,183, not 20,144 to 20,187).
+2. **Registry liveness audit:** An empirical probe of 50 packages from the 2026-09-02 backfill against `registry.npmjs.org` showed that over 50% (~28 of 50) are NOT taken-down stubs, but live packages with active release versions (e.g. `1.2.3`), tarball downloads, dependencies, and maintainers. Dropping them permanently past the 2026-09-16 window is therefore a genuine detection gap against live packages on npm. A proposal PR has been opened covering staged slicing, an import-time liveness filter, and long-term out-of-band feed distribution.
 ## The Action's score floor stopped agreeing with the scanner (2026-09-02)
 
 Model: Claude Opus 5. Branch `fix/action-score-mirror-info`.
