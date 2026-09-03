@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-03: 43 new package IOCs, taking the
+  bundled feed to 20,187 entries. The set is 31 npm and 12 PyPI; 33 are exact
+  version pins and 10 are whole-package names. All 10 whole-package names were
+  probed against the npm registry before being accepted and every one is already
+  taken down as an npm security-holding package with no maintainer and a single
+  `0.0.1-security` placeholder, so no package with a legitimate history is
+  blocked by name. New clusters: the `@stellarshift` scope (`abi-tools`,
+  `chain-metadata`, `evm-address-kit`, `token-units`, all version-pinned), a
+  dependency-confusion set impersonating internal Apple and Google Cloud tooling,
+  the `evilpostinstall` install-hook family, and two counterfeit `baileys`
+  scopes. The legitimate `@whiskeysockets/baileys` scope is unaffected and is
+  not blocked.
+- The 2026-09-02 GitHub Advisory Database bulk backfill of roughly 9,776 historic
+  OpenSSF malicious-package records is deliberately NOT imported in this batch and
+  is recorded as an open decision in the handoff notes.
+
 ## [6.0.10] - 2026-09-02
 
 ### Added
