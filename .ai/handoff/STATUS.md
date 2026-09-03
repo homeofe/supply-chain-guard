@@ -1,3 +1,85 @@
+## The Action's score floor stopped agreeing with the scanner (2026-09-02)
+
+Model: Claude Opus 5. Branch `fix/action-score-mirror-info`.
+
+`action.yml` fails closed on a report v6.0.10 itself produces. Measured against a
+consumer repository that runs this Action at `min-severity: info`, scanned with
+the exact arguments the Action passes (`--format markdown --json-output <file>
+--no-history --fail-on high --min-severity info`):
+
+    score 17, riskLevel medium, 17 findings
+    minimum_visible_score 19
+    [FAIL] .score >= minimum_visible_score
+
+Every other clause of the predicate holds. The report is well formed; the floor
+is wrong.
+
+`minimum_visible_score` in `action.yml` is a hand-written copy of
+`calculateScore()` in `src/scanner.ts`, and through v6.0.5 the two agreed
+exactly: both deduplicate by rule, take the highest severity seen per rule, skip
+`SCORE_EXCLUDED_RULES`, and cap at 100. #250 added one condition to the function
+and not to the copy:
+
+    -    if (SCORE_EXCLUDED_RULES.has(finding.rule)) continue;
+    +    if (finding.severity === "info" || SCORE_EXCLUDED_RULES.has(finding.rule)) {
+
+The scanner stopped scoring info findings. The copy still credits them, through
+its `else 1` branch, at one point per distinct rule. Any report carrying a rule
+that only ever appears at info severity therefore gets a floor above the highest
+score the scanner can return, and the Action rejects its own output as malformed.
+For the affected consumer those rules are `GHA_THIRD_PARTY_ACTION` and
+`LOCKFILE_ORPHANED_DEPENDENCY`: floor 19 against a score of 17.
+
+It reaches a consumer only at `min-severity: info`. That is why one consumer is
+green on v6.0.10 at `min-severity: low` while another, differing only in that
+input, is red on two consecutive commits eighteen minutes apart. It is not
+environmental and not specific to any runner: it reproduces on Windows against a
+fresh clone.
+
+### The test that should have caught this could not fail
+
+`action-partial-scan.test.ts` already compared the copy against the original, but
+it compared CONSTANTS: the excluded-rule list against `SCORE_EXCLUDED_RULES`, the
+severity table against `SEVERITY_SCORES`. Both were still correct after #250.
+What drifted was control flow, which no constant describes, so the gate stayed
+green through the exact regression it exists to prevent.
+
+One assertion did worse than miss it. A report whose only finding is info was
+required to score at least 1, which is precisely what v6.0.10 stopped doing, so
+the suite pinned the defect in place.
+
+This commit adds a check that CAN fail and deliberately leaves `action.yml`
+unfixed so that it does; the fix follows in the next commit. `calculateScore` is
+exported for it. The new test runs the jq program extracted from `action.yml`
+against reports scored by the real function, so the two implementations cannot
+disagree unnoticed again.
+
+Reported honestly: the jq-dependent tests SKIP on Windows, where `jq` is not
+installed (`15 passed | 4 skipped`, the new test among the skips). Linux CI is
+the only place this test executes, and it is the evidence for both halves.
+
+### The fix
+
+One `select` in `action.yml`, placed to mirror the function rather than to make
+the symptom go away:
+
+    | select(.severity != "info")
+
+`severity_score` keeps its `else` branch untouched, because that branch mirrors
+`SEVERITY_SCORES` and a test pins it there; the branch is simply no longer
+reachable from the floor. With it, the floor for the measured report drops from
+19 to 17 and equals the score the scanner returns.
+
+The severity table, the excluded-rule list and the coverage-rule list are all
+still checked against their sources. The new check is the one that binds the
+arithmetic, which is what none of the others could do.
+
+### Review follow-up (2026-09-03)
+
+Model: Gemini-3.8-Flash-high.
+
+Review identified that the initial test in `action-partial-scan.test.ts` asserted only `jqAccepts(report) === true`, which would remain green even if `minimum_visible_score` were broken or mutated to return 0. The test now includes an explicit lower-bound assertion for every positive score: `expect(jqAccepts({ ...report, score: score - 1 })).toBe(false)`. This guarantees that the floor is tight and that under-reporting by even 1 point fails closed.
+
 ## v6.0.10 release preparation (2026-09-02)
 
 Model: Claude Opus 5. Branch `release/v6.0.10`.
