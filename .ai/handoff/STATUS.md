@@ -1,3 +1,35 @@
+## Threat-feed bulk backfill ingestion strategy (2026-09-03)
+
+Model: Gemini-3.8-Flash-high. Branch `proposal/threat-feed-backfill-strategy`.
+
+Proposes an ingestion and architecture strategy for handling large alphabetical
+threat-intelligence bulk backfills (specifically the 2026-09-02 GitHub Advisory
+Database / OpenSSF bulk backfill of roughly 9,776 historic records).
+
+### Empirical audit results
+
+A random sample of 50 packages from the 2026-09-02 backfill was probed against
+the npm registry (`registry.npmjs.org`). Crucially, over 50% (~28 of 50) are NOT
+quarantined `0.0.1-security` holding stubs, but live packages with active release
+versions (e.g. `1.2.3`), active maintainers, and downloadable tarballs.
+Failing to ingest these packages before the 14-day window expires on 2026-09-16
+would create a permanent silent detection gap against packages currently live
+and installable on npm.
+
+### Strategic recommendations
+
+1. **Immediate (Before 2026-09-16):** Ingest the backfill in staged slices
+   (e.g. 2,000 entries per batch) via dedicated topic branches, preventing window
+   loss while keeping review diffs and test budgets manageable.
+2. **Intermediate:** Implement an import-time registry liveness check
+   (`scripts/verify-feed-liveness.mjs` / `--filter-holding-packages`), filtering
+   out quiescent `0.0.1-security` holding stubs while prioritizing live packages.
+3. **Long-Term:** Decouple historical bulk feeds from the core npm package,
+   maintaining a lean `BUNDLED_FEED` for fast cold-start CI installs and serving
+   the full historical archive out-of-band via compressed feed updates.
+
+RFC published at `docs/threat-feed-bulk-backfill-strategy.md`.
+
 ## v6.0.10 release preparation (2026-09-02)
 
 Model: Claude Opus 5. Branch `release/v6.0.10`.
