@@ -573,6 +573,20 @@ describe("Marketplace Action fail-closed contract", () => {
         riskLevel: riskLevelFor(score),
       };
       expect(jqAccepts(report), `${mix.name} (score ${score})`).toBe(true);
+
+      if (score > 0) {
+        // A report scoring even one point below calculateScore must fail closed:
+        // the floor is an exact minimum, not an approximate bound.
+        const underReport = {
+          ...report,
+          score: score - 1,
+          riskLevel: riskLevelFor(score - 1),
+        };
+        expect(
+          jqAccepts(underReport),
+          `${mix.name} (under-reported score ${score - 1} vs floor ${score})`,
+        ).toBe(false);
+      }
     }
   });
 

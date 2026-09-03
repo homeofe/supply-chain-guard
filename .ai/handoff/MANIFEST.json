@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788373835",
-    "timestamp": "2026-09-02T18:30:35Z",
-    "commit": "d2eb3a4",
+    "session_id": "cli-1788415780",
+    "timestamp": "2026-09-03T06:09:40Z",
+    "commit": "cb7c885",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:650f908283cb991631f11b5f82dff798c4adf2debfd4a38a3077a916a9e97214",
-      "updated": "2026-09-02T18:30:31Z",
-      "lines": 6431,
+      "checksum": "sha256:a1be481db20bc34a52cad795c9304b1ab17cd2501ddba0a7b2d9f1234e409366",
+      "updated": "2026-09-03T06:09:35Z",
+      "lines": 6437,
       "summary": "Model: Claude Opus 5. Branch `fix/action-score-mirror-info`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:4eec1aab29a1aeaa19e222fb8e3bf65b64cafa6ae754c02117425714f82b5cd1",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-09-02T08:10:06Z",
       "lines": 250,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:bde42b35e8032d3ec4973b02a944bf6d7f00c3e08b6d74edcad294d8526b1d2f",
-      "updated": "2026-09-02T18:30:35Z",
+      "updated": "2026-09-03T06:09:40Z",
       "lines": 167,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:1b049fee518895a762d695ac391bbdd229e0b8148ae02d22647ed85d16895916",
-      "updated": "2026-09-02T18:30:35Z",
+      "updated": "2026-09-03T06:09:40Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:eec46e7e67b6848b12e6f03ce4d8313b2ed0608d4a30e00a89870286b9cd5ac3",
-      "updated": "2026-09-02T18:30:35Z",
+      "updated": "2026-09-03T06:09:40Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-08-26T08:53:07Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-08-20T12:42:10Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-08-04T08:54:14Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-02T18:12:58Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "Model: Claude Opus 5. Branch `fix/action-score-mirror-info`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 76215,
-    "full_read": 88383
+    "manifest_plus_core": 76304,
+    "full_read": 88472
   }
 }

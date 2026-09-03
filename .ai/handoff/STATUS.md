@@ -74,6 +74,12 @@ The severity table, the excluded-rule list and the coverage-rule list are all
 still checked against their sources. The new check is the one that binds the
 arithmetic, which is what none of the others could do.
 
+### Review follow-up (2026-09-03)
+
+Model: Gemini-3.8-Flash-high.
+
+Review identified that the initial test in `action-partial-scan.test.ts` asserted only `jqAccepts(report) === true`, which would remain green even if `minimum_visible_score` were broken or mutated to return 0. The test now includes an explicit lower-bound assertion for every positive score: `expect(jqAccepts({ ...report, score: score - 1 })).toBe(false)`. This guarantees that the floor is tight and that under-reporting by even 1 point fails closed.
+
 ## v6.0.10 release preparation (2026-09-02)
 
 Model: Claude Opus 5. Branch `release/v6.0.10`.
