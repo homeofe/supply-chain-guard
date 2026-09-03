@@ -10,7 +10,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 ### Added
 
 - Threat-intelligence batch for 2026-09-03: 43 new package IOCs, taking the
-  bundled feed to 20,187 entries. The set is 31 npm and 12 PyPI; 33 are exact
+  bundled feed to 20,183 entries. The set is 31 npm and 12 PyPI; 33 are exact
   version pins and 10 are whole-package names. All 10 whole-package names were
   probed against the npm registry before being accepted and every one is already
   taken down as an npm security-holding package with no maintainer and a single
