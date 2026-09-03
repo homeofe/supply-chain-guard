@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.0.11] - 2026-09-03
+
 ### Added
 
 - Threat-intelligence batch for 2026-09-03: 43 new package IOCs, taking the
@@ -21,9 +23,32 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   the `evilpostinstall` install-hook family, and two counterfeit `baileys`
   scopes. The legitimate `@whiskeysockets/baileys` scope is unaffected and is
   not blocked.
-- The 2026-09-02 GitHub Advisory Database bulk backfill of roughly 9,776 historic
-  OpenSSF malicious-package records is deliberately NOT imported in this batch and
-  is recorded as an open decision in the handoff notes.
+- Threat feed bulk backfill RFC and staging tooling (`scripts/import-threat-feed.mjs`,
+  `scripts/stage-backfill-slices.mjs`, `scripts/verify-feed-liveness.mjs`,
+  `docs/threat-feed-bulk-backfill-strategy.md`): adds `--filter-holding-packages`
+  to drop npm security stubs during backfill ingestion and introduces multi-slice
+  automated staging.
+- Pure in-process zero-dependency ZIP archive builder (`src/__tests__/zip-fixture-helper.ts`)
+  using Node's standard `node:zlib` (`deflateRawSync`, `crc32`) resolving T-014:
+  enables all VS Code test fixtures to run natively across Windows and Linux.
+- Added `--hermetic` CLI flag to `scg npm` and `ScanOptions.hermetic` for callers
+  requiring strict, byte-identical offline scans against only the bundled feed.
+
+### Changed
+
+- Scanner threat feed detection parity (T-020): `scg npm` now defaults to
+  `loadThreatIntel()` rather than the bundled feed only, ensuring single-package
+  scans receive the same zero-day protection as `scg scan` and `install-guard.ts`
+  when feeds are refreshed.
+- Action score floor alignment: hardened GitHub Action partial-scan reporting
+  and score floor semantics to maintain exact parity with core scanner calculations.
+- Test performance and CI optimization: introduced dense deterministic stride-sampling
+  in `bare-npm-index-parity.test.ts`, reducing CI runtime by over 70 seconds while
+  preserving 100% of bare names and testing over 1,200 sampled feed entries. Reused
+  prebuilt compiler output in `self-scan-recognition.test.ts` saving 30 seconds
+  per test execution.
+- Network bound hardening: latched `settled` state before destroying sockets on
+  timeouts in `src/remote-download.ts`, preventing aborted event races.
 
 ## [6.0.10] - 2026-09-02
 
@@ -5217,7 +5242,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.10...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.0.11...HEAD
+[6.0.11]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.11
 [6.0.10]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.10
 [6.0.9]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.9
 [6.0.8]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.8
