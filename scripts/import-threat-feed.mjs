@@ -703,6 +703,72 @@ export function countUndrainable(added, { limit, days, now = new Date() } = {}) 
   return count;
 }
 
+/**
+ * Probe npm registry liveness to filter out inactive 0.0.1-security holding stubs.
+ *
+ * Historic advisories often include packages that npm has quarantined with an empty
+ * 0.0.1-security placeholder and no maintainers. When requested via --filter-holding-packages,
+ * these quiescent stubs are filtered out before import, saving feed capacity while
+ * preserving all active, installable packages.
+ */
+export async function filterHoldingPackages(
+  candidates,
+  { fetchImpl = globalThis.fetch, concurrency = 10, timeoutMs = 5000 } = {},
+) {
+  const cache = new Map();
+  const kept = [];
+  const filtered = [];
+
+  async function checkPkg(name) {
+    if (cache.has(name)) return cache.get(name);
+    try {
+      const url = `https://registry.npmjs.org/${encodeURIComponent(name)}`;
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      const res = await fetchImpl(url, {
+        headers: { "User-Agent": "supply-chain-guard-feed-importer" },
+        signal: controller?.signal,
+      });
+      if (timer) clearTimeout(timer);
+      if (res.status === 404) {
+        cache.set(name, false);
+        return false;
+      }
+      const data = await res.json();
+      const versions = Object.keys(data?.versions || {});
+      const isHolding =
+        versions.length === 1 &&
+        versions[0] === "0.0.1-security" &&
+        data.description === "security holding package" &&
+        (!data.maintainers || data.maintainers.length === 0);
+      cache.set(name, isHolding);
+      return isHolding;
+    } catch {
+      // Fail open: network/registry errors must never discard a candidate
+      cache.set(name, false);
+      return false;
+    }
+  }
+
+  for (let i = 0; i < candidates.length; i += concurrency) {
+    const chunk = candidates.slice(i, i + concurrency);
+    const results = await Promise.all(
+      chunk.map(async (c) => {
+        const isNpm = !c._ecosystemPrefix || c._ecosystemPrefix === "npm:";
+        if (!isNpm) return { candidate: c, isHolding: false };
+        const isHolding = await checkPkg(c._name);
+        return { candidate: c, isHolding };
+      }),
+    );
+    for (const { candidate, isHolding } of results) {
+      if (isHolding) filtered.push(candidate);
+      else kept.push(candidate);
+    }
+  }
+
+  return { kept, filtered };
+}
+
 // ---------------------------------------------------------------------------
 // Upstream fetch (bounded, explicit timeout, optional token)
 // ---------------------------------------------------------------------------
@@ -1268,6 +1334,7 @@ export async function importUpstreamFeed({
   dryRun = false,
   allowTruncated = false,
   ecosystems,
+  filterHoldingPackages = false,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -1361,7 +1428,19 @@ export async function importUpstreamFeed({
   // the undrainable check on purpose: a family that is covered elsewhere must not
   // consume the per-run budget, and must not be counted as backlog this run is
   // "losing" - it was never queued for import in the first place.
-  const { kept: added, declined, byRule: declinedByRule } = applyDeclineList(deduped, declineList);
+  const { kept: addedAfterDecline, declined, byRule: declinedByRule } = applyDeclineList(deduped, declineList);
+
+  let added = addedAfterDecline;
+  let holdingPackagesFiltered = 0;
+  if (filterHoldingPackages) {
+    const livenessResult = await filterHoldingPackages(addedAfterDecline, {
+      fetchImpl,
+      timeoutMs,
+      concurrency: 10,
+    });
+    added = livenessResult.kept;
+    holdingPackagesFiltered = livenessResult.filtered.length;
+  }
 
   // Exhaustive by default. A limit is only applied when the operator explicitly
   // supplies --limit; using a fixed implicit batch size lets a sustained upstream
@@ -1425,6 +1504,7 @@ export async function importUpstreamFeed({
     // are NOT losses: each declined family names the coverage that replaces it.
     declined,
     declinedByRule,
+    holdingPackagesFiltered,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
     corroboratedByOsv: [...osv.ids.keys()].length,
@@ -1563,6 +1643,7 @@ export function parseArgs(argv) {
     else if (arg === "--allow-truncated") opts.allowTruncated = true;
     else if (arg === "--allow-backlog") opts.allowBacklog = true;
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
+    else if (arg === "--filter-holding-packages") opts.filterHoldingPackages = true;
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -1577,6 +1658,10 @@ const USAGE = `
     --days <n>          Look-back window in days (default 14)
     --since <date>      Explicit start date (YYYY-MM-DD), overrides --days
     --until <date>      Explicit end date (YYYY-MM-DD)
+    --filter-holding-packages
+                        Probe npm registry and filter out 0.0.1-security holding
+                        stubs with no maintainers, saving feed capacity while
+                        retaining active, installable packages.
     --limit <n>         Optional maximum new entries to add in one run. By default
                         every new entry in the fetched window is imported.
                         Anything over the limit stays available to the next run
@@ -1658,6 +1743,9 @@ if (isMain) {
         .map(([rule, n]) => `${rule} x${n}`)
         .join(", ");
       console.log(`  Declined:             ${report.declined} (${rules}) - see ${DECLINE_FILE}`);
+    }
+    if (report.holdingPackagesFiltered > 0) {
+      console.log(`  Holding pkgs filtered:${report.holdingPackagesFiltered} (inactive 0.0.1-security placeholders)`);
     }
     console.log(`  Skipped:              ${report.skippedTotal} ${JSON.stringify(report.skipped)}`);
     console.log(`  OSV corroboration:    ${report.osvAvailable ? `${report.corroboratedByOsv} confirmed` : `unavailable (${report.osvError})`}`);
