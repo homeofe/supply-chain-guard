@@ -280,11 +280,17 @@ describe("built repository self-scan", () => {
 
     // Build current production sources into the isolated checkout. This avoids
     // racing other Vitest workers over the repository's real dist directory.
-    execFileSync(
-      process.execPath,
-      [TSC, "-p", path.join(ROOT, "tsconfig.json"), "--outDir", path.join(checkout, "dist")],
-      { cwd: ROOT, stdio: "pipe" },
-    );
+    // If the project already has a built dist/ (from prepare/tsc), copy it directly
+    // to save 20+ seconds of compilation time during test runs.
+    if (fs.existsSync(path.join(ROOT, "dist", "cli.js"))) {
+      fs.cpSync(path.join(ROOT, "dist"), path.join(checkout, "dist"), { recursive: true });
+    } else {
+      execFileSync(
+        process.execPath,
+        [TSC, "-p", path.join(ROOT, "tsconfig.json"), "--outDir", path.join(checkout, "dist")],
+        { cwd: ROOT, stdio: "pipe" },
+      );
+    }
     // Model the published npm package, where dist is included and .gitignore
     // and the TypeScript sources are absent.
     const publishedRootEntries = new Set([

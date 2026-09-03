@@ -302,10 +302,10 @@ export async function downloadHttpsFile(
   const timeout = new Promise<never>((_resolve, reject) => {
     timeoutTimer = setTimeout(() => {
       const error = timeoutError(limits.timeoutMs, opened.url.toString());
+      reject(error);
       opened.response.destroy?.(error);
       limiter.destroy(error);
       file.destroy(error);
-      reject(error);
     }, remaining);
   });
   const transfer = pipeline(opened.response, limiter, file);
