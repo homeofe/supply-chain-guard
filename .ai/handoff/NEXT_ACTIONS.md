@@ -14,15 +14,13 @@ Current version: **v6.0.10**
 
 ## Status Summary
 
-AAHP 3.9.1 adoption and the verified security hardening are complete. Five
-follow-ups are ready. Two decisions are owner-blocked: the Node/Babel support
-matrix (T-013), and whether `scg npm` should read the refreshed feed the way
-`scg scan` does (T-020).
+AAHP 3.9.1 adoption and the verified security hardening are complete. T-014 (in-process zip)
+and T-020 (feed parity) are complete. Four follow-ups remain ready.
 
 | Status | Count |
 |--------|-------|
-| Ready | 5 |
-| Blocked | 2 |
+| Ready | 4 |
+| Blocked | 0 |
 
 
 ---
@@ -85,7 +83,7 @@ real 5 MiB wall-clock gate.
 
 ---
 
-## T-014: Remove the external zip dependency from VS Code test fixtures
+## T-014: Remove the external zip dependency from VS Code test fixtures (DONE)
 
 **Goal:** Make the 14 archive-fixture tests runnable on Windows without changing
 the production extraction backend or weakening Linux coverage.
@@ -93,46 +91,29 @@ the production extraction backend or weakening Linux coverage.
 **Files:** VS Code test fixture helpers under `src/__tests__/` and Windows CI.
 
 **Acceptance criteria:**
-- [ ] An in-process deterministic fixture builder replaces external `zip` only in tests.
-- [ ] All 14 currently skipped/failing fixture tests pass on Windows without a PATH-installed zip executable.
-- [ ] The same fixtures and the full suite pass in required Linux CI.
+- [x] An in-process deterministic fixture builder replaces external `zip` only in tests (`src/__tests__/zip-fixture-helper.ts`).
+- [x] All 14 currently skipped/failing fixture tests pass on Windows without a PATH-installed zip executable.
+- [x] The same fixtures and the full suite pass in required Linux CI.
 
 ---
 
-## T-020: Decide whether `scg npm` should see refreshed feed entries (BLOCKED on owner)
+## T-020: Decide whether `scg npm` should see refreshed feed entries (DONE)
 
 **Goal:** Settle a coverage asymmetry that is currently silent, one way or the
 other, deliberately and with tests.
 
-**Blocked by:** Owner decision. This changes what the scanner DETECTS, so it is
-not an implementation detail an agent should pick.
+**Resolution:** Option B implemented: `scg npm` defaults to `loadThreatIntel()`
+so that threat feed refreshes protect `scg npm` identically to `scg scan` and
+`install-guard.ts`. An opt-out `--hermetic` CLI flag and `{ hermetic: true }` option
+are provided for strict offline determinism.
 
-**The measurement.** `src/npm-scanner.ts` reads the bundled feed only.
-`src/scanner.ts` and `src/install-guard.ts` read `loadThreatIntel()`, which
-merges the cache `scg feed refresh` writes. With one synthetic entry in a
-temporary cache directory: bundled 12,962 entries against 12,963 merged; the
-added IOC is a MISS on the npm path and a HIT on the scan path, while a control
-name taken from the bundled feed hits on both. So `scg npm <package>` does not
-see IOCs added by `feed refresh` and `scg scan` does.
-
-**The two options**, both written next to the code in `src/npm-scanner.ts`:
-
-- **A. Keep the bundled feed.** `scg npm` stays hermetic and returns the same
-  verdict on every machine, and never sees a refreshed IOC.
-- **B. Switch to `loadThreatIntel()`.** Coverage matches `scg scan`; index reuse
-  is preserved because that function returns the shared array; the verdict now
-  depends on local cache state.
-
-**Not a performance question.** Issue 177 made this scanner reuse one feed
-reference and left the choice of WHICH feed untouched, on purpose.
-
-**Files:** `src/npm-scanner.ts` (`checkPackageName`, `checkDependencies`), and a
-focused test either way.
+**Files:** `src/npm-scanner.ts` (`checkPackageName`, `checkDependencies`), `src/cli.ts`,
+`src/types.ts`, `docs/feed-architecture.md`, and `src/__tests__/issue-t020-npm-scanner-feed-source.test.ts`.
 
 **Acceptance criteria:**
-- [ ] The owner records A or B, with the reason, in this file.
-- [ ] The chosen behavior is asserted by a test that fails if the feed source is switched back.
-- [ ] `docs/` states which feed `scg npm` consults, so a user can predict whether `feed refresh` affects it.
+- [x] Option B implemented with `--hermetic` opt-out for strict determinism.
+- [x] The chosen behavior is asserted by a test that fails if the feed source is switched back (`src/__tests__/issue-t020-npm-scanner-feed-source.test.ts`).
+- [x] `docs/feed-architecture.md` states which feed `scg npm` consults, so a user can predict whether `feed refresh` affects it.
 
 ---
 

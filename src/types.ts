@@ -696,6 +696,8 @@ export interface ScanOptions {
   noHistory?: boolean;
   /** Compare local package.json version against the npm registry 'latest' (network, opt-in) (v5.9) */
   checkRegistry?: boolean;
+  /** Use bundled feed only without merging refreshed local cache (--hermetic) */
+  hermetic?: boolean;
 }
 
 export interface NpmPackageInfo {

@@ -232,8 +232,8 @@ function readBoundedBody(
     };
     const timer = setTimeout(() => {
       const error = timeoutError(timeoutMs, url);
-      response.destroy?.(error);
       finish(error);
+      response.destroy?.(error);
     }, timeoutMs);
 
     response.on("error", (error) => finish(error));
@@ -242,8 +242,8 @@ function readBoundedBody(
       const chunk = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
       if (bytes + chunk.length > maxBytes) {
         const error = new RemoteBodyTooLargeError(maxBytes, url);
-        response.destroy?.(error);
         finish(error);
+        response.destroy?.(error);
         return;
       }
       bytes += chunk.length;
@@ -302,10 +302,10 @@ export async function downloadHttpsFile(
   const timeout = new Promise<never>((_resolve, reject) => {
     timeoutTimer = setTimeout(() => {
       const error = timeoutError(limits.timeoutMs, opened.url.toString());
+      reject(error);
       opened.response.destroy?.(error);
       limiter.destroy(error);
       file.destroy(error);
-      reject(error);
     }, remaining);
   });
   const transfer = pipeline(opened.response, limiter, file);

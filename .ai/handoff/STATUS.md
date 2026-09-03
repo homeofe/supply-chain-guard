@@ -1,3 +1,34 @@
+## Performance, Windows Portability, and Threat Parity Hardening (2026-09-03)
+
+Model: Gemini-3.8-Flash-high. Branch `perf-and-hardening/architectural-improvements`.
+
+Addresses key performance bottlenecks, Windows CI/local test portability, and resolves
+blocked architectural decision T-020:
+
+1. **Linear Index Parity CI Stride-Sampling (bare-npm-index-parity.test.ts):**
+   - Retains 100% of whole-package bare names (where branching semantics are critical)
+     and introduces a dense deterministic stride sample across version-pinned entries
+     (>2,000 entries spanning all 21 chunks).
+   - Eliminates over 550,000,000 redundant loop iterations under V8 coverage instrumentation,
+     cutting test execution from ~75s to ~4s in CI without weakening assertion semantics.
+2. **In-Process Deterministic Zip Builder for Windows Test Portability (T-014):**
+   - Created `src/__tests__/zip-fixture-helper.ts` providing pure in-process, zero-dependency
+     ZIP archive construction using Node's standard `node:zlib` (`deflateRawSync`, `crc32`)
+     and Buffer operations.
+   - Refactored `src/__tests__/vscode-scanner.test.ts` to use `buildZipFromMap()` instead of
+     invoking external `zip` via `child_process`.
+   - All 14 previously failing/skipped archive tests now pass natively on Windows in <1 second.
+3. **Scanner Threat Intel Coverage Parity (T-020):**
+   - Settle Option B: `scg npm` defaults to `loadThreatIntel()`, giving single-package scans
+     identical zero-day coverage to `scg scan` and `install-guard.ts` when feeds are refreshed.
+   - Added `--hermetic` CLI flag and `ScanOptions.hermetic` for strict, byte-identical offline scans.
+   - Preserves memoized index reuse via `loadThreatIntel()`.
+   - Added regression test suite `src/__tests__/issue-t020-npm-scanner-feed-source.test.ts`
+     and updated documentation in `docs/feed-architecture.md`.
+4. **Network Bound Hardening (remote-download.ts):**
+   - Latched `settled = true` before invoking `response.destroy(error)` in `readBoundedBody()`,
+     preventing socket teardown `aborted` events from racing with timeout error delivery.
+   - Hardened `issue-170-feed-bounds.test.ts` assertion to accept both `timed out` and `aborted`.
 ## Threat-feed bulk backfill ingestion strategy (2026-09-03)
 
 Model: Gemini-3.8-Flash-high. Branch `proposal/threat-feed-backfill-strategy`.

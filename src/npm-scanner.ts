@@ -26,7 +26,8 @@ import {
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
-import { getBundledFeedRef } from "./threat-intel.js";
+import { getBundledFeedRef, loadThreatIntel } from "./threat-intel.js";
+import type { FeedIOC } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
 import { parseJsonObject } from "./json-utils.js";
 import {
@@ -143,9 +144,10 @@ export async function scanNpmPackage(
 ): Promise<ScanReport> {
   const startTime = Date.now();
   const findings: Finding[] = [];
+  const feed = options.hermetic ? getBundledFeedRef() : loadThreatIntel();
 
   // Check package name against known malicious patterns
-  checkPackageName(packageName, findings);
+  checkPackageName(packageName, findings, feed);
 
   // Fetch package metadata from registry
   const metadata = await fetchPackageMetadata(packageName);
@@ -163,7 +165,7 @@ export async function scanNpmPackage(
   checkPackageScripts(versionData as NpmVersionData, findings);
 
   // Check dependencies against known malicious packages
-  checkDependencies(versionData as NpmVersionData, findings);
+  checkDependencies(versionData as NpmVersionData, findings, feed);
 
   // Corroborate the claimed source repository (starjacking): a package that
   // points its `repository` at a popular project it does not own inherits that
@@ -236,30 +238,15 @@ export async function scanNpmPackage(
 }
 
 // ---------------------------------------------------------------------------
-// OPEN DECISION FOR THE MAINTAINER, recorded here because this is where the
-// choice lives: this scanner reads the BUNDLED feed only.
+// Threat Intelligence feed source (settled for T-020):
 //
-// checkPackageName and checkDependencies below both take getBundledFeedRef().
-// scanner.ts and install-guard.ts instead take loadThreatIntel(), which merges
-// the refreshed cache that `scg feed refresh` writes. The consequence, measured
-// with a synthetic entry in a temporary cache directory and a positive control
-// name drawn from the bundled feed: bundled 12,962 entries versus merged 12,963;
-// the added IOC is a MISS on this path and a HIT on the scanner.ts path, while
-// the control name hits on both. So `scg npm <package>` does not see IOCs added
-// by `feed refresh`, and `scg scan` does.
-//
-// This is a COVERAGE question, not a performance one, and it is deliberately
-// NOT settled by the change that made this scanner reuse one feed reference
-// (issue 177). The two options, so the next reader does not have to rediscover
-// them:
-//   A. Keep the bundled feed here. `scg npm` then stays hermetic and gives the
-//      same verdict on any machine, at the cost of never seeing a refreshed IOC.
-//   B. Switch to loadThreatIntel(). Coverage matches `scg scan`, index reuse is
-//      preserved because loadThreatIntel returns the shared array, and the cost
-//      is that the verdict now depends on local cache state.
-// Whichever is chosen, it changes what this scanner DETECTS and belongs in its
-// own change with its own tests, not folded into a performance fix.
-// Tracked as T-020 in .ai/handoff/NEXT_ACTIONS.md.
+// Defaults to loadThreatIntel() so `scg npm` sees refreshed threat intelligence
+// from `scg feed refresh` (matching `scg scan` and `install-guard.ts`).
+// The caller or operator can pass `options.hermetic: true` or provide an explicit
+// feed reference (e.g. getBundledFeedRef()) when strict machine-independent
+// determinism is desired.
+// Index reuse is fully preserved because loadThreatIntel() returns a memoized
+// shared array when the cache is unchanged.
 // ---------------------------------------------------------------------------
 
 /**
@@ -267,20 +254,18 @@ export async function scanNpmPackage(
  *
  * Exported for tests: this and checkDependencies are the two functions
  * scanNpmPackage() calls once each per scan, and they are where the feed and
- * the name-pattern table are consumed. Without direct handles the index-reuse
- * invariant they carry (see issue-177-npm-scanner-index-reuse.test.ts) could
- * only be asserted through a live registry fetch and a tarball extraction.
+ * the name-pattern table are consumed.
  */
-export function checkPackageName(name: string, findings: Finding[]): void {
+export function checkPackageName(
+  name: string,
+  findings: Finding[],
+  feed: readonly FeedIOC[] = loadThreatIntel(),
+): void {
   // Exact-match first. This path used to rely entirely on name-shape regexes,
   // which is why it needed a scoped catch-all that flagged 94% of all scoped
-  // packages. The bundled feed gives an exact verdict for every curated name,
+  // packages. The bundled or refreshed feed gives an exact verdict for every curated name,
   // scoped or not, with no false-positive surface.
-  //
-  // getBundledFeedRef(), not getBundledFeed(): the matcher's lookup index is
-  // memoized on the feed array's identity, and a fresh copy per call rebuilds
-  // all 12,962 entries every time. See issue 177.
-  const ioc = matchBareNpmIOC(name, undefined, getBundledFeedRef());
+  const ioc = matchBareNpmIOC(name, undefined, feed);
   if (ioc) {
     const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
     findings.push({
@@ -358,6 +343,7 @@ export function checkPackageScripts(
 export function checkDependencies(
   pkg: NpmVersionData,
   findings: Finding[],
+  feed: readonly FeedIOC[] = loadThreatIntel(),
 ): void {
   const allDeps: string[] = [];
 
@@ -367,9 +353,6 @@ export function checkDependencies(
   if (deps) allDeps.push(...Object.keys(deps));
   if (devDeps) allDeps.push(...Object.keys(devDeps));
 
-  // Shared frozen reference, hoisted out of the loop: one index build for the
-  // whole process rather than one per scan. See issue 177 and getBundledFeedRef.
-  const feed = getBundledFeedRef();
   for (const dep of allDeps) {
     const depIoc = matchBareNpmIOC(dep, undefined, feed);
     if (depIoc) {

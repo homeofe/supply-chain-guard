@@ -116,3 +116,16 @@ canonical records into a data file and generate two artifacts:
 
 That migration must preserve `npm run check:feed`, deterministic builds,
 self-scan suppression, cache merging and the current public `FeedIOC` schema.
+
+## Scanner feed consumption and parity (`scg scan` vs `scg npm`)
+
+By default, all scanner entry points (`scg scan`, `scg npm`, and `install-guard`)
+consult `loadThreatIntel()`, which merges the bundled feed with any locally
+refreshed threat cache (written by `scg feed refresh`). This ensures zero-day threat
+indicators discovered between releases protect both whole-repository scans and
+direct single-package queries.
+
+For environments requiring strict byte-for-byte reproducibility regardless of local
+cache state, `scg npm` and `scanNpmPackage()` accept `--hermetic` / `{ hermetic: true }`,
+which restricts lookups strictly to the bundled immutable feed (`getBundledFeedRef()`).
+

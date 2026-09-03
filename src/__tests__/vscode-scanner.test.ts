@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync, execSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
@@ -12,6 +13,7 @@ import {
 } from "../vscode-scanner.js";
 import { MAX_FILE_SIZE, matchPatternInContent, truncateMatch } from "../patterns.js";
 import type { Finding } from "../types.js";
+import { buildZipFromMap } from "./zip-fixture-helper.js";
 
 /**
  * Helper: create a minimal .vsix (zip) file from a directory structure.
@@ -20,20 +22,21 @@ function createVsix(dir: string, files: Record<string, string>): string {
   const extDir = path.join(dir, "extension");
   fs.mkdirSync(extDir, { recursive: true });
 
-  for (const [filePath, content] of Object.entries(files)) {
+  const allFiles: Record<string, string> = {
+    "[Content_Types].xml":
+      '<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>',
+    ...files,
+  };
+
+  for (const [filePath, content] of Object.entries(allFiles)) {
     const fullPath = path.join(dir, filePath);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, content);
   }
 
-  // Also create [Content_Types].xml (required for vsix)
-  fs.writeFileSync(
-    path.join(dir, "[Content_Types].xml"),
-    '<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>',
-  );
-
   const vsixPath = path.join(dir, "test-extension.vsix");
-  execSync(`cd "${dir}" && zip -q -r "${vsixPath}" .`, { stdio: "pipe" });
+  const zipBuffer = buildZipFromMap(allFiles);
+  fs.writeFileSync(vsixPath, zipBuffer);
   return vsixPath;
 }
 
@@ -41,7 +44,7 @@ describe("VS Code Extension Scanner", () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join("/tmp", "scg-vscode-test-"));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-test-"));
   });
 
   afterEach(() => {

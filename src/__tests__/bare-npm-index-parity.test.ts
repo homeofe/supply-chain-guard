@@ -31,16 +31,36 @@ function npmEntries(): { name: string; version?: string }[] {
   return out;
 }
 
+/**
+ * Sampled npm-namespace entries for parity proof.
+ * Tests 100% of whole-package bare names (where branch behavior is critical)
+ * plus a deterministic stride sample across version-pinned entries spanning all chunks.
+ */
+function sampledNpmEntries(): { name: string; version?: string }[] {
+  const all = npmEntries();
+  const bare = all.filter((e) => !e.version);
+  const pinned = all.filter((e) => e.version);
+  // Sample every 16th pinned entry plus the boundary entries (first 50, last 50)
+  const sampledPinned: { name: string; version?: string }[] = [];
+  for (let i = 0; i < pinned.length; i++) {
+    if (i < 50 || i >= pinned.length - 50 || i % 16 === 0) {
+      sampledPinned.push(pinned[i]);
+    }
+  }
+  return [...bare, ...sampledPinned];
+}
+
 describe("matchBareNpmIOC index parity", () => {
-  // Explicit budget, and deliberately NOT the same thing as the 30s stopgap this
-  // change removes from collection-reachability.test.ts. That one was hiding a
-  // real complexity problem in production code. This cost is inherent to the
-  // proof: parity means running the linear reference once per case, so it is
-  // O(cases x feed) by construction and gets slower as the feed grows. If it
-  // ever needs raising again, sample the cases - do not weaken the assertion.
-  it("agrees with the linear reference on every entry in the bundled feed", { timeout: 120_000 }, () => {
+  // Explicit budget. This cost is inherent to the proof: parity means running the
+  // linear reference once per case, so it is O(cases x feed) by construction.
+  // Testing 100% of bare names plus a dense stride sample (>1,000 entries) across
+  // all feed chunks preserves full branch and boundary assertion semantics while
+  // keeping execution fast under CI coverage instrumentation.
+  it("agrees with the linear reference on bare names and sampled feed entries", { timeout: 120_000 }, () => {
     const mismatches: string[] = [];
-    for (const { name, version } of npmEntries()) {
+    const entriesToTest = sampledNpmEntries();
+    expect(entriesToTest.length).toBeGreaterThan(1000);
+    for (const { name, version } of entriesToTest) {
       // Both the exact version and the version-less form, since the two take
       // different branches (pinned-exact vs bare-name-any).
       for (const v of [version, undefined]) {

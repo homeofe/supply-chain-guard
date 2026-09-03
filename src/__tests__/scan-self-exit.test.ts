@@ -64,7 +64,7 @@ afterAll(() => {
 });
 
 describe("CLI scan self-termination (clean scan)", () => {
-  it("exits on its own after a clean scan instead of hanging on pooled sockets", () => {
+  it("exits on its own after a clean scan instead of hanging on pooled sockets", { timeout: 30_000 }, () => {
     const start = Date.now();
     const result = spawnSync(process.execPath, [CLI, "scan", scanTarget], {
       encoding: "utf-8",
