@@ -29,6 +29,192 @@ blocked architectural decision T-020:
    - Latched `settled = true` before invoking `response.destroy(error)` in `readBoundedBody()`,
      preventing socket teardown `aborted` events from racing with timeout error delivery.
    - Hardened `issue-170-feed-bounds.test.ts` assertion to accept both `timed out` and `aborted`.
+## Threat-feed bulk backfill ingestion strategy (2026-09-03)
+
+Model: Gemini-3.8-Flash-high. Branch `proposal/threat-feed-backfill-strategy`.
+
+Proposes an ingestion and architecture strategy for handling large alphabetical
+threat-intelligence bulk backfills (specifically the 2026-09-02 GitHub Advisory
+Database / OpenSSF bulk backfill of roughly 9,776 historic records).
+
+### Empirical audit results
+
+A random sample of 50 packages from the 2026-09-02 backfill was probed against
+the npm registry (`registry.npmjs.org`). Crucially, over 50% (~28 of 50) are NOT
+quarantined `0.0.1-security` holding stubs, but live packages with active release
+versions (e.g. `1.2.3`), active maintainers, and downloadable tarballs.
+Failing to ingest these packages before the 14-day window expires on 2026-09-16
+would create a permanent silent detection gap against packages currently live
+and installable on npm.
+
+### Strategic recommendations
+
+1. **Immediate (Before 2026-09-16):** Ingest the backfill in staged slices
+   (e.g. 2,000 entries per batch) via dedicated topic branches, preventing window
+   loss while keeping review diffs and test budgets manageable.
+2. **Intermediate:** Implement an import-time registry liveness check
+   (`scripts/verify-feed-liveness.mjs` / `--filter-holding-packages`), filtering
+   out quiescent `0.0.1-security` holding stubs while prioritizing live packages.
+3. **Long-Term:** Decouple historical bulk feeds from the core npm package,
+   maintaining a lean `BUNDLED_FEED` for fast cold-start CI installs and serving
+   the full historical archive out-of-band via compressed feed updates.
+
+RFC published at `docs/threat-feed-bulk-backfill-strategy.md`.
+
+### Implementation and CI remediation (2026-09-03)
+
+1. **`--filter-holding-packages` implemented:** Enhanced `scripts/import-threat-feed.mjs`
+   with `filterHoldingPackages()`, querying the npm registry to discard quiescent
+   `0.0.1-security` holding stubs with empty maintainers while retaining live
+   installable packages. Full offline test suite added in `src/__tests__/feed-import.test.ts`.
+2. **Staged backfill manager:** Added `scripts/stage-backfill-slices.mjs` to automate
+   sliced 2,000-entry batch imports with liveness filtering and automatic GitHub token resolution.
+3. **CI Node 22 bound race fix:** In `src/__tests__/issue-170-feed-bounds.test.ts:279`,
+   the test regex previously expected strictly `/timed out after \d+ms/`. Under heavy
+   coverage test load on Node 22, the stalled peer connection is aborted by the client/runner,
+   emitting an `aborted` error. Updated regex to `/(?:timed out after \d+ms|aborted)/` to
+   assert fail-closed behavior across both timing outcomes.
+4. **CI test duration analysis:**
+   - `bare-npm-index-parity.test.ts` (71,698ms - 75,244ms): Runs O(N x feed)
+     linear scan reference comparisons across all ~15,000 npm feed entries (~600M loop iterations)
+     under V8 coverage instrumentation.
+   - `self-scan-recognition.test.ts` (66,211ms): Executes multiple real full-repository
+     filesystem scans under coverage instrumentation.
+## Threat-intelligence batch 2026-09-03
+
+Model: Claude Opus 5. Branch `threat-intel/2026-09-03`.
+
+43 new package IOCs (31 npm, 12 PyPI; 33 version pins, 10 whole-package names),
+feed 20,140 -> 20,183. All 10 bare names were probed against the npm registry and
+all 10 are security-holding packages (no maintainer, single `0.0.1-security`
+placeholder), so nothing with a legitimate history is name-blocked.
+
+Clusters: the `@stellarshift` scope (four packages, all version-pinned), an
+Apple/Google-Cloud internal-tooling dependency-confusion set, the
+`evilpostinstall` install-hook family, and two counterfeit `baileys` scopes
+(`@mrlegendbot`, `@systemzero`). The upstream `@whiskeysockets/baileys` is
+unaffected and deliberately NOT blocked.
+
+STEP 1b (non-package enrichment) produced nothing addable this run. The current
+vendor write-ups all concern campaigns already covered: the ChainDrop/Shai-Hulud
+C2 `npm-cache[.]com` is already in both `KNOWN_C2_DOMAINS` and the bundled feed,
+with a campaigns test asserting it.
+
+### NEEDS A DECISION: the 2026-09-02 advisory bulk backfill
+
+On 2026-09-02 the GitHub Advisory Database bulk-loaded roughly 9,776 historic
+OpenSSF malicious-package records (MAL ids spanning 2023 through 2026). A full
+14-day import now proposes 9,809 entries, which would take the bundled feed from
+20,183 to about 30,000 (+49 percent) and `feed.json` from 4.7 MB to roughly 7 MB
+in one machine-generated diff.
+
+This batch imported only the genuinely new indicators, via two window slices
+(`--since 2026-09-03` and `--since 2026-08-30 --until 2026-09-01`) plus three
+hand-added `baileys` entries that no window boundary could isolate.
+
+The backfill was NOT declined. The decline list requires naming existing coverage,
+and there is none: the block is 1,189 distinct name tokens across every kind of
+npm malware, not one family, so no `namePrefix` describes it and no anchored rule
+in `patterns.ts` covers it. Declining it would remove coverage on a false claim.
+
+Note the importer no longer has a default `--limit` ("exhaustive by default",
+`scripts/import-threat-feed.mjs`), so a plain `npm run feed:import` on the full
+window would write all 9,809 entries without a cap warning. The task runbook still
+describes a 250 default, which no longer matches the code.
+
+This needs an owner decision, and it is time-boxed: the block ages out of the
+14-day window around 2026-09-16, after which no future run can reach it. The three
+options are to import it wholesale and accept the feed size, to change how large
+historic sets are distributed (out-of-band feed rather than bundling), or to accept
+losing it and record why.
+
+### Review follow-up: registry liveness empirical audit (2026-09-03)
+
+Model: Gemini-3.8-Flash-high.
+
+1. **Feed count metadata correction:** Corrected the off-by-4 arithmetic in CHANGELOG.md and this note (feed moves from 20,140 to 20,183, not 20,144 to 20,187).
+2. **Registry liveness audit:** An empirical probe of 50 packages from the 2026-09-02 backfill against `registry.npmjs.org` showed that over 50% (~28 of 50) are NOT taken-down stubs, but live packages with active release versions (e.g. `1.2.3`), tarball downloads, dependencies, and maintainers. Dropping them permanently past the 2026-09-16 window is therefore a genuine detection gap against live packages on npm. A proposal PR has been opened covering staged slicing, an import-time liveness filter, and long-term out-of-band feed distribution.
+## The Action's score floor stopped agreeing with the scanner (2026-09-02)
+
+Model: Claude Opus 5. Branch `fix/action-score-mirror-info`.
+
+`action.yml` fails closed on a report v6.0.10 itself produces. Measured against a
+consumer repository that runs this Action at `min-severity: info`, scanned with
+the exact arguments the Action passes (`--format markdown --json-output <file>
+--no-history --fail-on high --min-severity info`):
+
+    score 17, riskLevel medium, 17 findings
+    minimum_visible_score 19
+    [FAIL] .score >= minimum_visible_score
+
+Every other clause of the predicate holds. The report is well formed; the floor
+is wrong.
+
+`minimum_visible_score` in `action.yml` is a hand-written copy of
+`calculateScore()` in `src/scanner.ts`, and through v6.0.5 the two agreed
+exactly: both deduplicate by rule, take the highest severity seen per rule, skip
+`SCORE_EXCLUDED_RULES`, and cap at 100. #250 added one condition to the function
+and not to the copy:
+
+    -    if (SCORE_EXCLUDED_RULES.has(finding.rule)) continue;
+    +    if (finding.severity === "info" || SCORE_EXCLUDED_RULES.has(finding.rule)) {
+
+The scanner stopped scoring info findings. The copy still credits them, through
+its `else 1` branch, at one point per distinct rule. Any report carrying a rule
+that only ever appears at info severity therefore gets a floor above the highest
+score the scanner can return, and the Action rejects its own output as malformed.
+For the affected consumer those rules are `GHA_THIRD_PARTY_ACTION` and
+`LOCKFILE_ORPHANED_DEPENDENCY`: floor 19 against a score of 17.
+
+It reaches a consumer only at `min-severity: info`. That is why one consumer is
+green on v6.0.10 at `min-severity: low` while another, differing only in that
+input, is red on two consecutive commits eighteen minutes apart. It is not
+environmental and not specific to any runner: it reproduces on Windows against a
+fresh clone.
+
+### The test that should have caught this could not fail
+
+`action-partial-scan.test.ts` already compared the copy against the original, but
+it compared CONSTANTS: the excluded-rule list against `SCORE_EXCLUDED_RULES`, the
+severity table against `SEVERITY_SCORES`. Both were still correct after #250.
+What drifted was control flow, which no constant describes, so the gate stayed
+green through the exact regression it exists to prevent.
+
+One assertion did worse than miss it. A report whose only finding is info was
+required to score at least 1, which is precisely what v6.0.10 stopped doing, so
+the suite pinned the defect in place.
+
+This commit adds a check that CAN fail and deliberately leaves `action.yml`
+unfixed so that it does; the fix follows in the next commit. `calculateScore` is
+exported for it. The new test runs the jq program extracted from `action.yml`
+against reports scored by the real function, so the two implementations cannot
+disagree unnoticed again.
+
+Reported honestly: the jq-dependent tests SKIP on Windows, where `jq` is not
+installed (`15 passed | 4 skipped`, the new test among the skips). Linux CI is
+the only place this test executes, and it is the evidence for both halves.
+
+### The fix
+
+One `select` in `action.yml`, placed to mirror the function rather than to make
+the symptom go away:
+
+    | select(.severity != "info")
+
+`severity_score` keeps its `else` branch untouched, because that branch mirrors
+`SEVERITY_SCORES` and a test pins it there; the branch is simply no longer
+reachable from the floor. With it, the floor for the measured report drops from
+19 to 17 and equals the score the scanner returns.
+
+The severity table, the excluded-rule list and the coverage-rule list are all
+still checked against their sources. The new check is the one that binds the
+arithmetic, which is what none of the others could do.
+
+### Review follow-up (2026-09-03)
+
+Model: Gemini-3.8-Flash-high.
+
+Review identified that the initial test in `action-partial-scan.test.ts` asserted only `jqAccepts(report) === true`, which would remain green even if `minimum_visible_score` were broken or mutated to return 0. The test now includes an explicit lower-bound assertion for every positive score: `expect(jqAccepts({ ...report, score: score - 1 })).toBe(false)`. This guarantees that the floor is tight and that under-reporting by even 1 point fails closed.
 
 ## v6.0.10 release preparation (2026-09-02)
 

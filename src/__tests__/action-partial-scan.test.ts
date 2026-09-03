@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { PARTIAL_SCAN_RULES } from "../pattern-scanner.js";
 import pkg from "../../package.json";
-import { SCORE_EXCLUDED_RULES } from "../scanner.js";
+import { SCORE_EXCLUDED_RULES, calculateScore } from "../scanner.js";
 import { SEVERITY_SCORES } from "../types.js";
+import type { Finding } from "../types.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const action = fs.readFileSync(path.join(repoRoot, "action.yml"), "utf8");
@@ -505,12 +506,88 @@ describe("Marketplace Action fail-closed contract", () => {
     };
     expect(jqAccepts(coverageReport)).toBe(false);
     expect(jqAccepts({ ...coverageReport, partialScan: true })).toBe(true);
+    // Zero is the score calculateScore() actually returns when every finding is
+    // info, so the floor must accept it. This asserted the opposite until
+    // v6.0.10, which is what made the Action reject its own scanner's output.
     expect(jqAccepts({
       ...coverageReport,
       score: 0,
       riskLevel: "clean",
       partialScan: true,
-    })).toBe(false);
+    })).toBe(true);
+  });
+
+  // The constants above are necessary but nowhere near sufficient: they pin the
+  // severity table and the excluded-rule list, and both were still correct when
+  // v6.0.10 shipped a floor that rejected every report the scanner produced for
+  // a repository scanned at --min-severity info. What drifted was the control
+  // flow, which no constant describes. This runs the shipped jq against reports
+  // scored by the real function, so the two cannot disagree unnoticed.
+  it.skipIf(!hasJq)("floors the score at what calculateScore actually returns", () => {
+    const riskLevelFor = (score: number) =>
+      score === 0 ? "clean"
+        : score <= 10 ? "low"
+        : score <= 30 ? "medium"
+        : score <= 60 ? "high"
+        : "critical";
+
+    const mixes: { name: string; findings: { rule: string; severity: string }[] }[] = [
+      {
+        name: "a rule that only ever appears at info",
+        findings: [{ rule: "GHA_THIRD_PARTY_ACTION", severity: "info" }],
+      },
+      {
+        // The consumer shape v6.0.10 rejected: two info-only rules lifted the
+        // floor to 19 against a score of 17.
+        name: "info findings beside scored ones",
+        findings: [
+          { rule: "GHA_SECRET_EXFIL_MULTILINE", severity: "high" },
+          { rule: "INTERNAL_PRIVATE_IP", severity: "medium" },
+          { rule: "GHA_THIRD_PARTY_ACTION", severity: "info" },
+          { rule: "LOCKFILE_ORPHANED_DEPENDENCY", severity: "info" },
+        ],
+      },
+      {
+        name: "one rule seen at info and at a scored severity",
+        findings: [
+          { rule: "INTERNAL_HOSTNAME", severity: "medium" },
+          { rule: "INTERNAL_HOSTNAME", severity: "info" },
+        ],
+      },
+      {
+        name: "a meta-governance rule excluded from the score",
+        findings: [{ rule: "CRITICAL_FINDING_NO_OWNER", severity: "critical" }],
+      },
+    ];
+
+    for (const mix of mixes) {
+      const summary = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+      for (const finding of mix.findings) {
+        summary[finding.severity as keyof typeof summary]++;
+      }
+      const score = calculateScore(mix.findings as unknown as Finding[]);
+      const report = {
+        summary: { totalFiles: 1, filesScanned: 1, ...summary },
+        findings: mix.findings,
+        score,
+        riskLevel: riskLevelFor(score),
+      };
+      expect(jqAccepts(report), `${mix.name} (score ${score})`).toBe(true);
+
+      if (score > 0) {
+        // A report scoring even one point below calculateScore must fail closed:
+        // the floor is an exact minimum, not an approximate bound.
+        const underReport = {
+          ...report,
+          score: score - 1,
+          riskLevel: riskLevelFor(score - 1),
+        };
+        expect(
+          jqAccepts(underReport),
+          `${mix.name} (under-reported score ${score - 1} vs floor ${score})`,
+        ).toBe(false);
+      }
+    }
   });
 
   it.skipIf(!hasBash || !hasJq)("executes clean, partial, critical, malformed, and invalid-input gates", () => {

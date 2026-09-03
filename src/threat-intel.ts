@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-02T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-03T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21002,6 +21002,55 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "hash", value: "f2fdfddbc436acc24a654092f5205b2c5bd3208b126b2c2754ac63e7aea22298", severity: "critical", confidence: 0.85, family: "PackagistThemeSpyware", campaign: "Packagist iOS spyware themes", source: "Socket", firstSeen: "2026-08-31" },
   { type: "hash", value: "9d6b58886189c0e23f706c32d3d8dda97b0b6d927ece6de07270813f070295b5", severity: "critical", confidence: 0.85, family: "PackagistThemeSpyware", campaign: "Packagist iOS spyware themes", source: "Socket", firstSeen: "2026-08-31" },
   { type: "hash", value: "de539a63cbe27bbd4a7db30fc796cd6dc5309c02ef5e60a3c5cf0835e5601283", severity: "critical", confidence: 0.85, family: "PackagistThemeSpyware", campaign: "Packagist iOS spyware themes", source: "Socket", firstSeen: "2026-08-31" },
+
+  // Imported from GitHub Advisory Database (2026-09-03) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:telemetry-helper@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@1.3.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:telemetry-helper@2.0.1", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:env-validator-tool@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:env-validator-tool@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:env-validator-tool@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "pypi:company-sdk@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-xwp3-c9rw-wggc, MAL-2026-15827 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
+  { type: "package", value: "frank-apple-utils", severity: "critical", confidence: 0.9, source: "GHSA-xg8f-3qvf-9cfp", firstSeen: "2026-09-03" },
+  { type: "package", value: "apple-internal-test-utility", severity: "critical", confidence: 0.9, source: "GHSA-54h3-c256-wpw8", firstSeen: "2026-09-03" },
+  { type: "package", value: "frank-apple-sync-service", severity: "critical", confidence: 0.9, source: "GHSA-463x-3972-8874", firstSeen: "2026-09-03" },
+  { type: "package", value: "frank-research-poc-apple", severity: "critical", confidence: 1.0, source: "GHSA-78hq-gp8w-grwp, MAL-2026-3081", firstSeen: "2026-09-03" },
+  { type: "package", value: "google-cloud-internal-core-utils", severity: "critical", confidence: 0.9, source: "GHSA-4vvq-8686-f44c", firstSeen: "2026-09-03" },
+  { type: "package", value: "frank-bot-gogle-cloning", severity: "critical", confidence: 1.0, source: "GHSA-52j3-fx2q-cqm9, MAL-2026-3080", firstSeen: "2026-09-03" },
+  { type: "package", value: "google-cloud-internal-build-helper", severity: "critical", confidence: 0.9, source: "GHSA-3qp7-c8c6-w6vj", firstSeen: "2026-09-03" },
+  { type: "package", value: "google-internal-cloud-audit-security-check", severity: "critical", confidence: 0.9, source: "GHSA-cw6m-gmx9-x556", firstSeen: "2026-09-03" },
+  { type: "package", value: "apple-cktool-internal-api-v9", severity: "critical", confidence: 0.9, source: "GHSA-5cfx-4hvj-jxm8", firstSeen: "2026-09-03" },
+  { type: "package", value: "google-cloud-mono-repo-helper", severity: "critical", confidence: 0.9, source: "GHSA-8rcc-3mvv-4c2x", firstSeen: "2026-09-03" },
+  { type: "package", value: "tailwindcss-fluid-styles@2.0.7", severity: "critical", confidence: 1.0, source: "GHSA-qmfx-363x-c6gj, MAL-2026-15826", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/token-units@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-f7jv-2wj8-grw7, MAL-2026-15824", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/token-units@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-f7jv-2wj8-grw7, MAL-2026-15824", firstSeen: "2026-09-03" },
+  { type: "package", value: "real-router-utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-fw7f-xj7r-p9v6, MAL-2026-15825", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/evm-address-kit@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-9wh4-p3rc-w4r3, MAL-2026-15823", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/evm-address-kit@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-9wh4-p3rc-w4r3, MAL-2026-15823", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/chain-metadata@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-3qrc-cxw6-3956, MAL-2026-15822", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/chain-metadata@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-3qrc-cxw6-3956, MAL-2026-15822", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/abi-tools@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-75j4-5w9p-f97f, MAL-2026-15821", firstSeen: "2026-09-03" },
+  { type: "package", value: "@stellarshift/abi-tools@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-75j4-5w9p-f97f, MAL-2026-15821", firstSeen: "2026-09-03" },
+
+  // Imported from GitHub Advisory Database (2026-08-30) - see docs/threat-feed-sources.md
+  { type: "package", value: "evilpostinstall@0.9.1", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.9.3", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.9.2", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.9.0", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@4192168.1.100", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.7.0", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.7.1", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  { type: "package", value: "evilpostinstall@0.8.0", severity: "critical", confidence: 1.0, source: "GHSA-2jqc-wjj7-w577, MAL-2026-15625", firstSeen: "2026-08-31" },
+  // Baileys scope-copy cluster (September 2026) - counterfeit scopes of the legitimate
+  // WhatsApp library; the upstream @whiskeysockets scope is unaffected and NOT blocked.
+  { type: "package", value: "@mrlegendbot/baileys@1.2.4", severity: "critical", confidence: 1.0, source: "GHSA-36cp-4g73-5fp7, MAL-2026-15819", firstSeen: "2026-09-01" },
+  { type: "package", value: "@mrlegendbot/baileys@1.2.5", severity: "critical", confidence: 1.0, source: "GHSA-36cp-4g73-5fp7, MAL-2026-15819", firstSeen: "2026-09-01" },
+  { type: "package", value: "@systemzero/baileys@1.1.2", severity: "critical", confidence: 1.0, source: "GHSA-qhhx-6r5v-mv3q, MAL-2026-15820", firstSeen: "2026-09-01" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

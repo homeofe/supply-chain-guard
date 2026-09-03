@@ -320,3 +320,28 @@ entries are appended to the last feed chunk under a dated comment (or to a new
 chunk, if that one was full), and every one of them names the advisory it came
 from, so each line can be checked against
 `https://github.com/advisories/<GHSA-id>`.
+
+## Handling bulk backfills and registry liveness filtering
+
+Large historic advisory backfills (such as the 2026-09-02 GitHub Advisory Database
+update of ~9,776 OpenSSF records) cannot be ingested into the bundled feed in a
+single commit without causing massive diff bloat, compiler union limits (`TS2590`),
+and package size inflation.
+
+To handle these events safely before the 14-day rolling window expires:
+
+1. **Registry Liveness Filter (`--filter-holding-packages`):**
+   Historic advisories often name packages that npm has quarantined with a bare
+   `0.0.1-security` holding placeholder and no maintainer. Passing
+   `--filter-holding-packages` probes `registry.npmjs.org` to identify and bypass
+   these quiescent stubs while preserving all active, installable packages.
+
+2. **Staged Slicing (`scripts/stage-backfill-slices.mjs`):**
+   Breaks large backfills into reviewable batches (e.g. 2,000 entries) using
+   `--limit <n>` and `--allow-backlog`:
+   ```bash
+   node scripts/stage-backfill-slices.mjs --since 2026-09-02 --until 2026-09-03 --slice-size 2000
+   ```
+   Each slice produces a distinct, testable pull request that can be verified and
+   merged independently without exceeding CI execution budgets.
+

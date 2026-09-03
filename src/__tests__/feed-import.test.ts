@@ -1762,4 +1762,75 @@ describe("parseArgs", () => {
     const { sinceDate } = await load();
     expect(sinceDate(14, new Date("2026-07-26T12:00:00Z"))).toBe("2026-07-12");
   });
+
+  it("parses --filter-holding-packages", async () => {
+    const { parseArgs } = await load();
+    expect(parseArgs(["--filter-holding-packages"]).filterHoldingPackages).toBe(true);
+  });
 });
+
+// ---------------------------------------------------------------------------
+// Holding package filtering (liveness probe)
+// ---------------------------------------------------------------------------
+
+describe("filterHoldingPackages", () => {
+  it("filters out 0.0.1-security holding packages and keeps live packages", async () => {
+    const { filterHoldingPackages } = await load();
+    const candidates = [
+      { type: "package", value: "pkg-holding", _name: "pkg-holding", _ecosystemPrefix: "" },
+      { type: "package", value: "pkg-live@1.2.3", _name: "pkg-live", _ecosystemPrefix: "" },
+      { type: "package", value: "pypi:pkg-python", _name: "pkg-python", _ecosystemPrefix: "pypi:" },
+    ];
+
+    const mockFetch = async (url: string | URL) => {
+      const urlStr = String(url);
+      if (urlStr.includes("pkg-holding")) {
+        return {
+          status: 200,
+          json: async () => ({
+            versions: { "0.0.1-security": {} },
+            description: "security holding package",
+            maintainers: [],
+          }),
+        };
+      }
+      if (urlStr.includes("pkg-live")) {
+        return {
+          status: 200,
+          json: async () => ({
+            versions: { "1.2.3": {} },
+            description: "live package",
+            maintainers: ["author"],
+          }),
+        };
+      }
+      return { status: 404, json: async () => ({}) };
+    };
+
+    const { kept, filtered } = await filterHoldingPackages(candidates, {
+      fetchImpl: mockFetch,
+    });
+
+    expect(filtered.map((c: { value: string }) => c.value)).toEqual(["pkg-holding"]);
+    expect(kept.map((c: { value: string }) => c.value)).toEqual(["pkg-live@1.2.3", "pypi:pkg-python"]);
+  });
+
+  it("fails open on fetch errors or timeouts", async () => {
+    const { filterHoldingPackages } = await load();
+    const candidates = [
+      { type: "package", value: "pkg-error", _name: "pkg-error", _ecosystemPrefix: "" },
+    ];
+
+    const errorFetch = async () => {
+      throw new Error("network timeout");
+    };
+
+    const { kept, filtered } = await filterHoldingPackages(candidates, {
+      fetchImpl: errorFetch,
+    });
+
+    expect(filtered).toEqual([]);
+    expect(kept.map((c: { value: string }) => c.value)).toEqual(["pkg-error"]);
+  });
+});
+

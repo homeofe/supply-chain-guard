@@ -171,7 +171,14 @@ runs:
             else 1
             end;
           def minimum_visible_score:
+            # Mirrors calculateScore() in src/scanner.ts, which skips info
+            # findings as well as the meta-governance rules named below. Info
+            # stays visible in the report but is an observation, not detected
+            # risk. Crediting it here lifts the floor above the highest score
+            # the scanner can produce, so every report carrying an info-only
+            # rule fails closed - which is what shipped in v6.0.10.
             [.findings[]
+             | select(.severity != "info")
              | select(.rule != "CRITICAL_FINDING_NO_OWNER"
                       and .rule != "RISK_STAGNATION_HIGH")
              | { rule: .rule, score: (.severity | severity_score) }]

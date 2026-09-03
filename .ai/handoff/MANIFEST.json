@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788417774",
-    "timestamp": "2026-09-03T06:42:54Z",
-    "commit": "a1cb346",
+    "session_id": "cli-1788419161",
+    "timestamp": "2026-09-03T07:06:02Z",
+    "commit": "6fe8140",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:6a44a85d4730c3b018bb4e6ba4f0fff402ca7ee4a8e4851c997c8a0bcfa33de3",
-      "updated": "2026-09-03T06:42:48Z",
-      "lines": 6387,
+      "checksum": "sha256:67e3b6d910b58347fc762d9fcba3139841bf3c90e7d57358e7820d80769c5cd6",
+      "updated": "2026-09-03T07:05:58Z",
+      "lines": 6573,
       "summary": "Model: Gemini-3.8-Flash-high. Branch `perf-and-hardening/architectural-improvements`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:9c12a94c8b6881204df8ac5b38bac8dcfcc8735b082e7d4586dbc0260ee7ce6b",
-      "updated": "2026-09-03T06:42:40Z",
+      "updated": "2026-09-03T07:05:57Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:bde42b35e8032d3ec4973b02a944bf6d7f00c3e08b6d74edcad294d8526b1d2f",
-      "updated": "2026-09-03T06:42:54Z",
+      "updated": "2026-09-03T07:06:01Z",
       "lines": 167,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:d0f7342b8a15ee507ff3d2eb58594ecebf5c65a5dee8a7332feeb00fa137f930",
-      "updated": "2026-09-03T06:42:54Z",
+      "updated": "2026-09-03T07:06:01Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:00a0169ecce8b70b0728feae9c35555aeb01d646229b273fef63773a13c36526",
-      "updated": "2026-09-03T06:42:54Z",
+      "updated": "2026-09-03T07:06:01Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: Gemini-3.8-Flash-high. Branch `perf-and-hardening/architectural-improvements`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 75568,
-    "full_read": 87736
+    "manifest_plus_core": 77497,
+    "full_read": 89665
   }
 }
