@@ -1,3 +1,55 @@
+## Daily threat intelligence batch (2026-09-04)
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-04`.
+
+Imported 129 package IOCs (110 npm, 19 PyPI, 79 distinct packages; 97 version pins,
+32 whole-package names), taking the bundled feed from 20,183 to 20,312 entries.
+All 32 whole-package names were probed against `registry.npmjs.org` and every one
+returned a `0.0.1-security` holding stub with no maintainer, so none of them can
+hit a package with a legitimate release history.
+
+No non-package indicator (C2 domain, IP, hash, dead-drop, GitHub account) was added
+this run. The clusters in this batch are automated detections from Amazon Inspector
+and the OpenSSF package-analysis feeds with no vendor write-up published yet. The
+one relevant write-up located (safedep on the Baileys channel-farming campaign,
+2026-08-10) is already fully covered: `fiora.nixel[.]my[.]id`, `levvicode[.]cloud`,
+the `LevviCodeID` account and the `Levi4than` dead-drop URL all landed in the
+2026-08-31 batch, including the negative test for the legitimate `nixel[.]my[.]id`
+apex. The `.ngrok-free[.]dev` infrastructure named in the Socket payment-SDK
+write-up was deliberately NOT ingested: it is a legitimate shared tunnelling host.
+
+### Needs a decision: the 2026-09-02 bulk backfill window closes 2026-09-16
+
+This run imported a deliberate slice (`--since 2026-09-03`) rather than the full
+14-day window, and left 9,758 candidates unimported. That block is the bulk backfill
+`docs/threat-feed-bulk-backfill-strategy.md` was written for, and the numbers now
+confirm the RFC's characterisation from the importer's own output:
+
+- 9,766 candidates carry `firstSeen` 2026-09-02, 99.8% alphabetical (6,962 names
+  beginning with "a", 2,792 with "b"), all npm.
+- By MAL id the deferred block is historic, not current: 9,466 MAL-2025 records,
+  191 MAL-2024, 26 MAL-2023, and only 75 MAL-2026 (ids 10 to 12514). Today's
+  genuine daily intel sits at MAL-2026-15847 and above.
+- 9,280 of the 9,766 are whole-package names, so ingesting the block wholesale
+  would add 9,280 name-level blocks in one diff. The RFC's own 50-package sample
+  found more than half of them still live and installable on npm, which is both
+  the argument for ingesting them and the reason each one needs a probe.
+
+Eight entries published 2026-09-02 WERE taken in this run: `daisypick`,
+`tailwind-theme-engine`, `onceaction`, `is-generator-check` and the four
+`@stellarshift/*` names. They carry current MAL-2026-158xx ids, so they are
+same-day intel that only looked like backfill because of the shared publish date.
+
+The importer no longer applies an implicit `--limit`, so a plain `npm run feed:import`
+today would have written all 9,888 candidates, including the whole historic block,
+in a single machine-generated commit to a public repo. That is why this run sliced.
+The decision is the owner's, and it has a deadline: on 2026-09-16 the 14-day window
+slides past 2026-09-02 and the block becomes permanently unreachable by routine runs.
+The RFC's Tier 1 recommendation is 4 to 5 dedicated slice PRs of roughly 2,000
+entries each, using `scripts/stage-backfill-slices.mjs` with `--filter-holding-packages`.
+Declining the block is not available: it spans about 1,189 prefix tokens and no
+anchored rule in `src/patterns.ts` covers it, so a `coveredBy` claim would be false.
+
 ## v6.0.11 release preparation (2026-09-03)
 
 Model: Gemini-3.8-Flash-high. Branch `release/v6.0.11`.
