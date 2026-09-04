@@ -7,6 +7,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-04: 129 new package IOCs, taking the
+  bundled feed to 20,312 entries. The set is 110 npm and 19 PyPI across 79
+  distinct packages; 97 are exact version pins and 32 are whole-package names.
+  All 32 whole-package names were probed against the npm registry before being
+  accepted and every one is already taken down as an npm security-holding
+  package (a single `0.0.1-security` placeholder, no maintainer), so no package
+  with a legitimate release history is blocked by name. New clusters: three more
+  counterfeit `baileys` scopes (`@crysnovax/baileys`, `megan-baileys`,
+  `@modss/baileys`, 30 pinned versions between them) extending the WhatsApp
+  channel-farming family already tracked in the feed; the `@quantixfinance`
+  crypto scope (10 packages); the `easypanel-*` and `@bx-ui-framework` sets; a
+  `btree-*` and ordered-collection cluster of 10 synthetic utility names; the
+  `guci-*` and `element-*-guci` set; PyPI `timeweave` (10 versions),
+  `uvhttp-custom`, `trongridi` and a `requests` typosquat family
+  (`0requests`, `py-0requests`, `py-1requests`, `py-2equests`); and `nestjs`
+  digit-prefix typosquats. The legitimate `@whiskeysockets/baileys` scope is
+  unaffected and is not blocked.
+
 ## [6.0.11] - 2026-09-03
 
 ### Added
