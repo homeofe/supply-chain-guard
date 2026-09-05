@@ -7,6 +7,36 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-05: 26 new package IOCs, taking the
+  bundled feed to 20,338 entries. The set is 16 npm and 10 PyPI across 23
+  distinct packages; 21 are exact version pins and 5 are whole-package names.
+  All 5 whole-package names were probed against the npm registry before being
+  accepted and every one is already taken down as an npm security-holding
+  package (a single `0.0.1-security` placeholder, no maintainer), so no package
+  with a legitimate release history is blocked by name. New clusters: two more
+  counterfeit `baileys` names in the `@crysnovax` scope (`baileys-fixed`,
+  `baileys-stable`) plus `@crysnovax/plug`, extending the WhatsApp
+  channel-farming family already tracked in the feed; a Box e-signature
+  typosquat pair (`box-sign-client`, `box-sign-client-poc`); the
+  `real-router-telemetry` pair; `line-through`, `tailwind-contact-forms`,
+  `claude-channel-discord`, `ulid-intel`, `techportal` and `eslint-rxjs`; the
+  live-but-hijacked `@bx-ui-framework/authentication` and
+  `n8n-nodes-social-facebook`, both version-pinned rather than name-blocked; and
+  PyPI `houdus`, `metricboxlite`, `chartkit-core`, `olympuslib`, `pymaas`,
+  `tpu-raiden-jax`, `qoeoe` and `astlsi`.
+
+### Changed
+
+- The daily import was taken as two window slices plus three hand-added entries
+  rather than one rolling-window run, because the upstream bulk backfill
+  described in `docs/threat-feed-bulk-backfill-strategy.md` landed a second wave
+  on 2026-09-04. The rolling 14-day window now proposes 19,721 candidates, of
+  which 19,695 are backfill; the 26 genuine advisories were separated from it
+  and the backfill was left unimported pending the owner decision recorded in
+  `.ai/handoff/STATUS.md`.
+
 ## [6.0.12] - 2026-09-04
 
 ### Added
