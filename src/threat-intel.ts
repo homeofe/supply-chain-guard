@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-04T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-05T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21182,6 +21182,39 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "@stellarshift/abi-tools", severity: "critical", confidence: 1.0, source: "MAL-2026-15821 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-02" },
   { type: "package", value: "@stellarshift/token-units", severity: "critical", confidence: 1.0, source: "MAL-2026-15824 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-02" },
   { type: "package", value: "@stellarshift/evm-address-kit", severity: "critical", confidence: 1.0, source: "MAL-2026-15823 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-02" },
+
+  // Imported from GitHub Advisory Database (2026-09-04) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:houdus@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-frjq-w86w-r3gr, MAL-2026-15933 (kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:houdus@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-frjq-w86w-r3gr, MAL-2026-15933 (kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:metricboxlite@1.0", severity: "critical", confidence: 1.0, source: "GHSA-92qj-f225-g878, MAL-2026-15931 (kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:metricboxlite@2.0", severity: "critical", confidence: 1.0, source: "GHSA-92qj-f225-g878, MAL-2026-15931 (kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:chartkit-core@1.0", severity: "critical", confidence: 1.0, source: "GHSA-qhj3-jww9-gmfc, MAL-2026-15932 (kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:olympuslib@99.99.0", severity: "critical", confidence: 1.0, source: "GHSA-jjjp-27xc-v3pv, MAL-2026-15928 (amazon-inspector+kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:pymaas@99.99.0", severity: "critical", confidence: 1.0, source: "GHSA-9hv8-x7fp-26vw, MAL-2026-15929 (amazon-inspector+kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:tpu-raiden-jax@99.99.0", severity: "critical", confidence: 1.0, source: "GHSA-3cvj-xhpg-ggw5, MAL-2026-15930 (amazon-inspector+kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "ulid-intel", severity: "critical", confidence: 0.9, source: "GHSA-h48j-674x-299v", firstSeen: "2026-09-04" },
+  { type: "package", value: "@crysnovax/plug", severity: "critical", confidence: 0.9, source: "GHSA-vg98-2r8g-7qw2", firstSeen: "2026-09-04" },
+  { type: "package", value: "@crysnovax/baileys-fixed", severity: "critical", confidence: 0.9, source: "GHSA-262v-p7h8-9574", firstSeen: "2026-09-04" },
+  { type: "package", value: "@crysnovax/baileys-stable", severity: "critical", confidence: 0.9, source: "GHSA-p579-542j-6v98", firstSeen: "2026-09-04" },
+  { type: "package", value: "@crysnovax/baileys", severity: "critical", confidence: 1.0, source: "GHSA-c34p-4828-cg5g, MAL-2026-15917", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:qoeoe@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-mf95-3h9p-8xpm, MAL-2026-15927 (amazon-inspector+kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "pypi:astlsi@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-mcr6-6rvw-7mg3, MAL-2026-15926 (amazon-inspector+kam193)", firstSeen: "2026-09-04" },
+  { type: "package", value: "line-through@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-j28f-v2rv-5qxh, MAL-2026-15923 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "box-sign-client@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-g83p-hr9q-m2pp, MAL-2026-15920 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "tailwind-contact-forms@0.5.12", severity: "critical", confidence: 1.0, source: "GHSA-389v-79qp-mvg6, MAL-2026-15925 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "real-router-telemetry@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-cwm2-j3h3-g35f, MAL-2026-15924 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "real-router-telemetry@1.0.4", severity: "critical", confidence: 1.0, source: "GHSA-cwm2-j3h3-g35f, MAL-2026-15924 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "claude-channel-discord@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-787m-xjf4-8gx6, MAL-2026-15922 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "box-sign-client-poc@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-33rh-wv8r-6q4r, MAL-2026-15921 (amazon-inspector)", firstSeen: "2026-09-04" },
+
+  // Imported from GitHub Advisory Database (2026-08-22) - see docs/threat-feed-sources.md
+  { type: "package", value: "techportal@4.0.11", severity: "critical", confidence: 1.0, source: "GHSA-649g-mjr9-4j74, MAL-2026-15561", firstSeen: "2026-08-29" },
+  // Corroborated advisories that sit inside the 2026-09-02 / 2026-09-04 bulk-backfill
+  // days, added by hand so they are not lost when that window ages out. Each was probed
+  // against registry.npmjs.org: the two live packages are version-pinned, never name-blocked.
+  { type: "package", value: "@bx-ui-framework/authentication@16.0.0", severity: "critical", confidence: 1.0, source: "GHSA-9q5c-jq8f-775p, MAL-2026-15866 (amazon-inspector)", firstSeen: "2026-09-04" },
+  { type: "package", value: "eslint-rxjs@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-45hh-8cg6-r5qp, MAL-2026-15812 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-02" },
+  { type: "package", value: "n8n-nodes-social-facebook@0.2.0", severity: "critical", confidence: 0.9, source: "MAL-2026-10536 (amazon-inspector)", firstSeen: "2026-07-14" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

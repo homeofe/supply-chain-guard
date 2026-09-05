@@ -1,3 +1,87 @@
+## Daily threat intelligence batch (2026-09-05)
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-05`.
+
+Imported 26 package IOCs (16 npm, 10 PyPI, 23 distinct packages; 21 version pins,
+5 whole-package names), taking the bundled feed from 20,312 to 20,338 entries.
+
+All 5 whole-package names (`ulid-intel`, `@crysnovax/plug`,
+`@crysnovax/baileys-fixed`, `@crysnovax/baileys-stable`, `@crysnovax/baileys`)
+were probed against `registry.npmjs.org` and every one returned a
+`0.0.1-security` holding stub with no maintainer, so none can hit a package with
+a legitimate release history. Two candidates came back LIVE with real maintainers
+and release history (`@bx-ui-framework/authentication`, 3 versions, maintainer
+`bxorg`; `n8n-nodes-social-facebook`, 91 versions, maintainer `kerituni12`), so
+both were version-pinned and neither was name-blocked.
+
+No non-package indicator (C2 domain, IP, hash, dead-drop, GitHub account) was
+added this run. The fresh advisories in this batch are automated detections from
+Amazon Inspector, `kam193` and the OpenSSF package-analysis feeds with no vendor
+write-up published yet. Every write-up located for the current window is already
+fully covered: the Shai-Hulud "Trinitite" wave on
+`@7nohe/openapi-react-query-codegen` (all three stage-2 and dropper hashes, the
+`p00paboot` account and all ten pinned versions), `npm-cache[.]com` and the
+on-chain C2 resolver contract from the ChainDrop worm, the Hades PyPI campaign,
+and the compromised PyPI `lightning` versions.
+
+### How this run was sliced, and why it is not a plain window import
+
+A plain `npm run feed:import` today would have written 19,721 entries. 19,695 of
+them are upstream bulk backfill and only 26 are genuine current advisories. Date
+slicing alone no longer separates them, because the second backfill wave shares a
+publish date with today's real intel. The separation used was:
+
+- `--since 2026-09-04 --limit 22`. The candidate list is ordered newest advisory
+  first, and the boundary is exact: entries 0 to 21 carry current MAL-2026-159xx
+  ids, entry 22 onwards is the historic wave (MAL-2025 and older). The `--limit`
+  is therefore a measured boundary, not a budget.
+- `--since 2026-08-22 --until 2026-09-01`, the pre-wave remainder. One entry,
+  `techportal@4.0.11`.
+- Three entries were added by hand because they sit inside the backfill days and
+  no date slice can reach them without pulling the wave with them:
+  `@bx-ui-framework/authentication@16.0.0` (MAL-2026-15866),
+  `eslint-rxjs@1.0.0` (MAL-2026-15812) and
+  `n8n-nodes-social-facebook@0.2.0` (MAL-2026-10536). Without this they would be
+  lost when the window slides.
+
+### Needs a decision: a SECOND backfill wave landed, and slicing is now behind
+
+The 2026-09-02 block is still unimported and its window still closes 2026-09-16.
+A second wave has since landed and the queue has roughly doubled:
+
+| Wave | `firstSeen` | Candidates left | Alphabetical shape | Window closes |
+| --- | --- | --- | --- | --- |
+| 1 | 2026-09-02 | 9,758 | "a" 6,965, "b" 2,793 | 2026-09-16 |
+| 2 | 2026-09-04 | 9,937 | "c" 9,613, "d" 330 | 2026-09-18 |
+
+Wave 2 is the same phenomenon as wave 1 and confirms the RFC's prediction that
+the waves would continue alphabetically. By MAL id it is historic, not current:
+9,262 MAL-2025 records, 321 MAL-2024, 50 MAL-2023, 1 MAL-2021, and 322 MAL-2026
+of which only three carry a current 15xxx id.
+
+What changes with wave 2 is the arithmetic, not the analysis:
+
+- The RFC's Tier 1 plan is 4 to 5 slice PRs of about 2,000 entries for wave 1
+  alone. Two waves is 9 to 10 such PRs, and if the alphabet continues at this
+  rate the full backfill is on the order of 25 waves and 100,000 entries, which
+  is the scale the RFC's Tier 3 was written for.
+- The two deadlines are two days apart, so the slice PRs for both waves would
+  have to run concurrently in a repo whose release invariant is zero open PRs.
+- Declining is still unavailable for the same reason as wave 1: the block spans
+  well over a thousand prefix tokens and no anchored rule in `src/patterns.ts`
+  covers it, so any `coveredBy` claim would be false. A decline entry written
+  without real coverage removes protection rather than deduplicating it.
+
+The owner decision is therefore between Tier 1 at double the planned volume,
+starting now, and skipping straight to Tier 3 (a lean bundled feed plus an
+external historical catalogue) and accepting that both waves age out of the
+14-day window in the meantime. The daily job cannot make that call: it changes
+the shipped artefact's size and distribution model, and it is not reversible by
+a later patch once the windows close.
+
+Until it is made, the daily job will keep doing what this run did: separate the
+current advisories from the backfill and import only the current ones.
+
 ## v6.0.12 release preparation (2026-09-04)
 
 Model: claude-opus-5. Branch `release/v6.0.12`.
