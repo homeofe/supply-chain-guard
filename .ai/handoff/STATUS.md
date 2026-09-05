@@ -1,3 +1,36 @@
+## v6.0.13 release preparation (2026-09-05)
+
+Model: claude-opus-5. Branch `release/v6.0.13`.
+
+Patch release carrying one change: the daily threat-intelligence batch for
+2026-09-05 (#272). 26 package IOCs (16 npm, 10 PyPI, 23 distinct packages; 21
+version pins, 5 whole-package names), taking the bundled feed from 20,312 to
+20,338 entries. All 5 whole-package names were probed against the npm registry
+and every one is an existing security-holding stub; the two candidates that came
+back live with real maintainers were version-pinned instead.
+
+No code, scanner or gate behaviour changed in this release.
+
+Version-bump notes, both of which are traps here and both of which held again:
+
+- `src/threat-intel.ts` carries the version TWICE with different meanings. Only
+  `bundledVersion` (line 22112) is a version site; line 9009 is the feed IOC
+  `@ornikar/babel-preset-base@6.0.12`, a real pinned indicator. The bump was
+  applied to `bundledVersion` by exact anchor and the IOC was left alone.
+  Version-sync only counts occurrences, so it would not have caught the damage.
+- `check:self-scan` is a fourth prebuild gate and goes red on any change under
+  `src/`, including a pure version bump. Regenerate it BEFORE
+  `npm run handoff:refresh`, since the handoff MANIFEST checksums the file.
+
+The README bump was checked against the CIDR trap before being applied: the four
+`6.0.12` occurrences in README.md are all version references (pre-commit `rev`,
+the Docker tag, two `uses:` pins) and none is a substring of an address, so the
+file-wide replacement was safe this time. Re-check rather than assume next time.
+
+The two-wave upstream bulk backfill is unaffected by this release and still
+needs an owner decision. See the 2026-09-05 daily batch note below; the
+deadlines are 2026-09-16 and 2026-09-18.
+
 ## Daily threat intelligence batch (2026-09-05)
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-05`.

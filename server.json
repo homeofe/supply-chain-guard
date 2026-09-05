@@ -6,13 +6,13 @@
     "url": "https://github.com/homeofe/supply-chain-guard",
     "source": "github"
   },
-  "version": "6.0.12",
+  "version": "6.0.13",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "supply-chain-guard",
-      "version": "6.0.12",
+      "version": "6.0.13",
       "transport": {
         "type": "stdio"
       },
