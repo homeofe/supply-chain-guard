@@ -1,0 +1,21 @@
+{
+  "$comment": "Publication windows the importer holds back on the DEFAULT rolling run. Unlike threat-feed-declined.json, a deferral makes NO coverage claim: it is a recorded, deliberate detection gap that a human postponed, and it stays recoverable in full. An explicit --since/--until slice ignores every deferral, so the recovery command printed by each run imports its range unchanged. See docs/threat-feed-bulk-backfill-strategy.md. A range may only name closed past days, and only after its normal-volume daily intel has been confirmed present in the committed feed: that precondition is human, the code cannot check it.",
+  "deferred": [
+    {
+      "since": "2026-09-02",
+      "until": "2026-09-02",
+      "reason": "First wave of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 9,758 candidates in one day, 99.8 percent alphabetical (a 6,965, b 2,793), against a normal daily volume of 26 to 450. Importing it wholesale would grow the bundled feed by roughly half in a single machine-generated diff, and the alphabet walk implies a corpus on the order of 100,000 entries, which is a distribution-model decision rather than a daily-import one.",
+      "detectionGap": "These 9,758 npm package names are NOT detected by anything else in the scanner. No anchored rule in src/patterns.ts covers them; the block spans roughly 1,189 distinct name tokens across unrelated malware families, which is exactly why it cannot be declined. Sampling indicates a third to a half are still installable on npm today, so the gap is live and not merely historical.",
+      "expectedCount": 9758,
+      "deferredOn": "2026-09-06"
+    },
+    {
+      "since": "2026-09-04",
+      "until": "2026-09-04",
+      "reason": "Second wave of the same migration, continuing the alphabet into c (9,607) and the first 330 of d. 9,937 candidates. Deferred on the same grounds as the 2026-09-02 wave and pending the same owner decision on feed size and distribution model.",
+      "detectionGap": "These 9,937 npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02 wave. Letter d is only about 330 of roughly 9,600 done, so this wave is also an incomplete slice of the upstream corpus.",
+      "expectedCount": 9937,
+      "deferredOn": "2026-09-06"
+    }
+  ]
+}

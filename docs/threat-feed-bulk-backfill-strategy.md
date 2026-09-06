@@ -13,9 +13,16 @@ is 99.8% alphabetical: 6,965 names beginning with "a" and 2,793 names beginning 
 
 The backfill poses three interrelated challenges:
 
-1. **Window Expiration (2026-09-16):** The importer runs with a rolling 14-day window.
-   If no ingestion or retention decision is made by 2026-09-16, the backfill ages out
-   and becomes unreachable by future routine runs, resulting in a permanent silent drop.
+1. **Review latency, NOT a deadline (corrected 2026-09-06):** an earlier revision of this
+   document claimed the backfill becomes unreachable on 2026-09-16 and is then silently
+   lost. That is wrong, and the error propagated into several handoff notes before it was
+   checked. The importer resolves its window as `const from = since ?? sinceDate(days, now)`,
+   so an explicit `--since` REPLACES the rolling 14-day default rather than intersecting
+   with it. Control run: `--since 2026-08-01 --until 2026-08-05`, sixteen days outside the
+   default window, fetched 1,002 advisories and exited 0. What 2026-09-16 actually marks is
+   the day the DEFAULT daily run stops proposing the block. Any explicit range recovers it
+   in full on any later date, so the cost of postponing is review latency and an open
+   detection gap, never reachability. Nothing here is time-boxed.
 2. **Bundle & Compilation Bloat:** Ingesting 9,776 entries wholesale would expand the
    bundled feed from 20,183 to ~30,000 entries (+49%) in a single diff. If waves
    continue through c-z, the bundled feed could exceed 100,000 entries. In Node/TypeScript:
@@ -59,15 +66,16 @@ these packages creates a genuine, active detection gap.
 
 We recommend a three-tiered approach:
 
-### Tier 1: Immediate Staged Slicing (Before 2026-09-16)
-Rather than deferring until the window expires, ingest the 2026-09-02 backfill in
-controlled, reviewable slices using the existing importer controls:
+### Tier 1: Staged Slicing (no deadline, see the correction above)
+Ingest the backfill in controlled, reviewable slices using the existing importer
+controls. This can be done at any time; the slice command is unaffected by how much
+time has passed, which is the same mechanism that disproves the deadline:
 ```bash
 # Example 2,000-entry sliced batches
 node scripts/import-threat-feed.mjs --since 2026-09-02 --until 2026-09-03 --limit 2000
 ```
 This distributes the 9,776 entries across 4-5 discrete PRs, giving Vitest test budgets
-and TypeScript chunking headroom to adapt without a single massive diff or window loss.
+and TypeScript chunking headroom to adapt without a single massive diff.
 
 ### Tier 2: Import-Time Registry Liveness Verification
 Introduce an optional `--filter-holding-packages` flag into `scripts/import-threat-feed.mjs`:

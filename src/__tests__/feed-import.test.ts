@@ -722,6 +722,343 @@ describe("applyDeclineList", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Deferral list - publication windows a human postponed
+//
+// The mirror image of the decline list, and the difference is the whole point.
+// A decline asserts coverage exists elsewhere; a deferral asserts it does NOT,
+// and records the gap instead. So the tests below lean on two guarantees the
+// decline tests have no need for: a deferral can never claim coverage, and an
+// explicit --since/--until slice must import a deferred range in full, because
+// that slice is the advertised recovery path.
+// ---------------------------------------------------------------------------
+
+describe("loadDeferralList", () => {
+  let dir: string;
+  // Frozen so the closed-past-window rule is tested against a fixed today.
+  const now = new Date("2026-09-20T00:00:00Z");
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-defer-"));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const write = (obj: unknown) =>
+    fs.writeFileSync(path.join(dir, "threat-feed-deferred.json"), JSON.stringify(obj));
+
+  const valid = {
+    since: "2026-09-02",
+    until: "2026-09-02",
+    reason: "a".repeat(30),
+    detectionGap: "b".repeat(30),
+    expectedCount: 9758,
+    deferredOn: "2026-09-06",
+  };
+
+  it("returns an empty list when the file is absent", async () => {
+    const { loadDeferralList } = await load();
+    expect(loadDeferralList(dir, { now })).toEqual([]);
+  });
+
+  it("loads a well-formed entry", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [valid] });
+    const list = loadDeferralList(dir, { now });
+    expect(list).toHaveLength(1);
+    expect(list[0].since).toBe("2026-09-02");
+    expect(list[0].expectedCount).toBe(9758);
+  });
+
+  it("throws on malformed JSON rather than failing open", async () => {
+    const { loadDeferralList } = await load();
+    fs.writeFileSync(path.join(dir, "threat-feed-deferred.json"), "{ nope");
+    expect(() => loadDeferralList(dir, { now })).toThrow(/not valid JSON/);
+  });
+
+  it("throws when the deferred key is not an array", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: "everything" });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/"deferred" array/);
+  });
+
+  it("rejects a coveredBy field, because a deferral must never claim coverage", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, coveredBy: "c".repeat(30) }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/must never claim coverage/);
+  });
+
+  it("rejects a name matcher, which would be a decline without its coverage gate", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, namePrefix: "@evilscope/nolb-" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/publication\s+date only/);
+    write({ deferred: [{ ...valid, ghsa: "GHSA-aaaa-bbbb-cccc" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/publication\s+date only/);
+  });
+
+  it("rejects an unknown field so a typo cannot silently drop the tripwire", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, expectedcount: 10 }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/unknown field "expectedcount"/);
+  });
+
+  it("rejects a window reaching into the present, where live intel is still unimported", async () => {
+    const { loadDeferralList } = await load();
+    // until == today, and today's genuine advisories may not be imported yet.
+    write({ deferred: [{ ...valid, since: "2026-09-20", until: "2026-09-20" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/at least 2 day\(s\) before/);
+    // until == yesterday still fails: one skipped nightly run and it swallows.
+    write({ deferred: [{ ...valid, since: "2026-09-19", until: "2026-09-19" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/at least 2 day\(s\) before/);
+  });
+
+  it("rejects a date that is not a real calendar day", async () => {
+    const { loadDeferralList } = await load();
+    // Date.parse rolls this to 2026-03-03, which would defer a day nobody wrote.
+    write({ deferred: [{ ...valid, since: "2026-02-31", until: "2026-02-31" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/real calendar date/);
+    write({ deferred: [{ ...valid, since: "2026-9-2", until: "2026-09-02" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/real calendar date/);
+  });
+
+  it("rejects an inverted range, which would match nothing while looking correct", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, since: "2026-09-04", until: "2026-09-02" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/must not be after/);
+  });
+
+  it("rejects a span wide enough to be a policy rather than one observed wave", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, since: "2026-06-01", until: "2026-09-02" }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/more than the 31-day maximum/);
+  });
+
+  it("rejects overlapping ranges, which make the per-range tally ambiguous", async () => {
+    const { loadDeferralList } = await load();
+    write({
+      deferred: [
+        { ...valid, since: "2026-09-01", until: "2026-09-05" },
+        { ...valid, since: "2026-09-03", until: "2026-09-07" },
+      ],
+    });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/overlap/);
+  });
+
+  it("requires a reason and the detection gap the deferral leaves open", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, reason: undefined }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/"reason"/);
+    write({ deferred: [{ ...valid, detectionGap: undefined }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/"detectionGap"/);
+  });
+
+  it("requires a positive expectedCount, the tripwire against a widened range", async () => {
+    const { loadDeferralList } = await load();
+    write({ deferred: [{ ...valid, expectedCount: 0 }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/"expectedCount"/);
+    write({ deferred: [{ ...valid, expectedCount: 12.5 }] });
+    expect(() => loadDeferralList(dir, { now })).toThrow(/"expectedCount"/);
+  });
+
+  it("accepts the deferral list this repository actually ships", async () => {
+    const { loadDeferralList } = await load();
+    const shipped = loadDeferralList();
+    for (const entry of shipped) {
+      expect(entry.reason.length).toBeGreaterThanOrEqual(20);
+      expect(entry.detectionGap.length).toBeGreaterThanOrEqual(20);
+      expect(entry.expectedCount).toBeGreaterThan(0);
+      expect(entry.since <= entry.until).toBe(true);
+    }
+  });
+});
+
+describe("applyDeferralList", () => {
+  const rule = (over: Record<string, unknown> = {}) => ({
+    since: "2026-09-02",
+    until: "2026-09-02",
+    reason: "a".repeat(30),
+    detectionGap: "b".repeat(30),
+    expectedCount: 100,
+    deferredOn: "2026-09-06",
+    ...over,
+  });
+
+  it("is a no-op when nothing is deferred", async () => {
+    const { applyDeferralList } = await load();
+    const entries = [
+      { type: "package", value: "evil-aaa", severity: "critical", confidence: 1, firstSeen: "2026-09-02" },
+    ];
+    expect(applyDeferralList(entries, []).kept).toBe(entries);
+  });
+
+  it("holds back a wave and tallies it per range", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [
+        { type: "package", value: "evil-aaa", severity: "critical", confidence: 1, firstSeen: "2026-09-02" },
+        { type: "package", value: "evil-bbb", severity: "critical", confidence: 1, firstSeen: "2026-09-02" },
+        { type: "package", value: "real-ccc", severity: "critical", confidence: 1, firstSeen: "2026-09-06" },
+      ],
+      [rule()],
+    );
+    expect(result.kept.map((e: FeedIOC) => e.value)).toEqual(["real-ccc"]);
+    expect(result.deferred).toBe(2);
+    expect(result.byRule).toEqual({ "2026-09-02..2026-09-02": 2 });
+  });
+
+  it("reports a configured range that matched nothing, so an inert deferral stays visible", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [{ type: "package", value: "real-ccc", severity: "critical", confidence: 1, firstSeen: "2026-09-06" }],
+      [rule()],
+    );
+    expect(result.deferred).toBe(0);
+    expect(result.byRule).toEqual({ "2026-09-02..2026-09-02": 0 });
+  });
+
+  it("never defers a non-package indicator", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [{ type: "domain", value: "evil-aaa", severity: "critical", confidence: 1, firstSeen: "2026-09-02" }],
+      [rule()],
+    );
+    expect(result.deferred).toBe(0);
+  });
+
+  it("never defers an entry that carries no publication date", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [{ type: "package", value: "evil-aaa", severity: "critical", confidence: 1 }],
+      [rule()],
+    );
+    expect(result.deferred).toBe(0);
+  });
+
+  it("keeps an OpenSSF record whose queue date falls outside the window", async () => {
+    const { applyDeferralList } = await load();
+    // The axes differ: the OpenSSF index selects on the MODIFIED day while
+    // firstSeen comes from record.published. Deferring on publication alone would
+    // suppress this entry, and the printed --since recovery, which selects on
+    // modified, would never bring it back. That is a permanent swallow.
+    const result = applyDeferralList(
+      [
+        {
+          type: "package",
+          value: "evil-late",
+          severity: "critical",
+          confidence: 1,
+          firstSeen: "2026-09-02",
+          _queueDate: "2026-09-19",
+        },
+      ],
+      [rule()],
+    );
+    expect(result.deferred).toBe(0);
+    expect(result.kept.map((e: FeedIOC) => e.value)).toEqual(["evil-late"]);
+  });
+
+  it("defers an OpenSSF record when both its dates sit inside the window", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [
+        {
+          type: "package",
+          value: "evil-aaa",
+          severity: "critical",
+          confidence: 1,
+          firstSeen: "2026-09-02",
+          _queueDate: "2026-09-02",
+        },
+      ],
+      [rule()],
+    );
+    expect(result.deferred).toBe(1);
+  });
+
+  it("throws when a range matches more than the count it was reviewed against", async () => {
+    const { applyDeferralList } = await load();
+    expect(() =>
+      applyDeferralList(
+        [
+          { type: "package", value: "evil-aaa", severity: "critical", confidence: 1, firstSeen: "2026-09-02" },
+          { type: "package", value: "evil-bbb", severity: "critical", confidence: 1, firstSeen: "2026-09-02" },
+        ],
+        [rule({ expectedCount: 1 })],
+      ),
+    ).toThrow(/matched 2 candidates but expectedCount is 1/);
+  });
+
+  it("imports everything when deferrals are inactive", async () => {
+    const { applyDeferralList } = await load();
+    const result = applyDeferralList(
+      [{ type: "package", value: "evil-aaa", severity: "critical", confidence: 1, firstSeen: "2026-09-02" }],
+      [rule()],
+      { active: false },
+    );
+    expect(result.deferred).toBe(0);
+    expect(result.kept).toHaveLength(1);
+  });
+});
+
+describe("deferralsApply", () => {
+  it("applies on the default rolling window", async () => {
+    const { deferralsApply } = await load();
+    expect(deferralsApply({})).toBe(true);
+  });
+
+  it("stands down on an explicit slice, which is the advertised recovery path", async () => {
+    const { deferralsApply } = await load();
+    // Without this the recovery command would match its own deferral, import
+    // nothing and exit 0 - a silent false negative.
+    expect(deferralsApply({ since: "2026-09-02" })).toBe(false);
+    expect(deferralsApply({ until: "2026-09-02" })).toBe(false);
+    expect(deferralsApply({ ignoreDeferrals: true })).toBe(false);
+  });
+});
+
+describe("formatDeferralReport", () => {
+  const ranges = [
+    {
+      since: "2026-09-02",
+      until: "2026-09-02",
+      reason: "a".repeat(30),
+      detectionGap: "b".repeat(30),
+      expectedCount: 100,
+      deferredOn: "2026-09-06",
+    },
+  ];
+
+  it("states the entries are not covered and prints a recovery command per range", async () => {
+    const { formatDeferralReport } = await load();
+    const text = formatDeferralReport({
+      deferralsApplied: true,
+      deferred: 2,
+      deferredByRule: { "2026-09-02..2026-09-02": 2 },
+      deferralRanges: ranges,
+    });
+    expect(text).toMatch(/NOT covered elsewhere/);
+    expect(text).toMatch(/makes NO claim that anything else detects them/);
+    expect(text).toMatch(/npm run feed:import -- --since 2026-09-02 --until 2026-09-02/);
+  });
+
+  it("reports the exemption on an explicit slice rather than staying silent", async () => {
+    const { formatDeferralReport } = await load();
+    const text = formatDeferralReport({
+      deferralsApplied: false,
+      deferred: 0,
+      deferredByRule: {},
+      deferralRanges: ranges,
+    });
+    expect(text).toMatch(/inactive on an explicit --since\/--until slice/);
+  });
+
+  it("says nothing when no range is configured", async () => {
+    const { formatDeferralReport } = await load();
+    expect(formatDeferralReport({ deferralsApplied: true, deferred: 0, deferralRanges: [] })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Fetch layer (bounded, optional token) - injected fetchImpl, no network
 // ---------------------------------------------------------------------------
 
