@@ -313,6 +313,68 @@ heuristics such as `^[a-z]{20,}$`, which would swallow genuinely new malware who
 name happens to be long. Declining stays a per-family decision, written down with
 its justification and reviewable in the diff.
 
+## The deferral list
+
+The decline list answers "something else already detects this". A bulk upstream
+backfill is the opposite case: nothing else detects it, the block is far too large and
+too heterogeneous to review in one diff, and there is no honest `coveredBy` string to
+write. Forcing one into the decline list would silently remove detection, which is why
+`loadDeferralList` rejects a `coveredBy` field outright.
+
+`threat-feed-deferred.json` at the repository root records such a block as a **deliberate,
+dated, recoverable gap**. It matches on the advisory publication window and nothing else:
+a name matcher here would be a decline with its coverage gate evaded, so `namePrefix` and
+`ghsa` are rejected too.
+
+```json
+{
+  "deferred": [
+    {
+      "since": "2026-09-02",
+      "until": "2026-09-02",
+      "reason": "why this block is not being taken now",
+      "detectionGap": "what stays undetected while this stands",
+      "expectedCount": 9758,
+      "deferredOn": "2026-09-06"
+    }
+  ]
+}
+```
+
+Entries are dropped after the decline list and before `--limit`, the liveness probe and
+the undrainable count: a postponed block must not consume the review budget, must not
+cost one registry request per candidate, and is not backlog the run is losing.
+
+Four properties carry the safety of the mechanism, and each is proven by a test that
+goes red when the guard is cut:
+
+- **Deferrals stand down on an explicit slice.** They apply only to the default rolling
+  window, mirroring the undrainable check's own exemption. Without this the printed
+  recovery command would match its own deferral, import nothing and exit 0, which is
+  exactly the silent false negative the page-cap guard treats as fatal.
+- **A range may only name closed past days,** at least two days old. On a wave day the
+  flood is mixed with that day's genuine advisories; those were imported by that day's
+  own run and are feed duplicates by the time a deferral is written, so a settled past
+  day cannot swallow them. The two-day floor means one skipped nightly run cannot break
+  that. What the code CANNOT check is that the run actually happened: only defer a range
+  whose normal-volume intel you have confirmed is already in the feed.
+- **Both date axes must match.** The GitHub path selects on `published`, so `firstSeen`
+  is the axis `--since`/`--until` uses. The OpenSSF path filters its index on the
+  MODIFIED day while `firstSeen` comes from `record.published`, which can be years
+  earlier. Deferring on publication alone would suppress a record that the printed
+  recovery command, which selects on modified, would never bring back. So an entry is
+  deferred only when `firstSeen` is in range AND `_queueDate`, when present, is too.
+  `countUndrainable` splits the axes the same way for the same reason.
+- **`expectedCount` is a tripwire.** A reviewed range's matched set can only shrink, so
+  matching MORE than the reviewed count throws before anything is written. That is what
+  stops a later edit quietly widening one range into a month of suppression, alongside
+  the 31-day span cap and the no-overlap rule.
+
+Every configured range is reported even when it matched nothing, so a deferral that has
+gone inert stays visible instead of becoming a gap nobody remembers. Recover any range
+with the command the run prints, or import everything on a widened window with
+`--ignore-deferrals`.
+
 ## Reviewing an import
 
 An import is a proposal, not a release. Read the diff before committing: the
@@ -328,7 +390,10 @@ update of ~9,776 OpenSSF records) cannot be ingested into the bundled feed in a
 single commit without causing massive diff bloat, compiler union limits (`TS2590`),
 and package size inflation.
 
-To handle these events safely before the 14-day rolling window expires:
+There is no deadline for handling one. An explicit `--since`/`--until` slice replaces the
+rolling window rather than intersecting with it, so a backfill stays reachable in full
+long after the default window has moved past it; postponing costs review latency and an
+open detection gap, not reachability. Two tools handle these events safely:
 
 1. **Registry Liveness Filter (`--filter-holding-packages`):**
    Historic advisories often name packages that npm has quarantined with a bare

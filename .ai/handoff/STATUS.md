@@ -75,6 +75,71 @@ strategy doc rather than a daily-import question. Tier 1 of that doc recommends
 slicing the backfill into 2,000-entry PRs before 2026-09-16. That has not been
 started, and an unattended daily run is the wrong place to start a five-PR
 programme that grows the shipped package by half, so it is left here.
+## Threat-feed deferral list, and a deadline that never existed (2026-09-06)
+
+Model: claude-opus-5. Branch `fix/backfill-deferral`.
+
+Two changes, one of which is a correction to this file's own recent history.
+
+### The deadline claim was wrong
+
+`docs/threat-feed-bulk-backfill-strategy.md` asserted that the 2026-09 backfill
+becomes permanently unreachable on 2026-09-16 and is then silently lost, and that
+claim was repeated across roughly nineteen notes here, including a per-wave table
+with a "Window closes" column. It is false. The importer resolves its window as
+`const from = since ?? sinceDate(days, now)`, so an explicit `--since` REPLACES the
+rolling default rather than intersecting with it. Control: `--since 2026-08-01
+--until 2026-08-05`, sixteen days outside the 14-day window, fetched 1,002
+advisories and exited 0.
+
+What 2026-09-16 and 2026-09-18 actually mark is when the DEFAULT daily run stops
+proposing the waves. Any explicit range recovers them in full on any later date.
+The cost of postponing is review latency and an open detection gap, never
+reachability, and the correct response to those dates is not a ten-PR scramble.
+
+The living docs are corrected. The dated notes below are NOT rewritten: they are an
+append-log and record what was believed at the time. The importer's own undrainable
+warning is corrected too, since it declared the remainder unreachable by any future
+run and then printed a slice command to recover it.
+
+### The deferral list
+
+`threat-feed-deferred.json` stops the daily job re-proposing a reviewed bulk block.
+It is deliberately NOT the decline list: a decline asserts coverage exists
+elsewhere and makes `coveredBy` mandatory, while this block has no such coverage
+(roughly 1,189 distinct name tokens, no anchored rule), so any `coveredBy` string
+would be a lie and the decline would silently remove detection. A deferral asserts
+the opposite and records the gap, so `coveredBy` is a hard error.
+
+Effect measured today: a plain `npm run feed:import --dry-run` goes from 19,757
+proposed candidates to 62, which is exactly the set the 2026-09-06 batch imported
+by hand via a manual slice.
+
+Four guards carry the safety, and each was proven by cutting it and watching the
+right test go red (baseline green, five mutations each caught by exactly one test,
+post-restore green):
+
+- Deferrals stand down on an explicit slice. Without this the printed recovery
+  command would match its own deferral, import nothing and exit 0.
+- A range may only name closed past days, at least two old.
+- Both date axes must match. This is the subtle one: the OpenSSF path filters its
+  index on the MODIFIED day while `firstSeen` comes from `record.published`, so
+  deferring on publication alone could suppress a record that the recovery command,
+  which selects on modified, would never bring back. That would be a permanent
+  swallow with a recovery that silently returns nothing.
+- `expectedCount` is a tripwire: matching more than the reviewed count throws
+  before anything is written.
+
+### Still needs an owner decision, now without a deadline
+
+The 19,695 deferred entries are a real, recorded detection gap: sampling puts a
+third to a half of them still installable on npm. Nothing else detects them. The
+open question is unchanged and is about feed size and distribution model, not
+about dates: Tier 1 staged slices versus skipping to Tier 3 feed decoupling, given
+that the alphabet walk implies a corpus on the order of 100,000 entries. Letter d
+is only about 330 of roughly 9,600 done, so more waves are expected; each new wave
+needs its own reviewed deferral entry, which is a deliberate per-wave human step
+rather than a standing rule.
 
 ## v6.0.13 release preparation (2026-09-05)
 

@@ -24,16 +24,45 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `sinataoke_cn_test`); a Discord and media utility group (`discord-tqr`,
   `discord-phub`, `anime-vostfr`, `google-img-scrap`, `iframe-to-video`); and
   PyPI `trongridew`, `proxycer` and `dbt-sa-cli`.
+- `threat-feed-deferred.json`, a deferral list for the threat-feed importer. It
+  records a bulk upstream publication window that a human has deliberately
+  postponed, so the daily import stops re-proposing it. It is the mirror image of
+  `threat-feed-declined.json` and the difference is enforced: a decline asserts
+  that coverage exists elsewhere, a deferral asserts that it does NOT and records
+  the gap instead, so a `coveredBy` field is rejected outright. Deferrals match on
+  the advisory publication window only; `namePrefix` and `ghsa` are rejected as a
+  decline with its coverage gate evaded. Seeded with the two 2026-09 backfill
+  waves, which takes a plain `npm run feed:import` from 19,757 proposed candidates
+  back to the 62 genuine ones with no manual diagnosis.
+- `--ignore-deferrals` on `scripts/import-threat-feed.mjs`, for a deliberate audit
+  sweep over a widened window.
 
 ### Changed
 
 - The daily import was taken as a window slice from 2026-09-05 rather than a
   full rolling-window run, for the second day running, because the upstream bulk
-  backfill described in `docs/threat-feed-bulk-backfill-strategy.md` is still
-  unimported. The rolling 14-day window proposes 19,757 candidates, of which
-  19,695 are backfill (9,758 dated 2026-09-02, letters a and b; 9,937 dated
-  2026-09-04, letters c and d) and 62 are genuine new advisories. The backfill
-  set has not grown since 2026-09-05, so no third wave has landed yet.
+  backfill described in `docs/threat-feed-bulk-backfill-strategy.md` was still
+  unimported at the time. The rolling 14-day window proposed 19,757 candidates,
+  of which 19,695 were backfill (9,758 dated 2026-09-02, letters a and b; 9,937
+  dated 2026-09-04, letters c and d) and 62 were genuine new advisories. That
+  slice is now expressed as a deferral entry instead of a hand-picked window.
+- The undrainable backlog check and its warning now describe the remainder as
+  needing a deliberate slice rather than as lost, and no longer suggest a
+  `--limit 100000` on the recovery command, which is redundant since imports are
+  exhaustive by default.
+
+### Fixed
+
+- Corrected a false claim in `docs/threat-feed-bulk-backfill-strategy.md` and
+  `docs/threat-feed-sources.md` that the 2026-09 backfill becomes permanently
+  unreachable on 2026-09-16 and is then silently lost. The importer resolves its
+  window as `const from = since ?? sinceDate(days, now)`, so an explicit `--since`
+  replaces the rolling default rather than intersecting with it; a control run of
+  `--since 2026-08-01 --until 2026-08-05`, sixteen days outside the window, fetched
+  1,002 advisories and exited 0. Those dates only mark when the DEFAULT daily run
+  stops proposing the block. The same overstatement is corrected in the importer,
+  whose undrainable warning declared the remainder unreachable by any future run
+  and then printed a slice command to recover it.
 
 ## [6.0.13] - 2026-09-05
 

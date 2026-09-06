@@ -186,6 +186,29 @@ const DECLINE_FILE = "threat-feed-declined.json";
  */
 const MIN_DECLINE_PREFIX = 6;
 
+/** Repo-root file listing publication windows a human has postponed. See loadDeferralList. */
+const DEFERRAL_FILE = "threat-feed-deferred.json";
+
+/**
+ * How far in the past a deferral's `until` must sit.
+ *
+ * The safety invariant is that a deferred day's genuine same-day advisories are
+ * already in the committed feed, because that day's own run imported them. That
+ * only holds if the run actually happened. A two-day floor means at least one
+ * scheduled daily run has covered `until` even when one run was missed, so a
+ * single skipped night cannot turn a deferral into a swallow of live intel.
+ */
+const MIN_DEFERRAL_AGE_DAYS = 2;
+
+/**
+ * Widest window one deferral may name.
+ *
+ * A deferral records one observed bulk wave, never a standing policy. Capping the
+ * span means a mis-dated upstream advisory has a small target to land in, and a
+ * later edit cannot quietly widen one reviewed range into a month of suppression.
+ */
+const MAX_DEFERRAL_SPAN_DAYS = 31;
+
 /**
  * Package names are serialized into a TypeScript source file, so the charset
  * is deliberately narrower than the feed's own package shape: no quotes, no
@@ -663,6 +686,318 @@ export function applyDeclineList(entries, declined) {
   return { kept, declined: entries.length - kept.length, byRule };
 }
 
+/** Deferral entry keys. Anything else is a typo and is rejected outright. */
+const DEFERRAL_KEYS = new Set([
+  "since",
+  "until",
+  "reason",
+  "detectionGap",
+  "expectedCount",
+  "deferredOn",
+  "$comment",
+]);
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Parse a strict YYYY-MM-DD, rejecting values that roll over (2026-02-31). */
+function parseIsoDay(value) {
+  if (typeof value !== "string" || !ISO_DAY.test(value)) return null;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  if (Number.isNaN(ms)) return null;
+  // Round-trip: Date.parse accepts 2026-02-31 and rolls it to 2026-03-03, which
+  // would defer a day nobody wrote down.
+  if (new Date(ms).toISOString().slice(0, 10) !== value) return null;
+  return ms;
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Load the deferral list: publication windows a human has deliberately postponed.
+ *
+ * WHY THIS IS NOT THE DECLINE LIST. A decline says "something else already detects
+ * this family", and `loadDeclineList` enforces that by making `coveredBy` mandatory.
+ * A bulk upstream backfill has no such coverage: the 2026-09 waves span roughly
+ * 1,189 distinct name tokens with no anchored rule behind them, so every honest
+ * `coveredBy` string would be a lie, and a decline written on one would silently
+ * remove detection. A deferral therefore claims the OPPOSITE: these entries are NOT
+ * covered, the gap is real and recorded, and the block is recoverable in full at any
+ * time with an explicit --since/--until slice. `coveredBy` is a hard error here.
+ *
+ * WHY IT MATCHES ON DATES AND NOTHING ELSE. The publication window is the axis a
+ * bulk wave is separable on, and it is the same axis that recovers it exactly. A
+ * name matcher would be a decline with the coverage requirement evaded, so
+ * `namePrefix` and `ghsa` are rejected too.
+ *
+ * THE SAFETY INVARIANT, and its one human precondition. A range may only name
+ * CLOSED PAST days, at least MIN_DEFERRAL_AGE_DAYS old. On a wave day the flood is
+ * mixed with that day's genuine advisories, but those were imported by that day's
+ * own run and are feed duplicates by the time a deferral is written, so deferring a
+ * settled past day cannot swallow them. What the code CANNOT check is that the run
+ * for those days actually happened and imported them. That is a human precondition:
+ * only defer a range whose normal-volume intel you have confirmed is in the feed.
+ *
+ * Returns [] when the file is absent. A malformed file THROWS, exactly as the
+ * decline list does: silently failing open re-floods the queue, silently failing
+ * closed drops real IOCs, and both are worse than refusing to run.
+ *
+ * @returns {Array<{since: string, until: string, reason: string, detectionGap: string,
+ *   expectedCount: number, deferredOn: string}>}
+ */
+export function loadDeferralList(root = repoRoot, { now = new Date() } = {}) {
+  const file = join(root, DEFERRAL_FILE);
+  if (!existsSync(file)) return [];
+
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    throw new Error(`${DEFERRAL_FILE} is not valid JSON: ${err.message}`);
+  }
+  const list = parsed?.deferred;
+  if (!Array.isArray(list)) {
+    throw new Error(`${DEFERRAL_FILE} must contain a "deferred" array`);
+  }
+
+  const today = now.toISOString().slice(0, 10);
+  const todayMs = Date.parse(`${today}T00:00:00Z`);
+
+  const entries = list.map((entry, i) => {
+    const at = `${DEFERRAL_FILE} deferred[${i}]`;
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${at}: must be an object`);
+    }
+    // A deferral removes candidates, so an unrecognised key must never be able to
+    // read as "the tripwire is absent". Stricter than the decline list on purpose.
+    for (const key of Object.keys(entry)) {
+      if (!DEFERRAL_KEYS.has(key)) {
+        if (key === "coveredBy") {
+          throw new Error(
+            `${at}: "coveredBy" is not a deferral field - a deferral must never claim ` +
+              `coverage. If coverage exists, the entry belongs in ${DECLINE_FILE} instead`,
+          );
+        }
+        if (key === "namePrefix" || key === "ghsa") {
+          throw new Error(
+            `${at}: "${key}" is not a deferral field - a deferral matches on publication ` +
+              `date only. A name matcher here would be a decline without its coveredBy gate`,
+          );
+        }
+        throw new Error(`${at}: unknown field "${key}"`);
+      }
+    }
+
+    const sinceMs = parseIsoDay(entry.since);
+    const untilMs = parseIsoDay(entry.until);
+    for (const [field, ms] of [
+      ["since", sinceMs],
+      ["until", untilMs],
+    ]) {
+      if (ms === null) {
+        throw new Error(`${at}: "${field}" must be a real calendar date as YYYY-MM-DD`);
+      }
+    }
+    if (sinceMs > untilMs) {
+      // An inverted range matches nothing and looks identical to a working one.
+      throw new Error(`${at}: "since" (${entry.since}) must not be after "until" (${entry.until})`);
+    }
+
+    const ageDays = Math.round((todayMs - untilMs) / DAY_MS);
+    if (ageDays < MIN_DEFERRAL_AGE_DAYS) {
+      throw new Error(
+        `${at}: "until" (${entry.until}) must be at least ${MIN_DEFERRAL_AGE_DAYS} day(s) before ` +
+          `today (${today} UTC); it is ${ageDays}. A range covering today or the recent past can ` +
+          `swallow live intel, because that day's genuine advisories may not be imported yet`,
+      );
+    }
+
+    const spanDays = Math.round((untilMs - sinceMs) / DAY_MS) + 1;
+    if (spanDays > MAX_DEFERRAL_SPAN_DAYS) {
+      throw new Error(
+        `${at}: range spans ${spanDays} days, more than the ${MAX_DEFERRAL_SPAN_DAYS}-day maximum. ` +
+          `A deferral names one observed wave, not a standing policy`,
+      );
+    }
+
+    for (const field of ["reason", "detectionGap"]) {
+      if (typeof entry[field] !== "string" || entry[field].trim().length < 20) {
+        throw new Error(`${at}: "${field}" must be a string of at least 20 characters`);
+      }
+    }
+
+    if (!Number.isInteger(entry.expectedCount) || entry.expectedCount <= 0) {
+      throw new Error(
+        `${at}: "expectedCount" must be a positive integer - the candidate count observed ` +
+          `with --dry-run when the block was reviewed. It is the tripwire against a widened range`,
+      );
+    }
+
+    const deferredOnMs = parseIsoDay(entry.deferredOn);
+    if (deferredOnMs === null || deferredOnMs > todayMs) {
+      throw new Error(`${at}: "deferredOn" must be a real calendar date as YYYY-MM-DD, not in the future`);
+    }
+
+    return {
+      since: entry.since,
+      until: entry.until,
+      reason: entry.reason,
+      detectionGap: entry.detectionGap,
+      expectedCount: entry.expectedCount,
+      deferredOn: entry.deferredOn,
+    };
+  });
+
+  // Overlapping ranges make the per-range tally ambiguous, and are how two narrow
+  // reviewed deferrals silently become one wide unreviewed one.
+  const ordered = [...entries].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+  for (let i = 1; i < ordered.length; i++) {
+    if (ordered[i].since <= ordered[i - 1].until) {
+      throw new Error(
+        `${DEFERRAL_FILE}: ranges ${ordered[i - 1].since}..${ordered[i - 1].until} and ` +
+          `${ordered[i].since}..${ordered[i].until} overlap`,
+      );
+    }
+  }
+
+  return entries;
+}
+
+/** Stable label for a range, used as the per-rule tally key and in the report. */
+function deferralKey(rule) {
+  return `${rule.since}..${rule.until}`;
+}
+
+/**
+ * Whether deferrals apply to this run.
+ *
+ * Deferrals are a property of the DEFAULT rolling window only, mirroring the
+ * undrainable check's exemption. An explicit --since/--until IS the recovery
+ * path, so it must import a deferred range in full; without this the recovery
+ * command would match its own deferral, import nothing and exit 0, which is the
+ * silent false negative the page-cap guard is fatal about.
+ */
+export function deferralsApply({ since, until, ignoreDeferrals } = {}) {
+  return !since && !until && !ignoreDeferrals;
+}
+
+/**
+ * Drop candidates whose publication day falls inside a deferred window.
+ *
+ * Runs after dedupe and after the decline list, and before --limit, the liveness
+ * probe and the undrainable count: a postponed block must not consume the review
+ * budget, must not cost one registry request per entry, and must not be counted as
+ * backlog this run is losing, since it is recoverable by an explicit slice.
+ *
+ * BOTH-AXIS MATCH, and it is the subtle one. The two discovery paths select on
+ * different date axes. The GitHub path queries `published`, so `firstSeen` is the
+ * axis --since/--until selects on. The OpenSSF path filters its index by the
+ * MODIFIED day while `firstSeen` comes from `record.published`, which can be years
+ * earlier. An OpenSSF record published inside a deferred window but re-modified
+ * later would match on publication, be suppressed, and never come back from the
+ * printed recovery command, because that command selects on modified. So an entry
+ * is deferred only when `firstSeen` is in range AND `_queueDate`, when present, is
+ * in range too. `countUndrainable` splits the axes the same way and for the same
+ * reason. The conjunction is strictly narrowing, so it fails toward importing.
+ *
+ * @returns {{kept: Array<object>, deferred: number, byRule: Record<string, number>}}
+ */
+export function applyDeferralList(entries, deferrals, { active = true } = {}) {
+  const byRule = {};
+  // Every configured range is reported, including ones that matched nothing, so an
+  // inert deferral stays visible instead of quietly becoming a forgotten gap.
+  for (const rule of deferrals ?? []) byRule[deferralKey(rule)] = 0;
+
+  if (!active || !deferrals?.length) return { kept: entries, deferred: 0, byRule };
+
+  const kept = [];
+  for (const entry of entries) {
+    // Never suppress what cannot be dated, and never suppress a non-package IOC:
+    // domains, IPs, URLs and hashes are low volume and high value.
+    const rule =
+      entry.type === "package" && typeof entry.firstSeen === "string"
+        ? deferrals.find((d) => {
+            if (entry.firstSeen < d.since || entry.firstSeen > d.until) return false;
+            if (typeof entry._queueDate === "string") {
+              if (entry._queueDate < d.since || entry._queueDate > d.until) return false;
+            }
+            return true;
+          })
+        : undefined;
+    if (!rule) {
+      kept.push(entry);
+      continue;
+    }
+    byRule[deferralKey(rule)] += 1;
+  }
+
+  // A reviewed range's matched set can only shrink (advisories get withdrawn,
+  // recovered entries become duplicates). Growth means the range is catching
+  // something it was never reviewed against, so fail before anything is written.
+  for (const rule of deferrals) {
+    const matched = byRule[deferralKey(rule)];
+    if (matched > rule.expectedCount) {
+      throw new Error(
+        `${DEFERRAL_FILE}: range ${deferralKey(rule)} matched ${matched} candidates but ` +
+          `expectedCount is ${rule.expectedCount}. A reviewed range can only shrink, so this ` +
+          `range is catching entries it was never reviewed against. Re-run with --dry-run, ` +
+          `re-review the block, then update expectedCount`,
+      );
+    }
+  }
+
+  return { kept, deferred: entries.length - kept.length, byRule };
+}
+
+/**
+ * Render the deferral section of the CLI report.
+ *
+ * Exported so the wording can be tested: the console block at the file foot is
+ * isMain-gated and unreachable from vitest, which is why the Declined line has no
+ * test. "It must be loud" is otherwise unprovable.
+ *
+ * @returns {string|null} null when there is nothing to say.
+ */
+export function formatDeferralReport(report) {
+  const deferrals = report?.deferralRanges ?? [];
+  if (!report?.deferralsApplied) {
+    if (!deferrals.length) return null;
+    return (
+      `  Deferrals:            inactive on an explicit --since/--until slice ` +
+      `(${deferrals.length} range(s) in ${DEFERRAL_FILE})`
+    );
+  }
+  if (!report.deferred) return null;
+
+  const tally = Object.entries(report.deferredByRule ?? {})
+    .filter(([, n]) => n > 0)
+    .map(([range, n]) => `${range} x${n}`)
+    .join(", ");
+
+  const lines = [
+    `  Deferred:             ${report.deferred} (${tally}) - NOT covered elsewhere; see ${DEFERRAL_FILE}`,
+    "",
+    `  DEFERRED, NOT COVERED. ${report.deferred} candidate(s) matched ${DEFERRAL_FILE} and were`,
+    "  NOT imported. A deferral makes NO claim that anything else detects them: unlike a",
+    "  decline, it is a recorded, deliberate gap that a human postponed, and it is",
+    "  recoverable in full at any time. Per range:",
+    "",
+  ];
+  for (const rule of deferrals) {
+    const matched = report.deferredByRule?.[deferralKey(rule)] ?? 0;
+    if (!matched) continue;
+    lines.push(`    ${deferralKey(rule)}   ${matched} deferred (expectedCount ${rule.expectedCount})`);
+    lines.push(`      reason: ${rule.reason}`);
+    lines.push(`      gap:    ${rule.detectionGap}`);
+    lines.push("      recover this range with:");
+    lines.push(`        npm run feed:import -- --since ${rule.since} --until ${rule.until}`);
+    lines.push("");
+  }
+  lines.push("  An explicit --since/--until slice ignores every deferral, so each command above");
+  lines.push("  imports its range in full. Nothing else in the scanner covers these entries");
+  lines.push("  until it is run.");
+  return lines.join("\n");
+}
+
 /**
  * Count entries that --limit will never reach before they age out of --days.
  *
@@ -675,7 +1010,13 @@ export function applyDeclineList(entries, declined) {
  * `added` is newest-first, so the entry at index `i` is reached on run
  * `floor(i / limit)`, i.e. that many days from now at one run per day. It
  * leaves the window `days - age` days from now. When the first number exceeds
- * the second, that entry is lost for good.
+ * the second, that entry is beyond the reach of any further ROUTINE run.
+ *
+ * Not beyond reach absolutely, and the difference matters: `--since` replaces the
+ * rolling window rather than intersecting with it, so an explicit slice still
+ * fetches the range on any later date. What this counts is the backlog the default
+ * daily job will stop proposing, which is why the check is exempt on an explicit
+ * slice. Treat it as "needs a deliberate slice", not as "gone".
  *
  * Deliberately OPTIMISTIC: it assumes zero new advisories arrive in the
  * meantime, so real inflow only makes the loss worse. The result is a lower
@@ -1335,6 +1676,7 @@ export async function importUpstreamFeed({
   allowTruncated = false,
   ecosystems,
   filterHoldingPackages = false,
+  ignoreDeferrals = false,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -1366,6 +1708,11 @@ export async function importUpstreamFeed({
   // Read before the fetch: a malformed decline list must fail on the spot rather
   // than after several hundred upstream requests have been spent.
   const declineList = loadDeclineList(root);
+  // Loaded and fully validated on EVERY run, including explicit slices and
+  // --dry-run. Only its APPLICATION is conditional, so a malformed file can never
+  // be hidden by happening to run a slice.
+  const deferralList = loadDeferralList(root, { now });
+  const deferralsActive = deferralsApply({ since, until, ignoreDeferrals });
 
   // 1. Fetch every enabled discovery source. Promise.all is deliberate: any
   // source failure rejects the whole snapshot before the feed is touched.
@@ -1430,10 +1777,20 @@ export async function importUpstreamFeed({
   // "losing" - it was never queued for import in the first place.
   const { kept: addedAfterDecline, declined, byRule: declinedByRule } = applyDeclineList(deduped, declineList);
 
-  let added = addedAfterDecline;
+  // 3c. Drop candidates inside a deliberately postponed publication window. Placed
+  // after the decline list so an entry that genuinely IS covered elsewhere is
+  // recorded as a decline rather than as a debt, and before the liveness probe so a
+  // 19k-entry block does not cost 19k registry requests to then be dropped.
+  const {
+    kept: addedAfterDeferral,
+    deferred,
+    byRule: deferredByRule,
+  } = applyDeferralList(addedAfterDecline, deferralList, { active: deferralsActive });
+
+  let added = addedAfterDeferral;
   let holdingPackagesFiltered = 0;
   if (filterHoldingPackages) {
-    const livenessResult = await filterHoldingPackages(addedAfterDecline, {
+    const livenessResult = await filterHoldingPackages(addedAfterDeferral, {
       fetchImpl,
       timeoutMs,
       concurrency: 10,
@@ -1504,6 +1861,16 @@ export async function importUpstreamFeed({
     // are NOT losses: each declined family names the coverage that replaces it.
     declined,
     declinedByRule,
+    // Candidates held back by threat-feed-deferred.json. Unlike `declined`, these
+    // ARE a gap: nothing else claims to detect them. They are not losses either -
+    // an explicit --since/--until slice imports the range in full at any later
+    // date - so they are deliberately excluded from `undrainable`.
+    deferred,
+    deferredByRule,
+    deferralsApplied: deferralsActive,
+    // The configured ranges themselves, so the CLI (and a health check) can print
+    // each one's reason, gap and recovery command without re-reading the file.
+    deferralRanges: deferralList,
     holdingPackagesFiltered,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
@@ -1644,6 +2011,7 @@ export function parseArgs(argv) {
     else if (arg === "--allow-backlog") opts.allowBacklog = true;
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--filter-holding-packages") opts.filterHoldingPackages = true;
+    else if (arg === "--ignore-deferrals") opts.ignoreDeferrals = true;
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -1673,6 +2041,11 @@ const USAGE = `
                         out unreached. The entries this run selected are written
                         either way; the non-zero exit only flags that a slice
                         import is needed to recover the rest.
+    --ignore-deferrals  Import candidates that threat-feed-deferred.json would
+                        hold back. Deferrals already apply only to the default
+                        rolling window, so an explicit --since/--until slice
+                        ignores them anyway; this flag is for a deliberate audit
+                        sweep over a widened --days window.
     --max-pages <n>     Maximum upstream pages to fetch (default 750). Pagination
                         stops early when there is no rel="next", so a quiet window
                         still costs about 3 requests. Hitting this cap is FATAL:
@@ -1744,6 +2117,10 @@ if (isMain) {
         .join(", ");
       console.log(`  Declined:             ${report.declined} (${rules}) - see ${DECLINE_FILE}`);
     }
+    {
+      const deferralText = formatDeferralReport(report);
+      if (deferralText) console.log(deferralText);
+    }
     if (report.holdingPackagesFiltered > 0) {
       console.log(`  Holding pkgs filtered:${report.holdingPackagesFiltered} (inactive 0.0.1-security placeholders)`);
     }
@@ -1765,15 +2142,17 @@ if (isMain) {
     }
     if (report.undrainable > 0) {
       console.log(
-        `\n  WARNING: ${report.undrainable} of those ${report.remaining} will AGE OUT before any\n` +
-          `  future run can reach them. At --limit ${report.limitApplied} the tail of the queue is more runs\n` +
-          `  away than it has days left in the --days ${report.daysApplied} window, so re-running does NOT\n` +
-          `  recover them - they are a silent false negative, the same failure the page\n` +
-          `  cap treats as fatal.\n\n` +
-          `  This is what a bulk-publication spike looks like. Recover by importing the\n` +
-          `  busy day(s) as explicit slices, which are exempt from this check:\n` +
-          `    npm run feed:import -- --since <YYYY-MM-DD> --until <YYYY-MM-DD> --limit 100000\n\n` +
-          `  Pass --allow-backlog to accept the loss and exit clean.`,
+        `\n  WARNING: ${report.undrainable} of those ${report.remaining} will fall out of the DEFAULT\n` +
+          `  window before any further routine run reaches them. At --limit ${report.limitApplied} the tail of\n` +
+          `  the queue is more runs away than it has days left in the --days ${report.daysApplied} window, so\n` +
+          `  re-running on the defaults does NOT recover them: left alone they become a\n` +
+          `  silent false negative, the same failure the page cap treats as fatal.\n\n` +
+          `  They are NOT unreachable. --since replaces the rolling window rather than\n` +
+          `  intersecting with it, so an explicit slice still fetches them on any later\n` +
+          `  date. This is what a bulk-publication spike looks like; import the busy\n` +
+          `  day(s) as explicit slices, which are exempt from this check:\n` +
+          `    npm run feed:import -- --since <YYYY-MM-DD> --until <YYYY-MM-DD>\n\n` +
+          `  Pass --allow-backlog to exit clean and leave the remainder for a slice.`,
       );
     }
     for (const entry of report.entries.slice(0, 20)) {
