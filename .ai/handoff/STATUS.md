@@ -1,3 +1,81 @@
+## Daily threat intelligence batch (2026-09-06)
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-06`.
+
+Imported 62 package IOCs (59 npm whole-package names, 3 PyPI version pins, 62
+distinct packages), taking the bundled feed from 20,338 to 20,400 entries.
+
+All 59 npm names were probed against `registry.npmjs.org` before acceptance and
+all 59 returned a `0.0.1-security` holding stub with no maintainer, so none can
+hit a package with a legitimate release history. Not one candidate came back
+live this run. The single entry with any prior history is `@domyjs/debounce`
+(created 2025-07-03, two versions); npm has taken down the entire `@domyjs`
+scope, so it is a stub today and the bare-name entry cannot break an
+installable package.
+
+Clusters: an Ethereum tooling set published and pulled inside a day
+(`wallet-watcher`, `eth-query-utils`, `ens-namehash-utils`, `eth-lib-helpers`,
+`gas-price-checker`, `trading-bot-utils`); two maintainer scopes taken down
+whole, `@domyjs` (10) and `@yoannchb` (4); a Chinese e-commerce SDK counterfeit
+set in `@liuliang520500` (6); a Discord and media utility group; and PyPI
+`trongridew`, `proxycer`, `dbt-sa-cli`.
+
+Step 1b (non-package enrichment) produced nothing this run, and that is a real
+finding rather than a skipped step. Every package in this batch was published
+on 2026-09-05 or 2026-09-06 and was already a takedown stub by the time it was
+probed. No vendor has published a write-up yet: Socket, Aikido, StepSecurity,
+OX Security and The Hacker News were all checked and Aikido's most recent post
+is 2026-08-28. There is therefore no C2 domain, IP, hash, dead-drop URL or
+GitHub account to add. These campaigns are candidates for enrichment in a later
+run once a write-up appears.
+
+### Needs an owner decision: the bulk backfill (no deadline - see correction)
+
+This is the third consecutive run to defer it, and the deferral is what needs
+deciding, not the batch above.
+
+Measured today, unchanged from 2026-09-05: the rolling 14-day window proposes
+19,757 candidates, of which 19,695 are the upstream backfill (9,758 dated
+2026-09-02 covering letters a and b; 9,937 dated 2026-09-04 covering letters c
+and d, with d only about 330 of roughly 9,600 done). 18,728 of the 19,757 carry
+`MAL-2025-*` ids, confirming this is a historical corpus migration and not new
+threat activity. No third wave has landed since 2026-09-05.
+
+CORRECTION, verified today, to a claim this file and
+`docs/threat-feed-bulk-backfill-strategy.md` have both been repeating: there is NO
+deadline and nothing is lost on 2026-09-16 or 2026-09-18. The importer resolves its
+window as `const from = since ?? sinceDate(days, now)`, so an explicit `--since`
+REPLACES the rolling window instead of intersecting with it. Control run:
+`--since 2026-08-01 --until 2026-08-05`, sixteen days outside the 14-day window,
+fetched 1,002 advisories and exited 0. What actually happens on those dates is only
+that the DEFAULT daily run stops proposing the block; any explicit range recovers it
+in full, this month or next year. The urgency asserted in three previous notes was
+wrong, and the correct response to those dates is not a ten-PR scramble.
+
+Two measurements bearing on the decision, one of which corrects an assumption:
+
+- The liveness finding in `docs/threat-feed-bulk-backfill-strategy.md` holds. An
+  independent sample of 40 taken today across both waves returned 27 holding
+  stubs and 13 live single-version packages, so a substantial share is still
+  installable and not importing them is a genuine detection gap. The doc's own
+  sample of 50 from the 2026-09-02 wave found 28 live. The two samples disagree
+  on the proportion (33% versus 56%) but agree on the conclusion.
+- The false-positive risk is lower than the volume suggests. A deliberately
+  adversarial sample of 35, chosen as the most legitimate-sounding generic names
+  in the corpus (`node-helper`, `jwt-logger`, `date-fns-formatter`,
+  `array-frames`, `wallet-watcher` and similar), came back 35 of 35 holding
+  stubs. Across 75 probes total, zero were a live package with a real version
+  history. Whatever is decided, mass name-blocking this corpus does not look
+  like it would produce false positives.
+
+The open question is scope, not safety: importing all 19,695 roughly doubles the
+bundled feed in one diff, and if the waves continue through e-z the corpus is on
+the order of 150,000 entries, which is the Tier 3 architectural question in the
+strategy doc rather than a daily-import question. Tier 1 of that doc recommends
+slicing the backfill into 2,000-entry PRs before 2026-09-16. That has not been
+started, and an unattended daily run is the wrong place to start a five-PR
+programme that grows the shipped package by half, so it is left here.
+
 ## v6.0.13 release preparation (2026-09-05)
 
 Model: claude-opus-5. Branch `release/v6.0.13`.
