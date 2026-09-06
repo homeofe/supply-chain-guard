@@ -1,3 +1,42 @@
+## v6.0.14 release preparation (2026-09-06)
+
+Model: claude-opus-5. Branch `release/v6.0.14`.
+
+Patch release carrying the two changes merged today: the 2026-09-06 threat-intel
+batch (#274, 62 package IOCs, feed 20,338 to 20,400) and the threat-feed deferral
+list plus the backfill deadline correction (#275).
+
+PATCH, not minor, and the reasoning is worth keeping. #275 adds a new repo-root
+config file and a new `--ignore-deferrals` CLI flag, which reads like a minor. It is
+not: `package.json` `files` ships only `dist/**/*`, `action.yml`, `README.md`,
+`LICENSE`, `socket.yml`, `policy-schema.json` and `self-scan-manifest.json`, so
+neither `scripts/` nor `threat-feed-deferred.json` reaches the published artefact and
+no consumer gains capability. The direct precedent is v6.0.3, which shipped the
+decline list, the deferral list's mirror image in the same location with the same
+"Added" changelog treatment, as a patch. Consumer-visible change here is the 62 new
+IOCs, exactly like every other 6.0.x. SECURITY.md is therefore untouched, since its
+table moves only on a major or minor.
+
+Both version-bump traps were live again this release and both held:
+
+- `src/threat-intel.ts` carries the version TWICE with different meanings, and this
+  time the collision was worse than usual. Line 22176 is `bundledVersion`, the real
+  version site. Line 9010 is the feed IOC `@ornikar/babel-preset-base@6.0.13`, and
+  line 9011 is `@ornikar/babel-preset-base@6.0.14` - the campaign behind
+  GHSA-x2q9-5wm2-wf59 published that package at 6.0.3 through 6.0.14, so the NEW
+  version number already existed as an indicator before the bump. A file-wide
+  replacement would have corrupted one indicator and silently created a duplicate of
+  another, and version-sync counts occurrences so it would not have caught either.
+  The bump was applied by exact `bundledVersion: "..."` anchor and verified by
+  diffing the file: one line changed.
+- The README CIDR trap was checked before replacing. All four `6.0.13` occurrences in
+  README.md are version references (pre-commit `rev`, the Docker tag, two `uses:`
+  pins) and none is a substring of an address, so the file-wide replacement was safe
+  this time. Re-check rather than assume next time.
+
+`check:self-scan` was regenerated before `handoff:refresh`, since the handoff
+MANIFEST checksums it.
+
 ## Daily threat intelligence batch (2026-09-06)
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-06`.
