@@ -29,7 +29,7 @@ is 2026-08-28. There is therefore no C2 domain, IP, hash, dead-drop URL or
 GitHub account to add. These campaigns are candidates for enrichment in a later
 run once a write-up appears.
 
-### Needs an owner decision: the bulk backfill, now 10 days from expiry
+### Needs an owner decision: the bulk backfill (no deadline - see correction)
 
 This is the third consecutive run to defer it, and the deferral is what needs
 deciding, not the batch above.
@@ -41,9 +41,16 @@ and d, with d only about 330 of roughly 9,600 done). 18,728 of the 19,757 carry
 `MAL-2025-*` ids, confirming this is a historical corpus migration and not new
 threat activity. No third wave has landed since 2026-09-05.
 
-Deadlines are unchanged and close: the 2026-09-02 wave ages out of the window on
-2026-09-16, the 2026-09-04 wave on 2026-09-18. After that no routine run can
-reach them and the drop is silent.
+CORRECTION, verified today, to a claim this file and
+`docs/threat-feed-bulk-backfill-strategy.md` have both been repeating: there is NO
+deadline and nothing is lost on 2026-09-16 or 2026-09-18. The importer resolves its
+window as `const from = since ?? sinceDate(days, now)`, so an explicit `--since`
+REPLACES the rolling window instead of intersecting with it. Control run:
+`--since 2026-08-01 --until 2026-08-05`, sixteen days outside the 14-day window,
+fetched 1,002 advisories and exited 0. What actually happens on those dates is only
+that the DEFAULT daily run stops proposing the block; any explicit range recovers it
+in full, this month or next year. The urgency asserted in three previous notes was
+wrong, and the correct response to those dates is not a ten-PR scramble.
 
 Two measurements bearing on the decision, one of which corrects an assumption:
 

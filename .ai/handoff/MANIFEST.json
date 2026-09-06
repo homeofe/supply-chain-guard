@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788686821",
-    "timestamp": "2026-09-06T09:27:01Z",
-    "commit": "e84a064",
+    "session_id": "cli-1788688265",
+    "timestamp": "2026-09-06T09:51:05Z",
+    "commit": "382eab9",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b386be76cf77f563e7e69b8376256af395b452577c0a6585034890757bc5b5dd",
-      "updated": "2026-09-06T09:26:54Z",
-      "lines": 6857,
+      "checksum": "sha256:3f7d442d4230d7eb41002a1c7670bdab753426cfe2a66a078c536e49ee7c5677",
+      "updated": "2026-09-06T09:49:50Z",
+      "lines": 6864,
       "summary": "Model: claude-opus-5. Branch `threat-intel/2026-09-06`."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:1eda50bcde6c61e89fdb985bd9be31f1077157671510dbe68e46ef96a0f56c0f",
-      "updated": "2026-09-06T09:27:01Z",
+      "updated": "2026-09-06T09:51:05Z",
       "lines": 170,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:5452e2091c22a0695d7222c745f95ab3c848a5471f0f84e37718a511c1820e56",
-      "updated": "2026-09-06T09:27:01Z",
+      "updated": "2026-09-06T09:51:05Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:95b9c3588ebd4d93651dfe543ac2395d59a28b3ed28491d0b8b1999f65c6eb17",
-      "updated": "2026-09-06T09:27:01Z",
+      "updated": "2026-09-06T09:51:05Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: claude-opus-5. Branch `threat-intel/2026-09-06`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 80748,
-    "full_read": 92979
+    "manifest_plus_core": 80861,
+    "full_read": 93092
   }
 }
