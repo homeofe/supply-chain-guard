@@ -7,6 +7,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-06: 62 new package IOCs, taking the
+  bundled feed to 20,400 entries. The set is 59 npm whole-package names and 3
+  PyPI exact version pins across 62 distinct packages. Every one of the 59 npm
+  names was probed against `registry.npmjs.org` before being accepted and all
+  59 came back as taken-down security-holding stubs (a single `0.0.1-security`
+  placeholder, no maintainer), so no package with a legitimate release history
+  is blocked by name. New clusters: an Ethereum tooling set published and pulled
+  within a day (`wallet-watcher`, `eth-query-utils`, `ens-namehash-utils`,
+  `eth-lib-helpers`, `gas-price-checker`, `trading-bot-utils`); two whole
+  maintainer scopes taken down entirely, `@domyjs` (10 names) and `@yoannchb`
+  (4 names); a Chinese e-commerce SDK counterfeit set in the `@liuliang520500`
+  scope (`pdd-sdk`, `pdd-sdk-new`, `jd-sdk`, `taobao-topclient`, `sinataoke_cn`,
+  `sinataoke_cn_test`); a Discord and media utility group (`discord-tqr`,
+  `discord-phub`, `anime-vostfr`, `google-img-scrap`, `iframe-to-video`); and
+  PyPI `trongridew`, `proxycer` and `dbt-sa-cli`.
+
+### Changed
+
+- The daily import was taken as a window slice from 2026-09-05 rather than a
+  full rolling-window run, for the second day running, because the upstream bulk
+  backfill described in `docs/threat-feed-bulk-backfill-strategy.md` is still
+  unimported. The rolling 14-day window proposes 19,757 candidates, of which
+  19,695 are backfill (9,758 dated 2026-09-02, letters a and b; 9,937 dated
+  2026-09-04, letters c and d) and 62 are genuine new advisories. The backfill
+  set has not grown since 2026-09-05, so no third wave has landed yet.
+
 ## [6.0.13] - 2026-09-05
 
 ### Added
