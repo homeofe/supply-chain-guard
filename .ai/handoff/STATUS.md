@@ -1,3 +1,43 @@
+## v6.0.15 release preparation (2026-09-07)
+
+Model: claude-opus-5. Branch `release/v6.0.15`.
+
+Patch release carrying the one change merged today: the 2026-09-07 threat-intel
+batch (#277, 23 package IOCs, feed 20,400 to 20,423). PATCH is right: the only
+consumer-visible change is new IOCs, exactly like every other 6.0.x. SECURITY.md
+is untouched, since its table moves only on a major or minor, and CONTRIBUTING.md
+is untouched because no module or file was added.
+
+Both version-bump traps were live again and both held:
+
+- `src/threat-intel.ts` carries the version twice with different meanings, and the
+  collision was the same one as last release. Line 22202 is `bundledVersion`, the
+  real version site. Line 9011 is the feed IOC `@ornikar/babel-preset-base@6.0.14`
+  from GHSA-x2q9-5wm2-wf59, which published that package at 6.0.3 through 6.0.14.
+  A file-wide replacement would have corrupted the indicator, and version-sync
+  counts occurrences so it would not have caught it. The bump was applied by exact
+  `bundledVersion: "..."` anchor and verified by grepping the file afterwards: the
+  IOC still reads 6.0.14 and only `bundledVersion` moved.
+- The README CIDR trap was checked before replacing rather than assumed. All four
+  `6.0.14` occurrences in README.md are version references (the pre-commit `rev`,
+  the Docker tag and two `uses:` pins) and none is a substring of an address, so
+  the file-wide replacement was safe this time. Re-check next release.
+
+One new thing worth recording: `6.0.15` was confirmed absent from the whole tracked
+tree before the bump, with a control run of the same grep against `6.0.14` to prove
+the query worked rather than trusting a bare zero. That matters here specifically
+because the `@ornikar` campaign has been publishing version numbers that keep
+colliding with our own release sequence, and the next one it reaches will land as a
+silent duplicate rather than an error.
+
+`check:handoff` went red on the NEXT_ACTIONS.md "Current version" header, which is
+the one handoff file `handoff:refresh` does not rewrite. Bumped by hand to v6.0.15
+and refreshed again. The daily threat-intel run correctly leaves that header alone
+because it does not bump the version; a release must move it.
+
+`check:self-scan` was regenerated before `handoff:refresh`, since the handoff
+MANIFEST checksums it.
+
 ## Daily threat intelligence batch (2026-09-07)
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-07`.
