@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-07: 23 new package IOCs. The largest
+  cluster is a dependency-confusion campaign against Coinbase internal wallet
+  package names, 13 npm names published and taken down inside the same day:
+  `cb-wallet-analytics`, `cb-wallet-data`, `cb-wallet-env`, `cb-wallet-http`,
+  `cb-wallet-metadata`, `cb-wallet-solana-provider`, `cb-wallet-store`,
+  `base-account-core`, `base-app-data`, `scw-core`, `scw-mobile`,
+  `wallet-cds-web` and `wallet-engine-signing`. All 13 were probed against
+  `registry.npmjs.org` and every one came back a taken-down security-holding
+  stub (a single `0.0.1-security` placeholder, no maintainer), so no package
+  with a legitimate release history is blocked by name. Also added: `cline`
+  version-pinned at 2.3.0, a live package with 343 releases and real
+  maintainers, corroborated by three independent sources; a five-package
+  dependency-confusion placeholder set from the `pr0t31n` maintainer, pinned
+  to the exact `0.0.1` and `9999.0.0` lures rather than blocked by name; and
+  PyPI `minecraftmodes` pinned at 0.3.3.
+
 ## [6.0.14] - 2026-09-06
 
 ### Added
