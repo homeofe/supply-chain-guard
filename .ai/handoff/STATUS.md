@@ -1,3 +1,73 @@
+## Daily threat intelligence batch (2026-09-07)
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-07`.
+
+Imported 23 package IOCs. 18 came from the importer on an explicit
+`--since 2026-09-07` slice; 5 were added by hand for reasons set out below.
+
+The headline cluster is a dependency-confusion campaign against Coinbase internal
+wallet package names: 13 npm names, all published and taken down inside the same
+day. All 13 were probed against the registry and every one returned a single
+`0.0.1-security` placeholder with no maintainer and the description "security
+holding package", which is positive evidence both that the name was malicious and
+that a bare-name block cannot hit anything legitimate. npm removed all 13 inside a
+48-second window on 2026-09-07 at about 04:55 UTC, so this was one takedown batch.
+
+`cline@2.3.0` is the opposite case and is handled the opposite way. The registry
+shows 343 versions, five real maintainers and a first publish in 2013, so it is a
+live package with a legitimate history and is version-pinned, never name-blocked.
+MAL-2026-1380 is corroborated by amazon-inspector, ghsa-malware and
+google-open-source-security.
+
+The `pr0t31n` set (`omni-channel-order-frontend`, `omni-channel-oid-frontend`,
+`oce-configurator-wireless-frontend`, `ocfe-tv-subscription-center-web`) is live on
+npm and self-describes as an authorized dependency-confusion research placeholder.
+Upstream flagged all four as malicious, so they are ingested, but pinned to the
+exact `0.0.1` and `9999.0.0` lures rather than blocked by name, since the
+maintainer account is not itself the finding.
+
+### Why five entries were added by hand
+
+Upstream mapped only `@0.0.1` for `omni-channel-oid-frontend` and
+`ocfe-tv-subscription-center-web`, while mapping both `0.0.1` and `9999.0.0` for
+their two siblings from the same campaign and maintainer. The registry confirms
+both versions exist on both packages with the identical placeholder description, so
+the missing pins were added for consistency with the siblings. `pypi:minecraftmodes`
+at 0.3.3 (MAL-2026-15937) was published on 2026-09-06 and so falls outside the
+2026-09-07 slice; it carries the load-bearing `pypi:` prefix.
+
+### Open decision for the owner: the third bulk-migration wave
+
+A plain `npm run feed:import` proposes 8,570 candidates today. 8,547 of those were
+published on 2026-09-06 and are the THIRD wave of the GitHub Advisory Database bulk
+migration of the historical OpenSSF corpus, continuing the alphabet walk: 7,813
+names beginning with `d` and 734 with `e`, against roughly 1,155 distinct name
+tokens. Waves one (2026-09-02) and two (2026-09-04) are already in
+`threat-feed-deferred.json`. This wave is the same shape and the same open
+question about feed size and distribution model.
+
+It was NOT deferred in this batch, and that is the code working as designed.
+`MIN_DEFERRAL_AGE_DAYS` is 2 and today is 2026-09-07, so a range ending 2026-09-06
+is rejected: `loadDeferralList` refuses any window whose `until` is less than two
+days old, because that day's own genuine advisories may not be imported yet. That
+guard was correct here in a way worth recording: nine of the 2026-09-06 candidates
+were NOT migration entries at all but current intel, and a day-level deferral
+written today would have swallowed them. Seven of the nine are now in the feed (the
+five hand-added above plus two from the 09-07 slice); the remaining two, `Developer`
+and `Database-Jones`, are MAL-2025 records and belong to the historical corpus.
+
+So the 2026-09-06 day is now clear of genuine intel and the human precondition on a
+deferral is satisfied. From 2026-09-08 onward a deferral for
+`2026-09-06..2026-09-06` can be written and will be accepted. Re-measure
+`expectedCount` with a fresh `--dry-run` at that point rather than reusing 8,547,
+since the day's candidate count moves as duplicates land. Until it is written, the
+daily run will keep proposing the wave.
+
+No non-package indicators were added this run. The Coinbase campaign broke less
+than a day ago and no vendor write-up has published a C2 domain, IP or hash for it
+yet; those typically appear a day or two behind the headline, so it is worth a
+second look on the next run.
+
 ## v6.0.14 release preparation (2026-09-06)
 
 Model: claude-opus-5. Branch `release/v6.0.14`.

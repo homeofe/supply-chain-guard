@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-06T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-07T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21279,6 +21279,32 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "eth-lib-helpers", severity: "critical", confidence: 0.9, source: "GHSA-h3xf-4f7r-v9xf", firstSeen: "2026-09-05" },
   { type: "package", value: "pypi:proxycer@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-qff6-cqrr-65wv, MAL-2026-15935 (kam193)", firstSeen: "2026-09-05" },
   { type: "package", value: "pypi:dbt-sa-cli@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-xf8p-r8w2-fx5m, MAL-2026-15934 (kam193)", firstSeen: "2026-09-05" },
+
+  // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
+  { type: "package", value: "scw-mobile", severity: "critical", confidence: 0.9, source: "GHSA-h9g8-rwcg-hpmh", firstSeen: "2026-09-07" },
+  { type: "package", value: "base-account-core", severity: "critical", confidence: 0.9, source: "GHSA-vgm8-2vf8-769j", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-solana-provider", severity: "critical", confidence: 0.9, source: "GHSA-5cg4-38v4-j4vc", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-metadata", severity: "critical", confidence: 0.9, source: "GHSA-cxwc-958j-45g8", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-http", severity: "critical", confidence: 1.0, source: "GHSA-mv3f-92cr-83h7, MAL-2026-4507", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-store", severity: "critical", confidence: 0.9, source: "GHSA-gw4f-3mgw-h64x", firstSeen: "2026-09-07" },
+  { type: "package", value: "base-app-data", severity: "critical", confidence: 0.9, source: "GHSA-9hpg-rmwp-vg4p", firstSeen: "2026-09-07" },
+  { type: "package", value: "wallet-engine-signing", severity: "critical", confidence: 0.9, source: "GHSA-qw4m-ccr9-7r43", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-env", severity: "critical", confidence: 0.9, source: "GHSA-m477-pr6m-v2fp", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-analytics", severity: "critical", confidence: 0.9, source: "GHSA-7944-c265-3ff7", firstSeen: "2026-09-07" },
+  { type: "package", value: "cb-wallet-data", severity: "critical", confidence: 1.0, source: "GHSA-7w56-x3g2-57fg, MAL-2026-4506", firstSeen: "2026-09-07" },
+  { type: "package", value: "scw-core", severity: "critical", confidence: 0.9, source: "GHSA-fv48-xvcx-h3qh", firstSeen: "2026-09-07" },
+  { type: "package", value: "wallet-cds-web", severity: "critical", confidence: 0.9, source: "GHSA-qh9w-32r6-2qpw", firstSeen: "2026-09-07" },
+  { type: "package", value: "cline@2.3.0", severity: "critical", confidence: 1.0, source: "MAL-2026-1380 (amazon-inspector+ghsa-malware+google-open-source-security)", firstSeen: "2026-02-19" },
+  { type: "package", value: "omni-channel-order-frontend@0.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-15942 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "omni-channel-order-frontend@9999.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-15942 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "oce-configurator-wireless-frontend@0.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-15940 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "oce-configurator-wireless-frontend@9999.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-15940 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  // Dependency-confusion placeholder campaign, maintainer pr0t31n (September 2026) - siblings above
+  { type: "package", value: "omni-channel-oid-frontend@0.0.1", severity: "critical", confidence: 0.9, source: "GHSA-fc5v-8w4f-376c, MAL-2026-15939 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "omni-channel-oid-frontend@9999.0.0", severity: "critical", confidence: 0.9, source: "GHSA-fc5v-8w4f-376c, MAL-2026-15939 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "ocfe-tv-subscription-center-web@0.0.1", severity: "critical", confidence: 0.9, source: "GHSA-4qgp-r5m8-8876, MAL-2026-15941 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "ocfe-tv-subscription-center-web@9999.0.0", severity: "critical", confidence: 0.9, source: "GHSA-4qgp-r5m8-8876, MAL-2026-15941 (ossf-package-analysis)", firstSeen: "2026-09-06" },
+  { type: "package", value: "pypi:minecraftmodes@0.3.3", severity: "critical", confidence: 0.9, source: "GHSA-m6v9-5p34-2x37, MAL-2026-15937 (kam193)", firstSeen: "2026-09-06" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
