@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (155, newest first)
+## Releases (156, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.0.16 | 2026-09-08 | Threat-intelligence batch for 2026-09-08: 94 new package IOCs from the |
 | v6.0.15 | 2026-09-07 | Threat-intelligence batch for 2026-09-07: 23 new package IOCs. The largest |
 | v6.0.14 | 2026-09-06 | Threat-intelligence batch for 2026-09-06: 62 new package IOCs, taking the |
 | v6.0.13 | 2026-09-05 | Threat-intelligence batch for 2026-09-05: 26 new package IOCs, taking the |
