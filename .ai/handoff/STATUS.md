@@ -1,3 +1,42 @@
+## v6.0.16 release (2026-09-08)
+
+Model: claude-opus-5. Branch `release/v6.0.16`.
+
+Patch release carrying the one change merged today: the 2026-09-08 threat-intel batch
+(#282). PATCH is right, since the only consumer-visible change is new IOCs. SECURITY.md
+is untouched (its table moves only on a major or minor) and CONTRIBUTING.md is untouched
+(no module or file was added).
+
+Both version-bump traps were checked before replacing rather than assumed, and NEITHER
+was live this time:
+
+- `src/threat-intel.ts` held exactly ONE occurrence of 6.0.15 and it was `bundledVersion`.
+  Last release the same file also carried the string as an `@ornikar/babel-preset-base`
+  IOC value, where a file-wide replacement would have corrupted the indicator. That
+  campaign has published up to 6.0.14 so far, so the collision returns the moment it
+  reaches our release sequence again. Re-check every release; do not read this run's
+  clean result as the trap being gone.
+- All four README.md occurrences are version references (pre-commit `rev`, the ghcr
+  Docker tag and two `uses:` pins). None is a substring of a CIDR, so the file-wide
+  replacement was safe. Re-check next release.
+
+`6.0.16` was confirmed absent from the whole tracked tree before the bump, with the
+`6.0.15` search (45 hits across 24 files) as the control proving the query worked rather
+than trusting a bare zero.
+
+### Carried open items
+
+- **Three dependabot PRs are open and this release does NOT close them**, so the
+  zero-open-PR invariant is not met on the remote right now. #279 is a safe
+  `@types/node` patch. #280 and #281 are `vitest` and `@vitest/coverage-v8` 4.1.11 to
+  **5.0.0**, a major across 141 test files. Pulling a test-runner major into a
+  threat-intel patch release is not a bookkeeping step, so it was deliberately left for
+  its own change rather than folded in here. Note the standing trap: those PRs are red on
+  `check:handoff`, not on the dependency, so their red does not tell you anything about
+  whether vitest 5 works.
+- The three bulk-migration deferral waves (~28,200 entries) still await the owner
+  decision recorded in the 2026-09-08 batch note below.
+
 ## Threat-intel batch 2026-09-08
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-08`. No version bump: the version
