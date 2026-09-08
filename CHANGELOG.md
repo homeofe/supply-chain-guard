@@ -7,6 +7,47 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-08: 94 new package IOCs from the
+  advisory importer, plus 18 indicators added by hand. Of the 64 bare npm names
+  the importer proposed, 60 came back from `registry.npmjs.org` as taken-down
+  security-holding stubs or unpublished names. The other 4 (`orbitron-tui`,
+  `orbitron-cli`, `agent-free`, `prime-coding-agent`) are still live and
+  installable; all four are published by the npm account `imjustbetterxd` and
+  all four advisories declare `vulnerable_version_range "> 0"`, so the whole
+  package is malicious in each case and no legitimate release history is
+  blocked.
+- Fifth member of that same AI-coding-CLI impersonation campaign: `codebuff-cli`,
+  name-blocked. It has no GitHub advisory, only OpenSSF `MAL-2026-4533`, so the
+  rolling 14-day advisory window cannot reach it. The OpenSSF record enumerates
+  29 versions, but the name has 41 published versions and every one of them
+  comes from `imjustbetterxd`, so pinning the enumeration would leave 12
+  releases by the same author undetected. The package it impersonates is
+  `codebuff`, a different name with a different maintainer set.
+- Web3 dev-tooling typosquat campaign (CYFIRMA, June 11 2026), 17 indicators:
+  10 name-blocked npm packages, `moralis-sdk` version-pinned at 1.0.1, one C2
+  IP, one path-scoped dead-drop paste URL, and 3 SHA-256 payload digests. Nine
+  of the eleven packages were still live and installable on npm when this was
+  ingested. Only the 3 digests that two independent transcriptions of the vendor
+  table publish identically were taken; the surplus the primary page renders is
+  deliberately not ingested, because a mis-transcribed digest is still
+  well-formed hex. Also added: the 3 Ethereum mainnet dead-drop resolver
+  contracts the postinstall stage reads its C2 host from.
+
+### Changed
+
+- Third wave of the GitHub Advisory Database bulk migration of the historical
+  OpenSSF malicious-packages corpus, published 2026-09-06, added to
+  `threat-feed-deferred.json`: 8,550 candidates in one day, 99.98 percent
+  alphabetical (`d` 7,812, `e` 734), resuming exactly where the 2026-09-04 wave
+  stopped. Deferred on the same grounds as the 2026-09-02 and 2026-09-04 waves,
+  pending an owner decision on feed size and distribution model. A deferral makes
+  no coverage claim: the gap is recorded and the range is recoverable in full
+  with `npm run feed:import -- --since 2026-09-06 --until 2026-09-06`. The
+  range matched 8,547 candidates and the 3 that fell outside it were imported by
+  the same run, so no genuine same-day intel is suppressed.
+
 ## [6.0.15] - 2026-09-07
 
 ### Added

@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788759550",
-    "timestamp": "2026-09-07T05:39:10Z",
-    "commit": "9125efb",
+    "session_id": "cli-1788845388",
+    "timestamp": "2026-09-08T05:29:48Z",
+    "commit": "0dedc46",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:5d1aa31486d9ac3e90b0906ae427b308931f3dd60033bcaa03f33a8ed09b1a4e",
-      "updated": "2026-09-07T05:39:09Z",
-      "lines": 7078,
-      "summary": "Model: claude-opus-5. Branch `release/v6.0.15`."
+      "checksum": "sha256:20ffc88dbd4c48479e9969cda63dc9591b74ac2c7eda24b0f28aa606098126e0",
+      "updated": "2026-09-08T05:29:33Z",
+      "lines": 7129,
+      "summary": "Model: claude-opus-5. Branch `threat-intel/2026-09-08`. No version bump: the version"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:a6a8fa99bec13df17f1c2b15aa6348b241feae506daede9c35bc1e74ae9ce816",
-      "updated": "2026-09-07T05:38:08Z",
+      "updated": "2026-09-07T05:46:35Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:5f4c35a17851c383da55322d0cc611065a1afeb6e6b22ffa8887ab4a5a724280",
-      "updated": "2026-09-07T05:39:09Z",
+      "updated": "2026-09-08T05:29:48Z",
       "lines": 172,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:05c090667b9f031faad606cb3a6304b7018008b96394d4420b59ecfd7160e366",
-      "updated": "2026-09-07T05:39:09Z",
+      "updated": "2026-09-08T05:29:48Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:38a514d37a6a45f44cc57cccf86307a3782cfb0ebbb0564fb7fee2014e09fcc3",
-      "updated": "2026-09-07T05:39:09Z",
+      "updated": "2026-09-08T05:29:48Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Model: claude-opus-5. Branch `release/v6.0.15`. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Model: claude-opus-5. Branch `threat-intel/2026-09-08`. No version bump: the version Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 83320,
-    "full_read": 95592
+    "manifest_plus_core": 83968,
+    "full_read": 96240
   }
 }

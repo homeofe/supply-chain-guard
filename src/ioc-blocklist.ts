@@ -611,6 +611,12 @@ export const KNOWN_C2_IPS: string[] = [
   // than on shared CDN edge.
   "23.225.48.20",
   "23.225.52.67",
+
+  // Web3 dev-tooling typosquat campaign, npm accounts ethcompat / sazuki (CYFIRMA,
+  // June 11 2026). Second-stage payload host the postinstall scripts reach on :3001.
+  // The port is not part of the match, so the bare address is listed. This is a rented
+  // host carrying only the campaign's own staging endpoint, not shared CDN edge.
+  "193.233.201.21",
 ];
 
 // ---------------------------------------------------------------------------
@@ -773,6 +779,13 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // build. Path-scoped to the attacker's own host so the entry cannot hit an unrelated
   // asset on the same apex.
   "union.macoms.la/jquery.min-3.6.8.js",
+
+  // Web3 dev-tooling typosquat campaign, npm accounts ethcompat / sazuki (CYFIRMA,
+  // June 11 2026). Paste the postinstall stage fetches its next-stage payload from.
+  // Path-scoped to the attacker's own paste: pastefy[.]app is a legitimate public paste
+  // host and the bare apex is deliberately NOT listed, for the same reason as the
+  // raw[.]githubusercontent[.]com entry above.
+  "pastefy.app/RhPBKGli/raw",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1204,6 +1217,17 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "f2fdfddbc436acc24a654092f5205b2c5bd3208b126b2c2754ac63e7aea22298": "Packagist theme spyware chain, 921w48jmeqvt3ygn0wwx.js kernel escape stage (SHA256)",
   "9d6b58886189c0e23f706c32d3d8dda97b0b6d927ece6de07270813f070295b5": "Packagist theme spyware chain, 4ap5xpu18z70wwslqybu.js spyware payload (SHA256)",
   "de539a63cbe27bbd4a7db30fc796cd6dc5309c02ef5e60a3c5cf0835e5601283": "Packagist theme spyware chain, qljbd9a1h4a83gw8lxcj.js iOS 18.6 and later worker (SHA256)",
+
+  // Web3 dev-tooling typosquat campaign, npm accounts ethcompat / sazuki (CYFIRMA,
+  // June 11 2026). ONLY the three digests that two independent transcriptions of the
+  // vendor table publish identically are listed here. The primary write-up renders a
+  // longer table; that surplus is NOT ingested, because a mis-transcribed digest is
+  // still well-formed hex and cannot be told from a real one by shape alone. Each of
+  // the three below round-tripped character-for-character across both fetches and is a
+  // well-formed 64-character SHA256.
+  "d94a2444268b339dfda2615f7800322fb318e0a484414bb17016cfcd5eb07c44": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
+  "6585ca0d3e26c20ced638f46f4a89eea924d411b8753d3fcf434663593c7cf0b": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
+  "17bad5ae5b2ac262f5f18854853869840245c344105aa38c7f550ef51d2e5f26": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1459,6 +1483,21 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
     "NullReceiver DPRK npm wave: hardcoded attacker wallet whose outbound transfer carries the C2 address (August 2026)",
   "0xa658863ea658863e68656c6c6f6970626f742121":
     "NullReceiver DPRK npm wave: dead-drop recipient address encoding C2 IP 166.88.134.62 plus the ASCII tag helloipbot!! (August 2026)",
+
+  // Web3 dev-tooling typosquat campaign, npm accounts ethcompat / sazuki (CYFIRMA,
+  // June 11 2026). Ethereum mainnet contracts the postinstall stage queries to resolve
+  // its current C2 host, so the infrastructure rotates without republishing a package.
+  // The first address is not exclusive to this campaign: it is the same resolver
+  // Checkmarx Zero documented for an earlier npm smart-contract C2 wave and that the
+  // Tsundere botnet reuses, which is what corroborates an otherwise single-vendor
+  // write-up. The public Ethereum RPC endpoints the payload reads through are shared
+  // infrastructure and are deliberately NOT listed, as with the ChainDrop entry above.
+  "0xa1b40044EBc2794f207D45143Bd82a1B86156c6b":
+    "Web3 dev-tooling typosquat campaign: Ethereum mainnet dead-drop C2 resolver contract, shared with earlier npm smart-contract C2 waves (June 2026)",
+  "0x52221c293a21D8CA7AFD01Ac6bFAC7175D590A84":
+    "Web3 dev-tooling typosquat campaign: Ethereum mainnet dead-drop C2 resolver contract (June 2026)",
+  "0xCBbecC5E5Eb88582e6305cF6ab688f03e02Ce16f":
+    "Web3 dev-tooling typosquat campaign: Ethereum mainnet dead-drop C2 resolver contract (June 2026)",
 };
 
 /**
@@ -2423,6 +2462,16 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "react-leaflet-marker-layer": {
     versions: ["0.1.5"],
     description: "TeamPCP npm wave: trojanized release of a legitimate package published with stolen credentials (registry-corroborated, no advisory, March 2026)",
+  },
+
+  // Web3 dev-tooling typosquat campaign, npm accounts ethcompat / sazuki (CYFIRMA,
+  // June 11 2026). The only member of the campaign that is NOT name-blocked: the name is
+  // still live on npm with two published versions, and the write-up names 1.0.1 alone. So
+  // this is version-pinned to what the source actually published and 1.0.0 is not listed,
+  // rather than blocking a name that has a release the report does not call malicious.
+  "moralis-sdk": {
+    versions: ["1.0.1"],
+    description: "Web3 dev-tooling typosquat campaign: postinstall stage exfiltrates wallet keys and mnemonics; only 1.0.1 is reported malicious (Jun 2026)",
   },
 };
 

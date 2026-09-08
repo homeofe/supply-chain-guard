@@ -16,6 +16,14 @@
       "detectionGap": "These 9,937 npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02 wave. Letter d is only about 330 of roughly 9,600 done, so this wave is also an incomplete slice of the upstream corpus.",
       "expectedCount": 9937,
       "deferredOn": "2026-09-06"
+    },
+    {
+      "since": "2026-09-06",
+      "until": "2026-09-06",
+      "reason": "Third wave of the same GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 8,550 candidates in one day, 99.98 percent alphabetical (d 7,812, e 734), against a normal daily volume of 26 to 450. It resumes exactly where the 2026-09-04 wave stopped, which had completed only about 330 of roughly 9,600 d names, and it carries the walk on into e. Deferred on the same grounds as the two earlier waves and pending the same owner decision on feed size and distribution model.",
+      "detectionGap": "These npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02 and 2026-09-04 waves: the block spans hundreds of unrelated name tokens and no anchored rule in src/patterns.ts covers them. Letter e is only about 734 names in, so this wave is again an incomplete slice of the upstream corpus. The human precondition is satisfied: the range matched 8,547 of the 8,550 reviewed candidates, and the 3 that fell outside it were imported by this same run, because the both-axis guard keeps an entry whose _queueDate sits outside the window. Those three are the day's genuine non-corpus advisories (vishal_312pkg@1.0.0, agentrc-security-poc-policy@1.0.0 and pypi:dac-tools@999.0.0), so no live intel from 2026-09-06 is suppressed by this range.",
+      "expectedCount": 8550,
+      "deferredOn": "2026-09-08"
     }
   ]
 }

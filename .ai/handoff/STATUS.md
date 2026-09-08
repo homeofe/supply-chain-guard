@@ -1,3 +1,54 @@
+## Threat-intel batch 2026-09-08
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-08`. No version bump: the version
+belongs to the release, and the owner cuts that.
+
+Importer added 94 package IOCs. The run needed a decision before it could import
+anything sane, because the raw candidate set was 8,641 and 8,550 of those were one
+day: 2026-09-06, the THIRD wave of the GitHub Advisory Database bulk migration of the
+historical OpenSSF corpus. It is 99.98 percent alphabetical (`d` 7,812, `e` 734) and
+resumes exactly where the 2026-09-04 wave stopped. Deferred, not declined, on the same
+grounds as waves one and two: no anchored rule covers the block, so every honest
+`coveredBy` string would be a lie.
+
+Two things about that deferral are worth carrying forward:
+
+- The whole-day range does NOT swallow the day's genuine advisories, and the reason is
+  the both-axis guard rather than luck. Three candidates from 2026-09-06 fell outside
+  the range because their `_queueDate` sits outside the window, and this same run
+  imported all three (`vishal_312pkg@1.0.0`, `agentrc-security-poc-policy@1.0.0`,
+  `pypi:dac-tools@999.0.0`). I had assumed I would have to hand-add them to satisfy the
+  human precondition and had already written that claim into the deferral text; the
+  measurement disproved it and the text was corrected. Check this by measurement on
+  wave four rather than assuming either way.
+- `expectedCount` is 8,550, the count observed at review time. The range matches 8,547
+  now that the three escapees are feed duplicates. That is a shrink, which the tripwire
+  allows by design.
+
+Wave four should be expected around 2026-09-08 and will be deferrable from 2026-09-10
+under the two-day floor. Measure `expectedCount` fresh; do not copy 8,550.
+
+### Needs an owner decision
+
+- **The bulk corpus is now three waves and roughly 28,200 deferred entries.** That is a
+  recorded, live detection gap, and sampling of the earlier waves indicated a third to
+  a half of those names are still installable on npm. The deferral was always framed as
+  pending a distribution-model decision (Tier 3 in
+  `docs/threat-feed-bulk-backfill-strategy.md`: lean bundled feed plus an external
+  compressed catalog). Three waves in, the question is no longer hypothetical, and
+  deferring a fourth without deciding is how a postponement quietly becomes a policy.
+- **`replit-agent` is published by `imjustbetterxd` and is NOT blocked.** That account
+  is the confirmed author of the AI-coding-CLI impersonation campaign: five of its six
+  npm packages are now blocked here (four from GHSA `> 0` advisories, plus
+  `codebuff-cli` from OpenSSF). `replit-agent` has no advisory in GHSA and none in OSV,
+  so nothing published it as malicious and it was deliberately left out rather than
+  blocked on inference. It impersonates Replit Agent by name and description. Worth a
+  decision on whether the account itself is sufficient grounds, or whether to report it
+  upstream and wait for a record.
+- **CYFIRMA's IOC table and its mirror disagree on how many hashes it holds** (11 vs 3).
+  Only the 3 that both render identically were ingested. If a second vendor ever
+  publishes this campaign's full digest set, the remaining 8 are worth recovering.
+
 ## v6.0.15 release preparation (2026-09-07)
 
 Model: claude-opus-5. Branch `release/v6.0.15`.
