@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788851865",
-    "timestamp": "2026-09-08T07:17:46Z",
-    "commit": "e042a6f",
+    "session_id": "cli-1788944583",
+    "timestamp": "2026-09-09T09:03:04Z",
+    "commit": "0f8b9a4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
       "checksum": "sha256:c1ed9f7c4696c755a53e9739a9de1119e282e3cf15519dc864f27db901e510b9",
-      "updated": "2026-09-08T07:15:37Z",
+      "updated": "2026-09-09T09:00:07Z",
       "lines": 7168,
       "summary": "Model: claude-opus-5. Branch `release/v6.0.16`."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:00c4e4d51b61f61e56785c1323e487f1a8fc3a5fca0c77b1ae89191d343c3749",
-      "updated": "2026-09-08T07:17:39Z",
+      "updated": "2026-09-08T07:24:07Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:3cb25673c04dda07f4a1c6ae3ecfac4792a4075ebc8c2c35d34eda1d4c86aaf6",
-      "updated": "2026-09-08T07:17:45Z",
+      "updated": "2026-09-09T09:03:03Z",
       "lines": 173,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:f722705b879b2804bef74d2bab1629dae748d343cda132e890610d7372818d78",
-      "updated": "2026-09-08T07:17:45Z",
+      "checksum": "sha256:031d0ecdf2a845c2d5a04da965d90ec47ca968a189df294b5e83c0047348643c",
+      "updated": "2026-09-09T09:03:03Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:9505212a3d8e90b494d857e297319d7b012c5c67bb064b3b39336528f042c71e",
-      "updated": "2026-09-08T07:17:45Z",
+      "updated": "2026-09-09T09:03:03Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
