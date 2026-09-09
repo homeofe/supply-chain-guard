@@ -1,3 +1,49 @@
+## v6.0.17 release (2026-09-09)
+
+Model: claude-opus-5. Branch `release/v6.0.17`.
+
+Patch release carrying the two changes merged today: the 2026-09-09 threat-intel
+batch (#284) and the vitest 5.0.0 dev-dependency bump (#285). PATCH is right: the
+only consumer-visible change is new IOCs, and a devDependency bump ships nothing to
+consumers at all. SECURITY.md is untouched (its table moves only on a major or
+minor) and CONTRIBUTING.md is untouched (no module or file was added).
+
+Both version-bump traps were checked before replacing rather than assumed, and
+NEITHER was live this time:
+
+- `src/threat-intel.ts` held exactly ONE occurrence of 6.0.16 and it was
+  `bundledVersion`. The `@ornikar/babel-preset-base` IOC collision that made a
+  file-wide replacement dangerous two releases ago has still not caught up to our
+  sequence, but that campaign was at 6.0.14, so the collision returns the moment it
+  does. Re-check every release; do not read this run's clean result as the trap
+  being gone.
+- All four README.md occurrences are version references (pre-commit `rev`, the ghcr
+  Docker tag and two `uses:` pins). None is a substring of a CIDR, so the file-wide
+  replacement was safe. Re-check next release.
+
+`6.0.17` was confirmed absent from the whole tracked tree before the bump, with the
+`6.0.16` search (24 files) as the control proving the query worked rather than
+trusting a bare zero.
+
+### Carried open items
+
+- **The deferred bulk-migration backlog is unchanged at 28,241 entries** across
+  2026-09-02, 2026-09-04 and 2026-09-06. Still the GitHub Advisory Database walking
+  the historical OpenSSF corpus alphabetically, now into `e`. It remains a recorded,
+  deliberate gap and a distribution-model decision (bundled feed size versus fetched
+  feed), not something a daily import should settle. Each range is recoverable in
+  full from `threat-feed-deferred.json`.
+- **All three dependabot PRs are closed and the zero-open-PR invariant now holds.**
+  #280 and #281 could never have gone green individually: `@vitest/coverage-v8`
+  peers on the EXACT `vitest` version, so each one alone failed `npm ci` with
+  ERESOLVE before any test ran. They landed together in #285.
+- **`npm run build` does not cover the AAHP content-drift gate.** Layer 2 of
+  `aahp verify --level ci` requires a STATUS.md entry whenever handoff-impacting
+  files change, and it runs only in CI. The local `check:handoff` gate answers a
+  different question (DASHBOARD/MANIFEST freshness). Any branch that regenerates the
+  handoff docs without adding a STATUS note will go red on `aahp-verify` only after
+  a push.
+
 ## Dev-dependency bump: vitest 5.0.0 (2026-09-09)
 
 Model: claude-opus-5. Branch `chore/dev-deps-vitest-5`. No version bump.
