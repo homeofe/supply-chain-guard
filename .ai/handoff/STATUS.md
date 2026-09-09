@@ -1,3 +1,42 @@
+## Dev-dependency bump: vitest 5.0.0 (2026-09-09)
+
+Model: claude-opus-5. Branch `chore/dev-deps-vitest-5`. No version bump.
+
+Folds the three open dependabot PRs into one change, because two of them could
+not land any other way. `@vitest/coverage-v8` peers on the EXACT `vitest`
+version, so bumping either alone breaks the peer constraint and `npm ci` dies on
+ERESOLVE before a single test runs. That is why #280 and #281 were red on every
+job in 9 to 21 seconds, including jobs that never reached a test step: the red
+said nothing about vitest 5 itself. #279 (`@types/node`) was red for the
+unrelated standing reason, `check:handoff`.
+
+- `vitest` 4.1.11 to 5.0.0
+- `@vitest/coverage-v8` 4.1.11 to 5.0.0
+- `@types/node` 26.4.0 to 26.4.1
+
+One real breakage, found by CI on the first push and fixed here:
+`bundle-false-positive-regressions.test.ts` pins the REAL `import.meta.env`
+Proxy out of the installed vitest as a false-positive fixture, locating the
+chunk by content because the filename carries a content hash. Vitest 5 changed
+the wrapped value from a local `env` binding to `process.env` directly, so the
+locator matched nothing and the test threw. The throw is correct design - it
+fails closed instead of asserting against an empty fixture - so the fix taught
+the locator both spellings rather than relaxing the guard.
+
+That fix was proved by cutting the vitest 5 spelling back out: the test goes red
+on the fail-closed throw while the other 27 cases in the file stay green. A
+locator change that could not be made to fail would not have proved the fixture
+is actually being found.
+
+### Note for the next dependency bump
+
+`npm run build` does NOT catch this. The AAHP content-drift gate (Layer 2 of
+`aahp verify --level ci`) requires a STATUS.md entry whenever handoff-impacting
+files change, and it runs only in CI. The local `check:handoff` gate checks
+DASHBOARD/MANIFEST freshness, which is a different question. Expect a red
+`aahp-verify` on any bump branch that regenerates the handoff docs but adds no
+STATUS note.
+
 ## v6.0.16 release (2026-09-08)
 
 Model: claude-opus-5. Branch `release/v6.0.16`.

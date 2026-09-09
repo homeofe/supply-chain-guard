@@ -35,12 +35,22 @@ function installedArtifact(...segments: string[]): string {
   return fs.readFileSync(path.join(process.cwd(), "node_modules", ...segments), "utf8");
 }
 
+// The fixture is the REAL env Proxy out of the installed Vitest, located by
+// content rather than by filename, because the chunk carries a content hash that
+// changes on every upstream build. The wrapped value moved between majors: Vitest
+// 4 proxied a local `env` binding, Vitest 5 proxies `process.env` directly. Both
+// spellings are accepted so the guard survives the bump, and the throw below is
+// kept deliberately: if no chunk matches, the test must fail closed rather than
+// silently assert nothing against an empty fixture.
+const VITEST_ENV_PROXY_OPENERS = ["new Proxy(env, {", "new Proxy(process.env, {"];
+
 function vitestEnvProxyChunk(): { content: string; relativePath: string } {
   const directory = path.join(process.cwd(), "node_modules", "vitest", "dist", "chunks");
   for (const name of fs.readdirSync(directory)) {
     if (!name.endsWith(".js")) continue;
     const content = fs.readFileSync(path.join(directory, name), "utf8");
-    if (content.includes("new Proxy(env, {") && content.includes("process.env[key]")) {
+    const opensProxy = VITEST_ENV_PROXY_OPENERS.some((opener) => content.includes(opener));
+    if (opensProxy && content.includes("process.env[key]")) {
       return { content, relativePath: `vitest/dist/chunks/${name}` };
     }
   }
@@ -48,7 +58,7 @@ function vitestEnvProxyChunk(): { content: string; relativePath: string } {
 }
 
 describe("stock bundled-package false-positive regressions", () => {
-  it("does not flag either Vitest 4.1.10 import.meta.env Proxy", () => {
+  it("does not flag either Vitest import.meta.env Proxy", () => {
     const moduleEvaluator = installedArtifact(
       "vitest",
       "dist",

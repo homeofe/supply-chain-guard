@@ -7,6 +7,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- **Test tooling bumped to vitest 5.0.0** (`vitest` and `@vitest/coverage-v8`)
+  and `@types/node` to 26.4.1, folded into one change rather than merged as
+  three separate dependency PRs. The two vitest packages are peer-locked
+  (`@vitest/coverage-v8` peers on the exact `vitest` version), so the split
+  dependency PRs could never go green individually: each one failed `npm ci`
+  with `ERESOLVE` before a single test ran. Bumping them together is the only
+  order that resolves.
+
 ## [6.0.16] - 2026-09-08
 
 ### Added
