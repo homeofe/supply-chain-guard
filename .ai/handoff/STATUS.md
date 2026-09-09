@@ -36,6 +36,61 @@ files change, and it runs only in CI. The local `check:handoff` gate checks
 DASHBOARD/MANIFEST freshness, which is a different question. Expect a red
 `aahp-verify` on any bump branch that regenerates the handoff docs but adds no
 STATUS note.
+## Threat-intel batch 2026-09-09
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-09`. No version bump: the version
+belongs to the release, which the owner cuts.
+
+Importer: 66 new package IOCs, 0 remaining behind `--limit`, no page cap, no
+undrainable backlog, 0 declines. Skipped 103 `unmappable-version-range` and 6
+`withdrawn`. OSV was reachable (`osvAvailable: true`) but corroborated 0 of the 66,
+which is the normal shape when GitHub and OpenSSF are the two discovery sources and
+OSV has not yet mirrored the day's MAL records: 54 of the 66 were found by BOTH
+GitHub and OpenSSF, so the cross-source evidence is there under a different key.
+
+All 6 bare npm names the importer proposed were probed against `registry.npmjs.org`
+before acceptance, and all 6 are security-holding stubs (single `0.0.1-security`
+version, `npm-support` or no maintainer). `i18nexus` and `i18nexus-tools` are worth
+naming: those read like a real i18n product, but the registry records for BOTH names
+were created on 2026-09-08 and were taken down the same day, so there is no
+legitimate history at either exact name to hit.
+
+Hand-added, 6 indicators, all one campaign: the skyzopedia leg of the Baileys
+WhatsApp fork channel-farming family. Single-source (Xygeni), hence confidence 0.85
+on every feed entry. The dev.to copy is a syndication of the same article and was NOT
+counted as a second source. The sibling LevviCodeID leg (safedep) was already fully
+ingested by an earlier run - `LevviCodeID`, `levvicode[.]cloud`, `fiora[.]nixel[.]my[.]id`
+and the `levvleys.json` dead drop are all already present - so only the new leg was
+added.
+
+Discipline calls worth recording:
+
+- `cloud-baileys` is version-pinned at 1.1.37 and 1.1.38, NOT name-blocked. The
+  registry probe shows a live package, maintainer `kazehya_dev1`, 17 published
+  versions. 1.1.39 exists but no source calls it malicious, so it is not listed - the
+  negative test asserts 1.1.36 stays clean.
+- `@dappaoffc/baileys-mod` and `@skyzopedia/libsignal-node` ARE name-blocked, because
+  npm has taken both down as security-holding packages, so blocking every version
+  cannot reach a legitimate release.
+- The `raw[.]githubusercontent[.]com` apex stays unlisted; only the attacker's own
+  repository path is an indicator. The existing negative test covering the upstream
+  WhiskeySockets path still guards that.
+
+### Open for the owner
+
+- **The deferred bulk-migration backlog grew to a third wave.** The importer now defers
+  28,241 candidates across 2026-09-02 (9,758), 2026-09-04 (9,936) and 2026-09-06
+  (8,547) - the GitHub Advisory Database migrating the historical OpenSSF
+  malicious-packages corpus, walking the alphabet and now only into `e`. These are a
+  recorded, deliberate gap: nothing else in the scanner detects those npm names, and
+  sampling says a third to a half are still installable. The alphabet walk implies a
+  corpus on the order of 100,000 entries, so this stays a distribution-model decision
+  (bundled feed size versus fetched feed) rather than something a daily import should
+  settle. Each range is recoverable in full with the `--since`/`--until` command
+  recorded in `threat-feed-deferred.json`.
+- **Three dependabot PRs are still open** (#279 `@types/node` patch, #280/#281 vitest
+  and `@vitest/coverage-v8` to 5.0.0), carried from the v6.0.16 note below. This
+  branch does not touch them.
 
 ## v6.0.16 release (2026-09-08)
 
