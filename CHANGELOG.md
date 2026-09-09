@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+
+### Added
+
+- Threat-intelligence batch for 2026-09-09: 66 new package IOCs from the
+  advisory importer, plus 6 indicators added by hand. All 6 bare npm names the
+  importer proposed (`i18nexus`, `i18nexus-tools` and the scoped Baileys
+  impersonations `@versacode/baileys`, `@vallensofficial/baileys`,
+  `@haimiya/baileys`, `@web2apk/baileys`) came back from `registry.npmjs.org` as
+  taken-down security-holding stubs with no maintainer and no version history,
+  so no legitimate release is blocked by any of them.
+- Baileys WhatsApp fork channel-farming campaign, skyzopedia leg (Xygeni,
+  September 2026), 6 indicators: the path-scoped `idChannel.json` dead-drop URL
+  the fork fetches 80 seconds after module load, the `skyzopedia` control-repository
+  account, and the taken-down scoped names `@dappaoffc/baileys-mod` and
+  `@skyzopedia/libsignal-node`. `cloud-baileys` is version-pinned at 1.1.37 and
+  1.1.38 rather than name-blocked: the registry probe shows a live package with a
+  real maintainer and 17 published versions, and 1.1.39 is deliberately not listed
+  because no source calls it malicious. Single-source, so every feed entry carries
+  confidence 0.85. The `raw[.]githubusercontent[.]com` apex stays unlisted and the
+  upstream Baileys and libsignal-node maintainers are treated as victims.
+
+
 ### Changed
 
 - **Test tooling bumped to vitest 5.0.0** (`vitest` and `@vitest/coverage-v8`)

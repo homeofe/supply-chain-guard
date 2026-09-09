@@ -786,6 +786,14 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // host and the bare apex is deliberately NOT listed, for the same reason as the
   // raw[.]githubusercontent[.]com entry above.
   "pastefy.app/RhPBKGli/raw",
+
+  // Baileys WhatsApp fork channel-farming campaign, skyzopedia leg (Xygeni, September
+  // 2026). The remote follow-list @dappaoffc/baileys-mod fetches 80 seconds after module
+  // load, so the target channels update without a new package version. Path-scoped to the
+  // attacker's own repository for the same reason as the LevviCodeID entry above:
+  // raw[.]githubusercontent[.]com is a legitimate shared host and its apex is deliberately
+  // NOT listed. Single-source, so the matching feed entry carries confidence 0.85.
+  "raw.githubusercontent.com/skyzopedia/Screaper/refs/heads/main/idChannel.json",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1394,6 +1402,15 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // StepSecurity researchers and their demo org, not the actor. They are deliberately
   // NOT listed: they appear in the write-up because they reported the attack.
   "p00paboot",
+
+  // Baileys WhatsApp fork channel-farming campaign, skyzopedia leg (Xygeni, September
+  // 2026). Both an npm scope and the GitHub account hosting the Screaper control
+  // repository; tracked here for source-reference matching. Attacker-created, not a
+  // compromised maintainer: npm has taken down both @skyzopedia/libsignal-node and
+  // @dappaoffc/baileys-mod as security holding packages, and the upstream Baileys and
+  // libsignal-node maintainers are VICTIMS of the impersonation and stay unlisted.
+  // Single-source, so the matching feed entries carry confidence 0.85.
+  "skyzopedia",
 ];
 
 // ---------------------------------------------------------------------------
@@ -2472,6 +2489,17 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
   "moralis-sdk": {
     versions: ["1.0.1"],
     description: "Web3 dev-tooling typosquat campaign: postinstall stage exfiltrates wallet keys and mnemonics; only 1.0.1 is reported malicious (Jun 2026)",
+  },
+
+  // Baileys WhatsApp fork channel-farming campaign (Xygeni digest 86, September 2026).
+  // Version-pinned and deliberately NOT name-blocked: the registry probe shows a live
+  // package with a real maintainer and 17 published versions, so this is a modded fork
+  // that shipped malicious releases rather than an attacker-created name. Only the two
+  // versions the write-up names are listed; 1.1.39 exists on the registry but no source
+  // calls it malicious, so it is not invented here.
+  "cloud-baileys": {
+    versions: ["1.1.37", "1.1.38"],
+    description: "Baileys fork channel-farming campaign: runtime injection subscribes the authenticated WhatsApp session to attacker-controlled newsletter channels; single-source (Sep 2026)",
   },
 };
 

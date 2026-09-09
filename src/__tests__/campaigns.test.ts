@@ -5659,6 +5659,93 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Baileys WhatsApp Channel Farming - skyzopedia leg (Xygeni, September 2026)
+  // =================================================================
+
+  describe("Baileys channel farming, skyzopedia leg (September 2026)", () => {
+    it("detects the idChannel.json remote follow-list dead drop", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "newsletter.js"),
+        'const ids = await fetch("https://raw.githubusercontent.com/skyzopedia/Screaper/refs/heads/main/idChannel.json");'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("detects the skyzopedia control repository account", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "ref.js"),
+        'const repo = "https://github.com/skyzopedia/Screaper";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag cloud-baileys@1.1.38 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "cloud-baileys": "1.1.38" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // cloud-baileys is LIVE on npm with a real maintainer and 17 published versions,
+    // so the name itself must never be blocked - only the two releases the write-up
+    // names. A release the source does not call malicious has to stay clean.
+    it("must NOT flag a cloud-baileys release the write-up does not name", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "cloud-baileys": "1.1.36" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION"),
+        "only 1.1.37 and 1.1.38 are reported malicious; the name must not be blocked",
+      ).toBeUndefined();
+    });
+
+    // Bare feed values are the npm namespace and resolve through matchBareNpmIOC(),
+    // not matchPackageIOC(). Both scoped names are npm security holding packages with
+    // no legitimate history, so blocking every version cannot hit a real release.
+    it("blocks the taken-down scoped names at every version", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("@dappaoffc/baileys-mod", "8.0.1", feed),
+        "the reported malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("@skyzopedia/libsignal-node", "1.0.0", feed),
+        "a bare-name entry blocks every version of a taken-down name",
+      ).not.toBeNull();
+    });
+  });
+
+  // =================================================================
   // Shai-Hulud "Trinitite" - @7nohe/openapi-react-query-codegen (August 28, 2026)
   // =================================================================
 

@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1788945029",
-    "timestamp": "2026-09-09T09:10:29Z",
-    "commit": "3ce7b58",
+    "session_id": "cli-1788945530",
+    "timestamp": "2026-09-09T09:18:50Z",
+    "commit": "685992e",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:5a5d91afcd4bb53b0a4beca35acbefffca9d4de0bdd954c1f3c2c82154aee60a",
-      "updated": "2026-09-09T09:10:28Z",
-      "lines": 7207,
+      "checksum": "sha256:e89de040622f584ad3aad4639e20e44f1ee4ba7d29d9b82c91904b488542b341",
+      "updated": "2026-09-09T09:18:18Z",
+      "lines": 7262,
       "summary": "Model: claude-opus-5. Branch `chore/dev-deps-vitest-5`. No version bump."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:3cb25673c04dda07f4a1c6ae3ecfac4792a4075ebc8c2c35d34eda1d4c86aaf6",
-      "updated": "2026-09-09T09:10:29Z",
+      "updated": "2026-09-09T09:18:50Z",
       "lines": 173,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:031d0ecdf2a845c2d5a04da965d90ec47ca968a189df294b5e83c0047348643c",
-      "updated": "2026-09-09T09:10:29Z",
+      "updated": "2026-09-09T09:18:50Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:9505212a3d8e90b494d857e297319d7b012c5c67bb064b3b39336528f042c71e",
-      "updated": "2026-09-09T09:10:29Z",
+      "updated": "2026-09-09T09:18:50Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Model: claude-opus-5. Branch `chore/dev-deps-vitest-5`. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 84829,
-    "full_read": 97122
+    "manifest_plus_core": 85468,
+    "full_read": 97761
   }
 }
