@@ -5941,4 +5941,68 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // lotusbail - Baileys fork credential theft (December 2025 backfill)
+  // =================================================================
+
+  describe("lotusbail Baileys fork credential theft (December 2025)", () => {
+    it("flags lotusbail as a malicious dependency", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { lotusbail: "7.0.11" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The advisory affects ALL versions and npm has replaced the name with a
+    // security holding package, so no legitimate release exists to protect.
+    // Bare feed values are the npm namespace and resolve through
+    // matchBareNpmIOC(), not matchPackageIOC().
+    it("blocks lotusbail at every version, including the earliest", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("lotusbail", "6.7.18-Alpha", feed),
+        "the earliest published version must match a bare-name entry",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("lotusbail", "7.0.11", feed),
+        "the last published version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("lotusbail", undefined, feed),
+        "a bare-name entry must match with no version given",
+      ).not.toBeNull();
+    });
+
+    // The upstream WhiskeySockets maintainers are VICTIMS of the impersonation.
+    // Blocking the library lotusbail forked would be a false positive on the
+    // single most widely used WhatsApp Web package, so this pins that decision.
+    it("must NOT flag the upstream library lotusbail forked", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@whiskeysockets/baileys": "6.7.18" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY"),
+        "the impersonated upstream library must never be flagged",
+      ).toBeUndefined();
+    });
+  });
+
 });
