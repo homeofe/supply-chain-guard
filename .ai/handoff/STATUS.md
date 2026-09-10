@@ -1,3 +1,60 @@
+## Threat-intel batch 2026-09-10
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-10`. Scheduled daily run. No
+version bump: the version belongs to the release, which the owner cuts.
+
+48 package IOCs from the advisory importer plus 1 added by hand (`lotusbail`).
+No cap was hit: 48 is far under `--limit 250`, there was no page-cap error and no
+undrainable-backlog error, so the window did not need slicing. 109 candidates were
+skipped upstream (103 unmappable version ranges, 6 withdrawn). Nothing was
+declined this run and no decline entry was added.
+
+All 18 bare npm names the importer proposed were probed against
+`registry.npmjs.org` before being accepted, because a bare name blocks every
+version. 18 of 18 came back as security-holding stubs with `0.0.1-security` as the
+only installable version, so 0 of 18 can hit a live release. Twelve carried earlier
+versions that npm has unpublished, which is worth recording because a prior version
+history is normally the signal for version-pinning instead of name-blocking: here
+the versions are gone, so the name-level block is still correct. Four of them
+(`sams-text-style`, `sams-run-style`, `react-remove-properties`,
+`graphql-js-client-transform`) were first published within a nine-minute window on
+2026-03-22, which reads as bulk publication by one actor rather than legitimate
+history. `react-remove-properties` and `graphql-js-client-transform` were the two
+that looked most like real packages by name alone, and the probe is what settled
+them; name shape predicted nothing, as usual.
+
+`lotusbail` is the one hand-added indicator and it is a BACKFILL, not fresh intel.
+It surfaced during the STEP 1b vendor sweep: an attacker-authored Baileys fork with
+roughly 56,000 downloads over about seven months, taken down by npm on 2025-12-23.
+GHSA-qmh8-v4jq-m242 / MAL-2025-192748 list every version as affected. The importer
+can never reach it because the advisory published outside the 14-day window, and a
+repository-wide search confirmed nothing else in the scanner covered it. No C2
+domain, IP or hash is addable: every vendor report says the C2 destination sits
+behind Unicode variable mangling, LZString, Base-91 and AES, and none published the
+decoded value, so inventing one was not an option.
+
+STEP 1b otherwise yielded nothing addable. Xygeni digest 87 does not exist yet
+(404), digest 86 is already covered from the 2026-09-09 batch, and the
+`@auction-fe`, `@convertics`, Solana-SDK and Discord-MFA clusters are
+advisory-only with no vendor write-up publishing atomic indicators. That is normal
+for targeted dependency-confusion activity and is not a gap in the sweep.
+
+### Needs an owner decision
+
+- **The deferred bulk-migration backlog is unchanged at 28,241 entries** across
+  2026-09-02, 2026-09-04 and 2026-09-06, and no fourth wave appeared today. This
+  is the same distribution-model question as before (bundled feed size versus a
+  fetched feed) and a daily import still should not settle it. Each range stays
+  recoverable in full from `threat-feed-deferred.json`.
+- **Should out-of-window backfill become part of this job?** `lotusbail` was found
+  by accident, not by a systematic search: the daily run only ever looks at the
+  last 14 days, so any campaign whose advisory published earlier and which no
+  pattern covers is invisible to it forever. One 56,000-download package was
+  sitting in that blind spot. A one-off sweep of high-download malicious npm
+  advisories older than the window would size the gap, but it is a scoped piece of
+  work rather than something to bolt onto the daily task, so it needs a decision
+  before anyone starts it.
+
 ## v6.0.17 release (2026-09-09)
 
 Model: claude-opus-5. Branch `release/v6.0.17`.

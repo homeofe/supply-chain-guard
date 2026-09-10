@@ -7,6 +7,36 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-10: 48 new package IOCs from the
+  advisory importer, plus 1 added by hand. All 18 bare npm names the importer
+  proposed came back from `registry.npmjs.org` as taken-down security-holding
+  stubs, 18 of 18, with `0.0.1-security` as the only installable version, so no
+  legitimate release is blocked by any of them. Twelve of the 18 did carry
+  earlier versions, all of them unpublished by npm; four of those
+  (`sams-text-style`, `sams-run-style`, `react-remove-properties`,
+  `graphql-js-client-transform`) were first published inside a nine-minute
+  window on 2026-03-22, which is bulk publication by one actor rather than
+  legitimate history. The batch covers the continuing Baileys WhatsApp fork
+  wave, a four-package `@auction-fe` dependency-confusion cluster, a Solana and
+  memecoin trading-SDK cluster, a Discord MFA-solver cluster, and the
+  `pypi:mlflow-ui` MLflow typosquat.
+- `lotusbail` (npm), added by hand and blocked at every version. An
+  attacker-authored fork of the Baileys WhatsApp Web library that kept real
+  send and receive behaviour working while exfiltrating auth tokens, session
+  keys, message history, contacts and media, and hijacked device linking with a
+  hard-coded pairing code so access survived uninstall. Roughly 56,000
+  downloads over about seven months. GHSA-qmh8-v4jq-m242 and MAL-2025-192748
+  both list every version as affected and npm has replaced the name with a
+  security holding package, so the bare name cannot hit a real release. The
+  advisory published 2025-12-23, outside the importer's 14-day window, and
+  nothing else in the scanner covered it. No C2 domain, IP or hash is addable:
+  every vendor report states the C2 destination is hidden behind four
+  obfuscation layers and none published the decoded value. The upstream
+  WhiskeySockets maintainers are victims of the impersonation and stay
+  unblocked, which a negative test now pins.
+
 ## [6.0.17] - 2026-09-09
 
 ### Added
