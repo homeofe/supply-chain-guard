@@ -55,7 +55,7 @@ import type {
   VexStatement,
 } from "./types.js";
 
-const TOOL_VERSION = "6.0.17";
+const TOOL_VERSION = "6.0.18";
 
 /** bom-ref of the component the document is about. */
 const SUBJECT_BOM_REF = "target";
