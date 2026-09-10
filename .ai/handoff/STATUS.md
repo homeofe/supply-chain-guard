@@ -1,3 +1,59 @@
+## v6.0.18 release (2026-09-10)
+
+Model: claude-opus-5. Branch `release/v6.0.18`.
+
+Patch release carrying the one change merged today: the 2026-09-10 threat-intel
+batch (#287), 48 importer IOCs plus the hand-added `lotusbail` backfill. PATCH is
+right, since the only consumer-visible change is new IOCs. SECURITY.md is untouched
+(its table moves only on a major or minor) and CONTRIBUTING.md is untouched (no
+module or file was added).
+
+The batch was reviewed rather than merged on its green CI alone. The two calls that
+could have blocked something legitimate were re-probed independently against the
+registries before the merge, not taken from the pull request body:
+
+- `lotusbail` is name-blocked at every version. `registry.npmjs.org` returns a
+  security holding package with NO maintainer and `0.0.1-security` as the only
+  version, so no legitimate release exists to hit. The victim-negative test pinning
+  `@whiskeysockets/baileys` is present.
+- `pypi:mlflow-ui` is version-pinned at 2.7.1 through 2.7.3. PyPI now returns ZERO
+  releases for that name, so the pin is conservative and cannot over-block.
+
+Both version-bump traps were checked before replacing rather than assumed, and
+NEITHER was live this time:
+
+- `src/threat-intel.ts` held exactly ONE occurrence of 6.0.17 and it was
+  `bundledVersion`.
+- All four README.md occurrences are version references (pre-commit `rev`, the ghcr
+  Docker tag and two `uses:` pins). None is a substring of a CIDR.
+
+### The version-collision trap fired this release, in a new place
+
+`6.0.18` was NOT absent from the tree before the bump. `src/__tests__/campaigns.test.ts`
+already contained it as `"leo-sdk": "6.0.18"`, the CLEAN-version negative case of the
+leo-sdk campaign (6.0.19 is the malicious one). No harm this time, because that file
+is not a versionSite and carries no 6.0.17, so nothing rewrote it. But it is the same
+collision class as the `@ornikar/babel-preset-base` IOC and it shows the collision can
+live in a TEST fixture, not only in the feed.
+
+The lesson for the next release: `6.0.19` is a live malicious IOC version in the
+leo-sdk campaign fixture. When our sequence reaches it, a careless file-wide
+replacement in that file would flip a positive test into a negative one silently.
+Check the absence control BEFORE bumping and read what any pre-existing hit actually
+is, rather than treating a non-zero result as a blocker or ignoring it.
+
+### Carried open items
+
+- **The deferred bulk-migration backlog is unchanged at 28,241 entries** across
+  2026-09-02, 2026-09-04 and 2026-09-06, and no fourth wave appeared in the 2026-09-10
+  run. Still a recorded, deliberate gap and a distribution-model decision (bundled
+  feed size versus fetched feed). Each range is recoverable in full from
+  `threat-feed-deferred.json`.
+- **No C2 domain, IP or hash is addable for `lotusbail`.** Every vendor report states
+  the C2 destination sits behind Unicode variable mangling, LZString, Base-91 and AES,
+  and none published the decoded value. If a vendor later publishes it, that is a
+  worthwhile enrichment.
+
 ## Threat-intel batch 2026-09-10
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-10`. Scheduled daily run. No
