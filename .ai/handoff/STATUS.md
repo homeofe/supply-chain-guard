@@ -1,3 +1,79 @@
+## v6.0.19 release (2026-09-11)
+
+Model: claude-opus-5. Branch `release/v6.0.19`.
+
+Patch release carrying the one change merged today: the 2026-09-11 threat-intel
+batch (#289), 5 importer IOCs plus 43 hand-added package entries and 5
+non-package indicators. PATCH is right, since the only consumer-visible change is
+new IOCs. SECURITY.md is untouched (its table is major-level: 6.x and 5.x, and it
+moves only on a major or minor) and CONTRIBUTING.md is untouched (no module or
+file was added).
+
+CI gave the authoritative verdict on the batch before the merge: 141 test files
+and 3,419 tests passed on both Node 22 and Node 24. That includes the two tests
+that fail on the Windows box on unmodified `main`
+(`87e0bbc636999b.lhr.life Phantom Bot C2 domain` and the GlassWASM
+`flags the stage-2 delivery host`), which confirms the environment-gap reading
+rather than leaving it as an assumption. `Build and Test` reports in 4 seconds
+because it is the AGGREGATOR job that requires the compat matrix; the suite runs
+inside `compat (Node 22)` and `compat (Node 24)`. A 4-second required check is
+not evidence the suite was skipped, and it is worth not re-deriving that.
+
+### The version-collision trap fired again, and this time it was load-bearing
+
+The 2026-09-10 note predicted exactly this and it was right. `6.0.19` was NOT
+absent from the tree before the bump: it is the MALICIOUS version of the
+`leo-sdk` IOC, present in `src/ioc-blocklist.ts` (KNOWN_BAD_NPM_VERSIONS),
+`src/threat-intel.ts` (feed entry `leo-sdk@6.0.19`) and twice in
+`src/__tests__/campaigns.test.ts`.
+
+The dangerous one is the other direction, and it is new. `campaigns.test.ts`
+line 2046 carries `dependencies: { "leo-sdk": "6.0.18" }` as the CLEAN control of
+`should NOT flag a clean upstream version of leo-sdk`. A repository-wide
+`6.0.18` -> `6.0.19` replacement would have rewritten that fixture into the
+MALICIOUS version, turning a negative control into a case that must now fire.
+The test would have gone red and the likely "fix" is to edit the assertion, which
+destroys the control permanently.
+
+What kept it safe was bumping strictly the 16 configured `versionSites` plus
+`package.json`, never a repo-wide replace, with the control file named and
+asserted byte-identical afterwards and both leo-sdk fixtures checked to still be
+6.0.18-clean and 6.0.19-malicious. 31 replacements across 16 files.
+`check:version-sync` could not have caught this: `campaigns.test.ts` is not a
+versionSite, so the gate has nothing to say about it either way.
+
+The general rule this makes concrete: **when the new version number already
+exists in the tree, read every occurrence and decide per file BEFORE replacing.**
+The sequence will hit `6.0.20` next, which is currently absent, but the
+`leo-sdk` fixture pair stays a collision magnet.
+
+Both other bump traps were checked and neither was live:
+
+- `src/threat-intel.ts` held exactly ONE occurrence of 6.0.18 and it was
+  `bundledVersion` (the ungated site that must be moved by hand). It now holds
+  two occurrences of 6.0.19: `bundledVersion` and the pre-existing `leo-sdk`
+  IOC. `minOccurrences` is a floor of 1, so that is fine and expected.
+- All four README.md occurrences are version references (pre-commit `rev`, the
+  ghcr Docker tag and two `uses:` pins). None is a substring of a CIDR.
+
+### Carried open items
+
+- **The bulk-migration backlog is four waves now.** 28,241 entries parked across
+  2026-09-02, 2026-09-04 and 2026-09-06, plus roughly 8,883 more from
+  2026-09-10 once that range becomes deferrable on 2026-09-12, taking the parked
+  total past 37,000. The alphabet walk has reached `f` of 26 letters in four
+  waves. Still a distribution-model decision (bundled feed size versus a fetched
+  feed) and still unanswered.
+- **The wave day needs a rule, not a judgement call.** On every wave day plus
+  one, the daily run has to separate live intel from corpus by hand. Today the
+  MAL-id gap (12789 then 16061, nothing between) made it clean, and the alphabet
+  heuristic would have discarded a ten-package eToro campaign. Nothing
+  guarantees the next wave has such a gap.
+- **`scan()` does not resolve version-pinned npm feed entries.** Recorded in the
+  2026-09-11 batch note above. Pre-existing, not caused by this release, and a
+  scanner change rather than a feed change.
+- **Out-of-window backfill is still unanswered** from the 2026-09-10 note.
+
 ## Threat-intel batch 2026-09-11
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-11`. Scheduled daily run. No

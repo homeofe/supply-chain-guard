@@ -116,7 +116,7 @@ import {
   isVerifiedSelfScanFile,
 } from "./self-scan-trust.js";
 
-const TOOL_VERSION = "6.0.18";
+const TOOL_VERSION = "6.0.19";
 
 /**
  * Pattern literals in this matcher module deliberately spell out signatures
