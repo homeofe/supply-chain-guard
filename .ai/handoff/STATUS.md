@@ -1,3 +1,143 @@
+## Threat-intel batch 2026-09-11
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-11`. Scheduled daily run. No
+version bump: the version belongs to the release, which the owner cuts.
+
+48 package IOCs and 5 non-package indicators. Only 5 of the 48 came from the
+importer, and the split is the whole story of this batch.
+
+### A fourth bulk-migration wave landed, and it hid live intel
+
+A plain `npm run feed:import --dry-run` proposes 8,931 candidates today. 8,924
+of them published on 2026-09-10 and are the FOURTH wave of the GitHub Advisory
+Database bulk migration of the historical OpenSSF corpus, resuming the alphabet
+walk exactly where the 2026-09-06 wave stopped: 7,203 names beginning with `e`
+and 1,690 with `f`, 99.6 percent of the day. Waves one to three (2026-09-02,
+2026-09-04, 2026-09-06) are already in `threat-feed-deferred.json`.
+
+It was NOT deferred, and that is the code working as designed for the second
+time. `MIN_DEFERRAL_AGE_DAYS` is 2 and today is 2026-09-11, so a range ending
+2026-09-10 is one day old and `loadDeferralList` rejects it. The 2026-09-07
+note predicted exactly this and the guard earned its keep again, harder than
+last time: **41 of the 2026-09-10 candidates are not migration entries at all
+but current intel**, including a complete ten-package eToro dependency-confusion
+campaign. A day-level deferral written today would have swallowed all 41
+silently.
+
+The corpus and the live intel separate cleanly on the OpenSSF id. Within the
+2026-09-10 day the MAL-2026 ids run to 12789 and then jump to 16061, with
+nothing in between. Everything at 16061 or above is current intel; everything
+below it, plus every MAL-2023/2024/2025 id, is corpus. That boundary is what the
+hand-added set was cut on, and it is worth reusing rather than re-deriving: the
+alphabet letter alone would have thrown the ten `etoro-*` packages away with the
+`e` block.
+
+So 5 entries came from an explicit `--since 2026-09-11` slice and 43 were added
+by hand. The remaining 8,883 candidates are the corpus and were left unimported.
+
+### Deferral for 2026-09-10 is ready from 2026-09-12
+
+The human precondition is now satisfied: the day's genuine intel is in the feed.
+From 2026-09-12 a `2026-09-10..2026-09-10` range can be written and will be
+accepted. Re-measure `expectedCount` with a fresh `--dry-run` at that point
+rather than reusing 8,924, since the count moves as duplicates land. Until it is
+written, the daily run keeps proposing the wave.
+
+### Every bare name was probed, and one probe changed the call
+
+Ten bare names were probed against `registry.npmjs.org` and four against PyPI,
+because a bare name blocks every version. All ten npm names returned
+`"security holding package"` with `0.0.1-security` as the only installable
+version and their real releases unpublished; `pypi:tsshare`, `pypi:pylever` and
+`pypi:lucy-python-script-2030` are 404 on PyPI. So 0 of 14 can hit a live
+release.
+
+`tailwindcss-contact-forms` is the one where the probe changed something. The
+advisory pins 0.5.4 through 0.6.0; the registry shows npm unpublished **eleven**
+versions, 0.5.2 through 0.6.2. The real malicious set is wider than the advisory
+says, so the bare name is the accurate call and the advisory's narrower pins are
+kept beside it rather than instead of it.
+
+`pypi:websetup@0.1.0` is the only indicator in this batch that is still LIVE.
+PyPI serves that release today, so the pin can actually fire; everything else is
+already taken down.
+
+### Non-package indicators, and what was deliberately NOT blocked
+
+Five: the eToro beacon IP `209[.]126[.]81[.]147` and its campaign path, the
+JSONKeeper paste path `pinochiomathm` stages from, the Discord webhook id
+`pypi:websetup` exfiltrates to, and the Ethereum address
+`tailwindcss-contact-forms` reads as C2 signalling.
+
+Three shared services were deliberately left alone: `www[.]jsonkeeper[.]com`,
+`discord[.]com` and the public Ethereum RPC providers (drpc[.]org,
+publicnode[.]com, blockscout, blastapi[.]io). Only the attacker's own path is an
+indicator in each case. The JSONKeeper call is worth recording because it looks
+like a reversal and is not: the July 2026 Contagious Interview entry listed no
+JSONKeeper indicator at all, because that write-up named only the service. This
+advisory published the paste id, so a narrow indicator exists now that did not
+exist then. A test pins both directions, apex clean and path flagged.
+
+The `tailwindcss-contact-forms` exfil endpoint is reassembled from string-array
+fragments and only its `ut.com/api` tail was recovered. That is not an
+ingestable value and inventing the rest was not an option, so it is omitted.
+
+The `amazon-inspector (<64 hex>)` digests in the advisory headers are OpenSSF
+SOURCE-RECORD digests, not artefact hashes. None was ingested as a malware hash.
+
+### A version-pinned npm IOC is caught at install time but not by a repo scan
+
+Writing the campaign test surfaced this and it is worth recording, because it is
+the "guard answers a different question" shape. A package.json carrying
+`etoro-auth: "999.0.0"` produces NO `MALICIOUS_DEPENDENCY` finding from
+`scan()`. The same name as a BARE feed entry does fire, which is why
+`tailwindcss-contact-forms` is caught by a repo scan and the ten `etoro-*` pins
+are not.
+
+This is NOT new and NOT caused by this batch. The control is `cline@2.3.0` and
+`omni-channel-order-frontend@0.0.1`, both version-pinned by the 2026-09-07 batch:
+they behave identically today, scan-clean and `matchBareNpmIOC` HIT. So every
+version-pinned npm entry the feed has ever carried sits on the install-time
+surface only. The indicator is real and `matchBareNpmIOC("etoro-auth", "999.0.0")`
+resolves it, which is the surface `install-guard` uses, so the install-time block
+works exactly as intended.
+
+The test now asserts that surface rather than the scan surface. It would have
+been easy to write the scan assertion, watch it fail, and quietly delete the
+version pin or widen it to a bare name to make the test pass. Widening is the
+dangerous repair here: eToro may publish these ten internal names itself, and a
+name block would then break their builds. The negative control exists to make
+that exact edit go red, and a mutation cut confirmed it does.
+
+Worth a decision separately: whether `scan()` should resolve version-pinned npm
+feed entries against a dependency tree at all. It is a scanner change, not a feed
+change, so it does not belong in a daily batch.
+
+### Needs an owner decision
+
+- **The deferred bulk-migration backlog is now four waves, not three.** 28,241
+  entries are parked across 2026-09-02, 2026-09-04 and 2026-09-06, and the
+  2026-09-10 wave adds roughly 8,883 more once it is deferrable on 2026-09-12,
+  taking the parked total past 37,000. The walk has reached `f` out of 26
+  letters in four waves, so the corpus is far from drained and the waves are
+  arriving every two to four days. This is the same distribution-model question
+  as before (bundled feed size versus a fetched feed), but it is no longer
+  drifting slowly: a decision would be worth making before the backlog doubles
+  again.
+- **The daily job now has a recurring manual step it did not have before.** On
+  every wave day plus one, the run has to separate live intel from corpus by
+  hand. Today the MAL-id gap made that clean, but nothing guarantees the next
+  wave has a gap, and an agent that reached for the alphabet heuristic instead
+  would have dropped a ten-package campaign. Either the importer should learn
+  the distinction, or the wave day should be skipped and swept afterwards. It is
+  a scoped change to `scripts/import-threat-feed.mjs` rather than something to
+  settle inside a daily batch.
+- **Out-of-window backfill is still unanswered** from the 2026-09-10 note. Two
+  more out-of-window entries surfaced today by accident (`datefmt-helper` from
+  2026-07-04 and `supplyhub@1.0.1` from 2026-07-20, both reached only because
+  the OpenSSF index re-modified them). That is the second day running that the
+  blind spot produced something, which is weak evidence it is not small.
+
 ## v6.0.18 release (2026-09-10)
 
 Model: claude-opus-5. Branch `release/v6.0.18`.

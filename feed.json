@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.18",
-  "entryCount": 20654,
-  "generatedAt": "2026-09-10T00:00:00.000Z",
+  "entryCount": 20706,
+  "generatedAt": "2026-09-11T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -166613,6 +166613,446 @@
       "confidence": 1,
       "source": "GHSA-qmh8-v4jq-m242, MAL-2025-192748 (osv+bleepingcomputer+securityweek+thehackernews)",
       "firstSeen": "2025-12-23"
+    },
+    {
+      "type": "package",
+      "value": "daytona-test-miner",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-7fxg-v94h-8j5g",
+      "firstSeen": "2026-09-11"
+    },
+    {
+      "type": "package",
+      "value": "daytona-test-filereader",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-f2vx-rj2m-pmp8",
+      "firstSeen": "2026-09-11"
+    },
+    {
+      "type": "package",
+      "value": "daytona-test-npm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-j8pm-8rv6-xg64",
+      "firstSeen": "2026-09-11"
+    },
+    {
+      "type": "package",
+      "value": "supplyhub@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-11043 (amazon-inspector)",
+      "firstSeen": "2026-07-20"
+    },
+    {
+      "type": "package",
+      "value": "datefmt-helper",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "MAL-2026-6788 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-07-04"
+    },
+    {
+      "type": "ip",
+      "value": "209.126.81.147",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "url",
+      "value": "209.126.81.147/etoro-depconf-poce346552f776f/npm/",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-aggregator@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-qj36-g77p-6w4c, MAL-2026-16111 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-analytics@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-wgc5-frwf-f4r9, MAL-2026-16112 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-api@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-jhx2-c8c9-77m4, MAL-2026-16113 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-auth@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-billing@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-6qw8-8vc7-fmj4, MAL-2026-16115 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-builders@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-642v-mmwv-fj8c, MAL-2026-16116 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-cashout@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-4jmj-qv75-33m2, MAL-2026-16117 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-charts@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-rmph-mjrh-89x3, MAL-2026-16118 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-client@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-hcqp-jmx5-mrwx, MAL-2026-16119 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "etoro-core@999.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "DependencyConfusion",
+      "campaign": "eToro Dependency Confusion",
+      "source": "GHSA-9vfj-6pvw-qrqr, MAL-2026-16120 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-844c-c6gj-g72x, MAL-2026-16124",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.5.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "tailwindcss-contact-forms@0.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "url",
+      "value": "www.jsonkeeper.com/b/V6NBX",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pinochiomathm@2.3.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pinochiomathm@2.3.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pinochiomathm@2.3.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pinochiomathm@2.3.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "url",
+      "value": "discord.com/api/webhooks/1546817174411288617",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v8mm-56q4-h26q, MAL-2026-16121 (amazon-inspector)",
+      "firstSeen": "2026-09-09"
+    },
+    {
+      "type": "package",
+      "value": "pypi:websetup@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v8mm-56q4-h26q, MAL-2026-16121 (amazon-inspector)",
+      "firstSeen": "2026-09-09"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.11",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:pylever@1.0.12",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:lucy-python-script-2030@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2q36-rrph-f47p, MAL-2026-16125 (kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:lucy-python-script-2030@0.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2q36-rrph-f47p, MAL-2026-16125 (kam193)",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "cat-sis2go-utils",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5pwp-vwhm-wm7x, MAL-2026-16071",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "@yongot/canary-mcp-isolation",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-cr2f-c82j-mj6q, MAL-2026-16061",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "@yongot/canary-mcp-test",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qjwm-vq22-4xx8, MAL-2026-16062",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "@yongot/canary-mcp-test-2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-93xr-jvm3-jpch",
+      "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tsshare",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-16044 (amazon-inspector)",
+      "firstSeen": "2026-09-04"
     }
   ]
 }

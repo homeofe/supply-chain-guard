@@ -7,6 +7,43 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-11: 48 new package IOCs plus 5
+  non-package indicators. Five package entries came from the advisory importer
+  on an explicit `--since 2026-09-11` slice; the other 43 were added by hand
+  because they are genuine current intel published on 2026-09-10, the same day
+  as a fourth bulk-migration wave that the daily run cannot yet defer.
+- eToro dependency-confusion reconnaissance: ten public namesakes of
+  eToro-internal npm packages (`etoro-aggregator`, `etoro-analytics`,
+  `etoro-api`, `etoro-auth`, `etoro-billing`, `etoro-builders`,
+  `etoro-cashout`, `etoro-charts`, `etoro-client`, `etoro-core`), each
+  published at the single lure version 999.0.0 with an empty library stub and a
+  preinstall beacon. All ten were created inside a 31-second window on
+  2026-09-10 and unpublished 43 minutes later, so this was one automated batch.
+  The bare-IP beacon endpoint `209[.]126[.]81[.]147` and its campaign path are
+  now indicators. The packages are version-pinned rather than name-blocked,
+  since eToro may publish these names itself.
+- `tailwindcss-contact-forms`: a `@tailwindcss/forms` impersonation whose only
+  module is an obfuscated loader that imports `node:child_process` and reads a
+  hardcoded Ethereum address's transaction list over public RPC as C2
+  signalling. The address is now in `KNOWN_C2_WALLETS`. Blocked by name as well
+  as by version: npm replaced the name with a security-holding stub and
+  unpublished eleven versions (0.5.2 through 0.6.2), a wider set than the
+  0.5.4-0.6.0 the advisory pinned.
+- `pinochiomathm` (a `picomatch` impersonation staging an AES-256-CBC-wrapped
+  payload from a JSONKeeper paste), `pypi:pylever` (Discord token stealer, 13
+  versions), `pypi:lucy-python-script-2030` (infostealer, 2 versions),
+  `pypi:websetup` (file exfiltration to a Discord webhook Discord itself names
+  "backdoor"), plus `cat-sis2go-utils`, three `@yongot/canary-mcp-*` names,
+  `pypi:tsshare`, three `daytona-test-*` names, `datefmt-helper` and
+  `supplyhub@1.0.1`.
+- The two shared services this batch abuses are matched by the attacker's own
+  path only: the JSONKeeper paste id and the Discord webhook id. The
+  `www[.]jsonkeeper[.]com` and `discord[.]com` apexes, and the public Ethereum
+  RPC providers the loader enumerates, are deliberately not indicators, and a
+  test now pins that in both directions.
+
 ## [6.0.18] - 2026-09-10
 
 ### Added
