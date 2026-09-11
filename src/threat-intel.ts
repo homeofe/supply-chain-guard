@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-10T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-11T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21593,6 +21593,124 @@ const FEED_CHUNK_20: FeedIOC[] = [
   // report states the C2 destination is hidden behind Unicode variable mangling,
   // LZString, Base-91 and AES layers, and none published the decoded value.
   { type: "package", value: "lotusbail", severity: "critical", confidence: 1.0, source: "GHSA-qmh8-v4jq-m242, MAL-2025-192748 (osv+bleepingcomputer+securityweek+thehackernews)", firstSeen: "2025-12-23" },
+
+  // Imported from GitHub Advisory Database (2026-09-11) - see docs/threat-feed-sources.md
+  { type: "package", value: "daytona-test-miner", severity: "critical", confidence: 0.9, source: "GHSA-7fxg-v94h-8j5g", firstSeen: "2026-09-11" },
+  { type: "package", value: "daytona-test-filereader", severity: "critical", confidence: 0.9, source: "GHSA-f2vx-rj2m-pmp8", firstSeen: "2026-09-11" },
+  { type: "package", value: "daytona-test-npm", severity: "critical", confidence: 0.9, source: "GHSA-j8pm-8rv6-xg64", firstSeen: "2026-09-11" },
+  { type: "package", value: "supplyhub@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-11043 (amazon-inspector)", firstSeen: "2026-07-20" },
+  { type: "package", value: "datefmt-helper", severity: "critical", confidence: 1.0, source: "MAL-2026-6788 (amazon-inspector+ghsa-malware)", firstSeen: "2026-07-04" },
+  // eToro dependency-confusion reconnaissance (GitHub Advisory Database / OpenSSF
+  // via amazon-inspector, September 10, 2026). Ten public namesakes of eToro-internal
+  // npm packages, every one published at the single lure version 999.0.0 with an empty
+  // library stub and a preinstall beacon. The registry settles the shape: all ten were
+  // created inside a 31-second window on 2026-09-10 at about 04:02 UTC and unpublished
+  // by 04:45, so this is one automated batch, and nothing legitimate has ever occupied
+  // these names. Version-pinned rather than name-blocked, because a 999.0.0 lure is the
+  // finding and eToro may later publish these names itself. preinstall.js sends an
+  // unauthenticated plaintext GET to hxxp://209[.]126[.]81[.]147/etoro-depconf-poce346552f776f/npm/
+  // carrying the installer's hostname, username and cwd as path segments.
+  { type: "ip", value: "209.126.81.147", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "url", value: "209.126.81.147/etoro-depconf-poce346552f776f/npm/", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-aggregator@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-qj36-g77p-6w4c, MAL-2026-16111 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-analytics@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-wgc5-frwf-f4r9, MAL-2026-16112 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-api@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-jhx2-c8c9-77m4, MAL-2026-16113 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-auth@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-cp95-g9vf-h9mc, MAL-2026-16114 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-billing@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-6qw8-8vc7-fmj4, MAL-2026-16115 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-builders@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-642v-mmwv-fj8c, MAL-2026-16116 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-cashout@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-4jmj-qv75-33m2, MAL-2026-16117 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-charts@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-rmph-mjrh-89x3, MAL-2026-16118 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-client@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-hcqp-jmx5-mrwx, MAL-2026-16119 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "etoro-core@999.0.0", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-9vfj-6pvw-qrqr, MAL-2026-16120 (amazon-inspector)", firstSeen: "2026-09-10" },
+
+  // tailwindcss-contact-forms - @tailwindcss/forms impersonation with an Ethereum
+  // dead-drop (GitHub Advisory Database / OpenSSF via amazon-inspector, September 10,
+  // 2026). README, repository field and install docs are copied verbatim from
+  // @tailwindcss/forms, but the only module is an obfuscator.io-obfuscated loader that
+  // imports node:child_process and reads the transaction list of a hardcoded Ethereum
+  // address as C2 signalling. The address is in KNOWN_C2_WALLETS; the feed has no wallet
+  // type. The public Ethereum RPC providers it enumerates (drpc[.]org, publicnode[.]com,
+  // blockscout, blastapi[.]io) are legitimate shared infrastructure and are NOT listed.
+  // The exfil endpoint is reassembled from string-array fragments and only its "ut.com/api"
+  // tail was recovered, which is not an ingestable value, so it is deliberately omitted.
+  // Name-blocked AND version-pinned: the registry shows a security holding stub with no
+  // maintainer and ELEVEN unpublished versions (0.5.2 through 0.6.2), a WIDER set than the
+  // 0.5.4-0.6.0 the advisory pinned, so the bare name is the accurate call and the pins
+  // are the advisory's own narrower claim kept alongside it.
+  { type: "package", value: "tailwindcss-contact-forms", severity: "critical", confidence: 1.0, source: "GHSA-844c-c6gj-g72x, MAL-2026-16124", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.4", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.5", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.6", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.7", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.8", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.5.9", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "tailwindcss-contact-forms@0.6.0", severity: "critical", confidence: 1.0, source: "GHSA-h9xr-6q2x-2v47, MAL-2026-16124 (amazon-inspector)", firstSeen: "2026-09-10" },
+
+  // pinochiomathm - picomatch impersonation staging an AES-wrapped payload from a
+  // JSONKeeper paste (GitHub Advisory Database / OpenSSF via amazon-inspector,
+  // September 10, 2026). The loader base64-decodes lib/parse.ts.map into parsetmp.js,
+  // GETs hxxps://www[.]jsonkeeper[.]com/b/V6NBX with a decoded x-secret-key header,
+  // AES-256-CBC-decrypts the response with a hardcoded password and eval()s the
+  // plaintext, then unlinks the staged files. Only the attacker's own paste PATH is
+  // listed. www[.]jsonkeeper[.]com is a legitimate JSON-paste service and its apex stays
+  // unlisted, which is the same call the July 2026 Contagious Interview entry made - the
+  // difference is that this advisory published the specific paste id, so the narrow
+  // indicator exists here and did not there. micromatch/picomatch are the VICTIMS of the
+  // impersonation and are not touched.
+  { type: "url", value: "www.jsonkeeper.com/b/V6NBX", severity: "critical", confidence: 1.0, source: "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pinochiomathm@2.3.2", severity: "critical", confidence: 1.0, source: "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pinochiomathm@2.3.3", severity: "critical", confidence: 1.0, source: "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pinochiomathm@2.3.4", severity: "critical", confidence: 1.0, source: "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pinochiomathm@2.3.5", severity: "critical", confidence: 1.0, source: "GHSA-cq4w-8cp6-cmvf, MAL-2026-16123 (amazon-inspector)", firstSeen: "2026-09-10" },
+
+  // pypi:websetup - file exfiltration to a Discord webhook (GitHub Advisory Database /
+  // OpenSSF via amazon-inspector, September 9, 2026). setup.set() POSTs arbitrary text
+  // and the contents of any local file path to a hardcoded Discord webhook whose name
+  // Discord itself returns as "backdoor". Nothing runs on install or import. Only the
+  // webhook ID PATH is listed, never the discord[.]com apex; the advisory published the
+  // id but not the token, and KNOWN_DEAD_DROPS is substring-matched, so the id prefix
+  // still matches the full URL in a scanned file. This is the one indicator in today's
+  // batch that is still LIVE: PyPI serves websetup 0.1.0 today, so the pin can fire.
+  { type: "url", value: "discord.com/api/webhooks/1546817174411288617", severity: "critical", confidence: 1.0, source: "GHSA-v8mm-56q4-h26q, MAL-2026-16121 (amazon-inspector)", firstSeen: "2026-09-09" },
+  { type: "package", value: "pypi:websetup@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-v8mm-56q4-h26q, MAL-2026-16121 (amazon-inspector)", firstSeen: "2026-09-09" },
+
+  // pypi:pylever - Discord token stealer (GitHub Advisory Database / OpenSSF via
+  // amazon-inspector and kam193, campaign 2026-09-pylever, September 10, 2026).
+  // Version-pinned across the twelve releases the advisory names. PyPI returns 404 for
+  // the name today, so nothing installable is behind it.
+  { type: "package", value: "pypi:pylever@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.4", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.5", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.6", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.7", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.8", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.9", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.10", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.11", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:pylever@1.0.12", severity: "critical", confidence: 1.0, source: "GHSA-x38c-f232-xj2x, MAL-2026-16122 (amazon-inspector+kam193)", firstSeen: "2026-09-10" },
+
+  // pypi:lucy-python-script-2030 - browser-data and cloud-credential infostealer on
+  // import (GitHub Advisory Database / OpenSSF via kam193, campaign
+  // 2026-09-lucy-python-script-2030, September 10, 2026). kam193 notes the shipped code
+  // carries mistakes that effectively disarm the exfiltration, which is why it is
+  // pinned to the two named releases rather than name-blocked. PyPI returns 404 today.
+  { type: "package", value: "pypi:lucy-python-script-2030@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-2q36-rrph-f47p, MAL-2026-16125 (kam193)", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:lucy-python-script-2030@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-2q36-rrph-f47p, MAL-2026-16125 (kam193)", firstSeen: "2026-09-10" },
+
+  // Remaining single-package advisories of 2026-09-10, all name-blocked. Every one was
+  // probed against registry.npmjs.org first, because a bare name blocks every version:
+  // all four return "security holding package" with 0.0.1-security as the only
+  // installable version and their real releases unpublished, so no legitimate release
+  // can be hit. The three @yongot names carry npm-support as the maintainer, which is
+  // npm's own takedown account rather than a real publisher. pypi:tsshare is 404 on PyPI.
+  { type: "package", value: "cat-sis2go-utils", severity: "critical", confidence: 1.0, source: "GHSA-5pwp-vwhm-wm7x, MAL-2026-16071", firstSeen: "2026-09-10" },
+  { type: "package", value: "@yongot/canary-mcp-isolation", severity: "critical", confidence: 1.0, source: "GHSA-cr2f-c82j-mj6q, MAL-2026-16061", firstSeen: "2026-09-10" },
+  { type: "package", value: "@yongot/canary-mcp-test", severity: "critical", confidence: 1.0, source: "GHSA-qjwm-vq22-4xx8, MAL-2026-16062", firstSeen: "2026-09-10" },
+  { type: "package", value: "@yongot/canary-mcp-test-2", severity: "critical", confidence: 0.9, source: "GHSA-93xr-jvm3-jpch", firstSeen: "2026-09-10" },
+  { type: "package", value: "pypi:tsshare", severity: "critical", confidence: 0.9, source: "MAL-2026-16044 (amazon-inspector)", firstSeen: "2026-09-04" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

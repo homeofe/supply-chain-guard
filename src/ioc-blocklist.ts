@@ -617,6 +617,12 @@ export const KNOWN_C2_IPS: string[] = [
   // The port is not part of the match, so the bare address is listed. This is a rented
   // host carrying only the campaign's own staging endpoint, not shared CDN edge.
   "193.233.201.21",
+
+  // eToro dependency-confusion reconnaissance (GitHub Advisory Database / OpenSSF via
+  // amazon-inspector, September 10, 2026). Bare-IP preinstall beacon for all ten
+  // etoro-* lure packages; plaintext HTTP, no domain was ever involved. Listed bare
+  // because the path is matched separately in KNOWN_DEAD_DROPS.
+  "209.126.81.147",
 ];
 
 // ---------------------------------------------------------------------------
@@ -794,6 +800,28 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // raw[.]githubusercontent[.]com is a legitimate shared host and its apex is deliberately
   // NOT listed. Single-source, so the matching feed entry carries confidence 0.85.
   "raw.githubusercontent.com/skyzopedia/Screaper/refs/heads/main/idChannel.json",
+
+  // eToro dependency-confusion reconnaissance (GitHub Advisory Database / OpenSSF via
+  // amazon-inspector, September 10, 2026). The preinstall beacon appends the installer's
+  // hostname, username and cwd to this path, so the campaign-specific prefix is what is
+  // matched. The bare address is also in KNOWN_C2_IPS above.
+  "209.126.81.147/etoro-depconf-poce346552f776f/npm/",
+
+  // pinochiomathm picomatch impersonation (GitHub Advisory Database / OpenSSF via
+  // amazon-inspector, September 10, 2026). Staging paste holding the AES-256-CBC-wrapped
+  // second stage the loader eval()s. Path-scoped to the attacker's own paste id:
+  // www[.]jsonkeeper[.]com is a legitimate JSON-paste service and its apex is deliberately
+  // NOT listed, exactly as the July 2026 Contagious Interview entry decided. That entry
+  // listed no JSONKeeper indicator at all because its write-up named only the service;
+  // here the advisory published the paste id, so a narrow indicator exists.
+  "www.jsonkeeper.com/b/V6NBX",
+
+  // pypi:websetup Discord webhook exfiltration (GitHub Advisory Database / OpenSSF via
+  // amazon-inspector, September 9, 2026). The advisory published the webhook ID but not
+  // its token, and this list is substring-matched, so the ID prefix still matches the
+  // full URL wherever it appears. discord[.]com is a legitimate shared host and its apex
+  // is deliberately NOT listed.
+  "discord.com/api/webhooks/1546817174411288617",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1515,6 +1543,15 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
     "Web3 dev-tooling typosquat campaign: Ethereum mainnet dead-drop C2 resolver contract (June 2026)",
   "0xCBbecC5E5Eb88582e6305cF6ab688f03e02Ce16f":
     "Web3 dev-tooling typosquat campaign: Ethereum mainnet dead-drop C2 resolver contract (June 2026)",
+  // tailwindcss-contact-forms @tailwindcss/forms impersonation (GitHub Advisory Database
+  // / OpenSSF via amazon-inspector, September 10, 2026). The obfuscated loader reads this
+  // address's transaction list over public Ethereum RPC and uses the returned data as C2
+  // signalling, so the chain itself is the dead drop and there is no takedownable URL.
+  // The RPC providers it enumerates (drpc[.]org, publicnode[.]com, blockscout,
+  // blastapi[.]io) are legitimate shared infrastructure and are deliberately NOT listed,
+  // as with the ChainDrop and Web3 dev-tooling entries above.
+  "0xa322E5f39aDC2490Ef6f0121063eD311D3080e1a":
+    "tailwindcss-contact-forms: Ethereum mainnet dead-drop C2 signalling address read by the obfuscated @tailwindcss/forms impersonation loader (September 2026)",
 };
 
 /**
