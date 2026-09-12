@@ -1,3 +1,40 @@
+## v6.0.20 release (2026-09-12)
+
+Model: claude-opus-5. Branch `release/v6.0.20`.
+
+Patch release carrying the one change merged today: the 2026-09-12 threat-intel
+batch (PR 291), 72 importer IOCs plus 3 hand-added package entries and 0
+non-package indicators, together with the wave-4 deferral of the 2026-09-10
+bulk-migration block. PATCH is right: the only consumer-visible change is new
+IOCs. SECURITY.md is untouched (its table is major-level and moves only on a
+major or minor) and CONTRIBUTING.md is untouched (no module or file added).
+
+### The version-collision trap, third release running
+
+`6.0.20` was absent from the tree, which the 2026-09-11 note had already checked
+and recorded. The dangerous direction was again the OTHER one: `6.0.19` is not
+only the outgoing version, it is the MALICIOUS version of the `leo-sdk` IOC. A
+repo-wide `6.0.19` -> `6.0.20` replace would have silently rewritten three
+things it must not touch: the `leo-sdk` entry in `src/ioc-blocklist.ts`
+(KNOWN_BAD_NPM_VERSIONS), the `leo-sdk@6.0.19` feed entry in
+`src/threat-intel.ts`, and both fixtures in `campaigns.test.ts`.
+
+What kept it safe, same recipe as last time: bump strictly the 16 configured
+`versionSites` plus `package.json`, never a repo-wide replace, with
+`src/threat-intel.ts` edited on the `bundledVersion` line ALONE and the
+`leo-sdk` IOC asserted still present afterwards. `src/ioc-blocklist.ts` and
+`campaigns.test.ts` were sha256-fingerprinted before and after and asserted
+byte-identical. 31 replacements across 16 files, the same count as the 6.0.19
+bump, which is a useful corroboration that nothing extra was caught.
+
+`check:version-sync` still cannot catch this: neither `ioc-blocklist.ts` nor
+`campaigns.test.ts` is a versionSite, so the gate has nothing to say either way.
+The next sequence value, `6.0.21`, is absent from the tree today, but the
+`leo-sdk` pair stays a collision magnet and must be re-checked every release.
+
+`bundledVersion` in `src/threat-intel.ts` remains the ungated site that no gate
+moves for you. It was bumped by hand here.
+
 ## Threat-intel batch 2026-09-12
 
 Model: claude-opus-5. Branch `threat-intel/2026-09-12`. Scheduled daily run. No
