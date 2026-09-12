@@ -1,3 +1,145 @@
+## Threat-intel batch 2026-09-12
+
+Model: claude-opus-5. Branch `threat-intel/2026-09-12`. Scheduled daily run. No
+version bump: the release is the owner call.
+
+75 package IOCs added, 0 non-package IOCs. The importer contributed 72 and three
+were added by hand. Nothing was left behind `--limit` (remaining 0, undrainable 0,
+no page cap, window not sliced). 122 candidates were skipped as
+`unmappable-version-range` and 1 as `withdrawn`, which is the normal shape.
+
+### Wave 4 of the bulk migration is now deferred
+
+The 2026-09-10 block is the fourth wave of the GitHub Advisory Database bulk
+migration of the historical OpenSSF malicious-packages corpus: 8,891 candidates,
+100 percent alphabetical (e 7,201, f 1,690), all npm, against a normal daily
+volume of 26 to 450. It resumes exactly where the 2026-09-06 wave stopped. The
+2026-09-11 note predicted this one and could not defer it yet, because
+`MIN_DEFERRAL_AGE_DAYS` is 2 and the block was one day old. Today it is two days
+old, so the range was added and holds back 8,883 entries.
+
+The part worth not re-deriving: the block was NOT homogeneous, and deferring it
+blind would have swallowed live intel. Eight candidates inside it carry
+current-batch ids MAL-2026-16111 to MAL-2026-16118 and are additional malicious
+versions (99.0.0, 99.0.2) of the eToro dependency-confusion lures whose 999.0.0
+versions shipped yesterday. The MAL id YEAR is not the discriminator: 95 entries
+in the block carry MAL-2026 ids and all but those 8 are low-sequence historical
+corpus. The SEQUENCE number is what separates them.
+
+The both-axis guard in `applyDeferralList` kept all 8, because their `_queueDate`
+sits outside the window. That was MEASURED, not assumed: the range was written
+first, then a `--dry-run --json` confirmed 8,883 deferred and those exact 8
+imported. A first draft of the `detectionGap` text claimed they were added by
+hand; the measurement contradicted it and the text was corrected before commit.
+Write the range, then measure, then write the prose.
+
+### Registry probes
+
+Every npm name the importer proposed was probed against the registry, not only
+the hand-added ones. `tailwind-form-kit` is the only BARE entry in the batch and
+it is safe: npm has replaced it with a `security holding package` at
+`0.0.1-security` with no maintainer, so no legitimate release can be hit, and the
+time map shows five malicious versions where the advisory pinned only 0.6.4, so
+the bare block is also the wider one. `cr-bot-common`, `greensaver`,
+`tracker-cloudflare` and `strapi-plugin-vinsoc-1109` are unpublished with no
+maintainer and no legitimate history; `@nimbusedge/auth` is gone entirely.
+
+For eToro the registry time map settled the version set exactly: the five
+extended packages were published at 999.0.0 plus 99.0.0 and (for three of them)
+99.0.2, and the other five committed etoro-* packages carry 999.0.0 only, so
+nothing is missing there.
+
+### Three entries lifted out of the deferred block
+
+`etoro-cordova-prove-mobileauth`, `etoro-provema` and `etoro-plaid-widget`
+(999.999.999 each, MAL-2025-41559/41560/41561) sit inside the deferred 2026-09-10
+block but are the same campaign target as the wave shipped yesterday. Leaving
+them would make eToro coverage partial within a single release, so they were
+added by hand after the same registry probe. This is a deliberate exception to
+the block deferral and the only one taken.
+
+### Needs an owner decision
+
+The corpus-migration question is now FOUR waves old and is the one open item
+here. Deferred so far: 2026-09-02 (9,758), 2026-09-04 (9,937), 2026-09-06
+(8,547) and 2026-09-10 (8,883), about 37,100 npm package names that nothing in
+the scanner detects. The alphabet walk has reached `f` of 26 letters, so on the
+order of 100,000 entries are still upstream and the waves keep arriving every
+two to four days. Each range is recoverable in full with its printed
+`--since/--until` slice, so nothing is lost, but the gap is live: sampling in
+wave 1 indicated a third to a half are still installable.
+
+#### The framing in the earlier notes was wrong
+
+Those notes weighed "separate optional feed package versus lazily-loaded chunk
+versus accept the size". That misses the actual problem, which is the ENCODING
+and not the entry count. The bundled feed stores every IOC as a TypeScript
+object literal, measured at 168 bytes per entry. The corpus does not need that
+shape, and re-encoding it changes the size of the decision rather than just its
+answer.
+
+Measured on this box, 2026-09-12, same 120,000 entries in two encodings:
+
+| encoding | load time | source size |
+| --- | --- | --- |
+| object literals (today) | 684 ms | 19.0 MB |
+| newline-delimited name Set | 24 ms | 2.4 MB |
+
+Scaling in the current encoding, synthesised at three sizes in the shipped
+entry shape: 20,000 -> 267 ms, 60,000 -> 454 ms, 120,000 -> 684 ms. So the
+corpus does not merely add bulk, it puts a growth curve on EVERY CLI
+invocation. That is the cost `project_feed_size_not_a_scan_cost` already
+identified as the one that bites: module-import time, not scan throughput. The
+real `dist/threat-intel.js` imports in 80 ms today at 20,706 entries, so treat
+the synthetic absolutes as a scaling curve rather than a prediction of the
+shipped number. The compact form is flat and about 28 times faster, which
+removes the curve instead of moving it.
+
+#### Recommendation
+
+Ship the corpus IN THE SAME PACKAGE, compactly encoded and lazily loaded, as a
+second store (`CORPUS_NAMES`) separate from `BUNDLED_FEED`.
+
+1. Compact encoding: newline-delimited `name@version` read into a `Set`. Exact
+   match, so no false positives. A Bloom filter is tempting on size but is the
+   wrong trade here, because a false positive gets the tool switched off, which
+   this project rates worse than a miss, and 2.4 MB buys the exact set outright.
+2. Lazy: load on the first package lookup, not at module import, so `--version`,
+   `--help` and the config paths never pay for it.
+3. Same package, NOT an optional one. This is the part to push back on hardest.
+   An optional corpus package means most users never install it, so the
+   detection silently does not happen, gated on whether someone read the docs.
+   That is a false negative by default, which is the expensive direction here.
+4. Keep provenance, trimmed. Name plus MAL id measures 60 bytes per entry
+   (5.7 MB raw, 1.6 MB gzipped) against 24 bytes for names alone. Worth it: a
+   finding that cannot cite an advisory is much weaker to triage. Drop the GHSA
+   id and reconstruct it from the MAL id.
+
+The structural reason this is a correct shape and not a hack: the corpus is
+homogeneous, every entry `critical` at confidence 1.0 with a single advisory id,
+while the live feed is genuinely rich with families, campaigns, confidence tiers
+and non-package IOC types. They are different data and deserve different stores.
+That also kills a tempting bad idea: pruning the dead or unpublished half to
+save space. At 2.4 MB there is no reason to, and liveness goes stale the moment
+it is measured.
+
+#### Not verified, and could change the design
+
+- Whether `matchPackageIOC` / `matchBareNpmIOC` can be backed by a `Set` without
+  changing match semantics. That path already carries a bare-versus-versioned
+  distinction (see the bare-npm resolver note) and the corpus is mostly
+  versioned, so the routing needs a real look before any of this is built.
+- Whether `feed.json`, 4.79 MB today, should carry the corpus at all or stay
+  live-feed only. That is a consumer-contract question, not an internal one.
+
+#### Sizing
+
+This is a real change to how the feed is stored and loaded, touching the
+importer, the scanner lookup path and the feed generator. It is NOT a
+daily-import task and should not ride along on one. There is no deadline
+pressure either: a deferral is cheap to keep adding and wave 5 is a two-minute
+job. But four waves in ten days is a trend, not an incident.
+
 ## v6.0.19 release (2026-09-11)
 
 Model: claude-opus-5. Branch `release/v6.0.19`.
