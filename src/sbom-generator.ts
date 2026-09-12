@@ -47,12 +47,16 @@ import { randomUUID } from "node:crypto";
 import { isJsonObject, parseJsonObject } from "./json-utils.js";
 import type {
   Finding,
+  ConfirmedMalwareInput,
   SbomComponent,
   SbomDependency,
   SbomDocument,
   SbomLicenseEntry,
   SbomProperty,
+  SbomRating,
+  TwoTierVerdict,
   VexStatement,
+  VulnerabilityScoreInput,
 } from "./types.js";
 
 const TOOL_VERSION = "6.0.20";
@@ -773,23 +777,36 @@ export function describeInventoryCoverage(doc: SbomDocument): string {
   return parts.join("; ");
 }
 
+export interface SbomGeneratorOptions {
+  slsaLevel?: number;
+  attackChainFindings?: Finding[];
+  twoTierVerdict?: TwoTierVerdict;
+  compositeRiskScore?: number;
+  vulnerabilities?: Array<
+    VulnerabilityScoreInput & {
+      cisaKevDateAdded?: string;
+      source?: { name: string; url?: string };
+      affectsRef?: string;
+    }
+  >;
+  confirmedMalware?: ConfirmedMalwareInput[];
+}
+
 /**
- * Build VEX statements from findings the project's policy suppressed.
- *
- * The suppressed findings are passed in separately because applyPolicy() drops
- * them from the findings it returns, so filtering the report's findings for
- * `suppressed` finds nothing on the scanner path. Direct API callers that hand
- * this function findings already marked `suppressed` still work.
- *
- * No `analysis.justification` is emitted. CycloneDX constrains that field to a
- * fixed enum ("protected_by_compiler" and friends) which a free-text policy
- * reason cannot be mapped to, so the project's own words are carried verbatim
- * in `analysis.detail` and nothing is asserted that the policy did not say. A
- * suppression with no recorded reason says exactly that.
+ * Build VEX statements from findings and threat intelligence feeds.
+ * Serializes EPSS and CVSS ratings into vulnerabilities[].ratings,
+ * and CISA KEV status into vulnerabilities[].analysis.detail.
  */
-function buildVexStatements(suppressed: Finding[]): VexStatement[] {
+function buildVexStatements(
+  suppressed: Finding[],
+  options?: SbomGeneratorOptions,
+  activeFindings: Finding[] = [],
+): VexStatement[] {
   const seen = new Set<string>();
   const statements: VexStatement[] = [];
+  const severityForScore = (score: number): SbomRating["severity"] =>
+    score === 0 ? "none" : score >= 9 ? "critical" : score >= 7 ? "high" : score >= 4 ? "medium" : "low";
+
   for (const f of suppressed) {
     const key = `${f.rule}|${f.file ?? ""}|${f.line ?? ""}`;
     if (seen.has(key)) continue;
@@ -797,21 +814,210 @@ function buildVexStatements(suppressed: Finding[]): VexStatement[] {
 
     const reason = f.suppressionReason?.trim();
     const where = f.file ? ` Finding location: ${f.file}${f.line ? `:${f.line}` : ""}.` : "";
+    let detail = reason
+      ? `Suppressed by project policy. Declared reason: ${reason}.${where}`
+      : `Suppressed by project policy; no reason was recorded for this suppression.${where}`;
+
+    if (f.cisaKev) {
+      detail = `${detail} CISA KEV: Known Exploited Vulnerability (Active exploitation observed).`;
+    }
+
+    const ratings: SbomRating[] = [];
+    if (typeof f.cvss === "number") {
+      const cvss = Math.max(0, Math.min(10, f.cvss));
+      const severity = severityForScore(cvss);
+      ratings.push({
+        source: { name: "supply-chain-guard" },
+        score: cvss,
+        severity,
+        method: "other",
+      });
+    }
+    if (typeof f.epss === "number") {
+      ratings.push({
+        source: { name: "FIRST", url: "https://www.first.org/epss" },
+        score: Math.max(0, Math.min(1, f.epss)),
+        method: "other",
+      });
+    }
+
     statements.push({
       id: `scg-${f.rule}`,
       source: { name: "supply-chain-guard" },
+      ratings: ratings.length > 0 ? ratings : undefined,
       analysis: {
         state: "not_affected",
-        detail: reason
-          ? `Suppressed by project policy. Declared reason: ${reason}.${where}`
-          : `Suppressed by project policy; no reason was recorded for this suppression.${where}`,
+        detail,
       },
-      // The subject is the only component a finding about the project's own
-      // files can be attributed to. Referencing the file path here instead
-      // would produce a bom-ref that resolves to nothing in this document.
       affects: [{ ref: SUBJECT_BOM_REF }],
     });
   }
+
+  // Serialize vulnerability findings from active scan with EPSS / CVSS / CISA KEV
+  for (const f of activeFindings) {
+    if (!f.cve && typeof f.cvss !== "number" && typeof f.epss !== "number" && !f.cisaKev) continue;
+    const vulnId = f.cve ?? `scg-${f.rule}`;
+    const key = `active-${vulnId}|${f.file ?? ""}|${f.line ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const ratings: SbomRating[] = [];
+    if (typeof f.cvss === "number") {
+      const cvss = Math.max(0, Math.min(10, f.cvss));
+      const severity = severityForScore(cvss);
+      ratings.push({
+        source: { name: "supply-chain-guard" },
+        score: cvss,
+        severity,
+        method: "other",
+      });
+    }
+    if (typeof f.epss === "number") {
+      ratings.push({
+        source: { name: "FIRST", url: "https://www.first.org/epss" },
+        score: Math.max(0, Math.min(1, f.epss)),
+        method: "other",
+      });
+    }
+
+    let detail = f.description || "Identified vulnerability";
+    if (f.cisaKev) {
+      detail = `${detail} CISA KEV: Known Exploited Vulnerability (Active exploitation observed).`;
+    }
+
+    statements.push({
+      id: vulnId,
+      source: { name: "supply-chain-guard" },
+      ratings: ratings.length > 0 ? ratings : undefined,
+      analysis: {
+        state: "in_triage",
+        detail,
+      },
+      affects: [{ ref: SUBJECT_BOM_REF }],
+    });
+  }
+
+  // Serialize external feed vulnerability inputs if provided
+  const confirmedById = new Map((options?.confirmedMalware ?? []).map((malware) => [malware.id, malware]));
+  const externalById = new Map<string, VexStatement>();
+  const addRating = (statement: VexStatement, rating: SbomRating): void => {
+    const ratings = statement.ratings ?? (statement.ratings = []);
+    const duplicate = ratings.some((candidate) =>
+      candidate.score === rating.score &&
+      candidate.severity === rating.severity &&
+      candidate.method === rating.method &&
+      candidate.vector === rating.vector &&
+      candidate.source?.name === rating.source?.name &&
+      candidate.source?.url === rating.source?.url,
+    );
+    if (!duplicate) ratings.push(rating);
+  };
+  const addAffects = (statement: VexStatement, ref: string): void => {
+    const affects = statement.affects ?? (statement.affects = []);
+    if (!affects.some((candidate) => candidate.ref === ref)) affects.push({ ref });
+  };
+  if (options?.vulnerabilities) {
+    for (const v of options.vulnerabilities) {
+      const id = v.cve ?? v.id ?? "UNKNOWN_VULN";
+      const affectsRef = v.affectsRef ?? SUBJECT_BOM_REF;
+      const existing = externalById.get(id);
+      if (existing) {
+        addAffects(existing, affectsRef);
+        if (typeof v.cvss === "number") {
+          const cvss = Math.max(0, Math.min(10, v.cvss));
+          addRating(existing, {
+            source: v.source,
+            score: cvss,
+            severity: severityForScore(cvss),
+            method: v.cvssMethod,
+            vector: v.cvssVector,
+          });
+        } else if (v.cvssVector && v.cvssMethod) {
+          addRating(existing, {
+            source: v.source,
+            method: v.cvssMethod,
+            vector: v.cvssVector,
+          });
+        }
+        if (typeof v.epss === "number") {
+          addRating(existing, {
+            source: { name: "FIRST", url: "https://www.first.org/epss" },
+            score: Math.max(0, Math.min(1, v.epss)),
+            method: "other",
+          });
+        }
+        if (confirmedById.has(v.id ?? "")) existing.analysis.state = "exploitable";
+        if (v.inCisaKev && !existing.analysis.detail?.includes("CISA KEV:")) {
+          existing.analysis.detail = `CISA KEV: Known Exploited Vulnerability (Active exploitation observed).${v.cisaKevDateAdded ? ` Added: ${v.cisaKevDateAdded}.` : ""}`;
+        }
+        continue;
+      }
+
+      const ratings: SbomRating[] = [];
+      if (typeof v.cvss === "number") {
+        const cvss = Math.max(0, Math.min(10, v.cvss));
+        const severity = severityForScore(cvss);
+        ratings.push({
+          source: v.source,
+          score: cvss,
+          severity,
+          method: v.cvssMethod,
+          vector: v.cvssVector,
+        });
+      } else if (v.cvssVector && v.cvssMethod) {
+        ratings.push({
+          source: v.source,
+          method: v.cvssMethod,
+          vector: v.cvssVector,
+        });
+      }
+      if (typeof v.epss === "number") {
+        ratings.push({
+          source: { name: "FIRST", url: "https://www.first.org/epss" },
+          score: Math.max(0, Math.min(1, v.epss)),
+          method: "other",
+        });
+      }
+
+      let detail = "External vulnerability feed assessment.";
+      if (v.inCisaKev) {
+        detail = `CISA KEV: Known Exploited Vulnerability (Active exploitation observed).${v.cisaKevDateAdded ? ` Added: ${v.cisaKevDateAdded}.` : ""}`;
+      }
+
+      const statement: VexStatement = {
+        id,
+        source: v.source ?? { name: "supply-chain-guard" },
+        ratings: ratings.length > 0 ? ratings : undefined,
+        analysis: {
+          state: confirmedById.has(v.id ?? "") ? "exploitable" : "in_triage",
+          detail,
+        },
+        affects: [{ ref: affectsRef }],
+      };
+      externalById.set(id, statement);
+      statements.push(statement);
+    }
+  }
+
+  for (const malware of options?.confirmedMalware ?? []) {
+    const affectsRef = malware.affectsRef ?? SUBJECT_BOM_REF;
+    const alreadyPresent = statements.find((statement) => statement.id === malware.id);
+    if (alreadyPresent) {
+      alreadyPresent.analysis.state = "exploitable";
+      addAffects(alreadyPresent, affectsRef);
+      continue;
+    }
+    statements.push({
+      id: malware.id,
+      source: malware.source,
+      analysis: {
+        state: "exploitable",
+        detail: malware.description ?? `Confirmed malicious package: ${malware.packageName}`,
+      },
+      affects: [{ ref: affectsRef }],
+    });
+  }
+
   return statements;
 }
 
@@ -831,6 +1037,7 @@ export function generateSbomDocument(
   projectDir: string,
   findings: Finding[],
   suppressedFindings: Finding[] = [],
+  options?: SbomGeneratorOptions,
 ): SbomDocument {
   // Determine project name and version from package.json. The version is left
   // undefined when nothing declares it: this is the one component that
@@ -952,10 +1159,47 @@ export function generateSbomDocument(
     });
   }
 
+  const subjectProperties: SbomProperty[] = [];
+  if (options?.slsaLevel !== undefined) {
+    subjectProperties.push({
+      name: "supply-chain-guard:slsa:level",
+      value: String(options.slsaLevel),
+    });
+  }
+  if (options?.attackChainFindings && options.attackChainFindings.length > 0) {
+    const chainRules = [...new Set(options.attackChainFindings.map((f) => f.rule))].join(", ");
+    subjectProperties.push({
+      name: "supply-chain-guard:attack-chain:findings",
+      value: chainRules,
+    });
+  }
+  const crs = options?.compositeRiskScore ?? options?.twoTierVerdict?.compositeRiskScore;
+  if (crs !== undefined) {
+    subjectProperties.push({
+      name: "supply-chain-guard:risk:composite-score",
+      value: String(crs),
+    });
+  }
+  if (options?.twoTierVerdict) {
+    subjectProperties.push({
+      name: "supply-chain-guard:two-tier:verdict",
+      value: options.twoTierVerdict.verdict,
+    });
+    subjectProperties.push({
+      name: "supply-chain-guard:risk:verdict",
+      value: options.twoTierVerdict.verdict,
+    });
+    subjectProperties.push({
+      name: "supply-chain-guard:two-tier:tier",
+      value: String(options.twoTierVerdict.tier),
+    });
+  }
+
   const subject: SbomDocument["metadata"]["component"] = {
     type: "application",
     name: projectName,
     "bom-ref": SUBJECT_BOM_REF,
+    properties: subjectProperties.length > 0 ? subjectProperties : undefined,
   };
   if (projectVersion) {
     subject.version = projectVersion;
@@ -964,10 +1208,11 @@ export function generateSbomDocument(
 
   // Build VEX. Findings already marked suppressed by a direct API caller are
   // honoured alongside the ones the policy engine removed from the report.
-  const vulnerabilities = buildVexStatements([
-    ...findings.filter((f) => f.suppressed),
-    ...suppressedFindings,
-  ]);
+  const vulnerabilities = buildVexStatements(
+    [...findings.filter((f) => f.suppressed), ...suppressedFindings],
+    options,
+    findings.filter((f) => !f.suppressed),
+  );
 
   return {
     bomFormat: "CycloneDX",

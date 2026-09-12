@@ -9,7 +9,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync, execFileSync } from "node:child_process";
 import type { Finding, ScanOptions, ScanReport, ScanSummary, Severity } from "./types.js";
-import { SEVERITY_SCORES } from "./types.js";
+import { SCORE_EXCLUDED_RULES, SEVERITY_SCORES } from "./types.js";
 import {
   FILE_PATTERNS,
   CAMPAIGN_PATTERNS,
@@ -108,6 +108,8 @@ import {
 } from "./patterns.js";
 import { generateSbomDocument } from "./sbom-generator.js";
 import { verifySLSA, assessSLSA } from "./slsa-verifier.js";
+import { evaluateTwoTierVerdict } from "./two-tier-scoring.js";
+import { gatherExternalIntel } from "./external-threat-intel.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
 import { scanAgentSkillFiles } from "./skills-scanner.js";
@@ -205,6 +207,24 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const stat = fs.statSync(scanDir);
   if (!stat.isDirectory()) {
     throw new Error(`Target is not a directory: ${scanDir}`);
+  }
+
+  let effectiveScorecard = options.scorecard;
+  let effectiveVulnerabilities = [...(options.vulnerabilities ?? [])];
+  let effectiveConfirmedMalware = [...(options.confirmedMalware ?? [])];
+  let externalIntel: ScanReport["externalIntel"];
+  if (options.externalIntel) {
+    const intel = await gatherExternalIntel(scanDir);
+    externalIntel = {
+      notes: intel.notes,
+      statuses: intel.statuses,
+      packagesQueried: intel.packagesQueried,
+      packagesSkipped: intel.packagesSkipped,
+      partial: intel.partial,
+    };
+    if (effectiveScorecard === undefined) effectiveScorecard = intel.scorecard;
+    effectiveVulnerabilities.push(...intel.vulnerabilities);
+    effectiveConfirmedMalware.push(...intel.confirmedMalware);
   }
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
@@ -731,7 +751,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Preserve completeness independently of policy, baseline, or severity filters.
   // A user may hide the informational finding, but that cannot turn a partial
   // evaluation into a complete report.
-  let partialScan = hasPartialScanFinding(findings);
+  let partialScan = hasPartialScanFinding(findings) || externalIntel?.partial === true;
 
   // v4.7: Active validation (assign confidence tiers, rationale, evidence)
   validateFindings(findings);
@@ -764,9 +784,6 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Policy validation findings are materialized by applyPolicy(), so refresh
   // the snapshot before later filters can hide a coverage-breaking warning.
   partialScan ||= hasPartialScanFinding(findings);
-
-  // v4.2: Correlation engine - link findings into incidents
-  const correlation = correlateFindings(findings);
 
   // v4.2: Trust breakdown (for directory/github scans with package.json)
   const hasLockfile = fs.existsSync(path.join(scanDir, "package-lock.json"));
@@ -861,6 +878,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Filter by severity and excluded rules
   const filteredFindings = filterFindings(findings, options);
 
+  // Correlate only evidence that survived baseline, policy, severity, and rule
+  // filters. Reusing the earlier raw incident set here revived excluded findings
+  // as a Tier 1 chain and added their risk boost to an otherwise filtered report.
+  const correlation = correlateFindings(filteredFindings);
+
   // Calculate summary and score (with correlation risk boost)
   const summary = calculateSummary(allFiles.length, filesScanned, filteredFindings);
   const baseScore = calculateScore(filteredFindings);
@@ -892,6 +914,27 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   const gitProv = resolveGitProvenance(scanDir);
   const detectionSet = getDetectionSetProvenance();
   const slsaAssessment = assessSLSA(scanDir);
+  // Opt-in only. An unconditional verdict changed the default text and JSON output
+  // for every existing consumer, and attached a composite risk score derived from a
+  // Scorecard fallback that no lookup had produced.
+  const twoTierVerdict = options.twoTier || options.externalIntel
+    ? evaluateTwoTierVerdict(filteredFindings, correlation.incidents, {
+        slsaLevel: slsaAssessment.level,
+        scorecard: effectiveScorecard,
+        vulnerabilities: effectiveVulnerabilities,
+        confirmedMalware: effectiveConfirmedMalware,
+        partialScan,
+      })
+    : undefined;
+
+  const sbomDocument = generateSbomDocument(scanDir, filteredFindings, policySuppressed, {
+    slsaLevel: slsaAssessment.level,
+    attackChainFindings: filteredFindings.filter((f) => f.correlationId || f.rule.includes("CHAIN")),
+    twoTierVerdict,
+    compositeRiskScore: twoTierVerdict?.compositeRiskScore,
+    vulnerabilities: effectiveVulnerabilities,
+    confirmedMalware: effectiveConfirmedMalware,
+  });
 
   // Cleanup temp directory
   if (tempDir) {
@@ -926,12 +969,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     riskHistory: riskHistory.length > 0 ? riskHistory : undefined,
     metrics,
     // v4.9: CycloneDX 1.6 SBOM from actual dependency inventory
-    sbomDocument: generateSbomDocument(scanDir, filteredFindings, policySuppressed),
+    sbomDocument,
     // v4.9: SLSA provenance level. Unreleased: the level and the record of what
     // produced it come from ONE assessment, so a renderer can never show the
     // number without the checks that were and were not run behind it.
     slsaLevel: slsaAssessment.level,
     slsaAssessment,
+    // Two-tier gated verdict and composite risk score (only when opted in)
+    twoTierVerdict,
+    compositeRiskScore: twoTierVerdict?.compositeRiskScore,
+    externalIntel,
     // v5.29 (issue #208): Scanned commit provenance and detection set metadata
     commit: gitProv.commit,
     branch: gitProv.branch,
@@ -1976,10 +2023,10 @@ function calculateSummary(
  */
 // Meta/governance findings that fire because other findings exist - excluded from
 // score to prevent circular inflation (they don't represent independent risk signals).
-export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
-  "CRITICAL_FINDING_NO_OWNER",
-  "RISK_STAGNATION_HIGH",
-]);
+// The set itself now lives in types.ts so scoring modules can read it without
+// importing this orchestrator; re-exported here because that is the name callers
+// and src/__tests__/action-partial-scan.test.ts already import.
+export { SCORE_EXCLUDED_RULES } from "./types.js";
 
 // Exported for src/__tests__/action-partial-scan.test.ts, which checks that the
 // jq score floor in action.yml still agrees with this function. That floor is a

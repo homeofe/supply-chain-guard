@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { formatReport, getFindingsExitCode, getReportExitCode } from "../reporter.js";
+import {
+  formatReport,
+  getFindingsExitCode,
+  getReportExitCode,
+  getTwoTierVerdictExitCode,
+} from "../reporter.js";
 import type { ScanReport } from "../types.js";
 import pkg from "../../package.json";
 
@@ -1035,5 +1040,40 @@ describe("a published artefact states what was not assessed", () => {
     expect(gitlab.scan.messages[0].level).toBe("warn");
     expect(gitlab.scan.messages[0].value).toContain("not a clean verdict");
     expect(formatReport(zero, "junit")).toContain("not a clean verdict");
+  });
+});
+
+describe("two-tier exit code", () => {
+  it("never reports a pass for a partial scan", () => {
+    // getReportExitCode floors a partial scan at 1: a verdict computed over files
+    // that were read says nothing about the files that were skipped. The two-tier
+    // path has to carry the same floor or enabling --two-tier turns an incomplete
+    // scan into a green build.
+    const partial = makeReport({ partialScan: true, findings: [], twoTierVerdict: undefined });
+    partial.summary.critical = 0;
+    partial.summary.high = 0;
+
+    expect(getReportExitCode(partial)).toBe(1);
+    expect(getTwoTierVerdictExitCode(partial)).toBe(1);
+  });
+
+  it("passes a complete clean scan", () => {
+    const clean = makeReport({ partialScan: false, findings: [], twoTierVerdict: undefined });
+    clean.summary.critical = 0;
+    clean.summary.high = 0;
+
+    expect(getTwoTierVerdictExitCode(clean)).toBe(0);
+  });
+
+  it("returns a supplied verdict's own code unchanged", () => {
+    expect(
+      getTwoTierVerdictExitCode({
+        tier: 1,
+        verdict: "CRITICAL / REJECT",
+        tier1Blocked: true,
+        level: "CRITICAL",
+        exitCode: 2,
+      }),
+    ).toBe(2);
   });
 });

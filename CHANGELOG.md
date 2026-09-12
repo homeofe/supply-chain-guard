@@ -7,6 +7,34 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Two-tier gated verdict and composite risk score behind `scan --two-tier`. Tier 1
+  is a binary gate on confirmed malware signatures, a complete ingress + access +
+  exfiltration attack chain tied to shared incident evidence, hardcoded C2
+  infrastructure, Discord/Telegram exfiltration endpoints and exact known C2
+  wallet indicators. Tier 2 scores everything
+  that passes it as `CRS = min(100, 0.35 * S_vuln + 0.45 * S_heur + 0.20 * S_hyg)`.
+  The verdict is opt-in: without the flag, text and JSON output are unchanged.
+- `scan --external-intel` looks up OSV for resolved npm coordinates from the root
+  package and `package-lock.json`, enriches advisories with FIRST EPSS and the CISA
+  KEV catalog, and looks up the declared GitHub repository's OpenSSF Scorecard.
+  The option implies `--two-tier`. Network access is opt-in, the same as
+  `--check-registry`; the default scan path stays offline. Unavailable or invalid
+  feeds are reported as partial external coverage and cannot produce a passing gate.
+- `scan --scorecard <score>` supplies a validated OpenSSF Scorecard score directly,
+  implies `--two-tier`, and rejects values outside 0.0 through 10.0.
+- CycloneDX 1.6 ratings and analysis state on VEX statements preserve the external
+  feed's CVSS method, vector and source, record EPSS as `method: "other"` from FIRST,
+  and reserve `exploitable` for confirmed malicious-package evidence.
+
+### Changed
+
+- `--two-tier` uses the same exit-code contract as every other gate here: 2 is the
+  stronger critical verdict, 1 is high. Its exit code is additionally floored at the
+  default severity gate and at the partial-scan floor, so enabling the flag can
+  never turn a report that blocks today into a pass.
+
 ## [6.0.20] - 2026-09-12
 
 ### Added

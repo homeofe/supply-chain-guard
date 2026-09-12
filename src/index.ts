@@ -198,5 +198,47 @@ export type {
   SbomDependency,
   SbomLicenseEntry,
   SbomProperty,
+  SbomRating,
+  TwoTierVerdict,
+  TwoTierOptions,
+  TwoTierVerdictLevel,
+  TwoTierVerdictLabel,
+  VulnerabilityScoreInput,
+  ConfirmedMalwareInput,
+  ExternalIntelReport,
+  ExternalLookupStatus,
+  Vulnerability,
+  ScanResult,
   VexStatement,
 } from "./types.js";
+export {
+  evaluateTwoTierVerdict,
+  evaluateTier1Gate,
+  calculateExploitabilityVector,
+  calculateHeuristicVector,
+  calculateGovernanceVector,
+  calculateCompositeRiskScore,
+  getTwoTierExitCode,
+} from "./two-tier-scoring.js";
+export {
+  queryOsv,
+  queryEpss,
+  queryCisaKev,
+  queryScorecard,
+  enrichVulnerabilityInputs,
+  gatherExternalIntel,
+  ThreatIntelCache,
+  normalizeEcosystemPrefix,
+  isValidEcosystemPrefix,
+  formatPackageCacheKey,
+  parsePrefixedPackage,
+  STANDARD_ECOSYSTEM_PREFIXES,
+  LOOKUP_TIMEOUT_MS,
+  LOOKUP_FAILURE_TTL_MS,
+  SCORECARD_FALLBACK_SCORE,
+  EPSS_FALLBACK_SCORE,
+} from "./external-threat-intel.js";
+export type { ExternalIntelResult, ExternalIntelOptions } from "./external-threat-intel.js";
+export { getTwoTierVerdictExitCode } from "./reporter.js";
+export { shouldParseWorkflow } from "./workflow-ast.js";
+export type { SbomGeneratorOptions } from "./sbom-generator.js";
