@@ -63,20 +63,82 @@ the block deferral and the only one taken.
 The corpus-migration question is now FOUR waves old and is the one open item
 here. Deferred so far: 2026-09-02 (9,758), 2026-09-04 (9,937), 2026-09-06
 (8,547) and 2026-09-10 (8,883), about 37,100 npm package names that nothing in
-the scanner detects. The alphabet walk has reached `f`, so on the order of
-100,000 entries are still upstream and the waves will keep arriving every few
-days. Each range is recoverable in full with its printed `--since/--until`
-slice, so nothing is lost, but the gap is live: sampling in wave 1 indicated a
-third to a half are still installable.
+the scanner detects. The alphabet walk has reached `f` of 26 letters, so on the
+order of 100,000 entries are still upstream and the waves keep arriving every
+two to four days. Each range is recoverable in full with its printed
+`--since/--until` slice, so nothing is lost, but the gap is live: sampling in
+wave 1 indicated a third to a half are still installable.
 
-This is a distribution-model decision, not a daily-import one. Importing the
-corpus wholesale would roughly triple the bundled feed, and
-`project_feed_size_not_a_scan_cost` says the real cost is module-import time per
-CLI invocation and package size, not scan throughput. Options worth weighing:
-ship the corpus as a separate optional feed package, move it behind a
-lazily-loaded chunk, or accept the size. A deferral is cheap to keep adding, so
-there is no deadline pressure, but four waves in ten days is a trend, not an
-incident.
+#### The framing in the earlier notes was wrong
+
+Those notes weighed "separate optional feed package versus lazily-loaded chunk
+versus accept the size". That misses the actual problem, which is the ENCODING
+and not the entry count. The bundled feed stores every IOC as a TypeScript
+object literal, measured at 168 bytes per entry. The corpus does not need that
+shape, and re-encoding it changes the size of the decision rather than just its
+answer.
+
+Measured on this box, 2026-09-12, same 120,000 entries in two encodings:
+
+| encoding | load time | source size |
+| --- | --- | --- |
+| object literals (today) | 684 ms | 19.0 MB |
+| newline-delimited name Set | 24 ms | 2.4 MB |
+
+Scaling in the current encoding, synthesised at three sizes in the shipped
+entry shape: 20,000 -> 267 ms, 60,000 -> 454 ms, 120,000 -> 684 ms. So the
+corpus does not merely add bulk, it puts a growth curve on EVERY CLI
+invocation. That is the cost `project_feed_size_not_a_scan_cost` already
+identified as the one that bites: module-import time, not scan throughput. The
+real `dist/threat-intel.js` imports in 80 ms today at 20,706 entries, so treat
+the synthetic absolutes as a scaling curve rather than a prediction of the
+shipped number. The compact form is flat and about 28 times faster, which
+removes the curve instead of moving it.
+
+#### Recommendation
+
+Ship the corpus IN THE SAME PACKAGE, compactly encoded and lazily loaded, as a
+second store (`CORPUS_NAMES`) separate from `BUNDLED_FEED`.
+
+1. Compact encoding: newline-delimited `name@version` read into a `Set`. Exact
+   match, so no false positives. A Bloom filter is tempting on size but is the
+   wrong trade here, because a false positive gets the tool switched off, which
+   this project rates worse than a miss, and 2.4 MB buys the exact set outright.
+2. Lazy: load on the first package lookup, not at module import, so `--version`,
+   `--help` and the config paths never pay for it.
+3. Same package, NOT an optional one. This is the part to push back on hardest.
+   An optional corpus package means most users never install it, so the
+   detection silently does not happen, gated on whether someone read the docs.
+   That is a false negative by default, which is the expensive direction here.
+4. Keep provenance, trimmed. Name plus MAL id measures 60 bytes per entry
+   (5.7 MB raw, 1.6 MB gzipped) against 24 bytes for names alone. Worth it: a
+   finding that cannot cite an advisory is much weaker to triage. Drop the GHSA
+   id and reconstruct it from the MAL id.
+
+The structural reason this is a correct shape and not a hack: the corpus is
+homogeneous, every entry `critical` at confidence 1.0 with a single advisory id,
+while the live feed is genuinely rich with families, campaigns, confidence tiers
+and non-package IOC types. They are different data and deserve different stores.
+That also kills a tempting bad idea: pruning the dead or unpublished half to
+save space. At 2.4 MB there is no reason to, and liveness goes stale the moment
+it is measured.
+
+#### Not verified, and could change the design
+
+- Whether `matchPackageIOC` / `matchBareNpmIOC` can be backed by a `Set` without
+  changing match semantics. That path already carries a bare-versus-versioned
+  distinction (see the bare-npm resolver note) and the corpus is mostly
+  versioned, so the routing needs a real look before any of this is built.
+- Whether `feed.json`, 4.79 MB today, should carry the corpus at all or stay
+  live-feed only. That is a consumer-contract question, not an internal one.
+
+#### Sizing
+
+This is a real change to how the feed is stored and loaded, touching the
+importer, the scanner lookup path and the feed generator. It is NOT a
+daily-import task and should not ride along on one. There is no deadline
+pressure either: a deferral is cheap to keep adding and wave 5 is a two-minute
+job. But four waves in ten days is a trend, not an incident.
 
 ## v6.0.19 release (2026-09-11)
 
