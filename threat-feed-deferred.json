@@ -24,6 +24,14 @@
       "detectionGap": "These npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02 and 2026-09-04 waves: the block spans hundreds of unrelated name tokens and no anchored rule in src/patterns.ts covers them. Letter e is only about 734 names in, so this wave is again an incomplete slice of the upstream corpus. The human precondition is satisfied: the range matched 8,547 of the 8,550 reviewed candidates, and the 3 that fell outside it were imported by this same run, because the both-axis guard keeps an entry whose _queueDate sits outside the window. Those three are the day's genuine non-corpus advisories (vishal_312pkg@1.0.0, agentrc-security-poc-policy@1.0.0 and pypi:dac-tools@999.0.0), so no live intel from 2026-09-06 is suppressed by this range.",
       "expectedCount": 8550,
       "deferredOn": "2026-09-08"
+    },
+    {
+      "since": "2026-09-10",
+      "until": "2026-09-10",
+      "reason": "Fourth wave of the same GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 8,891 candidates in one day, 100 percent alphabetical (e 7,201, f 1,690), all npm, against a normal daily volume of 26 to 450. It resumes exactly where the 2026-09-06 wave stopped, which had carried e only about 734 names in, and it finishes e and continues into f. Deferred on the same grounds as the three earlier waves and pending the same owner decision on feed size and distribution model.",
+      "detectionGap": "These npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02, 2026-09-04 and 2026-09-06 waves: the block spans hundreds of unrelated name tokens across unrelated malware families and no anchored rule in src/patterns.ts covers them. Letter f is only about 1,690 names in, so this wave is again an incomplete slice of the upstream corpus. The human precondition is satisfied: the day own genuine non-corpus intel was imported by the 2026-09-11 run and is in the committed feed (44 entries, the eToro dependency-confusion campaign). The range matched 8,883 of the 8,891 reviewed candidates, and the 8 that fell outside it were imported by this same run, because the both-axis guard keeps an entry whose _queueDate sits outside the window. Those eight carry current-batch ids MAL-2026-16111 to MAL-2026-16118 and are additional malicious versions (99.0.0 and 99.0.2) of that same eToro campaign, whose 999.0.0 versions were already pinned, so no live intel from 2026-09-10 is suppressed by this range.",
+      "expectedCount": 8891,
+      "deferredOn": "2026-09-12"
     }
   ]
 }

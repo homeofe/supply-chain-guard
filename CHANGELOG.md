@@ -7,6 +7,36 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-12: 75 new package IOCs. The advisory
+  importer added 72 of them - 64 published on 2026-09-11, plus 8 additional
+  malicious versions (99.0.0 and 99.0.2) of five eToro dependency-confusion
+  lures whose 999.0.0 versions were already pinned. New names this batch
+  include `cr-bot-common`, `greensaver`, `tracker-cloudflare`,
+  `strapi-plugin-vinsoc-1109`, `@nimbusedge/auth` and a run of PyPI AI-tooling
+  typosquats (`transfomers`, `langgrap`, `openaii`, `ollamaa`, `aitextkit-py`,
+  `aitextutils-py`, `web3-eth-account`, `eth-account-web3`, `pymem-win`).
+  `tailwind-form-kit` is name-blocked rather than version-pinned because npm
+  has replaced it with a security holding package, so no legitimate release
+  can be hit.
+- Three earlier eToro lures (`etoro-cordova-prove-mobileauth`, `etoro-provema`,
+  `etoro-plaid-widget`, one 999.999.999 version each) added by hand. They sit
+  inside the deferred 2026-09-10 bulk-migration block, and are lifted out so
+  that eToro coverage is not left partial.
+
+### Changed
+
+- `threat-feed-deferred.json`: the fourth wave of the GitHub Advisory Database
+  bulk migration of the historical OpenSSF malicious-packages corpus
+  (2026-09-10, 8,891 candidates, 100 percent alphabetical across `e` and `f`)
+  is now deferred, as the three earlier waves already are. The range holds back
+  8,883 corpus entries and is recoverable in full with an explicit
+  `--since 2026-09-10 --until 2026-09-10` slice. It suppresses no live intel:
+  the day own genuine advisories were imported by the 2026-09-11 run, and the
+  8 current-batch eToro versions fall outside the range on the `_queueDate`
+  axis and were imported by this run.
+
 ## [6.0.19] - 2026-09-11
 
 ### Added
