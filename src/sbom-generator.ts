@@ -854,7 +854,7 @@ function buildVexStatements(
   }
 
   // Serialize vulnerability findings from active scan with EPSS / CVSS / CISA KEV
-  for (const f of activeFindings) {
+  for (const [findingIndex, f] of activeFindings.entries()) {
     if (!f.cve && typeof f.cvss !== "number" && typeof f.epss !== "number" && !f.cisaKev) continue;
     const vulnId = f.cve ?? `scg-${f.rule}`;
     const key = `active-${vulnId}|${f.file ?? ""}|${f.line ?? ""}`;
@@ -885,15 +885,31 @@ function buildVexStatements(
       detail = `${detail} CISA KEV: Known Exploited Vulnerability (Active exploitation observed).`;
     }
 
+    const properties: SbomProperty[] = [];
+    if (f.file) properties.push({ name: "supply-chain-guard:file", value: f.file });
+    if (f.line !== undefined) {
+      properties.push({ name: "supply-chain-guard:line", value: String(f.line) });
+    }
+    const incidentIds = new Set([
+      ...(f.correlationIds ?? []),
+      ...(f.correlationId ? [f.correlationId] : []),
+    ]);
+    for (const incidentId of incidentIds) {
+      properties.push({ name: "supply-chain-guard:incident", value: incidentId });
+    }
+
     statements.push({
+      "bom-ref": `scg-finding-${findingIndex}`,
       id: vulnId,
       source: { name: "supply-chain-guard" },
       ratings: ratings.length > 0 ? ratings : undefined,
+      recommendation: f.recommendation,
       analysis: {
         state: "in_triage",
         detail,
       },
       affects: [{ ref: SUBJECT_BOM_REF }],
+      properties: properties.length > 0 ? properties : undefined,
     });
   }
 

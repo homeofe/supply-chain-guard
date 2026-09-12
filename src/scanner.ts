@@ -214,7 +214,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   let effectiveConfirmedMalware = [...(options.confirmedMalware ?? [])];
   let externalIntel: ScanReport["externalIntel"];
   if (options.externalIntel) {
-    const intel = await gatherExternalIntel(scanDir);
+    const intel = await gatherExternalIntel(scanDir, {
+      scorecardOverride: effectiveScorecard,
+    });
     externalIntel = {
       notes: intel.notes,
       statuses: intel.statuses,
@@ -927,14 +929,21 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       })
     : undefined;
 
-  const sbomDocument = generateSbomDocument(scanDir, filteredFindings, policySuppressed, {
-    slsaLevel: slsaAssessment.level,
-    attackChainFindings: filteredFindings.filter((f) => f.correlationId || f.rule.includes("CHAIN")),
-    twoTierVerdict,
-    compositeRiskScore: twoTierVerdict?.compositeRiskScore,
-    vulnerabilities: effectiveVulnerabilities,
-    confirmedMalware: effectiveConfirmedMalware,
-  });
+  const sbomDocument = generateSbomDocument(
+    scanDir,
+    filteredFindings,
+    policySuppressed,
+    options.twoTier || options.externalIntel
+      ? {
+          slsaLevel: slsaAssessment.level,
+          attackChainFindings: filteredFindings.filter((f) => f.correlationId || f.rule.includes("CHAIN")),
+          twoTierVerdict,
+          compositeRiskScore: twoTierVerdict?.compositeRiskScore,
+          vulnerabilities: effectiveVulnerabilities,
+          confirmedMalware: effectiveConfirmedMalware,
+        }
+      : undefined,
+  );
 
   // Cleanup temp directory
   if (tempDir) {

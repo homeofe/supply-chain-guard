@@ -285,6 +285,8 @@ export interface ExternalIntelReport {
 }
 
 export interface VexStatement {
+  /** Stable document-local reference used by annotations and renderer deduplication. */
+  "bom-ref"?: string;
   /** CVE or finding ID */
   id: string;
   source?: { name: string; url?: string };
@@ -295,6 +297,7 @@ export interface VexStatement {
     detail?: string;
   };
   affects?: Array<{ ref: string; versions?: string[] }>;
+  recommendation?: string;
   /**
    * Free-form name/value pairs on the vulnerability entry (v5.30).
    *

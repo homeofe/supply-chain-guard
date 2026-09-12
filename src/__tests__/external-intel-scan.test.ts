@@ -101,8 +101,43 @@ describe("external intelligence scan integration", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await scan({ target: fixture(), noHistory: true });
+    const report = await scan({ target: fixture(), noHistory: true });
 
     expect(fetchMock).not.toHaveBeenCalled();
+    const propertyNames = report.sbomDocument?.metadata.properties?.map((property) => property.name) ?? [];
+    expect(propertyNames).not.toContain("supply-chain-guard:slsa:level");
+    expect(propertyNames).not.toContain("supply-chain-guard:attack-chain:findings");
+    expect(report.twoTierVerdict).toBeUndefined();
+  });
+
+  it("does not query Scorecard or mark coverage partial when a score is supplied", async () => {
+    const dir = fixture(false, "override-fixture-app");
+    const packageJsonPath = path.join(dir, "package.json");
+    const manifest = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as Record<string, unknown>;
+    manifest.repository = "github:example-org/override-fixture-app";
+    fs.writeFileSync(packageJsonPath, JSON.stringify(manifest));
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.includes("api.securityscorecards.dev")) {
+        throw new Error("Scorecard must not be queried when the caller supplied it");
+      }
+      return { ok: true, status: 200, json: async () => ({ vulns: [] }) } as Response;
+    }));
+
+    const report = await scan({
+      target: dir,
+      externalIntel: true,
+      scorecard: 8.4,
+      noHistory: true,
+    });
+
+    expect(requested.some((url) => url.includes("api.securityscorecards.dev"))).toBe(false);
+    expect(report.externalIntel?.statuses.scorecard).toBe("ok");
+    expect(report.externalIntel?.partial).toBe(false);
+    expect(report.partialScan).not.toBe(true);
+    expect(report.twoTierVerdict?.scorecardUsed).toBe(8.4);
+    expect(report.twoTierVerdict?.exitCode).toBe(0);
   });
 });

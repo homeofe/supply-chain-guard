@@ -508,6 +508,11 @@ export interface ExternalIntelOptions {
   deadlineAt?: number;
 }
 
+export interface GatherExternalIntelOptions extends ExternalIntelOptions {
+  /** Caller-supplied Scorecard value; when present no Scorecard network lookup is required. */
+  scorecardOverride?: number;
+}
+
 function effectiveLookupTimeout(options: ExternalIntelOptions): number {
   const perLookup = Math.max(1, Math.min(30_000, options.timeoutMs ?? LOOKUP_TIMEOUT_MS));
   if (options.deadlineAt === undefined) return perLookup;
@@ -1029,6 +1034,15 @@ export async function queryScorecard(
       signal: AbortSignal.timeout(timeoutMs),
     });
 
+    if (res.status === 404) {
+      const notFound: ScorecardResult = {
+        repo: slug,
+        score: SCORECARD_FALLBACK_SCORE,
+        status: "not-found",
+      };
+      cache.set(cacheKey, notFound, DEFAULT_TTL_MS);
+      return notFound;
+    }
     if (!res.ok) {
       const fallback: ScorecardResult = { repo: slug, score: SCORECARD_FALLBACK_SCORE, status: "unavailable" };
       cache.set(cacheKey, fallback, LOOKUP_FAILURE_TTL_MS);
@@ -1203,9 +1217,15 @@ function resolveGithubSlug(pkg: Record<string, unknown>): string | undefined {
         ? ((repo as { url: string }).url)
         : undefined;
   if (!raw) return undefined;
-  const normalized = raw.startsWith("git+") ? raw.slice(4) : raw;
+  const normalized = raw.replace(/^git\+/i, "");
+  if (/^github:/i.test(normalized)) {
+    return parseGithubSlug(normalized.replace(/^github:/i, ""));
+  }
   if (/^git@github\.com:/i.test(normalized)) {
     return parseGithubSlug(normalized.replace(/^git@github\.com:/i, ""));
+  }
+  if (/^ssh:\/\/git@github\.com\//i.test(normalized)) {
+    return parseGithubSlug(normalized.replace(/^ssh:\/\/git@github\.com\//i, ""));
   }
   if (/^git:\/\/github\.com\//i.test(normalized)) {
     return parseGithubSlug(normalized.replace(/^git:/i, "https:"));
@@ -1378,7 +1398,7 @@ function mergeLookupStatus(current: ExternalLookupStatus, incoming: ExternalLook
  */
 export async function gatherExternalIntel(
   projectDir: string,
-  options: ExternalIntelOptions = {},
+  options: GatherExternalIntelOptions = {},
 ): Promise<ExternalIntelResult> {
   const result: ExternalIntelResult = {
     vulnerabilities: [],
@@ -1421,7 +1441,11 @@ export async function gatherExternalIntel(
   }
 
   const slug = resolveGithubSlug(pkg);
-  if (slug) {
+  if (options.scorecardOverride !== undefined) {
+    result.scorecard = options.scorecardOverride;
+    result.statuses.scorecard = "ok";
+    result.notes.push(`OpenSSF Scorecard ${options.scorecardOverride} supplied by caller; lookup skipped`);
+  } else if (slug) {
     const scorecard = await queryScorecard(slug, effectiveOptions);
     result.statuses.scorecard = scorecard.status;
     if (scorecard.status === "ok") {

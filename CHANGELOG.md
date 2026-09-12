@@ -34,6 +34,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   stronger critical verdict, 1 is high. Its exit code is additionally floored at the
   default severity gate and at the partial-scan floor, so enabling the flag can
   never turn a report that blocks today into a pass.
+- The default offline scan keeps its previous SBOM shape: SLSA, attack-chain,
+  vulnerability-feed, and composite-risk metadata are emitted only when two-tier
+  scoring or external intelligence is explicitly enabled.
+- Generic `PROXY_BACKCONNECT` findings remain high-severity heuristics but no longer
+  trigger the Tier 1 confirmed-C2 kill switch without corroborating evidence.
+- OpenSSF Scorecard HTTP 404 responses are treated as a complete `not-found` result
+  instead of a feed outage. A caller-supplied `--scorecard` value skips the remote
+  Scorecard request, and package repository declarations now recognize both
+  `github:owner/repo` and `git+ssh://git@github.com/owner/repo.git` without relaxing
+  credential rejection.
+- Enriched active findings are emitted once in CycloneDX output. Their stable
+  vulnerability references retain source location, incident membership, ratings,
+  recommendations, and annotation targets without a second generic record.
 
 ## [6.0.20] - 2026-09-12
 

@@ -1271,11 +1271,16 @@ function formatSbom(report: ScanReport): string {
           p.name === "supply-chain-guard:sbom:component-source" &&
           p.value === "package-lock.json",
       ) ?? false;
+    const existingFindingRefs = new Set(
+      (document.vulnerabilities ?? []).flatMap((vulnerability) =>
+        vulnerability["bom-ref"] ? [vulnerability["bom-ref"]] : [],
+      ),
+    );
 
     const subjectsByIncident = new Map<string, string[]>();
     const findingVulnerabilities = report.findings
       .filter((f) => !f.suppressed)
-      .map((finding, idx) => {
+      .flatMap((finding, idx) => {
         const bomRef = `scg-finding-${idx}`;
         const properties: SbomProperty[] = [];
         // CycloneDX gives a vulnerability no field for a source location, so
@@ -1293,7 +1298,8 @@ function formatSbom(report: ScanReport): string {
           subjects.push(bomRef);
           subjectsByIncident.set(incidentId, subjects);
         }
-        return {
+        if (existingFindingRefs.has(bomRef)) return [];
+        return [{
           "bom-ref": bomRef,
           id: finding.rule,
           source: { name: "supply-chain-guard" },
@@ -1304,7 +1310,7 @@ function formatSbom(report: ScanReport): string {
             { ref: resolveAffectedRef(finding.file, document.components, refsArePaths) },
           ],
           ...(properties.length > 0 ? { properties } : {}),
-        };
+        }];
       });
 
     const annotations = buildIncidentAnnotations(

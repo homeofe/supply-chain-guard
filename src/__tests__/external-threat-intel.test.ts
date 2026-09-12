@@ -413,6 +413,23 @@ describe("external threat intelligence", () => {
       expect(res.checks?.["Branch-Protection"]).toBe(8);
     });
 
+    it("treats an unindexed repository as not found rather than unavailable", async () => {
+      const cache = new ThreatIntelCache();
+      const fetchMock = (async () => new Response(null, { status: 404 })) as typeof fetch;
+
+      const first = await queryScorecard("owner/unindexed", { cache, fetchFn: fetchMock });
+      const second = await queryScorecard("owner/unindexed", {
+        cache,
+        fetchFn: (async () => {
+          throw new Error("the not-found result should be cached");
+        }) as typeof fetch,
+      });
+
+      expect(first.status).toBe("not-found");
+      expect(second.status).toBe("not-found");
+      expect(second.score).toBe(SCORECARD_FALLBACK_SCORE);
+    });
+
     it("fails open to fallback score 3.0 on error", async () => {
       const mockFetch = async () => {
         throw new Error("Timeout");
@@ -732,6 +749,56 @@ describe("external threat intelligence", () => {
           }),
         } as Response;
       }) as typeof fetch;
+
+    it.each([
+      "github:example-org/example-repo",
+      "git+ssh://git@github.com/example-org/example-repo.git",
+    ])("resolves the package repository form %s for Scorecard", async (repository) => {
+      fs.writeFileSync(path.join(tmpDir, "package.json"), JSON.stringify({
+        name: "root",
+        version: "1.0.0",
+        repository,
+      }));
+      const requested: string[] = [];
+
+      const result = await gatherExternalIntel(tmpDir, {
+        cache: new ThreatIntelCache(),
+        fetchFn: (async (input: string | URL | Request) => {
+          const url = String(input);
+          requested.push(url);
+          if (url.includes("api.securityscorecards.dev")) {
+            return { ok: true, status: 200, json: async () => ({ score: 8.2 }) } as Response;
+          }
+          return { ok: true, status: 200, json: async () => ({ vulns: [] }) } as Response;
+        }) as typeof fetch,
+      });
+
+      expect(requested).toContain(
+        "https://api.securityscorecards.dev/projects/github.com/example-org/example-repo",
+      );
+      expect(result.statuses.scorecard).toBe("ok");
+      expect(result.partial).toBe(false);
+    });
+
+    it("does not accept credentials while normalizing Git SSH repository URLs", async () => {
+      fs.writeFileSync(path.join(tmpDir, "package.json"), JSON.stringify({
+        name: "root",
+        version: "1.0.0",
+        repository: "git+ssh://attacker:synthetic-secret@github.com/example-org/example-repo.git",
+      }));
+      const requested: string[] = [];
+
+      await gatherExternalIntel(tmpDir, {
+        cache: new ThreatIntelCache(),
+        fetchFn: (async (input: string | URL | Request) => {
+          requested.push(String(input));
+          return { ok: true, status: 200, json: async () => ({ vulns: [] }) } as Response;
+        }) as typeof fetch,
+      });
+
+      expect(requested.some((url) => url.includes("api.securityscorecards.dev"))).toBe(false);
+      expect(requested.join(" ")).not.toContain("synthetic-secret");
+    });
 
     it("retains every installed bom-ref for one queried package version", async () => {
       fs.writeFileSync(path.join(tmpDir, "package.json"), JSON.stringify({ name: "root", version: "1.0.0" }));

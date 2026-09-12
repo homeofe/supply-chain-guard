@@ -101,6 +101,18 @@ describe("two-tier scoring engine", () => {
       expect(evaluateTier1Gate(findings).blocked).toBe(false);
     });
 
+    it("does NOT treat a generic backconnect proxy as confirmed C2", () => {
+      const findings: Finding[] = [
+        makeFinding("PROXY_BACKCONNECT", {
+          severity: "high",
+          description: "Connects through an external socks5 proxy",
+          match: "socks5://198.51.100.10:1080",
+        }),
+      ];
+
+      expect(evaluateTier1Gate(findings).blocked).toBe(false);
+    });
+
     it("does NOT block on invisible Unicode alone", () => {
       // The project's own high-but-not-critical fixture is a clean package plus a
       // U+200B string. Zero-width characters are a heuristic, not a signature.

@@ -6,6 +6,10 @@ import {
   getTwoTierVerdictExitCode,
 } from "../reporter.js";
 import type { ScanReport } from "../types.js";
+import { generateSbomDocument } from "../sbom-generator.js";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import pkg from "../../package.json";
 
 /** Strip ANSI escape codes for plain-text assertions */
@@ -472,6 +476,55 @@ describe("formatReport – SBOM (CycloneDX 1.6)", () => {
     const parsed = JSON.parse(formatReport(makeReport(), "sbom")) as SbomOutput;
     for (const vuln of parsed.vulnerabilities) {
       expect(vuln.affects[0].ref).toBe("target");
+    }
+  });
+
+  it("does not append an enriched active finding a second time", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-reporter-sbom-"));
+    try {
+      fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({
+        name: "enriched-fixture",
+        version: "1.0.0",
+      }));
+      const finding = {
+        rule: "OSV_ENRICHED_FINDING",
+        description: "Known vulnerable dependency",
+        severity: "high" as const,
+        file: "package-lock.json",
+        line: 12,
+        recommendation: "Upgrade the dependency",
+        cve: "CVE-2026-12345",
+        cvss: 8.1,
+        epss: 0.42,
+        cisaKev: true,
+        correlationId: "incident-enriched",
+      };
+      const sbomDocument = generateSbomDocument(dir, [finding]);
+      const report = makeReport({ findings: [finding], sbomDocument });
+
+      const parsed = JSON.parse(formatReport(report, "sbom")) as {
+        vulnerabilities: Array<{
+          id: string;
+          "bom-ref"?: string;
+          properties?: Array<{ name: string; value: string }>;
+        }>;
+      };
+      const records = parsed.vulnerabilities.filter((vulnerability) =>
+        vulnerability.id === "CVE-2026-12345",
+      );
+
+      expect(records).toHaveLength(1);
+      expect(records[0]?.["bom-ref"]).toBe("scg-finding-0");
+      expect(records[0]?.properties).toContainEqual({
+        name: "supply-chain-guard:file",
+        value: "package-lock.json",
+      });
+      expect(records[0]?.properties).toContainEqual({
+        name: "supply-chain-guard:incident",
+        value: "incident-enriched",
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });
