@@ -606,16 +606,38 @@ function readScalarOrBlock(
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function parseWorkflow(content: string): WorkflowAst {
-  const lines = content.replace(/\r/g, "").split("\n");
-  const inner = computeBlockInner(lines);
+/**
+ * Fast regex/token pre-filter for workflow documents.
+ * Verifies that the content contains at least one root-level YAML key
+ * before splitting lines and allocating AST structures.
+ */
+// Keep this deliberately syntax-equivalent to parseKeyValue(): quoted root keys
+// are valid YAML and are commonly used for `on` to avoid YAML 1.1 boolean
+// coercion. `\s` is not used because it also consumes newlines and turns a
+// line-anchored pre-filter into an overlapping, cross-line search.
+const WORKFLOW_ROOT_KEY_PATTERN =
+  /^[ \t]*(?:"(?:name|on|jobs|permissions|env)"|'(?:name|on|jobs|permissions|env)'|(?:name|on|jobs|permissions|env))[ \t]*:/m;
 
+export function shouldParseWorkflow(content: string): boolean {
+  return typeof content === "string" && content.length > 0 && WORKFLOW_ROOT_KEY_PATTERN.test(content);
+}
+
+export function parseWorkflow(content: string): WorkflowAst {
   const ast: WorkflowAst = {
     triggers: [],
     workflowRunWorkflows: [],
     permissions: emptyPermissions(),
     jobs: [],
   };
+
+  // Performance pre-filter: reject empty or non-workflow documents before line-splitting
+  // to avoid V8 heap exhaustion on large inputs or dependencies.
+  if (!shouldParseWorkflow(content)) {
+    return ast;
+  }
+
+  const lines = content.replace(/\r/g, "").split("\n");
+  const inner = computeBlockInner(lines);
 
   for (let i = 0; i < lines.length; i++) {
     if (inner[i]) continue;

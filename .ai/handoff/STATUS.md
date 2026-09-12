@@ -1,3 +1,87 @@
+## External threat intel and two-tier risk scoring (2026-09-12)
+
+Branch `feat/external-threat-intel-and-risk-scoring`.
+
+This branch adds an optional, network-backed assessment path without changing
+the default hermetic scan. `--external-intel` enables OSV package queries plus
+FIRST EPSS, CISA KEV, and OpenSSF Scorecard enrichment. It also enables
+`--two-tier`; `--scorecard` enables the two-tier verdict even when the other
+feeds are not requested.
+
+The external client in `src/external-threat-intel.ts` inventories npm packages
+from `package-lock.json` (including the root package) or direct dependencies
+from `package.json`, with a 250-query default, a 1,000-component hard cap, and
+eight concurrent lookups. It validates feed schemas and Scorecard repository identity, parses
+CVSS v3 vectors without inventing scores, distinguishes unavailable, invalid,
+not-found, and successful responses, and reports partial coverage. Malicious
+OSV records become explicit confirmed-malware inputs instead of relying on
+package-name heuristics.
+
+The optional on-disk cache is versioned and uses an explicitly selected user
+cache location. Reads reject symlinks, oversized files, excessive entries,
+expired or future-dated timestamps, and ecosystem-confused keys. Writes are
+bounded and atomic. Invalid feed responses are not cached. Remote bodies and
+local inventory files are size-limited.
+
+`src/two-tier-scoring.ts` implements a binary Tier 1 gate and a scored Tier 2.
+Tier 1 blocks confirmed malware, exact known C2 indicators, or a complete
+ingress, execution, access, and exfiltration chain only when findings share a
+correlation ID or belong to a validated incident. Tier 2 combines CVSS/EPSS/KEV,
+heuristics, Scorecard, and SLSA signals. Missing or partial external coverage is
+visible and cannot silently produce a low-confidence pass. The effective
+verdict is also floored by ordinary high/critical findings, including findings
+excluded from the score, so enabling the feature cannot weaken the existing
+gate. The raw composite score level is retained separately from that effective
+verdict.
+
+The CLI accepts `--external-intel`, `--scorecard`, and `--two-tier`. It validates
+Scorecard URLs and preserves the strongest exit code
+required by the two-tier verdict, `--fail-on`, and partial-scan handling. SBOM
+generation occurs before temporary URL-scan directories are removed.
+
+CycloneDX 1.6 output carries actual feed provenance, CVSS methods and vectors,
+FIRST EPSS ratings, KEV detail, confirmed-malware state, and component-specific
+`affects` references. Repeated matches for the same CVE are one vulnerability
+entry with every affected component retained. The schema-conformance tests use
+the repository's CycloneDX 1.6 schema.
+
+The workflow AST prefilter now recognizes quoted root keys and rejects clearly
+irrelevant or oversized input before the more expensive parse. Dedicated unit,
+integration, CLI, scanner, reporter, and SBOM regression coverage accompanies
+the feature.
+
+Verification snapshot: a clean Linux snapshot passed all 146 test files and
+3,533 tests, then passed the complete build including AAHP, feed, handoff,
+self-scan, and TypeScript gates; `npm ci` and `npm audit` reported zero
+vulnerabilities. The
+full Windows run reached 3,493 passing and 22 skipped tests, with three
+environment-specific failures recorded separately: Defender intercepted two
+live-C2 campaign fixtures before the scanner could read them, and one Git Bash
+handoff-cleanup test hit `EPERM`.
+
+### Codex review follow-up (PR #293, 2026-09-12)
+
+All six Codex code-review findings on commit `9350432` were independently
+validated and implemented together. The default offline path no longer passes
+two-tier-only SLSA, attack-chain, vulnerability, or composite-risk inputs into
+the SBOM generator. `PROXY_BACKCONNECT` remains a high-confidence heuristic but
+is no longer classified as confirmed hardcoded C2 by the Tier 1 gate.
+
+The external-intelligence path now treats a Scorecard 404 as `not-found`, uses a
+caller-supplied Scorecard value without performing an irrelevant remote lookup,
+and recognizes the common `github:` and Git SSH package repository forms while
+continuing to reject credential-bearing URLs. CycloneDX rendering reuses the
+stable reference of an enriched active finding instead of appending a duplicate
+generic vulnerability record; source location, recommendation, incident
+membership, and annotation linkage remain attached to that single record.
+
+Regression coverage was added for every finding. Eight focused test files passed
+324 tests, and the complete build passed AAHP, feed, handoff, self-scan, and
+TypeScript gates. The Windows full suite passed 3,515 tests in 144 of 146 files,
+with 22 skipped and the same three environment-specific failures already
+documented for this branch: Defender intercepted two live-C2 fixtures and one
+handoff cleanup encountered `EPERM`. No affected regression test failed.
+
 ## v6.0.20 release (2026-09-12)
 
 Model: claude-opus-5. Branch `release/v6.0.20`.

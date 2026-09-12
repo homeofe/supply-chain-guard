@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { formatReport, getFindingsExitCode, getReportExitCode } from "../reporter.js";
+import {
+  formatReport,
+  getFindingsExitCode,
+  getReportExitCode,
+  getTwoTierVerdictExitCode,
+} from "../reporter.js";
 import type { ScanReport } from "../types.js";
+import { generateSbomDocument } from "../sbom-generator.js";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import pkg from "../../package.json";
 
 /** Strip ANSI escape codes for plain-text assertions */
@@ -467,6 +476,55 @@ describe("formatReport – SBOM (CycloneDX 1.6)", () => {
     const parsed = JSON.parse(formatReport(makeReport(), "sbom")) as SbomOutput;
     for (const vuln of parsed.vulnerabilities) {
       expect(vuln.affects[0].ref).toBe("target");
+    }
+  });
+
+  it("does not append an enriched active finding a second time", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-reporter-sbom-"));
+    try {
+      fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({
+        name: "enriched-fixture",
+        version: "1.0.0",
+      }));
+      const finding = {
+        rule: "OSV_ENRICHED_FINDING",
+        description: "Known vulnerable dependency",
+        severity: "high" as const,
+        file: "package-lock.json",
+        line: 12,
+        recommendation: "Upgrade the dependency",
+        cve: "CVE-2026-12345",
+        cvss: 8.1,
+        epss: 0.42,
+        cisaKev: true,
+        correlationId: "incident-enriched",
+      };
+      const sbomDocument = generateSbomDocument(dir, [finding]);
+      const report = makeReport({ findings: [finding], sbomDocument });
+
+      const parsed = JSON.parse(formatReport(report, "sbom")) as {
+        vulnerabilities: Array<{
+          id: string;
+          "bom-ref"?: string;
+          properties?: Array<{ name: string; value: string }>;
+        }>;
+      };
+      const records = parsed.vulnerabilities.filter((vulnerability) =>
+        vulnerability.id === "CVE-2026-12345",
+      );
+
+      expect(records).toHaveLength(1);
+      expect(records[0]?.["bom-ref"]).toBe("scg-finding-0");
+      expect(records[0]?.properties).toContainEqual({
+        name: "supply-chain-guard:file",
+        value: "package-lock.json",
+      });
+      expect(records[0]?.properties).toContainEqual({
+        name: "supply-chain-guard:incident",
+        value: "incident-enriched",
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });
@@ -1035,5 +1093,40 @@ describe("a published artefact states what was not assessed", () => {
     expect(gitlab.scan.messages[0].level).toBe("warn");
     expect(gitlab.scan.messages[0].value).toContain("not a clean verdict");
     expect(formatReport(zero, "junit")).toContain("not a clean verdict");
+  });
+});
+
+describe("two-tier exit code", () => {
+  it("never reports a pass for a partial scan", () => {
+    // getReportExitCode floors a partial scan at 1: a verdict computed over files
+    // that were read says nothing about the files that were skipped. The two-tier
+    // path has to carry the same floor or enabling --two-tier turns an incomplete
+    // scan into a green build.
+    const partial = makeReport({ partialScan: true, findings: [], twoTierVerdict: undefined });
+    partial.summary.critical = 0;
+    partial.summary.high = 0;
+
+    expect(getReportExitCode(partial)).toBe(1);
+    expect(getTwoTierVerdictExitCode(partial)).toBe(1);
+  });
+
+  it("passes a complete clean scan", () => {
+    const clean = makeReport({ partialScan: false, findings: [], twoTierVerdict: undefined });
+    clean.summary.critical = 0;
+    clean.summary.high = 0;
+
+    expect(getTwoTierVerdictExitCode(clean)).toBe(0);
+  });
+
+  it("returns a supplied verdict's own code unchanged", () => {
+    expect(
+      getTwoTierVerdictExitCode({
+        tier: 1,
+        verdict: "CRITICAL / REJECT",
+        tier1Blocked: true,
+        level: "CRITICAL",
+        exitCode: 2,
+      }),
+    ).toBe(2);
   });
 });
