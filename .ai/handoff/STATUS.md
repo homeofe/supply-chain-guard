@@ -1,3 +1,25 @@
+## Release v6.1.0 (2026-09-13, claude-sonnet-5)
+
+Minor release. Carries two changes accumulated under `[Unreleased]`:
+
+- The external threat intelligence and two-tier risk scoring feature
+  (`--two-tier`, `--external-intel`, `--scorecard`), merged from
+  `feat/external-threat-intel-and-risk-scoring`. Opt-in, backward compatible,
+  hence the MINOR bump rather than a patch.
+- The 2026-09-13 threat-intelligence batch (2 package IOCs), merged from
+  `threat-intel/2026-09-13`.
+
+Version bumped at all 16 configured versionSites plus `package.json` and the
+ungated `bundledVersion` in `src/threat-intel.ts`, each site edited by exact
+old-version substitution rather than a repo-wide replace (the old version
+string also appears, unrelated, inside the huge IOC feed literal in
+`src/threat-intel.ts` and possibly elsewhere, so a blanket replace would have
+been unsafe). `npm install --package-lock-only` synced the lockfile's two
+version fields. SECURITY.md untouched (already covers `6.x`, no major bump).
+CONTRIBUTING.md untouched (both new modules from PR #293,
+`external-threat-intel.ts` and `two-tier-scoring.ts`, were already listed in
+its Project Structure table by that PR).
+
 ## Threat-intelligence batch 2026-09-13 (claude-opus-5)
 
 Branch `threat-intel/2026-09-13`. Daily advisory import. No version bump.
