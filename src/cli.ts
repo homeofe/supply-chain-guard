@@ -27,7 +27,7 @@ import {
   listWatchlist,
   monitorWatchlist,
 } from "./solana-monitor.js";
-import { formatReport, getFindingsExitCode, getReportExitCode } from "./reporter.js";
+import { formatReport, getFindingsExitCode, getReportExitCode, getTwoTierVerdictExitCode } from "./reporter.js";
 import type { ScanOptions, Severity } from "./types.js";
 
 const program = new Command();
@@ -51,6 +51,18 @@ function parseSeverityOption(
     );
   }
   return value as Severity;
+}
+
+function parseScorecardOption(value: string): number {
+  const trimmed = value.trim();
+  if (!/^(?:10(?:\.0+)?|[0-9](?:\.\d+)?)$/.test(trimmed)) {
+    throw new Error(`--scorecard must be a number from 0.0 to 10.0 (received "${value}").`);
+  }
+  const score = Number(trimmed);
+  if (!Number.isFinite(score) || score < 0 || score > 10) {
+    throw new Error(`--scorecard must be a number from 0.0 to 10.0 (received "${value}").`);
+  }
+  return score;
 }
 
 function assertCompatibleSeverityThresholds(
@@ -226,6 +238,9 @@ program
   .option("--no-history", "Do not write risk history to .scg-history/ in the scanned repo")
   .option("--check-registry", "Compare the local package.json version against the npm registry 'latest' dist-tag (requires network; off by default)")
   .option("--all-findings", "Show every finding in text output instead of grouping repeated rule/file matches")
+  .option("--two-tier", "Use two-tier gated verdict and risk scoring")
+  .option("--scorecard <score>", "OpenSSF Scorecard score (0.0 - 10.0)")
+  .option("--external-intel", "Look up OSV, EPSS, CISA KEV and OpenSSF Scorecard for the scanned project and feed them into the two-tier score (requires network; off by default)")
   .action(
     async (
       target: string,
@@ -247,6 +262,9 @@ program
         history: boolean;
         checkRegistry?: boolean;
         allFindings?: boolean;
+        twoTier?: boolean;
+        scorecard?: string;
+        externalIntel?: boolean;
       },
     ) => {
       try {
@@ -270,9 +288,15 @@ program
           sinceCommit: opts.since,
           noHistory: opts.history === false,
           checkRegistry: opts.checkRegistry === true,
+          twoTier: opts.twoTier === true || opts.externalIntel === true || opts.scorecard !== undefined,
+          scorecard: opts.scorecard !== undefined ? parseScorecardOption(opts.scorecard) : undefined,
+          externalIntel: opts.externalIntel === true,
         };
 
         const report = await scan(options);
+        for (const note of report.externalIntel?.notes ?? []) {
+          console.error(`  external intel: ${note}`);
+        }
 
         // CI can request a canonical JSON copy from this exact in-memory report
         // while stdout uses another formatter. This avoids a second scan whose
@@ -353,7 +377,18 @@ program
         }
 
         // Preserve the report bytes even when the verdict is nonzero.
-        finishCliCommand(getReportExitCode(report, failOn));
+        // --two-tier adds a verdict, it does not replace the gate the caller asked
+        // for: an explicit --fail-on still has to be honoured, so the strongest of
+        // the two codes wins. Both scales agree that 2 is critical and 1 is high.
+        let exitCode: 0 | 1 | 2;
+        if (report.twoTierVerdict) {
+          const twoTierCode = getTwoTierVerdictExitCode(report);
+          const thresholdCode = failOn ? getReportExitCode(report, failOn) : 0;
+          exitCode = Math.max(twoTierCode, thresholdCode) as 0 | 1 | 2;
+        } else {
+          exitCode = getReportExitCode(report, failOn);
+        }
+        finishCliCommand(exitCode);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`\n  Error: ${message}\n`);

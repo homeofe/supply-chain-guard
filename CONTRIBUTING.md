@@ -244,8 +244,10 @@ src/
   policy-engine.ts        # Policy config, baseline, suppressions
   trust-signals.ts        # Positive trust indicators
   threat-intel.ts         # External IOC feed integration
+  external-threat-intel.ts # Opt-in OSV, EPSS, CISA KEV and Scorecard clients
   feed.ts                 # Feed stats + published-feed refresh (feed.json channel)
   risk-engine.ts          # Multi-dimensional risk scoring
+  two-tier-scoring.ts     # Correlated threat gate and composite risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
   org-scanner.ts          # Organization-level scanning
   remediation-engine.ts   # Automated fix suggestions
@@ -265,6 +267,7 @@ src/
   risk-forecast.ts        # Risk trajectory prediction
   metrics.ts              # Security KPIs & metrics
   reporter.ts             # Output formatting
+  sbom-generator.ts       # CycloneDX inventory and VEX generation
   osv-export.ts           # OSV-schema export of malicious-package IOCs
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces

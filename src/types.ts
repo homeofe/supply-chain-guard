@@ -63,6 +63,20 @@ export interface Finding {
    * the SBOM VEX statement for the suppression.
    */
   suppressionReason?: string;
+  /** CVSS score if vulnerability finding (0.0-10.0) */
+  cvss?: number;
+  /** EPSS probability score (0.0-1.0) */
+  epss?: number;
+  /** CISA Known Exploited Vulnerability status */
+  cisaKev?: boolean;
+  /** Associated CVE identifier */
+  cve?: string;
+  /** Standard ecosystem prefix (e.g. npm:, pypi:, cargo:) */
+  ecosystem?: string;
+  /** Package name */
+  packageName?: string;
+  /** Package version */
+  packageVersion?: string;
 }
 
 export interface ScanReport {
@@ -135,6 +149,12 @@ export interface ScanReport {
   repositoryUri?: string;
   /** Detection set version, entry count, generation date and cache merge status (v5.29, issue #208) */
   detectionSet?: DetectionSetProvenance;
+  /** Two-tier gated verdict and risk assessment */
+  twoTierVerdict?: TwoTierVerdict;
+  /** Composite risk score (0-100) */
+  compositeRiskScore?: number;
+  /** Coverage and lookup status for explicitly requested external intelligence. */
+  externalIntel?: ExternalIntelReport;
 }
 
 /**
@@ -240,16 +260,44 @@ export interface SbomDependency {
   dependsOn: string[];
 }
 
+export interface SbomRating {
+  source?: { name: string; url?: string };
+  score?: number;
+  severity?: Severity | "none" | "unknown";
+  method?: "CVSSv2" | "CVSSv3" | "CVSSv31" | "CVSSv4" | "OWASP" | "SSVC" | "other";
+  vector?: string;
+  justification?: string;
+}
+
+export type ExternalLookupStatus = "ok" | "not-found" | "unavailable" | "invalid";
+
+export interface ExternalIntelReport {
+  notes: string[];
+  statuses: {
+    osv: ExternalLookupStatus;
+    scorecard: ExternalLookupStatus;
+    epss: ExternalLookupStatus;
+    cisaKev: ExternalLookupStatus;
+  };
+  packagesQueried: number;
+  packagesSkipped: number;
+  partial: boolean;
+}
+
 export interface VexStatement {
+  /** Stable document-local reference used by annotations and renderer deduplication. */
+  "bom-ref"?: string;
   /** CVE or finding ID */
   id: string;
   source?: { name: string; url?: string };
+  ratings?: SbomRating[];
   analysis: {
-    state: "not_affected" | "affected" | "fixed" | "under_investigation";
+    state: "not_affected" | "affected" | "fixed" | "under_investigation" | "exploitable" | "resolved" | "in_triage" | "false_positive";
     justification?: string;
     detail?: string;
   };
   affects?: Array<{ ref: string; versions?: string[] }>;
+  recommendation?: string;
   /**
    * Free-form name/value pairs on the vulnerability entry (v5.30).
    *
@@ -300,6 +348,7 @@ export interface SbomDocument {
       version?: string;
       purl?: string;
       "bom-ref": string;
+      properties?: SbomProperty[];
     };
     /** Records what the generator could and could not assess (v5.29). */
     properties?: SbomProperty[];
@@ -698,6 +747,23 @@ export interface ScanOptions {
   checkRegistry?: boolean;
   /** Use bundled feed only without merging refreshed local cache (--hermetic) */
   hermetic?: boolean;
+  /**
+   * Compute the two-tier gated verdict and composite risk score (--two-tier).
+   *
+   * Opt-in. While this was unconditional, every scan gained a `twoTierVerdict` and a
+   * `compositeRiskScore` in JSON and two extra rows in text output, so a clean
+   * project reported "Composite Risk 14 / 100" built on a Scorecard fallback that
+   * stands for a FAILED lookup and no lookup had been attempted.
+   */
+  twoTier?: boolean;
+  /** OpenSSF Scorecard score override or mock (0.0 - 10.0) */
+  scorecard?: number;
+  /** External vulnerability inputs for two-tier scoring */
+  vulnerabilities?: VulnerabilityScoreInput[];
+  /** Confirmed malicious-package evidence from an authoritative external feed. */
+  confirmedMalware?: ConfirmedMalwareInput[];
+  /** Explicitly opt into network-backed external intelligence. Off by default. */
+  externalIntel?: boolean;
 }
 
 export interface NpmPackageInfo {
@@ -897,6 +963,21 @@ export interface TrustBreakdown {
   overallScore: number;
 }
 
+/**
+ * Meta/governance findings that fire because other findings exist - excluded from
+ * score to prevent circular inflation (they don't represent independent risk signals).
+ *
+ * This lives in types.ts rather than scanner.ts so that scoring modules can read it
+ * without importing the orchestrator: scanner.ts imports two-tier-scoring.ts, so the
+ * reverse import would form a cycle and drag the whole scanner (and the threat-intel
+ * feed it loads) into anything that only wanted to score or format findings.
+ * scanner.ts re-exports it, which is the name the rest of the tree already uses.
+ */
+export const SCORE_EXCLUDED_RULES: ReadonlySet<string> = new Set([
+  "CRITICAL_FINDING_NO_OWNER",
+  "RISK_STAGNATION_HIGH",
+]);
+
 export const SEVERITY_SCORES: Record<Severity, number> = {
   critical: 25,
   high: 15,
@@ -904,3 +985,77 @@ export const SEVERITY_SCORES: Record<Severity, number> = {
   low: 2,
   info: 1,
 };
+
+// ---------------------------------------------------------------------------
+// Two-Tier Gated Verdict and Threat Intel Scoring types
+// ---------------------------------------------------------------------------
+
+export type TwoTierVerdictLevel = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+export type TwoTierVerdictLabel =
+  | "CRITICAL / REJECT"
+  | "HIGH / REVIEW_REQUIRED"
+  | "MEDIUM / AUDIT_WARNING"
+  | "LOW / PASS";
+
+export interface TwoTierVerdict {
+  tier: 1 | 2;
+  verdict: TwoTierVerdictLabel;
+  tier1Blocked: boolean;
+  tier1Reasons?: string[];
+  exploitabilityScore?: number;
+  heuristicScore?: number;
+  governanceScore?: number;
+  compositeRiskScore?: number;
+  /** Risk band produced by the composite score before gate and coverage floors. */
+  compositeRiskLevel?: TwoTierVerdictLevel;
+  level: TwoTierVerdictLevel;
+  exitCode: 0 | 1 | 2;
+  vulnerabilitiesEvaluated?: number;
+  scorecardUsed?: number;
+  slsaMultiplierUsed?: number;
+}
+
+export interface VulnerabilityScoreInput {
+  id?: string;
+  cve?: string;
+  cvss?: number;
+  epss?: number;
+  inCisaKev?: boolean;
+  severity?: Severity;
+  description?: string;
+  /** Feed that supplied the advisory and rating. */
+  source?: { name: string; url?: string };
+  /** Original CVSS vector when the feed supplies one. */
+  cvssVector?: string;
+  /** CycloneDX rating method matching the supplied CVSS version. */
+  cvssMethod?: SbomRating["method"];
+  /** Component reference affected by this advisory. */
+  affectsRef?: string;
+  /** Package coordinate the advisory was queried for. */
+  packageName?: string;
+  packageVersion?: string;
+  ecosystem?: string;
+}
+
+export interface ConfirmedMalwareInput {
+  id: string;
+  packageName: string;
+  packageVersion?: string;
+  ecosystem: string;
+  source: { name: string; url?: string };
+  description?: string;
+  affectsRef?: string;
+}
+
+export interface TwoTierOptions {
+  scorecard?: number;
+  slsaLevel?: number;
+  vulnerabilities?: VulnerabilityScoreInput[];
+  confirmedMalware?: ConfirmedMalwareInput[];
+  partialScan?: boolean;
+}
+
+/** Legacy / schema aliases */
+export type Vulnerability = VexStatement;
+export type ScanResult = ScanReport;

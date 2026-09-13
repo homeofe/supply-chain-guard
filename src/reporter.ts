@@ -16,8 +16,10 @@ import type {
   SbomProperty,
   ScanReport,
   Severity,
+  TwoTierVerdict,
 } from "./types.js";
 import { describeInventoryCoverage } from "./sbom-generator.js";
+import { evaluateTwoTierVerdict } from "./two-tier-scoring.js";
 
 /** bom-ref of the component every SBOM this tool emits is about. */
 const SUBJECT_BOM_REF = "target";
@@ -169,6 +171,33 @@ export function getReportExitCode(
   }
 
   return report.summary.high > 0 ? 1 : 0;
+}
+
+/**
+ * Calculate process exit code from a TwoTierVerdict or a ScanReport carrying two-tier evaluation.
+ * - Tier 1 Hit or CRS 80 to 100: CRITICAL (Exit code 2, build blocker)
+ * - CRS 55 to 79: HIGH (Exit code 1, review required)
+ * - CRS 30 to 54: MEDIUM (Exit code 0, log audit warning)
+ * - CRS 0 to 29: LOW (Exit code 0, pass)
+ *
+ * A partial scan is floored at 1, the same as getReportExitCode(). A verdict computed
+ * over findings from files that were never read says nothing about the files that were
+ * skipped, so it must not be allowed to report a pass: without this, a clean fixture
+ * plus one oversized file exited 0 under --two-tier and 1 on the default path.
+ */
+export function getTwoTierVerdictExitCode(
+  target: ScanReport | TwoTierVerdict,
+): 0 | 1 | 2 {
+  if ("tier" in target && "exitCode" in target) {
+    return target.exitCode;
+  }
+  const code = target.twoTierVerdict
+    ? target.twoTierVerdict.exitCode
+    : evaluateTwoTierVerdict(target.findings, target.incidents).exitCode;
+  if (target.partialScan && code === 0) {
+    return 1;
+  }
+  return code;
 }
 
 /**
@@ -368,6 +397,26 @@ function formatText(
     const ds = report.detectionSet;
     const dsInfo = `v${ds.bundledVersion} (${ds.effectiveEntryCount} entries${ds.cacheMerged ? `, merged cache` : ""}${ds.generatedAt ? `, generated ${ds.generatedAt}` : ""})`;
     lines.push(metaRow("Detection Set", dsInfo));
+  }
+  if (report.twoTierVerdict) {
+    const ttv = report.twoTierVerdict;
+    const ttvCol =
+      ttv.tier1Blocked || ttv.level === "CRITICAL"
+        ? "\x1b[91m"
+        : ttv.level === "HIGH"
+          ? "\x1b[31m"
+          : ttv.level === "MEDIUM"
+            ? "\x1b[33m"
+            : "\x1b[32m";
+    lines.push(metaRow("Two-Tier Verdict", `${ttvCol}${BOLD}${ttv.verdict}${RESET} (Tier ${ttv.tier})`));
+    if (ttv.compositeRiskScore !== undefined) {
+      lines.push(
+        metaRow(
+          "Composite Risk",
+          `${ttv.compositeRiskScore} / 100 (S_vuln: ${ttv.exploitabilityScore ?? 0}, S_heur: ${ttv.heuristicScore ?? 0}, S_hyg: ${ttv.governanceScore ?? 0})`,
+        ),
+      );
+    }
   }
   if (report.partialScan) {
     lines.push(metaRow("Status", "\x1b[33mPARTIAL - coverage incomplete\x1b[0m"));
@@ -1222,11 +1271,16 @@ function formatSbom(report: ScanReport): string {
           p.name === "supply-chain-guard:sbom:component-source" &&
           p.value === "package-lock.json",
       ) ?? false;
+    const existingFindingRefs = new Set(
+      (document.vulnerabilities ?? []).flatMap((vulnerability) =>
+        vulnerability["bom-ref"] ? [vulnerability["bom-ref"]] : [],
+      ),
+    );
 
     const subjectsByIncident = new Map<string, string[]>();
     const findingVulnerabilities = report.findings
       .filter((f) => !f.suppressed)
-      .map((finding, idx) => {
+      .flatMap((finding, idx) => {
         const bomRef = `scg-finding-${idx}`;
         const properties: SbomProperty[] = [];
         // CycloneDX gives a vulnerability no field for a source location, so
@@ -1244,7 +1298,8 @@ function formatSbom(report: ScanReport): string {
           subjects.push(bomRef);
           subjectsByIncident.set(incidentId, subjects);
         }
-        return {
+        if (existingFindingRefs.has(bomRef)) return [];
+        return [{
           "bom-ref": bomRef,
           id: finding.rule,
           source: { name: "supply-chain-guard" },
@@ -1255,7 +1310,7 @@ function formatSbom(report: ScanReport): string {
             { ref: resolveAffectedRef(finding.file, document.components, refsArePaths) },
           ],
           ...(properties.length > 0 ? { properties } : {}),
-        };
+        }];
       });
 
     const annotations = buildIncidentAnnotations(

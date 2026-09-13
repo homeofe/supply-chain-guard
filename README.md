@@ -218,6 +218,16 @@ supply-chain-guard scan ./project --check-registry
 # Expand every repeated text finding (text groups by rule and file by default)
 supply-chain-guard scan ./project --all-findings
 
+# Opt into correlated two-tier gating and composite risk scoring
+supply-chain-guard scan ./project --two-tier
+
+# Query resolved npm coordinates plus OSV, EPSS, CISA KEV and Scorecard
+# This requires network access and implies --two-tier
+supply-chain-guard scan ./project --external-intel
+
+# Supply a previously obtained Scorecard value; also implies --two-tier
+supply-chain-guard scan ./project --scorecard 8.4
+
 # Monitor a Solana C2 wallet
 supply-chain-guard monitor <wallet-address> --once
 ```
