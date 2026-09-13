@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-12T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-13T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21796,6 +21796,10 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "etoro-cordova-prove-mobileauth@999.999.999", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-97vm-94j4-jr9q, MAL-2025-41559", firstSeen: "2026-09-10" },
   { type: "package", value: "etoro-provema@999.999.999", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-hhg7-rpgf-hx9f, MAL-2025-41561", firstSeen: "2026-09-10" },
   { type: "package", value: "etoro-plaid-widget@999.999.999", severity: "critical", confidence: 1.0, family: "DependencyConfusion", campaign: "eToro Dependency Confusion", source: "GHSA-q2j6-52qg-fqx7, MAL-2025-41560", firstSeen: "2026-09-10" },
+
+  // Imported from GitHub Advisory Database (2026-09-12) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:python-fork@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)", firstSeen: "2026-09-12" },
+  { type: "package", value: "pypi:python-fork@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)", firstSeen: "2026-09-12" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
