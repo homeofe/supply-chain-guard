@@ -15,7 +15,7 @@ Change the policy here and the gate names every file that has to follow.
   "supportedMajors": [22, 24],
   "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "6.1.0",
+  "activeLtsReviewedIn": "6.2.0",
   "publishMajor": 22,
   "runtimeMajor": 22,
   "devBaseline": 22
