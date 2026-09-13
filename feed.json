@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.0.20",
-  "entryCount": 20781,
-  "generatedAt": "2026-09-12T00:00:00.000Z",
+  "entryCount": 20783,
+  "generatedAt": "2026-09-13T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -167659,6 +167659,22 @@
       "campaign": "eToro Dependency Confusion",
       "source": "GHSA-q2j6-52qg-fqx7, MAL-2025-41560",
       "firstSeen": "2026-09-10"
+    },
+    {
+      "type": "package",
+      "value": "pypi:python-fork@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)",
+      "firstSeen": "2026-09-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:python-fork@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)",
+      "firstSeen": "2026-09-12"
     }
   ]
 }

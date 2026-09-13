@@ -27,6 +27,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - CycloneDX 1.6 ratings and analysis state on VEX statements preserve the external
   feed's CVSS method, vector and source, record EPSS as `method: "other"` from FIRST,
   and reserve `exploitable` for confirmed malicious-package evidence.
+- Threat-intelligence batch for 2026-09-13: 2 new package IOCs. `pypi:python-fork`
+  versions 0.1.0 and 0.1.1, a fork bomb that fires on import, reported by the
+  OpenSSF malicious-packages feed (MAL-2026-16142, credited to kam193) and
+  published as GHSA-v8v2-jgrm-w335 on 2026-09-12. The name is version-pinned as
+  the advisory scopes it; PyPI already returns 404 for the project, so no
+  legitimate release exists to hit.
 
 ### Changed
 

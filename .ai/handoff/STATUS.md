@@ -1,3 +1,73 @@
+## Threat-intelligence batch 2026-09-13 (claude-opus-5)
+
+Branch `threat-intel/2026-09-13`. Daily advisory import. No version bump.
+
+Imported: 2 package IOCs, `pypi:python-fork@0.1.0` and `@0.1.1`
+(GHSA-v8v2-jgrm-w335, MAL-2026-16142, credited to kam193). Importing the module
+starts a fork bomb. Version-pinned exactly as the advisory scopes it. PyPI
+returns 404 for the project, so the name is already withdrawn upstream and no
+legitimate release can be hit by the pin.
+
+No non-package indicators were added. The vendor sweep for the 2026-09-11 to
+2026-09-13 window surfaced no write-up carrying an atomic indicator that is not
+already in `src/ioc-blocklist.ts`. Every concrete lead chased back to covered
+ground: the `ddjidd564` GitHub Pages dead drop (TrapDoor, covered since
+2026-05-25), the `git.disroot.org/git-ecosystem` payload host (SleeperGem,
+covered since 2026-07-18), and the `proc-macro1` crates.io dropper hashes
+(covered since 2026-08-21).
+
+### Carried open items
+
+**A fifth bulk-migration wave landed on 2026-09-13 and is NOT yet deferred.**
+
+The plain importer run proposed 10,012 new entries. 10,010 of them are one
+machine-generated batch: every advisory on 2026-09-13 was published inside a
+single burst from 04:56:54Z to 05:01:58Z, all npm, alphabetically ordered
+`g` (3,552), `h` (5,939), `i` (517). It resumes the same GitHub Advisory
+Database migration of the historical OpenSSF malicious-packages corpus as the
+2026-09-02, 2026-09-04, 2026-09-06 and 2026-09-10 waves already recorded in
+`threat-feed-deferred.json`.
+
+The block is not MAL-year homogeneous (2023 x47, 2024 x166, 2025 x9,766,
+2026 x33), so the year does not separate corpus from live intel. The publish
+timestamp does: the whole day is one burst, and the only genuine same-day
+advisory on the wire is the `python-fork` one above, which carries a normal
+single-advisory timestamp of 2026-09-12T12:30:52Z and a current-batch id
+(MAL-2026-16142). There is no live 2026-09-13 intel suppressed by leaving the
+wave out.
+
+This run handled it by slicing to `--since 2026-09-12 --until 2026-09-12`, which
+takes the genuine entry and leaves the wave untouched. **It could not be
+deferred today:** `MIN_DEFERRAL_AGE_DAYS` is 2, so a deferral whose `until` is
+2026-09-13 is rejected by the loader and would turn every run red.
+
+What the next runs need to do:
+
+- **2026-09-14 run:** the wave is 1 day old and still under the floor. Slice
+  again (`--since 2026-09-14 --until 2026-09-14`, or whichever day carries that
+  run's genuine advisories). Do NOT run the plain importer: it is exhaustive by
+  default now, there is no implicit `--limit`, and a plain run writes all 10,010
+  corpus names into the feed in one commit.
+- **2026-09-15 run:** the floor is satisfied. Add the 2026-09-13 range to
+  `threat-feed-deferred.json` as the fifth wave, with the same reason and gap
+  wording as the four existing ranges.
+
+The `f` walk is not finished, and the gap is upstream, not ours. Wave four
+stopped about 1,690 names into `f` and this wave opens at `g`. The two days in
+between were measured: 2026-09-11 and 2026-09-12 together carried 10 npm malware
+advisories in total, none of them `f`-named. So the remainder of `f` was skipped
+by the migration rather than drained by a run here, and it may or may not be
+backfilled upstream later. Nothing to do about it from this side; worth a note
+when the fifth range is written.
+
+**Decision still open for the owner.** ~37,100 corpus entries are now parked
+across four ranges, and this wave would make it ~47,100. Each deferral is a
+recorded, recoverable gap, not coverage by something else: these npm names are
+detected by nothing in the scanner today. The question the deferrals are waiting
+on is unchanged and is a distribution-model call, not a daily-import one:
+whether the bundled feed absorbs a corpus on the order of 100,000 entries, or
+whether that corpus ships some other way.
+
 ## External threat intel and two-tier risk scoring (2026-09-12)
 
 Branch `feat/external-threat-intel-and-risk-scoring`.
