@@ -623,6 +623,14 @@ export const KNOWN_C2_IPS: string[] = [
   // etoro-* lure packages; plaintext HTTP, no domain was ever involved. Listed bare
   // because the path is matched separately in KNOWN_DEAD_DROPS.
   "209.126.81.147",
+
+  // openaii PyPI typosquat campaign (kam193 package-campaigns, September 11 2026).
+  // Staging host the malicious .pth file reaches on :7788 for every later stage. The
+  // port is not part of the match, so the bare address is listed; the two payload
+  // paths are in KNOWN_DEAD_DROPS below. A rented host carrying only the campaign's
+  // own staging endpoint, not shared CDN edge. Single-source, so the matching feed
+  // entries carry confidence 0.85.
+  "167.86.108.190",
 ];
 
 // ---------------------------------------------------------------------------
@@ -822,6 +830,15 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // full URL wherever it appears. discord[.]com is a legitimate shared host and its apex
   // is deliberately NOT listed.
   "discord.com/api/webhooks/1546817174411288617",
+
+  // openaii PyPI typosquat campaign (kam193 package-campaigns, September 11 2026).
+  // The .pth file planted at install time fetches stage1 on every Python startup,
+  // which then pulls the hidden agent that exfiltrates SSH keys and cloud
+  // credentials, establishes persistence and drops a cryptominer. Both paths are
+  // listed without the scheme so an hxxp:// mention in an incident note and a real
+  // fetch URL are both caught. The bare address is also in KNOWN_C2_IPS above.
+  "167.86.108.190:7788/stage1.py",
+  "167.86.108.190:7788/.lurves-agent.py",
 ];
 
 // ---------------------------------------------------------------------------

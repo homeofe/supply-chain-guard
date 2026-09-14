@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.1.0",
-  "entryCount": 20783,
-  "generatedAt": "2026-09-13T00:00:00.000Z",
+  "entryCount": 20787,
+  "generatedAt": "2026-09-14T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -167675,6 +167675,41 @@
       "confidence": 1,
       "source": "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)",
       "firstSeen": "2026-09-12"
+    },
+    {
+      "type": "package",
+      "value": "pypi:chroma-client@0.5.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qp4x-pg53-7xh8, MAL-2026-16143 (kam193)",
+      "firstSeen": "2026-09-13"
+    },
+    {
+      "type": "ip",
+      "value": "167.86.108.190",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "openaii PyPI Typosquat",
+      "source": "kam193",
+      "firstSeen": "2026-09-11"
+    },
+    {
+      "type": "url",
+      "value": "167.86.108.190:7788/stage1.py",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "openaii PyPI Typosquat",
+      "source": "kam193",
+      "firstSeen": "2026-09-11"
+    },
+    {
+      "type": "url",
+      "value": "167.86.108.190:7788/.lurves-agent.py",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "openaii PyPI Typosquat",
+      "source": "kam193",
+      "firstSeen": "2026-09-11"
     }
   ]
 }
