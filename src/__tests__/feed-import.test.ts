@@ -1717,6 +1717,14 @@ describe("importUpstreamFeed failure mode", () => {
         root: tmpRoot,
         ecosystems: ["npm"],
         useOsv: false,
+        // Pinned for the same reason as the sibling case above: the OSSF index
+        // entry this test serves is dated 2026-08-30, and the default 14-day
+        // window is relative to the real clock. Left unpinned, the record fell
+        // out of the window once the calendar passed 2026-09-13, the detail
+        // fetch that returns 503 was never made, and the import resolved
+        // instead of rejecting. The test then asserted nothing about the
+        // failure mode it is named for.
+        now: new Date("2026-08-31T00:00:00Z"),
         fetchImpl,
       }),
     ).rejects.toThrow(/OpenSSF\/OSV export returned HTTP 503/);

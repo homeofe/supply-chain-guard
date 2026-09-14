@@ -26,6 +26,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   published by the campaign write-up alone, so the feed entries carry
   confidence 0.85.
 
+### Fixed
+
+- The `feed-import` case covering an incomplete OpenSSF export no longer depends
+  on the real clock. It served an index entry dated 2026-08-30 without pinning
+  `now`, so once the calendar passed 2026-09-13 the entry fell outside the
+  default 14-day window, the detail fetch that returns HTTP 503 was never made,
+  and the import resolved instead of rejecting. The test asserted nothing about
+  the failure mode it is named for and turned every branch red on 2026-09-14.
+  `now` is now pinned exactly as the sibling case already does.
+
 ## [6.1.0] - 2026-09-13
 
 ### Added

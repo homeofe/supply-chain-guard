@@ -31,6 +31,29 @@ returned is already covered: `npm-cache[.]com` and the ChainDrop contract
 address (2026-08-04), `filev2.getsession[.]org` and the `router_init.js` hash
 (Mini Shai-Hulud, 2026-05-12).
 
+### Also in this branch: a time-bomb test that turned CI red
+
+`feed-import.test.ts > writes nothing when OpenSSF discovery is incomplete`
+failed on the first CI run of this PR, on both Node 22 and Node 24, and it
+fails on unmodified `main` as well. It is not caused by this batch.
+
+The case serves an OSSF index entry dated 2026-08-30 but did not pin `now`, so
+its window came from the real clock. While `today - 14 days` was on or before
+2026-08-30 the entry sat inside the window, the detail fetch returned HTTP 503
+and the import rejected as asserted. From 2026-09-14 the window opens at
+2026-08-31, the entry is filtered out before any detail fetch, the 503 is never
+served, and the import resolves. The assertion is
+`rejects.toThrow(/OpenSSF\/OSV export returned HTTP 503/)`, so the test had
+been asserting nothing about its own failure mode for as long as it stayed in
+the window by luck.
+
+Fixed by pinning `now: new Date("2026-08-31T00:00:00Z")`, exactly as the
+sibling case directly above it already does. Red before the fix and green
+after, same file and same command, so the assertion does bite again.
+
+Worth a sweep at some point: this is unlikely to be the only test in the suite
+whose window comes from the real clock, and the failure mode is silent in both
+directions until the calendar moves.
 ### Carried open items
 
 **The fifth bulk-migration wave is still NOT deferred, and it has doubled.**

@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789364523",
-    "timestamp": "2026-09-14T05:42:04Z",
-    "commit": "985478b",
+    "session_id": "cli-1789364900",
+    "timestamp": "2026-09-14T05:48:20Z",
+    "commit": "1bcffe6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4f370ad30cdf9dcd0fea0429b60d2d3460a57cc29f04581a828bce0058948bd0",
-      "updated": "2026-09-14T05:41:53Z",
-      "lines": 8068,
+      "checksum": "sha256:30db8c9ca4dde3887a9339ba81d37e14af1ea60b0258e59840d161b21a072d79",
+      "updated": "2026-09-14T05:48:19Z",
+      "lines": 8091,
       "summary": "Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6fc0de08414f14d47af2a068e8ee7312708d8259939fa8bc574cdcf24084896c",
-      "updated": "2026-09-14T05:42:03Z",
+      "updated": "2026-09-14T05:48:20Z",
       "lines": 178,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3df0edb87c536d640319a296a72e4e1eba120060815270008243fa3c5c3c9ad3",
-      "updated": "2026-09-14T05:42:03Z",
+      "updated": "2026-09-14T05:48:20Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:c30e6fd5eee9e4ee462995f40eece0f01af2d7a8f350578f1bade5b40e055393",
-      "updated": "2026-09-14T05:42:03Z",
+      "updated": "2026-09-14T05:48:20Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 94523,
-    "full_read": 106925
+    "manifest_plus_core": 94821,
+    "full_read": 107223
   }
 }
