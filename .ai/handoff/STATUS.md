@@ -1,3 +1,79 @@
+## Threat-intelligence batch 2026-09-14 (claude-opus-5)
+
+Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump.
+
+Imported: 1 package IOC, `pypi:chroma-client@0.5.7` (GHSA-qp4x-pg53-7xh8,
+MAL-2026-16143, credited to kam193). Version-pinned exactly as the advisory
+scopes it; PyPI returns 404 for the project, so the name is already withdrawn
+upstream and no legitimate release can be hit by the pin.
+
+Added by hand, 3 atomic indicators for the same `2026-09-openaii` campaign,
+from kam193's `package-campaigns` repository, which is the upstream that feeds
+the OSV MAL records:
+
+- `167[.]86[.]108[.]190` to `KNOWN_C2_IPS`. Staging host the planted `.pth` file
+  reaches on :7788. Rented host carrying only the campaign's own endpoint, not
+  shared CDN edge, so the bare address is safe to list.
+- `167[.]86[.]108[.]190:7788/stage1.py` and `167[.]86[.]108[.]190:7788/.lurves-agent.py` to
+  `KNOWN_DEAD_DROPS`, listed without the scheme so an incident-note mention and
+  a real fetch URL both match.
+
+All three carry confidence 0.85 in the bundled feed: the packages are
+two-source (amazon-inspector + kam193), but the atomic indicators are published
+by kam193 alone. Both value shapes were checked against `IOC_VALUE_SHAPES`
+before being written, and a new describe block in `campaigns.test.ts` covers
+the staging host, both payload paths, and a clean-version negative for the
+package pin. The campaign's other four packages (`openaii`, `langgrap`,
+`ollamaa`, `transfomers`) were already in the feed from the 2026-09-11 run.
+
+The vendor sweep otherwise surfaced nothing new. Every concrete indicator it
+returned is already covered: `npm-cache[.]com` and the ChainDrop contract
+address (2026-08-04), `filev2.getsession[.]org` and the `router_init.js` hash
+(Mini Shai-Hulud, 2026-05-12).
+
+### Carried open items
+
+**The fifth bulk-migration wave is still NOT deferred, and it has doubled.**
+
+The 2026-09-13 wave recorded by yesterday's run as 10,010 candidates is now
+19,158. The day carried TWO bursts, not one: 04:56:54Z to 05:01:58Z (9,919
+advisories, npm, `g` 3,572 / `h` 5,959 / `i` 522), which is what yesterday saw,
+and a second burst at 20:12Z to 20:16Z (9,091 advisories, npm, `i` 7,221 /
+`j` 1,967) that landed after yesterday's run had finished. Measured directly
+against the advisory API, not inferred from the importer.
+
+Exactly one advisory on 2026-09-13 sits outside both bursts: GHSA-qp4x-pg53-7xh8
+at 18:31:27Z, the `chroma-client` entry this run imported. That is the whole of
+the day's genuine intel, so nothing live is left behind by holding the wave.
+
+**It still could not be deferred today.** `MIN_DEFERRAL_AGE_DAYS` is 2 and the
+range's `until` would be 2026-09-13, which is 1 day old; the loader rejects it
+and every run would go red. This run handled it the same way as yesterday but
+on the ecosystem axis instead of the date axis: `--ecosystem pip` takes the one
+genuine advisory and leaves all 19,158 npm corpus names untouched. That slice
+is exact here because the entire wave is npm and the only non-corpus advisory
+is PyPI; it is not a general recipe.
+
+What the next run needs to do:
+
+- **2026-09-15 run:** the floor is satisfied (`until` 2026-09-13 is 2 days old).
+  Add the 2026-09-13 range to `threat-feed-deferred.json` as the fifth wave with
+  `expectedCount` 19158, the same reason and gap wording as the four existing
+  ranges, and a note that the day held two separate bursts. The human
+  precondition is satisfied: the day's only genuine advisory is in the committed
+  feed as of this run.
+- Do NOT run the plain importer before that range is in place. It is exhaustive
+  by default, there is no implicit `--limit`, and a plain run writes all 19,158
+  corpus names into the feed in one commit.
+
+**Decision still open for the owner.** ~37,100 corpus entries are parked across
+four ranges today, and the fifth wave would take that to ~56,300. Each deferral
+is a recorded, recoverable gap, not coverage by something else: these npm names
+are detected by nothing in the scanner. The question is unchanged and is a
+distribution-model call, not a daily-import one: whether the bundled feed
+absorbs a corpus on the order of 100,000 entries, or whether that corpus ships
+some other way. The wave rate has roughly doubled since the question was first
+raised, so the cost of leaving it open is growing.
 ## Release v6.1.0 (2026-09-13, claude-sonnet-5)
 
 Minor release. Carries two changes accumulated under `[Unreleased]`:

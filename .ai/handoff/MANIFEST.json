@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789305897",
-    "timestamp": "2026-09-13T13:24:57Z",
-    "commit": "aa73e31",
+    "session_id": "cli-1789364523",
+    "timestamp": "2026-09-14T05:42:04Z",
+    "commit": "985478b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f65981af8bcfa5a57bbf077b5dfe095900067b2b797c50995536593e5fee1b76",
-      "updated": "2026-09-13T13:24:23Z",
-      "lines": 7992,
-      "summary": "Minor release. Carries two changes accumulated under `[Unreleased]`:"
+      "checksum": "sha256:4f370ad30cdf9dcd0fea0429b60d2d3460a57cc29f04581a828bce0058948bd0",
+      "updated": "2026-09-14T05:41:53Z",
+      "lines": 8068,
+      "summary": "Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:d0878800783b135953828d2566890c2367da89fcbc147c03b8a71b890a7d0f77",
-      "updated": "2026-09-13T13:24:52Z",
+      "updated": "2026-09-13T14:21:30Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:6fc0de08414f14d47af2a068e8ee7312708d8259939fa8bc574cdcf24084896c",
-      "updated": "2026-09-13T13:24:57Z",
+      "updated": "2026-09-14T05:42:03Z",
       "lines": 178,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3df0edb87c536d640319a296a72e4e1eba120060815270008243fa3c5c3c9ad3",
-      "updated": "2026-09-13T13:24:57Z",
+      "updated": "2026-09-14T05:42:03Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:c30e6fd5eee9e4ee462995f40eece0f01af2d7a8f350578f1bade5b40e055393",
-      "updated": "2026-09-13T13:24:57Z",
+      "updated": "2026-09-14T05:42:03Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Minor release. Carries two changes accumulated under `[Unreleased]`: Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 93658,
-    "full_read": 106060
+    "manifest_plus_core": 94523,
+    "full_read": 106925
   }
 }

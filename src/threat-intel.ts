@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-13T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-14T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21800,6 +21800,18 @@ const FEED_CHUNK_20: FeedIOC[] = [
   // Imported from GitHub Advisory Database (2026-09-12) - see docs/threat-feed-sources.md
   { type: "package", value: "pypi:python-fork@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)", firstSeen: "2026-09-12" },
   { type: "package", value: "pypi:python-fork@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-v8v2-jgrm-w335, MAL-2026-16142 (kam193)", firstSeen: "2026-09-12" },
+
+  // Imported from GitHub Advisory Database (2026-08-31) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:chroma-client@0.5.7", severity: "critical", confidence: 1.0, source: "GHSA-qp4x-pg53-7xh8, MAL-2026-16143 (kam193)", firstSeen: "2026-09-13" },
+
+  // openaii PyPI typosquat campaign (kam193 package-campaigns, September 11 2026).
+  // Atomic indicators for the five-package campaign whose packages are already in
+  // this feed. The advisory databases publish package@version only, so the staging
+  // host and the two payload paths come from the campaign write-up alone.
+  // Single-source, hence confidence 0.85.
+  { type: "ip", value: "167.86.108.190", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
+  { type: "url", value: "167.86.108.190:7788/stage1.py", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
+  { type: "url", value: "167.86.108.190:7788/.lurves-agent.py", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

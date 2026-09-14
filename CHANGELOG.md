@@ -7,6 +7,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-14: 1 new package IOC and 3 atomic
+  indicators. `pypi:chroma-client` version 0.5.7 is the fifth package of the
+  `2026-09-openaii` PyPI typosquat campaign, reported by the OpenSSF
+  malicious-packages feed (MAL-2026-16143, credited to kam193) and published as
+  GHSA-qp4x-pg53-7xh8 on 2026-09-13. The other four campaign packages
+  (`openaii`, `langgrap`, `ollamaa`, `transfomers`) were already covered. The
+  name is version-pinned as the advisory scopes it; PyPI returns 404 for the
+  project, so no legitimate release exists to hit.
+- The same campaign's staging host 167[.]86[.]108[.]190 is now in
+  `KNOWN_C2_IPS`, and its two payload paths (`:7788/stage1.py` and
+  `:7788/.lurves-agent.py`) in `KNOWN_DEAD_DROPS`, with matching bundled-feed
+  entries. The campaign plants a `.pth` file that fetches stage 1 on every
+  Python startup, which then exfiltrates SSH keys and cloud credentials,
+  establishes persistence and drops a cryptominer. The atomic indicators are
+  published by the campaign write-up alone, so the feed entries carry
+  confidence 0.85.
+
 ## [6.1.0] - 2026-09-13
 
 ### Added

