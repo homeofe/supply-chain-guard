@@ -1,3 +1,40 @@
+## Release v6.1.1 (2026-09-14, claude-opus-5)
+
+Patch release. Carries everything that had accumulated under `[Unreleased]`:
+
+- The 2026-09-14 threat-intelligence batch, merged from
+  `threat-intel/2026-09-14`: 1 package IOC and 3 atomic indicators for the
+  `2026-09-openaii` PyPI typosquat campaign. See the batch note below.
+- The clock-pinning fix for the incomplete-OpenSSF-export case in
+  `feed-import.test.ts`, which had turned every branch red on 2026-09-14.
+- Two dev-dependency bumps pulled in from their dependabot PRs rather than
+  merged separately, because each of those PRs fails `check:handoff` on the
+  generated dependency table and none of them can go green on its own:
+  `@types/node` 26.4.1 to 26.5.1 and `@babel/parser` 7.29.7 to 8.0.5. Both
+  dependabot PRs were closed explicitly once this release carried the bump.
+
+`@babel/parser` is a MAJOR bump, so it was checked rather than assumed. It is
+imported by exactly one test (`pattern-guard-wiring.test.ts`) and by no module
+under `src/`, so nothing shipped to consumers touches it. Its engines range is
+`^22.18.0 || >=24.11.0`, which is narrower than this project's own
+`enginesFloor` of 22.0.0; that is a development-only constraint, npm reports it
+as an EBADENGINE warning rather than an error (no `engine-strict` in `.npmrc`),
+and it does not touch the support claim in `docs/node-support.md`, which is
+about consumers. `pattern-guard-wiring`, `sbom-correctness-cluster` and
+`node-version-contract` were run against the new major and all pass.
+
+Version bumped at all 16 configured versionSites plus `package.json` and the
+ungated `bundledVersion` in `src/threat-intel.ts`. Every site was edited by
+exact old-version substitution with a pre-measured occurrence count, never a
+repo-wide replace: `src/threat-intel.ts` carries the string `6.1.0` six more
+times inside the IOC feed literal, as part of malicious packages' own version
+pins (`express-bunker@6.1.0`, `ably-cli@6.1.0`,
+`@servicetitan/suppress-warnings@6.1.0` and three more), and a blanket replace
+would corrupt the feed with no gate noticing. `npm install --package-lock-only`
+synced the lockfile's two version fields.
+
+SECURITY.md untouched: patch release, and the table already covers `6.x`.
+CONTRIBUTING.md untouched: no new modules.
 ## Threat-intelligence batch 2026-09-14 (claude-opus-5)
 
 Branch `threat-intel/2026-09-14`. Daily advisory import. No version bump.

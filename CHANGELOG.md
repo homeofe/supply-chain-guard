@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.1.1] - 2026-09-14
+
 ### Added
 
 - Threat-intelligence batch for 2026-09-14: 1 new package IOC and 3 atomic
@@ -35,6 +37,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   and the import resolved instead of rejecting. The test asserted nothing about
   the failure mode it is named for and turned every branch red on 2026-09-14.
   `now` is now pinned exactly as the sibling case already does.
+
+### Changed
+
+- Dev dependencies: `@types/node` 26.4.1 to 26.5.1 and `@babel/parser` 7.29.7
+  to 8.0.5. Both are development-only; `@babel/parser` is used by one test and
+  by no module under `src/`, and its verifying suites pass on the new major.
 
 ## [6.1.0] - 2026-09-13
 
@@ -5631,7 +5639,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.1.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.1.1...HEAD
+[6.1.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.1
 [6.1.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.0
 [6.0.20]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.20
 [6.0.19]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.19

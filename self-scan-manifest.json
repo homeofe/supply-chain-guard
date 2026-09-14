@@ -21,17 +21,17 @@
     "src/broad-gap-pattern-matchers.ts": "dbf54d00a5bcc030318d9204b31e1df17b2b9deb34609eba37a503efa14b144f",
     "src/config-scanner.ts": "9b385f18047d136e6153df2b0d48d118e8e0922b4af7ba56e0776d3af26b9c71",
     "src/correlation-engine.ts": "53c44c32d3aa411ba11ad4ffbf5a8552de5f8c2e19d220b1b34d4c8357ccb097",
-    "src/dependency-confusion.ts": "11b8ddf5f5054c7a758073441d7b115e46034fc97079ff0a0fe0688e9a13e2df",
+    "src/dependency-confusion.ts": "c541a6eb31bd845cc7a22033632fe83fab64d03a51216701923a1b492fe55ce1",
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "5ae5de2ad9f205ca2e7a1e03bc9349467c70f62a3741a84a6a63ecacb997cff9",
     "src/ioc-blocklist.ts": "cdaa6ec7185bcc3ef94fd7bdb46cae14541930faa4e02f181f3057d9c806d2b0",
     "src/patterns.ts": "22f6b472b219c535f3eefa31eca7025fe3dd31409cde6b545376ff2314547333",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
-    "src/reporter.ts": "9627446e88b7e236d1a61f21a1705ef72b5cd6dad6c029f7f5590a09a0a17363",
-    "src/scanner.ts": "a79b187302846e084080383b9fd1cc18eaa1f6aab32f6d971759979b6eba374e",
+    "src/reporter.ts": "61356bc096a77af31b1c7fb2b3f3e1ce9642ad79b74a68d9567bf736b5c9305e",
+    "src/scanner.ts": "d52f1d952f2fc51fc770d731640efe78fb5aa8df5df7b6e5e2b82d7597eb4d6e",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "d8a8a6a5846c8baa57a137049f771e4249cac9d7a415f97a9b3f4df412988ada",
+    "src/threat-intel.ts": "216f2f7300be4483634b4be385eed8eaa4b9738c96812071aeb304e4dedbbd28",
     "src/workflow-modeler.ts": "1ff70d4b2066a233b08a56e4d12c4b6736dc80e237dc19492aa1ed8568d90b9a"
   }
 }

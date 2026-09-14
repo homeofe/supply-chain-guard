@@ -13,7 +13,7 @@ Current package inventory and CI gate wiring are generated below.
 
 | Field | Value |
 |-------|-------|
-| Version | 6.1.0 |
+| Version | 6.1.1 |
 | Node engines | >=22.0.0 |
 | Source modules | 79 under `src/` |
 | Test files | 146 under `src/__tests__/` |
@@ -32,9 +32,9 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 
 | Package | Range |
 |---------|-------|
-| @babel/parser | ^7.29.7 |
+| @babel/parser | ^8.0.5 |
 | @elvatis_com/aahp | 3.12.0 |
-| @types/node | ^26.4.1 |
+| @types/node | ^26.5.1 |
 | @vitest/coverage-v8 | ^5.0.0 |
 | ajv | ^8.20.0 |
 | ajv-formats | ^3.0.1 |
