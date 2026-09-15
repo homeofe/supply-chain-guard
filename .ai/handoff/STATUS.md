@@ -1,3 +1,43 @@
+## workflow-graph: GHA_CROSS_WORKFLOW_ARTIFACT_TRUST scoped to the downloading job (claude-opus-5)
+
+Branch `fix/gha-cross-workflow-artifact-trust-job-scope`. No version bump.
+
+Two defects in the cross-workflow artifact-trust rule, both of the class this
+estate produces most often: a guard that runs, passes, and answers a different
+question than the one it is read for.
+
+1. `executesDownloaded` was computed file-wide, by flattening every job's steps
+   together. An unrelated job in the same workflow file could therefore flip an
+   unconnected download-only finding from medium to critical just by containing
+   a `chmod +x` or a run step whose path matched the interpreter-name regex.
+   Different jobs are different trust boundaries, so the severity had no business
+   crossing between them. Fixed with a per-job `JobDownload` record that scopes
+   the download-and-execute correlation to the job that actually downloads.
+2. The finding never set `line`, and `applyInlineSuppressions` requires it. The
+   documented `scg-ignore-next-line` convention therefore did nothing for this
+   rule, wherever the comment was placed, and did so silently. Fixed by anchoring
+   the finding on the download step's line, the way the other structural rules
+   already do.
+
+The two failure directions are guarded separately, because they are separate
+bugs: an unrelated job's `chmod +x` no longer escalates a download-only job (the
+false positive), and a same-job download-then-exec still flags critical even
+alongside a benign job (the false negative that a careless scoping fix would
+have introduced).
+
+Mutation-proved: reverting `workflow-graph.ts` to the pre-fix version turns
+exactly the three tests tied to these defects red (severity leak, missing line,
+unsuppressible), while the same-job-still-critical guard stays green on BOTH
+versions, which is what shows the fix did not simply disable the rule.
+
+`WorkflowRecord.downloadsArtifact`, `.downloadNames` and `.executesDownloaded`
+are removed. Nothing outside `src/workflow-graph.ts` read them.
+
+Handoff note: this entry was added on 2026-09-15 by the release run. The
+original commit changed `src/workflow-graph.ts` without touching handoff state,
+so `aahp verify --level ci` blocked the PR on its content-drift gate. The code
+itself was reviewed and left unchanged.
+
 ## Release v6.1.1 (2026-09-14, claude-opus-5)
 
 Patch release. Carries everything that had accumulated under `[Unreleased]`:
