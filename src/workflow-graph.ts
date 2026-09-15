@@ -16,7 +16,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
-import { parseWorkflow, type WorkflowAst, type WfStep } from "./workflow-ast.js";
+import { parseWorkflow, type WorkflowAst, type WfJob, type WfStep } from "./workflow-ast.js";
 
 /** Triggers an anonymous contributor can fire, populating artifact contents. */
 const UNTRUSTED_PRODUCER_TRIGGERS = ["pull_request", "pull_request_target"];
@@ -54,15 +54,29 @@ function runExecutesDownloaded(run: string): boolean {
   return false;
 }
 
+/**
+ * A single job's download-artifact posture, scoped to THAT job's own steps
+ * only. Severity must not leak across jobs: an unrelated job in the same
+ * file (different trigger context, different trust boundary) executing a
+ * shell script has no bearing on whether the artifact THIS job downloads is
+ * then executed.
+ */
+interface JobDownload {
+  jobId: string;
+  /** 1-based line of the job's first download step - anchors the Finding so
+   *  scg-ignore-next-line can suppress it. */
+  line: number;
+  downloadNames: string[];
+  executesDownloaded: boolean;
+}
+
 interface WorkflowRecord {
   file: string;          // relative path, e.g. .github/workflows/ci.yml
   basename: string;      // e.g. ci.yml
   ast: WorkflowAst;
   uploadsArtifact: boolean;
   uploadNames: string[];
-  downloadsArtifact: boolean;
-  downloadNames: string[];
-  executesDownloaded: boolean;
+  downloadJobs: JobDownload[];
 }
 
 function stepIsUpload(s: WfStep): boolean {
@@ -75,13 +89,23 @@ function stepIsDownload(s: WfStep): boolean {
   return false;
 }
 
+function buildJobDownload(job: WfJob): JobDownload | null {
+  const downloads = job.steps.filter(stepIsDownload);
+  if (downloads.length === 0) return null;
+  return {
+    jobId: job.id,
+    line: downloads[0]!.line,
+    downloadNames: downloads.map((s) => s.withName).filter((n): n is string => !!n),
+    executesDownloaded: job.steps.some((s) => s.run != null && runExecutesDownloaded(s.run)),
+  };
+}
+
 function buildRecord(file: string, basename: string, content: string): WorkflowRecord {
   const ast = parseWorkflow(content);
-  const steps = ast.jobs.flatMap((j) => j.steps);
-
-  const uploads = steps.filter(stepIsUpload);
-  const downloads = steps.filter(stepIsDownload);
-  const executesDownloaded = steps.some((s) => s.run != null && runExecutesDownloaded(s.run));
+  const uploads = ast.jobs.flatMap((j) => j.steps).filter(stepIsUpload);
+  const downloadJobs = ast.jobs
+    .map(buildJobDownload)
+    .filter((d): d is JobDownload => d !== null);
 
   return {
     file,
@@ -89,9 +113,7 @@ function buildRecord(file: string, basename: string, content: string): WorkflowR
     ast,
     uploadsArtifact: uploads.length > 0,
     uploadNames: uploads.map((s) => s.withName).filter((n): n is string => !!n),
-    downloadsArtifact: downloads.length > 0,
-    downloadNames: downloads.map((s) => s.withName).filter((n): n is string => !!n),
-    executesDownloaded,
+    downloadJobs,
   };
 }
 
@@ -115,12 +137,12 @@ function matchProducers(
   return producers.filter((p) => p.ast.name != null && names.includes(p.ast.name));
 }
 
-/** Does the consumer download an artifact that a producer actually uploads? */
-function artifactNamesOverlap(consumer: WorkflowRecord, producer: WorkflowRecord): boolean {
+/** Does this job's download match an artifact a producer actually uploads? */
+function artifactNamesOverlap(downloadNames: string[], producer: WorkflowRecord): boolean {
   // A nameless download pulls every artifact from the run, so it matches any upload.
-  if (consumer.downloadNames.length === 0) return true;
+  if (downloadNames.length === 0) return true;
   if (producer.uploadNames.length === 0) return true;
-  return consumer.downloadNames.some((n) => producer.uploadNames.includes(n));
+  return downloadNames.some((n) => producer.uploadNames.includes(n));
 }
 
 export function scanWorkflowGraph(dir: string): Finding[] {
@@ -154,40 +176,46 @@ export function scanWorkflowGraph(dir: string): Finding[] {
   if (producers.length === 0) return findings;
 
   const consumers = records.filter(
-    (r) => r.ast.triggers.includes("workflow_run") && r.downloadsArtifact,
+    (r) => r.ast.triggers.includes("workflow_run") && r.downloadJobs.length > 0,
   );
 
   for (const consumer of consumers) {
-    const matched = matchProducers(consumer, producers).filter((p) =>
-      artifactNamesOverlap(consumer, p),
-    );
-    if (matched.length === 0) continue;
+    const producersForConsumer = matchProducers(consumer, producers);
+    if (producersForConsumer.length === 0) continue;
 
-    const producerLabel = matched
-      .map((p) => p.ast.name ?? p.basename)
-      .join(", ");
-    const critical = consumer.executesDownloaded;
+    for (const jobDl of consumer.downloadJobs) {
+      const matched = producersForConsumer.filter((p) =>
+        artifactNamesOverlap(jobDl.downloadNames, p),
+      );
+      if (matched.length === 0) continue;
 
-    findings.push({
-      rule: "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST",
-      description:
-        `Privileged workflow "${consumer.basename}" (triggered by workflow_run) downloads an artifact ` +
-        `produced by the untrusted PR workflow "${producerLabel}"` +
-        (critical
-          ? ` and runs downloaded content (a shell/interpreter step on a non-repo path) with secrets and a read/write token in scope. `
-          : ` and consumes it with secrets and a read/write token in scope (residual risk: path traversal / zip-slip / trusting attacker data). `) +
-        `An anonymous contributor controls that artifact's contents, so this is a cross-workflow ` +
-        `privilege escalation (the Cordyceps composition pattern) that single-file scanners miss.`,
-      severity: critical ? "critical" : "medium",
-      file: consumer.file,
-      confidence: critical ? 0.85 : 0.55,
-      category: "supply-chain",
-      recommendation:
-        "Do not consume PR-produced artifacts in a privileged workflow_run workflow. Treat downloaded " +
-        "artifacts as untrusted input: never execute them, and validate/scope their use. If you must relay " +
-        "PR build output (e.g. to comment on a PR), do it without secrets and without running the content. " +
-        "Add provenance (actions/attest-build-provenance) and pin the producing workflow.",
-    });
+      const producerLabel = matched
+        .map((p) => p.ast.name ?? p.basename)
+        .join(", ");
+      const critical = jobDl.executesDownloaded;
+
+      findings.push({
+        rule: "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST",
+        description:
+          `Privileged workflow "${consumer.basename}" (triggered by workflow_run) downloads an artifact ` +
+          `produced by the untrusted PR workflow "${producerLabel}"` +
+          (critical
+            ? ` and runs downloaded content (a shell/interpreter step on a non-repo path) with secrets and a read/write token in scope. `
+            : ` and consumes it with secrets and a read/write token in scope (residual risk: path traversal / zip-slip / trusting attacker data). `) +
+          `An anonymous contributor controls that artifact's contents, so this is a cross-workflow ` +
+          `privilege escalation (the Cordyceps composition pattern) that single-file scanners miss.`,
+        severity: critical ? "critical" : "medium",
+        file: consumer.file,
+        line: jobDl.line,
+        confidence: critical ? 0.85 : 0.55,
+        category: "supply-chain",
+        recommendation:
+          "Do not consume PR-produced artifacts in a privileged workflow_run workflow. Treat downloaded " +
+          "artifacts as untrusted input: never execute them, and validate/scope their use. If you must relay " +
+          "PR build output (e.g. to comment on a PR), do it without secrets and without running the content. " +
+          "Add provenance (actions/attest-build-provenance) and pin the producing workflow.",
+      });
+    }
   }
 
   return findings;

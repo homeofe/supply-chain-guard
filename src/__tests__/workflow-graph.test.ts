@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scanWorkflowGraph } from "../workflow-graph.js";
+import { applyInlineSuppressions } from "../policy-engine.js";
 
 /**
  * v5.7 cross-workflow trust-boundary pass (the core Cordyceps detection).
@@ -198,5 +199,117 @@ describe("scanWorkflowGraph cross-workflow artifact trust (v5.7)", () => {
   it("returns no findings when there is no workflows directory", () => {
     const findings = scanWorkflowGraph(tempDir);
     expect(findings).toHaveLength(0);
+  });
+
+  describe("severity is scoped to the job that downloads, not the whole file", () => {
+    it("does NOT let an unrelated job's chmod +x escalate a separate download-only job to critical", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "mixed.yml": [
+          "name: Mixed",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  report:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: build",
+          "      - run: echo done",
+          "  unrelated:",
+          "    steps:",
+          "      - run: chmod +x some-other-tool.sh",
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir);
+      const f = findings.find((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST");
+      expect(f).toBeDefined();
+      expect(f?.severity).toBe("medium");
+    });
+
+    it("still flags critical when the SAME job both downloads and executes, even alongside a benign job", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "mixed.yml": [
+          "name: Mixed",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  deploy:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: build",
+          "      - run: bash build/deploy.sh",
+          "  unrelated:",
+          "    steps:",
+          "      - run: echo hello",
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir);
+      const f = findings.find((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST");
+      expect(f).toBeDefined();
+      expect(f?.severity).toBe("critical");
+    });
+  });
+
+  describe("finding carries a line so scg-ignore-next-line can suppress it", () => {
+    it("anchors the finding on the download step's line", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "deploy.yml": [
+          "name: Deploy",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  deploy:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4", // line 9
+          "        with:",
+          "          name: build",
+          "      - run: bash build/deploy.sh",
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir);
+      const f = findings.find((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST");
+      expect(f?.line).toBe(9);
+    });
+
+    it("is actually suppressible via scg-ignore-next-line above the download step", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "deploy.yml": [
+          "name: Deploy",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  deploy:",
+          "    steps:",
+          "      # scg-ignore-next-line GHA_CROSS_WORKFLOW_ARTIFACT_TRUST reviewed, artifact is signed",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: build",
+          "      - run: bash build/deploy.sh",
+        ].join("\n"),
+      });
+
+      const raw = scanWorkflowGraph(tempDir);
+      expect(raw.some((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST")).toBe(true);
+
+      const { findings, suppressedCount } = applyInlineSuppressions(raw, tempDir);
+      expect(findings.some((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST")).toBe(false);
+      expect(suppressedCount).toBeGreaterThanOrEqual(1);
+    });
   });
 });
