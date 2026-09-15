@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-14T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-15T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21812,6 +21812,75 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "ip", value: "167.86.108.190", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
   { type: "url", value: "167.86.108.190:7788/stage1.py", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
   { type: "url", value: "167.86.108.190:7788/.lurves-agent.py", severity: "critical", confidence: 0.85, campaign: "openaii PyPI Typosquat", source: "kam193", firstSeen: "2026-09-11" },
+
+  // Imported from GitHub Advisory Database (2026-09-01) - see docs/threat-feed-sources.md
+  { type: "package", value: "@biz44/process-runtime-utils@1.1.10", severity: "critical", confidence: 1.0, source: "GHSA-85j9-pqgv-pr94, MAL-2026-16171", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/process-runtime-utils@1.1.79", severity: "critical", confidence: 1.0, source: "GHSA-85j9-pqgv-pr94, MAL-2026-16171", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/process-runtime-utils@1.1.95", severity: "critical", confidence: 1.0, source: "GHSA-85j9-pqgv-pr94, MAL-2026-16171", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/runtime-utils@1.1.11", severity: "critical", confidence: 1.0, source: "GHSA-fc79-g66m-pjph, MAL-2026-16172", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/runtime-utils@1.1.13", severity: "critical", confidence: 1.0, source: "GHSA-fc79-g66m-pjph, MAL-2026-16172", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/runtime-utils@1.1.81", severity: "critical", confidence: 1.0, source: "GHSA-fc79-g66m-pjph, MAL-2026-16172", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/runtime-utils@1.1.96", severity: "critical", confidence: 1.0, source: "GHSA-fc79-g66m-pjph, MAL-2026-16172", firstSeen: "2026-09-14" },
+  { type: "package", value: "@biz44/runtime-utils@1.1.100", severity: "critical", confidence: 1.0, source: "GHSA-fc79-g66m-pjph, MAL-2026-16172", firstSeen: "2026-09-14" },
+  { type: "package", value: "cargo:logs-update", severity: "critical", confidence: 1.0, source: "GHSA-3hhc-h7ww-gp83, MAL-2026-16164", firstSeen: "2026-09-11" },
+  { type: "package", value: "@biz44/id99-client@1.1.100", severity: "critical", confidence: 1.0, source: "GHSA-2r46-q2c6-8xv3, MAL-2026-16170", firstSeen: "2026-09-12" },
+  { type: "package", value: "@biz44/id44-client@1.1.44", severity: "critical", confidence: 1.0, source: "GHSA-5j4q-j7xc-mcjq, MAL-2026-16167", firstSeen: "2026-09-12" },
+  { type: "package", value: "id79-client@1.1.79", severity: "critical", confidence: 1.0, source: "GHSA-c62r-crr7-5qfm, MAL-2026-16173", firstSeen: "2026-09-12" },
+  { type: "package", value: "@biz44/id95-client@1.1.96", severity: "critical", confidence: 1.0, source: "GHSA-h5qm-2mw2-cpj7, MAL-2026-16169", firstSeen: "2026-09-12" },
+  { type: "package", value: "@biz44/id79-client@1.1.80", severity: "critical", confidence: 1.0, source: "GHSA-38g4-jrgw-cqgh, MAL-2026-16168", firstSeen: "2026-09-12" },
+  { type: "package", value: "@biz44/id12-client@1.1.13", severity: "critical", confidence: 1.0, source: "GHSA-57p7-wfrw-75gv, MAL-2026-16166", firstSeen: "2026-09-12" },
+  { type: "package", value: "@biz44/id10-client@1.1.11", severity: "critical", confidence: 1.0, source: "GHSA-3fp9-rc4g-j5v2, MAL-2026-16165", firstSeen: "2026-09-12" },
+  { type: "package", value: "n8n-nodes-sysdiag2@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-mx46-3mx3-r66x, MAL-2026-16162 (ossf-package-analysis)", firstSeen: "2026-09-14" },
+  { type: "package", value: "@yggbrasil/api", severity: "critical", confidence: 0.9, source: "GHSA-cmxv-8vgc-m43c, MAL-2026-16163 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "get-power@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-pjxw-c7p6-x2gq, MAL-2026-16156 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "app-rrhh@999.0.0", severity: "critical", confidence: 1.0, source: "GHSA-c9r8-qhjh-h69j, MAL-2026-16144 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "web-main@22.1.2", severity: "critical", confidence: 1.0, source: "GHSA-mq47-gfmg-59pp, MAL-2026-16153 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "@aiwfm/communitywfm.scripts.api@28.1.28", severity: "critical", confidence: 1.0, source: "GHSA-cj6r-j9c8-88qp, MAL-2026-16146 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "sql-limit-enforcer@10.0.0", severity: "critical", confidence: 1.0, source: "GHSA-vjjr-9qv2-mh33, MAL-2026-16151 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "strapi-plugin-os-info-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-3jh2-p873-gc7r, MAL-2026-16152 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "postgreesqlhelper@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-87qj-rx96-4w66, MAL-2026-16150 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "n8n-nodes-sysdiag@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-mfvv-xhj7-524c, MAL-2026-16147 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "n8n-nodes-sysdiag@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-mfvv-xhj7-524c, MAL-2026-16147 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "n8n-nodes-sysdiag@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-mfvv-xhj7-524c, MAL-2026-16147 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "n8n-nodes-sysdiag@1.0.4", severity: "critical", confidence: 1.0, source: "GHSA-mfvv-xhj7-524c, MAL-2026-16147 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "n8n-nodes-sysdiag@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-mfvv-xhj7-524c, MAL-2026-16147 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "noblox-asset.js@7.4.2", severity: "critical", confidence: 1.0, source: "GHSA-9pp6-m94w-8jhp, MAL-2026-16148 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "noblox-asset.js@7.6.0", severity: "critical", confidence: 1.0, source: "GHSA-9pp6-m94w-8jhp, MAL-2026-16148 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "noblox-asset.js@7.4.0", severity: "critical", confidence: 1.0, source: "GHSA-9pp6-m94w-8jhp, MAL-2026-16148 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "noblox-asset.js@7.4.1", severity: "critical", confidence: 1.0, source: "GHSA-9pp6-m94w-8jhp, MAL-2026-16148 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "os-info-meeb322k@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-5wwx-6p5f-p9vh, MAL-2026-16149 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "concierge-sdk@99.99.101", severity: "critical", confidence: 1.0, source: "GHSA-7gx4-hj9w-hx25, MAL-2026-16145 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "concierge-sdk@99.99.100", severity: "critical", confidence: 1.0, source: "GHSA-7gx4-hj9w-hx25, MAL-2026-16145 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "concierge-sdk@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-7gx4-hj9w-hx25, MAL-2026-16145 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "ultra-ws@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-h35p-624w-rrp4, MAL-2026-16155 (amazon-inspector)", firstSeen: "2026-09-14" },
+  { type: "package", value: "pino-ulid@2.12.3", severity: "critical", confidence: 1.0, source: "GHSA-5qw6-rpv6-623h, MAL-2026-16154", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.0", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.1", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.2", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.3", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.4", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "afhmxiewpsf@1.0.5", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "expect-dotenv", severity: "critical", confidence: 1.0, source: "GHSA-h7q6-7chv-cgh2, MAL-2026-14316 (amazon-inspector+ghsa-malware)", firstSeen: "2026-08-20" },
+  { type: "package", value: "@gfe/lx-watcher", severity: "critical", confidence: 1.0, source: "GHSA-wg37-hw83-hqwf, MAL-2026-14353 (amazon-inspector+ghsa-malware)", firstSeen: "2026-08-21" },
+  { type: "package", value: "meraz-project-tracker", severity: "critical", confidence: 0.9, source: "GHSA-54v8-j59m-366h, MAL-2026-16161 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "@merazmz/project-tracker", severity: "critical", confidence: 0.9, source: "GHSA-x98w-cqq8-v3q2, MAL-2026-16157 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "lpulogin", severity: "critical", confidence: 0.9, source: "GHSA-5823-3hg3-27v8, MAL-2026-16160 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "dilxztech", severity: "critical", confidence: 0.9, source: "GHSA-5wh2-j94m-rwpf, MAL-2026-16159 (ghsa-malware)", firstSeen: "2026-09-14" },
+  { type: "package", value: "discord-mfa-solver@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-f5p4-vw6q-5w28, MAL-2026-16100 (amazon-inspector)", firstSeen: "2026-09-09" },
+  { type: "package", value: "pino-ulid", severity: "critical", confidence: 0.9, source: "MAL-2026-16154 (amazon-inspector)", firstSeen: "2026-09-14" },
+
+  // Atomic indicators for the 2026-09-14 advisory batch, added by hand: the
+  // advisory databases publish package@version only. See src/ioc-blocklist.ts for
+  // the per-indicator rationale and the deliberate non-listings (npoint[.]io,
+  // webhook[.]site, netlify[.]app, and the Azure IMDS address 169[.]254[.]169[.]254,
+  // which concierge-sdk abuses but which is legitimate cloud infrastructure).
+  { type: "ip", value: "121.127.33.228", severity: "critical", confidence: 0.85, campaign: "n8n-nodes-sysdiag Credential Exfil", source: "amazon-inspector", firstSeen: "2026-09-14" },
+  { type: "url", value: "121.127.33.228:443/api/v1/nodes/compat", severity: "critical", confidence: 0.85, campaign: "n8n-nodes-sysdiag Credential Exfil", source: "amazon-inspector", firstSeen: "2026-09-14" },
+  { type: "domain", value: "trlxgames.netlify.app", severity: "critical", confidence: 0.85, campaign: "noblox-asset.js Roblox Typosquat", source: "amazon-inspector", firstSeen: "2026-09-14" },
+  { type: "url", value: "trlxgames.netlify.app/TRLX.exe", severity: "critical", confidence: 0.85, campaign: "noblox-asset.js Roblox Typosquat", source: "amazon-inspector", firstSeen: "2026-09-14" },
+  { type: "ip", value: "95.216.232.162", severity: "critical", confidence: 0.85, campaign: "pino-ulid RAT", source: "OSV MAL-2026-16154", firstSeen: "2026-09-14" },
+  { type: "hash", value: "3a9089e9db3650dd6d1584fae709022002dc34854b961abfb014a90f0a7c6a50", severity: "critical", confidence: 0.85, campaign: "pino-ulid RAT", source: "OSV MAL-2026-16154", firstSeen: "2026-09-14" },
+  { type: "ip", value: "103.170.217.184", severity: "critical", confidence: 0.85, campaign: "biz44 npm Campaign", source: "OSSF malicious-packages 1518 (ESTsecurity)", firstSeen: "2026-09-14" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
