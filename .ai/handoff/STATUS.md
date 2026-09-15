@@ -1,3 +1,94 @@
+## workflow-graph: GHA_CROSS_WORKFLOW_ARTIFACT_TRUST scoped to the downloading job (claude-opus-5)
+
+Branch `fix/gha-cross-workflow-artifact-trust-job-scope`. No version bump.
+
+Two defects in the cross-workflow artifact-trust rule, both of the class this
+estate produces most often: a guard that runs, passes, and answers a different
+question than the one it is read for.
+
+1. `executesDownloaded` was computed file-wide, by flattening every job's steps
+   together. An unrelated job in the same workflow file could therefore flip an
+   unconnected download-only finding from medium to critical just by containing
+   a `chmod +x` or a run step whose path matched the interpreter-name regex.
+   Different jobs are different trust boundaries, so the severity had no business
+   crossing between them. Fixed with a per-job `JobDownload` record that scopes
+   the download-and-execute correlation to the job that actually downloads.
+2. The finding never set `line`, and `applyInlineSuppressions` requires it. The
+   documented `scg-ignore-next-line` convention therefore did nothing for this
+   rule, wherever the comment was placed, and did so silently. Fixed by anchoring
+   the finding on the download step's line, the way the other structural rules
+   already do.
+
+The two failure directions are guarded separately, because they are separate
+bugs: an unrelated job's `chmod +x` no longer escalates a download-only job (the
+false positive), and a same-job download-then-exec still flags critical even
+alongside a benign job (the false negative that a careless scoping fix would
+have introduced).
+
+Mutation-proved: reverting `workflow-graph.ts` to the pre-fix version turns
+exactly the three tests tied to these defects red (severity leak, missing line,
+unsuppressible), while the same-job-still-critical guard stays green on BOTH
+versions, which is what shows the fix did not simply disable the rule.
+
+`WorkflowRecord.downloadsArtifact`, `.downloadNames` and `.executesDownloaded`
+are removed. Nothing outside `src/workflow-graph.ts` read them.
+
+Handoff note: this entry was added on 2026-09-15 by the release run. The
+original commit changed `src/workflow-graph.ts` without touching handoff state,
+so `aahp verify --level ci` blocked the PR on its content-drift gate. The code
+itself was reviewed and left unchanged.
+
+### Three review findings addressed before merge
+
+An automated review on the pull request raised three defects in the job-scoping
+change itself. All three were verified against the code before being accepted,
+and all three were real.
+
+**The scoping fix had opened a false negative (the serious one).** Scoping
+`executesDownloaded` to the downloading job is right for an UNRELATED job, but an
+artifact can be RELAYED: a consumer job downloads the PR artifact, re-uploads it
+under a fresh name, and a dependent job downloads that relay and executes it. The
+downstream download name does not match the producer's upload, so it was filtered
+out entirely and the chain reported `medium`. The old file-wide analysis reported
+it `critical`. The first version of this fix therefore cured a loud false positive
+and opened a silent false negative, which is the more expensive direction for a
+security rule and exactly the failure mode the guard rules warn about.
+
+Fixed with `chainExecutesDownloaded`, which follows the relay one hop at a time: a
+tainted job that uploads passes the taint to any DEPENDENT job downloading a name
+it uploaded. Only `needs`-dependent jobs are followed, because a job that does not
+wait for the upload cannot reliably consume it - and that restriction is what
+still keeps an unrelated job's `chmod +x` from escalating anything.
+
+**Findings are now anchored per download step, not per job.** A job with several
+downloads always anchored on the FIRST one, so `scg-ignore-next-line` above an
+unrelated download suppressed a later risky one, and a directive above the
+matched download did nothing. `JobDownload` became `DownloadStep` plus
+`JobPosture`, and the consumer loop emits one finding per matching step.
+
+**Adding `line` broke existing baselines.** `applyBaseline` keys entries on
+`rule|file|line`. Baselines written before this rule reported a line carry an
+empty line field, so their key could never equal the new keyed form: on upgrade,
+every already-accepted finding of this rule would resurface as NEW, and a
+`critical` one would fail the pipeline of a user who changed nothing. Fixed in
+`policy-engine.ts` by also accepting the line-less `rule|file` key from an
+existing baseline entry. The fallback only ever widens what an entry the user
+already accepted covers, and only for that rule and file; a test asserts it does
+not leak to another rule or another file.
+
+Each fix is mutation-proved separately: cutting the relay chase, the per-step
+anchor, or the legacy baseline key turns exactly its own test red and leaves the
+other 57 green. The two negative controls (the non-dependent job must NOT
+escalate, and the baseline fallback must stay scoped) stay green under every cut,
+which is what shows the fixes did not simply disable the checks. 89 tests pass
+across `workflow-graph`, `policy-engine`, `correlation-engine` and
+`issue-168-policy-visibility`.
+
+Note on the gate: `src/__tests__/policy-engine.test.ts` is listed in
+`src/self-scan-files.json`, so `check:self-scan` goes red until
+`npm run self-scan:generate` is committed. A grep over the build output missed
+that the first time; only reading the build's exit code caught it.
+
 ## Release v6.1.1 (2026-09-14, claude-opus-5)
 
 Patch release. Carries everything that had accumulated under `[Unreleased]`:
