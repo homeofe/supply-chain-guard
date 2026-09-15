@@ -922,12 +922,29 @@ export function applyBaseline(
     baseline.map((b) => `${b.rule}|${b.file ?? ""}|${b.line ?? ""}`),
   );
 
+  // Baselines written before a rule learned to report a line carry an empty
+  // line field, so their key can never equal the keyed form. Without this, a
+  // release that adds `line` to an existing rule silently re-reports every
+  // already-accepted finding of that rule as NEW, and a critical one fails the
+  // pipeline of a user who changed nothing. Accepting the line-less key as a
+  // file-level match keeps those baselines honoured.
+  //
+  // It only ever widens what an EXISTING baseline entry covers, and only for a
+  // rule/file pair the user already accepted; a baseline that records a line
+  // still matches on the line alone, so newly-added rules gain nothing from it.
+  const legacyFileSet = new Set(
+    baseline
+      .filter((b) => b.line === undefined || b.line === null)
+      .map((b) => `${b.rule}|${b.file ?? ""}`),
+  );
+
   let suppressedCount = 0;
   const result: Finding[] = [];
 
   for (const finding of findings) {
     const key = `${finding.rule}|${finding.file ?? ""}|${finding.line ?? ""}`;
-    if (baselineSet.has(key)) {
+    const legacyKey = `${finding.rule}|${finding.file ?? ""}`;
+    if (baselineSet.has(key) || legacyFileSet.has(legacyKey)) {
       suppressedCount++;
     } else {
       result.push(finding);

@@ -283,6 +283,43 @@ describe("Policy Engine", () => {
       expect(result.findings).toHaveLength(1);
       expect(result.suppressedCount).toBe(0);
     });
+
+    // A baseline written before a rule learned to report a line has no line
+    // field. Its key can never equal the keyed form, so without the legacy
+    // fallback a release that adds `line` to an existing rule re-reports every
+    // accepted finding as new and fails the pipeline of a user who changed
+    // nothing.
+    it("honours a pre-existing line-less baseline entry after a rule gains a line", () => {
+      const legacy: Finding[] = [
+        makeFinding("GHA_CROSS_WORKFLOW_ARTIFACT_TRUST", "critical", ".github/workflows/deploy.yml"),
+      ];
+      expect(legacy[0].line, "the legacy entry must carry no line").toBeUndefined();
+      saveBaseline(legacy, baselinePath);
+
+      const nowWithLine: Finding[] = [
+        { ...legacy[0], line: 9 },
+      ];
+      const result = applyBaseline(nowWithLine, baselinePath);
+      expect(result.findings, "the accepted finding must stay suppressed").toHaveLength(0);
+      expect(result.suppressedCount).toBe(1);
+    });
+
+    it("does not let the legacy fallback suppress a different rule or file", () => {
+      const legacy: Finding[] = [
+        makeFinding("GHA_CROSS_WORKFLOW_ARTIFACT_TRUST", "critical", ".github/workflows/deploy.yml"),
+      ];
+      saveBaseline(legacy, baselinePath);
+
+      const result = applyBaseline(
+        [
+          { ...makeFinding("GHA_CROSS_WORKFLOW_ARTIFACT_TRUST", "critical", ".github/workflows/other.yml"), line: 9 },
+          { ...makeFinding("SOME_OTHER_RULE", "critical", ".github/workflows/deploy.yml"), line: 9 },
+        ],
+        baselinePath,
+      );
+      expect(result.findings, "the fallback must stay scoped to the baselined rule AND file").toHaveLength(2);
+      expect(result.suppressedCount).toBe(0);
+    });
   });
 
   describe("loadPolicyConfig", () => {

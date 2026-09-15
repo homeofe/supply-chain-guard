@@ -312,4 +312,114 @@ describe("scanWorkflowGraph cross-workflow artifact trust (v5.7)", () => {
       expect(suppressedCount).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe("an artifact relayed into a dependent job is still followed", () => {
+    // The job-scoping fix must not turn the old file-wide FALSE POSITIVE into a
+    // false negative. Here the download job never executes anything: it
+    // re-uploads the PR artifact under a new name, and a dependent job runs it.
+    // Scoping alone would report medium and drop the executing job entirely,
+    // because its download name does not match the producer's upload.
+    it("flags critical when a dependent job downloads the relay and executes it", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "relay.yml": [
+          "name: Relay",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  fetch:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: build",
+          "      - uses: actions/upload-artifact@v4",
+          "        with:",
+          "          name: relayed",
+          "  run-it:",
+          "    needs: [fetch]",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: relayed",
+          "      - run: bash relayed/deploy.sh",
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir);
+      const f = findings.find((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST");
+      expect(f).toBeDefined();
+      expect(f?.severity).toBe("critical");
+    });
+
+    // The other direction: without the `needs` edge the second job cannot
+    // reliably receive the upload, so the chain is not followed and the
+    // unrelated execution must NOT escalate the download-only job.
+    it("does NOT escalate when the executing job does not depend on the downloading job", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "norelay.yml": [
+          "name: NoRelay",
+          "on:",
+          "  workflow_run:",
+          '    workflows: ["CI"]',
+          "    types: [completed]",
+          "jobs:",
+          "  fetch:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: build",
+          "      - uses: actions/upload-artifact@v4",
+          "        with:",
+          "          name: relayed",
+          "  unrelated:",
+          "    steps:",
+          "      - uses: actions/download-artifact@v4",
+          "        with:",
+          "          name: something-else",
+          "      - run: bash something-else/tool.sh",
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir);
+      const f = findings.find((f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST");
+      expect(f).toBeDefined();
+      expect(f?.severity).toBe("medium");
+    });
+  });
+
+  describe("each finding is anchored on the download step that actually matched", () => {
+    // Anchoring on the job's FIRST download puts scg-ignore-next-line on the
+    // wrong line: a directive above the unrelated download would suppress the
+    // risky one, and a directive above the risky one would do nothing.
+    it("anchors on the matching download, not the job's first download", () => {
+      writeWorkflows(tempDir, {
+        "ci.yml": PRODUCER_PR_UPLOAD,
+        "two.yml": [
+          "name: Two",                                      // 1
+          "on:",                                            // 2
+          "  workflow_run:",                                // 3
+          '    workflows: ["CI"]',                          // 4
+          "    types: [completed]",                         // 5
+          "jobs:",                                          // 6
+          "  deploy:",                                      // 7
+          "    steps:",                                     // 8
+          "      - uses: actions/download-artifact@v4",     // 9  (unrelated)
+          "        with:",                                  // 10
+          "          name: unrelated-cache",                // 11
+          "      - uses: actions/download-artifact@v4",     // 12 (the match)
+          "        with:",                                  // 13
+          "          name: build",                          // 14
+        ].join("\n"),
+      });
+
+      const findings = scanWorkflowGraph(tempDir).filter(
+        (f) => f.rule === "GHA_CROSS_WORKFLOW_ARTIFACT_TRUST",
+      );
+      expect(findings).toHaveLength(1);
+      expect(findings[0].line, "must anchor on the download whose name matched").toBe(12);
+    });
+  });
 });
