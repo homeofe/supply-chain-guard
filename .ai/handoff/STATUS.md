@@ -1,3 +1,51 @@
+## Release v6.1.2 (2026-09-15, claude-opus-5)
+
+Patch release. Carries everything that had accumulated under `[Unreleased]`:
+
+- The 2026-09-15 threat-intelligence batch, merged from
+  `threat-intel/2026-09-15`: 54 package IOCs and 7 atomic indicators across five
+  campaigns, plus the fifth bulk-migration deferral range. See the batch note
+  below.
+- The four `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST` fixes, merged from
+  `fix/gha-cross-workflow-artifact-trust-job-scope`: severity no longer leaks
+  between unrelated jobs, a relayed artifact is followed into a
+  `needs`-dependent job, findings carry the matched download step's line, and
+  baselines written before the rule reported a line are still honoured. See that
+  note below, including the three review findings addressed before merge.
+
+Version bumped at all 16 configured `versionSites` plus `package.json` and the
+ungated `bundledVersion` in `src/threat-intel.ts`.
+
+**The version-substring trap bit harder than the note for v6.1.1 recorded, and
+the measurement that was supposed to catch it was itself wrong.** A first count
+of `6.1.1` in `src/threat-intel.ts` reported 845 occurrences. That number came
+from a `node -e` one-liner whose regex escaping was eaten by the shell, so it
+counted a bogus pattern. The true count is 18: one `bundledVersion` and
+seventeen malicious packages' own version pins inside the feed literal. Both
+numbers argue for the same surgical edit, so nothing was harmed, but the lesson
+is the one already written down: a surprising measurement gets re-measured
+before it is used, and shell-quoted regexes are not a measurement tool here.
+
+One of those seventeen is `@ornikar/babel-preset-react@6.1.10`. A repo-wide
+replace of `6.1.1` would have rewritten it to `6.1.20`, silently corrupting a
+feed entry, and no gate would have noticed: `check:feed` only checks that
+`feed.json` matches the source, and both sides would have carried the same
+corruption. Every site was therefore edited by exact substitution with a
+pre-measured count, and a post-edit assertion confirms every remaining `6.1.1`
+in that file is a feed entry.
+
+`npm install --package-lock-only` synced the lockfile's two version fields.
+
+`SECURITY.md` untouched: patch release, and the table already covers `6.x`.
+`CONTRIBUTING.md` untouched: no new modules.
+
+Gate note for the next release: a version bump touches `src/`, so
+`aahp verify --level ci` requires `STATUS.md` to change in the SAME commit.
+`npm run handoff:refresh` alone does not satisfy it - it regenerates
+DASHBOARD/TRUST/LOG/MANIFEST, none of which count as the handoff state the
+content-drift gate is looking for. This release PR went red on exactly that
+before this entry was added.
+
 ## workflow-graph: GHA_CROSS_WORKFLOW_ARTIFACT_TRUST scoped to the downloading job (claude-opus-5)
 
 Branch `fix/gha-cross-workflow-artifact-trust-job-scope`. No version bump.

@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.1.2] - 2026-09-15
+
 ### Added
 
 - Threat-intelligence batch for 2026-09-15: 54 new package IOCs from the
@@ -51,6 +53,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   entries are now parked across five ranges, and the question of how that corpus
   should ship remains open for the owner.
 
+### Fixed
+
+- `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST` no longer lets one job's steps set the
+  severity of another job's finding. `executesDownloaded` was computed across
+  every job in a workflow file flattened together, so an unrelated job
+  containing a `chmod +x`, or a run step whose path the interpreter regex
+  misread, could flip an unconnected download-only finding from `medium` to
+  `critical`. The download-and-execute correlation is now scoped to the job that
+  performs the download.
+- The same rule now follows an artifact RELAYED between jobs. A consumer job that
+  downloads the PR-produced artifact, re-uploads it under a new name, and a
+  `needs`-dependent job that downloads and executes that relay is reported
+  `critical` again. Only dependent jobs are followed, so an unrelated job still
+  cannot escalate anything.
+- The rule's findings now carry a `line`, anchored on the download step that
+  actually matched an untrusted producer, so the documented
+  `scg-ignore-next-line` convention works for it. It previously set no line at
+  all, which made the directive silently do nothing wherever it was placed, and
+  a job with several downloads would otherwise have anchored on the wrong one.
+- Baselines written before a rule reported a line are still honoured. `applyBaseline`
+  keys entries on `rule|file|line`, so adding a line to an existing rule would have
+  re-reported every already-accepted finding of that rule as new and could fail an
+  upgrading pipeline on an unchanged repository. An existing line-less entry now
+  matches on rule and file; it cannot leak to a different rule or file.
 ## [6.1.1] - 2026-09-14
 
 ### Added
@@ -5683,7 +5709,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.1.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.1.2...HEAD
+[6.1.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.2
 [6.1.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.1
 [6.1.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.0
 [6.0.20]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.0.20
