@@ -88,6 +88,87 @@ Note on the gate: `src/__tests__/policy-engine.test.ts` is listed in
 `src/self-scan-files.json`, so `check:self-scan` goes red until
 `npm run self-scan:generate` is committed. A grep over the build output missed
 that the first time; only reading the build's exit code caught it.
+## Threat-intelligence batch 2026-09-15 (claude-opus-5)
+
+Branch `threat-intel/2026-09-15`. Daily advisory import. No version bump.
+
+Imported 54 package IOCs and added 7 atomic indicators by hand across five
+campaigns: `n8n-nodes-sysdiag` (MAL-2026-16147), `noblox-asset.js`
+(MAL-2026-16148), `pino-ulid` (MAL-2026-16154), the `biz44` npm account campaign
+(15 versions across 9 packages, OSSF report 1518, credit ESTsecurity) and
+`concierge-sdk` (MAL-2026-16145). Details are in the CHANGELOG entry.
+
+Every atomic indicator was read from the OSV JSON API or the raw GitHub PR body
+rather than a rendered page, so none of them passed through a summarising layer.
+That matters for the one digest in this batch: the 64-hex strings that appear
+beside `## Source: amazon-inspector (...)` in three of these records are the
+source record ids, NOT file hashes, and only the pino-ulid record publishes a
+real one (`dist/node/payload.js`, about 456 KB).
+
+Three things were deliberately NOT listed, and each would have been a false
+positive against legitimate infrastructure:
+
+- `npoint[.]io`, the JSON-hosting service the biz44 loader stages through. The
+  report publishes no document id, and the apex is a shared service.
+- `webhook[.]site`, the collector `concierge-sdk` exfiltrates to. Same reason;
+  no endpoint id is published.
+- `169[.]254[.]169[.]254`, which `concierge-sdk` curls for an Azure managed
+  identity token. That is the Azure Instance Metadata Service, present in
+  ordinary cloud code.
+
+`netlify[.]app` is likewise not listed; only the attacker's own subdomain is,
+and `campaigns.test.ts` carries a negative test asserting an unrelated
+`*.netlify.app` host stays clean.
+
+All eight new tests were mutation-proved: cutting the three indicators they
+assert turns exactly those three tests red, and restoring them returns the file
+to 46 inserted lines and 20 passing tests. Two tests in this file
+(`Phantom Bot` and `GlassWASM`, both `IOC_KNOWN_C2_DOMAIN`) fail on this Windows
+box on unmodified `main` as well; that was checked against `main` this run and
+is the known environment gap, green in CI.
+
+One trap re-encountered and worth keeping written down: the `@biz44/*` feed
+entries carry no ecosystem prefix, so they live in the bare npm namespace and
+`matchPackageIOC("npm", ...)` returns `null` for them. The assertion has to use
+`matchBareNpmIOC`, or the test reads as a missing IOC.
+
+### The fifth bulk-migration wave is now deferred
+
+`threat-feed-deferred.json` gained the 2026-09-13 range, `expectedCount` 19158,
+exactly as the 2026-09-14 run specified. The importer matches 19,158 against it
+and exits 0.
+
+The shape was re-measured this run rather than taken from the handoff: 100
+percent alphabetical (g 3,552, h 5,939, i 7,701, j 1,963), all npm, zero
+entries outside g-j. The day's only genuine advisory, GHSA-qp4x-pg53-7xh8
+(`pypi:chroma-client@0.5.7`), is in the committed feed with `firstSeen`
+2026-09-13, so the human precondition holds.
+
+One check worth repeating on future waves: 55 candidates inside this block carry
+MAL-2026 ids and could look like fresh intel. They are not. Their ids run from
+MAL-2026-17 to MAL-2026-12793, while the current daily batch is at
+MAL-2026-161xx, so they are older advisories being backfilled in the alphabet
+walk. Sorting the block by MAL id, not by year, is what separates the two.
+
+Note for whoever builds the next range: this wave does NOT resume where wave 4
+stopped. Wave 4 ended about 1,690 names into `f` and this one starts at `g`, so
+the remainder of `f` has not appeared in any wave so far. If a future wave
+carries it, the alphabet-continuity argument used in the earlier reasons does
+not apply to it.
+
+### Needs a decision from the owner
+
+Unchanged from the 2026-09-14 note, but the number has moved again. With this
+range added, roughly **56,300** corpus entries are parked across five ranges,
+up from ~37,100. Each is a recorded, recoverable gap: these npm names are
+detected by nothing else in the scanner.
+
+The wave rate is still climbing. Wave 5 alone is 19,158, more than twice wave 4
+(8,891), and it arrived as two bursts in one day rather than one. Deferring is
+holding, not solving. The question remains a distribution-model call: whether
+the bundled feed absorbs a corpus on the order of 100,000 entries, or whether
+that corpus ships some other way (a separately versioned data package, an
+opt-in download, a compact name index).
 
 ## Release v6.1.1 (2026-09-14, claude-opus-5)
 

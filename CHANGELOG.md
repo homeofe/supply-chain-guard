@@ -7,6 +7,50 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-15: 54 new package IOCs from the
+  advisory databases and 7 atomic indicators added by hand, covering five
+  campaigns.
+- `n8n-nodes-sysdiag` versions 1.0.0 to 1.0.4 (MAL-2026-16147), a fake n8n
+  community automation node whose deferred bootstrap selects n8n encryption
+  keys, database passwords and queue credentials out of `process.env` and POSTs
+  them base64-encoded to a bare literal IP. The host 121[.]127[.]33[.]228 is now
+  in `KNOWN_C2_IPS` and the endpoint `:443/api/v1/nodes/compat` in
+  `KNOWN_DEAD_DROPS`.
+- `noblox-asset.js` versions 7.4.0, 7.4.1, 7.4.2 and 7.6.0 (MAL-2026-16148), a
+  typosquat of the `noblox.js` Roblox API wrapper that copies the legitimate
+  package's metadata and, after sandbox and hypervisor evasion checks, downloads
+  a Windows binary and spawns it detached. The delivery host
+  `trlxgames[.]netlify[.]app` is now in `KNOWN_C2_DOMAINS` and the payload URL
+  in `KNOWN_DEAD_DROPS`. The `netlify[.]app` apex is deliberately not listed.
+- `pino-ulid` (MAL-2026-16154), a remote-access trojan wearing a ULID
+  generator's name. Its WebSocket C2 95[.]216[.]232[.]162 is now in
+  `KNOWN_C2_IPS` and the SHA-256 of the bundled `dist/node/payload.js` agent in
+  `KNOWN_MALICIOUS_HASHES`. The name is blocked outright: npm holds no published
+  version of it.
+- Fifteen versions across nine packages published by the `biz44` npm account
+  (OSSF malicious-packages report 1518, credited to ESTsecurity), whose loader
+  resolves an attacker backend and steals clipboard contents, input events and
+  Chrome extension storage. The backend 103[.]170[.]217[.]184 is now in
+  `KNOWN_C2_IPS`. The shared JSON host the loader stages through is deliberately
+  not listed, and neither is the Azure instance-metadata address that
+  `concierge-sdk` (MAL-2026-16145) abuses.
+- All seven atomic indicators carry confidence 0.85 in the bundled feed, because
+  each is published by a single source.
+
+### Changed
+
+- `threat-feed-deferred.json` records a fifth range, 2026-09-13, holding 19,158
+  candidates. It is the next slice of the GitHub Advisory Database bulk
+  migration of the historical OpenSSF malicious-packages corpus: 100 percent
+  alphabetical (g, h, i, j), all npm, delivered in two publication bursts on the
+  same day. As with the four earlier waves this is a recorded, fully recoverable
+  gap rather than coverage by another rule. The day's only genuine advisory was
+  imported by the 2026-09-14 run and is unaffected. Roughly 56,300 corpus
+  entries are now parked across five ranges, and the question of how that corpus
+  should ship remains open for the owner.
+
 ## [6.1.1] - 2026-09-14
 
 ### Added

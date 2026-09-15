@@ -440,6 +440,14 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // two independent transcriptions of it differ by one character (...kxmx32hsqg against
   // ...kxgmx32hsqg), and an indicator that cannot be pinned down exactly is a dead entry
   // at best and a false positive at worst.
+
+  // noblox-asset.js Roblox API typosquat (MAL-2026-16148, amazon-inspector,
+  // September 2026). Attacker-controlled Netlify site the obfuscated postinstall
+  // script downloads its Windows payload from, after passing recent-boot, debugger
+  // and hypervisor evasion checks. Only the attacker's own subdomain is listed:
+  // netlify[.]app is shared hosting and blocking the apex would flag unrelated
+  // projects. Single-source, so the matching feed entry carries confidence 0.85.
+  "trlxgames.netlify.app",
 ];
 
 // ---------------------------------------------------------------------------
@@ -631,6 +639,27 @@ export const KNOWN_C2_IPS: string[] = [
   // own staging endpoint, not shared CDN edge. Single-source, so the matching feed
   // entries carry confidence 0.85.
   "167.86.108.190",
+
+  // n8n-nodes-sysdiag fake n8n community node (MAL-2026-16147, amazon-inspector,
+  // September 2026). Bare literal IP the deferred bootstrap POSTs base64-encoded
+  // n8n encryption keys, database passwords and queue credentials to on :443. The
+  // port is not part of the match, so the bare address is listed; the exfiltration
+  // path is in KNOWN_DEAD_DROPS below. Single-source, confidence 0.85 in the feed.
+  "121.127.33.228",
+
+  // pino-ulid remote-access trojan (MAL-2026-16154, September 2026). WebSocket C2
+  // the bundled dist/node/payload.js agent opens on :8010; the address is stored
+  // XOR-obfuscated in dist/agent/config.js and is published only in the curated
+  // record, not by the second source, so confidence 0.85.
+  "95.216.232.162",
+
+  // biz44 npm account campaign (OSSF malicious-packages report 1518, credit
+  // ESTsecurity, September 2026). Backend the npoint[.]io-hosted loader resolves
+  // and talks to on :8787 for clipboard capture, input capture and theft of Chrome
+  // extension storage. npoint[.]io itself is deliberately NOT listed: it is a
+  // shared JSON-hosting service and the report publishes no document id, so the
+  // apex would flag unrelated projects. Single-source, confidence 0.85.
+  "103.170.217.184",
 ];
 
 // ---------------------------------------------------------------------------
@@ -839,6 +868,16 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // fetch URL are both caught. The bare address is also in KNOWN_C2_IPS above.
   "167.86.108.190:7788/stage1.py",
   "167.86.108.190:7788/.lurves-agent.py",
+
+  // n8n-nodes-sysdiag credential exfiltration endpoint (MAL-2026-16147, September
+  // 2026). Listed without the scheme so an hxxps:// mention in an incident note and
+  // a real POST target both match. The bare address is also in KNOWN_C2_IPS above.
+  "121.127.33.228:443/api/v1/nodes/compat",
+
+  // noblox-asset.js Windows payload download (MAL-2026-16148, September 2026).
+  // Fetched to os.tmpdir()/NOBLOX_CLI.exe and spawned detached with stdio ignored
+  // on non-sandbox hosts. The host is also in KNOWN_C2_DOMAINS above.
+  "trlxgames.netlify.app/TRLX.exe",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1281,6 +1320,13 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "d94a2444268b339dfda2615f7800322fb318e0a484414bb17016cfcd5eb07c44": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
   "6585ca0d3e26c20ced638f46f4a89eea924d411b8753d3fcf434663593c7cf0b": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
   "17bad5ae5b2ac262f5f18854853869840245c344105aa38c7f550ef51d2e5f26": "Web3 dev-tooling typosquat campaign, malicious npm package archive (SHA256)",
+
+  // pino-ulid remote-access trojan agent (MAL-2026-16154, September 2026). The
+  // ~456 KB dist/node/payload.js the postinstall hook spawns detached; it opens the
+  // WebSocket C2 listed in KNOWN_C2_IPS and supports a deploy_binary command that
+  // writes and executes attacker-supplied bytes. Read from the OSV JSON API rather
+  // than a rendered page, so the digest is not subject to transcription drift.
+  "3a9089e9db3650dd6d1584fae709022002dc34854b961abfb014a90f0a7c6a50": "pino-ulid dist/node/payload.js RAT agent (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
