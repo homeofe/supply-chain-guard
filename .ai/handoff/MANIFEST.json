@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789469208",
-    "timestamp": "2026-09-15T10:46:48Z",
-    "commit": "f5cdfa7",
+    "session_id": "cli-1789470235",
+    "timestamp": "2026-09-15T11:03:55Z",
+    "commit": "0d70c7e",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4e537494afcc43644ca09f4b30385a83c40ff1261eab75eefa40fdc2416d9f8a",
-      "updated": "2026-09-15T10:46:27Z",
-      "lines": 8300,
-      "summary": "Branch `fix/gha-cross-workflow-artifact-trust-job-scope`. No version bump."
+      "checksum": "sha256:f2a9f4c1848250583436fbed8917cf0aff7fb4ed107c0faaab075aad05b69e06",
+      "updated": "2026-09-15T11:03:54Z",
+      "lines": 8348,
+      "summary": "Patch release. Carries everything that had accumulated under `[Unreleased]`:"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:324f57629f79482806d8684fbfa3f489bf3637187191e765b8381e85b6fcf73d",
-      "updated": "2026-09-15T10:46:22Z",
+      "checksum": "sha256:84bad6625f58ec8ca3ef66dab4f015088ca0bb36bd4392cbec53fedacd75fd78",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:546ea276ae3059e2bb2346608c7f5fefe13876e6f4cf045f647e3b2f45749dc0",
-      "updated": "2026-09-15T10:46:48Z",
-      "lines": 179,
+      "checksum": "sha256:737fb6a23655c1373d22ab9397bedd0c095df4164251276bfbc1ab997dc7eee9",
+      "updated": "2026-09-15T11:03:55Z",
+      "lines": 180,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:6bab5fc4ea88ccc2ce757d3677d238e41ec43b8c456f2f1e9e08725ceeb14b6e",
-      "updated": "2026-09-15T10:46:48Z",
+      "checksum": "sha256:3e29bb29013092a9b9703dc9e10a40a400807fce7a17e067081bc7470ab04dc1",
+      "updated": "2026-09-15T11:03:55Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:6bdd44e10618fdd83b912c981875b6b8734174a6b5e7dc89ed28cdcb686257f7",
-      "updated": "2026-09-15T10:46:48Z",
+      "checksum": "sha256:03794dace2cf5c3dab17bd128c6a7bc07b08b58647341b785066efcd6fb52d59",
+      "updated": "2026-09-15T11:03:55Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-15T10:46:22Z",
+      "updated": "2026-09-15T11:03:25Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Branch `fix/gha-cross-workflow-artifact-trust-job-scope`. No version bump. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Patch release. Carries everything that had accumulated under `[Unreleased]`: Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 97149,
-    "full_read": 109573
+    "manifest_plus_core": 97648,
+    "full_read": 110093
   }
 }
