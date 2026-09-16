@@ -1,5 +1,13 @@
 # Threat-Feed Bulk Backfill Ingestion Strategy
 
+> **Superseded in part, 2026-09-16.** Tier 3 of section 3 below was the
+> starting point for
+> [the catalog decoupling design](threat-feed-catalog-decoupling-design.md),
+> which is the approved decision and carries the measurements that settled it.
+> Sections 1 and 2 here remain accurate and are still the evidence for why the
+> block cannot be declined. The entry counts in section 2 are the 2026-09-02
+> wave alone; the backlog is now 56,294 across five ranges.
+
 This document outlines the strategy for handling large upstream threat-intelligence
 backfills, specifically addressing the GitHub Advisory Database / OpenSSF bulk backfill
 observed on 2026-09-02 (and subsequent alphabetical waves).

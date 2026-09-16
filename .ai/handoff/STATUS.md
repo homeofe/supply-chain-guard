@@ -1,3 +1,52 @@
+## Design: threat-feed catalog decoupling (2026-09-16, claude-opus-5)
+
+Design only. No behaviour change, no code, no feed change. The spec is
+`docs/threat-feed-catalog-decoupling-design.md`.
+
+Answers the open item carried in the 2026-09-16 batch note: the 56,294 deferred
+npm package IOCs across five ranges, detected by nothing else in the scanner.
+
+**The decision: a two-tier feed, with a loud failure.** The historical corpus
+moves to a gzipped GitHub Release asset fetched by `feed refresh`; the bundle
+keeps atomic indicators, curated campaign entries and a recent window. A scan
+with no catalog cached emits `THREAT_FEED_CATALOG_MISSING` naming the number of
+indicators it did not consult, so reduced coverage can never be silent. A
+`catalog: required` policy value makes it critical and fails the gate.
+
+**What the measurements settled.** Feed import is linear at about 3.5
+microseconds per entry and is paid on every CLI invocation: 75 ms today at
+20,969 entries, 266 ms with the backlog absorbed, 527 ms if the alphabet walk
+completes near 150,000. The package is 9.91 MB unpacked and `action.yml` runs
+`npm install -g` at runtime, so size is paid per Action run, not once per
+machine. Those two numbers are what rule out importing the block into the
+bundle. Gzip is 7.3 percent, so even a 150,000-entry catalog transfers in 2.4
+MB, well inside the existing 32 MiB cap.
+
+**The machinery is already built and wired to itself.** `refreshFeed()`, the
+cache merge in `loadThreatIntel()`, `FEED_REMOTE_LIMITS` and
+`THREAT_FEED_STALE` all exist, but `DEFAULT_FEED_URL` resolves to the same
+`feed.json` that is compiled into the bundle, so a refresh re-fetches what the
+caller already has. This is a generation and publishing change, not new
+transport.
+
+**The durable part is the budget, not the split.** A fifth prebuild gate
+`check:feed-budget` fails the build when the bundle exceeds its entry or byte
+limit. Without it the split only resets the clock, because the root cause is
+that no step in any workflow owned the feed size.
+
+### Open for the owner
+
+- Whether `THREAT_FEED_CATALOG_MISSING` should escalate to `high` after a grace
+  period. Same shape as the existing open question about whether a badly stale
+  rule set should fail the build; they should be answered together.
+- Whether the catalog resolves to `latest` or to the installed version. The
+  spec picks `latest` with the resolved version recorded in the cache.
+- Initial values for `MAX_BUNDLED_ENTRIES`, `MAX_BUNDLE_BYTES` and
+  `BUNDLE_RECENT_DAYS` (proposed 25,000 / 4 MB / 90 days).
+
+Next step after approval is an implementation plan; nothing is built yet.
+
+
 ## Release v6.1.3 (2026-09-16, claude-opus-5)
 
 Patch release. Carries the single item that had accumulated under `[Unreleased]`:
