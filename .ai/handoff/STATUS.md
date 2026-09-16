@@ -1,3 +1,28 @@
+## Plans hard-wrapped at 80 columns (2026-09-16, claude-opus-5)
+
+The plans were written with unwrapped paragraphs, up to 691 characters on one
+line: unreadable on GitHub, horizontally scrolling in an editor, and every diff
+rewrites a whole paragraph for a one-word change. The design document was
+already wrapped, so the four documents also disagreed with each other.
+
+Wrapped by a transform that leaves code fences, tables, headings and link
+references untouched, preserves list and blockquote prefixes on continuation
+lines, and refuses to break where the next line would start with a token
+markdown reads as a new block. Verified rather than eyeballed: code blocks
+compare byte-identical and prose compares identical after collapsing
+whitespace, so the rendered output cannot have changed. Lines over 120
+characters drop from 184 to 31, and every one that remains is inside a code
+fence or is a table row.
+
+**This commit failed `aahp-verify` the first time, for a reason `npm run
+build` cannot see.** Layer 2 is a content-drift gate: files changed outside
+`.ai/handoff/` require `STATUS.md` itself to change. The first push refreshed
+the handoff, which regenerates `MANIFEST.json`, but a regenerated MANIFEST is
+not a STATUS update. The lesson is already written down for release commits and
+applies to any commit touching tracked files: `npm run build` is green while
+`aahp-verify` is red, so a docs-only change still needs a note here.
+
+
 ## Catalog decoupling: every open exit closed (2026-09-16, claude-opus-5)
 
 The previous note left three things as "would require a design change later".

@@ -4,9 +4,8 @@ Design for resolving the bulk-migration deferral backlog by splitting the threat
 feed into a compiled-in bundle and a downloadable historical catalog, with an
 explicit finding whenever the catalog is absent, stale or unverifiable.
 
-Status: design approved, revised after review, not yet implemented.
-Date: 2026-09-16.
-Supersedes Tier 3 of `docs/threat-feed-bulk-backfill-strategy.md`.
+Status: design approved, revised after review, not yet implemented. Date:
+2026-09-16. Supersedes Tier 3 of `docs/threat-feed-bulk-backfill-strategy.md`.
 
 Revision note: the first draft carried seven defects found in review, an eighth
 was found while writing the implementation plan against it, and four more were
@@ -126,12 +125,12 @@ source of truth and regenerated `src/threat-intel.ts` from it. **That is not
 implementable and the plan for it was abandoned before any code was written.**
 
 The feed chunks in `src/threat-intel.ts` carry 792 comment lines interleaved
-with the 20,969 entries. They are the curated rationale this project depends
-on: why `jsonkeeper[.]com`'s apex is deliberately not listed, why a compromised
+with the 20,969 entries. They are the curated rationale this project depends on:
+why `jsonkeeper[.]com`'s apex is deliberately not listed, why a compromised
 maintainer is a victim rather than an indicator, why a given entry is pinned
 instead of name-blocked. `FeedIOC` has no field for any of it. A round trip
-through a JSONL corpus would delete all 792 lines, and the byte-identical
-Phase 1 check the migration depends on could never pass.
+through a JSONL corpus would delete all 792 lines, and the byte-identical Phase
+1 check the migration depends on could never pass.
 
 So the bundle stays exactly where it is, authored as it is today, with its
 comments and its existing importer workflow untouched. Only the catalog is new:
@@ -150,9 +149,9 @@ into two.
 **Invariants, asserted by `check:feed-partition`:**
 
 - No `value` appears in both stores.
-- The catalog contains no entry whose `type` is not `package`, and none
-  carrying `campaign` or `family`. Those belong in the bundle by rules 1 and 2
-  of section 4.2, so their presence in the catalog is a routing bug.
+- The catalog contains no entry whose `type` is not `package`, and none carrying
+  `campaign` or `family`. Those belong in the bundle by rules 1 and 2 of section
+  4.2, so their presence in the catalog is a routing bug.
 - Every catalog line parses as a `FeedIOC` and passes `isValidFeedIOC`.
 
 The gate is what makes placement checkable without a single generated source,
@@ -201,8 +200,8 @@ Measured on the v6.1.3 feed: 1,094 entries sit beneath a curated comment block,
 and 60 of them carry no `campaign` or `family` field at all. `lotusbail` has a
 fourteen-line rationale about a credential-theft campaign and no `campaign:`
 field; the two `dakumangalsingh` pins have a seven-line comment explaining why
-they had to be added by hand. Under rules 1, 2 and 4 alone, those entries move to
-the catalog and their rationale is orphaned in a file that no longer contains
+they had to be added by hand. Under rules 1, 2 and 4 alone, those entries move
+to the catalog and their rationale is orphaned in a file that no longer contains
 what it describes.
 
 Rule 3 is evaluated only by the Phase 2 migration, because only the migration
@@ -215,19 +214,19 @@ The cost is negligible and was measured: with rule 3 in force, 11,998 entries
 move instead of 12,002. Four entries stay bundled so that three curated comment
 blocks keep the entries they describe.
 
-Everything else is routed to the catalog. The rule is evaluated by the
-importer when an entry is first written, by the Phase 2 migration when an
-existing bundled entry is moved, and by `check:feed-partition` when validating
-placement. One exported function, three callers.
+Everything else is routed to the catalog. The rule is evaluated by the importer
+when an entry is first written, by the Phase 2 migration when an existing
+bundled entry is moved, and by `check:feed-partition` when validating placement.
+One exported function, three callers.
 
 `BUNDLE_CUTOFF_DATE` is an explicit ISO date committed in
 `feed-partition.config.json`, **not** a rolling window measured from the current
 date or the release date. A rolling window is not a pure function of committed
 inputs: the generator and `check:feed` run during ordinary prebuilds, so the
 same corpus would cross the cutoff on a later day, committed generated files
-would drift without anyone editing them, and the byte-identical check that
-Phase 1 depends on could not hold. The release date is also unavailable to a PR
-gate, which runs before any tag exists.
+would drift without anyone editing them, and the byte-identical check that Phase
+1 depends on could not hold. The release date is also unavailable to a PR gate,
+which runs before any tag exists.
 
 Moving the cutoff is a deliberate, reviewable commit. `BUNDLE_CUTOFF_DATE`
 starts earlier than every entry in the bundle, so rule 4 admits everything
@@ -254,9 +253,8 @@ makes this durable:
 Binding it to the release gets the automation without either cost. A release is
 already a deliberate, reviewed, gated event that regenerates many files, so one
 more generated value changes nothing about the process. Between releases the
-bundle drifts upward at the observed 266 entries a day, and
-`check:feed-budget` is the backstop if a release is ever skipped for long
-enough to matter.
+bundle drifts upward at the observed 266 entries a day, and `check:feed-budget`
+is the backstop if a release is ever skipped for long enough to matter.
 
 ### 4.3 Catalog document, compression and bounded decompression
 
@@ -287,9 +285,10 @@ never install a single historical indicator.
 
 The design adds an explicit, bounded decompression step:
 
-- Decompress with `gunzipSync(buf, { maxOutputLength: CATALOG_MAX_DECOMPRESSED_BYTES + 1 })`,
-  reusing the exact pattern already used in `src/archive-extractor.ts`, which
-  bounds expansion rather than trusting the header.
+- Decompress with `gunzipSync(buf, { maxOutputLength:
+  CATALOG_MAX_DECOMPRESSED_BYTES + 1 })`, reusing the exact pattern already used
+  in `src/archive-extractor.ts`, which bounds expansion rather than trusting the
+  header.
 - `CATALOG_MAX_DECOMPRESSED_BYTES` is 64 MiB and applies PER SHARD. A shard
   holds at most 50,000 entries, about 8.25 MB raw, so the cap sits eight times
   above the largest shard the generator can produce.
@@ -308,25 +307,24 @@ for a bundle feed, where empty means something broke, and wrong for a catalog,
 where empty is the legitimate Phase 1 state. Without this the Phase 1 catalog is
 rejected by the very parser that is supposed to accept it, leaving
 `THREAT_FEED_CATALOG_MISSING` firing after a successful refresh and making
-`catalog: "required"` unsatisfiable. The relaxation is scoped to the catalog kind
-and tested in both directions.
+`catalog: "required"` unsatisfiable. The relaxation is scoped to the catalog
+kind and tested in both directions.
 
 ### 4.4 Hosting, version pinning and integrity
 
 The catalog is published as a GitHub Release asset on the release tag by the
 existing `Create GitHub Release` job, which already holds `contents: write` and
-reaches GitHub through `gh`. One extra argument on the existing
-`gh release create` call: no new workflow, no new credential.
+reaches GitHub through `gh`. One extra argument on the existing `gh release
+create` call: no new workflow, no new credential.
 
-**The catalog is pinned to the installed package version, not to `latest`.**
-A client requests the asset for its own version and refuses anything else.
+**The catalog is pinned to the installed package version, not to `latest`.** A
+client requests the asset for its own version and refuses anything else.
 
 **Integrity does not rest on release-asset immutability.** The first draft
 claimed assets are immutable per tag. That is false for this repository as
-configured: `immutable_releases` is `null` and no ruleset enables it, and
-`gh release upload --clobber` can delete and replace an asset on an existing
-tag. Enabling the setting would help but is external state this design cannot
-assert.
+configured: `immutable_releases` is `null` and no ruleset enables it, and `gh
+release upload --clobber` can delete and replace an asset on an existing tag.
+Enabling the setting would help but is external state this design cannot assert.
 
 Instead, `scripts/generate-catalog.mjs` computes the SHA-256 of the catalog
 INDEX and writes it into `src/catalog-digest.ts`, a generated and committed
@@ -347,8 +345,8 @@ them portability:
    parameter and no access to `package.json`, so without the constant the
    version-pinned catalog URL could not be built at all.
 
-An earlier revision justified this differently and wrongly, claiming
-`__dirname` is undefined under vitest and citing the defensive comment at
+An earlier revision justified this differently and wrongly, claiming `__dirname`
+is undefined under vitest and citing the defensive comment at
 `src/mcp-server.ts:59`. That was asserted from a comment rather than measured.
 Measured: this package has no `"type": "module"`, vitest transforms the sources
 to CommonJS, and `__dirname` is a defined string there. A JSON file located
@@ -374,12 +372,12 @@ gh api -X DELETE repos/homeofe/supply-chain-guard/immutable-releases  # disable
 The read returns `{"enabled": bool, "enforced_by_owner": bool}`. Enabled on
 2026-09-16; it now reads `{"enabled": true, "enforced_by_owner": false}`.
 
-An earlier revision of this document instructed
-`gh api -X PATCH repos/{owner}/{repo} -f immutable_releases=true` and verified it
-with `--jq .immutable_releases` on the repository object. Both were wrong in the
-same direction, which is why they agreed with each other. No such field exists
-on that object, so `PATCH` silently ignored it and the check returned `null` for
-a key that is simply absent. The setting was never enabled, and the verification
+An earlier revision of this document instructed `gh api -X PATCH
+repos/{owner}/{repo} -f immutable_releases=true` and verified it with `--jq
+.immutable_releases` on the repository object. Both were wrong in the same
+direction, which is why they agreed with each other. No such field exists on
+that object, so `PATCH` silently ignored it and the check returned `null` for a
+key that is simply absent. The setting was never enabled, and the verification
 could not have told anyone: a bad command and a bad check that confirm each
 other look exactly like a working system. This is the third absence-read-as-a-
 value error in this document, recorded as entries 9, 14 and 15 in section 11.
@@ -431,8 +429,9 @@ so a refreshed catalog is observed rather than served from a stale memo.
 ### 4.6 The corpus must be exempt from the repository self-scan
 
 `data/threat-catalog.jsonl` will contain tens of thousands of raw malicious
-package names, and in future possibly other raw indicator values. The scanner runs against its own repository
-in CI, and the corpus is ordinary repository content to it:
+package names, and in future possibly other raw indicator values. The scanner
+runs against its own repository in CI, and the corpus is ordinary repository
+content to it:
 
 - `collectFiles()` does not exclude `data/`.
 - `isInertThreatFeedFile()` accepts only the basenames `feed.json` and
@@ -475,16 +474,17 @@ not public advisory data. The check is entirely STRUCTURAL:
   validating its contents would not be;
 - no `value` or `source` may match a private-infrastructure shape: an RFC1918,
   loopback or link-local address, a `.local`, `.internal`, `.lan`, `.corp` or
-  `.home` host, or a local filesystem path such as `C:\Users\...` or `/home/...`.
+  `.home` host, or a local filesystem path such as `C:\Users\...` or
+  `/home/...`.
 
 **An earlier revision of this section also required every entry to carry a
 `source` naming a public vendor from a list. That was measured against the
 shipped feed and rejected**: 514 of 20,969 entries would have failed it, 465 of
-them because they carry no `source` at all, and the rest because the list did not
-happen to name Datadog, Unit 42, Sonatype, Corgea and others. It is the failure
-this project already has written down: the moment a check judges a value it has
-to enumerate spellings, and the next spelling walks past. Worse, it would have
-failed the build on legitimate data, which is how a gate gets switched off.
+them because they carry no `source` at all, and the rest because the list did
+not happen to name Datadog, Unit 42, Sonatype, Corgea and others. It is the
+failure this project already has written down: the moment a check judges a value
+it has to enumerate spellings, and the next spelling walks past. Worse, it would
+have failed the build on legitimate data, which is how a gate gets switched off.
 
 The structural form was measured the same way: 14 of 14 genuinely private
 control values are caught, there are zero false positives against real public
@@ -590,8 +590,8 @@ beats a catalog that is fresh by a few days.
 
 The cost is bounded and it is already covered:
 
-- **Recent intelligence still reaches every install, pinned or not.**
-  `feed refresh` refreshes both documents, and the bundle feed is published from
+- **Recent intelligence still reaches every install, pinned or not.** `feed
+  refresh` refreshes both documents, and the bundle feed is published from
   `main` and is NOT version-pinned. Whatever was published today reaches a user
   on an old version as soon as they refresh. What is version-pinned is the
   HISTORICAL catalog, which by construction contains nothing newer than the
@@ -678,11 +678,11 @@ feed, 20,969 entries, with the release date as the reference point:
 | 90 days | 20,846 | 123 | ~75 ms |
 | 180 days | 20,947 | 22 | ~75 ms |
 
-These figures are the DATE rule alone, which is what the cutoff has to be
-chosen against. The comment anchor in section 4.2 then holds four of them
-back, so the actual Phase 2 result at 30 days is 8,971 bundled and 11,998
-moved, not 8,967 and 12,002. The two are consistent; the table is the input to
-the decision and section 4.2 is the outcome.
+These figures are the DATE rule alone, which is what the cutoff has to be chosen
+against. The comment anchor in section 4.2 then holds four of them back, so the
+actual Phase 2 result at 30 days is 8,971 bundled and 11,998 moved, not 8,967
+and 12,002. The two are consistent; the table is the input to the decision and
+section 4.2 is the outcome.
 
 At 90 days the split moves 123 entries and changes nothing. The feed is
 recent-skewed because the daily importer has been running, and there is a cliff
@@ -733,22 +733,21 @@ the second cache, the merge and the availability conditions. Add
 `THREAT_FEED_CATALOG_MISSING` and the `catalog` policy knob. Publish an empty
 catalog asset from CI. Detection is unchanged.
 
-**Phase 2: make the partition finite and migrate.**
-Move `BUNDLE_CUTOFF_DATE` forward to 30 days before the release, tighten the
-budget to 15,000 entries and 2 MiB, and run a
-migration script that moves every now-unqualifying bundle entry into the
-catalog. The script must preserve the bundle's comments: a batch header comment
-is removed only when every entry beneath it moved, and left intact otherwise, so
-no rationale is orphaned or silently deleted. This is the only step that reduces
-what a bare install detects, and it lands after the finding that reports it.
-Measure and record the resulting bundle size and import time, then tighten the
-budget to the new size.
+**Phase 2: make the partition finite and migrate.** Move `BUNDLE_CUTOFF_DATE`
+forward to 30 days before the release, tighten the budget to 15,000 entries and
+2 MiB, and run a migration script that moves every now-unqualifying bundle entry
+into the catalog. The script must preserve the bundle's comments: a batch header
+comment is removed only when every entry beneath it moved, and left intact
+otherwise, so no rationale is orphaned or silently deleted. This is the only
+step that reduces what a bare install detects, and it lands after the finding
+that reports it. Measure and record the resulting bundle size and import time,
+then tighten the budget to the new size.
 
-**Phase 3: drain the deferrals.**
-Import all five ranges with explicit `--since`/`--until` slices. Because the
-cutoff is now finite and these entries are `package` type with no campaign and a
-`firstSeen` far older than the cutoff, the importer's routing rule sends every
-one of them to `data/threat-catalog.jsonl`. The bundle does not grow.
+**Phase 3: drain the deferrals.** Import all five ranges with explicit
+`--since`/`--until` slices. Because the cutoff is now finite and these entries
+are `package` type with no campaign and a `firstSeen` far older than the cutoff,
+the importer's routing rule sends every one of them to
+`data/threat-catalog.jsonl`. The bundle does not grow.
 `threat-feed-deferred.json` empties and the 56,294 indicator gap closes for any
 consumer who has refreshed.
 
@@ -756,10 +755,10 @@ The first draft had this phase before the cutoff was made finite, where every
 deferred entry would have satisfied rule 4, landed in the bundle, and breached
 the budget immediately.
 
-**Phase 4: retire the deferral mechanism for bulk waves.**
-With a catalog that absorbs volume, a future alphabet wave is an ordinary
-import. The deferral machinery stays for genuinely undecidable blocks but should
-no longer be reached for size alone.
+**Phase 4: retire the deferral mechanism for bulk waves.** With a catalog that
+absorbs volume, a future alphabet wave is an ordinary import. The deferral
+machinery stays for genuinely undecidable blocks but should no longer be reached
+for size alone.
 
 ## 8. Testing
 
@@ -882,10 +881,10 @@ failure: a design that named a mechanism without checking how this repository
 actually implements it.
 
 Entry 9 is the same failure pointing the other way, and is the most useful line
-in this table. The re-audit produced a confident claim about `__dirname`, sourced
-from a code comment, and it went into this document before anyone ran it. It
-survived one revision. It was caught only because the claim was measured before
-merge, which is the rule this project already writes down: a surprising
+in this table. The re-audit produced a confident claim about `__dirname`,
+sourced from a code comment, and it went into this document before anyone ran
+it. It survived one revision. It was caught only because the claim was measured
+before merge, which is the rule this project already writes down: a surprising
 measurement gets re-measured before it is published. A design document is not
 exempt from that just because it contains no code.
 
@@ -937,8 +936,8 @@ here.
   travels with the release while recent intelligence keeps flowing to every
   install through the unpinned bundle feed. Verifiability beats freshness for a
   scanner strangers depend on.
-- **A missing or mismatched catalog is reported, never assumed** (section 5),
-  at a severity that reflects the state rather than the calendar.
+- **A missing or mismatched catalog is reported, never assumed** (section 5), at
+  a severity that reflects the state rather than the calendar.
 - **The public catalog is gated structurally** (section 4.7), so it cannot carry
   anything but public advisory data, and the gate needs no maintenance because
   it matches shapes rather than values.
@@ -951,3 +950,4 @@ migration state is a projection from the v6.1.3 feed, and Phase 2 records what
 actually happened. If it disagrees materially with 8,971 entries and about 32
 ms, the input changed and the cutoff needs a different value, which is a
 configuration change and not a design change.
+

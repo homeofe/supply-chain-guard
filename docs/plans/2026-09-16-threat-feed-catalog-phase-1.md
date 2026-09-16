@@ -1,45 +1,89 @@
 # Threat-Feed Catalog Decoupling, Phase 1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the complete catalog path (routing policy, gates, transport, cache, finding) without moving a single indicator out of the bundle, so that detection is provably unchanged when the phase lands.
+**Goal:** Build the complete catalog path (routing policy, gates, transport,
+cache, finding) without moving a single indicator out of the bundle, so that
+detection is provably unchanged when the phase lands.
 
-**Architecture:** `src/threat-intel.ts` stays the authored bundle, untouched. A new `data/threat-catalog.jsonl` becomes the catalog store, committed empty in this phase. Placement across the two stores is enforced by a build gate rather than by regeneration. The published catalog is SHARDED from this first release (an index document plus 50,000-entry shards), so later growth adds shards instead of requiring a format migration old clients could not read. The existing feed transport gains bounded gzip decompression, a `kind` discriminator, a second cache keyed by version and index digest, and a finding that fires whenever the catalog is absent, version-mismatched or digest-mismatched.
+**Architecture:** `src/threat-intel.ts` stays the authored bundle, untouched. A
+new `data/threat-catalog.jsonl` becomes the catalog store, committed empty in
+this phase. Placement across the two stores is enforced by a build gate rather
+than by regeneration. The published catalog is SHARDED from this first release
+(an index document plus 50,000-entry shards), so later growth adds shards
+instead of requiring a format migration old clients could not read. The existing
+feed transport gains bounded gzip decompression, a `kind` discriminator, a
+second cache keyed by version and index digest, and a finding that fires
+whenever the catalog is absent, version-mismatched or digest-mismatched.
 
-**Tech Stack:** TypeScript (ESM, Node 22 floor), vitest, `.mjs` build scripts run by `npm run` and wired into `prebuild`, GitHub Actions.
+**Tech Stack:** TypeScript (ESM, Node 22 floor), vitest, `.mjs` build scripts
+run by `npm run` and wired into `prebuild`, GitHub Actions.
 
 **Spec:** `docs/threat-feed-catalog-decoupling-design.md`
 
 ## Global Constraints
 
-Copied verbatim from the project's rules. Every task's requirements implicitly include this section.
+Copied verbatim from the project's rules. Every task's requirements implicitly
+include this section.
 
-- **No em-dashes or en-dashes** anywhere in code, comments, docs or commit messages. Use a plain hyphen or a colon. See the Language section of `.ai/handoff/CONVENTIONS.md`.
-- **No AI attribution** in any commit message, PR title or body: no model co-authorship trailer, no tool-generated footer, no model name. The repo is public and CI fails on it. Agent notes belong in `.ai/handoff/STATUS.md`.
-- **Never name the maintainer** in repository content. Write "the owner" or "the maintainer".
-- **Defang IOCs** in comments and docs: `example[.]com`, `hxxps://`, `1[.]2[.]3[.]4`. Raw values in `src/` code are compared, not displayed, and stay raw. Hashes stay raw.
-- **Never run the full test suite locally.** Run only the suite file covering the change: `npx vitest run src/__tests__/<file>.test.ts`. CI produces the full-suite verdict.
+- **No em-dashes or en-dashes** anywhere in code, comments, docs or commit
+  messages. Use a plain hyphen or a colon. See the Language section of
+  `.ai/handoff/CONVENTIONS.md`.
+- **No AI attribution** in any commit message, PR title or body: no model
+  co-authorship trailer, no tool-generated footer, no model name. The repo is
+  public and CI fails on it. Agent notes belong in `.ai/handoff/STATUS.md`.
+- **Never name the maintainer** in repository content. Write "the owner" or "the
+  maintainer".
+- **Defang IOCs** in comments and docs: `example[.]com`, `hxxps://`,
+  `1[.]2[.]3[.]4`. Raw values in `src/` code are compared, not displayed, and
+  stay raw. Hashes stay raw.
+- **Never run the full test suite locally.** Run only the suite file covering
+  the change: `npx vitest run src/__tests__/<file>.test.ts`. CI produces the
+  full-suite verdict.
 - **Never bypass hooks** (`--no-verify`, `--no-gpg-sign`).
 - **`main` is protected.** All work lands through a squash-merged PR.
-- **The green baseline is 146 files / 3565 tests, all passing.** Measured on 2026-09-16 on Linux against `main` at v6.1.3 (`05c0729`), 54.7 seconds wall clock. Any other number means something broke.
-- On Windows that baseline is unreachable and the difference is environmental, not a regression. Two campaign tests (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) fail there on unmodified `main`, and the vscode-scanner archive tests fail for a missing `zip` binary. Both pass on Linux. Never call the suite broken from a Windows run without first running the same suite on unmodified `main`.
-- For a real full-suite verdict without waiting for CI, use a Linux host: clone into a fresh `mktemp -d` directory, `npm ci`, `npx vitest run`. That is under a minute against hours on Windows. Remove the temp directory afterwards. (The maintainer has an `ssh` alias configured for such a host; it is deliberately not named here, because this file is public.)
-- **Every gate is proved by cutting it**, never by reading it: show a green baseline, make the cut, watch the specific assertion go red, restore, show green again.
+- **The green baseline is 146 files / 3565 tests, all passing.** Measured on
+  2026-09-16 on Linux against `main` at v6.1.3 (`05c0729`), 54.7 seconds wall
+  clock. Any other number means something broke.
+- On Windows that baseline is unreachable and the difference is environmental,
+  not a regression. Two campaign tests (`Phantom Bot C2 domain`, `GlassWASM
+  stage-2 delivery host`) fail there on unmodified `main`, and the
+  vscode-scanner archive tests fail for a missing `zip` binary. Both pass on
+  Linux. Never call the suite broken from a Windows run without first running
+  the same suite on unmodified `main`.
+- For a real full-suite verdict without waiting for CI, use a Linux host: clone
+  into a fresh `mktemp -d` directory, `npm ci`, `npx vitest run`. That is under
+  a minute against hours on Windows. Remove the temp directory afterwards. (The
+  maintainer has an `ssh` alias configured for such a host; it is deliberately
+  not named here, because this file is public.)
+- **Every gate is proved by cutting it**, never by reading it: show a green
+  baseline, make the cut, watch the specific assertion go red, restore, show
+  green again.
 
 ---
 
 ### Task 1: Recognize the catalog file as inert detection data
 
-Must land before any catalog file is committed. `collectFiles()` does not exclude `data/`, and `isInertThreatFeedFile()` accepts only the basenames `feed.json` and `threat-feed.json` with a JSON-object shape, so a committed `.jsonl` catalog would be scanned as ordinary content and flood the self-scan with criticals from the project's own detection data.
+Must land before any catalog file is committed. `collectFiles()` does not
+exclude `data/`, and `isInertThreatFeedFile()` accepts only the basenames
+`feed.json` and `threat-feed.json` with a JSON-object shape, so a committed
+`.jsonl` catalog would be scanned as ordinary content and flood the self-scan
+with criticals from the project's own detection data.
 
 **Files:**
-- Modify: `src/threat-intel.ts` (beside `isInertThreatFeedFile`, around line 22436)
+- Modify: `src/threat-intel.ts` (beside `isInertThreatFeedFile`, around line
+  22436)
 - Modify: `src/scanner.ts:449`
 - Test: `src/__tests__/self-scan-recognition.test.ts`
 
 **Interfaces:**
-- Consumes: `FEED_ENTRY_KEYS` (existing module-private `Set<string>` in `src/threat-intel.ts`)
-- Produces: `export function isInertThreatCatalogFile(filename: string, content: string): boolean`
+- Consumes: `FEED_ENTRY_KEYS` (existing module-private `Set<string>` in
+  `src/threat-intel.ts`)
+- Produces: `export function isInertThreatCatalogFile(filename: string, content:
+  string): boolean`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -77,8 +121,9 @@ describe("isInertThreatCatalogFile", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/self-scan-recognition.test.ts -t "isInertThreatCatalogFile"`
-Expected: FAIL, `isInertThreatCatalogFile is not a function`.
+Run: `npx vitest run src/__tests__/self-scan-recognition.test.ts -t
+"isInertThreatCatalogFile"` Expected: FAIL, `isInertThreatCatalogFile is not a
+function`.
 
 - [ ] **Step 3: Implement**
 
@@ -122,7 +167,8 @@ export function isInertThreatCatalogFile(filename: string, content: string): boo
 }
 ```
 
-In `src/scanner.ts`, extend the import on line 88 to include `isInertThreatCatalogFile`, and change line 449 from:
+In `src/scanner.ts`, extend the import on line 88 to include
+`isInertThreatCatalogFile`, and change line 449 from:
 
 ```typescript
     if (isInertThreatFeedFile(relativePath, content)) continue;
@@ -137,17 +183,25 @@ to:
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/self-scan-recognition.test.ts -t "isInertThreatCatalogFile"`
-Expected: PASS, 6 tests.
+Run: `npx vitest run src/__tests__/self-scan-recognition.test.ts -t
+"isInertThreatCatalogFile"` Expected: PASS, 6 tests.
 
 - [ ] **Step 5: Prove the guard by cutting it**
 
-Temporarily change `if (!FEED_ENTRY_KEYS.has(k)) return false;` to `if (false) return false;`. Re-run. Expected: the "rejects a key outside the entry allowlist" case goes RED and the others stay green. Restore the line and re-run to confirm green again. Record both observations in the commit body.
+Temporarily change `if (!FEED_ENTRY_KEYS.has(k)) return false;` to `if (false)
+return false;`. Re-run. Expected: the "rejects a key outside the entry
+allowlist" case goes RED and the others stay green. Restore the line and re-run
+to confirm green again. Record both observations in the commit body.
 
 - [ ] **Step 6: Commit**
 
 
-**`src/threat-intel.ts` and `src/scanner.ts` are both listed in `src/self-scan-files.json`, so `check:self-scan` goes red the moment either is edited.** Run `npm run self-scan:generate` and include `self-scan-manifest.json` in this task's commit, or the next `npm run build` fails on a gate that has nothing to do with the change. `src/feed.ts` is NOT listed, so tasks touching only it are unaffected.
+**`src/threat-intel.ts` and `src/scanner.ts` are both listed in
+`src/self-scan-files.json`, so `check:self-scan` goes red the moment either is
+edited.** Run `npm run self-scan:generate` and include `self-scan-manifest.json`
+in this task's commit, or the next `npm run build` fails on a gate that has
+nothing to do with the change. `src/feed.ts` is NOT listed, so tasks touching
+only it are unaffected.
 
 ```bash
 npm run self-scan:generate
@@ -173,7 +227,8 @@ otherwise be scanned as ordinary content."
 **Interfaces:**
 - Produces:
   - `export function partitionTarget(entry, config): "bundle" | "catalog"`
-  - `export function loadPartitionConfig(root?): { bundleCutoffDate: string; maxBundledEntries: number; maxBundleBytes: number }`
+  - `export function loadPartitionConfig(root?): { bundleCutoffDate: string;
+    maxBundledEntries: number; maxBundleBytes: number }`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -232,8 +287,8 @@ describe("partitionTarget", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/feed-partition.test.ts`
-Expected: FAIL, cannot resolve `../../scripts/feed-partition.mjs`.
+Run: `npx vitest run src/__tests__/feed-partition.test.ts` Expected: FAIL,
+cannot resolve `../../scripts/feed-partition.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -318,8 +373,8 @@ export function partitionTarget(entry, config) {
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/feed-partition.test.ts`
-Expected: PASS, 6 tests.
+Run: `npx vitest run src/__tests__/feed-partition.test.ts` Expected: PASS, 6
+tests.
 
 - [ ] **Step 5: Commit**
 
@@ -346,8 +401,10 @@ answer does not change."
 - Test: `src/__tests__/feed-partition.test.ts` (extend)
 
 **Interfaces:**
-- Consumes: `partitionTarget`, `loadPartitionConfig` from Task 2; `extractBundledEntries` from `scripts/generate-feed.mjs`
-- Produces: `export function checkPartition(root?): string[]` returning a list of violation messages, empty when clean
+- Consumes: `partitionTarget`, `loadPartitionConfig` from Task 2;
+  `extractBundledEntries` from `scripts/generate-feed.mjs`
+- Produces: `export function checkPartition(root?): string[]` returning a list
+  of violation messages, empty when clean
 
 - [ ] **Step 1: Write the failing test**
 
@@ -502,12 +559,19 @@ Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Verify the gate runs green against the real tree**
 
-Run: `npm run check:feed-partition`
-Expected: `feed partition OK: every IOC is in exactly one store, correctly placed.` The catalog is empty and the cutoff is 2000-01-01, so nothing can violate it yet.
+Run: `npm run check:feed-partition` Expected: `feed partition OK: every IOC is
+in exactly one store, correctly placed.` The catalog is empty and the cutoff is
+2000-01-01, so nothing can violate it yet.
 
 - [ ] **Step 6: Prove the gate by cutting it**
 
-Append a line to `data/threat-catalog.jsonl` duplicating a value that exists in the bundle, for example `{"type":"package","value":"plogme@1.0.0","severity":"critical","firstSeen":"2026-01-01"}`. Run `npm run check:feed-partition` and expect exit 1 naming that value as being in both stores. Then replace it with a `campaign`-carrying entry and expect the "belongs in the bundle" violation instead. Truncate the file back to empty, re-run, and confirm it is green again.
+Append a line to `data/threat-catalog.jsonl` duplicating a value that exists in
+the bundle, for example
+`{"type":"package","value":"plogme@1.0.0","severity":"critical","firstSeen":"2026-01-01"}`.
+Run `npm run check:feed-partition` and expect exit 1 naming that value as being
+in both stores. Then replace it with a `campaign`-carrying entry and expect the
+"belongs in the bundle" violation instead. Truncate the file back to empty,
+re-run, and confirm it is green again.
 
 - [ ] **Step 7: Commit**
 
@@ -662,11 +726,20 @@ Expected: PASS, 3 tests.
 
 - [ ] **Step 4b: Verify the gate names a usable date**
 
-Run `checkBudget` against a fixture whose bundle exceeds the entry limit and assert the last violation matches `/^Suggested bundleCutoffDate: \d{4}-\d{2}-\d{2}/`, and that setting exactly that date brings the entry count to the limit. A gate that says "move it forward" without saying where is a gate that gets guessed at, and this is the one recurring manual step in the whole design.
+Run `checkBudget` against a fixture whose bundle exceeds the entry limit and
+assert the last violation matches `/^Suggested bundleCutoffDate:
+\d{4}-\d{2}-\d{2}/`, and that setting exactly that date brings the entry count
+to the limit. A gate that says "move it forward" without saying where is a gate
+that gets guessed at, and this is the one recurring manual step in the whole
+design.
 
 - [ ] **Step 5: Set the real byte limit from a measurement, not a guess**
 
-Run: `node -e "console.log(require('node:fs').statSync('src/threat-intel.ts').size)"`. The current file is about 3.71 MB. Confirm `maxBundleBytes` of 4194304 (4 MiB) leaves headroom, then run `npm run check:feed-budget` against the real tree and expect `feed budget OK.`
+Run: `node -e
+"console.log(require('node:fs').statSync('src/threat-intel.ts').size)"`. The
+current file is about 3.71 MB. Confirm `maxBundleBytes` of 4194304 (4 MiB)
+leaves headroom, then run `npm run check:feed-budget` against the real tree and
+expect `feed budget OK.`
 
 - [ ] **Step 6: Commit**
 
@@ -690,7 +763,9 @@ fails for that specific reason, one entry under passes."
 - Test: `src/__tests__/feed.test.ts`
 
 **Interfaces:**
-- Produces: `parseFeedPayload(raw: string, expectedKind?: "feed" | "catalog"): FeedIOC[]` (the second parameter is new and defaults to `"feed"`, so every existing caller is unchanged)
+- Produces: `parseFeedPayload(raw: string, expectedKind?: "feed" | "catalog"):
+  FeedIOC[]` (the second parameter is new and defaults to `"feed"`, so every
+  existing caller is unchanged)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -722,12 +797,14 @@ describe("parseFeedPayload kind handling", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "kind handling"`
-Expected: FAIL, the empty catalog throws `invalid feed format: missing non-empty entries array`.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "kind handling"` Expected:
+FAIL, the empty catalog throws `invalid feed format: missing non-empty entries
+array`.
 
 - [ ] **Step 3: Implement**
 
-In `src/feed.ts`, change the signature and the two checks inside `parseFeedPayload`:
+In `src/feed.ts`, change the signature and the two checks inside
+`parseFeedPayload`:
 
 ```typescript
 export function parseFeedPayload(
@@ -736,7 +813,9 @@ export function parseFeedPayload(
 ): FeedIOC[] {
 ```
 
-After the JSON parse and before the entries check, add the discriminator test. A document with no `kind` is a feed, because the published `feed.json` predates this field:
+After the JSON parse and before the entries check, add the discriminator test. A
+document with no `kind` is a feed, because the published `feed.json` predates
+this field:
 
 ```typescript
   const kind = typeof (doc as { kind?: unknown }).kind === "string"
@@ -747,7 +826,8 @@ After the JSON parse and before the entries check, add the discriminator test. A
   }
 ```
 
-Then relax the emptiness check so it applies only to a feed. An empty bundle feed means something broke; an empty catalog is the legitimate Phase 1 state:
+Then relax the emptiness check so it applies only to a feed. An empty bundle
+feed means something broke; an empty catalog is the legitimate Phase 1 state:
 
 ```typescript
   if (!Array.isArray(entries) || (entries.length === 0 && expectedKind === "feed")) {
@@ -755,7 +835,9 @@ Then relax the emptiness check so it applies only to a feed. An empty bundle fee
   }
 ```
 
-Add `"kind"` to `FEED_DOC_KEYS` in `src/threat-intel.ts` (line 22409), or the published catalog fails `isInertThreatFeedFile` and any repo committing it drowns in phantom findings:
+Add `"kind"` to `FEED_DOC_KEYS` in `src/threat-intel.ts` (line 22409), or the
+published catalog fails `isInertThreatFeedFile` and any repo committing it
+drowns in phantom findings:
 
 ```typescript
 const FEED_DOC_KEYS = new Set(["schema", "kind", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
@@ -763,13 +845,14 @@ const FEED_DOC_KEYS = new Set(["schema", "kind", "package", "version", "entryCou
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "kind handling"`
-Expected: PASS, 5 tests.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "kind handling"` Expected:
+PASS, 5 tests.
 
 - [ ] **Step 5: Confirm no existing caller regressed**
 
-Run: `npx vitest run src/__tests__/feed.test.ts`
-Expected: PASS for the whole file. `expectedKind` defaults to `"feed"`, so every existing call site keeps its behaviour.
+Run: `npx vitest run src/__tests__/feed.test.ts` Expected: PASS for the whole
+file. `expectedKind` defaults to `"feed"`, so every existing call site keeps its
+behaviour.
 
 - [ ] **Step 6: Commit**
 
@@ -790,7 +873,10 @@ FEED_DOC_KEYS so a committed catalog stays inert to the scanner."
 
 ### Task 6: Bounded gzip decompression in the transport
 
-The catalog must be compressed: 150,000 entries is 33.14 MB raw, which exceeds `FEED_REMOTE_LIMITS.maxBytes` of 32 MiB, and 2.42 MB gzipped. But nothing in `src/feed.ts` or `src/remote-download.ts` decompresses anything, so a `.gz` asset fed to the current path can never parse.
+The catalog must be compressed: 150,000 entries is 33.14 MB raw, which exceeds
+`FEED_REMOTE_LIMITS.maxBytes` of 32 MiB, and 2.42 MB gzipped. But nothing in
+`src/feed.ts` or `src/remote-download.ts` decompresses anything, so a `.gz`
+asset fed to the current path can never parse.
 
 **Files:**
 - Modify: `src/feed.ts`
@@ -878,7 +964,10 @@ Expected: PASS, 3 tests.
 
 - [ ] **Step 5: Prove the bound by cutting it**
 
-Temporarily raise `CATALOG_MAX_DECOMPRESSED_BYTES` to `1024 * 1024 * 1024`. Re-run and expect the bomb test to go RED (it no longer throws). Restore the constant, re-run, confirm green. This proves the test measures the bound rather than the try/catch.
+Temporarily raise `CATALOG_MAX_DECOMPRESSED_BYTES` to `1024 * 1024 * 1024`.
+Re-run and expect the bomb test to go RED (it no longer throws). Restore the
+constant, re-run, confirm green. This proves the test measures the bound rather
+than the try/catch.
 
 - [ ] **Step 6: Commit**
 
@@ -898,7 +987,10 @@ under the download cap still fails on expansion."
 
 ### Task 7: Generate and ship the catalog digest
 
-Integrity cannot rest on release-asset immutability: `immutable_releases` is `null` on this repository and `gh release upload --clobber` can replace an asset on an existing tag. The anchor is instead a digest shipped inside the npm package.
+Integrity cannot rest on release-asset immutability: `immutable_releases` is
+`null` on this repository and `gh release upload --clobber` can replace an asset
+on an existing tag. The anchor is instead a digest shipped inside the npm
+package.
 
 **Files:**
 - Create: `scripts/generate-catalog.mjs`
@@ -907,17 +999,20 @@ Integrity cannot rest on release-asset immutability: `immutable_releases` is `nu
 
 **Interfaces:**
 - Produces:
-  - `catalog-index.json` and `catalog-NNN.json.gz` at the repo root (gitignored build artifacts)
+  - `catalog-index.json` and `catalog-NNN.json.gz` at the repo root (gitignored
+    build artifacts)
   - `src/catalog-digest.ts`, a GENERATED and COMMITTED TypeScript constant:
-    `export const CATALOG_DIGEST = { version: string; sha256: string; entryCount: number; shardCount: number }`
-    where `sha256` is the digest of the INDEX document
+    `export const CATALOG_DIGEST = { version: string; sha256: string;
+    entryCount: number; shardCount: number }` where `sha256` is the digest of
+    the INDEX document
 
 **Sharded from this first release, deliberately.** A single catalog document has
-a hard ceiling of about 406,000 entries, set by `CATALOG_MAX_DECOMPRESSED_BYTES`,
-which is compiled into every released client. Sharding later would hit the same
-wall as raising that constant: old clients would not know how to read an index,
-so the fix for the ceiling would break every existing install. Sharding now,
-while the catalog is empty, costs nothing and removes the ceiling permanently.
+a hard ceiling of about 406,000 entries, set by
+`CATALOG_MAX_DECOMPRESSED_BYTES`, which is compiled into every released client.
+Sharding later would hit the same wall as raising that constant: old clients
+would not know how to read an index, so the fix for the ceiling would break
+every existing install. Sharding now, while the catalog is empty, costs nothing
+and removes the ceiling permanently.
 
 `CATALOG_SHARD_MAX_ENTRIES` is 50,000, chosen so the multi-shard path is LIVE
 after Phase 3 at 68,292 entries rather than dormant. Dormant code first
@@ -929,7 +1024,8 @@ reasons:
 
 1. `loadThreatIntel()` runs on every scan and already does a `stat` plus a read
    per cache file. A compiled-in constant costs nothing.
-2. It is typechecked, so it cannot drift into a shape the caller does not expect.
+2. It is typechecked, so it cannot drift into a shape the caller does not
+   expect.
 3. It supplies the version `refreshFeed()` needs to build the version-pinned
    catalog URL. That function has no version parameter and no access to
    `package.json`, so without it Task 10 cannot be implemented at all.
@@ -998,8 +1094,8 @@ describe("buildCatalog", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"`
-Expected: FAIL, cannot resolve `../../scripts/generate-catalog.mjs`.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` Expected:
+FAIL, cannot resolve `../../scripts/generate-catalog.mjs`.
 
 - [ ] **Step 3: Implement**
 
@@ -1129,7 +1225,8 @@ if (invokedDirectly) {
 }
 ```
 
-In `package.json`, add the script, ship the digest, and ignore the asset from git:
+In `package.json`, add the script, ship the digest, and ignore the asset from
+git:
 
 ```json
     "catalog:generate": "node scripts/generate-catalog.mjs",
@@ -1142,12 +1239,16 @@ and extend `prebuild` again so a stale digest cannot be committed:
     "prebuild": "npm run check:aahp && npm run check:feed && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
 ```
 
-`src/catalog-digest.ts` is compiled into the package like any other source file, so nothing needs adding to `files`. Add `catalog-index.json` and `catalog-*.json.gz` to `.gitignore`: they are build artifacts rebuilt from the committed catalog, and committing binary blobs that change on every import would bloat history.
+`src/catalog-digest.ts` is compiled into the package like any other source file,
+so nothing needs adding to `files`. Add `catalog-index.json` and
+`catalog-*.json.gz` to `.gitignore`: they are build artifacts rebuilt from the
+committed catalog, and committing binary blobs that change on every import would
+bloat history.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"`
-Expected: PASS, 2 tests.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` Expected:
+PASS, 2 tests.
 
 - [ ] **Step 5: Add the public-artifact hygiene check**
 
@@ -1302,10 +1403,10 @@ about 8.25 MB, a quarter of the per-shard budget and an eighth of the client
 floor. Growth adds shards rather than enlarging one, so this gate protects the
 shape rather than the total.
 
-Wire both checks into the CLI block from Step 3, immediately after the catalog is
-built and BEFORE anything is written or compared, so neither the write path nor
-`--check` can pass on a catalog that violates them. `entries` and `shards` are
-already in scope there; do not rebuild:
+Wire both checks into the CLI block from Step 3, immediately after the catalog
+is built and BEFORE anything is written or compared, so neither the write path
+nor `--check` can pass on a catalog that violates them. `entries` and `shards`
+are already in scope there; do not rebuild:
 
 ```javascript
   const violations = [
@@ -1379,17 +1480,20 @@ Expected: PASS, 9 tests.
 
 Remove the `169.254` entry from `PRIVATE_SHAPES`. Re-run and expect only the
 link-local case in "rejects every private-address shape" to go red. Restore and
-confirm green. A guard over a list of shapes must be shown to fail per shape,
-or a later edit can delete one silently.
+confirm green. A guard over a list of shapes must be shown to fail per shape, or
+a later edit can delete one silently.
 
 - [ ] **Step 8: Generate against the real tree and commit the digest module**
 
-Run `npm run catalog:generate`, then `npm run check:catalog`.
-Expected: the first writes `src/catalog-digest.ts`, `catalog-index.json` and one empty shard; the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit `src/catalog-digest.ts`.
+Run `npm run catalog:generate`, then `npm run check:catalog`. Expected: the
+first writes `src/catalog-digest.ts`, `catalog-index.json` and one empty shard;
+the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit
+`src/catalog-digest.ts`.
 
 An empty catalog still produces ONE shard, not zero. That keeps the index shape
 identical whether the catalog is empty or holds a million entries, so the client
-never needs a special case and Phase 1 exercises the same code path Phase 3 will.
+never needs a special case and Phase 1 exercises the same code path Phase 3
+will.
 
 - [ ] **Step 9: Commit**
 
@@ -1423,8 +1527,10 @@ exists to keep unpublished. Violations report line numbers, never values."
 - Consumes: `isValidFeedIOC`, `normalizeFeedIOC`, `mergeFeeds` (all existing)
 - Produces:
   - `export const CATALOG_CACHE_FILE = "threat-catalog.json";`
-  - `export type CatalogUnavailableReason = "absent" | "unreadable" | "version-mismatch" | "digest-mismatch";`
-  - `export interface CatalogState { available: boolean; reason?: CatalogUnavailableReason; entryCount: number; cachedVersion?: string; }`
+  - `export type CatalogUnavailableReason = "absent" | "unreadable" |
+    "version-mismatch" | "digest-mismatch";`
+  - `export interface CatalogState { available: boolean; reason?:
+    CatalogUnavailableReason; entryCount: number; cachedVersion?: string; }`
   - `export function lastCatalogState(): CatalogState`
 
 - [ ] **Step 1: Write the failing test**
@@ -1466,12 +1572,14 @@ describe("catalog cache availability", () => {
 });
 ```
 
-Import `pkg` from `../../package.json` and `CATALOG_DIGEST` from `../catalog-digest.js` at the top of the file, and use `CATALOG_DIGEST.sha256` where the test writes `expectedDigest.sha256`.
+Import `pkg` from `../../package.json` and `CATALOG_DIGEST` from
+`../catalog-digest.js` at the top of the file, and use `CATALOG_DIGEST.sha256`
+where the test writes `expectedDigest.sha256`.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/threat-intel.test.ts -t "catalog cache availability"`
-Expected: FAIL, `lastCatalogState is not a function`.
+Run: `npx vitest run src/__tests__/threat-intel.test.ts -t "catalog cache
+availability"` Expected: FAIL, `lastCatalogState is not a function`.
 
 - [ ] **Step 3: Implement**
 
@@ -1506,7 +1614,10 @@ Import the generated digest constant from Task 7. No filesystem access and no
 import { CATALOG_DIGEST } from "./catalog-digest.js";
 ```
 
-Inside `loadThreatIntel`, after the existing feed-cache merge and before `lastCacheState = state;`, add the catalog merge. Note that a cache that fails any check is NOT merged: a version-mismatched catalog is not partial coverage to be used opportunistically, it is coverage the caller must be told is missing.
+Inside `loadThreatIntel`, after the existing feed-cache merge and before
+`lastCacheState = state;`, add the catalog merge. Note that a cache that fails
+any check is NOT merged: a version-mismatched catalog is not partial coverage to
+be used opportunistically, it is coverage the caller must be told is missing.
 
 ```typescript
   const catalogPath = path.join(cacheBase, CATALOG_CACHE_FILE);
@@ -1542,7 +1653,9 @@ Inside `loadThreatIntel`, after the existing feed-cache merge and before `lastCa
   lastCatalog = catalog;
 ```
 
-Extend the memo key so a refreshed catalog is observed rather than served from a stale memo. Replace the `stamp` computation with one that covers both files, and include it in `key`:
+Extend the memo key so a refreshed catalog is observed rather than served from a
+stale memo. Replace the `stamp` computation with one that covers both files, and
+include it in `key`:
 
 ```typescript
   let catalogStamp = "none";
@@ -1560,12 +1673,16 @@ and change the key line to:
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/threat-intel.test.ts -t "catalog cache availability"`
-Expected: PASS, 4 tests.
+Run: `npx vitest run src/__tests__/threat-intel.test.ts -t "catalog cache
+availability"` Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Prove the version check by cutting it**
 
-Temporarily change `cached.version !== expected.version` to `false`. Re-run and expect the version-mismatch test to go RED while the others stay green. This is the check that closes the hole where a previous release's catalog silently satisfies `catalog: "required"`, so it must be shown to bite. Restore and confirm green.
+Temporarily change `cached.version !== expected.version` to `false`. Re-run and
+expect the version-mismatch test to go RED while the others stay green. This is
+the check that closes the hole where a previous release's catalog silently
+satisfies `catalog: "required"`, so it must be shown to bite. Restore and
+confirm green.
 
 - [ ] **Step 6: Commit**
 
@@ -1597,7 +1714,8 @@ therefore count as unavailable, and a failing cache is not merged at all."
 - Consumes: `lastCatalogState`, `CatalogState` from Task 8
 - Produces:
   - `export const CATALOG_MISSING_RULE = "THREAT_FEED_CATALOG_MISSING";`
-  - `export function catalogFindings(state: CatalogState, mode: "optional" | "required"): Finding[]`
+  - `export function catalogFindings(state: CatalogState, mode: "optional" |
+    "required"): Finding[]`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1628,8 +1746,8 @@ describe("catalogFindings", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogFindings"`
-Expected: FAIL, `catalogFindings is not a function`.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogFindings"` Expected:
+FAIL, `catalogFindings is not a function`.
 
 - [ ] **Step 3: Implement**
 
@@ -1686,13 +1804,18 @@ export function catalogFindings(
 }
 ```
 
-In `src/scanner.ts`, line 661 currently reads `findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));`. `policy` is already in scope there, declared at line 234 as `const policy = loadPolicyConfig(scanDir)`. Add immediately after it:
+In `src/scanner.ts`, line 661 currently reads
+`findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));`. `policy`
+is already in scope there, declared at line 234 as `const policy =
+loadPolicyConfig(scanDir)`. Add immediately after it:
 
 ```typescript
   findings.push(...catalogFindings(lastCatalogState(), policy?.catalog ?? "optional"));
 ```
 
-The policy value needs BOTH a schema entry and a TypeScript field, or `tsc` fails on `policy.catalog`. In `src/types.ts`, inside `interface PolicyConfig` (line 554), add:
+The policy value needs BOTH a schema entry and a TypeScript field, or `tsc`
+fails on `policy.catalog`. In `src/types.ts`, inside `interface PolicyConfig`
+(line 554), add:
 
 ```typescript
   /**
@@ -1716,8 +1839,8 @@ Then in `policy-schema.json`, add to `properties`:
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogFindings"`
-Expected: PASS, 4 tests.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogFindings"` Expected:
+PASS, 4 tests.
 
 - [ ] **Step 5: Verify end to end through a real scan**
 
@@ -1726,7 +1849,9 @@ node dist/cli.js scan . --format json > /tmp/scan.json
 node -e "const r=require('/tmp/scan.json'); const f=r.findings.find(x=>x.rule==='THREAT_FEED_CATALOG_MISSING'); console.log(f ? f.severity+': '+f.description.slice(0,80) : 'NOT EMITTED')"
 ```
 
-Expected: `medium: The historical indicator catalog was not consulted by this scan: no catalog has been downloaded...`. There is no catalog cache yet, so the finding must appear.
+Expected: `medium: The historical indicator catalog was not consulted by this
+scan: no catalog has been downloaded...`. There is no catalog cache yet, so the
+finding must appear.
 
 - [ ] **Step 6: Commit**
 
@@ -1753,11 +1878,15 @@ consumers who want the guarantee rather than the signal."
 - Test: `src/__tests__/feed.test.ts`
 
 **Interfaces:**
-- Consumes: `decodeCatalogBody` (Task 6), `parseFeedPayload` (Task 5), `CATALOG_CACHE_FILE` (Task 8)
+- Consumes: `decodeCatalogBody` (Task 6), `parseFeedPayload` (Task 5),
+  `CATALOG_CACHE_FILE` (Task 8)
 - Produces:
-  - `export const DEFAULT_CATALOG_URL_TEMPLATE = "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/{file}";`
-  - `export function catalogUrlFor(version: string, file: string, template?: string): string`
-  - `refreshFeed` return type gains `catalog?: { entryCount: number; cachePath: string }`
+  - `export const DEFAULT_CATALOG_URL_TEMPLATE =
+    "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/{file}";`
+  - `export function catalogUrlFor(version: string, file: string, template?:
+    string): string`
+  - `refreshFeed` return type gains `catalog?: { entryCount: number; cachePath:
+    string }`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1786,8 +1915,8 @@ describe("catalogUrlFor", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogUrlFor"`
-Expected: FAIL, `catalogUrlFor is not a function`.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogUrlFor"` Expected:
+FAIL, `catalogUrlFor is not a function`.
 
 - [ ] **Step 3: Implement**
 
@@ -1810,7 +1939,9 @@ export function catalogUrlFor(
 }
 ```
 
-Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must not fail the whole refresh: the feed is the more important document, and the missing-catalog finding already reports the gap.
+Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must
+not fail the whole refresh: the feed is the more important document, and the
+missing-catalog finding already reports the gap.
 
 ```typescript
     // CATALOG_DIGEST.version is the installed package's version, generated at
@@ -1866,7 +1997,8 @@ Add the imports `createHash` from `node:crypto`, `CATALOG_DIGEST` from
 imported there for `parseFeedPayload`'s return type) at the top of
 `src/feed.ts`.
 
-In `src/cli.ts`, extend the `feed refresh` output so the operator sees both results:
+In `src/cli.ts`, extend the `feed refresh` output so the operator sees both
+results:
 
 ```typescript
   console.log(`Feed refreshed: ${result.entryCount} entries -> ${result.cachePath}`);
@@ -1879,12 +2011,16 @@ In `src/cli.ts`, extend the `feed refresh` output so the operator sees both resu
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogUrlFor"`
-Expected: PASS, 2 tests.
+Run: `npx vitest run src/__tests__/feed.test.ts -t "catalogUrlFor"` Expected:
+PASS, 2 tests.
 
 - [ ] **Step 5: Confirm the digest agrees across both sides**
 
-Run `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` and confirm the Task 7 tests still pass. Then run `npm run check:catalog` and expect `catalog digest up to date`. The client and the generator must hash the same bytes, so if this disagrees every download would be rejected as a digest mismatch.
+Run `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` and confirm
+the Task 7 tests still pass. Then run `npm run check:catalog` and expect
+`catalog digest up to date`. The client and the generator must hash the same
+bytes, so if this disagrees every download would be rejected as a digest
+mismatch.
 
 - [ ] **Step 6: Commit**
 
@@ -1913,7 +2049,8 @@ verifies."
 
 - [ ] **Step 1: Add the generation and upload steps**
 
-In the `release` job, between "Extract changelog for this version" and "Create GitHub Release", add:
+In the `release` job, between "Extract changelog for this version" and "Create
+GitHub Release", add:
 
 ```yaml
       - name: Set up Node
@@ -1975,7 +2112,9 @@ Run:
 node -e "const y=require('js-yaml');const fs=require('node:fs');y.load(fs.readFileSync('.github/workflows/ci.yml','utf8'));console.log('ci.yml parses')"
 ```
 
-Expected: `ci.yml parses`. An invalid `ci.yml` makes the ENTIRE workflow file invalid and no job runs at all, which reads as "CI did not trigger" rather than as a syntax error.
+Expected: `ci.yml parses`. An invalid `ci.yml` makes the ENTIRE workflow file
+invalid and no job runs at all, which reads as "CI did not trigger" rather than
+as a syntax error.
 
 - [ ] **Step 3: Commit**
 
@@ -2003,7 +2142,10 @@ Detection must be provably unchanged. This is the task that demonstrates it.
 git diff --stat origin/main -- src/threat-intel.ts feed.json
 ```
 
-Expected: `src/threat-intel.ts` shows only the additions from Tasks 1, 5 and 8 (the inert-catalog check, the `kind` key, the catalog cache), and `feed.json` shows NO diff at all. A changed `feed.json` means an indicator moved, which is Phase 2 work and must not happen here.
+Expected: `src/threat-intel.ts` shows only the additions from Tasks 1, 5 and 8
+(the inert-catalog check, the `kind` key, the catalog cache), and `feed.json`
+shows NO diff at all. A changed `feed.json` means an indicator moved, which is
+Phase 2 work and must not happen here.
 
 - [ ] **Step 2: Confirm the entry count is unchanged**
 
@@ -2020,7 +2162,9 @@ npm run build
 npx --no-install aahp lint
 ```
 
-Expected: `check:aahp`, `check:feed`, `check:feed-partition`, `check:feed-budget`, `check:catalog`, `check:handoff`, `check:self-scan`, then `tsc`, all green; lint green.
+Expected: `check:aahp`, `check:feed`, `check:feed-partition`,
+`check:feed-budget`, `check:catalog`, `check:handoff`, `check:self-scan`, then
+`tsc`, all green; lint green.
 
 - [ ] **Step 4: Confirm the self-scan does not flag the catalog**
 
@@ -2029,7 +2173,9 @@ node dist/cli.js scan . --format json > /tmp/self.json
 node -e "const r=require('/tmp/self.json'); const c=r.findings.filter(f=>(f.file||'').includes('threat-catalog')); console.log('catalog findings:', c.length)"
 ```
 
-Expected: `catalog findings: 0`. The catalog is empty in Phase 1, so run this again at the start of Phase 2 with a populated catalog, which is the case that actually exercises `isInertThreatCatalogFile`.
+Expected: `catalog findings: 0`. The catalog is empty in Phase 1, so run this
+again at the start of Phase 2 with a populated catalog, which is the case that
+actually exercises `isInertThreatCatalogFile`.
 
 - [ ] **Step 5: Run every suite touched by this phase**
 
@@ -2039,7 +2185,10 @@ npx vitest run src/__tests__/feed.test.ts src/__tests__/threat-intel.test.ts \
   src/__tests__/campaigns.test.ts
 ```
 
-Expected on Windows: all pass except the two known environment failures (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) plus the vscode-scanner archive tests if that file is run. Confirm any failure also fails on unmodified `main` before attributing it to this work.
+Expected on Windows: all pass except the two known environment failures
+(`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) plus the
+vscode-scanner archive tests if that file is run. Confirm any failure also fails
+on unmodified `main` before attributing it to this work.
 
 Then get the real verdict, because a Windows run cannot produce one:
 
@@ -2050,11 +2199,16 @@ git clone --quiet --branch feat/threat-feed-catalog-phase-1 https://github.com/h
 cd repo && npm ci --silent && npx vitest run --reporter=dot
 ```
 
-Expected: 146 files and at least 3565 tests passing, zero failures. The baseline at v6.1.3 is exactly 146 / 3565; this phase adds test files, so both numbers must be HIGHER and the failure count must still be zero. Remove the temp directory when done.
+Expected: 146 files and at least 3565 tests passing, zero failures. The baseline
+at v6.1.3 is exactly 146 / 3565; this phase adds test files, so both numbers
+must be HIGHER and the failure count must still be zero. Remove the temp
+directory when done.
 
 - [ ] **Step 6: Update the handoff and open the PR**
 
-Prepend a dated note to `.ai/handoff/STATUS.md` recording what Phase 1 changed, the measured bundle size and import time (unchanged), and that Phase 2 is the next step. Run `npm run handoff:refresh`, then:
+Prepend a dated note to `.ai/handoff/STATUS.md` recording what Phase 1 changed,
+the measured bundle size and import time (unchanged), and that Phase 2 is the
+next step. Run `npm run handoff:refresh`, then:
 
 ```bash
 git add -A
@@ -2063,24 +2217,46 @@ git push -u origin feat/threat-feed-catalog-phase-1
 gh pr create --base main --title "feat(feed): catalog decoupling, Phase 1" --body-file <path>
 ```
 
-The PR body must state that `feed.json` is unchanged and the entry count is still 20969, because that is the claim a reviewer needs to check.
+The PR body must state that `feed.json` is unchanged and the entry count is
+still 20969, because that is the claim a reviewer needs to check.
 
 ---
 
 ## Phases 2 to 4
 
-Not in this plan. Each is a separate deliverable with its own plan, written after the preceding phase has landed and its measurements are known:
+Not in this plan. Each is a separate deliverable with its own plan, written
+after the preceding phase has landed and its measurements are known:
 
-- **Phase 2** moves `BUNDLE_CUTOFF_DATE` forward and migrates the now-unqualifying bundle entries into the catalog, preserving the bundle's 792 curated comment lines by removing a batch header only when every entry beneath it moved. This is the only phase that reduces what a bare install detects.
-- **Phase 3** drains the five deferral ranges into the catalog through the importer's routing rule.
+- **Phase 2** moves `BUNDLE_CUTOFF_DATE` forward and migrates the
+  now-unqualifying bundle entries into the catalog, preserving the bundle's 792
+  curated comment lines by removing a batch header only when every entry beneath
+  it moved. This is the only phase that reduces what a bare install detects.
+- **Phase 3** drains the five deferral ranges into the catalog through the
+  importer's routing rule.
 - **Phase 4** retires the deferral mechanism for bulk waves.
 
-Phase 2's plan depends on the bundle size and import time Phase 1 measures, so writing it now would be guessing.
+Phase 2's plan depends on the bundle size and import time Phase 1 measures, so
+writing it now would be guessing.
 
 ## Self-review
 
 Checked against the spec on 2026-09-16:
 
-- **Spec coverage.** Section 4.1 two stores: Tasks 2, 3. Section 4.2 partition policy and committed cutoff: Task 2. Section 4.3 catalog envelope, gzip, empty allowance: Tasks 5, 6, 7. Section 4.4 hosting and digest: Tasks 7, 10, 11. Section 4.5 cache and availability: Task 8. Section 4.6 self-scan inertness: Task 1. Section 5 finding and policy knob: Task 9. Section 6 budget gate: Task 4. Section 7 Phase 1: Task 12 verifies it. Section 8 tests: every listed Phase 1 case has a task, except catalog detection parity and comment preservation, which are Phase 2 cases because they need a populated catalog.
-- **Type consistency.** `CatalogState` is defined in Task 8 and consumed in Task 9. `decodeCatalogBody` is defined in Task 6 and consumed in Task 10. `partitionTarget`/`loadPartitionConfig` are defined in Task 2 and consumed in Tasks 3 and 4. `CATALOG_CACHE_FILE` is defined in Task 8 and consumed in Task 10.
-- **One cross-task conflict found and resolved inline.** Task 7 originally hashed the gzip bytes while Task 10 hashed the decoded body, which would have made every download fail verification. Task 10 Step 3 now changes both sides to hash the decompressed JSON, and Task 10 Step 5 regenerates the digest.
+- **Spec coverage.** Section 4.1 two stores: Tasks 2, 3. Section 4.2 partition
+  policy and committed cutoff: Task 2. Section 4.3 catalog envelope, gzip, empty
+  allowance: Tasks 5, 6, 7. Section 4.4 hosting and digest: Tasks 7, 10, 11.
+  Section 4.5 cache and availability: Task 8. Section 4.6 self-scan inertness:
+  Task 1. Section 5 finding and policy knob: Task 9. Section 6 budget gate: Task
+  4. Section 7 Phase 1: Task 12 verifies it. Section 8 tests: every listed Phase
+  1 case has a task, except catalog detection parity and comment preservation,
+  which are Phase 2 cases because they need a populated catalog.
+- **Type consistency.** `CatalogState` is defined in Task 8 and consumed in Task
+  9. `decodeCatalogBody` is defined in Task 6 and consumed in Task 10.
+  `partitionTarget`/`loadPartitionConfig` are defined in Task 2 and consumed in
+  Tasks 3 and 4. `CATALOG_CACHE_FILE` is defined in Task 8 and consumed in Task
+  10.
+- **One cross-task conflict found and resolved inline.** Task 7 originally
+  hashed the gzip bytes while Task 10 hashed the decoded body, which would have
+  made every download fail verification. Task 10 Step 3 now changes both sides
+  to hash the decompressed JSON, and Task 10 Step 5 regenerates the digest.
+
