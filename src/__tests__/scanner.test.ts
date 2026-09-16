@@ -31,9 +31,15 @@ describe("Core Scanner", () => {
     // v4.9: SLSA_LEVEL_0 (info severity, score=1) is emitted for directories
     // without any build scripts - this is a posture finding, not a security alert.
     // Unreleased: SCAN_ZERO_COVERAGE is the coverage signal, likewise not an alert.
+    // v6.2.0: THREAT_FEED_CATALOG_MISSING (info) says the optional historical
+    // catalog has not been downloaded on this machine. Same class again: it
+    // describes the scanner's own data, not this directory.
     // Verify no actual security/malware findings are present.
     const securityFindings = report.findings.filter(
-      (f) => !f.rule.startsWith("SLSA_") && f.rule !== "SCAN_ZERO_COVERAGE",
+      (f) =>
+        !f.rule.startsWith("SLSA_") &&
+        f.rule !== "SCAN_ZERO_COVERAGE" &&
+        f.rule !== "THREAT_FEED_CATALOG_MISSING",
     );
     expect(securityFindings).toHaveLength(0);
     expect(report.scanType).toBe("directory");
