@@ -53,6 +53,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { buildFeed, serializeFeed, extractBundledEntries } from "./generate-feed.mjs";
+import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
+import { buildCatalog, renderDigestModule, readCatalogEntries } from "./generate-catalog.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -1552,6 +1554,81 @@ export function updateFeedGeneratedAt(source, date) {
  */
 export const FEED_CHUNK_CAPACITY = 1000;
 
+/** The catalog's canonical field order, shared with the migration. */
+const CATALOG_FIELDS = [
+  "type",
+  "value",
+  "severity",
+  "confidence",
+  "family",
+  "campaign",
+  "source",
+  "firstSeen",
+  "lastSeen",
+];
+
+/**
+ * Refuse to send an atomic indicator to the catalog.
+ *
+ * Rule 1 is bounded by CURATION rather than by type, deliberately: an
+ * unconditional "every non-package entry stays" would grow the bundle forever
+ * with no way to stop it. The design closes the loss risk with a gate instead,
+ * and check:feed-partition does reject an atomic indicator that reached the
+ * catalog.
+ *
+ * That gate fires at the next build, which is the wrong moment for an automated
+ * import: the tree has already been rewritten by then, and the daily job leaves
+ * a broken repository behind for someone else to untangle. This refuses before
+ * anything is written.
+ *
+ * Measured on the v6.1.3 feed this is unreachable: 401 of the 404 non-package
+ * entries carry curation and none of the other 3 is old enough to move. It
+ * exists for the import that changes that.
+ */
+export function assertNoAtomicInCatalog(toCatalog) {
+  const atomic = toCatalog.filter((entry) => entry.type !== "package");
+  if (atomic.length === 0) return;
+  throw new Error(
+    `import refused: ${atomic.length} atomic indicator(s) would be routed to the catalog, ` +
+      `which check:feed-partition rejects. Atomic indicators must stay in the bundle, where an ` +
+      `offline scan can always reach them. First: ${atomic[0].type} ` +
+      `${JSON.stringify(atomic[0].value).slice(0, 60)}. Give them a campaign or family so rule 2 ` +
+      `keeps them bundled.`,
+  );
+}
+
+/**
+ * Split accepted entries by the shared partition policy.
+ *
+ * The importer must not have its own opinion about where an entry belongs. If
+ * it did, an entry could be in the bundle to the importer and in the catalog to
+ * the gate, and check:feed-partition would go red on a file nobody edited by
+ * hand. partitionTarget is the single definition, shared with the migration.
+ */
+export function routeEntries(entries, config) {
+  const toBundle = [];
+  const toCatalog = [];
+  for (const entry of entries) {
+    (partitionTarget(entry, config) === "catalog" ? toCatalog : toBundle).push(entry);
+  }
+  return { toBundle, toCatalog };
+}
+
+/** Render one entry as a catalog JSONL line, in canonical field order. */
+export function renderCatalogEntry(entry) {
+  const pub = publicEntry(entry);
+  const out = {};
+  for (const key of CATALOG_FIELDS) {
+    if (pub[key] !== undefined) out[key] = pub[key];
+  }
+  return JSON.stringify(out);
+}
+
+/** The version the catalog digest is built for. */
+function packageVersion(root) {
+  return JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
+}
+
 const CHUNK_DECL_RE = /^const (FEED_CHUNK_(\d+)): FeedIOC\[\] = \[/gm;
 const ENTRY_LINE_RE = /^[ \t]*\{\s*type:/gm;
 
@@ -1878,6 +1955,10 @@ export async function importUpstreamFeed({
     osvAvailable: osv.ok,
     osvError: osv.error ?? null,
     added: selected.length,
+    // Where this run sent them. A run that silently sends everything one
+    // way is the failure this split exists to make visible.
+    addedToBundle: 0,
+    addedToCatalog: 0,
     capped,
     // null is deliberate and JSON-safe: it means this run was exhaustive rather
     // than relying on Infinity, which JSON.stringify would also turn into null but
@@ -1910,24 +1991,79 @@ export async function importUpstreamFeed({
 
   // 5. Build the new source in memory and prove it re-parses to exactly the
   //    entries we expect BEFORE anything touches the working tree.
+  const digestModulePath = join(root, "src", "catalog-digest.ts");
   const original = readFileSync(threatIntelPath, "utf8");
+
+  // Route each accepted entry by the SAME policy the migration and the gates
+  // use. Without this the bundle starts growing again on the next daily import
+  // and the migration is undone within weeks, silently, because nothing else
+  // looks at where a newly imported entry landed.
+  const partitionConfig = loadPartitionConfig(root);
+  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig);
+  report.addedToBundle = toBundle.length;
+  report.addedToCatalog = toCatalog.length;
+
+  // Rule 1 is bounded by CURATION rather than by type, deliberately: an
+  // unconditional "every non-package entry stays" would grow the bundle forever
+  // with no way to stop it. The design closes the loss risk with a gate instead,
+  // and check:feed-partition does reject an atomic indicator that reached the
+  // catalog.
+  //
+  // That gate fires at the next build, which is the wrong moment for an
+  // automated import: the tree has already been rewritten by then, and the
+  // daily job leaves a broken repository behind for someone to untangle.
+  // Refuse here, before anything is written, and name the entries so the fix is
+  // obvious. Measured on the v6.1.3 feed this is unreachable: 401 of the 404
+  // non-package entries carry curation and none of the other 3 is old enough to
+  // move. It exists for the import that changes that.
+  assertNoAtomicInCatalog(toCatalog);
+
+  const catalogPath = join(root, "data", "threat-catalog.jsonl");
+  const originalCatalog = readFileSync(catalogPath, "utf8");
+  const originalDigestModule = readFileSync(digestModulePath, "utf8");
+
   const updated = updateFeedGeneratedAt(
-    applyEntries(original, selected, { date: from }),
+    toBundle.length > 0
+      ? applyEntries(original, toBundle, { date: from })
+      : original,
     now.toISOString().slice(0, 10),
   );
   writeFileSync(threatIntelPath, updated);
+
+  if (toCatalog.length > 0) {
+    // One JSON object per line, in the catalog's canonical field order, so the
+    // file the generator reads back is the file the migration would have
+    // written. LF regardless of platform: the catalog is pinned to LF in
+    // .gitattributes because its digest is published.
+    const appended = toCatalog.map((entry) => renderCatalogEntry(entry)).join("\n");
+    const needsNewline = originalCatalog.length > 0 && !originalCatalog.endsWith("\n");
+    writeFileSync(catalogPath, `${originalCatalog}${needsNewline ? "\n" : ""}${appended}\n`);
+  }
+
   try {
     const reparsed = extractBundledEntries(root);
-    if (reparsed.length !== existing.length + selected.length) {
+    if (reparsed.length !== existing.length + toBundle.length) {
       throw new Error(
-        `re-parse mismatch: expected ${existing.length + selected.length} entries, got ${reparsed.length}`,
+        `re-parse mismatch: expected ${existing.length + toBundle.length} entries, got ${reparsed.length}`,
       );
     }
     // 6. Regenerate feed.json from the (now updated) single source of truth.
     writeFileSync(feedPath, serializeFeed(buildFeed(root)));
+
+    // 7. And the catalog digest, which is a gated generated file: leaving it
+    //    stale would make the next `npm run build` red for a reason that has
+    //    nothing to do with whoever runs it.
+    if (toCatalog.length > 0) {
+      const { digest } = buildCatalog(readCatalogEntries(root), packageVersion(root));
+      writeFileSync(digestModulePath, renderDigestModule(digest));
+    }
   } catch (err) {
-    // Roll the source file back so a half-applied import can never ship.
+    // Roll BOTH stores back. Rolling back only the source would leave the
+    // catalog holding entries the bundle no longer knows about, which is a
+    // worse state than either failure alone.
     writeFileSync(threatIntelPath, original);
+    writeFileSync(catalogPath, originalCatalog);
+    writeFileSync(digestModulePath, originalDigestModule);
     throw new Error(
       `import aborted and rolled back: ${err instanceof Error ? err.message : String(err)}`,
     );
@@ -2127,7 +2263,7 @@ if (isMain) {
     console.log(`  Skipped:              ${report.skippedTotal} ${JSON.stringify(report.skipped)}`);
     console.log(`  OSV corroboration:    ${report.osvAvailable ? `${report.corroboratedByOsv} confirmed` : `unavailable (${report.osvError})`}`);
     console.log(
-      `  New entries:          ${report.added}${
+      `  New entries:          ${report.added} (${report.addedToBundle} to the bundle, ${report.addedToCatalog} to the catalog)${
         report.capped
           ? ` (--limit ${report.limitApplied} reached; ${report.remaining} MORE are ready - re-run to take the next batch, or raise --limit. They stay available only until they age out of the --days window.)`
           : ""

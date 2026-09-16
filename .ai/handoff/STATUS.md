@@ -1,3 +1,62 @@
+## Phase 2 Task 4: the importer routes new entries (2026-09-16, claude-opus-5)
+
+Without this the bundle starts growing again on the next daily import and the
+migration is undone within weeks, silently, because nothing else looks at where
+a newly imported entry landed.
+
+`routeEntries(entries, config)` splits accepted candidates through
+`partitionTarget`, the same function the migration and the placement gate use.
+The importer has no opinion of its own: if it did, an entry could be in the
+bundle to the importer and in the catalog to the gate, and `check:feed-partition`
+would go red on a file nobody edited by hand. Catalog-bound entries are appended
+to `data/threat-catalog.jsonl` in the canonical field order, the digest module is
+regenerated, and the summary reports both destinations so a run that silently
+sends everything one way is visible.
+
+Both stores roll back together on failure. Rolling back only the source would
+leave the catalog holding entries the bundle no longer knows about, which is a
+worse state than either failure alone.
+
+**The plan's own test for this task contradicted the design.** It asserted that
+a non-package IOC is never routed to the catalog. Design section 4.2 says the
+opposite, deliberately: rule 1 is bounded by CURATION rather than by type,
+because an unconditional "every non-package entry stays" is an unbounded rule
+that would grow the bundle forever with no mechanism to stop it. Measured on the
+v6.1.3 feed, 401 of 404 non-package entries already carry curation and none of
+the other 3 is old enough to move, so the bound costs nothing.
+
+That was checked rather than assumed, in both directions: `partitionTarget` has
+no type check, and the design's claim that "check:feed-partition fails the build
+if an atomic indicator would leave the bundle" is TRUE, at
+`scripts/check-feed-partition.mjs:76`. The migrated catalog is 11,998 entries and
+100 percent `package`, so nothing atomic moved.
+
+**One gap was real, and is closed.** The gate fires at the next build, which is
+the wrong moment for an automated daily import: the tree has already been
+rewritten, and the job leaves a broken repository behind for someone to untangle.
+`assertNoAtomicInCatalog` refuses before anything is written, and names the
+offending indicator.
+
+**Mutation results**, baseline and post-restore green at 23 tests. Cuts that go
+red: routing everything to the bundle (the migration undone), routing everything
+to the catalog, the catalog line losing its canonical field order, and the
+atomic-indicator refusal.
+
+**One cut initially stayed green, which was the finding.** The refusal was
+covered only by a test asserting the string appeared before the write in the
+source. Replacing the condition with `if (false)` left that string in place
+inside a dead branch, so a source-order test walked straight past it. The
+refusal is now an exported function with behavioural tests and a control in the
+other direction, and the cut goes red on four of them.
+
+**The fixtures had to become real repositories.** The importer now reads
+`feed-partition.config.json`, `data/threat-catalog.jsonl` and
+`src/catalog-digest.ts`, and two test fixtures built a temp root without them.
+Falling back to a default when the config is missing was considered and rejected:
+it would send every imported entry to the bundle, which is precisely the
+regression this task prevents, and it would do it without saying anything.
+
+
 ## Phase 2 Task 3: the migration is applied (2026-09-16, claude-opus-5)
 
 11,998 indicators moved from the compiled bundle into the catalog. This is the

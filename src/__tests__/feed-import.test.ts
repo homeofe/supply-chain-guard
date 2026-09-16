@@ -1518,6 +1518,7 @@ describe("importUpstreamFeed failure mode", () => {
   let tmpRoot: string;
   let threatIntelPath: string;
   let feedPath: string;
+  let catalogPath: string;
 
   const FAKE_THREAT_INTEL = [
     "export interface FeedIOC { type: string }",
@@ -1536,6 +1537,30 @@ describe("importUpstreamFeed failure mode", () => {
     fs.writeFileSync(threatIntelPath, FAKE_THREAT_INTEL);
     fs.writeFileSync(path.join(tmpRoot, "package.json"), JSON.stringify({ version: "9.9.9" }));
     fs.writeFileSync(feedPath, '{"schema":1,"entries":[{"type":"domain","value":"existing.example"}]}\n');
+
+    // The importer routes every accepted entry through the partition policy, so
+    // the fixture has to be a repository that HAS one. Falling back to a default
+    // when the config is missing would be worse than failing: it would send
+    // everything to the bundle, which is the exact regression the routing
+    // exists to prevent, and it would do it silently.
+    catalogPath = path.join(tmpRoot, "data", "threat-catalog.jsonl");
+    fs.mkdirSync(path.join(tmpRoot, "data"));
+    fs.writeFileSync(catalogPath, "");
+    fs.writeFileSync(
+      path.join(tmpRoot, "feed-partition.config.json"),
+      JSON.stringify({
+        // Older than every fixture entry, so routing is a no-op here and these
+        // tests keep asserting what they were written for. The routing itself
+        // has its own describe block with its own cutoff.
+        bundleCutoffDate: "2000-01-01",
+        maxBundledEntries: 15000,
+        maxBundleBytes: 2097152,
+      }),
+    );
+    fs.writeFileSync(
+      path.join(tmpRoot, "src", "catalog-digest.ts"),
+      'export const CATALOG_DIGEST = {\n  version: "9.9.9",\n  sha256: "",\n  entryCount: 0,\n  shardCount: 1,\n} as const;\n',
+    );
   });
 
   afterEach(() => {
@@ -1999,6 +2024,23 @@ describe("ecosystem filter", () => {
     const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scg-eco-"));
     try {
       fs.mkdirSync(path.join(tmpRoot, "src"));
+      // Same reason as the main fixture: the importer routes every accepted
+      // entry through the partition policy, so the fixture repository has to
+      // have one.
+      fs.mkdirSync(path.join(tmpRoot, "data"));
+      fs.writeFileSync(path.join(tmpRoot, "data", "threat-catalog.jsonl"), "");
+      fs.writeFileSync(
+        path.join(tmpRoot, "feed-partition.config.json"),
+        JSON.stringify({
+          bundleCutoffDate: "2000-01-01",
+          maxBundledEntries: 15000,
+          maxBundleBytes: 2097152,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(tmpRoot, "src", "catalog-digest.ts"),
+        'export const CATALOG_DIGEST = { version: "9.9.9", sha256: "", entryCount: 0, shardCount: 1 } as const;\n',
+      );
       fs.writeFileSync(
         path.join(tmpRoot, "src", "threat-intel.ts"),
         [
