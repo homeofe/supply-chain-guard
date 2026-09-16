@@ -1,3 +1,71 @@
+## Catalog decoupling: Phase 2 to 4 plans (2026-09-16, claude-opus-5)
+
+Still design and planning only, no code. Plans:
+`docs/plans/2026-09-16-threat-feed-catalog-phase-2.md` and
+`docs/plans/2026-09-16-threat-feed-catalog-phases-3-4.md`.
+
+Phase 2 was previously said to need measurements only Phase 1 could produce.
+That was over-cautious: Phase 1 moves no indicator by construction, so the
+v6.1.3 measurements ARE the Phase 2 inputs, and the plan is written against
+real numbers rather than projections.
+
+**Phase 2 moves 11,998 of 20,969 entries out of the compiled bundle.**
+Measured projections: `src/threat-intel.ts` 3.54 MB to 1.58 MB, module import
+75 ms to about 32 ms, both against a budget of 15,000 entries and 2 MiB, which
+the result fits with room to spare.
+
+**A thirteenth defect was found while planning it, and it is the most
+dangerous one so far.** The partition treated the `campaign` / `family` FIELDS
+as the definition of "curated". Curation in this repository is expressed in
+COMMENTS. Measured: 1,094 entries sit beneath a curated comment block and 60 of
+them carry no such field. `lotusbail` has a fourteen-line rationale about a
+credential-theft campaign and no `campaign:` field; the two `dakumangalsingh`
+pins have a seven-line comment explaining why they had to be hand-added.
+Migrating on the field alone would have moved those entries to the catalog and
+left their rationale in a file that no longer contains what it describes.
+
+Fixed as rule 3 in section 4.2: an entry beneath a curated comment block is
+immovable. It is a migration-time rule only, because the importer writes under
+its own batch header and never needs it, so `partitionTarget()` stays pure.
+Measured cost: 4 entries out of 12,002.
+
+The migration is specified to remove an importer batch header only when every
+entry beneath it moved (45 of 217 groups qualify; 14 split and keep theirs),
+and never to remove a curated header. Acceptance asserts zero orphaned comment
+groups, all 706 curated comment lines still present, and bundle plus catalog
+still equal to 20,969.
+
+**A fourteenth: the release-immutability claim was built on absence again.**
+`GET /repos/{owner}/{repo}` carries no `immutable_releases` key at all, so the
+`null` this session read from it meant "field absent", not "feature off". That
+is the same mistake as entry 9. The real flag is per release: the release
+object has an `immutable` boolean, measured `false` on v6.1.1, v6.1.2 and
+v6.1.3. Enabling the setting does NOT retrofit existing releases, so those
+three stay mutable forever and the shipped digest is the catalog only
+protection on them. Phase 2 asserts `immutable == true` on the first release
+published after the change, because a setting nobody verified is a setting
+nobody has.
+
+**Phases 3 and 4** drain the five deferred ranges (56,294 indicators) one PR
+per range and then retire bulk deferral. Verified while planning: the importer
+is EXHAUSTIVE by default (`appliedLimit` is `null` unless `--limit` is passed),
+so an explicit range imports in full. The operator instructions for the daily
+job still claim a default of `--limit 250`; acting on that during the drain
+would have imported 250 of 19,158 entries and left a remainder no later run
+proposes. Phase 4 corrects it and adds a regression in both directions.
+
+Projected end state: catalog about 68,292 entries, 15.8 MB raw and about
+1.2 MB gzipped, inside both the 32 MiB download cap and the 64 MiB
+decompression cap. Bundle stays at about 8,971.
+
+**Two leaks of our own were caught in the public plans before commit**: a
+local Windows path to the operator instructions file, and the internal Linux
+runner hostname in five places. Both removed; the plans now describe the host
+generically and say why it is not named. The RFC1918 addresses that remain in
+the Phase 1 plan are the fixtures that prove the hygiene guard fires, and are
+deliberate.
+
+
 ## Catalog decoupling: open decisions closed (2026-09-16, claude-opus-5)
 
 Still design only, still no code. All five open questions are decided and

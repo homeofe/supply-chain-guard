@@ -23,7 +23,7 @@ Copied verbatim from the project's rules. Every task's requirements implicitly i
 - **`main` is protected.** All work lands through a squash-merged PR.
 - **The green baseline is 146 files / 3565 tests, all passing.** Measured on 2026-09-16 on Linux against `main` at v6.1.3 (`05c0729`), 54.7 seconds wall clock. Any other number means something broke.
 - On Windows that baseline is unreachable and the difference is environmental, not a regression. Two campaign tests (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) fail there on unmodified `main`, and the vscode-scanner archive tests fail for a missing `zip` binary. Both pass on Linux. Never call the suite broken from a Windows run without first running the same suite on unmodified `main`.
-- For a real full-suite verdict without waiting for CI, use the Linux runner: `ssh openclaw`, clone into a fresh `mktemp -d /tmp/...` directory, `npm ci`, `npx vitest run`. That is under a minute against hours on Windows. Remove the temp directory afterwards.
+- For a real full-suite verdict without waiting for CI, use a Linux host: clone into a fresh `mktemp -d` directory, `npm ci`, `npx vitest run`. That is under a minute against hours on Windows. Remove the temp directory afterwards. (The maintainer has an `ssh` alias configured for such a host; it is deliberately not named here, because this file is public.)
 - **Every gate is proved by cutting it**, never by reading it: show a green baseline, make the cut, watch the specific assertion go red, restore, show green again.
 
 ---
@@ -1776,8 +1776,8 @@ Expected on Windows: all pass except the two known environment failures (`Phanto
 Then get the real verdict, because a Windows run cannot produce one:
 
 ```bash
-ssh openclaw
-WD=$(mktemp -d /tmp/scg-phase1-XXXXXX) && cd "$WD"
+ssh <your linux host>
+WD=$(mktemp -d) && cd "$WD"
 git clone --quiet --branch feat/threat-feed-catalog-phase-1 https://github.com/homeofe/supply-chain-guard.git repo
 cd repo && npm ci --silent && npx vitest run --reporter=dot
 ```

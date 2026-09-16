@@ -165,7 +165,30 @@ An entry stays in the bundle when any of the following holds:
    few, high value and cheap. All stay bundled.
 2. It carries a `campaign` or `family` field. These are curated, hand-reviewed
    campaign entries, the intelligence a database cannot supply.
-3. Its `firstSeen` is on or after `BUNDLE_CUTOFF_DATE`.
+3. **It sits beneath a curated comment block in `src/threat-intel.ts`**, meaning
+   a comment run that is not an importer batch header. Migration-time only; see
+   below.
+4. Its `firstSeen` is on or after `BUNDLE_CUTOFF_DATE`.
+
+**Rule 3 exists because rule 2 does not actually capture what "curated" means
+here.** Curation in this repository is expressed in COMMENTS, not in fields.
+Measured on the v6.1.3 feed: 1,094 entries sit beneath a curated comment block,
+and 60 of them carry no `campaign` or `family` field at all. `lotusbail` has a
+fourteen-line rationale about a credential-theft campaign and no `campaign:`
+field; the two `dakumangalsingh` pins have a seven-line comment explaining why
+they had to be added by hand. Under rules 1, 2 and 4 alone, those entries move to
+the catalog and their rationale is orphaned in a file that no longer contains
+what it describes.
+
+Rule 3 is evaluated only by the Phase 2 migration, because only the migration
+moves entries that a human already authored. The importer never needs it: its
+own output is written beneath an importer batch header, which rule 3 explicitly
+does not match. So `partitionTarget()` stays a pure function of the entry, and
+the migration applies rule 3 on top from its own parse of the file.
+
+The cost is negligible and was measured: with rule 3 in force, 11,998 entries
+move instead of 12,002. Four entries stay bundled so that three curated comment
+blocks keep the entries they describe.
 
 Everything else is routed to the catalog. The rule is evaluated by the
 importer when an entry is first written, by the Phase 2 migration when an
@@ -282,18 +305,32 @@ Staleness is gated: `check:catalog` regenerates the constant and fails the build
 if the committed copy differs, so a digest can never drift from the catalog it
 describes.
 
-**Repository release immutability is enabled as well.** The digest means
-correctness does not depend on it, but it is free, it protects every other
-release asset too, and for a public security tool the posture should be the
-strong one rather than the merely sufficient one. It is a repository setting and
-therefore an owner action, not something this design can assert from CI:
+**Repository release immutability is enabled as well**, as defence in depth
+rather than as a dependency.
+
+It cannot be verified at the repository level: `GET /repos/{owner}/{repo}`
+returns no `immutable_releases` key at all, so reading `null` from it says
+nothing either way. That is the same absence-read-as-a-value mistake recorded as
+entry 9 in section 11, and it is why the check below is written against the
+release object instead.
+
+The flag is real and per release. `GET /repos/{owner}/{repo}/releases/tags/{tag}`
+carries an `immutable` boolean, and it is set when the release is CREATED:
 
 ```bash
-gh api -X PATCH repos/homeofe/supply-chain-guard -f immutable_releases=true
+gh api repos/homeofe/supply-chain-guard/releases/tags/v6.1.3 --jq .immutable
 ```
 
-Verify with `gh api repos/homeofe/supply-chain-guard --jq .immutable_releases`,
-which returns `null` today.
+Measured on 2026-09-16: `false` for v6.1.1, v6.1.2 and v6.1.3. Enabling the
+setting does not retrofit existing releases, so every release published before it
+took effect stays mutable forever.
+
+Two consequences this design takes seriously:
+
+1. The shipped digest is not belt-and-braces on the current release, it is the
+   only protection the catalog has there.
+2. Phase 2 asserts `immutable == true` on the first release published after the
+   setting change, because a setting nobody verified is a setting nobody has.
 
 ### 4.5 Cache, merge, and what counts as unavailable
 
@@ -621,9 +658,10 @@ why a security tool behaves the way it does without reconstructing it.
    six months as today, and a clock-driven severity breaks that for everyone at
    once.
 2. **Repository release immutability is enabled**, as defence in depth rather
-   than as a dependency. Section 4.4 carries the command. The digest check is
-   what actually protects the catalog, and it keeps working whether or not the
-   setting is on.
+   than as a dependency, and it is verified per release rather than per
+   repository because the repository API does not expose it. It does not
+   retrofit: v6.1.1 through v6.1.3 are `immutable: false` permanently, so on
+   those the shipped digest is the catalog's only protection. Section 4.4.
 3. **`BUNDLE_CUTOFF_DATE` is 30 days, `MAX_BUNDLED_ENTRIES` is 15,000 and
    `MAX_BUNDLE_BYTES` is 2 MiB.** Chosen from the measured distribution in
    section 6.1, not from round numbers: at the originally proposed 90 days the
@@ -661,6 +699,8 @@ answers a different question, which is this project's most common defect class.
 | 10 | `policy.catalog` was added to `policy-schema.json` only; `tsc` would have failed because `PolicyConfig` in `src/types.ts` has no such field | The field is added to both |
 | 11 | `refreshFeed()` has no version in scope, so the version-pinned catalog URL could not be built | `CATALOG_DIGEST.version` supplies it, from the same generated constant as fix 9 |
 | 12 | `src/threat-intel.ts` and `src/scanner.ts` are listed in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly every task and would block each commit | Every affected task regenerates and commits `self-scan-manifest.json` |
+| 13 | The partition treated `campaign`/`family` as the definition of "curated", but curation here lives in COMMENTS. 60 of 1,094 comment-anchored entries carry no such field, so their rationale would have been orphaned as they aged past the cutoff | Rule 3 in section 4.2: an entry beneath a curated comment block is immovable. Found while planning Phase 2 |
+| 14 | The claim that release immutability was off rested on `immutable_releases` reading `null`, which actually means the repo API does not expose the field at all. Absence was read as a value, which is the same mistake as entry 9 | Verified per release instead: `immutable` is a real field on the release object, and it is `false` on v6.1.1 through v6.1.3. Phase 2 asserts it on the next release |
 
 Defects 10 to 12 were found by re-auditing the design against the code before
 merging, after the review had already been addressed. All three are the same
