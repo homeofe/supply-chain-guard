@@ -552,6 +552,16 @@ export interface ThreatIntelSource {
 // ---------------------------------------------------------------------------
 
 export interface PolicyConfig {
+  /**
+   * Whether the downloadable threat catalog must be present.
+   *
+   * `optional` (the default) reports a finding when the catalog could not be
+   * consulted and carries on. `required` raises that finding to `critical`, so
+   * a scan that could not consult the historical corpus fails the default
+   * `fail-on: critical` gate rather than reporting a narrower result as success.
+   */
+  catalog?: "optional" | "required";
+
   rules?: {
     disable?: string[];
     /**

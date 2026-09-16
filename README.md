@@ -392,6 +392,11 @@ Shape rules cannot know that `sample-service` is one of your private repositorie
 ```yaml
 # yaml-language-server: $schema=./node_modules/supply-chain-guard/policy-schema.json
 
+# Whether the downloadable historical catalog must be present for a scan to
+# count as complete. "optional" (the default) reports THREAT_FEED_CATALOG_MISSING
+# and carries on; "required" raises it to critical.
+catalog: optional
+
 internalDisclosure:
   # (a) HASHED. Publishable: the digest hides the term from a reader and from
   #     grep. It is not a vault - see "What hashing is worth" below.
@@ -960,6 +965,54 @@ the rule by name:
 - uses: homeofe/supply-chain-guard@v6.1.3
   with:
     exclude-rules: THREAT_FEED_STALE
+```
+
+#### THREAT_FEED_CATALOG_MISSING
+
+Staleness is about the rule set being old. This one is about part of it not
+being consulted at all.
+
+The indicator corpus is published in two pieces. Recent and curated indicators
+are compiled into the package and always available offline. The historical
+corpus lives in a catalog that is published beside the release and downloaded on
+demand, because carrying all of it in the package would make every install and
+every Action run pay for indicators most scans never match. A scan without the
+catalog is narrower than a scan with it, and without this rule it reports exactly
+the same success.
+
+`supply-chain-guard feed refresh` downloads the catalog and caches it for later
+scans. The finding names how many historical indicators were not consulted and
+why, and the reason matters:
+
+| Reason | Severity | What it means |
+|--------|----------|---------------|
+| not downloaded yet | medium | No catalog on this machine. Run a refresh. |
+| unreadable | medium | The cache could not be parsed. |
+| built for a different release | medium | Left over from an older version. |
+| does not match the pinned digest | high | Not the catalog this release expects. |
+| entries do not match their checksum | high | The cached data changed underneath the scanner. |
+
+The last two are not normal states. They say the scanner's own detection data is
+either corrupt or has been modified in place, which is a different problem from
+"not downloaded yet" and is worth looking at the machine for.
+
+Set `catalog: required` in `.supply-chain-guard.yml` to treat any of them as
+`critical`, so a scan that could not consult the full corpus fails the default
+gate rather than reporting a narrower result as success:
+
+```yaml
+catalog: required
+```
+
+An empty catalog is a valid catalog: while a release publishes no historical
+indicators there is nothing to miss, and the rule stays quiet under the default
+setting rather than firing on every scan. If scanning against the bundled set
+alone is the intent, exclude the rule by name:
+
+```yaml
+- uses: homeofe/supply-chain-guard@v6.1.3
+  with:
+    exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```
 
 ### Action Inputs

@@ -85,7 +85,7 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance, lastCatalogState } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
@@ -95,7 +95,7 @@ import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
-import { feedFreshness, feedStalenessFindings } from "./feed.js";
+import { feedFreshness, feedStalenessFindings, catalogFindings } from "./feed.js";
 import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
 import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
@@ -660,6 +660,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // on a frozen pin is told so instead of receiving another green check.
   // Carries no `file`, so the path-ignore filter below leaves it in place.
   findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));
+
+  // The companion to the staleness finding: that one says the rule set is old,
+  // this one says part of it was not consulted at all. lastCatalogState() reads
+  // the state recorded by the loadThreatIntel() call that produced threatFeed,
+  // so the two describe the same scan. Carries no `file`, for the same reason:
+  // the path-ignore filter below drops anything that looks like a repo finding.
+  findings.push(...catalogFindings(lastCatalogState(), policy?.catalog ?? "optional"));
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own

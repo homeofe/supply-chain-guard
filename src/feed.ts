@@ -28,11 +28,13 @@ import * as path from "node:path";
 import { gunzipSync } from "node:zlib";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
+import { CATALOG_DIGEST } from "./catalog-digest.js";
 import {
   CACHE_DIR,
   FEED_CACHE_FILE,
   FEED_REMOTE_LIMITS,
   isValidFeedIOC,
+  type CatalogState,
   normalizeFeedIOC,
   type FeedIOC,
   type FeedLimitOverrides,
@@ -90,6 +92,9 @@ export const FEED_STALE_AFTER_DAYS = 30;
 
 /** Rule id of the staleness finding. Stable: consumers exclude it by name. */
 export const FEED_STALE_RULE = "THREAT_FEED_STALE";
+
+/** The rule id for a catalog that could not be consulted. */
+export const CATALOG_MISSING_RULE = "THREAT_FEED_CATALOG_MISSING";
 
 export interface FeedFreshness {
   /** `YYYY-MM-DD` of the newest usable indicator, or null if none was usable. */
@@ -225,6 +230,118 @@ export function feedStalenessFindings(freshness: FeedFreshness): Finding[] {
         "`supply-chain-guard feed refresh` before the scan to merge the " +
         `published feed for 24h. Exclude the ${FEED_STALE_RULE} rule only if a ` +
         "deliberately frozen rule set is the intent.",
+    },
+  ];
+}
+
+
+/**
+ * Human wording for each reason the catalog was not consulted.
+ *
+ * Kept as a total map rather than a default string so that adding a reason to
+ * CatalogUnavailableReason without adding wording here is a TYPE error instead
+ * of a finding that says "undefined".
+ */
+const CATALOG_REASON_TEXT: Record<NonNullable<CatalogState["reason"]>, string> = {
+  absent: "no catalog has been downloaded on this machine",
+  unreadable: "the cached catalog could not be read",
+  "version-mismatch": "the cached catalog was built for a different release",
+  "digest-mismatch": "the cached catalog does not match the digest this release pins",
+  corrupt: "the cached catalog's entries do not match the checksum recorded beside them",
+};
+
+/**
+ * Severity by reason.
+ *
+ * Most reasons are `medium`, for the same calibration as the staleness rule: it
+ * moves the score off zero and names the rule in the reports without turning
+ * the default `fail-on: critical` gate red for every consumer on the day this
+ * ships.
+ *
+ * `digest-mismatch` and `corrupt` are `high` because neither is a normal state.
+ * One means the cached catalog was built from a different catalog than this
+ * release pins, the other that its entries no longer match their own checksum.
+ * Both mean the scanner's own detection data is either corrupt or has been
+ * modified underneath it, which is a different claim from "not downloaded yet".
+ *
+ * The plan specified a flat `medium`; the design's table distinguishes them.
+ * The design wins here because the distinction is the only thing that tells an
+ * operator whether to run a refresh or to go and look at the machine.
+ */
+const CATALOG_REASON_SEVERITY: Record<NonNullable<CatalogState["reason"]>, "medium" | "high"> = {
+  absent: "medium",
+  unreadable: "medium",
+  "version-mismatch": "medium",
+  "digest-mismatch": "high",
+  corrupt: "high",
+};
+
+/**
+ * The severity this reason earns under this mode.
+ *
+ * Exported so the mapping can be proved directly. Through `catalogFindings` it
+ * currently cannot be: while the release pins an EMPTY catalog the optional
+ * path returns nothing at all, so every assertion about medium versus high
+ * would sit behind a condition that is never true, and the distinction between
+ * "not downloaded" and "modified underneath us" would ship untested until the
+ * catalog first became non-empty.
+ */
+export function catalogSeverityFor(
+  reason: NonNullable<CatalogState["reason"]>,
+  mode: "optional" | "required",
+): "medium" | "high" | "critical" {
+  return mode === "required" ? "critical" : CATALOG_REASON_SEVERITY[reason];
+}
+
+/**
+ * The catalog-missing finding, or an empty array when there is nothing to say.
+ *
+ * This is the safety net that makes moving indicators out of the compiled
+ * bundle safe to ship: without it, a scan that consulted a fraction of the
+ * corpus reports exactly the same clean result as one that consulted all of it.
+ *
+ * Two cases deliberately return nothing, because a false positive here gets the
+ * whole tool switched off, which is worse than the finding being absent:
+ *
+ * - The catalog IS available. An empty-but-valid catalog counts as available,
+ *   which is what keeps `catalog: required` satisfiable in the phase where the
+ *   published catalog is still empty.
+ * - The release pins an EMPTY catalog and the mode is `optional`. There is then
+ *   no coverage to miss, so a finding would name zero indicators and appear on
+ *   every scan for no reason. Under `required` it still fires, because that
+ *   setting is a statement about the mechanism being in place, not about how
+ *   many indicators happen to be in it.
+ */
+export function catalogFindings(
+  state: CatalogState,
+  mode: "optional" | "required" = "optional",
+): Finding[] {
+  if (state.available) return [];
+  if (CATALOG_DIGEST.entryCount === 0 && mode !== "required") return [];
+
+  const reason = state.reason ?? "absent";
+  const missing = CATALOG_DIGEST.entryCount;
+  const built = state.cachedVersion ? ` (it was built for ${state.cachedVersion})` : "";
+
+  return [
+    {
+      rule: CATALOG_MISSING_RULE,
+      description:
+        `${missing} historical indicators were not consulted by this scan, because ` +
+        `${CATALOG_REASON_TEXT[reason]}${built}. Those indicators are published ` +
+        `separately from the package and are downloaded on demand, so this scan ` +
+        `matched against the bundled set alone and no other part of the result says so.`,
+      severity: catalogSeverityFor(reason, mode),
+      confidence: 1.0,
+      category: "trust",
+      rationale:
+        "The offline bundle carries recent and curated indicators; the catalog " +
+        "carries the historical corpus that no longer fits in the package. A scan " +
+        "without it is narrower than a scan with it, and reports the same success.",
+      recommendation:
+        "Run `supply-chain-guard feed refresh` to download the catalog, which is " +
+        `cached for later scans. Exclude the ${CATALOG_MISSING_RULE} rule only if ` +
+        "scanning against the bundled set alone is the intent.",
     },
   ];
 }

@@ -6,6 +6,12 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "catalog": {
+      "type": "string",
+      "enum": ["optional", "required"],
+      "default": "optional",
+      "description": "Whether the downloadable threat catalog must be present. 'optional' reports a finding when it could not be consulted; 'required' raises that finding to critical so a narrower scan fails the default gate."
+    },
     "rules": {
       "description": "Rule-level tuning: disable rules entirely or override their severity.",
       "type": "object",

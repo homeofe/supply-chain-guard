@@ -1,3 +1,60 @@
+## Phase 1 Task 9: THREAT_FEED_CATALOG_MISSING and the catalog knob (2026-09-16, claude-opus-5)
+
+The safety net. Without it a scan that consulted a fraction of the corpus
+reports exactly the same clean result as one that consulted all of it, which is
+what makes moving indicators out of the bundle unsafe to ship.
+
+`catalogFindings(state, mode)` in `src/feed.ts`, wired into `src/scanner.ts`
+directly beside the staleness finding and above the path-ignore filter, carrying
+no `file` for the same reason that one does. `catalog: optional | required` is a
+top-level scalar in the policy file, in `policy-schema.json`, and documented in
+the README.
+
+**Severity follows the design, not the plan.** The plan specified a flat
+`medium` unless `required`. The design's table distinguishes `digest-mismatch`,
+and its reason is right: that state is never normal, it means the cached catalog
+was built from a different catalog than this release pins. The same argument
+applies to `corrupt`, which Task 8 added. Both are `high`, the other three are
+`medium`, and `required` raises everything to `critical`. The distinction is the
+only thing telling an operator whether to run a refresh or to go and look at the
+machine.
+
+**Two silences are deliberate, because a false positive gets a scanner switched
+off and that is worse than the finding being absent:**
+
+- An empty-but-valid catalog is AVAILABLE, not missing, in either mode. That is
+  what keeps `catalog: required` satisfiable in the phase where the published
+  catalog is still empty.
+- While the release pins an empty catalog, an unavailable catalog is silent
+  under `optional`: there is no coverage to miss, so the finding would name zero
+  indicators on every scan. Under `required` it still fires, because that
+  setting is a statement about the mechanism being in place.
+
+**A vacuous test was caught and fixed.** The severity assertions were written
+through `catalogFindings` and guarded with `if (optional.length > 0)`. While the
+catalog is empty that path returns nothing, so every severity assertion sat
+behind a condition that is never true: the whole medium-versus-high distinction
+was untested and would have stayed untested until the catalog first became
+non-empty. `catalogSeverityFor(reason, mode)` is now exported and asserted
+directly, with a separate wiring test that the finding carries what the map
+returns.
+
+**The policy parser needed a step the plan omits.** `catalog` is the one
+top-level SCALAR key, and every other top-level key opens a section, so without
+a branch ahead of the blanket rejection a valid `catalog: required` produced a
+warning and was dropped. It is deliberately NOT in `KNOWN_SECTIONS`, which would
+make `catalog:` open a section. An unrecognised value is reported rather than
+ignored: a typo would otherwise leave the default in place while the author
+believes the catalog is required, which is exactly the failure the setting
+exists to prevent.
+
+**Mutation results**, baseline and post-restore green at 21 tests. Eight cuts:
+firing when the catalog was consulted, removing the empty-catalog silence,
+extending that silence to `required`, the plan's flat `medium`, `required` no
+longer escalating, giving the finding a `file` so the ignore filter can drop it,
+accepting any policy value, and removing the parser branch.
+
+
 ## Phase 1 Task 8: the catalog cache, the merge, and availability (2026-09-16, claude-opus-5)
 
 This is the task that makes the catalog reachable. `loadThreatIntel()` now reads
