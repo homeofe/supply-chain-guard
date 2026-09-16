@@ -36,7 +36,7 @@ import {
   RemoteHttpStatusError,
 } from "./remote-download.js";
 
-const TOOL_VERSION = "6.1.2";
+const TOOL_VERSION = "6.1.3";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_REGISTRY_HOST = "registry.npmjs.org";
 const RAW_GITHUB_HOST = "raw.githubusercontent.com";

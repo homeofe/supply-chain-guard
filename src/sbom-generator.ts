@@ -59,7 +59,7 @@ import type {
   VulnerabilityScoreInput,
 } from "./types.js";
 
-const TOOL_VERSION = "6.1.2";
+const TOOL_VERSION = "6.1.3";
 
 /** bom-ref of the component the document is about. */
 const SUBJECT_BOM_REF = "target";

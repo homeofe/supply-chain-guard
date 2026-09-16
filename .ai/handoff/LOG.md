@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (163, newest first)
+## Releases (164, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.1.3 | 2026-09-16 | Threat-intelligence batch for 2026-09-16: 71 new package IOCs from the |
 | v6.1.2 | 2026-09-15 | Threat-intelligence batch for 2026-09-15: 54 new package IOCs from the |
 | v6.1.1 | 2026-09-14 | Threat-intelligence batch for 2026-09-14: 1 new package IOC and 3 atomic |
 | v6.1.0 | 2026-09-13 | Two-tier gated verdict and composite risk score behind scan --two-tier. Tier 1 |

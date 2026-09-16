@@ -1,3 +1,52 @@
+## Release v6.1.3 (2026-09-16, claude-opus-5)
+
+Patch release. Carries the single item that had accumulated under `[Unreleased]`:
+the 2026-09-16 threat-intelligence batch, merged from `threat-intel/2026-09-16`
+as PR 303. 71 package IOCs from the advisory databases and 50 indicators added by
+hand across two campaigns the feed did not cover at all (the April 2026 malicious
+Strapi CMS plugins targeting Guardarian, and the express-session-js remote-access
+trojan). See the batch note below.
+
+Version bumped at all 16 configured `versionSites` plus `package.json` and the
+ungated `bundledVersion` in `src/threat-intel.ts`.
+
+**The version-substring trap was measured before the edit, not after.** `6.1.2`
+occurs five times in `src/threat-intel.ts` and only one of those is the version
+site. The other four are feed entries, and three of them merely CONTAIN the
+version as a substring: `chai-as-victimed@6.1.21`, `flat-cache@6.1.24` and
+`isite@2026.1.2`. A blanket replace would have rewritten them to `6.1.31`,
+`6.1.34` and `2026.1.3`, silently corrupting three malicious-version pins, and
+no gate would have caught it: `check:feed` only checks that `feed.json` matches
+the source, so both sides would carry the same corruption. The fourth,
+`@servicetitan/responsive@6.1.2`, is an exact match that still must not move.
+
+The bump therefore ran as an exact substitution per file with the occurrence
+count asserted BEFORE the write, and `src/threat-intel.ts` was edited through its
+`bundledVersion: "6.1.2",` anchor alone. A post-edit assertion confirms four
+surviving `6.1.2` feed entries and that all three substring entries are intact.
+
+The incoming version string was checked for collisions too: `6.1.3` already
+occurred five times in `src/threat-intel.ts`, all of them feed entries
+(`@servicetitan/responsive@6.1.3`, `chai-as-promised-plus@6.1.3`,
+`admin-upload-common@6.1.3`, `acp-docs@6.1.3`, `acribus-core@6.1.3`). The
+post-condition is six, not one, and that is what was asserted.
+
+`README.md` carried four occurrences against a `minOccurrences` of 3 and all four
+were genuine version references (pre-commit `rev:`, the Docker tag, two `@v6.1.2`
+action pins), so the CIDR trap recorded for earlier releases did not apply here.
+`src/reporter.ts` carried twelve against a `minOccurrences` of 5, all of them the
+tool's own version across the report formats, so all twelve were bumped.
+
+`npm install --package-lock-only` synced the lockfile's two version fields.
+
+`SECURITY.md` untouched: patch release, and the table already covers `6.x`.
+`CONTRIBUTING.md` untouched: no new modules or files.
+
+Full suite is CI's verdict, as always on this box. The two campaign tests that
+fail locally on Windows (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery
+host`) were reproduced on unmodified `main` before the batch branch existed.
+
+
 ## Threat-intel batch 2026-09-16 (claude-opus-5)
 
 Scheduled daily import. No version bump; the version belongs to the release.
