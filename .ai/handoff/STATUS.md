@@ -1,3 +1,74 @@
+## Catalog decoupling: open decisions closed (2026-09-16, claude-opus-5)
+
+Still design only, still no code. All five open questions are decided and
+recorded in section 10 of `docs/threat-feed-catalog-decoupling-design.md`.
+Framing given: community project, public face, security scanner, must work
+properly every time, and no internal data in anything published.
+
+**1. Severity follows the state, never the clock.** `medium` for absent,
+version mismatch and unreadable; `high` for digest mismatch; `critical` for any
+of them under `catalog: "required"`. The gates were measured first: the CLI
+fails at `high` (`src/cli.ts:73`), the Action at `critical` (`action.yml:43`).
+So absence, which is what every fresh install looks like, breaks nobody, while
+a digest that does not verify stops a developer. No time-based escalation here
+or for `THREAT_FEED_STALE`: a severity that rises because thirty days passed
+answers "how long has this been true" when the question is "what is wrong", and
+it makes a build depend on the calendar rather than on its own configuration.
+
+**2. Release immutability: enable it**, as defence in depth rather than as a
+dependency. The digest is what actually protects the catalog. Owner action, the
+command is in section 4.4; `immutable_releases` reads `null` today.
+
+**3. Budget values, chosen from a measurement that overturned the proposal.**
+The 90-day cutoff from the first draft was checked against the real feed and
+moves 123 of 20,969 entries. It would have accomplished nothing. The feed is
+recent-skewed and there is a cliff between 30 and 60 days:
+
+| cutoff | bundle | catalog | import |
+| --- | --- | --- | --- |
+| 30 days | 8,967 | 12,002 | ~32 ms |
+| 60 days | 20,625 | 344 | ~74 ms |
+| 90 days | 20,846 | 123 | ~75 ms |
+
+Decided: 30 days, `MAX_BUNDLED_ENTRIES` 15,000, `MAX_BUNDLE_BYTES` 2 MiB. That
+halves startup on every invocation and roughly halves the package, which every
+Action run pays for since `action.yml` installs at runtime. The limits sit BELOW
+the current unsplit size on purpose: a budget above it could never catch a
+cutoff that was not moved.
+
+**4. The catalog resolves to the installed version, never `latest`.** That is
+what makes the digest check and the version-mismatch state possible at all.
+
+**5. New: the published catalog is gated as a public artifact** (section 4.7).
+This is the direct answer to the no-internal-data requirement. The check is
+STRUCTURAL: no key outside `FEED_ENTRY_KEYS`, no free-text `note` field at all,
+and no `value` or `source` matching a private-infrastructure shape (RFC1918,
+loopback, link-local, `.local` / `.internal` / `.lan` / `.corp` / `.home`, or a
+local filesystem path). Violations report LINE NUMBERS, never values, so the
+error message cannot leak either. It embeds no list of our own hostnames,
+because such a list in a public repo would publish exactly what the check
+exists to keep unpublished.
+
+**The first version of that check was wrong and measuring caught it.** It also
+required every entry to carry a `source` naming a public vendor from a list.
+Measured against the shipped feed: 514 of 20,969 entries would have FAILED the
+build, 465 of them because they carry no `source` at all, the rest because the
+list did not happen to name Datadog, Unit 42, Sonatype, Corgea and others. That
+is the rule this project already writes down, hit for the second time in one
+session: the moment a check judges a VALUE it must enumerate spellings, and the
+next spelling walks past. Worse, it would have failed the build on legitimate
+data, which is how a gate gets switched off.
+
+The structural form was then measured with controls in both directions: 14 of
+14 private control values caught, zero false positives including `172.15.0.1`
+and `172.32.0.1` either side of the RFC1918 range, and zero violations across
+all 20,969 shipped entries and all 12,002 that a 30-day cutoff would route to
+the catalog.
+
+Nothing is open for the owner any more except a measurement: Phase 2 real
+bundle size and import time, which Phase 2 records when it lands.
+
+
 ## Catalog decoupling: review response + Phase 1 plan (2026-09-16, claude-opus-5)
 
 Design only, still no code. Spec:

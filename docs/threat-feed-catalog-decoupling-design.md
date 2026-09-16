@@ -282,6 +282,19 @@ Staleness is gated: `check:catalog` regenerates the constant and fails the build
 if the committed copy differs, so a digest can never drift from the catalog it
 describes.
 
+**Repository release immutability is enabled as well.** The digest means
+correctness does not depend on it, but it is free, it protects every other
+release asset too, and for a public security tool the posture should be the
+strong one rather than the merely sufficient one. It is a repository setting and
+therefore an owner action, not something this design can assert from CI:
+
+```bash
+gh api -X PATCH repos/homeofe/supply-chain-guard -f immutable_releases=true
+```
+
+Verify with `gh api repos/homeofe/supply-chain-guard --jq .immutable_releases`,
+which returns `null` today.
+
 ### 4.5 Cache, merge, and what counts as unavailable
 
 A second cache file, `threat-catalog.json`, beside the existing
@@ -342,6 +355,60 @@ Any deviation means the file is scanned like everything else. An exact-hash
 allowlist entry was rejected as the alternative: the catalog changes on every
 import, so the hash would be updated reflexively and would stop being a check.
 
+
+### 4.7 The catalog is a public artifact and is gated as one
+
+The catalog is a new file published to the open internet under the project's
+name. Everything in it is derived from public advisory databases, but "derived
+from public sources" is an intention, not a guarantee, and the release step is
+the last point where it can be checked.
+
+`check:catalog` therefore refuses to build a catalog carrying anything that is
+not public advisory data. The check is entirely STRUCTURAL:
+
+- no entry may carry a key outside `FEED_ENTRY_KEYS`;
+- no entry may carry the free-text `note` field at all. The catalog is
+  machine-written and never needs prose, and prose is the only place an internal
+  detail could realistically travel. Banning the field is closed and checkable;
+  validating its contents would not be;
+- no `value` or `source` may match a private-infrastructure shape: an RFC1918,
+  loopback or link-local address, a `.local`, `.internal`, `.lan`, `.corp` or
+  `.home` host, or a local filesystem path such as `C:\Users\...` or `/home/...`.
+
+**An earlier revision of this section also required every entry to carry a
+`source` naming a public vendor from a list. That was measured against the
+shipped feed and rejected**: 514 of 20,969 entries would have failed it, 465 of
+them because they carry no `source` at all, and the rest because the list did not
+happen to name Datadog, Unit 42, Sonatype, Corgea and others. It is the failure
+this project already has written down: the moment a check judges a value it has
+to enumerate spellings, and the next spelling walks past. Worse, it would have
+failed the build on legitimate data, which is how a gate gets switched off.
+
+The structural form was measured the same way: 14 of 14 genuinely private
+control values are caught, there are zero false positives against real public
+IOCs (including `172.15.0.1` and `172.32.0.1` either side of the RFC1918 range),
+and across all 20,969 shipped entries and all 12,002 that a 30-day cutoff would
+route to the catalog it reports zero violations. It gates without breaking
+anything that exists.
+
+**The check matches shapes, and deliberately contains no list of the
+organization's own hostnames or repository names.** Embedding such a list in a
+public repository would publish exactly the information the check exists to keep
+unpublished, and the check would then leak more than it caught. Shape matching
+needs no secrets to work: a `10.x` address or a `.internal` host is recognizable
+without knowing whose it is.
+
+A violation fails the build and names the offending line number, not the value,
+for the same reason.
+
+This is cheap, it runs on every build rather than only at release, and it makes
+"no internal data in the public artifact" a property the repository enforces
+rather than a habit the maintainer has to remember.
+
+The same rule already governs the bundled feed by convention. The difference is
+that the bundle is reviewed line by line in pull requests, while the catalog is
+machine-written in bulk and nobody will read 56,294 lines.
+
 ## 5. Failure semantics: the loud part
 
 `THREAT_FEED_CATALOG_MISSING` is emitted on every scan where the catalog is
@@ -351,34 +418,100 @@ description naming the number of indicators not consulted and the reason
 (absent, version mismatch, digest mismatch), and a recommendation naming the
 command that fixes it.
 
-**Severity is `medium` by default, deliberately.** Shipping at `high` would turn
-every existing consumer's default gate red on upgrade day for a condition they
-did not cause. That is the reasoning already recorded for `THREAT_FEED_STALE`,
-which chose `medium` so the condition is visible in the score, the risk level
-and eight of nine report formats without failing a `fail-on: critical` or
-`fail-on: high` build.
+### 5.1 Severity follows the state, never the clock
 
-For consumers who want the guarantee rather than the signal, policy gains
-`catalog: "optional" | "required"`. Under `required` a missing, mismatched or
-unverifiable catalog is a `critical` finding and fails the gate.
+The measured defaults this has to live with: the CLI fails at `high`
+(`src/cli.ts:73`), and the Action fails at `critical` (`action.yml:43`). So
+`medium` breaks nobody, `high` stops a developer's CLI run, and `critical` stops
+a CI pipeline.
 
-Escalating the default is left as an owner decision, recorded with the existing
-open question about whether a badly stale rule set should fail the build.
+| state | severity | why |
+| --- | --- | --- |
+| absent | `medium` | A fresh install that has not run `feed refresh` yet. Legitimate, extremely common, and self-correcting. Breaking it would punish first use. |
+| version mismatch | `medium` | The user upgraded and has not refreshed. Normal, expected after every release, self-correcting. |
+| unreadable | `medium` | Corrupt or truncated cache. The remedy is the same one command. |
+| digest mismatch | `high` | Never a normal state. The catalog's bytes do not match what this release expects, which is either corruption or tampering with the scanner's own detection data. |
+
+Under `catalog: "required"` every unavailable state becomes `critical` and fails
+the gate, for consumers who want the guarantee rather than the signal.
+
+**There is no time-based escalation, and this is a decision rather than an
+omission.** A severity that rises because thirty days passed answers "how long
+has this been true" when the question is "what is wrong". That is exactly the
+guard-answers-a-different-question failure this project produces most often, and
+it would make a build's outcome depend on the calendar rather than on its own
+configuration, which is the opposite of working properly every time. A tool used
+by strangers must be predictable: the same repository, the same package version
+and the same policy produce the same verdict today and in six months.
+
+The digest-mismatch case is the one place the severity does rise, because the
+STATE is different rather than because time passed. For a security scanner,
+detection data that fails verification is a finding in its own right.
+
+**The same principle settles the companion question about stale rule sets.**
+`THREAT_FEED_STALE` keeps its severity too. Enforcement belongs in policy, where
+the consumer declares what they need, not in a timer that decides for them.
 
 ## 6. The durable fix: a size budget with a gate
 
 This problem exists because no step in any workflow owned the feed's size, so it
 grew until one upstream event made it a crisis.
 
-A fifth prebuild gate, `check:feed-budget`, fails the build when either bound is
+A prebuild gate, `check:feed-budget`, fails the build when either bound is
 exceeded:
 
-- bundled entries greater than `MAX_BUNDLED_ENTRIES` (initially 25,000)
-- generated `src/threat-intel.ts` larger than `MAX_BUNDLE_BYTES` (initially 4 MB)
+- bundled entries greater than `MAX_BUNDLED_ENTRIES`
+- generated `src/threat-intel.ts` larger than `MAX_BUNDLE_BYTES`
 
 A release that would breach the budget cannot be built; the fix is to move
 `BUNDLE_CUTOFF_DATE` forward and regenerate. Without this gate the split merely
 resets the clock.
+
+### 6.1 The values, chosen from the measured distribution
+
+The 90-day cutoff proposed in the first draft was checked against the actual
+feed before being adopted, and it does almost nothing. Measured on the v6.1.3
+feed, 20,969 entries, with the release date as the reference point:
+
+| cutoff | bundle | catalog | import |
+| --- | --- | --- | --- |
+| 30 days | 8,967 | 12,002 | ~32 ms |
+| 60 days | 20,625 | 344 | ~74 ms |
+| 90 days | 20,846 | 123 | ~75 ms |
+| 180 days | 20,947 | 22 | ~75 ms |
+
+At 90 days the split moves 123 entries and changes nothing. The feed is
+recent-skewed because the daily importer has been running, and there is a cliff
+between 30 and 60 days.
+
+Of the 20,969 entries, 1,048 are non-package or curated and stay bundled under
+rules 1 and 2 regardless of any date. Zero plain package entries are undated, so
+the fail-safe branch is currently empty.
+
+**Decided values:**
+
+- `BUNDLE_CUTOFF_DATE`: **30 days before the release**. It is the only cutoff on
+  the curve that does real work: the bundle drops to 8,967 entries, startup
+  falls from 75 ms to about 32 ms on every invocation, and the package roughly
+  halves, which every Action run pays for since `action.yml` installs the
+  package at runtime. The offline default still carries every atomic indicator,
+  every curated campaign, and a month of fresh package intelligence, which is
+  the part most likely to be in a lockfile someone is scanning today.
+- `MAX_BUNDLED_ENTRIES`: **15,000**. Roughly 65 percent headroom above the 8,967
+  the cutoff produces, which at the observed daily volume of 26 to 450 new
+  entries is several months of slack. Set well below today's 20,969 on purpose:
+  the budget must be able to catch a cutoff that was not moved, and a limit
+  above the unsplit size could never do that.
+- `MAX_BUNDLE_BYTES`: **2 MiB**. The 8,967-entry bundle is about 1.6 MB, so this
+  is the byte-side equivalent of the same headroom.
+
+Both limits are deliberately reachable. A budget that can never be hit is not a
+gate, and the point of this one is to force the cutoff conversation before the
+feed becomes a problem rather than after.
+
+Phase 1 sets the limits above the current unsplit size so the phase can land
+without moving an indicator, and Phase 2 tightens them to the values above in
+the same commit that moves the cutoff.
 
 ## 7. Migration
 
@@ -397,7 +530,8 @@ the second cache, the merge and the availability conditions. Add
 catalog asset from CI. Detection is unchanged.
 
 **Phase 2: make the partition finite and migrate.**
-Move `BUNDLE_CUTOFF_DATE` forward to 90 days before the release and run a
+Move `BUNDLE_CUTOFF_DATE` forward to 30 days before the release, tighten the
+budget to 15,000 entries and 2 MiB, and run a
 migration script that moves every now-unqualifying bundle entry into the
 catalog. The script must preserve the bundle's comments: a batch header comment
 is removed only when every entry beneath it moved, and left intact otherwise, so
@@ -473,21 +607,38 @@ locally; CI produces the full-suite verdict.
   percent of unpacked size and is a source map for a data array, so probably
   removable, but that is an adjacent packaging question.
 
-## 10. Open questions for the owner
+## 10. Decisions
 
-1. **Should `THREAT_FEED_CATALOG_MISSING` escalate to `high` after a grace
-   period, and should a badly stale rule set fail the build?** The same question
-   twice; they should be decided together.
-2. **Should repository release immutability be enabled anyway?** The digest
-   check in section 4.4 makes the design not depend on it, but enabling it is
-   cheap defence in depth for every other asset.
-3. **Initial values for `MAX_BUNDLED_ENTRIES`, `MAX_BUNDLE_BYTES` and the Phase
-   2 `BUNDLE_CUTOFF_DATE`.** The proposed 25,000 / 4 MB / 90 days keeps the
-   bundle near its current size and its import near 75 ms.
+Every question this design opened is now closed. They are recorded here with
+their reasons, because a stranger reading the repository should be able to see
+why a security tool behaves the way it does without reconstructing it.
 
-The first draft's question about resolving the catalog to `latest` is closed:
-section 4.4 pins it to the installed version, which is what makes the digest
-check and the version-mismatch condition possible.
+1. **Severity follows the state, not the clock.** `medium` for absent, version
+   mismatch and unreadable; `high` for digest mismatch; `critical` for any of
+   them under `catalog: "required"`. No time-based escalation, here or for
+   `THREAT_FEED_STALE`. Full reasoning in section 5.1. The short version: the
+   same repository, package version and policy must produce the same verdict in
+   six months as today, and a clock-driven severity breaks that for everyone at
+   once.
+2. **Repository release immutability is enabled**, as defence in depth rather
+   than as a dependency. Section 4.4 carries the command. The digest check is
+   what actually protects the catalog, and it keeps working whether or not the
+   setting is on.
+3. **`BUNDLE_CUTOFF_DATE` is 30 days, `MAX_BUNDLED_ENTRIES` is 15,000 and
+   `MAX_BUNDLE_BYTES` is 2 MiB.** Chosen from the measured distribution in
+   section 6.1, not from round numbers: at the originally proposed 90 days the
+   split would have moved 123 of 20,969 entries and accomplished nothing.
+4. **The catalog resolves to the installed version, never to `latest`**, which
+   is what makes the digest check and the version-mismatch state possible at
+   all. Section 4.4.
+5. **The published catalog is gated as a public artifact** (section 4.7): every
+   entry must carry public advisory provenance, and no value may match
+   private-infrastructure shapes. The build fails otherwise.
+
+What remains genuinely open is not a decision but a measurement: Phase 2's real
+bundle size and import time. Those are recorded when Phase 2 lands, and the
+Phase 3 and 4 plans are written against the measured numbers rather than the
+projections in section 6.1.
 
 ## 11. Review corrections
 

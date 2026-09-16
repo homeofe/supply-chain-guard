@@ -227,12 +227,17 @@ Expected: FAIL, cannot resolve `../../scripts/feed-partition.mjs`.
 
 ```json
 {
-  "$comment": "Partition policy for the threat feed. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files. Moving it is a deliberate commit. Phase 1 sets it earlier than every existing entry so nothing moves.",
+  "$comment": "Partition policy for the threat feed. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files. Moving it is a deliberate commit, and the release process moves it to 30 days before the release. Phase 1 sets it earlier than every existing entry, and the limits above the current unsplit size, so this phase moves nothing; Phase 2 sets the real values (2026-xx-xx, 15000, 2097152).",
   "bundleCutoffDate": "2000-01-01",
   "maxBundledEntries": 25000,
   "maxBundleBytes": 4194304
 }
 ```
+
+The Phase 2 values are already decided and are recorded in section 6.1 of the
+spec: a 30-day cutoff, `maxBundledEntries` 15000, `maxBundleBytes` 2097152. They
+are deliberately NOT set here, because Phase 1 must not move an indicator and a
+15,000 limit would fail immediately against today's 20,969.
 
 `scripts/feed-partition.mjs`:
 
@@ -1017,22 +1022,169 @@ and extend `prebuild` again so a stale digest cannot be committed:
 Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 5: Generate against the real tree and commit the digest module**
+- [ ] **Step 5: Add the public-artifact hygiene check**
+
+The catalog is published to the open internet under the project's name. This
+refuses to build one that contains anything other than public advisory data.
+
+Add to `scripts/generate-catalog.mjs`:
+
+```javascript
+// Structural only. This file is PUBLIC, so it deliberately contains no list of
+// the organization's own hostnames or repository names: embedding one would
+// publish exactly what the check exists to keep unpublished. A 10.x address or
+// a .internal host is recognizable without knowing whose it is.
+//
+// An earlier draft also required a source naming a public vendor from a list.
+// Measured against the shipped feed, that would have failed 514 of 20,969
+// entries, 465 of them carrying no source at all. A check that judges a value
+// has to enumerate spellings and the next spelling walks past, so this one
+// checks shape and structure only.
+const PRIVATE_SHAPES = [
+  /(?:^|[^\d.])10\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d.])/,
+  /(?:^|[^\d.])192\.168\.\d{1,3}\.\d{1,3}(?![\d.])/,
+  /(?:^|[^\d.])172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(?![\d.])/,
+  /(?:^|[^\d.])127\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d.])/,
+  /(?:^|[^\d.])169\.254\.\d{1,3}\.\d{1,3}(?![\d.])/,
+  /(?:^|[.@/\s])(?:localhost|[\w-]+\.(?:local|internal|lan|corp|home))(?:[:/\s]|$)/i,
+  /[A-Za-z]:[\\/](?:Users|Windows|Program)/i,
+  /(?:^|\s)\/(?:home|Users|root|srv|opt)\//,
+];
+
+/** Mirrors FEED_ENTRY_KEYS in src/threat-intel.ts, which is module-private. */
+export const FEED_ENTRY_KEYS = new Set([
+  "type", "value", "severity", "confidence", "family", "campaign", "source",
+  "firstSeen", "lastSeen", "note", "ecosystem",
+]);
+
+/**
+ * Refuse to publish a catalog carrying anything that is not public advisory
+ * data. Reports LINE NUMBERS, never the offending value, so a violation cannot
+ * leak through the error message either.
+ */
+export function checkCatalogHygiene(entries) {
+  const violations = [];
+  entries.forEach((entry, i) => {
+    const line = i + 1;
+    for (const key of Object.keys(entry)) {
+      if (!FEED_ENTRY_KEYS.has(key)) {
+        violations.push(`line ${line}: key "${key}" is not an allowed FeedIOC field`);
+      }
+    }
+    // The catalog is machine-written and never needs prose. Prose is the only
+    // field where an internal detail could realistically travel, so the field
+    // is banned outright rather than validated.
+    if (entry.note !== undefined) {
+      violations.push(`line ${line}: free-text "note" is not allowed in the catalog`);
+    }
+    for (const field of ["value", "source"]) {
+      const v = entry[field];
+      if (typeof v === "string" && PRIVATE_SHAPES.some((re) => re.test(v))) {
+        violations.push(`line ${line}: ${field} matches a private-infrastructure shape`);
+      }
+    }
+  });
+  return violations;
+}
+```
+
+Wire it into both the `--check` and the write path, before anything is emitted:
+
+```javascript
+  const violations = checkCatalogHygiene(readCatalogEntries());
+  if (violations.length > 0) {
+    console.error(`\n  catalog hygiene: ${violations.length} violation(s)\n`);
+    for (const v of violations.slice(0, 25)) console.error(`    ${v}`);
+    console.error("");
+    process.exit(1);
+  }
+```
+
+Add the test:
+
+```typescript
+import { checkCatalogHygiene, FEED_ENTRY_KEYS as SCRIPT_KEYS } from "../../scripts/generate-catalog.mjs";
+
+describe("checkCatalogHygiene", () => {
+  const ok = { type: "package", value: "evil@1.0.0", severity: "critical", source: "GHSA-8p3w-gp6g-xf77, MAL-2026-16211" };
+
+  it("passes a normal machine-imported entry", () => {
+    expect(checkCatalogHygiene([ok])).toEqual([]);
+  });
+  it("passes an entry with no source at all", () => {
+    const { source, ...noSource } = ok;
+    expect(checkCatalogHygiene([noSource])).toEqual([]);
+  });
+  it("rejects every private-address shape", () => {
+    for (const v of ["10.0.0.5", "192.168.1.1", "172.16.0.9", "172.31.255.1", "127.0.0.1", "169.254.1.1"]) {
+      expect(checkCatalogHygiene([{ ...ok, value: v }]).join(" ")).toMatch(/private-infrastructure/);
+    }
+  });
+  it("rejects internal host suffixes and local paths", () => {
+    for (const v of ["buildbox.internal", "nas.local", "host.lan", "git.corp", "C:/Users/someone/x", "/home/someone/x"]) {
+      expect(checkCatalogHygiene([{ ...ok, value: v }]).join(" ")).toMatch(/private-infrastructure/);
+    }
+  });
+  it("does not flag public addresses either side of the RFC1918 range", () => {
+    for (const v of ["209.126.81.147", "172.15.0.1", "172.32.0.1", "10x-package@1.0.0"]) {
+      expect(checkCatalogHygiene([{ ...ok, value: v }])).toEqual([]);
+    }
+  });
+  it("rejects a free-text note", () => {
+    expect(checkCatalogHygiene([{ ...ok, note: "seen on our staging box" }]).join(" "))
+      .toMatch(/free-text "note" is not allowed/);
+  });
+  it("rejects a key outside the allowlist", () => {
+    expect(checkCatalogHygiene([{ ...ok, internalTicket: "OPS-1" }]).join(" "))
+      .toMatch(/not an allowed FeedIOC field/);
+  });
+  it("never puts the offending value in the message", () => {
+    const msg = checkCatalogHygiene([{ ...ok, value: "10.1.2.3/secret-path" }]).join(" ");
+    expect(msg).not.toContain("secret-path");
+    expect(msg).not.toContain("10.1.2.3");
+  });
+  it("checks source as well as value", () => {
+    expect(checkCatalogHygiene([{ ...ok, source: "found on 192.168.1.50" }]).join(" "))
+      .toMatch(/source matches a private-infrastructure shape/);
+  });
+});
+```
+
+- [ ] **Step 6: Run the hygiene test**
+
+Run: `npx vitest run src/__tests__/feed.test.ts -t "checkCatalogHygiene"`
+Expected: PASS, 9 tests.
+
+- [ ] **Step 7: Prove the hygiene gate by cutting it**
+
+Remove the `169.254` entry from `PRIVATE_SHAPES`. Re-run and expect only the
+link-local case in "rejects every private-address shape" to go red. Restore and
+confirm green. A guard over a list of shapes must be shown to fail per shape,
+or a later edit can delete one silently.
+
+- [ ] **Step 8: Generate against the real tree and commit the digest module**
 
 Run `npm run catalog:generate`, then `npm run check:catalog`.
 Expected: the first writes `src/catalog-digest.ts` and `catalog.json.gz`; the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit `src/catalog-digest.ts`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add scripts/generate-catalog.mjs src/catalog-digest.ts package.json .gitignore src/__tests__/feed.test.ts
 git commit -m "feat(feed): build the catalog asset and its shipped digest
 
 Integrity is anchored to a SHA-256 that travels inside the npm package
-rather than to release-asset immutability, which this repository does not
-have enabled and which --clobber can defeat on an existing tag. Generation
-is deterministic, so the same catalog and version always produce the same
-bytes and the same digest."
+rather than to release-asset immutability alone. Repository immutability is
+being enabled as defence in depth, but it is a repository setting this
+design cannot assert from CI, and --clobber defeats it while it is off.
+Generation is deterministic, so the same catalog and version always produce
+the same bytes and the same digest.
+
+Also refuses to build a catalog carrying anything that is not public
+advisory data. The check matches private-infrastructure SHAPES and
+deliberately embeds no list of the organization own hostnames, because
+such a list in a public repository would publish exactly what the check
+exists to keep unpublished. Violations report line numbers, never values."
 ```
 
 ---
