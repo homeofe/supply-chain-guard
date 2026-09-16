@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
+import { gzipSync } from "node:zlib";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +20,8 @@ import {
   feedStats,
   refreshFeed,
   parseFeedPayload,
+  decodeCatalogBody,
+  CATALOG_MAX_DECOMPRESSED_BYTES,
   DEFAULT_FEED_URL,
 } from "../feed.js";
 import {
@@ -288,6 +291,99 @@ describe("parseFeedPayload", () => {
     expect(() =>
       parseFeedPayload('{"entries":[{"type":"domain"}]}'),
     ).toThrow(/type\/value\/severity/);
+  });
+});
+
+describe("parseFeedPayload kind handling", () => {
+  const ENTRY =
+    '{"type":"domain","value":"evil.example.com","severity":"critical","confidence":1}';
+
+  it("defaults to feed when the document declares no kind", () => {
+    expect(parseFeedPayload(`{"schema":1,"entries":[${ENTRY}]}`)).toHaveLength(1);
+  });
+
+  it("accepts a catalog when a catalog was asked for", () => {
+    expect(
+      parseFeedPayload(`{"schema":1,"kind":"catalog","entries":[${ENTRY}]}`, "catalog"),
+    ).toHaveLength(1);
+  });
+
+  // The whole point of the discriminator. Both documents come over the same
+  // transport from the same origin and carry different trust, so serving one
+  // where the other was asked for must not pass silently.
+  it("refuses a catalog served where a feed was asked for", () => {
+    expect(() =>
+      parseFeedPayload(`{"schema":1,"kind":"catalog","entries":[${ENTRY}]}`),
+    ).toThrow(/expected kind "feed", got "catalog"/);
+  });
+
+  it("refuses a feed served where a catalog was asked for", () => {
+    expect(() => parseFeedPayload(`{"schema":1,"entries":[${ENTRY}]}`, "catalog")).toThrow(
+      /expected kind "catalog", got "feed"/,
+    );
+  });
+
+  // Design defect #3: the Phase 1 catalog ships empty, and an empty catalog is
+  // a legitimate state (present, reachable, holding nothing yet). An empty FEED
+  // is not, because it would replace the corpus with nothing.
+  it("allows an empty catalog but still refuses an empty feed", () => {
+    expect(parseFeedPayload('{"schema":1,"kind":"catalog","entries":[]}', "catalog")).toEqual(
+      [],
+    );
+    expect(() => parseFeedPayload('{"schema":1,"entries":[]}')).toThrow(/entries array/);
+  });
+
+  // Only the LENGTH check is relaxed. A catalog with no entries array at all is
+  // a malformed document, not an empty one, and must still be rejected.
+  it("still refuses a catalog whose entries are missing or not an array", () => {
+    expect(() => parseFeedPayload('{"schema":1,"kind":"catalog"}', "catalog")).toThrow(
+      /entries array/,
+    );
+    expect(() =>
+      parseFeedPayload('{"schema":1,"kind":"catalog","entries":"nope"}', "catalog"),
+    ).toThrow(/entries array/);
+  });
+
+  // JSON.parse("null") yields null, and reading .kind off it without care turns
+  // a clean format error into a TypeError.
+  it("reports a format error, not a TypeError, for a null document", () => {
+    expect(() => parseFeedPayload("null")).toThrow(/entries array/);
+  });
+
+  it("treats a non-string kind as absent rather than crashing", () => {
+    expect(parseFeedPayload(`{"schema":1,"kind":7,"entries":[${ENTRY}]}`)).toHaveLength(1);
+  });
+});
+
+describe("decodeCatalogBody", () => {
+  it("decompresses a gzip body", () => {
+    expect(decodeCatalogBody(gzipSync(Buffer.from('{"ok":true}')))).toBe('{"ok":true}');
+  });
+
+  it("passes through an uncompressed body", () => {
+    expect(decodeCatalogBody(Buffer.from('{"ok":true}'))).toBe('{"ok":true}');
+  });
+
+  it("refuses a decompression bomb", () => {
+    const bomb = gzipSync(Buffer.alloc(CATALOG_MAX_DECOMPRESSED_BYTES + 1024, 0x61));
+    expect(() => decodeCatalogBody(bomb)).toThrow(/decompressed catalog exceeds/);
+  });
+
+  // The control in the other direction. Without it the bomb test passes
+  // identically whether the cap is 64 MiB or one byte, and the off-by-one in
+  // maxOutputLength is untested: `maxOutputLength: N` accepts exactly N and
+  // throws at N + 1, which is why the cap is passed without the design's `+ 1`.
+  it("accepts a body at exactly the cap", () => {
+    const atCap = gzipSync(Buffer.alloc(CATALOG_MAX_DECOMPRESSED_BYTES, 0x61));
+    expect(decodeCatalogBody(atCap)).toHaveLength(CATALOG_MAX_DECOMPRESSED_BYTES);
+  });
+
+  it("reports corrupt gzip differently from an over-cap body", () => {
+    const corrupt = Buffer.concat([
+      Buffer.from([0x1f, 0x8b]),
+      Buffer.from("not actually gzip"),
+    ]);
+    expect(() => decodeCatalogBody(corrupt)).toThrow(/catalog is not valid gzip/);
   });
 });
 

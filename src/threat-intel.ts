@@ -22406,7 +22406,7 @@ export async function updateThreatFeed(
 // Anything outside these sets means the file is NOT our inert data format and
 // must be scanned normally - an attacker cannot smuggle code past the check by
 // naming a file feed.json, because any extra key or non-scalar value fails it.
-const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
+const FEED_DOC_KEYS = new Set(["schema", "kind", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
 // Mirrors the FeedIOC interface exactly. It MUST list every field the feed can
 // carry: "source" and "lastSeen" are part of FeedIOC, and entries imported from
 // upstream advisory databases populate "source" with their provenance (see

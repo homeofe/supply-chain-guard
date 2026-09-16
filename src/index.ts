@@ -88,6 +88,8 @@ export {
   feedStats,
   refreshFeed,
   parseFeedPayload,
+  decodeCatalogBody,
+  CATALOG_MAX_DECOMPRESSED_BYTES,
   DEFAULT_FEED_URL,
   feedFreshness,
   feedStalenessFindings,

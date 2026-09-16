@@ -25,6 +25,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { gunzipSync } from "node:zlib";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
 import {
@@ -243,8 +244,22 @@ export interface RefreshResult {
  * Validate a downloaded feed payload. Accepts both the published shape
  * `{ schema: 1, entries: [...] }` (feed.json) and a raw FeedIOC[] array
  * (the format the legacy updateThreatFeed() consumed).
+ *
+ * `expectedKind` says which of the two documents the caller asked for. A
+ * document that does not declare a `kind` is a feed, which is what every
+ * published feed.json is today, so the default keeps existing callers exact.
+ *
+ * The discriminator exists so a catalog cannot be served where a feed was
+ * requested, or the reverse. Both are fetched over the same transport from the
+ * same origin, and the two carry different trust: the feed is the current
+ * published corpus, the catalog is historical bulk. Silently accepting either
+ * in place of the other would let a stale or swapped asset masquerade as the
+ * one that was asked for.
  */
-export function parseFeedPayload(raw: string): FeedIOC[] {
+export function parseFeedPayload(
+  raw: string,
+  expectedKind: "feed" | "catalog" = "feed",
+): FeedIOC[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -252,11 +267,28 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
     throw new Error("feed is not valid JSON");
   }
 
+  // Null-safe on purpose: `JSON.parse("null")` yields null, and the entries
+  // extraction below has always tolerated it via optional chaining. Reading
+  // `.kind` off it without the same care would turn a clean format error into
+  // a TypeError.
+  const declared = (parsed as { kind?: unknown } | null)?.kind;
+  const kind = typeof declared === "string" ? declared : "feed";
+  if (kind !== expectedKind) {
+    throw new Error(
+      `invalid feed format: expected kind ${JSON.stringify(expectedKind)}, got ${JSON.stringify(kind).slice(0, 64)}`,
+    );
+  }
+
   const entries: unknown = Array.isArray(parsed)
     ? parsed
     : (parsed as { entries?: unknown } | null)?.entries;
 
-  if (!Array.isArray(entries) || entries.length === 0) {
+  // An empty catalog is legitimate and is the state Phase 1 ships: the catalog
+  // exists, is signed and is reachable, and simply holds nothing yet. An empty
+  // FEED is not, because it would silently replace the corpus with nothing.
+  // Note the check is only relaxed for length: a missing or non-array `entries`
+  // is still a hard reject for both kinds.
+  if (!Array.isArray(entries) || (entries.length === 0 && expectedKind === "feed")) {
     throw new Error("invalid feed format: missing non-empty entries array");
   }
 
@@ -287,6 +319,59 @@ export function parseFeedPayload(raw: string): FeedIOC[] {
   }
 
   return normalizedEntries;
+}
+
+/**
+ * Cap on what a catalog document may expand to once decompressed.
+ *
+ * The transport caps the bytes on the WIRE (FEED_REMOTE_LIMITS.maxBytes, 32
+ * MiB). That says nothing about what those bytes become: gzip compresses long
+ * runs of one byte by roughly a thousand to one, so a 32 MiB body inside the
+ * wire cap can still expand to gigabytes. This is the cap on the other side.
+ */
+export const CATALOG_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
+
+/** gzip magic: 0x1f 0x8b. Mirrors the sniff in src/archive-extractor.ts. */
+function isGzip(body: Buffer): boolean {
+  return body.length >= 2 && body[0] === 0x1f && body[1] === 0x8b;
+}
+
+/**
+ * Decode a catalog body, decompressing it if it is gzipped, with the expansion
+ * bounded so a decompression bomb cannot exhaust memory.
+ *
+ * `maxOutputLength: N` accepts exactly N bytes and throws at N + 1, so the cap
+ * is passed as-is. The design's `+ 1` form belongs with archive-extractor,
+ * which compares the length itself afterwards; without that comparison the
+ * `+ 1` would let exactly one byte over the cap through.
+ *
+ * The uncompressed branch applies no size check of its own. That is safe only
+ * because every caller arrives through `fetchHttpsBuffer` under
+ * FEED_REMOTE_LIMITS, whose 32 MiB wire cap is below this 64 MiB expansion cap.
+ * If this is ever called on a locally read file that premise is gone, and the
+ * caller must bound the input itself.
+ */
+export function decodeCatalogBody(body: Buffer): string {
+  if (!isGzip(body)) return body.toString("utf-8");
+  try {
+    return gunzipSync(body, {
+      maxOutputLength: CATALOG_MAX_DECOMPRESSED_BYTES,
+    }).toString("utf-8");
+  } catch (err) {
+    // Discriminate on the error CODE. The over-cap message is "Cannot create a
+    // Buffer larger than 67108864 bytes" and contains neither "maxOutputLength"
+    // nor "size", so a message regex matches it only through the word "buffer"
+    // and would stop matching if Node ever reworded it. The regex is kept as a
+    // fallback, not as the test.
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    const message = err instanceof Error ? err.message : String(err);
+    if (code === "ERR_BUFFER_TOO_LARGE" || /maxOutputLength|buffer|size/i.test(message)) {
+      throw new Error(
+        `decompressed catalog exceeds ${CATALOG_MAX_DECOMPRESSED_BYTES} bytes`,
+      );
+    }
+    throw new Error(`catalog is not valid gzip: ${message}`);
+  }
 }
 
 /**

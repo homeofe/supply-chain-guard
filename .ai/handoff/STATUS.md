@@ -1,3 +1,63 @@
+## Phase 1 Tasks 5 and 6: the payload parser and bounded decompression (2026-09-16, claude-opus-5)
+
+The first two of the eight tasks that make the catalog reachable at runtime.
+Both land in `src/feed.ts`, neither depends on the other, and neither changes
+detection: nothing calls the new code yet.
+
+**Task 5.** `parseFeedPayload` takes `expectedKind: "feed" | "catalog" = "feed"`.
+A document declaring no `kind` is a feed, which is what every published
+`feed.json` is today, so the default keeps all existing callers exact. The
+discriminator exists because both documents are fetched over the same transport
+from the same origin and carry different trust, so serving one where the other
+was asked for must not pass silently. The empty-entries check (design defect #3)
+is relaxed for LENGTH only, and only for a catalog: a missing or non-array
+`entries` is still a hard reject for both kinds. `FEED_DOC_KEYS` gained `kind`.
+
+**Task 6.** `decodeCatalogBody` inflates a gzip body with
+`maxOutputLength: CATALOG_MAX_DECOMPRESSED_BYTES` (64 MiB).
+
+**Three corrections to the plan, each measured rather than reasoned:**
+
+- **The plan's own mutation proof could not go red.** Its Step 5 raises
+  `CATALOG_MAX_DECOMPRESSED_BYTES` to 1 GiB, but the bomb fixture is sized
+  FROM that constant (`Buffer.alloc(CATALOG_MAX_DECOMPRESSED_BYTES + 1024)`), so
+  the bomb grows with the cap, the output still exceeds it, and the test stays
+  green while allocating and gzipping a gigabyte. The cut here mutates only the
+  literal passed to `gunzipSync`, leaving the exported constant alone.
+- **The design and the plan disagreed on an off-by-one.** Design section 4.3
+  mandates `maxOutputLength: N + 1`; the plan's snippet has no `+ 1`. Measured
+  on Node v24.14.1: `maxOutputLength: N` accepts exactly N bytes and throws at
+  N + 1. `archive-extractor.ts` uses `+ 1` only because it compares the length
+  itself afterwards; without that comparison the `+ 1` lets exactly one byte
+  over the cap through. The plan's form is the self-consistent one and is what
+  shipped.
+- **The plan's error regex matched only by accident.** The real over-cap message
+  is "Cannot create a Buffer larger than 67108864 bytes", which contains neither
+  "maxOutputLength" nor "size"; `/maxOutputLength|buffer|size/i` matched it
+  solely through the word "buffer". The code now discriminates on
+  `code === "ERR_BUFFER_TOO_LARGE"` and keeps the regex as a fallback.
+
+**A control the plan omitted.** A body at exactly the cap must be ACCEPTED.
+Without it the bomb test passes identically whether the cap is 64 MiB or one
+byte, and the off-by-one decision above is untested.
+
+**A limit worth writing down:** the uncompressed branch of `decodeCatalogBody`
+applies no size check. That is safe only because every caller arrives through
+`fetchHttpsBuffer` under `FEED_REMOTE_LIMITS`, whose 32 MiB wire cap sits below
+the 64 MiB expansion cap. Called on a locally read file the premise is gone, and
+the comment in the function says so.
+
+**Mutation results**, baseline and post-restore green at 73 tests. Eight cuts,
+each red on its own test: the kind discriminator, empty allowed for both kinds,
+empty refused for both, the null guard on `.kind`, the gunzip literal raised,
+the gunzip literal lowered, the gzip sniff removed, and corrupt gzip reported as
+over-cap. The cap is therefore proven in both directions.
+
+`check:self-scan` went red on the `FEED_DOC_KEYS` edit and was regenerated. A
+pre-implementation survey predicted it would not, which was wrong: the ordinary
+rule that any `src/` change restales it held.
+
+
 ## BLOCKED: the Phase 2 migration cannot land yet (2026-09-16, claude-opus-5)
 
 **The migration was run against the real file, verified, and then reverted. It
