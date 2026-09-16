@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789590077",
-    "timestamp": "2026-09-16T20:21:17Z",
-    "commit": "b8aeab7",
+    "session_id": "cli-1789590544",
+    "timestamp": "2026-09-16T20:29:04Z",
+    "commit": "63b97d3",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:578d79216da02bf225a117610f70bce2c7afe8215ef1a902bc24534a8327da76",
-      "updated": "2026-09-16T20:21:15Z",
-      "lines": 9489,
-      "summary": "`scripts/generate-catalog.mjs` builds the publishable catalog and the committed"
+      "checksum": "sha256:9edf7cba4ba0afdb2bc89fb6535e91615dc13f595cf3c0fe7ddffa788411908b",
+      "updated": "2026-09-16T20:29:02Z",
+      "lines": 9553,
+      "summary": "This is the task that makes the catalog reachable. `loadThreatIntel()` now reads"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T20:21:16Z",
+      "updated": "2026-09-16T20:29:04Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:afb621e7052880ca6f3f6c4081b2d93462b1422ddeac183ae1357aad7deb2245",
-      "updated": "2026-09-16T20:21:16Z",
+      "checksum": "sha256:4cbdb883ba618ec51f4b351f32e5baead4df30fdfe7290bdc68da3e5ecfa41e7",
+      "updated": "2026-09-16T20:29:04Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:5cad797017f14eaa7dbddeab9b53f70a9cf0e1f0379b0a1d6be7384d8332a5a2",
-      "updated": "2026-09-16T20:21:16Z",
+      "checksum": "sha256:26480e97e93802044d34f8e067d747e4280b493511ad3a1e3d5fdbf8e8fe8240",
+      "updated": "2026-09-16T20:29:04Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "`scripts/generate-catalog.mjs` builds the publishable catalog and the committed Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "This is the task that makes the catalog reachable. `loadThreatIntel()` now reads Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 110968,
-    "full_read": 123435
+    "manifest_plus_core": 111762,
+    "full_read": 124229
   }
 }

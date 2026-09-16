@@ -1,3 +1,67 @@
+## Phase 1 Task 8: the catalog cache, the merge, and availability (2026-09-16, claude-opus-5)
+
+This is the task that makes the catalog reachable. `loadThreatIntel()` now reads
+a second cache file, `threat-catalog.json`, validates it, merges it and records
+why it did not when it did not. `lastCatalogState()` reports
+`absent | unreadable | version-mismatch | digest-mismatch | corrupt`.
+
+Detection is still unchanged in practice, because nothing writes that cache yet
+(Task 10) and the catalog is still empty. What changed is that the path exists
+and is proven.
+
+**Merge order is a decision, not an accident.** The catalog is merged LAST.
+`mergeFeeds` is first-wins on `type:value`, so the compiled bundle and the
+fresher feed stay authoritative for any indicator all three carry, and a
+downloaded document cannot downgrade a severity that ships inside the package.
+There is a test that writes a bundled indicator into the catalog at severity
+`info` and asserts the bundled severity survives.
+
+**The plan's digest check was not integrity, and now something is.** As
+specified, the cache records `sha256` and the reader compares it to
+`CATALOG_DIGEST.sha256`, a constant compiled into this package. That compares a
+constant to a constant: it catches a cache built for a different release, which
+is its job, but it can say nothing about the `entries` sitting beside it.
+Anyone able to write into `.scg-cache` could edit or truncate the entry list
+under a valid-looking header and have it merged. Truncation is the dangerous
+direction, because removing indicators disables detection silently and no other
+check in the function would notice.
+
+The cache now also records a `checksum` over the canonical JSON of its entries,
+which the reader recomputes. A truncated or edited cache is refused as
+`corrupt`. What this does NOT defend against is a writer who edits the entries
+and recomputes the checksum too; nothing self-contained in a cache file can, and
+the real anchor stays the digest chain verified at download time. It closes the
+accidental-corruption and naive-edit cases, and the comment in the code says
+exactly that rather than implying more.
+
+**A second reader was already drifting.** `getDetectionSetProvenance()` counted
+the bundle alone unless a FRESH feed cache existed, so a merged catalog would
+have been reported as no coverage at all: with a stale or absent feed cache it
+would print 8,971 while the process matched against 20,969. It now asks
+`loadThreatIntel()` for the effective set, which is memoized on the same inputs.
+
+**The memo key gained the catalog stamp.** Without it a catalog arriving after
+the first load stays invisible until the FEED cache happens to change, and the
+process keeps serving a set built before the catalog existed. Two tests cover
+it, one for a catalog appearing and one for a catalog being removed.
+
+**Mutation results**, baseline and post-restore green at 17 tests. Eight cuts:
+the version check, the index-digest check, the entries checksum, the catalog
+stamp in the memo key, merging the catalog first so it can override the bundle,
+the malformed-entry quarantine, provenance counting the bundle alone, and the
+structural entries-array guard.
+
+**One cut initially stayed green, which was the finding.** Removing the
+`Array.isArray(cached.entries)` guard left every test passing, because the test
+for it wrote `entries: 7` and, with the guard gone, still reached `"unreadable"`
+by way of the exception handler rather than the guard. The guard's real effect
+is ORDERING: shape is checked before provenance, so a malformed document is
+reported as unreadable rather than as built for the wrong release, which would
+send whoever reads it looking for a stale download instead of a corrupt file.
+A test that sets both a wrong version and a malformed body now pins that, and
+the cut goes red.
+
+
 ## Phase 1 Task 7: the catalog generator and its digest (2026-09-16, claude-opus-5)
 
 `scripts/generate-catalog.mjs` builds the publishable catalog and the committed

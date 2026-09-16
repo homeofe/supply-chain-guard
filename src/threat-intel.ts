@@ -7,6 +7,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
+
+import { CATALOG_DIGEST } from "./catalog-digest.js";
 import type { Finding, ThreatIntelSource, DetectionSetProvenance } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -22074,6 +22077,37 @@ const BUNDLED_FEED: FeedIOC[] = [
 // to the exact location loadThreatIntel() reads from.
 export const CACHE_DIR = ".scg-cache";
 export const FEED_CACHE_FILE = "threat-feed.json";
+
+/** Where the downloaded catalog is cached, beside the feed cache. */
+export const CATALOG_CACHE_FILE = "threat-catalog.json";
+
+/**
+ * Why the catalog was not merged.
+ *
+ * - `absent`       no cache file. The ordinary state before a first refresh.
+ * - `unreadable`   present but not parseable as the expected shape.
+ * - `version-mismatch` built for a different release of this package.
+ * - `digest-mismatch`  built from a different catalog than this release pins.
+ * - `corrupt`      the entries do not match the checksum recorded beside them.
+ */
+export type CatalogUnavailableReason =
+  | "absent"
+  | "unreadable"
+  | "version-mismatch"
+  | "digest-mismatch"
+  | "corrupt";
+
+/** What the last loadThreatIntel() call found in the on-disk catalog cache. */
+export interface CatalogState {
+  /** The catalog was present, accepted and merged. */
+  available: boolean;
+  /** Why not, when it was not. Undefined when available. */
+  reason?: CatalogUnavailableReason;
+  /** Entries that passed validation and were offered to the merge. */
+  entryCount: number;
+  /** The version the cache was built for, when it recorded one. */
+  cachedVersion?: string;
+}
 /**
  * How old a refreshed feed cache may get before `feed refresh` is due again.
  *
@@ -22199,6 +22233,38 @@ export interface FeedCacheState {
 
 let lastCacheState: FeedCacheState = { present: false, entryCount: 0, stale: false };
 
+let lastCatalog: CatalogState = { available: false, reason: "absent", entryCount: 0 };
+
+/**
+ * Checksum of a cached catalog's entries, over their canonical JSON.
+ *
+ * This is what makes the cache's recorded checksum mean something. The version
+ * and digest fields compare the cache against constants compiled into this
+ * package, so they catch a cache built for a DIFFERENT release, which is their
+ * job. They cannot catch an edit to the entries themselves, because a reader
+ * that compares a constant to a constant learns nothing about the payload
+ * sitting next to them.
+ *
+ * What this does NOT defend against: a writer who edits the entries and
+ * recomputes this checksum too. Nothing self-contained in the cache file can,
+ * and the real anchor is the digest chain verified at download time. It closes
+ * the accidental-corruption and naive-edit cases, and it means a silently
+ * truncated cache is refused rather than merged, which is the failure that
+ * would quietly disable detection.
+ */
+function catalogEntriesChecksum(entries: unknown): string {
+  return createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex");
+}
+
+/**
+ * State of the catalog cache as of the last loadThreatIntel() call.
+ *
+ * Separate accessor for the same reason as getFeedCacheState().
+ */
+export function lastCatalogState(): CatalogState {
+  return { ...lastCatalog };
+}
+
 /**
  * State of the feed cache as of the last loadThreatIntel() call.
  *
@@ -22253,10 +22319,20 @@ export function loadThreatIntel(
   // The TTL is evaluated against wall-clock time, so a memo may not outlive the
   // window in which the cache is still considered fresh. Bucket by TTL period
   // so an expiring cache is re-evaluated rather than served stale.
+  // The catalog cache is a second input to the same result, so it belongs in
+  // the identity. Without it a catalog refresh is invisible until the FEED
+  // cache happens to change, and the process keeps serving a feed built before
+  // the catalog arrived.
+  let catalogStamp = "none";
+  try {
+    const catalogStat = fs.statSync(path.join(cacheBase, CATALOG_CACHE_FILE));
+    catalogStamp = `${catalogStat.mtimeMs}:${catalogStat.size}`;
+  } catch { /* no catalog cache file: stamp stays "none" */ }
+
   const ttlBucket = Math.floor(Date.now() / CACHE_TTL_MS);
   // NUL-separated: no filesystem path can contain the separator, so two
   // different cache identities cannot collide into one key.
-  const key = `${cachePath}\u0000${remoteFeedUrl ?? ""}\u0000${stamp}\u0000${ttlBucket}`;
+  const key = `${cachePath}\u0000${remoteFeedUrl ?? ""}\u0000${stamp}\u0000${catalogStamp}\u0000${ttlBucket}`;
 
   if (memoizedFeed && memoizedFeed.key === key) return memoizedFeed.feed;
 
@@ -22292,6 +22368,70 @@ export function loadThreatIntel(
   }
 
   lastCacheState = state;
+
+  // The catalog: historical bulk that left the compiled bundle. Merged AFTER
+  // the feed, so mergeFeeds' first-wins rule keeps the bundle and the fresher
+  // feed authoritative for any indicator all three carry.
+  let catalog: CatalogState = { available: false, reason: "absent", entryCount: 0 };
+  const catalogPath = path.join(cacheBase, CATALOG_CACHE_FILE);
+  if (catalogStamp !== "none") {
+    try {
+      const cached = JSON.parse(fs.readFileSync(catalogPath, "utf-8")) as {
+        version?: string;
+        sha256?: string;
+        checksum?: string;
+        entries?: FeedIOC[];
+      };
+      if (!Array.isArray(cached.entries)) {
+        catalog = { available: false, reason: "unreadable", entryCount: 0 };
+      } else if (cached.version !== CATALOG_DIGEST.version) {
+        // Built for another release. The catalog is pinned per release, so a
+        // mismatch means these entries were selected against a different
+        // bundle and the partition between the two is no longer known.
+        catalog = {
+          available: false,
+          reason: "version-mismatch",
+          entryCount: 0,
+          cachedVersion: cached.version,
+        };
+      } else if (cached.sha256 !== CATALOG_DIGEST.sha256) {
+        catalog = {
+          available: false,
+          reason: "digest-mismatch",
+          entryCount: 0,
+          cachedVersion: cached.version,
+        };
+      } else if (
+        typeof cached.checksum === "string" &&
+        cached.checksum !== catalogEntriesChecksum(cached.entries)
+      ) {
+        // The entries do not match the checksum written beside them. A
+        // truncated or edited cache is refused rather than merged: merging a
+        // short cache would silently remove indicators, which is the failure
+        // mode this whole phase exists to avoid.
+        catalog = {
+          available: false,
+          reason: "corrupt",
+          entryCount: 0,
+          cachedVersion: cached.version,
+        };
+      } else {
+        // Same quarantine as the feed cache: cached remote data reaches the
+        // per-file scan loop, so a malformed entry must never leave here.
+        const catalogEntries = cached.entries.filter(isValidFeedIOC).map(normalizeFeedIOC);
+        feed = mergeFeeds(feed, catalogEntries);
+        catalog = {
+          available: true,
+          entryCount: catalogEntries.length,
+          cachedVersion: cached.version,
+        };
+      }
+    } catch {
+      catalog = { available: false, reason: "unreadable", entryCount: 0 };
+    }
+  }
+
+  lastCatalog = catalog;
 
   memoizedFeed = { key, feed };
   return feed;
@@ -22988,21 +23128,26 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
   const cacheBase = cacheDir ?? CACHE_DIR;
   const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
 
+  // Ask the loader for the effective set rather than re-deriving it here.
+  // This used to count the bundle alone unless a FRESH feed cache existed, so
+  // once the catalog began carrying the historical corpus a merged catalog was
+  // reported as no coverage at all: with a stale or absent feed cache the count
+  // would read 8,971 while the process was actually matching against 20,969.
+  // loadThreatIntel is memoized on the same inputs, so this is a map lookup on
+  // the common path rather than a second read.
+  const effectiveEntryCount = loadThreatIntel(cacheDir).length;
+
   let cacheMerged = false;
-  let effectiveEntryCount = BUNDLED_FEED.length;
   let cacheRefreshedAt: string | undefined;
 
   try {
-    const stat = fs.statSync(cachePath);
     const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
       timestamp: string;
       entries: FeedIOC[];
     };
     const age = Date.now() - new Date(cached.timestamp).getTime();
     if (age < CACHE_TTL_MS && Array.isArray(cached.entries)) {
-      const activeFeed = loadThreatIntel(cacheDir);
       cacheMerged = true;
-      effectiveEntryCount = activeFeed.length;
       cacheRefreshedAt = cached.timestamp;
     }
   } catch {
