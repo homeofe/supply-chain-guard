@@ -308,22 +308,33 @@ describes.
 **Repository release immutability is enabled as well**, as defence in depth
 rather than as a dependency.
 
-It cannot be verified at the repository level: `GET /repos/{owner}/{repo}`
-returns no `immutable_releases` key at all, so reading `null` from it says
-nothing either way. That is the same absence-read-as-a-value mistake recorded as
-entry 9 in section 11, and it is why the check below is written against the
-release object instead.
-
-The flag is real and per release. `GET /repos/{owner}/{repo}/releases/tags/{tag}`
-carries an `immutable` boolean, and it is set when the release is CREATED:
+Immutable releases are a dedicated GitHub feature with their own endpoints, not
+a field on the repository object:
 
 ```bash
-gh api repos/homeofe/supply-chain-guard/releases/tags/v6.1.3 --jq .immutable
+gh api repos/homeofe/supply-chain-guard/immutable-releases            # read
+gh api -X PUT repos/homeofe/supply-chain-guard/immutable-releases     # enable
+gh api -X DELETE repos/homeofe/supply-chain-guard/immutable-releases  # disable
 ```
 
-Measured on 2026-09-16: `false` for v6.1.1, v6.1.2 and v6.1.3. Enabling the
-setting does not retrofit existing releases, so every release published before it
-took effect stays mutable forever.
+The read returns `{"enabled": bool, "enforced_by_owner": bool}`. Enabled on
+2026-09-16; it now reads `{"enabled": true, "enforced_by_owner": false}`.
+
+An earlier revision of this document instructed
+`gh api -X PATCH repos/{owner}/{repo} -f immutable_releases=true` and verified it
+with `--jq .immutable_releases` on the repository object. Both were wrong in the
+same direction, which is why they agreed with each other. No such field exists
+on that object, so `PATCH` silently ignored it and the check returned `null` for
+a key that is simply absent. The setting was never enabled, and the verification
+could not have told anyone: a bad command and a bad check that confirm each
+other look exactly like a working system. This is the third absence-read-as-a-
+value error in this document, recorded as entries 9, 14 and 15 in section 11.
+
+**It does not retrofit.** Immutability is stamped per release at creation time:
+`GET /repos/{owner}/{repo}/releases/tags/{tag}` carries an `immutable` boolean,
+measured `false` for v6.1.1, v6.1.2 and v6.1.3. Those stay mutable forever, so
+on any release published before 2026-09-16 the shipped digest is the catalog's
+only protection.
 
 Two consequences this design takes seriously:
 
@@ -658,10 +669,11 @@ why a security tool behaves the way it does without reconstructing it.
    six months as today, and a clock-driven severity breaks that for everyone at
    once.
 2. **Repository release immutability is enabled**, as defence in depth rather
-   than as a dependency, and it is verified per release rather than per
-   repository because the repository API does not expose it. It does not
-   retrofit: v6.1.1 through v6.1.3 are `immutable: false` permanently, so on
-   those the shipped digest is the catalog's only protection. Section 4.4.
+   than as a dependency. It has its own endpoints
+   (`/repos/{owner}/{repo}/immutable-releases`), not a field on the repository
+   object, and it now reads `{"enabled": true}`. It does not retrofit: v6.1.1
+   through v6.1.3 are `immutable: false` permanently, so on those the shipped
+   digest is the catalog's only protection. Section 4.4.
 3. **`BUNDLE_CUTOFF_DATE` is 30 days, `MAX_BUNDLED_ENTRIES` is 15,000 and
    `MAX_BUNDLE_BYTES` is 2 MiB.** Chosen from the measured distribution in
    section 6.1, not from round numbers: at the originally proposed 90 days the
@@ -701,6 +713,7 @@ answers a different question, which is this project's most common defect class.
 | 12 | `src/threat-intel.ts` and `src/scanner.ts` are listed in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly every task and would block each commit | Every affected task regenerates and commits `self-scan-manifest.json` |
 | 13 | The partition treated `campaign`/`family` as the definition of "curated", but curation here lives in COMMENTS. 60 of 1,094 comment-anchored entries carry no such field, so their rationale would have been orphaned as they aged past the cutoff | Rule 3 in section 4.2: an entry beneath a curated comment block is immovable. Found while planning Phase 2 |
 | 14 | The claim that release immutability was off rested on `immutable_releases` reading `null`, which actually means the repo API does not expose the field at all. Absence was read as a value, which is the same mistake as entry 9 | Verified per release instead: `immutable` is a real field on the release object, and it is `false` on v6.1.1 through v6.1.3. Phase 2 asserts it on the next release |
+| 15 | The command given for enabling immutability, `PATCH /repos/{owner}/{repo} -f immutable_releases=true`, addressed a field that does not exist. GitHub ignored it silently, the setting was never enabled, and the verification in entry 14 could not detect that because it read the same non-existent field. A wrong command and a wrong check agreed with each other and looked like a working system | The feature has dedicated endpoints: `GET`, `PUT` and `DELETE` on `/repos/{owner}/{repo}/immutable-releases`, returning `{"enabled", "enforced_by_owner"}`. Enabled and verified `true` on 2026-09-16 |
 
 Defects 10 to 12 were found by re-auditing the design against the code before
 merging, after the review had already been addressed. All three are the same

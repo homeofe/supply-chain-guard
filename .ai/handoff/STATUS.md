@@ -1,3 +1,52 @@
+## Immutable releases actually enabled, and a hostname redaction (2026-09-16, claude-opus-5)
+
+**The immutability command given earlier in this session was wrong, and the
+check given to verify it was wrong in the same direction, so the two agreed
+with each other and looked like a working system.**
+
+The instruction was
+`gh api -X PATCH repos/{owner}/{repo} -f immutable_releases=true`, verified
+with `--jq .immutable_releases` on the repository object. No such field exists
+there. GitHub silently ignored the PATCH, and the verification returned `null`
+for a key that is simply absent, which is indistinguishable from "disabled".
+The setting was never enabled and nothing in the check could have revealed it.
+Third absence-read-as-a-value error in one session.
+
+Immutable releases are a dedicated feature with their own endpoints:
+
+```
+GET    /repos/{owner}/{repo}/immutable-releases   -> {"enabled", "enforced_by_owner"}
+PUT    /repos/{owner}/{repo}/immutable-releases   -> enable
+DELETE /repos/{owner}/{repo}/immutable-releases   -> disable
+```
+
+Before: `{"enabled": false, "enforced_by_owner": false}`.
+Enabled via `PUT`. Now: `{"enabled": true, "enforced_by_owner": false}`.
+
+**It does not retrofit.** Immutability is stamped per release at creation:
+the release object carries an `immutable` boolean, and v6.1.1, v6.1.2 and
+v6.1.3 are all `false` permanently. On those releases the shipped catalog
+digest is the only protection. The Phase 2 and Phase 4 plans now check BOTH
+the repository setting and the per-release flag, because the setting says
+"from now on" while the flag says "this one actually got it".
+
+**Hostname redaction.** The remote Linux test runner was named in five places
+in this file, from earlier sessions. This repository is public, so the machine
+name is now replaced with "the remote Linux runner". Git history still carries
+it, so the redaction is partial by nature; it stops further publication rather
+than undoing the earlier one.
+
+**What was deliberately NOT redacted.** Every other occurrence of the string
+in this repository refers to OpenClaw the agent RUNTIME, which is a public
+product this scanner detects: `src/openclaw-plugin-scanner.ts`, the
+`OPENCLAW_PLUGIN_*` rule ids, the CHANGELOG entries describing them, the
+host-runtime patch tests, and feed IOCs naming malware that impersonates it. A
+blanket replace would have renamed live rule ids and broken the documentation
+of a real detection capability. The redaction was therefore five exact line
+anchors, not a global substitution, and the product references were asserted
+present afterwards.
+
+
 ## Catalog decoupling: Phase 2 to 4 plans (2026-09-16, claude-opus-5)
 
 Still design and planning only, no code. Plans:
@@ -2892,7 +2941,7 @@ Verification:
 - Windows: `npm run build` and 190 focused feed, integrity, staleness, and
   self-scan tests pass. Two campaign fixtures are intercepted by endpoint
   protection before scanning; direct matcher probes pass.
-- Clean Linux openclaw checkout of commit `ca82767`: `npm ci` reports zero
+- Clean checkout on the remote Linux runner, of commit `ca82767`: `npm ci` reports zero
   vulnerabilities, `npm run build` passes, and all 139 test files / 3,353 tests
   pass, including both campaign fixtures.
 
@@ -2919,7 +2968,7 @@ Verification:
 - A live authenticated dry-run fetched 1,865 advisories across 19 pages, mapped
   2,651 entries, deduplicated/covered 1,953, and selected all 698 new entries with
   `capped: false`, `remaining: 0`, and `undrainable: 0`; dry-run wrote nothing.
-- Clean Linux openclaw checkout: all 139 test files / 3,335 tests pass, followed by
+- Clean checkout on the remote Linux runner: all 139 test files / 3,335 tests pass, followed by
   all AAHP, feed, handoff, self-scan, and TypeScript build gates.
 
 ## Content-addressed self-scan and CLI risk consistency (2026-08-30)
@@ -2964,7 +3013,7 @@ matches. Existing findings in the three AAHP projects remain visible.
 Verification:
 
 - Windows: `npm run build` passes; the focused changed-area suite passes 131/131.
-- Linux openclaw, isolated `/tmp` checkout of implementation commit `f6149ce`:
+- Remote Linux runner, isolated temp checkout of implementation commit `f6149ce`:
   `npm ci` reports zero vulnerabilities, `npm run build` passes, and all 139 test
   files / 3,328 tests pass.
 - The Linux run confirms the two real IOC campaign fixtures that Windows endpoint
@@ -3340,7 +3389,7 @@ Evidence before the release PR:
   TypeScript compilation all pass.
 - `aahp doctor`: all six conformance gates pass.
 - The focused provenance integration suite passes 8/8 after the version-site fix.
-- Full Linux suite on openclaw: 138/138 test files and 3,294/3,294 tests pass.
+- Full Linux suite on the remote runner: 138/138 test files and 3,294/3,294 tests pass.
 - Release PR: #245. Tagging and publication remain deliberately after its squash
   merge, so the immutable tag will point at the commit that is actually on `main`.
 
@@ -8639,7 +8688,7 @@ copies are still CRLF and must be renormalized once:
 3. `npm run handoff:refresh` - works from a Windows checkout again; the three
    defects behind that are described above and shipped in this release.
 4. `npm run build` green (check:aahp + check:feed + check:handoff + tsc), the five
-   targeted suites green on Windows, and the full suite green on Linux via openclaw
+   targeted suites green on Windows, and the full suite green on the remote Linux runner
    (108 files, 2,653 tests, vscode-scanner included because zip is present there).
 
 Nothing is outstanding from this run.

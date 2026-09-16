@@ -278,10 +278,13 @@ Measure the version string's occurrences per file before editing. `src/threat-in
 - [ ] **Step 2: Verify the release is immutable**
 
 ```bash
+gh api repos/homeofe/supply-chain-guard/immutable-releases
 gh api repos/homeofe/supply-chain-guard/releases/tags/<new tag> --jq .immutable
 ```
 
-Expected: `true`. If `false`, the repository setting did not take effect and the shipped digest is the catalog's only protection. Record the answer either way.
+Expected: `{"enabled": true, ...}` and `true`. If the release reads `false` while the setting reads `true`, the release was stamped before the setting applied and the shipped digest is its only protection. Record the answer either way.
+
+Never verify this through `immutable_releases` on the repository object: that field does not exist and returns `null` regardless, which is how this was got wrong once already.
 
 - [ ] **Step 3: Verify the catalog asset actually published and verifies**
 

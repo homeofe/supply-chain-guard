@@ -733,10 +733,15 @@ everything one way is visible rather than discovered later."
 The repository API does not expose `immutable_releases`, so the only honest check is on a release published after the setting changed:
 
 ```bash
+gh api repos/homeofe/supply-chain-guard/immutable-releases
 gh api repos/homeofe/supply-chain-guard/releases/tags/<the first tag after the change> --jq .immutable
 ```
 
-Expected: `true`. It was `false` on v6.1.1 through v6.1.3, and enabling the setting does not retrofit them, so if this returns `false` the setting did not take and the shipped digest is the catalog's only protection. Record the answer either way; do not assume it.
+Expected: `{"enabled": true, ...}` from the first, and `true` from the second.
+
+Check BOTH. The repository setting says immutability is on from now on; the release flag says this particular release actually got it. The setting was enabled on 2026-09-16, and it does not retrofit, so v6.1.1 through v6.1.3 remain `false` permanently. If the setting reads `true` but the release reads `false`, something stamped the release before the setting applied and the shipped digest is that release's only protection.
+
+Do not verify this by reading `immutable_releases` on the repository object. No such field exists there, so it returns `null` whether the feature is on or off, and an earlier revision of this design was misled by exactly that for a full day.
 
 - [ ] **Step 2: Confirm the catalog is now real and verifiable**
 
