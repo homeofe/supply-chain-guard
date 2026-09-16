@@ -601,6 +601,22 @@ npm pack --dry-run --json | node -e "let s='';process.stdin.on('data',d=>s+=d).o
 
 Record both numbers in the PR body and in `.ai/handoff/STATUS.md`. They are the evidence that this phase did what it claimed, and Phase 3 and 4 plans are written against them.
 
+- [ ] **Step 9b: Record the recurring cutoff step in the release documentation**
+
+`BUNDLE_CUTOFF_DATE` is the one value a release has to move by hand, so it belongs in the committed release documentation rather than only in a gate message. Add to `docs/ci-and-release.md`, in the release checklist:
+
+```markdown
+- **Move `bundleCutoffDate` in `feed-partition.config.json`** to 30 days before
+  this release, then run `node scripts/feed-migrate.mjs` and regenerate. This is
+  the only value a release moves by hand. Forgetting it is not silent:
+  `check:feed-budget` fails the build once the bundle outgrows its limit and
+  prints the exact date to set.
+```
+
+Do not put it only in a gitignored file. The gate names the value and the
+committed documentation names the step, so neither a new maintainer nor a fresh
+machine has to rediscover it.
+
 - [ ] **Step 10: Commit**
 
 ```bash

@@ -1,3 +1,56 @@
+## Durability audit before merge (2026-09-16, claude-opus-5)
+
+Asked whether the design is final enough that future releases never need a
+redesign. Audited rather than asserted. Four things came out of it.
+
+**1. The catalog has a hard ceiling nobody had computed.**
+`CATALOG_MAX_DECOMPRESSED_BYTES` is 64 MiB and, at the measured 165 serialized
+bytes per entry, that is about 406,000 entries. It binds long before the 32 MiB
+download cap, which would allow about 2 million. Worse, the constant is compiled
+into every released client, so raising it later does nothing for installs that
+already exist: a catalog that outgrows it simply stops installing for everyone
+on an older release, and those users cannot be reached.
+
+Fixed by gating the GENERATOR, not the client. `check:catalog` now fails the
+build above `CATALOG_SIZE_BUDGET` of 48 MiB, about 305,000 entries and 75
+percent of the floor, and the message says to shard the catalog rather than
+raise the client limit. We can no longer ship a catalog our own clients cannot
+read. Headroom after Phase 3 is 4.5x (68,292 entries, 17 percent of the floor).
+
+**2. The one recurring manual step is now self-announcing.**
+`BUNDLE_CUTOFF_DATE` still has to move once per release. That is deliberate: a
+clock-derived cutoff is not a pure function of committed inputs, and deriving it
+from the newest feed entry would turn every daily import into a silent migration
+whose diff nobody could review, and reviewing those pull requests is a security
+control here. So the gate now prints the EXACT date to set rather than only
+saying to move it forward, and Phase 2 adds the step to `docs/ci-and-release.md`
+rather than to a gitignored file. Forgetting it costs one failed build about a
+month later.
+
+**3. Two stale cross-references.** Inserting the comment anchor as rule 3
+renumbered the date rule to 4, and two passages still said rule 3. Fixed.
+
+**4. An apparent numeric contradiction, now annotated.** Section 6.1 tabulates
+8,967 bundled and 12,002 moved; section 4.2 states 8,971 and 11,998. Both are
+right: the table is the date rule alone, which is what the cutoff is chosen
+against, and 4.2 is the outcome after the comment anchor holds four entries
+back. The table now says so, because a future reader would otherwise read it as
+a defect.
+
+New section 12 records what is settled, the one recurring step, and the three
+things that would genuinely force a design change: the catalog passing 305,000
+entries, an upstream source publishing non-package IOCs in bulk, or a need to
+update a catalog between releases. None are reachable without a build failing
+first, which is the property that matters.
+
+Also stated plainly there: a user who never upgrades keeps receiving recent
+intelligence, because `feed refresh` also refreshes the bundle feed, which is
+published from `main` and is not version-pinned. What they stop receiving is
+newly added HISTORICAL indicators, because the catalog is version-pinned. That
+split is deliberate and is what keeps old installs protected against what is
+being installed today.
+
+
 ## Immutable releases actually enabled, and a hostname redaction (2026-09-16, claude-opus-5)
 
 **The immutability command given earlier in this session was wrong, and the

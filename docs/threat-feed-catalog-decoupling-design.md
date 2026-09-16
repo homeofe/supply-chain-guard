@@ -205,7 +205,7 @@ Phase 1 depends on could not hold. The release date is also unavailable to a PR
 gate, which runs before any tag exists.
 
 Moving the cutoff is a deliberate, reviewable commit. `BUNDLE_CUTOFF_DATE`
-starts earlier than every entry in the bundle, so rule 3 admits everything
+starts earlier than every entry in the bundle, so rule 4 admits everything
 already there and Phase 1 moves nothing. That is what lets Phase 1 prove itself
 by leaving `src/threat-intel.ts` and `feed.json` untouched.
 
@@ -457,6 +457,35 @@ The same rule already governs the bundled feed by convention. The difference is
 that the bundle is reviewed line by line in pull requests, while the catalog is
 machine-written in bulk and nobody will read 56,294 lines.
 
+### 4.8 The catalog has a ceiling, and the build refuses to cross it
+
+`CATALOG_MAX_DECOMPRESSED_BYTES` is 64 MiB. Measured against the real feed at
+165 serialized bytes per entry, that is a hard ceiling of about **406,000
+entries**, and it binds long before the 32 MiB download cap does, which at the
+measured 10.1 percent gzip ratio would allow about 2 million.
+
+| state | entries | raw | gzip | share of the cap |
+| --- | --- | --- | --- | --- |
+| after Phase 3 | 68,292 | 10.7 MB | 1.08 MB | 17 percent |
+| alphabet walk complete | ~150,000 | 23.6 MB | 2.37 MB | 37 percent |
+| double that | 300,000 | 47.2 MB | 4.75 MB | 74 percent |
+
+**The cap is a compatibility floor, not a tunable.** It is compiled into every
+released client. Raising it in a future version does nothing for the clients
+already installed, so a catalog that outgrows 64 MiB is not fixable by editing a
+constant: it would simply fail to install for everyone on an older release, and
+those users cannot be reached.
+
+So the generator gates on it. `check:catalog` fails the build when the
+serialized catalog exceeds `CATALOG_SIZE_BUDGET`, set at 48 MiB, roughly 305,000
+entries and 75 percent of the floor. Crossing that budget is the signal to shard
+the catalog into per-prefix documents, which is a real design change, and the
+budget exists so that change is made deliberately with 25 percent of headroom
+left rather than discovered by a user whose refresh stopped working.
+
+A maintainer can never ship a catalog this project's own clients cannot read,
+because the build will not produce one.
+
 ## 5. Failure semantics: the loud part
 
 `THREAT_FEED_CATALOG_MISSING` is emitted on every scan where the catalog is
@@ -528,6 +557,12 @@ feed, 20,969 entries, with the release date as the reference point:
 | 90 days | 20,846 | 123 | ~75 ms |
 | 180 days | 20,947 | 22 | ~75 ms |
 
+These figures are the DATE rule alone, which is what the cutoff has to be
+chosen against. The comment anchor in section 4.2 then holds four of them
+back, so the actual Phase 2 result at 30 days is 8,971 bundled and 11,998
+moved, not 8,967 and 12,002. The two are consistent; the table is the input to
+the decision and section 4.2 is the outcome.
+
 At 90 days the split moves 123 entries and changes nothing. The feed is
 recent-skewed because the daily importer has been running, and there is a cliff
 between 30 and 60 days.
@@ -597,7 +632,7 @@ one of them to `data/threat-catalog.jsonl`. The bundle does not grow.
 consumer who has refreshed.
 
 The first draft had this phase before the cutoff was made finite, where every
-deferred entry would have satisfied rule 3, landed in the bundle, and breached
+deferred entry would have satisfied rule 4, landed in the bundle, and breached
 the budget immediately.
 
 **Phase 4: retire the deferral mechanism for bulk waves.**
@@ -727,3 +762,70 @@ survived one revision. It was caught only because the claim was measured before
 merge, which is the rule this project already writes down: a surprising
 measurement gets re-measured before it is published. A design document is not
 exempt from that just because it contains no code.
+
+## 12. Durability: what is settled, and what could still change
+
+This design is meant to hold for every future release without revisiting. What
+follows is an honest account of what that does and does not mean.
+
+### Settled, and not expected to change again
+
+- **Two authored stores, partition by routing, placement by gate.** The bundle
+  is authored as it always was; only the catalog is new. Nothing about this has
+  to change as either store grows.
+- **Integrity anchored to a digest compiled into the package.** Independent of
+  release-asset immutability, which is enabled as defence in depth but is not
+  load-bearing and does not retrofit.
+- **Version-pinned catalogs.** What makes the digest check and the
+  version-mismatch state possible at all.
+- **Severity by state, never by clock.** The verdict a consumer gets is a
+  function of their repository, their installed version and their policy, and
+  nothing else. This is what makes the tool predictable for strangers.
+- **Structural public-artifact hygiene.** Checks shape, never a list of values,
+  so it cannot be walked past by a new spelling and needs no maintenance.
+- **A budget gate on the bundle and a size gate on the catalog.** Both fail the
+  build rather than warning, and both name the remedy.
+
+### The one recurring manual step
+
+`BUNDLE_CUTOFF_DATE` is a committed date and a release moves it forward. That is
+deliberate: a clock-derived cutoff is not a pure function of committed inputs,
+and a cutoff derived from the newest entry in the feed would make every daily
+import silently evict older entries, turning the daily threat-intel pull into a
+migration whose diff nobody could review. Review of those pull requests is a
+security control here, so it is worth one committed value per release.
+
+The step is bounded and self-announcing rather than remembered:
+`check:feed-budget` fails the build when the bundle outgrows its limit, and it
+prints the exact date to set. Forgetting it costs one failed build, roughly a
+month after the fact at the observed arrival rate of 26 to 450 entries a day,
+and the fix is a one-line commit.
+
+### What would genuinely require a design change
+
+1. **The catalog passing 305,000 entries** (section 4.8), which is about 4.5
+   times the post-Phase-3 size. The answer then is sharding the catalog by name
+   prefix, and `check:catalog` fails the build well before any user is affected.
+2. **An upstream source that publishes something other than package identifiers
+   in bulk.** The partition routes by `type`, and a flood of non-package IOCs
+   would sit in the bundle by rule 1. That rule is correct today because atomic
+   indicators are few and high value; if that stops being true the rule needs
+   revisiting, and the bundle budget is what would surface it.
+3. **A need to update a catalog between releases.** Catalogs are version-pinned,
+   so today the answer is that anything urgent is recent, and recent entries are
+   bundled anyway. If that stops being true, the catalog would need its own
+   version line independent of the package.
+
+None of these are reachable from the current trajectory without the build
+failing first, which is the property that matters.
+
+### A consequence worth stating plainly
+
+A user who never upgrades keeps getting recent intelligence, because
+`feed refresh` also refreshes the bundle feed, which is published from `main`
+and is not version-pinned. What they stop getting is newly added HISTORICAL
+indicators, because the catalog is pinned to their installed version. That split
+is deliberate: recent intelligence is what protects a lockfile being installed
+today, and it keeps flowing to old installs. Complete historical coverage is a
+reason to upgrade, and `THREAT_FEED_STALE` already tells them when their rule set
+has aged.

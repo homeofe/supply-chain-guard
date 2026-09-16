@@ -588,6 +588,24 @@ export function checkBudget(root = repoRoot) {
     );
   }
 
+  // Name the value rather than the action. The cutoff is the one recurring
+  // manual step in this design, and a gate that says "move it forward" without
+  // saying where is a gate that gets guessed at. Suggest the date that brings
+  // the bundle back under the entry limit: the firstSeen of the Nth newest
+  // plain package entry, where N is the limit.
+  if (violations.length > 0) {
+    const dated = entries
+      .filter((e) => e.type === "package" && e.campaign === undefined && e.family === undefined)
+      .map((e) => String(e.firstSeen ?? ""))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort()
+      .reverse();
+    const suggestion = dated[config.maxBundledEntries - 1];
+    if (suggestion) {
+      violations.push(`Suggested bundleCutoffDate: ${suggestion} (brings the bundle to ${config.maxBundledEntries} entries).`);
+    }
+  }
+
   return violations;
 }
 
@@ -615,6 +633,10 @@ In `package.json`:
 
 Run: `npx vitest run src/__tests__/feed-partition.test.ts -t "checkBudget"`
 Expected: PASS, 3 tests.
+
+- [ ] **Step 4b: Verify the gate names a usable date**
+
+Run `checkBudget` against a fixture whose bundle exceeds the entry limit and assert the last violation matches `/^Suggested bundleCutoffDate: \d{4}-\d{2}-\d{2}/`, and that setting exactly that date brings the entry count to the limit. A gate that says "move it forward" without saying where is a gate that gets guessed at, and this is the one recurring manual step in the whole design.
 
 - [ ] **Step 5: Set the real byte limit from a measurement, not a guess**
 
@@ -1088,10 +1110,64 @@ export function checkCatalogHygiene(entries) {
 }
 ```
 
-Wire it into both the `--check` and the write path, before anything is emitted:
+Add the size ceiling alongside it. `CATALOG_MAX_DECOMPRESSED_BYTES` is compiled
+into every released client, so raising it later does nothing for clients already
+installed: a catalog that outgrows it simply stops installing for everyone on an
+older release, and those users cannot be reached. The only safe place to catch
+that is here, at build time.
 
 ```javascript
-  const violations = checkCatalogHygiene(readCatalogEntries());
+// Compatibility floor, not a tunable: this value is compiled into every
+// released client, so a catalog that outgrows it is unreadable by installs that
+// already exist and cannot be fixed by editing the constant. Budget at 75
+// percent of the floor so the shard-the-catalog decision is made deliberately
+// with headroom, rather than discovered by a user whose refresh stopped working.
+export const CATALOG_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
+export const CATALOG_SIZE_BUDGET = 48 * 1024 * 1024;
+
+export function checkCatalogSize(json) {
+  const bytes = Buffer.byteLength(json, "utf8");
+  if (bytes <= CATALOG_SIZE_BUDGET) return [];
+  return [
+    `catalog is ${bytes} bytes, over the ${CATALOG_SIZE_BUDGET} byte budget ` +
+    `(${((bytes / CATALOG_MAX_DECOMPRESSED_BYTES) * 100).toFixed(0)} percent of the ` +
+    `${CATALOG_MAX_DECOMPRESSED_BYTES} byte client decompression limit). ` +
+    `Shard the catalog by name prefix; do NOT raise the client limit, because ` +
+    `released clients carry the old value and cannot be reached.`,
+  ];
+}
+```
+
+Add its test:
+
+```typescript
+import { checkCatalogSize, CATALOG_SIZE_BUDGET } from "../../scripts/generate-catalog.mjs";
+
+describe("checkCatalogSize", () => {
+  it("passes a catalog under the budget", () => {
+    expect(checkCatalogSize("x".repeat(1024))).toEqual([]);
+  });
+  it("fails one byte over the budget", () => {
+    expect(checkCatalogSize("x".repeat(CATALOG_SIZE_BUDGET + 1)).join(" ")).toMatch(/over the .* byte budget/);
+  });
+  it("tells the operator to shard rather than raise the client limit", () => {
+    expect(checkCatalogSize("x".repeat(CATALOG_SIZE_BUDGET + 1)).join(" ")).toMatch(/do NOT raise the client limit/);
+  });
+});
+```
+
+At the measured 165 serialized bytes per entry the budget is about 305,000
+entries, against 68,292 after Phase 3. That is 4.5 times the headroom, and the
+build fails long before any user is affected.
+
+Wire all of it into both the `--check` and the write path, before anything is emitted:
+
+```javascript
+  const entries = readCatalogEntries();
+  const violations = [
+    ...checkCatalogHygiene(entries),
+    ...checkCatalogSize(JSON.stringify({ schema: 1, kind: "catalog", entries })),
+  ];
   if (violations.length > 0) {
     console.error(`\n  catalog hygiene: ${violations.length} violation(s)\n`);
     for (const v of violations.slice(0, 25)) console.error(`    ${v}`);
