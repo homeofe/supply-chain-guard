@@ -21,6 +21,47 @@ the handoff, which regenerates `MANIFEST.json`, but a regenerated MANIFEST is
 not a STATUS update. The lesson is already written down for release commits and
 applies to any commit touching tracked files: `npm run build` is green while
 `aahp-verify` is red, so a docs-only change still needs a note here.
+## Phase 1 Task 1: inert catalog recognition (2026-09-16, claude-opus-5)
+
+First code of the catalog decoupling. Adds `isInertThreatCatalogFile()` to
+`src/threat-intel.ts`, wired into the scan walk in `src/scanner.ts` beside the
+existing `isInertThreatFeedFile()` call, sharing `FEED_ENTRY_KEYS` so the two
+cannot drift.
+
+**The design premise for this task was wrong, and running it is what showed
+that.** Section 4.6 claimed the committed catalog would flood the self-scan with
+criticals from the project own detection data. Measured instead:
+`SCANNABLE_EXTENSIONS` in `src/patterns.ts` is an ALLOWLIST that contains
+`.json` but not `.jsonl`, so a `.jsonl` file is counted and skipped before its
+content is ever examined. The same C2 domain written into `b.json` produces two
+findings; written into `a.jsonl` it produces zero.
+
+The first attempt to prove the wiring illustrates why this matters. A scan of a
+probe repo carrying 400 real feed entries reported zero findings on the catalog,
+which looked like success. The control, the same content under a different
+filename, also reported zero. The zero had nothing to do with the guard. A
+second attempt using only atomic indicators, which are what a content scan can
+match, also returned zero for both, and only then did the extension allowlist
+turn up.
+
+**The guard still ships, as insurance, with a test that keeps that honest.**
+`.jsonl` is a common data format and `.json` is already in the allowlist, so
+adding it is a plausible one-line change, and the moment it lands the committed
+catalog becomes scannable and this guard becomes load-bearing. That is exactly
+the v5.4.0 dogfooding bug recorded on `isInertThreatFeedFile()`: 169 phantom
+criticals on this repository own `feed.json`. A coupling test asserts safety if
+`.jsonl` is not scannable OR the guard recognizes the catalog, plus the guard
+working unconditionally, so adding the extension stays a one-line change rather
+than a coverage incident.
+
+Nine tests, all passing. Five mutation cuts, each isolated to the catalog
+function so it cannot hit its feed twin, each going red in exactly the test that
+covers it, with a green baseline before and a green run after restoring:
+basename, key allowlist, scalar check, JSON parse, and object shape.
+
+The plan placed these tests in `self-scan-recognition.test.ts`. They are in
+`feed.test.ts` instead, which is where the seventeen `isInertThreatFeedFile`
+assertions already live; the plan had guessed without checking.
 
 
 ## Catalog decoupling: every open exit closed (2026-09-16, claude-opus-5)

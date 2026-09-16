@@ -563,3 +563,100 @@ describe("isInertThreatFeedFile", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// isInertThreatCatalogFile - same reasoning as isInertThreatFeedFile above,
+// for the JSONL catalog store. It holds raw IOC values as machine-readable
+// detection data, and data/ is not excluded from the scan walk, so without
+// this the project's own self-scan drowns in phantom criticals from its own
+// protection data (the v5.4.0 finding, in a new file shape).
+// ---------------------------------------------------------------------------
+
+describe("isInertThreatCatalogFile", () => {
+  const line = (over: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      type: "package",
+      value: "evil-pkg@1.0.0",
+      severity: "critical",
+      confidence: 1,
+      source: "GHSA-xxxx-xxxx-xxxx",
+      firstSeen: "2026-09-16",
+      ...over,
+    });
+
+  it("accepts a well-formed catalog, at any path depth", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line({ value: "other@2.0.0" })}\n`;
+    expect(isInertThreatCatalogFile("threat-catalog.jsonl", body)).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(true);
+  });
+
+  it("accepts an empty catalog, which is the Phase 1 state", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "")).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "\n\n")).toBe(true);
+  });
+
+  it("rejects any other filename, even with a valid body", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/other.jsonl", line())).toBe(false);
+    expect(isInertThreatCatalogFile("threat-catalog.json", line())).toBe(false);
+  });
+
+  it("rejects a line carrying a key outside the entry allowlist", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line({ exec: "require('child_process')" })}\n`;
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  it("rejects a non-scalar value", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = line({ value: { $ref: "http://evil.example" } });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  it("rejects a line that is not a JSON object", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "not json")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "[1,2,3]")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "null")).toBe(false);
+  });
+
+  it("rejects when only ONE line of many is malformed", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line()}\nnot json\n${line()}\n`;
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  // The guard above is INSURANCE, not a fix for a live problem, and this test
+  // is what keeps that true. Measured 2026-09-16: SCANNABLE_EXTENSIONS is an
+  // allowlist that contains ".json" but NOT ".jsonl", so the catalog is not
+  // content-scanned today and would produce no findings with or without the
+  // guard. An earlier draft of the design claimed the opposite.
+  //
+  // That safety is one line away from disappearing: ".jsonl" is a common data
+  // format and ".json" is already in the set, so adding it is a plausible
+  // future change. The moment it is added, the committed catalog becomes
+  // scannable and the guard becomes load-bearing. This test ties the two
+  // facts together so the relationship cannot silently break.
+  it("stays safe whether or not .jsonl becomes scannable", async () => {
+    const { SCANNABLE_EXTENSIONS } = await import("../patterns.js");
+    const { isInertThreatCatalogFile, CATALOG_FILE } = await import("../threat-intel.js");
+
+    const scannable = SCANNABLE_EXTENSIONS.has(".jsonl");
+    const guarded = isInertThreatCatalogFile(`data/${CATALOG_FILE}`, line());
+
+    // Safe if the extension is not scanned, or if the guard recognizes the
+    // catalog. Both are true today; either one alone is enough.
+    expect(!scannable || guarded).toBe(true);
+
+    // And the guard must keep working regardless, so that adding the
+    // extension is a one-line change rather than a coverage incident.
+    expect(guarded).toBe(true);
+  });
+
+  it("normalizes Windows path separators", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data\\threat-catalog.jsonl", line())).toBe(true);
+  });
+});

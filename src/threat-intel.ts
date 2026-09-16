@@ -22459,6 +22459,43 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
   return true;
 }
 
+/** Basename of the committed catalog store (data/threat-catalog.jsonl). */
+export const CATALOG_FILE = "threat-catalog.jsonl";
+
+/**
+ * Structural check: is this file supply-chain-guard's own catalog store?
+ *
+ * Same reasoning as isInertThreatFeedFile above, for the JSONL catalog: it
+ * holds RAW IOC values as machine-readable detection data, collectFiles() does
+ * not exclude data/, and without this check the project's own self-scan drowns
+ * in phantom criticals from its own protection data - the v5.4.0 dogfooding
+ * bug in a new file shape.
+ *
+ * Shares FEED_ENTRY_KEYS with the feed check so the two cannot drift apart.
+ * Strictness is the security property: every non-empty line must be a JSON
+ * object whose every key is allowlisted and whose every value is an inert
+ * scalar. Any deviation -> the file is scanned like everything else.
+ */
+export function isInertThreatCatalogFile(filename: string, content: string): boolean {
+  const base = filename.replace(/\\/g, "/").split("/").pop() ?? "";
+  if (base !== CATALOG_FILE) return false;
+  for (const line of content.split("\n")) {
+    if (line.trim() === "") continue;
+    let entry: unknown;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      return false;
+    }
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+    for (const [k, v] of Object.entries(entry as Record<string, unknown>)) {
+      if (!FEED_ENTRY_KEYS.has(k)) return false;
+      if (typeof v !== "string" && typeof v !== "number") return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Check content against the threat intelligence feed.
  */
