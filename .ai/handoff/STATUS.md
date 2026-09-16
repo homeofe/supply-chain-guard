@@ -1,3 +1,58 @@
+## Phase 2 Task 3: the migration is applied (2026-09-16, claude-opus-5)
+
+11,998 indicators moved from the compiled bundle into the catalog. This is the
+step the earlier entry in this file recorded as BLOCKED, and it is unblocked
+because Phase 1 tasks 5 to 12 shipped the runtime path that reads them back.
+
+**Measured after the move:**
+
+| | Before | After |
+| --- | --- | --- |
+| `src/threat-intel.ts` | 3,717,957 bytes | 1,664,028 bytes |
+| `feed.json` | 20,969 entries | 8,971 entries |
+| `data/threat-catalog.jsonl` | 0 entries | 11,998 entries |
+| `CATALOG_DIGEST.entryCount` | 0 | 11,998 |
+| Curated comment lines | 706 | 706 |
+| Orphaned comment groups | 0 | 0 |
+
+Bundle plus catalog is 20,969, the two sets are disjoint, and every one of the
+11,998 committed catalog lines passes the real `isValidFeedIOC`, so nothing was
+quarantined on the way out.
+
+**The safety net is now live.** With the catalog non-empty, a scan that cannot
+consult it reports `THREAT_FEED_CATALOG_MISSING` at `medium`, saying "11998
+historical indicators were not consulted by this scan". In Phase 1 that path was
+deliberately silent because there was nothing to miss.
+
+**Five tests failed on the migration, all of them correctly.** They asserted the
+Phase 1 end state, and they were rewritten to assert the Phase 2 one rather than
+relaxed:
+
+- the two "catalog is empty, bundle unchanged" assertions became "bundle plus
+  catalog accounts for every indicator, with no overlap", plus a check that the
+  shipped digest describes the shipped catalog
+- "emits catalog lines the real isValidFeedIOC accepts" was validating the PLAN's
+  output, which is now empty. It now validates the COMMITTED catalog file, which
+  is the artifact that actually ships
+- the real-file collision control went red exactly as designed. The comment on
+  it said that if it ever failed the collision had gone away and both halves
+  should be re-derived rather than deleted. It had: the migration removed the
+  duplicated importer headers whose groups were fully moved, which is what it
+  was for. The synthetic case still covers the hazard
+- "the plan still moves something" became an IDEMPOTENCE test, which is the more
+  useful property: re-running at the committed cutoff moves nothing, because
+  everything that qualified is already across. A second test moves the cutoff
+  forward and asserts work IS found, so the idempotence is not passing because
+  the planner is inert for some other reason
+
+**`tsc` caught what the tests could not.** `CATALOG_DIGEST` is generated with
+`as const`, so `entryCount` carries the literal type of whatever the release
+pins. `entryCount === 0` became a type error the moment the catalog stopped
+being empty. Vitest does not typecheck, so 247 tests passed while `npm run
+build` failed. The type is widened at the use site with a comment, because the
+comparison is a real runtime condition over a generated value.
+
+
 ## Phase 1 Task 12: acceptance, and the claim the design rests on (2026-09-16, claude-opus-5)
 
 Phase 1 is complete: tasks 1 to 12. The runtime catalog path exists end to end,

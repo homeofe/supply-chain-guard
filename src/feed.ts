@@ -354,10 +354,17 @@ export function catalogFindings(
   mode: "optional" | "required" = "optional",
 ): Finding[] {
   if (state.available) return [];
-  if (CATALOG_DIGEST.entryCount === 0 && mode !== "required") return [];
+
+  // Widened deliberately. CATALOG_DIGEST is generated with `as const`, so
+  // `entryCount` carries the literal type of whatever this release happens to
+  // pin, and comparing that literal to 0 is a type error the moment the catalog
+  // stops being empty. The comparison is a real runtime condition over a
+  // generated value, not a dead branch, so the type is widened rather than the
+  // check removed.
+  const missing: number = CATALOG_DIGEST.entryCount;
+  if (missing === 0 && mode !== "required") return [];
 
   const reason = state.reason ?? "absent";
-  const missing = CATALOG_DIGEST.entryCount;
   const built = state.cachedVersion ? ` (it was built for ${state.cachedVersion})` : "";
 
   return [

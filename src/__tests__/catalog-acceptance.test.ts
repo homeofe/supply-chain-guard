@@ -168,19 +168,74 @@ describe("Phase 1 acceptance: the absence of the catalog is reported, never sile
   });
 });
 
-describe("Phase 1 acceptance: detection is unchanged by this phase", () => {
-  // Phase 1 builds the path and moves nothing. The bundle must still hold
-  // everything it held before, and the shipped catalog must still be empty.
-  it("ships an empty catalog and an unchanged bundle", () => {
-    expect(CATALOG_DIGEST.entryCount).toBe(0);
+describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
+  // The migration moved 11,998 indicators out of the compiled bundle. The claim
+  // that matters is that none of them was LOST: every indicator is now in
+  // exactly one of the two stores, and the two together are what the bundle
+  // alone used to be.
+  it("bundle plus catalog accounts for every indicator, with no overlap", () => {
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const catalogLines = fs
+      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== "");
+
+    const bundled = getBundledFeed();
+    const catalogValues = new Set(catalogLines.map((l) => JSON.parse(l).value));
+    const bundledValues = new Set(bundled.map((e) => e.value));
+
+    expect(bundled.length).toBe(8971);
+    expect(catalogLines.length).toBe(11998);
+    expect(bundled.length + catalogLines.length).toBe(20969);
+
+    // Disjoint: an indicator in both would be carried twice and counted twice.
+    const both = [...bundledValues].filter((v) => catalogValues.has(v));
+    expect(both.slice(0, 3)).toEqual([]);
+  });
+
+  it("the shipped digest describes the shipped catalog", () => {
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const lines = fs
+      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== "");
+    expect(CATALOG_DIGEST.entryCount).toBe(lines.length);
+  });
+
+  it("feed.json matches the bundle that remains", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
     const feed = JSON.parse(fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8"));
     expect(getBundledFeed().length).toBe(feed.entryCount);
   });
 
-  it("the committed catalog file is empty", () => {
+  // Every catalog line has to survive the loader, or the indicator is silently
+  // quarantined and the migration has removed it from detection after all.
+  it("every committed catalog line passes the real isValidFeedIOC", async () => {
+    const { isValidFeedIOC } = await import("../threat-intel.js");
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const raw = fs.readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8");
-    expect(raw.split(/\r?\n/).filter((l) => l.trim() !== "")).toHaveLength(0);
-  });
+    const lines = fs
+      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== "");
+
+    const rejected = lines.filter((l) => !isValidFeedIOC(JSON.parse(l)));
+    expect(rejected.slice(0, 3)).toEqual([]);
+    expect(rejected).toHaveLength(0);
+  }, 60_000);
+
+  // The curated rationale is the thing the comment anchor exists to protect.
+  it("keeps every curated comment line in the bundle", async () => {
+    const { parseChunks } = await import("../../scripts/feed-migrate.mjs");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const source = fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
+    const groups = parseChunks(source);
+
+    const curatedLines = groups
+      .filter((g: { isCurated: boolean }) => g.isCurated)
+      .reduce((sum: number, g: { header: string[] }) => sum + g.header.length, 0);
+    expect(curatedLines).toBe(706);
+
+    // No comment block left describing entries that are no longer beneath it.
+    expect(groups.filter((g: { entries: unknown[] }) => g.entries.length === 0)).toHaveLength(0);
+  }, 60_000);
 });

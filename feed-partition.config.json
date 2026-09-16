@@ -1,6 +1,6 @@
 {
-  "$comment": "Partition policy for the threat feed. See docs/threat-feed-catalog-decoupling-design.md section 4.2. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files with nobody editing them. From Phase 2 onward `npm run release:prepare` moves it as part of a release. Phase 1 sets it earlier than every existing entry, and the limits above the current unsplit size, so this phase moves nothing; Phase 2 sets the decided values (30 days before the release, 15000, 2097152).",
-  "bundleCutoffDate": "2000-01-01",
-  "maxBundledEntries": 25000,
-  "maxBundleBytes": 4194304
+  "$comment": "Partition policy for the threat feed. See docs/threat-feed-catalog-decoupling-design.md section 4.2. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files with nobody editing them. From Phase 2 onward `npm run release:prepare` moves it as part of a release. Phase 2 set the decided values: 30 days before the 2026-09-16 release, 15000 entries, 2097152 bytes. The BYTE limit is the binding one after the migration (1.66 MB of 2 MiB used, roughly 3,400 entries of headroom, against 6,029 entries of headroom on the entry limit), so that is the gate a bulk import will trip first.",
+  "bundleCutoffDate": "2026-08-17",
+  "maxBundledEntries": 15000,
+  "maxBundleBytes": 2097152
 }

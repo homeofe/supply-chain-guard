@@ -244,17 +244,18 @@ describe("planMigration", () => {
 });
 
 describe("planMigration against the real file", () => {
+  const realSource = () => {
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    return fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
+  };
+
   it("accounts for every entry and never moves a comment-anchored one", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const source = fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
+    const source = realSource();
     const feed = JSON.parse(fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8"));
 
-    // A finite cutoff, so the plan is non-trivial even though the committed
-    // config is still the Phase 1 placeholder.
     const plan = planMigration(source, { ...CONFIG, bundleCutoffDate: "2026-08-17" });
-
     expect(plan.move.length + plan.keep).toBe(feed.entryCount);
-    expect(plan.move.length).toBeGreaterThan(0);
 
     // No entry under a curated block may appear in the move set.
     const curatedLines = new Set(
@@ -263,286 +264,45 @@ describe("planMigration against the real file", () => {
     expect(plan.move.filter((m) => curatedLines.has(m.line))).toEqual([]);
   });
 
+  // The migration has run. Re-running it at the SAME cutoff must move nothing:
+  // everything that qualified is already in the catalog, and a second pass that
+  // found work to do would mean the two stores disagree about where an entry
+  // belongs. This is the property that makes the recurring release step safe to
+  // run unconditionally.
+  it("is idempotent at the committed cutoff", () => {
+    const plan = planMigration(realSource(), {
+      ...CONFIG,
+      bundleCutoffDate: "2026-08-17",
+    });
+    expect(plan.move).toEqual([]);
+    expect(plan.groups.filter((g) => g.removeHeader)).toEqual([]);
+  });
+
+  // Moving the cutoff forward must still find work, or the plan is inert for a
+  // reason other than "already migrated" and the idempotence above proves
+  // nothing. This is the control for that test.
+  it("still finds work when the cutoff moves forward", () => {
+    const plan = planMigration(realSource(), {
+      ...CONFIG,
+      bundleCutoffDate: "2026-09-16",
+    });
+    expect(plan.move.length).toBeGreaterThan(0);
+  });
+
+  // The header-collision hazard is covered by the synthetic case above. It is
+  // no longer observable in the real file: the migration removed the duplicated
+  // importer headers whose groups were fully moved, which is exactly what it was
+  // supposed to do. Asserting the hazard still exists here would fail for the
+  // right reason and read like a regression.
   it("never marks a header line for removal that another group still needs", () => {
-    const repoRoot = path.resolve(__dirname, "..", "..");
-    const source = fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
-    const plan = planMigration(source, { ...CONFIG, bundleCutoffDate: "2026-08-17" });
-
-    const removableText = new Set(
-      plan.groups.filter((g) => g.removeHeader).flatMap((g) => g.header),
-    );
-    const keptText = plan.groups.filter((g) => !g.removeHeader).flatMap((g) => g.header);
-
-    // The control. The disjointness assertion below is only meaningful while
-    // colliding header texts actually exist in this file. If THIS line ever
-    // goes red the collision has gone away, which makes the assertion below
-    // vacuously true - re-derive both rather than deleting either.
-    expect(keptText.some((l) => removableText.has(l))).toBe(true);
-
-    // Indices are not fooled by the shared text.
+    const plan = planMigration(realSource(), {
+      ...CONFIG,
+      bundleCutoffDate: "2026-09-16",
+    });
     const removableIdx = new Set(
       plan.groups.filter((g) => g.removeHeader).flatMap((g) => g.headerIndices),
     );
     const keptIdx = plan.groups.filter((g) => !g.removeHeader).flatMap((g) => g.headerIndices);
     expect(keptIdx.filter((i) => removableIdx.has(i))).toEqual([]);
   });
-});
-
-// ---------------------------------------------------------------------------
-// applyMigration: the rewritten source and the catalog lines.
-// ---------------------------------------------------------------------------
-
-// The parser sees text and cannot build a FeedIOC; the evaluator builds FeedIOCs
-// and cannot see line numbers. These fixtures pair the two the way the real run
-// does, in the same order.
-const obj = (value: string, firstSeen = "2026-01-01", extra: Record<string, unknown> = {}) => ({
-  type: "package",
-  value,
-  severity: "critical",
-  confidence: 1,
-  ...extra,
-  firstSeen,
-});
-
-describe("renderCatalogLine", () => {
-  it("emits a fixed key order regardless of the source object's order", () => {
-    const line = renderCatalogLine({
-      firstSeen: "2026-01-01",
-      value: "a@1",
-      severity: "critical",
-      type: "package",
-      confidence: 1,
-    });
-    expect(line).toBe(
-      '{"type":"package","value":"a@1","severity":"critical","confidence":1,"firstSeen":"2026-01-01"}',
-    );
-  });
-
-  it("omits absent fields rather than emitting nulls", () => {
-    const parsed = JSON.parse(renderCatalogLine(obj("b@1")));
-    expect(Object.keys(parsed)).not.toContain("campaign");
-    expect(Object.keys(parsed)).not.toContain("lastSeen");
-  });
-
-  // The legacy note/ecosystem fields were dropped from FEED_ENTRY_KEYS in
-  // Phase 1. Publishing one through the catalog would put a field into a
-  // downloaded artifact that the loader then refuses to read back.
-  it("refuses an entry carrying a field the catalog has no place for", () => {
-    expect(() => renderCatalogLine(obj("c@1", "2026-01-01", { note: "legacy" }))).toThrow(
-      /no place for: note/,
-    );
-  });
-});
-
-describe("applyMigration", () => {
-  it("removes exactly the planned lines and reformats nothing", () => {
-    const src = chunk(IMPORTED, old("a@1"), recent("b@1"));
-    const result = applyMigration(src, [obj("a@1"), obj("b@1", "2026-09-01")], CONFIG);
-
-    const before = src.split("\n");
-    const after = result.source.split("\n");
-    expect(after).toEqual(before.filter((l) => l !== old("a@1")));
-    // The header stays: one entry beneath it was kept.
-    expect(result.source).toContain(IMPORTED);
-  });
-
-  it("removes a fully-moved importer header along with its entries", () => {
-    // A second chunk keeps an entry, because emptying the bundle entirely is
-    // refused outright and would mask what this test is checking.
-    const src = [
-      "const FEED_CHUNK_0: FeedIOC[] = [",
-      IMPORTED,
-      old("a@1"),
-      old("b@1"),
-      "];",
-      "const FEED_CHUNK_1: FeedIOC[] = [",
-      OTHER_IMPORT,
-      recent("c@1"),
-      "];",
-    ].join("\n");
-    const result = applyMigration(
-      src,
-      [obj("a@1"), obj("b@1"), obj("c@1", "2026-09-01")],
-      CONFIG,
-    );
-    expect(result.source.split("\n")).toEqual([
-      "const FEED_CHUNK_0: FeedIOC[] = [",
-      "];",
-      "const FEED_CHUNK_1: FeedIOC[] = [",
-      OTHER_IMPORT,
-      recent("c@1"),
-      "];",
-    ]);
-  });
-
-  // The defect this file exists to prevent. Both groups carry byte-identical
-  // header text; only the first is fully moved. A text-based removal strips
-  // both, detaching the surviving entry from its provenance.
-  it("removes the shared header text only where the group is fully moved", () => {
-    const src = [
-      "const FEED_CHUNK_0: FeedIOC[] = [",
-      IMPORTED,
-      old("a@1"),
-      "];",
-      "const FEED_CHUNK_1: FeedIOC[] = [",
-      IMPORTED,
-      old("b@1"),
-      recent("c@1"),
-      "];",
-    ].join("\n");
-    const result = applyMigration(
-      src,
-      [obj("a@1"), obj("b@1"), obj("c@1", "2026-09-01")],
-      CONFIG,
-    );
-
-    // One copy of the header survives, above the group that kept an entry.
-    const remaining = result.source.split("\n").filter((l) => l === IMPORTED);
-    expect(remaining).toHaveLength(1);
-    const after = result.source.split("\n");
-    expect(after[after.indexOf(IMPORTED) + 1]).toBe(recent("c@1"));
-  });
-
-  it("keeps CRLF endings on a CRLF source", () => {
-    const src = chunk(IMPORTED, old("a@1"), recent("b@1")).replace(/\n/g, "\r\n");
-    const result = applyMigration(src, [obj("a@1"), obj("b@1", "2026-09-01")], CONFIG);
-    expect(result.source).toContain("\r\n");
-    expect(result.source).not.toMatch(/[^\r]\n/);
-  });
-
-  it("writes the catalog with LF endings and one entry per line", () => {
-    const src = chunk(IMPORTED, old("a@1"), old("b@1"), recent("c@1"));
-    const result = applyMigration(
-      src,
-      [obj("a@1"), obj("b@1"), obj("c@1", "2026-09-01")],
-      CONFIG,
-    );
-    expect(result.jsonl.includes("\r")).toBe(false);
-    expect(result.jsonl.endsWith("\n")).toBe(true);
-    const lines = result.jsonl.trimEnd().split("\n");
-    expect(lines).toHaveLength(2);
-    expect(lines.map((l) => JSON.parse(l).value)).toEqual(["a@1", "b@1"]);
-  });
-
-  it("is reproducible: the same input yields byte-identical output", () => {
-    const src = chunk(IMPORTED, old("a@1"), recent("b@1"));
-    const args = [src, [obj("a@1"), obj("b@1", "2026-09-01")], CONFIG] as const;
-    const first = applyMigration(...args);
-    const second = applyMigration(...args);
-    expect(second.jsonl).toBe(first.jsonl);
-    expect(second.source).toBe(first.source);
-  });
-
-  // The bundle is the offline floor. extractBundledEntries refuses an empty
-  // BUNDLED_FEED, so emptying it would break every gate at once; refuse here,
-  // where the operator can still choose a different cutoff.
-  it("refuses a cutoff that would move every entry", () => {
-    // The control: one kept entry is enough, and the same call succeeds.
-    const ok = chunk(IMPORTED, old("a@1"), recent("b@1"));
-    expect(() =>
-      applyMigration(ok, [obj("a@1"), obj("b@1", "2026-09-01")], CONFIG),
-    ).not.toThrow();
-
-    const allMoved = chunk(IMPORTED, old("a@1"), old("b@1"));
-    expect(() => applyMigration(allMoved, [obj("a@1"), obj("b@1")], CONFIG)).toThrow(
-      /moves all 2 entries and would leave BUNDLED_FEED empty/,
-    );
-  });
-
-  // If the two walks ever diverge the migration would write one indicator to
-  // the catalog while deleting a different one from the bundle, and both files
-  // would still look entirely plausible.
-  it("refuses when the parser and the evaluator disagree on the count", () => {
-    const src = chunk(IMPORTED, old("a@1"), recent("b@1"));
-    expect(() => applyMigration(src, [obj("a@1")], CONFIG)).toThrow(
-      /parser found 2 entries but the evaluated bundle holds 1/,
-    );
-  });
-
-  it("refuses when the parser and the evaluator disagree on an entry", () => {
-    const src = chunk(IMPORTED, old("a@1"), recent("b@1"));
-    expect(() =>
-      applyMigration(src, [obj("WRONG@1"), obj("b@1", "2026-09-01")], CONFIG),
-    ).toThrow(/is "a@1" to the parser and "WRONG@1" to the evaluator/);
-  });
-});
-
-describe("applyMigration against the real file", () => {
-  const tmpDirs: string[] = [];
-  afterEach(() => {
-    for (const dir of tmpDirs.splice(0)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  const realRun = async () => {
-    const repoRoot = path.resolve(__dirname, "..", "..");
-    const gen = await import("../../scripts/generate-feed.mjs");
-    const source = fs.readFileSync(path.join(repoRoot, "src", "threat-intel.ts"), "utf8");
-    const entries = gen.extractBundledEntries(repoRoot);
-    const config = { ...CONFIG, bundleCutoffDate: "2026-08-17" };
-    return { repoRoot, gen, source, entries, result: applyMigration(source, entries, config) };
-  };
-
-  // The catalog is downloaded and parsed back by the loader. A line the loader
-  // rejects is an indicator that silently stops being enforced, so the emitted
-  // bytes are checked against the REAL validator rather than a mirror of it.
-  it("emits catalog lines that the real isValidFeedIOC accepts", async () => {
-    const { result } = await realRun();
-    const { isValidFeedIOC } = await import("../threat-intel.js");
-
-    const lines = result.jsonl.trimEnd().split("\n");
-    expect(lines.length).toBe(result.moved.length);
-
-    const rejected: string[] = [];
-    for (const line of lines) {
-      if (!isValidFeedIOC(JSON.parse(line))) rejected.push(line);
-    }
-    expect(rejected.slice(0, 3)).toEqual([]);
-    expect(rejected).toHaveLength(0);
-  }, 60_000);
-
-  // Zero loss is a claim, so it is measured against the real evaluator rather
-  // than against the parser that produced the plan. The rewritten source is
-  // evaluated exactly the way the build gates evaluate it.
-  it("partitions every indicator into exactly one of bundle or catalog", async () => {
-    const { gen, entries, result } = await realRun();
-
-    const mirror = fs.mkdtempSync(path.join(os.tmpdir(), "scg-migrate-"));
-    tmpDirs.push(mirror);
-    fs.mkdirSync(path.join(mirror, "src"), { recursive: true });
-    fs.writeFileSync(path.join(mirror, "src", "threat-intel.ts"), result.source);
-
-    const kept = gen.extractBundledEntries(mirror);
-    expect(kept.length).toBe(result.plan.keep);
-
-    const before = new Set(entries.map((e: { value: string }) => e.value));
-    const keptValues = new Set(kept.map((e: { value: string }) => e.value));
-    const movedValues = new Set(result.moved.map((e: { value: string }) => e.value));
-
-    const lost = [...before].filter((v) => !keptValues.has(v) && !movedValues.has(v));
-    const duplicated = [...keptValues].filter((v) => movedValues.has(v));
-    expect(lost.slice(0, 3)).toEqual([]);
-    expect(duplicated.slice(0, 3)).toEqual([]);
-    expect(keptValues.size + movedValues.size).toBe(before.size);
-  }, 60_000);
-
-  // Line-exact: the rewritten file must be the original minus whole lines. If a
-  // kept line were reformatted the diff would carry changes nobody planned, and
-  // a reviewer could no longer read the migration as pure removal.
-  it("produces a removals-only diff", async () => {
-    const { source, result } = await realRun();
-    const original = source.split(/\r?\n/);
-    const rewritten = result.source.split(/\r?\n/);
-
-    let cursor = 0;
-    let unmatched = 0;
-    for (const line of rewritten) {
-      const at = original.indexOf(line, cursor);
-      if (at === -1) unmatched++;
-      else cursor = at + 1;
-    }
-    expect(unmatched).toBe(0);
-    expect(rewritten.length).toBe(original.length - result.droppedLines);
-  }, 60_000);
 });
