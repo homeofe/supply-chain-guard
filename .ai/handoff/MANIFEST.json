@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789587752",
-    "timestamp": "2026-09-16T19:42:33Z",
-    "commit": "ff843d1",
+    "session_id": "cli-1789588050",
+    "timestamp": "2026-09-16T19:47:30Z",
+    "commit": "358c0a7",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:8097c08b76a7885559425e19424be3b25272187343a8cbbe44d1ebdc2bd1c385",
-      "updated": "2026-09-16T19:42:31Z",
-      "lines": 9307,
-      "summary": "`applyMigration` plus the CLI and `scripts/release-prepare.mjs`. No entry has"
+      "checksum": "sha256:629ae7a89b5f063c659ccafde5511614a9128070a243dcefd581fb540a4deac9",
+      "updated": "2026-09-16T19:47:28Z",
+      "lines": 9373,
+      "summary": "**The migration was run against the real file, verified, and then reverted. It"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T19:42:32Z",
+      "updated": "2026-09-16T19:47:29Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:210afe6ed509cc1e4026b1794afb2f987591d43dbf6bb7d9bc801aee907e2dcb",
-      "updated": "2026-09-16T19:42:32Z",
+      "updated": "2026-09-16T19:47:29Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:c7418eb41bace1cdaea280ab494efd018898e2cbeaa08da94f0f547a2b34b91e",
-      "updated": "2026-09-16T19:42:32Z",
+      "updated": "2026-09-16T19:47:29Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "`applyMigration` plus the CLI and `scripts/release-prepare.mjs`. No entry has Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "**The migration was run against the real file, verified, and then reverted. It Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 108870,
-    "full_read": 121335
+    "manifest_plus_core": 109622,
+    "full_read": 122087
   }
 }

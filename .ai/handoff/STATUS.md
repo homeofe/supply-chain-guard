@@ -1,3 +1,69 @@
+## BLOCKED: the Phase 2 migration cannot land yet (2026-09-16, claude-opus-5)
+
+**The migration was run against the real file, verified, and then reverted. It
+is not in this branch.** What is here is the tooling, which is inert: the cutoff
+is still the Phase 1 placeholder, `node scripts/feed-migrate.mjs` reports
+`move 0`, and all 20,969 entries remain in the bundle.
+
+**Why it was reverted.** The migration moves 11,998 indicators out of the
+compiled bundle, and nothing in the shipped package can read them back:
+
+- `THREAT_FEED_CATALOG_MISSING`, `kind: "catalog"`, `catalogUrl` and
+  `catalogDigest` appear only in the design and the three plan documents. There
+  is no occurrence of any of them anywhere in `src/`.
+- The only reference to the catalog in `src/` is `isInertThreatCatalogFile`,
+  which stops the scanner flagging the catalog as content. It is an exemption,
+  not a loader.
+- `data/` is not in the `files` array of `package.json`, so the catalog is not
+  published to npm either.
+
+Running the migration and packing drops the published package from 9.91 MB to
+6.40 MB, and the scanner would carry 8,971 indicators instead of 20,969. That is
+a 57 percent coverage loss with no error, no warning and no finding: exactly the
+silent false negative this repository exists to prevent.
+
+**This is an ordering violation, not a defect in the migration.** Design section
+7 is explicit that the phases are "ordered so coverage never silently drops",
+and it puts the runtime consumption path in **Phase 1**: "Add bounded gzip
+decompression, the `kind` check, the empty-catalog allowance, the digest file,
+the second cache, the merge and the availability conditions. Add
+`THREAT_FEED_CATALOG_MISSING` and the `catalog` policy knob." It then says of
+Phase 2: "This is the only step that reduces what a bare install detects, and it
+lands after the finding that reports it."
+
+The finding that reports it does not exist yet.
+
+**What actually landed in Phase 1 was Tasks 1 to 4 of twelve**: the inert
+catalog file, the shared partition policy, the placement gate and the budget
+gate. Tasks 5 to 12 are still open, and they are the ones that make the catalog
+reachable at runtime:
+
+| Task | Title |
+| --- | --- |
+| 5 | Teach the payload parser about catalogs |
+| 6 | Bounded gzip decompression in the transport |
+| 7 | Generate and ship the catalog digest |
+| 8 | Catalog cache, merge, and what counts as unavailable |
+| 9 to 12 | remaining Phase 1 tasks |
+
+Phase 1 was reported as fully landed in an earlier note in this file. That was
+wrong: it described the four tasks that were batched into the two pull requests,
+not the phase.
+
+**Next action, and it is a decision for the owner.** Phase 2's migration step is
+blocked until Phase 1 Tasks 5 to 12 ship. Phases 3 and 4 are about draining the
+five deferral ranges and retiring bulk deferral, so neither of them unblocks it
+either. Nothing else in Phase 2 is blocked: Task 4, the importer routing, does
+not move existing entries and can proceed.
+
+The migration itself is verified and reproducible in one command once the
+loader exists. Measured on the real file at a 2026-08-17 cutoff: 11,998 moved,
+8,971 kept, 20,969 accounted for, 0 indicators lost or duplicated, 0 orphaned
+comment groups, all 706 curated comment lines preserved, `src/threat-intel.ts`
+3.54 MB to 1.58 MB, and the rewritten source re-evaluated through the real
+`extractBundledEntries` to exactly 8,971.
+
+
 ## Phase 2 Task 3: the migration writer, and where it left the plan (2026-09-16, claude-opus-5)
 
 `applyMigration` plus the CLI and `scripts/release-prepare.mjs`. No entry has
