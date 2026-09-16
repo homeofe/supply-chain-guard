@@ -19,27 +19,45 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * The date that would bring the bundle back to maxBundledEntries: the firstSeen
- * of the Nth newest entry that the cutoff can actually move.
+ * A cutoff date that brings the bundle back inside maxBundledEntries.
  *
- * Curated entries and undatable ones are immovable by the policy, so they are
- * excluded from the ranking. Returns null when no date can achieve the limit,
- * which happens when the immovable entries alone already exceed it, and that is
- * a different problem than a stale cutoff.
+ * Curated and undatable entries are immovable by the policy, so they are
+ * excluded from the ranking and counted against the budget up front.
+ *
+ * Dates are day-granular and partitionTarget keeps every entry whose firstSeen
+ * is >= the cutoff, so the answer has to be a DATE BOUNDARY, not the Nth entry.
+ * Picking the Nth entry's date is wrong whenever entries share a date: with a
+ * limit of 1 and two entries dated 2026-09-05 it would suggest 2026-09-05 and
+ * keep both, leaving the gate red after applying its own advertised remedy.
+ *
+ * So walk the distinct dates newest first and take the largest boundary whose
+ * cumulative count still fits. Returns null when even the newest date group
+ * does not fit, or when the immovable entries alone already exceed the limit;
+ * both are different problems from a stale cutoff and deserve a different
+ * message rather than a date that cannot work.
  */
 export function suggestCutoff(entries, maxBundledEntries) {
-  const movable = [];
+  const counts = new Map();
   let immovable = 0;
   for (const e of entries) {
     if (e.campaign !== undefined || e.family !== undefined) { immovable++; continue; }
     const d = String(e.firstSeen ?? "");
     if (!ISO_DATE.test(d)) { immovable++; continue; }
-    movable.push(d);
+    counts.set(d, (counts.get(d) ?? 0) + 1);
   }
+
   const room = maxBundledEntries - immovable;
-  if (room <= 0 || room > movable.length) return null;
-  movable.sort().reverse();
-  return movable[room - 1];
+  if (room <= 0) return null;
+
+  let cumulative = 0;
+  let best = null;
+  for (const date of [...counts.keys()].sort().reverse()) {
+    const next = cumulative + counts.get(date);
+    if (next > room) break;
+    cumulative = next;
+    best = date;
+  }
+  return best;
 }
 
 export function checkBudget(root = repoRoot) {

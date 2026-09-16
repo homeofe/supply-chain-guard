@@ -5,7 +5,7 @@ import * as path from "node:path";
 
 import { partitionTarget, loadPartitionConfig } from "../../scripts/feed-partition.mjs";
 import { checkPartition } from "../../scripts/check-feed-partition.mjs";
-import { checkBudget } from "../../scripts/check-feed-budget.mjs";
+import { checkBudget, suggestCutoff } from "../../scripts/check-feed-budget.mjs";
 
 const CONFIG = {
   bundleCutoffDate: "2026-06-01",
@@ -276,5 +276,154 @@ describe("checkBudget", () => {
     const out = checkBudget(root).join(" ");
     expect(out).toMatch(/exceeds 1/);
     expect(out).not.toMatch(/Suggested bundleCutoffDate/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review findings, each with a test that fails without the fix.
+// ---------------------------------------------------------------------------
+
+describe("partitionTarget, trailing junk in firstSeen", () => {
+  // Slicing the value before applying the anchored regex accepted trailing
+  // junk: "2020-01-01oops" parsed as a valid old date and routed a detection
+  // OUT of the bundle, the opposite of the documented fail-open behaviour.
+  // Measured on the v6.1.3 feed, all 20,958 dated entries are exactly
+  // YYYY-MM-DD, so the slice bought nothing and cost this.
+  it("fails open for a date-prefixed invalid string", () => {
+    for (const bad of ["2020-01-01oops", "2020-01-01T00:00:00Z", "2020-01-01 ", "2020-01-012"]) {
+      expect(partitionTarget({ type: "package", value: "x@1", firstSeen: bad }, CONFIG))
+        .toBe("bundle");
+    }
+  });
+
+  it("still routes a clean old date to the catalog", () => {
+    expect(partitionTarget({ type: "package", value: "x@1", firstSeen: "2020-01-01" }, CONFIG))
+      .toBe("catalog");
+  });
+});
+
+describe("loadPartitionConfig, malformed limits", () => {
+  // A missing or misspelled limit returned undefined, and `n > undefined` is
+  // false, so check:feed-budget reported success for ANY bundle size. One typo
+  // in a committed config silently disabled the gate.
+  const write = (cfg: Record<string, unknown>) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-badcfg-"));
+    fs.writeFileSync(path.join(root, "feed-partition.config.json"), JSON.stringify(cfg));
+    return root;
+  };
+
+  it("refuses a missing limit rather than failing open", () => {
+    const root = write({ bundleCutoffDate: "2026-06-01", maxBundleBytes: 10 });
+    expect(() => loadPartitionConfig(root)).toThrow(/maxBundledEntries/);
+  });
+
+  it("refuses a misspelled limit", () => {
+    const root = write({ bundleCutoffDate: "2026-06-01", maxBundledEntires: 10, maxBundleBytes: 10 });
+    expect(() => loadPartitionConfig(root)).toThrow(/maxBundledEntries/);
+  });
+
+  it("refuses non-numeric, non-finite and negative limits", () => {
+    for (const v of ["10", null, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const root = write({ bundleCutoffDate: "2026-06-01", maxBundledEntries: v, maxBundleBytes: 10 });
+      expect(() => loadPartitionConfig(root)).toThrow(/maxBundledEntries/);
+    }
+  });
+
+  it("refuses a non-string cutoff", () => {
+    const root = write({ bundleCutoffDate: 20260601, maxBundledEntries: 10, maxBundleBytes: 10 });
+    expect(() => loadPartitionConfig(root)).toThrow(/bundleCutoffDate/);
+  });
+
+  // The control: a well-formed config still loads.
+  it("accepts a well-formed config", () => {
+    const root = write({ bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20 });
+    expect(loadPartitionConfig(root)).toEqual({
+      bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20,
+    });
+  });
+});
+
+describe("suggestCutoff, tied dates", () => {
+  const apply = (entries: Record<string, unknown>[], cutoff: string) =>
+    entries.filter((e) => partitionTarget(e, {
+      bundleCutoffDate: cutoff, maxBundledEntries: 0, maxBundleBytes: 0,
+    }) === "bundle").length;
+
+  // Picking the Nth entry's date is wrong whenever entries share a date:
+  // partitionTarget keeps everything >= the cutoff, so with a limit of 1 and
+  // two entries on 2026-09-05 the old code suggested 2026-09-05 and kept both,
+  // leaving the gate red after applying its own advertised remedy.
+  it("never suggests a date that leaves the bundle over the limit", () => {
+    const tied = [
+      pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-05"),
+      pkg("c@1", "2026-09-04"), pkg("d@1", "2026-09-03"),
+    ];
+    for (const limit of [1, 2, 3, 4]) {
+      const s = suggestCutoff(tied, limit);
+      if (s === null) continue;
+      expect(apply(tied, s)).toBeLessThanOrEqual(limit);
+    }
+  });
+
+  it("returns null when even the newest date group does not fit", () => {
+    const tied = [pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-05")];
+    expect(suggestCutoff(tied, 1)).toBeNull();
+  });
+
+  it("picks the largest boundary that fits, not the smallest", () => {
+    const entries = [pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-04"), pkg("c@1", "2026-09-03")];
+    expect(suggestCutoff(entries, 2)).toBe("2026-09-04");
+    expect(apply(entries, "2026-09-04")).toBe(2);
+  });
+
+  it("returns null when immovable entries alone exceed the limit", () => {
+    const curated = [
+      pkg("x@1", "2026-09-01", { campaign: "c" }),
+      pkg("y@1", "2026-09-01", { campaign: "c" }),
+    ];
+    expect(suggestCutoff(curated, 1)).toBeNull();
+  });
+});
+
+describe("the committed catalog is a valid feed document", () => {
+  // The gate cannot enforce the full FeedIOC contract: it is a .mjs script, it
+  // runs before tsc, and isValidFeedIOC lives in TypeScript with per-type value
+  // shapes, timestamp parsing and a lastSeen ordering rule. Mirroring all of
+  // that in the gate would be a drift liability, so the contract is enforced
+  // HERE, against the real function, where no copy is needed.
+  //
+  // It matters because loadThreatIntel() filters the cached catalog through
+  // isValidFeedIOC: an entry that is well-shaped but invalid is silently
+  // quarantined at scan time, so a gate that only checked for a string `value`
+  // would pass while the detection disappeared.
+  it("every committed catalog line passes the loader's own validator", async () => {
+    const { isValidFeedIOC } = await import("../threat-intel.js");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const file = path.join(repoRoot, "data", "threat-catalog.jsonl");
+    const raw = fs.readFileSync(file, "utf8");
+
+    const bad: string[] = [];
+    raw.split("\n").forEach((line, i) => {
+      if (line.trim() === "") return;
+      let entry: unknown;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        bad.push(`line ${i + 1}: not valid JSON`);
+        return;
+      }
+      if (!isValidFeedIOC(entry)) bad.push(`line ${i + 1}: isValidFeedIOC rejected it`);
+    });
+
+    expect(bad).toEqual([]);
+  });
+
+  // The control: the assertion above passes trivially on an empty catalog, so
+  // prove it would actually catch a bad entry.
+  it("would reject an entry the loader quarantines", async () => {
+    const { isValidFeedIOC } = await import("../threat-intel.js");
+    expect(isValidFeedIOC({ type: "package", value: "bad@1", firstSeen: "2020-01-01" })).toBe(false);
+    expect(isValidFeedIOC({ type: "package", value: "ok@1", severity: "catastrophic" })).toBe(false);
+    expect(isValidFeedIOC({ type: "package", value: "ok@1", severity: "critical" })).toBe(true);
   });
 });

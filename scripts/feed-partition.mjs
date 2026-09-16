@@ -24,7 +24,12 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
  */
 function isoToEpoch(value) {
   if (typeof value !== "string") return null;
-  const m = ISO_DATE.exec(value.slice(0, 10));
+  // Match the WHOLE value, never a slice of it. Slicing first accepts trailing
+  // junk: "2020-01-01oops" would parse as a valid old date and route a
+  // detection out of the bundle, which is the opposite of the documented
+  // fail-open behaviour for unparsable dates. Measured on the v6.1.3 feed, all
+  // 20,958 dated entries are exactly YYYY-MM-DD, so the slice bought nothing.
+  const m = ISO_DATE.exec(value);
   if (!m) return null;
   const [, y, mo, d] = m;
   const epoch = Date.UTC(Number(y), Number(mo) - 1, Number(d));
@@ -39,13 +44,38 @@ function isoToEpoch(value) {
   return epoch;
 }
 
-/** Read the committed partition policy. */
+/**
+ * Read the committed partition policy, refusing a malformed one.
+ *
+ * The validation is not decoration. A missing or misspelled limit would return
+ * undefined, and `entries.length > undefined` is false, so check:feed-budget
+ * would report success for any bundle size: one typo in a committed config
+ * silently disables the gate. A gate that fails open is worse than no gate,
+ * because the build stays green while nobody is watching the thing it guards.
+ */
 export function loadPartitionConfig(root = repoRoot) {
   const raw = JSON.parse(readFileSync(join(root, "feed-partition.config.json"), "utf8"));
+
+  const limit = (name) => {
+    const v = raw[name];
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+      throw new Error(
+        `feed-partition.config.json: ${name} must be a finite non-negative number, got ${JSON.stringify(v)}`,
+      );
+    }
+    return v;
+  };
+
+  if (typeof raw.bundleCutoffDate !== "string") {
+    throw new Error(
+      `feed-partition.config.json: bundleCutoffDate must be a string, got ${JSON.stringify(raw.bundleCutoffDate)}`,
+    );
+  }
+
   return {
     bundleCutoffDate: raw.bundleCutoffDate,
-    maxBundledEntries: raw.maxBundledEntries,
-    maxBundleBytes: raw.maxBundleBytes,
+    maxBundledEntries: limit("maxBundledEntries"),
+    maxBundleBytes: limit("maxBundleBytes"),
   };
 }
 

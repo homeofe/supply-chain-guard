@@ -1,3 +1,55 @@
+## Review findings on Tasks 1 to 4, all five real (2026-09-16, claude-opus-5)
+
+Automated review of PR 307 and PR 308 returned five findings. Every one was
+reproduced against the code before being accepted, and every one was real.
+
+**P1: the partition gate did not enforce the FeedIOC contract.** A catalog line
+missing `severity` passed the gate, and `loadThreatIntel()` filters the cached
+catalog through `isValidFeedIOC`, so the entry would be silently quarantined at
+scan time: the gate green, the detection gone. The signature
+gate-answers-a-different-question failure.
+
+The first fix was a `.mjs` mirror of `isValidFeedIOC`, and it was ABANDONED.
+Reading the real function showed it also enforces per-type value shapes,
+timestamp formats with offsets, and a `lastSeen >= firstSeen` ordering rule, and
+the first draft of the mirror had already guessed two constants wrong
+(`MAX_IOC_VALUE_LENGTH` is 2048, not 512; metadata fields are family, campaign
+and source, not five). A mirror that elaborate is a drift liability pretending
+to be a gate. The contract is now enforced in a vitest test that imports the
+REAL function, with a control asserting it rejects what the loader rejects.
+
+**P1: trailing junk in `firstSeen` routed a detection out of the bundle.**
+`isoToEpoch` sliced to 10 characters before applying the anchored regex, so
+`2020-01-01oops` parsed as a valid old date. Documented behaviour for an
+unparsable date is fail-open into the bundle; this did the opposite. Measured:
+all 20,958 dated entries are exactly YYYY-MM-DD, so the slice bought nothing.
+
+**P1: a typo in the config silently disabled the budget gate.**
+`loadPartitionConfig` returned the raw fields, and `entries.length > undefined`
+is false, so a missing or misspelled limit made `check:feed-budget` report
+success for any bundle size. Limits are now validated as finite non-negative
+numbers and a malformed config throws.
+
+**P2: the cutoff suggestion did not work on tied dates.** `partitionTarget`
+keeps everything `>=` the cutoff, so with a limit of 1 and two entries dated
+2026-09-05 the gate suggested 2026-09-05 and kept both: the advertised remedy
+left the gate red. It now walks distinct date boundaries newest first and takes
+the largest that fits, returning null when none does.
+
+**P2: the catalog exemption was bound to a basename.** Once `.jsonl` is added to
+`SCANNABLE_EXTENSIONS`, any scanned repository could place
+`threat-catalog.jsonl` at any depth and have every content scanner skip it, and
+`{"note":"curl ... | bash"}` was accepted because `note` is an allowlisted
+free-text field. Now bound to the exact path `data/threat-catalog.jsonl`, the
+`note` field is rejected outright, and every line must be a complete valid
+FeedIOC. The same weakness exists in the older `isInertThreatFeedFile` and is
+NOT addressed here; it predates this work and deserves its own change.
+
+Six reverts, six caught, against a green baseline of 90 tests and a green
+post-restore: the slice, the limit validation, the tied-date boundary, the
+exact-path binding, the note rejection, and the FeedIOC requirement.
+
+
 ## Phase 1 Tasks 2 to 4: partition policy and its two gates (2026-09-16, claude-opus-5)
 
 Adds `scripts/feed-partition.mjs` (the routing rule), `feed-partition.config.json`,

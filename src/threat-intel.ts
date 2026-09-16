@@ -22459,8 +22459,16 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
   return true;
 }
 
-/** Basename of the committed catalog store (data/threat-catalog.jsonl). */
+/** Basename of the committed catalog store. */
 export const CATALOG_FILE = "threat-catalog.jsonl";
+
+/**
+ * Exact repository-relative path of the catalog store. The exemption is bound
+ * to this path, not merely to the basename: a basename match would let ANY
+ * scanned repository place a file with this name at any depth and have it
+ * skipped, which is an evasion primitive rather than a convenience.
+ */
+export const CATALOG_RELATIVE_PATH = "data/threat-catalog.jsonl";
 
 /**
  * Structural check: is this file supply-chain-guard's own catalog store?
@@ -22477,8 +22485,11 @@ export const CATALOG_FILE = "threat-catalog.jsonl";
  * scalar. Any deviation -> the file is scanned like everything else.
  */
 export function isInertThreatCatalogFile(filename: string, content: string): boolean {
-  const base = filename.replace(/\\/g, "/").split("/").pop() ?? "";
-  if (base !== CATALOG_FILE) return false;
+  // Exact relative path, not a basename. Without this, any scanned repository
+  // could place a file with this name at any depth and have every content
+  // scanner skip it.
+  if (filename.replace(/\\/g, "/") !== CATALOG_RELATIVE_PATH) return false;
+
   for (const line of content.split("\n")) {
     if (line.trim() === "") continue;
     let entry: unknown;
@@ -22488,10 +22499,24 @@ export function isInertThreatCatalogFile(filename: string, content: string): boo
       return false;
     }
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+
+    // Every key allowlisted and every value an inert scalar, as for the feed.
     for (const [k, v] of Object.entries(entry as Record<string, unknown>)) {
       if (!FEED_ENTRY_KEYS.has(k)) return false;
       if (typeof v !== "string" && typeof v !== "number") return false;
     }
+
+    // The catalog is machine-written and never carries prose. `note` is the
+    // one field that could hold arbitrary attacker text inside an otherwise
+    // valid entry, so an exemption that accepted it would be a way to hide a
+    // payload from every scanner. The published-catalog gate forbids the field
+    // for the same reason; this keeps the two consistent.
+    if ((entry as Record<string, unknown>).note !== undefined) return false;
+
+    // A complete, real FeedIOC. Key-and-scalar checking alone accepts objects
+    // that the loader would quarantine, so requiring the full contract is what
+    // makes "this is our own inert detection data" an actual claim.
+    if (!isValidFeedIOC(entry)) return false;
   }
   return true;
 }
