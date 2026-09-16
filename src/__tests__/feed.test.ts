@@ -698,6 +698,20 @@ describe("isInertThreatCatalogFile", () => {
     expect(isInertThreatCatalogFile("data\\threat-catalog.jsonl", line())).toBe(true);
   });
 
+  // The exemption is bound to the repository-relative path, so it applies only
+  // when the scan root IS the repository root. Scanning a parent directory
+  // (a workspace holding the checkout) loses it, and once .jsonl is added to
+  // SCANNABLE_EXTENSIONS such a scan would report this project's own detection
+  // data as findings. That narrowing is a deliberate trade for closing the
+  // basename evasion, and this test pins it so it stays deliberate.
+  it("does not apply when the scan root is above the repository", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("supply-chain-guard/data/threat-catalog.jsonl", line()))
+      .toBe(false);
+    expect(isInertThreatCatalogFile("workspace/repo/data/threat-catalog.jsonl", line()))
+      .toBe(false);
+  });
+
   it("matches the path constant the scanner exports", async () => {
     const { CATALOG_RELATIVE_PATH, isInertThreatCatalogFile } = await import("../threat-intel.js");
     expect(CATALOG_RELATIVE_PATH).toBe("data/threat-catalog.jsonl");

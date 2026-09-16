@@ -14,8 +14,12 @@ import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Relative path of the catalog store, from the repo root. */
-export const CATALOG_PATH = join("data", "threat-catalog.jsonl");
+/**
+ * Relative path of the catalog store, for DISPLAY: a forward-slash literal, so
+ * a violation reads identically on every platform and can be grepped for in CI
+ * logs or asserted by a test. path.join is used only to touch the filesystem.
+ */
+export const CATALOG_PATH = "data/threat-catalog.jsonl";
 
 export function checkPartition(root = repoRoot) {
   const config = loadPartitionConfig(root);
@@ -23,7 +27,7 @@ export function checkPartition(root = repoRoot) {
 
   const bundleValues = new Set(extractBundledEntries(root).map((e) => e.value));
 
-  const catalogFile = join(root, CATALOG_PATH);
+  const catalogFile = join(root, "data", "threat-catalog.jsonl");
   if (!existsSync(catalogFile)) {
     return [`${CATALOG_PATH} is missing; it must exist, even empty.`];
   }
@@ -40,6 +44,18 @@ export function checkPartition(root = repoRoot) {
       violations.push(`${at}: not valid JSON`);
       return;
     }
+    // SCOPE: this gate checks PLACEMENT, not validity. It needs only enough
+    // shape to answer "which store does this belong in".
+    //
+    // The full FeedIOC contract is enforced by "the committed catalog is a
+    // valid feed document" in src/__tests__/feed-partition.test.ts, which
+    // imports the real isValidFeedIOC. It is not duplicated here on purpose: a
+    // .mjs copy of a validator with per-type value shapes, timestamp offsets
+    // and a lastSeen ordering rule would drift from the original, and a gate
+    // that disagrees with the loader is worse than one that defers to it.
+    //
+    // Consequence to know: `npm run build` alone does not catch an entry the
+    // loader would quarantine. `npm test` does, and CI runs both.
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)
         || typeof entry.value !== "string") {
       violations.push(`${at}: not a FeedIOC object`);

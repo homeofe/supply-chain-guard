@@ -12,11 +12,9 @@ import { statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { extractBundledEntries } from "./generate-feed.mjs";
-import { loadPartitionConfig } from "./feed-partition.mjs";
+import { loadPartitionConfig, isoToEpoch } from "./feed-partition.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * A cutoff date that brings the bundle back inside maxBundledEntries.
@@ -41,8 +39,11 @@ export function suggestCutoff(entries, maxBundledEntries) {
   let immovable = 0;
   for (const e of entries) {
     if (e.campaign !== undefined || e.family !== undefined) { immovable++; continue; }
+    // The policy's own parser, not a second looser one. A shape-only test
+    // accepts 2026-02-31, which partitionTarget rejects and therefore keeps in
+    // the bundle, so counting it as movable produced a date that cannot work.
     const d = String(e.firstSeen ?? "");
-    if (!ISO_DATE.test(d)) { immovable++; continue; }
+    if (isoToEpoch(d) === null) { immovable++; continue; }
     counts.set(d, (counts.get(d) ?? 0) + 1);
   }
 
@@ -57,7 +58,9 @@ export function suggestCutoff(entries, maxBundledEntries) {
     cumulative = next;
     best = date;
   }
-  return best;
+  // The caller reports the count this boundary actually produces, so return it
+  // rather than letting the message assume the limit was reached exactly.
+  return best === null ? null : { date: best, bundledEntries: immovable + cumulative };
 }
 
 export function checkBudget(root = repoRoot) {
@@ -65,7 +68,8 @@ export function checkBudget(root = repoRoot) {
   const violations = [];
 
   const entries = extractBundledEntries(root);
-  if (entries.length > config.maxBundledEntries) {
+  const overEntryLimit = entries.length > config.maxBundledEntries;
+  if (overEntryLimit) {
     violations.push(
       `${entries.length} bundled entries exceeds ${config.maxBundledEntries}. ` +
       `Move bundleCutoffDate forward in feed-partition.config.json and migrate.`,
@@ -83,12 +87,17 @@ export function checkBudget(root = repoRoot) {
   // Name the value, not just the action. The cutoff is the one recurring manual
   // input in this design, and a gate that says "move it forward" without saying
   // where is a gate that gets guessed at.
-  if (violations.length > 0) {
+  //
+  // Only when the ENTRY limit is what broke, because that is the constraint
+  // suggestCutoff solves. On a byte-only breach it would return a boundary that
+  // moves nothing, and the operator would apply the advertised remedy and stay
+  // red with no indication why.
+  if (overEntryLimit) {
     const suggestion = suggestCutoff(entries, config.maxBundledEntries);
     if (suggestion) {
       violations.push(
-        `Suggested bundleCutoffDate: ${suggestion} ` +
-        `(brings the bundle to ${config.maxBundledEntries} entries).`,
+        `Suggested bundleCutoffDate: ${suggestion.date} ` +
+        `(brings the bundle to ${suggestion.bundledEntries} entries).`,
       );
     }
   }

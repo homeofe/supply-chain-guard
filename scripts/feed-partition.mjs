@@ -22,7 +22,7 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
  * date. Rejects values that parse but do not round-trip ("2026-02-31"), because
  * Date.UTC silently rolls those over into a later, wrong day.
  */
-function isoToEpoch(value) {
+export function isoToEpoch(value) {
   if (typeof value !== "string") return null;
   // Match the WHOLE value, never a slice of it. Slicing first accepts trailing
   // junk: "2020-01-01oops" would parse as a valid old date and route a
@@ -66,9 +66,14 @@ export function loadPartitionConfig(root = repoRoot) {
     return v;
   };
 
-  if (typeof raw.bundleCutoffDate !== "string") {
+  // Validated HERE, beside the limits, not only inside partitionTarget. The
+  // throw there is unreachable for both gates on a repo with an empty catalog:
+  // checkBudget never calls partitionTarget, and checkPartition calls it per
+  // catalog line. So an invalid date used to pass every gate silently, the same
+  // fail-open as an unvalidated limit.
+  if (typeof raw.bundleCutoffDate !== "string" || isoToEpoch(raw.bundleCutoffDate) === null) {
     throw new Error(
-      `feed-partition.config.json: bundleCutoffDate must be a string, got ${JSON.stringify(raw.bundleCutoffDate)}`,
+      `feed-partition.config.json: bundleCutoffDate must be a valid ISO date (YYYY-MM-DD), got ${JSON.stringify(raw.bundleCutoffDate)}`,
     );
   }
 

@@ -1,3 +1,61 @@
+## Code-review findings on Tasks 1 to 4, all nine applied (2026-09-16, claude-opus-5)
+
+A structured review of the whole change found nine issues, four of them
+correctness bugs in code written the same day. All nine are applied.
+
+**An invalid `bundleCutoffDate` passed both gates.** The numeric-limit
+fail-open was fixed earlier in the session and the same class was left open for
+the date: `loadPartitionConfig` checked it was a string, and the only date
+validation sat inside `partitionTarget`, which `checkBudget` never calls and
+`checkPartition` only reaches per catalog line. With an empty catalog that
+throw is unreachable, so `not-a-date` shipped green. Validated where the limits
+are. Verified against the real repo: both gates now exit 1, and 0 after restore.
+
+**Three bugs in the cutoff suggestion**, which had itself been added in response
+to an earlier review finding:
+
+- it fired on a byte-only breach while solving for the ENTRY limit, so it
+  suggested a date that moved 0 of 3 entries and left the operator red with no
+  explanation. Now scoped to the constraint it actually solves.
+- it classified movability with a shape-only regex while the policy uses
+  `isoToEpoch`, so `2026-02-31` was movable to the gate and immovable to the
+  policy. The gate now imports the policy parser: the gate model of the policy
+  must BE the policy.
+- it reported `maxBundledEntries` as the resulting size, printing "brings the
+  bundle to 25000 entries" for a bundle holding three. It now returns and
+  reports the count the boundary actually produces.
+
+**Scope of check:feed-partition is now stated in the file.** It checks
+PLACEMENT, not validity. The full FeedIOC contract is enforced by a test that
+imports the real `isValidFeedIOC`, deliberately not duplicated into `.mjs`. The
+consequence is written down too: `npm run build` alone does not catch an entry
+the loader would quarantine, `npm test` does, and CI runs both.
+
+**Test fixtures no longer leak.** Roughly thirty temp directories per run were
+left behind, adding to the leftover `scg-issue54-empty-*` and `scg-two-tier-*`
+directories already on the Linux runner. Registered and removed in `afterEach`;
+measured delta is now 0 per run.
+
+**Violation messages are platform-independent.** `CATALOG_PATH` was built with
+`path.join`, so the same failure read `data	hreat-catalog.jsonl` on Windows
+and `data/threat-catalog.jsonl` on Linux and could not be grepped for
+consistently. Forward-slash literal for display, `path.join` only for the
+filesystem.
+
+**`extractBundledEntries` is memoized.** Both gates parsed and vm-evaluated the
+3.7 MB `src/threat-intel.ts` independently. Keyed on path, mtime and size so a
+regenerated file is re-read rather than served stale. Measured: 86 ms then
+0.1 ms in-process. Note the residual: `prebuild` runs each gate as its own
+`npm run`, so the file is still read once per PROCESS, twice per build. Closing
+that would mean merging the two gates into one script, which is a bigger change
+than this fix.
+
+**The exemption path narrowing is now pinned by a test.** Binding
+`isInertThreatCatalogFile` to the exact repository-relative path closes the
+basename evasion but means a scan rooted ABOVE the repository loses the
+exemption. That trade is deliberate and now has a test saying so.
+
+
 ## The same weakness in isInertThreatFeedFile, fixed at the root (2026-09-16, claude-opus-5)
 
 The review finding on the catalog exemption applied equally to the older feed

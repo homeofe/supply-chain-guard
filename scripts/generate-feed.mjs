@@ -19,7 +19,7 @@
 // raw.githubusercontent.com/homeofe/supply-chain-guard/main/feed.json into the
 // local .scg-cache that loadThreatIntel() merges at scan time.
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { runInNewContext } from "node:vm";
@@ -34,9 +34,26 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
  */
 const DECL_RE = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*:\s*FeedIOC\[\]\s*=\s*\[/gm;
 
+/**
+ * Memo for extractBundledEntries, keyed by resolved path plus the file's
+ * identity. src/threat-intel.ts is ~3.7 MB and extraction regex-scans it and
+ * evaluates the result in a node:vm sandbox, so two callers in one process
+ * (check:feed-partition and check:feed-budget, and the tests that exercise
+ * both) paid that cost twice for an identical answer.
+ */
+const extractMemo = new Map();
+
 /** Extract the BUNDLED_FEED entries from src/threat-intel.ts. */
 export function extractBundledEntries(root = repoRoot) {
-  const source = readFileSync(join(root, "src", "threat-intel.ts"), "utf8");
+  const target = join(root, "src", "threat-intel.ts");
+  // Keyed on mtime and size, so a regenerated file is re-read rather than
+  // served stale: the generator itself rewrites this file mid-process.
+  const stat = statSync(target);
+  const key = `${target}\u0000${stat.mtimeMs}\u0000${stat.size}`;
+  const memo = extractMemo.get(key);
+  if (memo !== undefined) return memo;
+
+  const source = readFileSync(target, "utf8");
   const decls = [];
   for (const m of source.matchAll(DECL_RE)) {
     const bodyStart = m.index + m[0].length;
@@ -73,6 +90,7 @@ export function extractBundledEntries(root = repoRoot) {
         `in src/threat-intel.ts.`,
     );
   }
+  extractMemo.set(key, entries);
   return entries;
 }
 

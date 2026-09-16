@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -12,6 +12,26 @@ const CONFIG = {
   maxBundledEntries: 25000,
   maxBundleBytes: 4194304,
 };
+
+// Every fixture root is registered here and removed after each test. Without
+// this the suite leaves roughly thirty directories behind per run, each holding
+// a synthetic src/threat-intel.ts. That is not hypothetical in this repository:
+// the Linux runner already carries leftover scg-issue54-empty-* and
+// scg-two-tier-* directories from earlier suites.
+const tempRoots: string[] = [];
+
+function makeTempRoot(prefix: string): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  tempRoots.push(root);
+  return root;
+}
+
+afterEach(() => {
+  while (tempRoots.length > 0) {
+    const root = tempRoots.pop();
+    if (root !== undefined) fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("partitionTarget", () => {
   it("keeps a CURATED non-package type in the bundle regardless of age", () => {
@@ -106,7 +126,7 @@ describe("loadPartitionConfig", () => {
   });
 
   it("reads from an explicit root", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cfg-"));
+    const root = makeTempRoot("scg-cfg-");
     fs.writeFileSync(
       path.join(root, "feed-partition.config.json"),
       JSON.stringify({ bundleCutoffDate: "2001-02-03", maxBundledEntries: 7, maxBundleBytes: 9 }),
@@ -134,7 +154,7 @@ function fixture(
     maxBundleBytes: 4194304,
   },
 ): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-part-"));
+  const root = makeTempRoot("scg-part-");
   fs.mkdirSync(path.join(root, "src"));
   fs.mkdirSync(path.join(root, "data"));
   const body = bundleEntries.map((e) => `  ${JSON.stringify(e)},`).join("\n");
@@ -307,7 +327,7 @@ describe("loadPartitionConfig, malformed limits", () => {
   // false, so check:feed-budget reported success for ANY bundle size. One typo
   // in a committed config silently disabled the gate.
   const write = (cfg: Record<string, unknown>) => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-badcfg-"));
+    const root = makeTempRoot("scg-badcfg-");
     fs.writeFileSync(path.join(root, "feed-partition.config.json"), JSON.stringify(cfg));
     return root;
   };
@@ -361,7 +381,9 @@ describe("suggestCutoff, tied dates", () => {
     for (const limit of [1, 2, 3, 4]) {
       const s = suggestCutoff(tied, limit);
       if (s === null) continue;
-      expect(apply(tied, s)).toBeLessThanOrEqual(limit);
+      expect(apply(tied, s.date)).toBeLessThanOrEqual(limit);
+      // The reported count must be the count actually achieved.
+      expect(s.bundledEntries).toBe(apply(tied, s.date));
     }
   });
 
@@ -372,7 +394,7 @@ describe("suggestCutoff, tied dates", () => {
 
   it("picks the largest boundary that fits, not the smallest", () => {
     const entries = [pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-04"), pkg("c@1", "2026-09-03")];
-    expect(suggestCutoff(entries, 2)).toBe("2026-09-04");
+    expect(suggestCutoff(entries, 2)?.date).toBe("2026-09-04");
     expect(apply(entries, "2026-09-04")).toBe(2);
   });
 
@@ -425,5 +447,77 @@ describe("the committed catalog is a valid feed document", () => {
     expect(isValidFeedIOC({ type: "package", value: "bad@1", firstSeen: "2020-01-01" })).toBe(false);
     expect(isValidFeedIOC({ type: "package", value: "ok@1", severity: "catastrophic" })).toBe(false);
     expect(isValidFeedIOC({ type: "package", value: "ok@1", severity: "critical" })).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review findings: each of these fails without its fix.
+// ---------------------------------------------------------------------------
+
+describe("loadPartitionConfig, invalid cutoff date", () => {
+  // The throw inside partitionTarget is unreachable for both gates on a repo
+  // with an empty catalog, so an invalid date used to pass every gate silently.
+  it("refuses a cutoff that is a string but not a date", () => {
+    for (const bad of ["not-a-date", "2026-13-01", "2026-02-31", "2026-6-1", ""]) {
+      const root = makeTempRoot("scg-date-");
+      fs.writeFileSync(
+        path.join(root, "feed-partition.config.json"),
+        JSON.stringify({ bundleCutoffDate: bad, maxBundledEntries: 10, maxBundleBytes: 10 }),
+      );
+      expect(() => loadPartitionConfig(root)).toThrow(/bundleCutoffDate/);
+    }
+  });
+
+  it("reaches both gates, not just the per-entry path", () => {
+    const root = fixture([pkg("a@1", "2026-07-01")], [], {
+      bundleCutoffDate: "not-a-date", maxBundledEntries: 25000, maxBundleBytes: 4194304,
+    });
+    expect(() => checkPartition(root)).toThrow(/bundleCutoffDate/);
+    expect(() => checkBudget(root)).toThrow(/bundleCutoffDate/);
+  });
+});
+
+describe("checkBudget, suggestion is scoped to the binding constraint", () => {
+  it("suggests nothing when only the byte limit is breached", () => {
+    const root = fixture(
+      [pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-04"), pkg("c@1", "2026-09-03")], [],
+      { bundleCutoffDate: "2020-01-01", maxBundledEntries: 25000, maxBundleBytes: 50 },
+    );
+    const out = checkBudget(root).join(" ");
+    expect(out).toMatch(/exceeds the 50 byte budget/);
+    expect(out).not.toMatch(/Suggested bundleCutoffDate/);
+  });
+
+  it("reports the count the boundary actually produces", () => {
+    const entries = [pkg("a@1", "2026-09-05"), pkg("b@1", "2026-09-04"), pkg("c@1", "2026-09-03")];
+    const root = fixture(entries, [], {
+      bundleCutoffDate: "2020-01-01", maxBundledEntries: 2, maxBundleBytes: 4194304,
+    });
+    const line = checkBudget(root).find((v) => v.includes("Suggested"))!;
+    const m = /Suggested bundleCutoffDate: (\S+) \(brings the bundle to (\d+) entries\)/.exec(line)!;
+    expect(m).not.toBeNull();
+
+    const kept = entries.filter((e) => partitionTarget(e, {
+      bundleCutoffDate: m[1], maxBundledEntries: 2, maxBundleBytes: 0,
+    }) === "bundle").length;
+    expect(Number(m[2])).toBe(kept);
+  });
+});
+
+describe("suggestCutoff uses the policy's own date parser", () => {
+  // A shape-only test accepts 2026-02-31, which partitionTarget rejects and
+  // therefore keeps in the bundle. Counting it as movable produced a boundary
+  // that cannot work.
+  it("treats a non-round-trip date as immovable, like partitionTarget does", () => {
+    const entries = [pkg("bad@1", "2026-02-31"), pkg("good@1", "2026-09-05")];
+    expect(partitionTarget(entries[0], CONFIG)).toBe("bundle");
+    expect(suggestCutoff(entries, 1)).toBeNull();
+  });
+});
+
+describe("violation paths are platform-independent", () => {
+  it("names the catalog with forward slashes", () => {
+    const root = fixture([FILLER], ["{ not json"]);
+    expect(checkPartition(root).join(" ")).toContain("data/threat-catalog.jsonl line 1");
   });
 });
