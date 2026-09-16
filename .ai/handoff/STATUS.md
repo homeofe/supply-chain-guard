@@ -1,3 +1,56 @@
+## The same weakness in isInertThreatFeedFile, fixed at the root (2026-09-16, claude-opus-5)
+
+The review finding on the catalog exemption applied equally to the older feed
+exemption, which predates this work. Fixed here rather than deferred.
+
+**Root cause, found by measuring rather than by reading.** `note` and
+`ecosystem` were in `FEED_ENTRY_KEYS` but are NOT fields of `FeedIOC`, so
+`isValidFeedIOC` never examined them: they were accepted at ANY length with ANY
+control character, while `source`, `family` and `campaign` are bounded at 512
+characters and reject control characters. A file named `feed.json` carrying
+`{"note":"curl ... | bash"}` was therefore skipped by every content scanner.
+
+**The first fix was wrong and measuring caught it.** Bounding the two fields at
+512 characters closed the 50,000-character case and left the 34-character case
+wide open, which is all an attacker needs. Length was never the property that
+mattered.
+
+**The right fix was to remove the keys**, and two measurements say that is
+safe in both directions:
+
+- no released `feed.json` carries either key, checked at v5.10.0, v5.20.0,
+  v5.28.0, v6.0.0 and v6.1.3, and 0 of the current 20,969 entries use them;
+- a cache file cannot carry them either, because `refreshFeed()` writes what
+  `parseFeedPayload()` returns, and that is `normalizeFeedIOC()` output, which
+  rebuilds each entry from `FeedIOC` fields alone.
+
+So no document this exemption is meant to accept can contain them, and a key
+that cannot be carried has no business widening a trust boundary. Both inert
+checks now also require every entry to satisfy `isValidFeedIOC`, which closes
+the separate hole where a merely feed-SHAPED document claimed the exemption.
+
+Two bespoke checks were then deleted as unreachable: the length bounding above,
+and the catalog explicit `note` rejection. With the keys gone the shared
+allowlist rejects them first, and duplicated mechanisms drift.
+
+**A claim I nearly published was wrong.** An earlier draft said a malicious
+remote feed could inject unvalidated notes into the merged feed.
+`normalizeFeedIOC` rebuilds from known fields, so they never reach it. The
+exposure is the inert-file exemption only, exactly as reported and no wider.
+
+Regression evidence, which is what this function exists for: the real
+`feed.json` with 20,969 entries and the cache shape both stay inert, and a real
+`scan .` of this repository reports 0 findings on `feed.json`, against the 169
+phantom criticals of the v5.4.0 dogfooding bug. 59 tests. Two reverts, two
+caught, green baseline and green post-restore.
+
+**One stale-artifact reading happened and is worth recording.** A first pass
+reported the hole still open on all three cases. The build had been run with
+its output discarded and its exit code unread, and editing `src/threat-intel.ts`
+makes `check:self-scan` stale, so `tsc` never ran and the probe read the
+previous `dist/`. Read the exit code.
+
+
 ## Review findings on Tasks 1 to 4, all five real (2026-09-16, claude-opus-5)
 
 Automated review of PR 307 and PR 308 returned five findings. Every one was
