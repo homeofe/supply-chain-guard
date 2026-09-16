@@ -1,3 +1,50 @@
+## Phase 1 Task 12: acceptance, and the claim the design rests on (2026-09-16, claude-opus-5)
+
+Phase 1 is complete: tasks 1 to 12. The runtime catalog path exists end to end,
+and detection is unchanged because the shipped catalog is still empty.
+
+**The acceptance test proves the one claim everything else depends on:** an
+indicator that exists ONLY in the catalog is enforced exactly as one in the
+bundle. Moving 11,998 indicators out of the compiled bundle is safe only if that
+holds, and until now nothing asserted it.
+
+The proof runs in both directions, through the matchers the scanner itself uses:
+
+- the fixture indicators are absent from the bundled feed, so nothing can pass
+  without the catalog doing the work
+- without the catalog, neither the npm package, the PyPI package nor the domain
+  matches
+- with the catalog, all three match, and `checkThreatIntel` produces a finding
+  for a file referencing the catalog-only domain
+- the effective detection-set count includes them
+
+**A trap this repository has recorded before cost a debugging pass anyway.** A
+BARE package value means the npm namespace, and bare npm entries resolve through
+`matchBareNpmIOC`; `matchPackageIOC("npm", ...)` requires an explicit `npm:`
+prefix and returns null for a bare entry. The first version of this test asked
+the wrong resolver and read exactly like a missing indicator, which is what the
+existing note warns about. The test now uses `matchBareNpmIOC` for the bare npm
+entry and `matchPackageIOC` for a `pypi:`-prefixed one, so both paths are
+covered and the comment says why.
+
+**Phase 1 acceptance, measured:**
+
+| Criterion | Result |
+| --- | --- |
+| Catalog-only indicator detected | yes, npm and pypi and domain |
+| Detected without the catalog | no, for all three |
+| Absence reported, never silent | `THREAT_FEED_CATALOG_MISSING` |
+| Bundle unchanged | 20,969, matching `feed.json` |
+| Committed catalog | empty, `CATALOG_DIGEST.entryCount` 0 |
+| Digest reproducible | byte-identical across runs |
+| Gates | six in `prebuild`, all green |
+
+**What is still NOT true:** no indicator has moved. `feed.json` still carries
+all 20,969 and the catalog is still empty, so a bare install detects exactly
+what it detected before this branch. That is the correct Phase 1 end state, and
+Phase 2 is what changes it, now that there is something to change it into.
+
+
 ## Phase 1 Task 11: publish the catalog assets from CI (2026-09-16, claude-opus-5)
 
 The release job builds `catalog-index.json` and every `catalog-*.json.gz` and
