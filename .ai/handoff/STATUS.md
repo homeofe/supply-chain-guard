@@ -1,3 +1,44 @@
+## Phase 1 Tasks 2 to 4: partition policy and its two gates (2026-09-16, claude-opus-5)
+
+Adds `scripts/feed-partition.mjs` (the routing rule), `feed-partition.config.json`,
+an empty `data/threat-catalog.jsonl`, and the two build gates
+`check:feed-partition` and `check:feed-budget`, both wired into `prebuild`.
+Detection is unchanged: the cutoff is 2000-01-01 and the limits sit above the
+current unsplit size, so the policy moves nothing in this phase.
+
+**24 tests. Twelve mutation cuts, twelve caught**, with a green baseline before
+and a green run after restoring: curation rule, undatable fail-open, date
+round-trip, invalid-cutoff throw, both-stores, atomic-indicator, placement,
+duplicate value, missing catalog file, entry limit, byte limit, and the cutoff
+suggestion.
+
+**One cut survived the first run, and it found dead code rather than a weak
+test.** `isoToEpoch` had three round-trip checks: year, month and day. Cutting
+the DAY check left all tests green. Brute-forced across 14,784 candidate date
+strings: there is no input where the day check is the one that fires, because a
+day overflow always moves the month or the year. It was unreachable. Removed,
+with the measurement recorded in a comment so it does not come back
+defensively. The re-run then caught 12 of 12.
+
+**Two fixtures were wrong in a way that only the real extractor could show.**
+`extractBundledEntries` requires the `BUNDLED_FEED` marker and refuses an empty
+bundle, both correct for the real file. The first fixtures emitted a bare
+`FEED_CHUNK_0` and several passed an empty bundle. Fixed the fixtures, not the
+code: an empty bundle genuinely means something broke.
+
+**Gates proved against the real repository, not only fixtures.** Planting
+`plogme@1.0.0` in the catalog while it is in the bundle exits 1 and names both
+the duplication and the misplacement; planting an `ip` entry exits 1 and names
+the campaign field as the fix; the empty catalog exits 0. Exit codes were read
+directly rather than through a pipe, because `cmd | tail; echo 0` reports the
+tail status and briefly did exactly that here.
+
+The budget gate names the exact date to set rather than only saying to move the
+cutoff forward, and a test asserts the suggested date actually achieves the
+limit. It suggests nothing when the immovable entries alone exceed it, which is
+a different problem from a stale cutoff.
+
+
 ## Plans hard-wrapped at 80 columns (2026-09-16, claude-opus-5)
 
 The plans were written with unwrapped paragraphs, up to 691 characters on one

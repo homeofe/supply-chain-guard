@@ -1,0 +1,6 @@
+{
+  "$comment": "Partition policy for the threat feed. See docs/threat-feed-catalog-decoupling-design.md section 4.2. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files with nobody editing them. From Phase 2 onward `npm run release:prepare` moves it as part of a release. Phase 1 sets it earlier than every existing entry, and the limits above the current unsplit size, so this phase moves nothing; Phase 2 sets the decided values (30 days before the release, 15000, 2097152).",
+  "bundleCutoffDate": "2000-01-01",
+  "maxBundledEntries": 25000,
+  "maxBundleBytes": 4194304
+}

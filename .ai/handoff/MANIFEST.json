@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789580027",
-    "timestamp": "2026-09-16T17:33:47Z",
-    "commit": "443130c",
+    "session_id": "cli-1789581061",
+    "timestamp": "2026-09-16T17:51:02Z",
+    "commit": "0383400",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4b353cbd0d344ea17f6fdefd88ad3816c064a3c44c2fbb86ec4165bfbab1f90e",
-      "updated": "2026-09-16T17:32:41Z",
-      "lines": 8988,
-      "summary": "The plans were written with unwrapped paragraphs, up to 691 characters on one"
+      "checksum": "sha256:8276fcf925fb385b2d8accfca5838694812230f2b83d3bc592c1fa38fbb8928e",
+      "updated": "2026-09-16T17:51:00Z",
+      "lines": 9029,
+      "summary": "Adds `scripts/feed-partition.mjs` (the routing rule), `feed-partition.config.json`,"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T17:33:47Z",
+      "updated": "2026-09-16T17:51:01Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:b81af33cb89bbb29a81a274a2c270224616015f85fa27153a21e62664cd065af",
-      "updated": "2026-09-16T17:33:47Z",
+      "checksum": "sha256:66202653ed66223e447e3e71ac2cc0599975e2c8d719c37b7d630f3de0a7d2e0",
+      "updated": "2026-09-16T17:51:01Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:91617a4e7d8ef4dfb63d4172e90c1603e528b8d7957cdc1f923fde86dfa1783e",
-      "updated": "2026-09-16T17:33:47Z",
+      "checksum": "sha256:aeb82f0d8447061acca58a46b1db5c0005b5fc18181b2a216b2f11ff9977e476",
+      "updated": "2026-09-16T17:51:01Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "The plans were written with unwrapped paragraphs, up to 691 characters on one Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Adds `scripts/feed-partition.mjs` (the routing rule), `feed-partition.config.json`, Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 105065,
-    "full_read": 117530
+    "manifest_plus_core": 105544,
+    "full_read": 118009
   }
 }
