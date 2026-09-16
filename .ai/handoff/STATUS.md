@@ -1,3 +1,461 @@
+## Catalog decoupling: every open exit closed (2026-09-16, claude-opus-5)
+
+The previous note left three things as "would require a design change later".
+For a public community security tool that is not good enough, so all three are
+now closed in the design rather than deferred. Still no code; the plans are
+updated to match.
+
+**1. The catalog is SHARDED from the first release.** This is the important
+one. A single catalog document has a hard ceiling of about 406,000 entries set
+by `CATALOG_MAX_DECOMPRESSED_BYTES`, which is compiled into every released
+client. Sharding LATER would have hit exactly the same wall as raising that
+constant: old clients would not know how to read an index, so the fix for the
+ceiling would itself have broken every existing install. Sharding now, while
+the catalog is empty, costs nothing and removes the ceiling permanently.
+
+Format: `catalog-index.json` plus `catalog-NNN.json.gz`, chain of trust from
+package to index to shard. `CATALOG_DIGEST` is the digest of the INDEX; the
+index carries a digest per shard; a client installs nothing unless every link
+verifies. `CATALOG_SHARD_MAX_ENTRIES` is 50,000, chosen so the multi-shard path
+is LIVE after Phase 3 at 68,292 entries rather than dormant. Dormant code first
+exercised years later under pressure is how this problem would come back
+wearing a different hat.
+
+**2. Rule 1 is bounded by curation instead of by type.** It previously kept
+every non-package entry bundled unconditionally, which is unbounded: a source
+that started publishing atomic indicators in bulk would have grown the bundle
+forever with no mechanism to stop it. Measured first: 404 non-package entries,
+401 already carry campaign or family, only 3 rely on type alone, none of those
+3 is older than a 30-day cutoff, and non-package is 0.9 percent of daily volume
+at about 2.4 a day. So bounding it moves ZERO entries today.
+
+The loss risk is closed by a gate rather than a rule: `check:feed-partition`
+FAILS THE BUILD if any non-package entry would be routed to the catalog, and
+the message names the real fix, which is the campaign or family field the entry
+should have had. Atomic indicators are the highest-value detections in the feed
+and none may leave the bundle silently.
+
+**3. Version pinning is now a stated decision, not an unexamined limit**
+(section 4.9). A catalog belongs to one release because the digest that
+verifies it is compiled into the package, and a document that moved
+independently would have nothing immutable left to verify it against. The cost
+is bounded and already covered: `feed refresh` also refreshes the bundle feed,
+which is published from `main` and is NOT version-pinned, so recent
+intelligence keeps flowing to every install regardless of version. Only newly
+added HISTORICAL coverage travels with the release.
+
+**Plus: the recurring manual step is gone.** `npm run release:prepare` moves
+`BUNDLE_CUTOFF_DATE` to 30 days before today and the migration follows. Both
+alternatives were considered and rejected in writing: deriving it from the
+clock would make generated files a function of the day they were generated, and
+deriving it from the newest feed entry would put a migration inside every daily
+threat-intel pull request and bury the day additions in hundreds of unrelated
+removals, when reviewing those diffs is a security control here. Binding it to
+the release gets automation without either cost.
+
+Section 10 now carries nine decisions and section 12 is rewritten as "why this
+does not need revisiting": three growth paths, all bounded, all failing the
+BUILD rather than a user. What genuinely remains is one measurement, not a
+decision: the real bundle size and import time after Phase 2.
+
+
+## Durability audit before merge (2026-09-16, claude-opus-5)
+
+Asked whether the design is final enough that future releases never need a
+redesign. Audited rather than asserted. Four things came out of it.
+
+**1. The catalog has a hard ceiling nobody had computed.**
+`CATALOG_MAX_DECOMPRESSED_BYTES` is 64 MiB and, at the measured 165 serialized
+bytes per entry, that is about 406,000 entries. It binds long before the 32 MiB
+download cap, which would allow about 2 million. Worse, the constant is compiled
+into every released client, so raising it later does nothing for installs that
+already exist: a catalog that outgrows it simply stops installing for everyone
+on an older release, and those users cannot be reached.
+
+Fixed by gating the GENERATOR, not the client. `check:catalog` now fails the
+build above `CATALOG_SIZE_BUDGET` of 48 MiB, about 305,000 entries and 75
+percent of the floor, and the message says to shard the catalog rather than
+raise the client limit. We can no longer ship a catalog our own clients cannot
+read. Headroom after Phase 3 is 4.5x (68,292 entries, 17 percent of the floor).
+
+**2. The one recurring manual step is now self-announcing.**
+`BUNDLE_CUTOFF_DATE` still has to move once per release. That is deliberate: a
+clock-derived cutoff is not a pure function of committed inputs, and deriving it
+from the newest feed entry would turn every daily import into a silent migration
+whose diff nobody could review, and reviewing those pull requests is a security
+control here. So the gate now prints the EXACT date to set rather than only
+saying to move it forward, and Phase 2 adds the step to `docs/ci-and-release.md`
+rather than to a gitignored file. Forgetting it costs one failed build about a
+month later.
+
+**3. Two stale cross-references.** Inserting the comment anchor as rule 3
+renumbered the date rule to 4, and two passages still said rule 3. Fixed.
+
+**4. An apparent numeric contradiction, now annotated.** Section 6.1 tabulates
+8,967 bundled and 12,002 moved; section 4.2 states 8,971 and 11,998. Both are
+right: the table is the date rule alone, which is what the cutoff is chosen
+against, and 4.2 is the outcome after the comment anchor holds four entries
+back. The table now says so, because a future reader would otherwise read it as
+a defect.
+
+New section 12 records what is settled, the one recurring step, and the three
+things that would genuinely force a design change: the catalog passing 305,000
+entries, an upstream source publishing non-package IOCs in bulk, or a need to
+update a catalog between releases. None are reachable without a build failing
+first, which is the property that matters.
+
+Also stated plainly there: a user who never upgrades keeps receiving recent
+intelligence, because `feed refresh` also refreshes the bundle feed, which is
+published from `main` and is not version-pinned. What they stop receiving is
+newly added HISTORICAL indicators, because the catalog is version-pinned. That
+split is deliberate and is what keeps old installs protected against what is
+being installed today.
+
+
+## Immutable releases actually enabled, and a hostname redaction (2026-09-16, claude-opus-5)
+
+**The immutability command given earlier in this session was wrong, and the
+check given to verify it was wrong in the same direction, so the two agreed
+with each other and looked like a working system.**
+
+The instruction was
+`gh api -X PATCH repos/{owner}/{repo} -f immutable_releases=true`, verified
+with `--jq .immutable_releases` on the repository object. No such field exists
+there. GitHub silently ignored the PATCH, and the verification returned `null`
+for a key that is simply absent, which is indistinguishable from "disabled".
+The setting was never enabled and nothing in the check could have revealed it.
+Third absence-read-as-a-value error in one session.
+
+Immutable releases are a dedicated feature with their own endpoints:
+
+```
+GET    /repos/{owner}/{repo}/immutable-releases   -> {"enabled", "enforced_by_owner"}
+PUT    /repos/{owner}/{repo}/immutable-releases   -> enable
+DELETE /repos/{owner}/{repo}/immutable-releases   -> disable
+```
+
+Before: `{"enabled": false, "enforced_by_owner": false}`.
+Enabled via `PUT`. Now: `{"enabled": true, "enforced_by_owner": false}`.
+
+**It does not retrofit.** Immutability is stamped per release at creation:
+the release object carries an `immutable` boolean, and v6.1.1, v6.1.2 and
+v6.1.3 are all `false` permanently. On those releases the shipped catalog
+digest is the only protection. The Phase 2 and Phase 4 plans now check BOTH
+the repository setting and the per-release flag, because the setting says
+"from now on" while the flag says "this one actually got it".
+
+**Hostname redaction.** The remote Linux test runner was named in five places
+in this file, from earlier sessions. This repository is public, so the machine
+name is now replaced with "the remote Linux runner". Git history still carries
+it, so the redaction is partial by nature; it stops further publication rather
+than undoing the earlier one.
+
+**What was deliberately NOT redacted.** Every other occurrence of the string
+in this repository refers to OpenClaw the agent RUNTIME, which is a public
+product this scanner detects: `src/openclaw-plugin-scanner.ts`, the
+`OPENCLAW_PLUGIN_*` rule ids, the CHANGELOG entries describing them, the
+host-runtime patch tests, and feed IOCs naming malware that impersonates it. A
+blanket replace would have renamed live rule ids and broken the documentation
+of a real detection capability. The redaction was therefore five exact line
+anchors, not a global substitution, and the product references were asserted
+present afterwards.
+
+
+## Catalog decoupling: Phase 2 to 4 plans (2026-09-16, claude-opus-5)
+
+Still design and planning only, no code. Plans:
+`docs/plans/2026-09-16-threat-feed-catalog-phase-2.md` and
+`docs/plans/2026-09-16-threat-feed-catalog-phases-3-4.md`.
+
+Phase 2 was previously said to need measurements only Phase 1 could produce.
+That was over-cautious: Phase 1 moves no indicator by construction, so the
+v6.1.3 measurements ARE the Phase 2 inputs, and the plan is written against
+real numbers rather than projections.
+
+**Phase 2 moves 11,998 of 20,969 entries out of the compiled bundle.**
+Measured projections: `src/threat-intel.ts` 3.54 MB to 1.58 MB, module import
+75 ms to about 32 ms, both against a budget of 15,000 entries and 2 MiB, which
+the result fits with room to spare.
+
+**A thirteenth defect was found while planning it, and it is the most
+dangerous one so far.** The partition treated the `campaign` / `family` FIELDS
+as the definition of "curated". Curation in this repository is expressed in
+COMMENTS. Measured: 1,094 entries sit beneath a curated comment block and 60 of
+them carry no such field. `lotusbail` has a fourteen-line rationale about a
+credential-theft campaign and no `campaign:` field; the two `dakumangalsingh`
+pins have a seven-line comment explaining why they had to be hand-added.
+Migrating on the field alone would have moved those entries to the catalog and
+left their rationale in a file that no longer contains what it describes.
+
+Fixed as rule 3 in section 4.2: an entry beneath a curated comment block is
+immovable. It is a migration-time rule only, because the importer writes under
+its own batch header and never needs it, so `partitionTarget()` stays pure.
+Measured cost: 4 entries out of 12,002.
+
+The migration is specified to remove an importer batch header only when every
+entry beneath it moved (45 of 217 groups qualify; 14 split and keep theirs),
+and never to remove a curated header. Acceptance asserts zero orphaned comment
+groups, all 706 curated comment lines still present, and bundle plus catalog
+still equal to 20,969.
+
+**A fourteenth: the release-immutability claim was built on absence again.**
+`GET /repos/{owner}/{repo}` carries no `immutable_releases` key at all, so the
+`null` this session read from it meant "field absent", not "feature off". That
+is the same mistake as entry 9. The real flag is per release: the release
+object has an `immutable` boolean, measured `false` on v6.1.1, v6.1.2 and
+v6.1.3. Enabling the setting does NOT retrofit existing releases, so those
+three stay mutable forever and the shipped digest is the catalog only
+protection on them. Phase 2 asserts `immutable == true` on the first release
+published after the change, because a setting nobody verified is a setting
+nobody has.
+
+**Phases 3 and 4** drain the five deferred ranges (56,294 indicators) one PR
+per range and then retire bulk deferral. Verified while planning: the importer
+is EXHAUSTIVE by default (`appliedLimit` is `null` unless `--limit` is passed),
+so an explicit range imports in full. The operator instructions for the daily
+job still claim a default of `--limit 250`; acting on that during the drain
+would have imported 250 of 19,158 entries and left a remainder no later run
+proposes. Phase 4 corrects it and adds a regression in both directions.
+
+Projected end state: catalog about 68,292 entries, 15.8 MB raw and about
+1.2 MB gzipped, inside both the 32 MiB download cap and the 64 MiB
+decompression cap. Bundle stays at about 8,971.
+
+**Two leaks of our own were caught in the public plans before commit**: a
+local Windows path to the operator instructions file, and the internal Linux
+runner hostname in five places. Both removed; the plans now describe the host
+generically and say why it is not named. The RFC1918 addresses that remain in
+the Phase 1 plan are the fixtures that prove the hygiene guard fires, and are
+deliberate.
+
+
+## Catalog decoupling: open decisions closed (2026-09-16, claude-opus-5)
+
+Still design only, still no code. All five open questions are decided and
+recorded in section 10 of `docs/threat-feed-catalog-decoupling-design.md`.
+Framing given: community project, public face, security scanner, must work
+properly every time, and no internal data in anything published.
+
+**1. Severity follows the state, never the clock.** `medium` for absent,
+version mismatch and unreadable; `high` for digest mismatch; `critical` for any
+of them under `catalog: "required"`. The gates were measured first: the CLI
+fails at `high` (`src/cli.ts:73`), the Action at `critical` (`action.yml:43`).
+So absence, which is what every fresh install looks like, breaks nobody, while
+a digest that does not verify stops a developer. No time-based escalation here
+or for `THREAT_FEED_STALE`: a severity that rises because thirty days passed
+answers "how long has this been true" when the question is "what is wrong", and
+it makes a build depend on the calendar rather than on its own configuration.
+
+**2. Release immutability: enable it**, as defence in depth rather than as a
+dependency. The digest is what actually protects the catalog. Owner action, the
+command is in section 4.4; `immutable_releases` reads `null` today.
+
+**3. Budget values, chosen from a measurement that overturned the proposal.**
+The 90-day cutoff from the first draft was checked against the real feed and
+moves 123 of 20,969 entries. It would have accomplished nothing. The feed is
+recent-skewed and there is a cliff between 30 and 60 days:
+
+| cutoff | bundle | catalog | import |
+| --- | --- | --- | --- |
+| 30 days | 8,967 | 12,002 | ~32 ms |
+| 60 days | 20,625 | 344 | ~74 ms |
+| 90 days | 20,846 | 123 | ~75 ms |
+
+Decided: 30 days, `MAX_BUNDLED_ENTRIES` 15,000, `MAX_BUNDLE_BYTES` 2 MiB. That
+halves startup on every invocation and roughly halves the package, which every
+Action run pays for since `action.yml` installs at runtime. The limits sit BELOW
+the current unsplit size on purpose: a budget above it could never catch a
+cutoff that was not moved.
+
+**4. The catalog resolves to the installed version, never `latest`.** That is
+what makes the digest check and the version-mismatch state possible at all.
+
+**5. New: the published catalog is gated as a public artifact** (section 4.7).
+This is the direct answer to the no-internal-data requirement. The check is
+STRUCTURAL: no key outside `FEED_ENTRY_KEYS`, no free-text `note` field at all,
+and no `value` or `source` matching a private-infrastructure shape (RFC1918,
+loopback, link-local, `.local` / `.internal` / `.lan` / `.corp` / `.home`, or a
+local filesystem path). Violations report LINE NUMBERS, never values, so the
+error message cannot leak either. It embeds no list of our own hostnames,
+because such a list in a public repo would publish exactly what the check
+exists to keep unpublished.
+
+**The first version of that check was wrong and measuring caught it.** It also
+required every entry to carry a `source` naming a public vendor from a list.
+Measured against the shipped feed: 514 of 20,969 entries would have FAILED the
+build, 465 of them because they carry no `source` at all, the rest because the
+list did not happen to name Datadog, Unit 42, Sonatype, Corgea and others. That
+is the rule this project already writes down, hit for the second time in one
+session: the moment a check judges a VALUE it must enumerate spellings, and the
+next spelling walks past. Worse, it would have failed the build on legitimate
+data, which is how a gate gets switched off.
+
+The structural form was then measured with controls in both directions: 14 of
+14 private control values caught, zero false positives including `172.15.0.1`
+and `172.32.0.1` either side of the RFC1918 range, and zero violations across
+all 20,969 shipped entries and all 12,002 that a 30-day cutoff would route to
+the catalog.
+
+Nothing is open for the owner any more except a measurement: Phase 2 real
+bundle size and import time, which Phase 2 records when it lands.
+
+
+## Catalog decoupling: review response + Phase 1 plan (2026-09-16, claude-opus-5)
+
+Design only, still no code. Spec:
+`docs/threat-feed-catalog-decoupling-design.md`. Phase 1 plan:
+`docs/plans/2026-09-16-threat-feed-catalog-phase-1.md`.
+
+**Twelve defects total across the design and the plan: seven from review, one
+found while writing the plan, four from a pre-merge re-audit. Eleven were real
+and one was a false claim of my own.**
+
+**The automated review of PR 305 found seven defects and every one was real.**
+Each was verified against the source before being accepted, not taken at face
+value. Six of the seven are this estate's signature defect: a claim or a guard
+that reads correct and answers a different question.
+
+1. Phase ordering drained the backlog while the cutoff was still infinite, so
+   all 56,294 entries would have landed in the BUNDLE and breached the budget
+   on the same commit. Phases swapped.
+2. No decompression exists anywhere in the refresh path (`httpsGetBody` does
+   `body.toString("utf-8")` straight into `JSON.parse`), so a `.gz` asset could
+   never parse and the refresh would have installed zero indicators. Bounded
+   `gunzipSync` added.
+3. `parseFeedPayload()` rejects an empty `entries` array, so the Phase 1 empty
+   catalog was rejected by the parser meant to accept it. Empty now allowed for
+   `kind: "catalog"` only.
+4. The spec claimed release assets are immutable. `immutable_releases` is NULL
+   on this repo and `gh release upload --clobber` replaces assets on an existing
+   tag. Integrity re-anchored to a SHA-256 shipped inside the npm package.
+5. The finding fired only on an absent file, so a previous release's catalog
+   silently satisfied `catalog: "required"`, and `THREAT_FEED_STALE` cannot
+   catch it because recent bundled entries keep the merged newest `firstSeen`
+   current. Version and digest mismatch now count as unavailable.
+6. The cutoff was relative to the release date, which is not a committed input
+   and is unavailable to a PR gate, so generated files would drift with nobody
+   editing them. `BUNDLE_CUTOFF_DATE` is now a committed ISO date.
+7. The committed corpus would have been scanned as ordinary content:
+   `collectFiles()` does not exclude `data/` and `isInertThreatFeedFile()` is
+   basename-locked to `feed.json`. `isInertThreatCatalogFile()` added, sharing
+   `FEED_ENTRY_KEYS` so the two cannot drift.
+
+**A pre-merge re-audit of the design against the code found four more, and one
+of them was a false claim this session had already published.** Details in
+section 11 of the spec. Numbers 10 to 12 are real: `policy.catalog` was added to
+`policy-schema.json` but not to `PolicyConfig` in `src/types.ts`, so `tsc` would
+have failed; `refreshFeed()` has no version in scope, so the version-pinned
+catalog URL could not be built; and `src/threat-intel.ts` and `src/scanner.ts`
+are both in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly
+every task and would have blocked each commit until the manifest was
+regenerated.
+
+**Number 9 was not a defect at all, and is the most useful entry in the table.**
+The re-audit claimed `__dirname` is undefined when vitest runs the TypeScript
+sources, sourced that from the defensive comment at `src/mcp-server.ts:59`, and
+wrote it into the spec and the plan as the justification for moving the catalog
+digest from a JSON file to a generated TypeScript constant. Then it was
+measured: this package has no `"type": "module"`, vitest transforms to CommonJS,
+and `__dirname` is a defined string with `require` available. A
+`__dirname`-relative read would have worked fine. The constant is still the
+right design, for reasons that are actually true (no file read on
+`loadThreatIntel()`'s hot path, typechecked, and it supplies the version that
+fixes number 11), but the published reason was false and survived a revision
+before anyone ran it. The rule this breaks is already written down: a surprising
+measurement gets re-measured before it is published. A design document is not
+exempt from that just because it contains no code.
+
+**Linux baseline, measured rather than assumed.** Full suite on `main` at
+v6.1.3 (`05c0729`), run on the Linux runner in a throwaway `/tmp` clone: **146
+files, 3565 tests, all passing, 54.7 seconds**. That is now recorded in the plan
+as the number Phase 1 must beat, and it confirms the Windows failures (two
+campaign tests plus the vscode-scanner archive tests) are environmental. The
+temp directory was removed afterwards.
+
+**An eighth defect was found while writing the plan, and it was ours.** The
+spec made `data/threat-corpus.jsonl` the single source of truth and regenerated
+`src/threat-intel.ts` from it. Measured: the feed chunks carry 792 comment lines
+among the 20,969 entries, and `FeedIOC` has no field for any of them. That round
+trip would have deleted every one of the curated rationales ("the apex is
+deliberately NOT listed", "he is a victim") and the byte-identical Phase 1 check
+could never have passed. The design now keeps TWO authored stores: the bundle
+stays exactly as authored, and only the catalog is new. Placement is enforced by
+`check:feed-partition` instead of by regeneration.
+
+The lesson is the one already written down: a design is a claim about the code
+and gets verified against the code before it is built on.
+
+**Process note.** This work was first committed onto local `main` by mistake,
+because the checkout had been returned to `main` at the end of the previous
+session and no branch check was run before editing. Branch protection meant
+nothing reached the remote; the commit was moved here and local `main` reset to
+`origin/main`. The rule that would have caught it is already written down:
+check `git rev-parse --abbrev-ref HEAD` before the first edit, not only before
+`git checkout -b`.
+
+### Open for the owner
+
+- Should `THREAT_FEED_CATALOG_MISSING` escalate to `high` after a grace period?
+  Same question as whether a badly stale rule set should fail the build; they
+  should be answered together.
+- Should repository release immutability be enabled anyway? The digest check
+  removes the dependency on it, but it is cheap defence in depth.
+- Initial `MAX_BUNDLED_ENTRIES` / `MAX_BUNDLE_BYTES` / Phase 2
+  `BUNDLE_CUTOFF_DATE` (proposed 25,000 / 4 MB / 90 days).
+
+Phases 2 to 4 get their own plans, written once Phase 1 has landed and its
+bundle-size and import-time measurements are real rather than projected.
+
+
+## Design: threat-feed catalog decoupling (2026-09-16, claude-opus-5)
+
+Design only. No behaviour change, no code, no feed change. The spec is
+`docs/threat-feed-catalog-decoupling-design.md`.
+
+Answers the open item carried in the 2026-09-16 batch note: the 56,294 deferred
+npm package IOCs across five ranges, detected by nothing else in the scanner.
+
+**The decision: a two-tier feed, with a loud failure.** The historical corpus
+moves to a gzipped GitHub Release asset fetched by `feed refresh`; the bundle
+keeps atomic indicators, curated campaign entries and a recent window. A scan
+with no catalog cached emits `THREAT_FEED_CATALOG_MISSING` naming the number of
+indicators it did not consult, so reduced coverage can never be silent. A
+`catalog: required` policy value makes it critical and fails the gate.
+
+**What the measurements settled.** Feed import is linear at about 3.5
+microseconds per entry and is paid on every CLI invocation: 75 ms today at
+20,969 entries, 266 ms with the backlog absorbed, 527 ms if the alphabet walk
+completes near 150,000. The package is 9.91 MB unpacked and `action.yml` runs
+`npm install -g` at runtime, so size is paid per Action run, not once per
+machine. Those two numbers are what rule out importing the block into the
+bundle. Gzip is 7.3 percent, so even a 150,000-entry catalog transfers in 2.4
+MB, well inside the existing 32 MiB cap.
+
+**The machinery is already built and wired to itself.** `refreshFeed()`, the
+cache merge in `loadThreatIntel()`, `FEED_REMOTE_LIMITS` and
+`THREAT_FEED_STALE` all exist, but `DEFAULT_FEED_URL` resolves to the same
+`feed.json` that is compiled into the bundle, so a refresh re-fetches what the
+caller already has. This is a generation and publishing change, not new
+transport.
+
+**The durable part is the budget, not the split.** A fifth prebuild gate
+`check:feed-budget` fails the build when the bundle exceeds its entry or byte
+limit. Without it the split only resets the clock, because the root cause is
+that no step in any workflow owned the feed size.
+
+### Open for the owner
+
+- Whether `THREAT_FEED_CATALOG_MISSING` should escalate to `high` after a grace
+  period. Same shape as the existing open question about whether a badly stale
+  rule set should fail the build; they should be answered together.
+- Whether the catalog resolves to `latest` or to the installed version. The
+  spec picks `latest` with the resolved version recorded in the cache.
+- Initial values for `MAX_BUNDLED_ENTRIES`, `MAX_BUNDLE_BYTES` and
+  `BUNDLE_RECENT_DAYS` (proposed 25,000 / 4 MB / 90 days).
+
+Next step after approval is an implementation plan; nothing is built yet.
+
+
 ## Release v6.1.3 (2026-09-16, claude-opus-5)
 
 Patch release. Carries the single item that had accumulated under `[Unreleased]`:
@@ -2597,7 +3055,7 @@ Verification:
 - Windows: `npm run build` and 190 focused feed, integrity, staleness, and
   self-scan tests pass. Two campaign fixtures are intercepted by endpoint
   protection before scanning; direct matcher probes pass.
-- Clean Linux openclaw checkout of commit `ca82767`: `npm ci` reports zero
+- Clean checkout on the remote Linux runner, of commit `ca82767`: `npm ci` reports zero
   vulnerabilities, `npm run build` passes, and all 139 test files / 3,353 tests
   pass, including both campaign fixtures.
 
@@ -2624,7 +3082,7 @@ Verification:
 - A live authenticated dry-run fetched 1,865 advisories across 19 pages, mapped
   2,651 entries, deduplicated/covered 1,953, and selected all 698 new entries with
   `capped: false`, `remaining: 0`, and `undrainable: 0`; dry-run wrote nothing.
-- Clean Linux openclaw checkout: all 139 test files / 3,335 tests pass, followed by
+- Clean checkout on the remote Linux runner: all 139 test files / 3,335 tests pass, followed by
   all AAHP, feed, handoff, self-scan, and TypeScript build gates.
 
 ## Content-addressed self-scan and CLI risk consistency (2026-08-30)
@@ -2669,7 +3127,7 @@ matches. Existing findings in the three AAHP projects remain visible.
 Verification:
 
 - Windows: `npm run build` passes; the focused changed-area suite passes 131/131.
-- Linux openclaw, isolated `/tmp` checkout of implementation commit `f6149ce`:
+- Remote Linux runner, isolated temp checkout of implementation commit `f6149ce`:
   `npm ci` reports zero vulnerabilities, `npm run build` passes, and all 139 test
   files / 3,328 tests pass.
 - The Linux run confirms the two real IOC campaign fixtures that Windows endpoint
@@ -3045,7 +3503,7 @@ Evidence before the release PR:
   TypeScript compilation all pass.
 - `aahp doctor`: all six conformance gates pass.
 - The focused provenance integration suite passes 8/8 after the version-site fix.
-- Full Linux suite on openclaw: 138/138 test files and 3,294/3,294 tests pass.
+- Full Linux suite on the remote runner: 138/138 test files and 3,294/3,294 tests pass.
 - Release PR: #245. Tagging and publication remain deliberately after its squash
   merge, so the immutable tag will point at the commit that is actually on `main`.
 
@@ -8344,7 +8802,7 @@ copies are still CRLF and must be renormalized once:
 3. `npm run handoff:refresh` - works from a Windows checkout again; the three
    defects behind that are described above and shipped in this release.
 4. `npm run build` green (check:aahp + check:feed + check:handoff + tsc), the five
-   targeted suites green on Windows, and the full suite green on Linux via openclaw
+   targeted suites green on Windows, and the full suite green on the remote Linux runner
    (108 files, 2,653 tests, vscode-scanner included because zip is present there).
 
 Nothing is outstanding from this run.
