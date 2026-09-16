@@ -288,27 +288,43 @@ const CATALOG_REASON_TEXT: Record<NonNullable<CatalogState["reason"]>, string> =
 };
 
 /**
- * Severity by reason.
+ * Severity by reason: how much is actually wrong.
  *
- * Most reasons are `medium`, for the same calibration as the staleness rule: it
- * moves the score off zero and names the rule in the reports without turning
- * the default `fail-on: critical` gate red for every consumer on the day this
- * ships.
+ * `absent` is `info`, and that is a correction made after the catalog stopped
+ * being empty. At `medium` this fired on EVERY scan of every fresh install,
+ * because a fresh install has never had the chance to download anything, and
+ * `medium` turns the badge from `clean`/`brightgreen` to yellow. A finding that
+ * fires for every user on every run until they take an action is not a finding,
+ * it is a nag, and the thing this repository says about nags is that they get
+ * the tool switched off, which is worse than the finding being quieter.
  *
- * `digest-mismatch` and `corrupt` are `high` because neither is a normal state.
- * One means the cached catalog was built from a different catalog than this
- * release pins, the other that its entries no longer match their own checksum.
- * Both mean the scanner's own detection data is either corrupt or has been
- * modified underneath it, which is a different claim from "not downloaded yet".
+ * `info` still names the rule, still counts it, and still puts the number of
+ * unconsulted indicators in every report that lists findings. What it does not
+ * do is claim the scanned repository is less clean than it is, which is true:
+ * this describes the SCANNER's optional data, not the repository. The same
+ * reasoning is already applied to the `SLSA_` posture findings.
  *
- * The plan specified a flat `medium`; the design's table distinguishes them.
- * The design wins here because the distinction is the only thing that tells an
- * operator whether to run a refresh or to go and look at the machine.
+ * The ladder above `absent` is about how much is actually wrong:
+ *
+ * - `version-mismatch` is `low`: a catalog is present, it is simply the wrong
+ *   release's. One refresh fixes it.
+ * - `unreadable` is `medium`: the file is there and broken.
+ * - `digest-mismatch` and `corrupt` are `high`: neither is a normal state. One
+ *   means the cached catalog was built from a different catalog than this
+ *   release pins, the other that its entries no longer match their own
+ *   checksum. Both say the scanner's own detection data was replaced or
+ *   corrupted underneath it, which is a different claim from "not downloaded".
+ *
+ * `catalog: required` raises all of them to `critical`, which is how an
+ * operator who needs the full corpus says so.
  */
-const CATALOG_REASON_SEVERITY: Record<NonNullable<CatalogState["reason"]>, "medium" | "high"> = {
-  absent: "medium",
+const CATALOG_REASON_SEVERITY: Record<
+  NonNullable<CatalogState["reason"]>,
+  "info" | "low" | "medium" | "high"
+> = {
+  absent: "info",
+  "version-mismatch": "low",
   unreadable: "medium",
-  "version-mismatch": "medium",
   "digest-mismatch": "high",
   corrupt: "high",
 };
@@ -326,7 +342,7 @@ const CATALOG_REASON_SEVERITY: Record<NonNullable<CatalogState["reason"]>, "medi
 export function catalogSeverityFor(
   reason: NonNullable<CatalogState["reason"]>,
   mode: "optional" | "required",
-): "medium" | "high" | "critical" {
+): "info" | "low" | "medium" | "high" | "critical" {
   return mode === "required" ? "critical" : CATALOG_REASON_SEVERITY[reason];
 }
 

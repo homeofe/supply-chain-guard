@@ -1,37 +1,4 @@
 {
   "$comment": "Publication windows the importer holds back on the DEFAULT rolling run. Unlike threat-feed-declined.json, a deferral makes NO coverage claim: it is a recorded, deliberate detection gap that a human postponed, and it stays recoverable in full. An explicit --since/--until slice ignores every deferral, so the recovery command printed by each run imports its range unchanged. See docs/threat-feed-bulk-backfill-strategy.md. A range may only name closed past days, and only after its normal-volume daily intel has been confirmed present in the committed feed: that precondition is human, the code cannot check it.",
-  "deferred": [
-    {
-      "since": "2026-09-02",
-      "until": "2026-09-02",
-      "reason": "First wave of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 9,758 candidates in one day, 99.8 percent alphabetical (a 6,965, b 2,793), against a normal daily volume of 26 to 450. Importing it wholesale would grow the bundled feed by roughly half in a single machine-generated diff, and the alphabet walk implies a corpus on the order of 100,000 entries, which is a distribution-model decision rather than a daily-import one.",
-      "detectionGap": "These 9,758 npm package names are NOT detected by anything else in the scanner. No anchored rule in src/patterns.ts covers them; the block spans roughly 1,189 distinct name tokens across unrelated malware families, which is exactly why it cannot be declined. Sampling indicates a third to a half are still installable on npm today, so the gap is live and not merely historical.",
-      "expectedCount": 9758,
-      "deferredOn": "2026-09-06"
-    },
-    {
-      "since": "2026-09-04",
-      "until": "2026-09-04",
-      "reason": "Second wave of the same migration, continuing the alphabet into c (9,607) and the first 330 of d. 9,937 candidates. Deferred on the same grounds as the 2026-09-02 wave and pending the same owner decision on feed size and distribution model.",
-      "detectionGap": "These 9,937 npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02 wave. Letter d is only about 330 of roughly 9,600 done, so this wave is also an incomplete slice of the upstream corpus.",
-      "expectedCount": 9937,
-      "deferredOn": "2026-09-06"
-    },
-    {
-      "since": "2026-09-10",
-      "until": "2026-09-10",
-      "reason": "Fourth wave of the same GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 8,891 candidates in one day, 100 percent alphabetical (e 7,201, f 1,690), all npm, against a normal daily volume of 26 to 450. It resumes exactly where the 2026-09-06 wave stopped, which had carried e only about 734 names in, and it finishes e and continues into f. Deferred on the same grounds as the three earlier waves and pending the same owner decision on feed size and distribution model.",
-      "detectionGap": "These npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02, 2026-09-04 and 2026-09-06 waves: the block spans hundreds of unrelated name tokens across unrelated malware families and no anchored rule in src/patterns.ts covers them. Letter f is only about 1,690 names in, so this wave is again an incomplete slice of the upstream corpus. The human precondition is satisfied: the day own genuine non-corpus intel was imported by the 2026-09-11 run and is in the committed feed (44 entries, the eToro dependency-confusion campaign). The range matched 8,883 of the 8,891 reviewed candidates, and the 8 that fell outside it were imported by this same run, because the both-axis guard keeps an entry whose _queueDate sits outside the window. Those eight carry current-batch ids MAL-2026-16111 to MAL-2026-16118 and are additional malicious versions (99.0.0 and 99.0.2) of that same eToro campaign, whose 999.0.0 versions were already pinned, so no live intel from 2026-09-10 is suppressed by this range.",
-      "expectedCount": 8891,
-      "deferredOn": "2026-09-12"
-    },
-    {
-      "since": "2026-09-13",
-      "until": "2026-09-13",
-      "reason": "Fifth wave of the same GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. 19,158 candidates in one day, 100 percent alphabetical (g 3,552, h 5,939, i 7,701, j 1,963), all npm, against a normal daily volume of 26 to 450. The day carried TWO separate publication bursts rather than one: 04:56:54Z to 05:01:58Z, which covered g, h and the first few hundred of i, and a second at 20:12Z to 20:16Z that carried the rest of i and continued into j. That is why the 2026-09-13 run recorded this wave as 10,010 candidates and it had grown to 19,158 by the time the range could be written. Unlike the earlier waves this one does NOT resume where its predecessor stopped: the 2026-09-10 wave ended about 1,690 names into f, and this block starts at g, so the remainder of f is absent from the corpus seen so far. Deferred on the same grounds as the four earlier waves and pending the same owner decision on feed size and distribution model.",
-      "detectionGap": "These 19,158 npm package names are NOT detected by anything else in the scanner, for the same reason as the 2026-09-02, 2026-09-04, 2026-09-06 and 2026-09-10 waves: the block spans hundreds of unrelated name tokens across unrelated malware families and no anchored rule in src/patterns.ts covers them. Letter j is only about 1,963 names in, so this wave is again an incomplete slice of the upstream corpus. The human precondition is satisfied: the day's only genuine non-corpus advisory is GHSA-qp4x-pg53-7xh8 (pypi:chroma-client@0.5.7, MAL-2026-16143), published at 18:31:27Z between the two bursts, and it was imported by the 2026-09-14 run and is in the committed feed with firstSeen 2026-09-13. Every one of the 19,158 candidates in this range is part of the alphabet walk, including the 55 that carry MAL-2026 ids: those ids run from MAL-2026-17 to MAL-2026-12793, far below the current daily batch, so they are older advisories being backfilled and not fresh intel. No live intel from 2026-09-13 is suppressed by this range.",
-      "expectedCount": 19158,
-      "deferredOn": "2026-09-15"
-    }
-  ]
+  "deferred": []
 }

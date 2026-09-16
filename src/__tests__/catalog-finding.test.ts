@@ -92,12 +92,22 @@ describe("catalogFindings severity", () => {
   // The design distinguishes these; the plan specified a flat medium. The
   // distinction is the only thing telling an operator whether to run a refresh
   // or to go and look at the machine.
+  // `absent` is info on purpose: it is the state of every fresh install, and a
+  // medium there turns the badge yellow for every user on every run until they
+  // refresh. The rest of the ladder is about how much is actually wrong.
   it.each([
-    ["absent", "medium"],
+    ["absent", "info"],
+    ["version-mismatch", "low"],
     ["unreadable", "medium"],
-    ["version-mismatch", "medium"],
   ] as const)("reports %s as %s in optional mode", (reason, severity) => {
     expect(catalogSeverityFor(reason, "optional")).toBe(severity);
+  });
+
+  // The control that keeps the ladder meaningful: not everything is info.
+  it("separates a missing download from replaced detection data", () => {
+    expect(catalogSeverityFor("absent", "optional")).toBe("info");
+    expect(catalogSeverityFor("digest-mismatch", "optional")).toBe("high");
+    expect(catalogSeverityFor("corrupt", "optional")).toBe("high");
   });
 
   // Neither of these is a normal state: one means the cached catalog was built

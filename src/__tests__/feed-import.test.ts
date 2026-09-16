@@ -1623,11 +1623,6 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.addedToBundle).toBe(1);
   });
 
-  // --to-catalog is for an explicit, bounded backfill of a known-historical
-  // corpus. On the rolling window it would silently route ordinary fresh
-  // intelligence out of the package, which is the one thing the bundled feed
-  // exists to prevent, so the importer refuses rather than obeying.
-
   // The bundle stopped being the whole committed feed when the migration moved
   // 11,998 entries into the catalog. Those are still enforced at scan time, so
   // re-importing one is a duplicate, not a new indicator. Deduping against the
@@ -1652,6 +1647,34 @@ describe("importUpstreamFeed failure mode", () => {
       fetchImpl: singlePage([advisory()]),
     });
     expect(report.added).toBe(0);
+  });
+
+  // With a NON-EMPTY catalog and a real write. Every other test here leaves the
+  // catalog empty, which makes the dedupe input and the bundle the same length
+  // and hides an assertion that confuses the two. A real import aborted with
+  // "expected 29517 entries, got 8971" because the re-parse check compared the
+  // bundle against bundle-plus-catalog.
+  it("writes successfully when the catalog is already populated", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      [
+        JSON.stringify({ type: "package", value: "cat-a", severity: "critical", confidence: 1 }),
+        JSON.stringify({ type: "package", value: "cat-b", severity: "critical", confidence: 1 }),
+      ].join("\n") + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+
+    expect(report.added).toBe(1);
+    expect(report.written).toBe(true);
+    expect(report.addedToBundle).toBe(1);
+    // The catalog is untouched by a bundle-bound import.
+    expect(fs.readFileSync(catalogPath, "utf8").trim().split("\n")).toHaveLength(2);
   });
 
   it("still imports an entry the catalog does not hold", async () => {

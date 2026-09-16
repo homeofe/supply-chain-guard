@@ -2094,9 +2094,15 @@ export async function importUpstreamFeed({
 
   try {
     const reparsed = extractBundledEntries(root);
-    if (reparsed.length !== existing.length + toBundle.length) {
+    // Against `bundled`, NOT `existing`. `existing` is the dedupe input and now
+    // spans both stores; this assertion is about the BUNDLE re-parsing to what
+    // was written into it. Comparing against `existing` made a real import abort
+    // with "expected 29517 entries, got 8971", the 29,517 being bundle plus
+    // catalog. The rollback worked, so nothing was lost, but the import could
+    // not proceed at all.
+    if (reparsed.length !== bundled.length + toBundle.length) {
       throw new Error(
-        `re-parse mismatch: expected ${existing.length + toBundle.length} entries, got ${reparsed.length}`,
+        `re-parse mismatch: expected ${bundled.length + toBundle.length} entries, got ${reparsed.length}`,
       );
     }
     // 6. Regenerate feed.json from the (now updated) single source of truth.

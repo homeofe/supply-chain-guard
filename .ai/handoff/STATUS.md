@@ -1,3 +1,100 @@
+## The catalog dedupe broke the re-parse assertion, and Phase 4 corrections (2026-09-16, claude-opus-5)
+
+**A regression I introduced, caught by a real import rather than by a test.**
+Widening the dedupe input to cover both stores also widened `existing`, and the
+post-write re-parse assertion was written against that same variable. The next
+real drain aborted with:
+
+```
+import aborted and rolled back: re-parse mismatch: expected 29517 entries, got 8971
+```
+
+29,517 is bundle plus catalog; 8,971 is the bundle, which is what
+`extractBundledEntries` returns and what the assertion is actually about. The
+rollback behaved correctly and nothing was lost, but no import could proceed.
+
+It compares against `bundled` now. The reason no test caught it is worth
+recording: every importer fixture left the catalog EMPTY, so the dedupe input
+and the bundle were always the same length and the two were indistinguishable.
+There is now a test that populates the catalog and performs a real write, and
+restoring the old comparison turns it red.
+
+**Two pipeline habits this repository already documents cost time again here.**
+The drain loop read `$?` after `npm run ... | grep`, which reports grep's status,
+so an import that had ABORTED printed `exit=0`. The replacement writes the
+importer's output to a file and reads the importer's own status. It also stops
+at the first failure instead of attempting the remaining ranges.
+
+**Phase 4 Task 3 Step 3: the operator instructions are corrected.**
+`~/.claude/scheduled-tasks/supply-chain-guard-daily-update/SKILL.md` is local to
+this machine and is not committed, so the correction is recorded here as well or
+the next machine keeps the stale copy:
+
+- It claimed the defaults are `--days 14 --limit 250 --max-pages 750`. Measured:
+  there is NO implicit limit. `appliedLimit` is `null` unless the operator passes
+  the flag, and the comment at the selection site says the importer is exhaustive
+  by default. The stale claim was not harmless: `--limit 250` against a deferred
+  range would have drained a fraction of it and left a remainder that no later
+  run proposes, because an explicit range is not re-offered by the daily job.
+- The undrainable-backlog guidance told the operator to slice or defer. It now
+  says volume is no longer a reason to postpone anything, names
+  `catalogWindows` as the way to declare a bulk-publication burst, and states
+  that deferral is for a block whose CORRECTNESS is undecided.
+
+**Phase 4 Task 3 Step 4** asks for a regression proving the importer is
+exhaustive without `--limit`. It already exists in `feed-import.test.ts`, so it
+was verified rather than added.
+
+
+## CI went red on the migration, and what it caught (2026-09-16, claude-opus-5)
+
+All five deferred ranges are drained. Catalog 68,234 across 2 shards, bundle
+9,015. CI failed on the way there and was right to. Three causes.
+
+**1. A real coverage regression.** `campaigns.test.ts` asserts specific campaign
+indicators resolve from `getBundledFeed()`, which is a deliberate contract: a
+documented campaign must be detectable from a bare install with no download.
+44 such entries carried no `campaign` or `family` field, so rule 2 could not see
+they were curated, and the cutoff moved them into the catalog. They were curated
+in the test suite and the README, not in the data.
+
+They are back in the bundle beneath a curated comment block, which is the
+designed mechanism for exactly this: rule 3 makes an entry under a curated
+header immovable regardless of age, and it required inventing no field values.
+The campaign suite is the gate that keeps it honest, and it is the gate that
+caught this.
+
+**2. The finding fired on every scan.** With the catalog non-empty,
+`THREAT_FEED_CATALOG_MISSING` fired at `medium` for every fresh install, because
+a fresh install has never had the chance to download anything. `medium` turns
+the badge from `clean`/`brightgreen` to yellow, so every user would have seen a
+yellow badge until they ran a refresh. A finding that fires for everyone on
+every run until they act is a nag, and a nag gets the tool switched off.
+
+`absent` is now `info`. It still names the rule and the number of unconsulted
+indicators in every report that lists findings; it no longer claims the scanned
+repository is less clean than it is. The ladder above it is about how much is
+actually wrong: `version-mismatch` low, `unreadable` medium, `digest-mismatch`
+and `corrupt` high, and everything critical under `catalog: required`. The two
+clean-fixture tests filter it the same way they already filter `SLSA_`, which is
+this repository's existing convention for a finding about the scanner's own
+posture rather than the repository's.
+
+**3. My own acceptance test hardcoded 8,971 and 11,998** and went red the moment
+a range was drained, which says nothing about whether an indicator was lost. It
+derives the counts now and asserts the invariant that matters: the two stores
+account for everything and overlap nowhere.
+
+**The process failure was mine.** I pushed repeatedly without waiting for CI,
+and the monitor I set expired without firing because each push restarted the
+run. The full suite is the gate that caught all three of these, and it runs on
+Linux in about two minutes. Push, then wait for it.
+
+Local run after the fixes: 927 tests, 2 failures, both the documented
+Windows-only `IOC_KNOWN_C2_DOMAIN` cases that fail on unmodified `main` and were
+absent from CI's own failure list.
+
+
 ## Phase 3 pilot: one range drained, and two defects it found (2026-09-16, claude-opus-5)
 
 The 2026-09-06 range is drained: 8,548 entries into the catalog, which now holds

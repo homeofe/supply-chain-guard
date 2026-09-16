@@ -757,18 +757,38 @@ Two fixes were considered:
   chosen for, which is that an offline install still carries a month of fresh
   package intelligence, the part most likely to be in a lockfile someone is
   scanning today. Rejected.
-- **Let the operator state it.** `npm run feed:import -- --since X --until Y
-  --to-catalog` routes an explicit, bounded range straight to the catalog. The
-  automatic policy is unchanged, so daily intelligence still lands in the bundle
-  by date, and the override cannot be used on the rolling window at all: the
-  importer refuses `--to-catalog` without both `--since` and `--until`, because
-  there it would silently route ordinary fresh intelligence out of the package.
-  Atomic indicators are still refused, so the override cannot smuggle one past
-  rule 1. Adopted.
+- **Declare the window in the policy.** `catalogWindows` in
+  `feed-partition.config.json` lists publication windows whose PACKAGE entries
+  belong in the catalog whatever their date. Rule 5. Adopted.
 
-The override is a statement about provenance that only a human has: that this
-range is corpus rather than intelligence. It is recorded in the command, which
-is why it is a flag rather than a heuristic.
+**Rule 5, and why it is config and not a flag.** The first attempt was an
+importer flag, `--to-catalog`. It worked, and it was wrong: the flag told the
+IMPORTER where to put an entry while `check:feed-partition` still asked
+`partitionTarget`, so the gate rejected all 8,548 correctly placed entries as
+belonging in the bundle. Two opinions about one decision is exactly what
+section 4.2 says the shared policy function exists to prevent, and the gate
+caught it within minutes.
+
+A window in the config has one definition that the importer, the migration and
+the gate all read. It is also the more honest artifact: a flag is a keystroke
+that leaves no trace, while a window is committed, reviewed, and carries the
+reason it was declared.
+
+The rule is bounded in three ways:
+
+- **Package-only.** A declared window never moves an atomic indicator, so it
+  cannot quietly strip an offline scan of a domain, an IP or a hash. Those stay
+  on the date rule, where rule 2 and the placement gate hold them.
+- **Curation wins.** An entry carrying `campaign` or `family` stays bundled even
+  inside a window. A window is a statement about a bulk corpus, not a licence to
+  move something a human deliberately kept.
+- **Malformed windows throw.** Silently ignoring one would send an entire
+  declared backfill to the bundle, which is the failure the window exists to
+  prevent, and the budget gate would then fail for a reason that looks nothing
+  like the cause.
+
+The declaration is a statement about provenance that only a human has: that this
+range is corpus rather than intelligence.
 
 ## 7. Migration
 

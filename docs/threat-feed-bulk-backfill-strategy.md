@@ -19,9 +19,10 @@
 > so every entry in a range carries a `firstSeen` inside it. The date-based
 > partition therefore reads the whole corpus as fresh and routes it to the
 > bundle. Draining all five ranges that way was measured at 65,265 entries and
-> about 12.1 MB against a budget of 15,000 and 2 MiB. An explicit
-> `--to-catalog`, confined to a bounded `--since`/`--until` range, is what
-> states that a backfill is corpus rather than intelligence.
+> about 12.1 MB against a budget of 15,000 and 2 MiB. A `catalogWindows` entry
+> in `feed-partition.config.json` is what states that a publication window is
+> corpus rather than intelligence, and the importer, the migration and the
+> placement gate all read it.
 
 This document outlines the strategy for handling large upstream threat-intelligence
 backfills, specifically addressing the GitHub Advisory Database / OpenSSF bulk backfill
