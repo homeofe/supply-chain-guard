@@ -1,3 +1,74 @@
+## Catalog decoupling: review response + Phase 1 plan (2026-09-16, claude-opus-5)
+
+Design only, still no code. Spec:
+`docs/threat-feed-catalog-decoupling-design.md`. Phase 1 plan:
+`docs/plans/2026-09-16-threat-feed-catalog-phase-1.md`.
+
+**The automated review of PR 305 found seven defects and every one was real.**
+Each was verified against the source before being accepted, not taken at face
+value. Six of the seven are this estate's signature defect: a claim or a guard
+that reads correct and answers a different question.
+
+1. Phase ordering drained the backlog while the cutoff was still infinite, so
+   all 56,294 entries would have landed in the BUNDLE and breached the budget
+   on the same commit. Phases swapped.
+2. No decompression exists anywhere in the refresh path (`httpsGetBody` does
+   `body.toString("utf-8")` straight into `JSON.parse`), so a `.gz` asset could
+   never parse and the refresh would have installed zero indicators. Bounded
+   `gunzipSync` added.
+3. `parseFeedPayload()` rejects an empty `entries` array, so the Phase 1 empty
+   catalog was rejected by the parser meant to accept it. Empty now allowed for
+   `kind: "catalog"` only.
+4. The spec claimed release assets are immutable. `immutable_releases` is NULL
+   on this repo and `gh release upload --clobber` replaces assets on an existing
+   tag. Integrity re-anchored to a SHA-256 shipped inside the npm package.
+5. The finding fired only on an absent file, so a previous release's catalog
+   silently satisfied `catalog: "required"`, and `THREAT_FEED_STALE` cannot
+   catch it because recent bundled entries keep the merged newest `firstSeen`
+   current. Version and digest mismatch now count as unavailable.
+6. The cutoff was relative to the release date, which is not a committed input
+   and is unavailable to a PR gate, so generated files would drift with nobody
+   editing them. `BUNDLE_CUTOFF_DATE` is now a committed ISO date.
+7. The committed corpus would have been scanned as ordinary content:
+   `collectFiles()` does not exclude `data/` and `isInertThreatFeedFile()` is
+   basename-locked to `feed.json`. `isInertThreatCatalogFile()` added, sharing
+   `FEED_ENTRY_KEYS` so the two cannot drift.
+
+**An eighth defect was found while writing the plan, and it was ours.** The
+spec made `data/threat-corpus.jsonl` the single source of truth and regenerated
+`src/threat-intel.ts` from it. Measured: the feed chunks carry 792 comment lines
+among the 20,969 entries, and `FeedIOC` has no field for any of them. That round
+trip would have deleted every one of the curated rationales ("the apex is
+deliberately NOT listed", "he is a victim") and the byte-identical Phase 1 check
+could never have passed. The design now keeps TWO authored stores: the bundle
+stays exactly as authored, and only the catalog is new. Placement is enforced by
+`check:feed-partition` instead of by regeneration.
+
+The lesson is the one already written down: a design is a claim about the code
+and gets verified against the code before it is built on.
+
+**Process note.** This work was first committed onto local `main` by mistake,
+because the checkout had been returned to `main` at the end of the previous
+session and no branch check was run before editing. Branch protection meant
+nothing reached the remote; the commit was moved here and local `main` reset to
+`origin/main`. The rule that would have caught it is already written down:
+check `git rev-parse --abbrev-ref HEAD` before the first edit, not only before
+`git checkout -b`.
+
+### Open for the owner
+
+- Should `THREAT_FEED_CATALOG_MISSING` escalate to `high` after a grace period?
+  Same question as whether a badly stale rule set should fail the build; they
+  should be answered together.
+- Should repository release immutability be enabled anyway? The digest check
+  removes the dependency on it, but it is cheap defence in depth.
+- Initial `MAX_BUNDLED_ENTRIES` / `MAX_BUNDLE_BYTES` / Phase 2
+  `BUNDLE_CUTOFF_DATE` (proposed 25,000 / 4 MB / 90 days).
+
+Phases 2 to 4 get their own plans, written once Phase 1 has landed and its
+bundle-size and import-time measurements are real rather than projected.
+
+
 ## Design: threat-feed catalog decoupling (2026-09-16, claude-opus-5)
 
 Design only. No behaviour change, no code, no feed change. The spec is

@@ -2,11 +2,17 @@
 
 Design for resolving the bulk-migration deferral backlog by splitting the threat
 feed into a compiled-in bundle and a downloadable historical catalog, with an
-explicit finding whenever the catalog is absent.
+explicit finding whenever the catalog is absent, stale or unverifiable.
 
-Status: design approved, not yet implemented.
+Status: design approved, revised after review, not yet implemented.
 Date: 2026-09-16.
-Supersedes the Tier 3 sketch in `docs/threat-feed-bulk-backfill-strategy.md`.
+Supersedes Tier 3 of `docs/threat-feed-bulk-backfill-strategy.md`.
+
+Revision note: the first draft carried seven defects found in review, and an
+eighth was found while writing the implementation plan against it. All are
+corrected below and recorded in section 11, because most of them are the same
+class of mistake this project keeps producing and the record is worth more than
+a clean-looking document.
 
 ## 1. Problem
 
@@ -24,26 +30,26 @@ that the importer has deliberately not ingested:
 A deferral makes no claim that anything else detects these names. Unlike a
 decline, it is a recorded, deliberate gap. The gap is live rather than
 historical: the liveness audit in the backfill strategy document sampled 50 of
-these packages and found 28 of them still installable on npm today.
+these packages and found 28 still installable on npm today.
 
 Three properties make this hard to resolve by importing the block:
 
 1. **It is not a fixed quantity.** The waves are an alphabet walk currently at
-   `j`, and the remainder of `f` was skipped rather than completed. More is
-   arriving. Any fix that treats 56,294 as the total will be re-litigated.
+   `j`, with the remainder of `f` skipped. More is arriving. Any fix that treats
+   56,294 as the total will be re-litigated within weeks.
 2. **The bundle pays the cost on every invocation.** The feed is compiled into
    `dist/threat-intel.js` and imported by the CLI on every run.
 3. **Declining is not available.** The block spans roughly 1,189 distinct name
    tokens across unrelated malware families, so no anchored rule in
-   `src/patterns.ts` covers it, and `coveredBy` cannot be satisfied honestly.
+   `src/patterns.ts` covers it and `coveredBy` cannot be satisfied honestly.
 
 ## 2. Measurements
 
-Every number below was measured on 2026-09-16 against the v6.1.3 tree, not
-estimated. Import cost was measured by generating synthetic feed modules shaped
-like the real chunked array literal and timing `require()`.
+Measured on 2026-09-16 against the v6.1.3 tree. Import cost was measured by
+generating synthetic feed modules shaped like the real chunked array literal and
+timing `require()`.
 
-### Import cost scales linearly at about 3.5 microseconds per entry
+### Import cost is linear at about 3.5 microseconds per entry
 
 | feed entries | module import | generated source |
 | --- | --- | --- |
@@ -52,123 +58,136 @@ like the real chunked array literal and timing `require()`.
 | 77,263 (today plus the backlog) | 266 ms | 12.3 MB |
 | 150,000 (alphabet walk completed) | 527 ms | 24.1 MB |
 
-This cost is paid on every CLI invocation, because the feed is a module-level
-array literal that the runtime must parse before anything else happens.
+Paid on every CLI invocation, because the feed is a module-level array literal
+the runtime must parse before anything else happens.
 
 ### Package size
 
-The published package is 1.30 MB packed and 9.91 MB unpacked, of which
-`dist/threat-intel.js` is 3.56 MB and its source map a further 2.76 MB.
-`action.yml` is a composite action that runs `npm install -g supply-chain-guard`
-at runtime, so package size is paid by every Action run rather than once per
-developer machine.
+1.30 MB packed, 9.91 MB unpacked, of which `dist/threat-intel.js` is 3.56 MB and
+its source map a further 2.76 MB. `action.yml` is a composite action running
+`npm install -g supply-chain-guard` at runtime, so size is paid per Action run.
 
-Absorbing the backlog into the bundle takes the package to roughly 19 MB
-unpacked; completing the alphabet walk takes it to roughly 31 MB.
+Absorbing the backlog takes the package to roughly 19 MB unpacked; completing
+the alphabet walk takes it to roughly 31 MB.
 
 ### Compression
 
 `feed.json` is 4.63 MB raw, 0.34 MB gzip -9 (7.3 percent), 0.27 MB brotli.
-Projecting the same ratio:
 
 | catalog size | raw | gzip |
 | --- | --- | --- |
 | 56,294 entries | 12.44 MB | 0.91 MB |
 | 150,000 entries | 33.14 MB | 2.42 MB |
 
-A 150,000-entry catalog transfers in about 2.4 MB, comfortably inside the
-existing `FEED_REMOTE_LIMITS.maxBytes` of 32 MiB.
+Compression is not optional at scale. A 150,000-entry catalog is 33.14 MB raw,
+which exceeds `FEED_REMOTE_LIMITS.maxBytes` of 32 MiB. Gzipped it is 2.42 MB.
 
-### The decoupling machinery already exists and is wired to itself
+### The transport exists and is wired to itself
 
 `refreshFeed()`, `parseFeedPayload()`, the cache merge in `loadThreatIntel()`,
-`FEED_REMOTE_LIMITS` and the `THREAT_FEED_STALE` finding are all built and
-tested. But `DEFAULT_FEED_URL` resolves to `feed.json` on `main`, which is the
-same document that is compiled into the bundle. A refresh today re-fetches what
-the caller already has. Splitting the two documents is a generation and
-publishing change, not new transport infrastructure.
+`FEED_REMOTE_LIMITS` and `THREAT_FEED_STALE` are built and tested. But
+`DEFAULT_FEED_URL` resolves to `feed.json` on `main`, the same document compiled
+into the bundle, so a refresh re-fetches what the caller already has.
 
 ## 3. Decision
 
 Ship a two-tier feed in which the historical corpus is downloaded rather than
-compiled in, and make its absence an explicit finding on every scan.
+compiled in, and make its absence, staleness or unverifiability an explicit
+finding on every scan.
 
-The alternative of keeping absolute offline parity was rejected: at 150,000
-entries it costs half a second of startup per invocation and a 31 MB global
-install on every Action run, and no amount of liveness filtering brings a
-corpus of that shape back under a sane budget when more than half of it is
-live.
+Keeping absolute offline parity was rejected: at 150,000 entries it costs half a
+second of startup per invocation and a 31 MB global install on every Action run,
+and liveness filtering cannot rescue a corpus where more than half is live.
 
-The variant where the catalog is simply optional and silent was also rejected.
-A scanner that quietly answers a narrower question than the caller believes it
-is asking is the failure mode this project treats as unacceptable, and it is
-precisely the class of defect that `THREAT_FEED_STALE` already exists to
-prevent for a different cause.
+A silently optional catalog was also rejected. A scanner that quietly answers a
+narrower question than the caller believes it is asking is the failure mode this
+project treats as unacceptable.
 
 ## 4. Architecture
 
-Two published documents, one partition, one source of truth.
-
 ```text
-data/threat-corpus.jsonl            <- source of truth, all entries, not compiled
-        |
-        | scripts/generate-feed.mjs applies the partition policy
-        |
-        +--> src/threat-intel.ts FEED_CHUNK_n   (generated, committed, typechecked)
-        |         |
-        |         +--> dist/threat-intel.js     (compiled into the package)
-        |         +--> feed.json                (published bundle document)
-        |
-        +--> catalog.json.gz                     (published release asset)
+src/threat-intel.ts FEED_CHUNK_n     <- authored bundle, comments preserved, compiled
+        +--> dist/threat-intel.js         (compiled into the package)
+        +--> feed.json                    (published bundle document)
+
+data/threat-catalog.jsonl            <- authored catalog, never compiled
+        +--> catalog.json.gz              (published release asset)
+        +--> dist/catalog-digest.json     (expected version + SHA-256, in package)
+
+scripts/check-feed-partition.mjs     <- gate: validates placement across both
 ```
 
-### 4.1 Source of truth moves out of TypeScript
+### 4.1 Two authored stores, not one generated store
 
-Today `src/threat-intel.ts` is the source of truth and `feed.json` is derived
-from it. That cannot hold once the corpus exceeds what should be compiled,
-because the source of truth would itself be the thing we are trying not to
-compile.
+An earlier revision of this design made `data/threat-corpus.jsonl` the single
+source of truth and regenerated `src/threat-intel.ts` from it. **That is not
+implementable and the plan for it was abandoned before any code was written.**
 
-The corpus moves to `data/threat-corpus.jsonl`, one `FeedIOC` per line. The
-bundle chunks in `src/threat-intel.ts` become generated output, committed and
-typechecked exactly as now, so nothing about review, diffing or the existing
-gates changes for the entries that remain bundled.
+The feed chunks in `src/threat-intel.ts` carry 792 comment lines interleaved
+with the 20,969 entries. They are the curated rationale this project depends
+on: why `jsonkeeper[.]com`'s apex is deliberately not listed, why a compromised
+maintainer is a victim rather than an indicator, why a given entry is pinned
+instead of name-blocked. `FeedIOC` has no field for any of it. A round trip
+through a JSONL corpus would delete all 792 lines, and the byte-identical
+Phase 1 check the migration depends on could never pass.
 
-This makes the partition invariant structural rather than a matter of
-discipline. Both documents come from one array and one policy function, so an
-entry cannot be in both, and cannot be in neither.
+So the bundle stays exactly where it is, authored as it is today, with its
+comments and its existing importer workflow untouched. Only the catalog is new:
 
-**Invariants, asserted by gate:**
+- **`src/threat-intel.ts`** remains the authored bundle. No change to how it is
+  written, reviewed or generated into `feed.json`.
+- **`data/threat-catalog.jsonl`** is the catalog store, one `FeedIOC` per line,
+  machine-written only. JSONL because this project reviews feed diffs line by
+  line and a 33 MB array literal reformats unreadably. Nothing in it is
+  compiled, so it costs neither TypeScript nor startup time.
 
-- `bundle` union `catalog` equals the corpus, with no entry lost.
-- `bundle` intersect `catalog` is empty.
-- Both are generated from `data/threat-corpus.jsonl` by a single pure function.
+The partition therefore becomes a **routing rule applied at write time** and a
+**placement gate applied at build time**, rather than a projection of one store
+into two.
 
-### 4.2 Partition policy
+**Invariants, asserted by `check:feed-partition`:**
+
+- No `value` appears in both stores.
+- The catalog contains no entry whose `type` is not `package`, and none
+  carrying `campaign` or `family`. Those belong in the bundle by rules 1 and 2
+  of section 4.2, so their presence in the catalog is a routing bug.
+- Every catalog line parses as a `FeedIOC` and passes `isValidFeedIOC`.
+
+The gate is what makes placement checkable without a single generated source,
+and it fails the build rather than warning.
+
+### 4.2 Partition policy, and why the cutoff is a committed date
 
 An entry stays in the bundle when any of the following holds:
 
 1. Its `type` is not `package`. Atomic indicators (ip, domain, url, hash) are
-   few, high value, and cheap. All of them stay bundled.
+   few, high value and cheap. All stay bundled.
 2. It carries a `campaign` or `family` field. These are curated, hand-reviewed
-   campaign entries, which is the intelligence a database cannot supply.
-3. Its `firstSeen` is within `BUNDLE_RECENT_DAYS` of the release date.
+   campaign entries, the intelligence a database cannot supply.
+3. Its `firstSeen` is on or after `BUNDLE_CUTOFF_DATE`.
 
-Everything else goes to the catalog.
+Everything else is routed to the catalog. The rule is evaluated by the
+importer when an entry is first written, by the Phase 2 migration when an
+existing bundled entry is moved, and by `check:feed-partition` when validating
+placement. One exported function, three callers.
 
-The policy is a single exported function so the gate, the generator and the
-tests all consult the same rule. `BUNDLE_RECENT_DAYS` is the tuning knob when
-the budget in section 6 is threatened.
+`BUNDLE_CUTOFF_DATE` is an explicit ISO date committed in
+`feed-partition.config.json`, **not** a rolling window measured from the current
+date or the release date. A rolling window is not a pure function of committed
+inputs: the generator and `check:feed` run during ordinary prebuilds, so the
+same corpus would cross the cutoff on a later day, committed generated files
+would drift without anyone editing them, and the byte-identical check that
+Phase 1 depends on could not hold. The release date is also unavailable to a PR
+gate, which runs before any tag exists.
 
-`BUNDLE_RECENT_DAYS` starts at `Infinity`, which makes rule 3 admit every
-existing entry and the partition a no-op. That is what lets Phase 1 prove
-itself by producing byte-identical output. Phase 3 is the moment it takes a
-finite value, and that is the only change in this design that reduces what a
-bare install detects.
+Moving the cutoff is a deliberate, reviewable commit. `BUNDLE_CUTOFF_DATE`
+starts earlier than every entry in the bundle, so rule 3 admits everything
+already there and Phase 1 moves nothing. That is what lets Phase 1 prove itself
+by leaving `src/threat-intel.ts` and `feed.json` untouched.
 
-### 4.3 Catalog document
+### 4.3 Catalog document, compression and bounded decompression
 
-Same envelope as `feed.json`, with a discriminator:
+Same envelope as `feed.json` plus a discriminator:
 
 ```json
 {
@@ -182,75 +201,152 @@ Same envelope as `feed.json`, with a discriminator:
 }
 ```
 
-Published gzipped as `catalog.json.gz`. `parseFeedPayload()` already accepts the
-published envelope and a raw array; it gains a `kind` check so a catalog cannot
-be mistaken for a bundle or the reverse.
+Published gzipped as `catalog.json.gz`.
 
-### 4.4 Hosting
+**The current transport cannot consume this and must be extended.**
+`refreshFeed()` calls `httpsGetBody()`, which calls `fetchHttpsBuffer()` and
+immediately does `body.toString("utf-8")` before `JSON.parse`. There is no
+decompression anywhere in `src/feed.ts` or `src/remote-download.ts`. A gzipped
+asset fed to the existing path fails to parse every time, so the refresh would
+never install a single historical indicator.
 
-A GitHub Release asset on the release tag, uploaded by the existing
-`Create GitHub Release` job, which already holds `contents: write` and reaches
-GitHub through `gh`. One extra argument on the existing `gh release create`
-call, no new workflow and no new credential.
+The design adds an explicit, bounded decompression step:
 
-Release assets are immutable per tag, which matches the project's rule against
-moving a published artifact. Clients resolve the asset for the `latest` release
-by default and record the resolved version and timestamp in the cache, so a
-scan can always say which catalog it matched against. `--catalog-url` overrides
-for air-gapped mirrors.
+- Decompress with `gunzipSync(buf, { maxOutputLength: CATALOG_MAX_DECOMPRESSED_BYTES + 1 })`,
+  reusing the exact pattern already used in `src/archive-extractor.ts`, which
+  bounds expansion rather than trusting the header.
+- `CATALOG_MAX_DECOMPRESSED_BYTES` starts at 64 MiB, roughly twice the projected
+  150,000-entry raw size.
+- Two independent bounds apply: `FEED_REMOTE_LIMITS.maxBytes` caps the
+  downloaded bytes, and `maxOutputLength` caps the expansion. A decompression
+  bomb fails the second even when it passes the first.
+- Both failures are fail-closed: the previous cache and the bundled feed stay in
+  effect and the missing-catalog finding fires.
 
-Not `raw.githubusercontent.com`: a 2.4 MB document on a branch path is served
-without the release's immutability guarantee, and the existing feed URL already
-occupies that path.
+`parseFeedPayload()` gains a `kind` check so a bundle cannot be accepted as a
+catalog or the reverse.
 
-### 4.5 Cache and merge
+**An empty catalog is valid, but only for `kind: "catalog"`.**
+`parseFeedPayload()` currently throws on `entries.length === 0`. That is correct
+for a bundle feed, where empty means something broke, and wrong for a catalog,
+where empty is the legitimate Phase 1 state. Without this the Phase 1 catalog is
+rejected by the very parser that is supposed to accept it, leaving
+`THREAT_FEED_CATALOG_MISSING` firing after a successful refresh and making
+`catalog: "required"` unsatisfiable. The relaxation is scoped to the catalog kind
+and tested in both directions.
+
+### 4.4 Hosting, version pinning and integrity
+
+The catalog is published as a GitHub Release asset on the release tag by the
+existing `Create GitHub Release` job, which already holds `contents: write` and
+reaches GitHub through `gh`. One extra argument on the existing
+`gh release create` call: no new workflow, no new credential.
+
+**The catalog is pinned to the installed package version, not to `latest`.**
+A client requests the asset for its own version and refuses anything else.
+
+**Integrity does not rest on release-asset immutability.** The first draft
+claimed assets are immutable per tag. That is false for this repository as
+configured: `immutable_releases` is `null` and no ruleset enables it, and
+`gh release upload --clobber` can delete and replace an asset on an existing
+tag. Enabling the setting would help but is external state this design cannot
+assert.
+
+Instead, `scripts/generate-feed.mjs` computes the catalog's SHA-256 and writes
+`catalog-digest.json` (`{ version, sha256, entryCount }`, a few hundred bytes)
+into the published npm package. The client verifies the downloaded catalog
+against that digest before parsing it. The anchor is therefore the immutable npm
+artifact and the tagged git tree, not a mutable release asset. A replaced asset
+fails verification, is discarded, and the finding fires.
+
+### 4.5 Cache, merge, and what counts as unavailable
 
 A second cache file, `threat-catalog.json`, beside the existing
-`threat-feed.json`. `loadThreatIntel()` merges bundle, then feed cache, then
-catalog cache, through the same `isValidFeedIOC` and `normalizeFeedIOC`
-quarantine that the feed cache already passes through. Cached catalog data
-reaches the per-file scan loop, so it gets the same treatment as any other
-remote input.
+`threat-feed.json`. It records the catalog `version`, its `sha256` and the fetch
+timestamp alongside the entries.
 
-`scg feed refresh` fetches both documents. One verb, no new subcommand, and an
-existing consumer's muscle memory keeps working.
+`loadThreatIntel()` merges bundle, then feed cache, then catalog cache, through
+the same `isValidFeedIOC` and `normalizeFeedIOC` quarantine the feed cache
+already passes, because cached remote data reaches the per-file scan loop.
 
-The memo key in `loadThreatIntel()` extends to cover the catalog cache's
-identity, so a refreshed catalog is observed rather than served from a stale
-memo.
+**A readable cache is not a usable cache.** The catalog counts as unavailable,
+and the finding fires, when any of these holds:
+
+- the cache file is absent, unreadable or unparsable;
+- its recorded `version` does not equal the installed package version;
+- its recorded `sha256` does not equal the expected digest in
+  `dist/catalog-digest.json`.
+
+The version check is what closes the hole the first draft left open. After an
+upgrade, or after a refresh where the bundle succeeded and the catalog fetch
+failed, a previous release's catalog stays readable on disk. A finding that
+fired only on an absent file would let `catalog: "required"` pass while the
+cached catalog silently omits every historical indicator added since. Nor can
+`THREAT_FEED_STALE` catch it: that rule reads the newest `firstSeen` across the
+merged feed, and the recent bundled entries keep that date current no matter how
+old the catalog is.
+
+`scg feed refresh` fetches both documents. One verb, no new subcommand.
+
+The memo key in `loadThreatIntel()` extends to cover the catalog cache identity,
+so a refreshed catalog is observed rather than served from a stale memo.
+
+### 4.6 The corpus must be exempt from the repository self-scan
+
+`data/threat-catalog.jsonl` will contain tens of thousands of raw malicious
+package names, and in future possibly other raw indicator values. The scanner runs against its own repository
+in CI, and the corpus is ordinary repository content to it:
+
+- `collectFiles()` does not exclude `data/`.
+- `isInertThreatFeedFile()` accepts only the basenames `feed.json` and
+  `threat-feed.json`, and requires a JSON object with an `entries` array. A
+  JSONL file is neither.
+- `src/self-scan-files.json` is a source-file allowlist and lists no data path.
+
+Left alone, Phase 1 would drown the self-scan in criticals from the project's
+own detection data and block the gate. This is not hypothetical: the comment on
+`isInertThreatFeedFile()` records the v5.4.0 dogfooding find of 169 findings on
+this repository's own `feed.json`, which is why the function exists.
+
+The design adds `isInertThreatCatalogFile(filename, content)` with strictness
+equal to the existing check, sharing its constants so the two cannot drift:
+
+- basename must be `threat-catalog.jsonl`;
+- every non-empty line must parse as a JSON object;
+- every key on every line must be in `FEED_ENTRY_KEYS`;
+- every value must be an inert scalar (string or number).
+
+Any deviation means the file is scanned like everything else. An exact-hash
+allowlist entry was rejected as the alternative: the catalog changes on every
+import, so the hash would be updated reflexively and would stop being a check.
 
 ## 5. Failure semantics: the loud part
 
-A new finding, `THREAT_FEED_CATALOG_MISSING`, is emitted on every scan where
-the catalog cache is absent or unreadable.
+`THREAT_FEED_CATALOG_MISSING` is emitted on every scan where the catalog is
+unavailable by any of the four conditions in section 4.5. It follows the
+`THREAT_FEED_STALE` shape exactly: `category: "trust"`, `confidence: 1.0`, a
+description naming the number of indicators not consulted and the reason
+(absent, version mismatch, digest mismatch), and a recommendation naming the
+command that fixes it.
 
-It follows the `THREAT_FEED_STALE` shape exactly: `category: "trust"`,
-`confidence: 1.0`, a description that names the number of indicators that were
-not consulted, and a recommendation naming the command that fixes it. Reusing
-the shape matters, because consumers already know how to read and how to
-exclude a trust finding by rule id.
-
-**Severity is `medium` by default, and this is deliberate.** Shipping it at
-`high` would turn every existing consumer's default gate red on upgrade day for
-a condition they did not cause and had no chance to prepare for. That is the
-same reasoning recorded for `THREAT_FEED_STALE`, which chose `medium` so the
-condition is visible in the score, the risk level and eight of the nine report
-formats without failing a `fail-on: critical` or `fail-on: high` build.
+**Severity is `medium` by default, deliberately.** Shipping at `high` would turn
+every existing consumer's default gate red on upgrade day for a condition they
+did not cause. That is the reasoning already recorded for `THREAT_FEED_STALE`,
+which chose `medium` so the condition is visible in the score, the risk level
+and eight of nine report formats without failing a `fail-on: critical` or
+`fail-on: high` build.
 
 For consumers who want the guarantee rather than the signal, policy gains
-`catalog: "optional" | "required"`. Under `required`, a missing catalog is a
-`critical` finding and fails the gate. This is the knob that makes "loud"
-enforceable without breaking anyone on the day it lands.
+`catalog: "optional" | "required"`. Under `required` a missing, mismatched or
+unverifiable catalog is a `critical` finding and fails the gate.
 
-Escalating the default is left as an owner decision, recorded alongside the
-existing open question about whether a badly stale rule set should fail the
-build. The two questions have the same shape and should be answered together.
+Escalating the default is left as an owner decision, recorded with the existing
+open question about whether a badly stale rule set should fail the build.
 
 ## 6. The durable fix: a size budget with a gate
 
-The reason this problem exists is not that anyone chose a large feed. It is
-that no step in any workflow owned the feed's size, so it grew until a single
-upstream event made it a crisis.
+This problem exists because no step in any workflow owned the feed's size, so it
+grew until one upstream event made it a crisis.
 
 A fifth prebuild gate, `check:feed-budget`, fails the build when either bound is
 exceeded:
@@ -258,96 +354,133 @@ exceeded:
 - bundled entries greater than `MAX_BUNDLED_ENTRIES` (initially 25,000)
 - generated `src/threat-intel.ts` larger than `MAX_BUNDLE_BYTES` (initially 4 MB)
 
-A release that would breach the budget cannot be built. The fix is to retune
-`BUNDLE_RECENT_DAYS` and regenerate, which moves older entries to the catalog.
-The budget is the mechanism that stops this recurring; without it the split
-merely resets the clock.
-
-Both limits live beside the partition policy and are asserted by the same
-tests.
+A release that would breach the budget cannot be built; the fix is to move
+`BUNDLE_CUTOFF_DATE` forward and regenerate. Without this gate the split merely
+resets the clock.
 
 ## 7. Migration
 
-Ordered so that coverage never silently decreases. The loud finding ships
-before anything leaves the bundle.
+Ordered so coverage never silently drops, and so that no phase depends on a
+state a later phase creates.
 
-**Phase 1: split the pipeline, change nothing that is detected.**
-Introduce `data/threat-corpus.jsonl` seeded from the current feed, generate the
-bundle from it, and confirm byte-identical output for `src/threat-intel.ts` and
-`feed.json`. Publish an empty catalog asset. Add `THREAT_FEED_CATALOG_MISSING`,
-the `catalog` policy knob, the second cache and the merge. Add
-`check:feed-budget` with limits set above current size so it passes.
-Detection is unchanged; this phase is pure plumbing and is verifiable by the
-generated files not moving.
+**Phase 1: build the catalog path, change nothing that is detected.**
+`src/threat-intel.ts` and `feed.json` are not touched at all, which is how this
+phase proves it changed nothing. Add `isInertThreatCatalogFile()` FIRST, before
+an empty `data/threat-catalog.jsonl` is committed, or the self-scan gate blocks
+the phase. Add the partition policy function, `check:feed-partition` and
+`check:feed-budget` with limits above current size. Add bounded gzip
+decompression, the `kind` check, the empty-catalog allowance, the digest file,
+the second cache, the merge and the availability conditions. Add
+`THREAT_FEED_CATALOG_MISSING` and the `catalog` policy knob. Publish an empty
+catalog asset from CI. Detection is unchanged.
 
-**Phase 2: drain the deferrals into the catalog.**
-Import all five ranges with explicit `--since`/`--until` slices, routing them to
-the corpus. The partition policy sends them to the catalog, because they are
-`package` entries with no campaign and a `firstSeen` older than the window.
-The bundle does not grow. `threat-feed-deferred.json` empties, and the 56,294
-indicator gap closes for any consumer who has refreshed.
-
-**Phase 3: apply the policy to existing bundled entries.**
-Set `BUNDLE_RECENT_DAYS` from `Infinity` to 90 and regenerate. Historical package entries
-move out of the bundle into the catalog. This is the only step that reduces
+**Phase 2: make the partition finite and migrate.**
+Move `BUNDLE_CUTOFF_DATE` forward to 90 days before the release and run a
+migration script that moves every now-unqualifying bundle entry into the
+catalog. The script must preserve the bundle's comments: a batch header comment
+is removed only when every entry beneath it moved, and left intact otherwise, so
+no rationale is orphaned or silently deleted. This is the only step that reduces
 what a bare install detects, and it lands after the finding that reports it.
-Measure and record the resulting bundle size and import time.
+Measure and record the resulting bundle size and import time, then tighten the
+budget to the new size.
+
+**Phase 3: drain the deferrals.**
+Import all five ranges with explicit `--since`/`--until` slices. Because the
+cutoff is now finite and these entries are `package` type with no campaign and a
+`firstSeen` far older than the cutoff, the importer's routing rule sends every
+one of them to `data/threat-catalog.jsonl`. The bundle does not grow.
+`threat-feed-deferred.json` empties and the 56,294 indicator gap closes for any
+consumer who has refreshed.
+
+The first draft had this phase before the cutoff was made finite, where every
+deferred entry would have satisfied rule 3, landed in the bundle, and breached
+the budget immediately.
 
 **Phase 4: retire the deferral mechanism for bulk waves.**
 With a catalog that absorbs volume, a future alphabet wave is an ordinary
-import. The deferral machinery stays for genuinely undecidable blocks, but
-should no longer be reached for size alone.
+import. The deferral machinery stays for genuinely undecidable blocks but should
+no longer be reached for size alone.
 
 ## 8. Testing
 
-The project's rule is that a guard is proved by cutting it, never by reading
-it, with a clean baseline before and after.
+A guard is proved by cutting it, never by reading it, with a clean baseline
+before and after.
 
-- **Partition round trip.** Generate from a fixture corpus; assert union equals
-  the corpus and intersection is empty. Mutation: drop one entry from the
-  bundle branch of the policy and watch the union assertion go red.
-- **Budget gate.** Mutation: generate a corpus that breaches each limit and
-  assert the gate fails for that specific reason, and that a corpus one entry
-  under the limit passes. Both directions, per the project's control rule.
-- **Missing-catalog finding.** A scan with no catalog cache emits
-  `THREAT_FEED_CATALOG_MISSING` naming the correct count; a scan with the
-  catalog cached does not. Under `catalog: "required"` the severity is
-  `critical` and the gate fails.
-- **Catalog detection parity.** Take a sample of names from the drained
-  deferral ranges, assert they are NOT detected with no catalog, and ARE
-  detected with the catalog cached. This is the test that proves the split
-  preserved coverage rather than losing it.
-- **Envelope confusion.** A bundle document offered as a catalog, and the
-  reverse, are both rejected by the `kind` check.
-- **Malformed catalog.** A corrupt or oversized catalog leaves the previous
-  cache and the bundled feed in effect, matching the existing feed behaviour.
+- **Partition placement gate.** Assert no value appears in both stores, and that
+  no catalog line is a non-package type or carries `campaign`/`family`. Cut:
+  plant a duplicate value in both stores, then a campaign entry in the catalog,
+  and watch each go red for its own reason.
+- **Partition determinism.** Generate twice with the system clock moved a year
+  forward between runs; assert byte-identical output. Cut: reintroduce a
+  now-relative cutoff and watch it go red.
+- **Budget gate.** Cut in both directions: a corpus one entry over each limit
+  fails for that specific reason, and one entry under passes.
+- **Self-scan inertness.** A well-formed catalog produces no findings. Cut: a
+  catalog line with a key outside `FEED_ENTRY_KEYS`, one with a non-scalar
+  value, and one under a different basename each fall back to being scanned.
+- **Comment preservation.** After the Phase 2 migration, assert every comment
+  line still in `src/threat-intel.ts` sits above at least one surviving entry,
+  and that the count of curated comment lines did not drop except for batch
+  headers whose entries all moved.
+- **Missing-catalog finding.** Fires with no cache; fires with a cache whose
+  version does not match; fires with a cache whose digest does not match; does
+  not fire with a valid cache. Under `required` the severity is `critical` and
+  the gate fails.
+- **Bounded decompression.** A valid gzip catalog parses. A gzip bomb exceeding
+  `CATALOG_MAX_DECOMPRESSED_BYTES` is refused, leaves the previous cache in
+  effect and fires the finding.
+- **Empty catalog.** Accepted for `kind: "catalog"`, still rejected for a bundle
+  feed.
+- **Envelope confusion.** A bundle offered as a catalog, and the reverse, are
+  both rejected by the `kind` check.
+- **Catalog detection parity.** Sample names from the drained deferral ranges;
+  assert they are NOT detected without the catalog and ARE detected with it.
+  This is the test that proves the split preserved coverage.
 
-Per the project's Windows constraint, only the suites covering the change are
-run locally; CI produces the full-suite verdict.
+Per the project's Windows constraint, only the suites covering the change run
+locally; CI produces the full-suite verdict.
 
 ## 9. Non-goals
 
-- Changing what counts as malicious, or any severity other than the two named.
+- Changing what counts as malicious, or any severity beyond the two named.
 - Reworking the importer's discovery adapters or its decline policy.
-- Liveness filtering of holding packages. It was Tier 2 of the earlier
-  strategy, and it remains available as a corpus-shrinking tactic, but it is
-  not needed once volume no longer lands in the bundle and it would discard
-  indicators that a future republish could make live again.
+- Liveness filtering of holding packages. Still available as a corpus-shrinking
+  tactic, but unnecessary once volume no longer lands in the bundle, and it
+  would discard indicators a future republish could make live again.
 - The 2.76 MB `dist/threat-intel.js.map` shipped in the package. It is 28
-  percent of the unpacked size and is a source map for a data array, so it is
-  probably removable, but that is an adjacent packaging question and not part
-  of this design.
+  percent of unpacked size and is a source map for a data array, so probably
+  removable, but that is an adjacent packaging question.
 
 ## 10. Open questions for the owner
 
-1. **Should `THREAT_FEED_CATALOG_MISSING` escalate to `high` after some grace
-   period, and should a badly stale rule set fail the build?** These are the
-   same question and should be decided together.
-2. **Should the catalog resolve to `latest` or to the installed version?**
-   This design chooses `latest` with the resolved version recorded in the
-   cache, trading strict reproducibility for coverage. A consumer who needs
-   byte-reproducible scans pins with `--catalog-url`.
-3. **Initial values for `MAX_BUNDLED_ENTRIES`, `MAX_BUNDLE_BYTES` and
-   `BUNDLE_RECENT_DAYS`.** The proposed 25,000 / 4 MB / 90 days keeps the
-   bundle near its current size and its import near 75 ms. Tighter values buy
-   startup time at the cost of default-install coverage.
+1. **Should `THREAT_FEED_CATALOG_MISSING` escalate to `high` after a grace
+   period, and should a badly stale rule set fail the build?** The same question
+   twice; they should be decided together.
+2. **Should repository release immutability be enabled anyway?** The digest
+   check in section 4.4 makes the design not depend on it, but enabling it is
+   cheap defence in depth for every other asset.
+3. **Initial values for `MAX_BUNDLED_ENTRIES`, `MAX_BUNDLE_BYTES` and the Phase
+   2 `BUNDLE_CUTOFF_DATE`.** The proposed 25,000 / 4 MB / 90 days keeps the
+   bundle near its current size and its import near 75 ms.
+
+The first draft's question about resolving the catalog to `latest` is closed:
+section 4.4 pins it to the installed version, which is what makes the digest
+check and the version-mismatch condition possible.
+
+## 11. Review corrections
+
+The first draft was reviewed and seven defects were found. All were verified
+against the source before being accepted, and all are fixed above. They are
+recorded because six of the seven are a guard or a claim that reads correct and
+answers a different question, which is this project's most common defect class.
+
+| # | Defect | Fix |
+| --- | --- | --- |
+| 1 | Phase ordering: the backlog drain ran while the cutoff was still infinite, so every deferred entry would have landed in the bundle and breached the budget | Phases 2 and 3 swapped; the cutoff is finite before the drain |
+| 2 | No decompression exists anywhere in the refresh path, so a `.gz` asset could never parse | Bounded `gunzipSync` with `maxOutputLength`, section 4.3 |
+| 3 | `parseFeedPayload()` rejects an empty `entries` array, so the Phase 1 empty catalog was unusable | Empty allowed for `kind: "catalog"` only |
+| 4 | Release assets were claimed immutable; `immutable_releases` is `null` on this repository and `--clobber` can replace them | Integrity anchored to a SHA-256 shipped in the npm package |
+| 5 | The finding fired only on an absent file, so a previous release's catalog silently satisfied `catalog: "required"` | Version and digest mismatch also count as unavailable |
+| 6 | The cutoff was relative to the release date, which is not a committed input and is unavailable to a PR gate, so generated files would drift | `BUNDLE_CUTOFF_DATE` is a committed ISO date |
+| 7 | The committed catalog would be scanned as ordinary content and flood the self-scan, blocking Phase 1 | `isInertThreatCatalogFile()`, sharing the existing allowlist constants |
+| 8 | Regenerating `src/threat-intel.ts` from a JSONL corpus would delete the 792 curated comment lines inside the feed chunks, and the byte-identical Phase 1 check could never pass. Found while writing the implementation plan, not in review | Two authored stores instead of one generated store, section 4.1; placement enforced by a gate rather than by regeneration |
