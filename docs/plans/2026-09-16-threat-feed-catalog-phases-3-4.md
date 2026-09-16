@@ -198,7 +198,7 @@ console.log('bundle entries :', require('./feed.json').entryCount, '(expect abou
 console.log('threat-intel.ts:', (fs.statSync('src/threat-intel.ts').size/1048576).toFixed(2), 'MB (expect about 1.58)');
 "
 node -e "const t=process.hrtime.bigint();require('./dist/threat-intel.js');console.log('import', Number(process.hrtime.bigint()-t)/1e6,'ms (expect about 32)')"
-ls -la catalog.json.gz
+ls -la catalog-index.json catalog-*.json.gz
 ```
 
 Record all of it in `.ai/handoff/STATUS.md`. The headline for the release notes is that 56,294 previously undetected indicators are now covered while startup got faster, which is the point of the whole exercise.
@@ -290,20 +290,28 @@ Never verify this through `immutable_releases` on the repository object: that fi
 
 ```bash
 gh release view <new tag> --json assets --jq '.assets[] | "\(.name) \(.size)"'
-curl -sL "https://github.com/homeofe/supply-chain-guard/releases/download/<new tag>/catalog.json.gz" -o /tmp/cat.gz
+BASE="https://github.com/homeofe/supply-chain-guard/releases/download/<new tag>"
+curl -sL "$BASE/catalog-index.json" -o index.json
 node -e "
-const z=require('node:zlib'), c=require('node:crypto'), fs=require('node:fs');
-const json = z.gunzipSync(fs.readFileSync('/tmp/cat.gz')).toString('utf8');
-const sha = c.createHash('sha256').update(json,'utf8').digest('hex');
+const z=require('node:zlib'), c=require('node:crypto'), fs=require('node:fs'), cp=require('node:child_process');
+const idx = fs.readFileSync('index.json','utf8');
 const { CATALOG_DIGEST } = require('./dist/catalog-digest.js');
-console.log('published sha:', sha);
-console.log('expected  sha:', CATALOG_DIGEST.sha256);
-console.log(sha === CATALOG_DIGEST.sha256 ? 'MATCH' : 'MISMATCH');
-console.log('entries:', JSON.parse(json).entries.length);
+const isha = c.createHash('sha256').update(idx,'utf8').digest('hex');
+console.log('index', isha === CATALOG_DIGEST.sha256 ? 'MATCH' : 'MISMATCH');
+const parsed = JSON.parse(idx);
+let total = 0, bad = 0;
+for (const s of parsed.shards) {
+  cp.execSync('curl -sL \'' + process.env.BASE + '/' + s.path + '\' -o ' + s.path);
+  const json = z.gunzipSync(fs.readFileSync(s.path)).toString('utf8');
+  const sha = c.createHash('sha256').update(json,'utf8').digest('hex');
+  if (sha !== s.sha256) { bad++; console.log(s.path, 'MISMATCH'); }
+  total += JSON.parse(json).entries.length;
+}
+console.log('shards', parsed.shards.length, '| mismatched', bad, '| entries', total);
 "
 ```
 
-Expected: `MATCH` and about 68,292 entries. This is the end-to-end proof that the digest anchor works against the real published artifact rather than against a fixture.
+Expected: `index MATCH`, `mismatched 0`, and about 68,292 entries across 2 shards. This is the end-to-end proof that the whole chain of trust, package to index to shard, works against the real published artifacts rather than against fixtures.
 
 - [ ] **Step 4: Verify a clean install detects a drained indicator after refresh**
 

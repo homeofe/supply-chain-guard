@@ -1,3 +1,64 @@
+## Catalog decoupling: every open exit closed (2026-09-16, claude-opus-5)
+
+The previous note left three things as "would require a design change later".
+For a public community security tool that is not good enough, so all three are
+now closed in the design rather than deferred. Still no code; the plans are
+updated to match.
+
+**1. The catalog is SHARDED from the first release.** This is the important
+one. A single catalog document has a hard ceiling of about 406,000 entries set
+by `CATALOG_MAX_DECOMPRESSED_BYTES`, which is compiled into every released
+client. Sharding LATER would have hit exactly the same wall as raising that
+constant: old clients would not know how to read an index, so the fix for the
+ceiling would itself have broken every existing install. Sharding now, while
+the catalog is empty, costs nothing and removes the ceiling permanently.
+
+Format: `catalog-index.json` plus `catalog-NNN.json.gz`, chain of trust from
+package to index to shard. `CATALOG_DIGEST` is the digest of the INDEX; the
+index carries a digest per shard; a client installs nothing unless every link
+verifies. `CATALOG_SHARD_MAX_ENTRIES` is 50,000, chosen so the multi-shard path
+is LIVE after Phase 3 at 68,292 entries rather than dormant. Dormant code first
+exercised years later under pressure is how this problem would come back
+wearing a different hat.
+
+**2. Rule 1 is bounded by curation instead of by type.** It previously kept
+every non-package entry bundled unconditionally, which is unbounded: a source
+that started publishing atomic indicators in bulk would have grown the bundle
+forever with no mechanism to stop it. Measured first: 404 non-package entries,
+401 already carry campaign or family, only 3 rely on type alone, none of those
+3 is older than a 30-day cutoff, and non-package is 0.9 percent of daily volume
+at about 2.4 a day. So bounding it moves ZERO entries today.
+
+The loss risk is closed by a gate rather than a rule: `check:feed-partition`
+FAILS THE BUILD if any non-package entry would be routed to the catalog, and
+the message names the real fix, which is the campaign or family field the entry
+should have had. Atomic indicators are the highest-value detections in the feed
+and none may leave the bundle silently.
+
+**3. Version pinning is now a stated decision, not an unexamined limit**
+(section 4.9). A catalog belongs to one release because the digest that
+verifies it is compiled into the package, and a document that moved
+independently would have nothing immutable left to verify it against. The cost
+is bounded and already covered: `feed refresh` also refreshes the bundle feed,
+which is published from `main` and is NOT version-pinned, so recent
+intelligence keeps flowing to every install regardless of version. Only newly
+added HISTORICAL coverage travels with the release.
+
+**Plus: the recurring manual step is gone.** `npm run release:prepare` moves
+`BUNDLE_CUTOFF_DATE` to 30 days before today and the migration follows. Both
+alternatives were considered and rejected in writing: deriving it from the
+clock would make generated files a function of the day they were generated, and
+deriving it from the newest feed entry would put a migration inside every daily
+threat-intel pull request and bury the day additions in hundreds of unrelated
+removals, when reviewing those diffs is a security control here. Binding it to
+the release gets automation without either cost.
+
+Section 10 now carries nine decisions and section 12 is rewritten as "why this
+does not need revisiting": three growth paths, all bounded, all failing the
+BUILD rather than a user. What genuinely remains is one measurement, not a
+decision: the real bundle size and import time after Phase 2.
+
+
 ## Durability audit before merge (2026-09-16, claude-opus-5)
 
 Asked whether the design is final enough that future releases never need a

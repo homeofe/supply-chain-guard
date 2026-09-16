@@ -537,9 +537,74 @@ node scripts/feed-migrate.mjs --dry-run
 
 The cutoff is still the Phase 1 placeholder, so this must report `move 0`. That is the control: it proves the migration is inert until the cutoff is deliberately moved, rather than firing on whatever the config happens to say.
 
-- [ ] **Step 6: Set the real cutoff and migrate**
+- [ ] **Step 6: Automate the cutoff, then migrate**
 
-Edit `feed-partition.config.json`: set `bundleCutoffDate` to the date 30 days before the release, and tighten the limits to the decided values:
+The cutoff is the one value a release moves, and it must not become a thing
+someone remembers. Add `scripts/release-prepare.mjs`:
+
+```javascript
+// release-prepare.mjs - move the bundle cutoff and migrate, as part of a release.
+//
+// The cutoff is NOT derived from the clock at build time: that would make the
+// generated files a function of the day they were generated, so the same commit
+// would produce different output tomorrow and check:feed would fail on an
+// untouched tree. It is NOT derived from the newest feed entry either: that
+// would slide the window on every daily import, putting a migration inside
+// every threat-intel pull request and burying the day's additions in hundreds
+// of unrelated removals. Reviewing those diffs is a security control here.
+//
+// Binding it to the release gets the automation without either cost: a release
+// is already a deliberate, reviewed, gated event that regenerates many files.
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const WINDOW_DAYS = 30;
+
+export function cutoffFor(now, windowDays = WINDOW_DAYS) {
+  return new Date(now.getTime() - windowDays * 86_400_000).toISOString().slice(0, 10);
+}
+
+const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (invokedDirectly) {
+  const p = join(repoRoot, "feed-partition.config.json");
+  const config = JSON.parse(readFileSync(p, "utf8"));
+  const previous = config.bundleCutoffDate;
+  config.bundleCutoffDate = cutoffFor(new Date());
+  writeFileSync(p, `${JSON.stringify(config, null, 2)}\n`);
+  console.log(`bundleCutoffDate ${previous} -> ${config.bundleCutoffDate}`);
+  console.log("Now run: node scripts/feed-migrate.mjs && npm run feed:generate && npm run catalog:generate");
+}
+```
+
+Add its test, pinning `now` so the test does not read the real clock. This file
+has been broken once already by tests that did:
+
+```typescript
+import { cutoffFor } from "../../scripts/release-prepare.mjs";
+
+describe("cutoffFor", () => {
+  it("is 30 days before the given date", () => {
+    expect(cutoffFor(new Date("2026-09-16T00:00:00Z"))).toBe("2026-08-17");
+  });
+  it("does not read the clock", () => {
+    const a = cutoffFor(new Date("2026-09-16T00:00:00Z"));
+    const realNow = Date.now;
+    Date.now = () => realNow() + 400 * 86400000;
+    try { expect(cutoffFor(new Date("2026-09-16T00:00:00Z"))).toBe(a); }
+    finally { Date.now = realNow; }
+  });
+});
+```
+
+Add the script and tighten the limits to the decided values in
+`feed-partition.config.json`:
+
+```json
+    "release:prepare": "node scripts/release-prepare.mjs",
+```
 
 ```json
 {
@@ -549,9 +614,10 @@ Edit `feed-partition.config.json`: set `bundleCutoffDate` to the date 30 days be
 }
 ```
 
-Then:
+Then run the sequence a release will run from now on:
 
 ```bash
+npm run release:prepare
 node scripts/feed-migrate.mjs
 npm run feed:generate
 npm run catalog:generate
@@ -559,7 +625,7 @@ npm run self-scan:generate
 npm run handoff:refresh
 ```
 
-Expected: `move 11998, keep 8971, total 20969`, then `feed.json` regenerated at 8971 entries and the catalog at 11998.
+Expected: `move 11998, keep 8971, total 20969`, then `feed.json` regenerated at 8971 entries and the catalog at 11998 across 1 shard (it crosses into 2 shards in Phase 3).
 
 - [ ] **Step 7: Verify the migration preserved everything**
 
@@ -606,11 +672,12 @@ Record both numbers in the PR body and in `.ai/handoff/STATUS.md`. They are the 
 `BUNDLE_CUTOFF_DATE` is the one value a release has to move by hand, so it belongs in the committed release documentation rather than only in a gate message. Add to `docs/ci-and-release.md`, in the release checklist:
 
 ```markdown
-- **Move `bundleCutoffDate` in `feed-partition.config.json`** to 30 days before
-  this release, then run `node scripts/feed-migrate.mjs` and regenerate. This is
-  the only value a release moves by hand. Forgetting it is not silent:
-  `check:feed-budget` fails the build once the bundle outgrows its limit and
-  prints the exact date to set.
+- **Run `npm run release:prepare`**, then `node scripts/feed-migrate.mjs` and
+  regenerate. This moves `bundleCutoffDate` to 30 days before today and
+  migrates the entries that fall outside it. It is the one value a release
+  moves, and the script moves it, so nobody has to remember a date. If a
+  release is ever skipped long enough to matter, `check:feed-budget` fails the
+  build and prints the exact date to set.
 ```
 
 Do not put it only in a gitignored file. The gate names the value and the
@@ -769,7 +836,12 @@ console.log('digest entries', d.CATALOG_DIGEST.entryCount, 'version', d.CATALOG_
 "
 ```
 
-Expected: `catalog digest up to date`, `entryCount 11998`.
+Expected: `catalog digest up to date`, `entryCount 11998`, `shardCount 1`.
+
+One shard here, two after Phase 3 crosses 50,000 entries. Check `shardCount`
+explicitly rather than only `entryCount`: the sharding path is what removes the
+catalog's ceiling, and a generator that silently stopped sharding would look
+identical on entry count alone.
 
 - [ ] **Step 3: Confirm the finding clears after a refresh**
 

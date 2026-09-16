@@ -4,7 +4,7 @@
 
 **Goal:** Build the complete catalog path (routing policy, gates, transport, cache, finding) without moving a single indicator out of the bundle, so that detection is provably unchanged when the phase lands.
 
-**Architecture:** `src/threat-intel.ts` stays the authored bundle, untouched. A new `data/threat-catalog.jsonl` becomes the catalog store, committed empty in this phase. Placement across the two stores is enforced by a build gate rather than by regeneration. The existing feed transport gains bounded gzip decompression, a `kind` discriminator, a second cache keyed by version and SHA-256, and a finding that fires whenever the catalog is absent, version-mismatched or digest-mismatched.
+**Architecture:** `src/threat-intel.ts` stays the authored bundle, untouched. A new `data/threat-catalog.jsonl` becomes the catalog store, committed empty in this phase. Placement across the two stores is enforced by a build gate rather than by regeneration. The published catalog is SHARDED from this first release (an index document plus 50,000-entry shards), so later growth adds shards instead of requiring a format migration old clients could not read. The existing feed transport gains bounded gzip decompression, a `kind` discriminator, a second cache keyed by version and index digest, and a finding that fires whenever the catalog is absent, version-mismatched or digest-mismatched.
 
 **Tech Stack:** TypeScript (ESM, Node 22 floor), vitest, `.mjs` build scripts run by `npm run` and wired into `prebuild`, GitHub Actions.
 
@@ -183,10 +183,24 @@ import { partitionTarget } from "../../scripts/feed-partition.mjs";
 const CONFIG = { bundleCutoffDate: "2026-06-01", maxBundledEntries: 25000, maxBundleBytes: 4194304 };
 
 describe("partitionTarget", () => {
-  it("keeps every non-package type in the bundle", () => {
+  it("keeps a CURATED non-package type in the bundle regardless of age", () => {
     for (const type of ["ip", "domain", "url", "hash"]) {
-      expect(partitionTarget({ type, value: "x", firstSeen: "2020-01-01" }, CONFIG)).toBe("bundle");
+      expect(partitionTarget({ type, value: "x", campaign: "c", firstSeen: "2020-01-01" }, CONFIG)).toBe("bundle");
     }
+  });
+
+  // Rule 1 is bounded by curation, not by type: an unbounded rule would let a
+  // source that publishes atomic indicators in bulk grow the bundle forever.
+  // Measured on the v6.1.3 feed, 401 of 404 non-package entries already carry
+  // campaign or family, so this moves zero entries today. The loss risk is
+  // closed by check:feed-partition, which FAILS the build rather than letting
+  // an atomic indicator leave the bundle silently.
+  it("routes an UNCURATED old non-package type to the catalog", () => {
+    expect(partitionTarget({ type: "ip", value: "203.0.113.9", firstSeen: "2020-01-01" }, CONFIG)).toBe("catalog");
+  });
+
+  it("keeps an uncurated non-package type that is recent", () => {
+    expect(partitionTarget({ type: "ip", value: "203.0.113.9", firstSeen: "2026-09-01" }, CONFIG)).toBe("bundle");
   });
   it("keeps curated campaign and family entries in the bundle", () => {
     expect(partitionTarget({ type: "package", value: "a@1", campaign: "c", firstSeen: "2020-01-01" }, CONFIG)).toBe("bundle");
@@ -290,7 +304,7 @@ export function loadPartitionConfig(root = repoRoot) {
  * where guessing it out of the bundle would silently drop coverage.
  */
 export function partitionTarget(entry, config) {
-  if (entry.type !== "package") return "bundle";
+  // Rule 2: curated entries stay, whatever their type or age.
   if (entry.campaign !== undefined || entry.family !== undefined) return "bundle";
   const seen = isoToEpoch(entry.firstSeen);
   if (seen === null) return "bundle";
@@ -365,9 +379,11 @@ describe("checkPartition", () => {
     const root = fixture([dup], [JSON.stringify({ ...dup, firstSeen: "2026-01-01" })]);
     expect(checkPartition(root).join(" ")).toMatch(/dup@1.*both/i);
   });
-  it("rejects a non-package entry in the catalog", () => {
+  it("rejects a non-package entry in the catalog, naming the real fix", () => {
     const root = fixture([], [JSON.stringify({ type: "ip", value: "1.2.3.4", severity: "critical", firstSeen: "2026-01-01" })]);
-    expect(checkPartition(root).join(" ")).toMatch(/1\.2\.3\.4.*belongs in the bundle/i);
+    const out = checkPartition(root).join(" ");
+    expect(out).toMatch(/Atomic indicators must stay/i);
+    expect(out).toMatch(/campaign or family/i);
   });
   it("rejects a campaign entry in the catalog", () => {
     const root = fixture([], [JSON.stringify({ type: "package", value: "c@1", severity: "critical", campaign: "x", firstSeen: "2026-01-01" })]);
@@ -442,6 +458,16 @@ export function checkPartition(root = repoRoot) {
     }
     if (partitionTarget(entry, config) === "bundle") {
       violations.push(`${entry.value} is in the catalog but belongs in the bundle by the partition policy`);
+    }
+    // Atomic indicators are the highest-value detections in the feed and none
+    // of them may leave the bundle silently. If one is about to, the entry is
+    // under-documented: the fix is the campaign or family it should have had,
+    // which 401 of 404 non-package entries already carry.
+    if (entry.type !== undefined && entry.type !== "package") {
+      violations.push(
+        `${entry.value} is a ${entry.type} indicator in the catalog. Atomic indicators must stay ` +
+        `in the bundle: give it a campaign or family field rather than moving it.`,
+      );
     }
   });
 
@@ -881,9 +907,22 @@ Integrity cannot rest on release-asset immutability: `immutable_releases` is `nu
 
 **Interfaces:**
 - Produces:
-  - `catalog.json.gz` at the repo root (gitignored build artifact)
+  - `catalog-index.json` and `catalog-NNN.json.gz` at the repo root (gitignored build artifacts)
   - `src/catalog-digest.ts`, a GENERATED and COMMITTED TypeScript constant:
-    `export const CATALOG_DIGEST = { version: string; sha256: string; entryCount: number }`
+    `export const CATALOG_DIGEST = { version: string; sha256: string; entryCount: number; shardCount: number }`
+    where `sha256` is the digest of the INDEX document
+
+**Sharded from this first release, deliberately.** A single catalog document has
+a hard ceiling of about 406,000 entries, set by `CATALOG_MAX_DECOMPRESSED_BYTES`,
+which is compiled into every released client. Sharding later would hit the same
+wall as raising that constant: old clients would not know how to read an index,
+so the fix for the ceiling would break every existing install. Sharding now,
+while the catalog is empty, costs nothing and removes the ceiling permanently.
+
+`CATALOG_SHARD_MAX_ENTRIES` is 50,000, chosen so the multi-shard path is LIVE
+after Phase 3 at 68,292 entries rather than dormant. Dormant code first
+exercised years later under pressure is how this problem would come back in a
+different shape.
 
 **Why a TypeScript constant and not a JSON file read at runtime.** Three
 reasons:
@@ -911,19 +950,47 @@ import { buildCatalog } from "../../scripts/generate-catalog.mjs";
 import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 
+const entry = (i: number) => ({ type: "package", value: `p${i}@1.0.0`, severity: "critical" });
+
 describe("buildCatalog", () => {
-  it("produces a gzipped catalog whose digest matches the manifest", () => {
-    const { json, digest } = buildCatalog([], "9.9.9");
-    expect(digest.sha256).toBe(createHash("sha256").update(json, "utf8").digest("hex"));
+  it("produces an index whose digest is what the package ships", () => {
+    const { indexJson, digest } = buildCatalog([], "9.9.9");
+    expect(digest.sha256).toBe(createHash("sha256").update(indexJson, "utf8").digest("hex"));
     expect(digest.version).toBe("9.9.9");
     expect(digest.entryCount).toBe(0);
-    const doc = JSON.parse(json);
-    expect(doc.kind).toBe("catalog");
-    expect(doc.entries).toEqual([]);
+    const index = JSON.parse(indexJson);
+    expect(index.kind).toBe("catalog-index");
   });
-  it("is deterministic: the same input yields the same digest", () => {
-    const a = buildCatalog([{ type: "package", value: "x@1", severity: "critical" }], "1.0.0");
-    const b = buildCatalog([{ type: "package", value: "x@1", severity: "critical" }], "1.0.0");
+
+  it("emits one shard below the shard limit", () => {
+    const { shards, digest } = buildCatalog([entry(1)], "1.0.0");
+    expect(shards).toHaveLength(1);
+    expect(digest.shardCount).toBe(1);
+    expect(shards[0].path).toBe("catalog-000.json.gz");
+  });
+
+  it("splits at the shard limit, and the index accounts for every entry", () => {
+    const { shards, indexJson, digest } = buildCatalog(
+      Array.from({ length: CATALOG_SHARD_MAX_ENTRIES + 1 }, (_, i) => entry(i)), "1.0.0");
+    expect(shards).toHaveLength(2);
+    expect(digest.shardCount).toBe(2);
+    const index = JSON.parse(indexJson);
+    expect(index.shards.reduce((s: number, x: { entryCount: number }) => s + x.entryCount, 0))
+      .toBe(CATALOG_SHARD_MAX_ENTRIES + 1);
+    expect(index.entryCount).toBe(CATALOG_SHARD_MAX_ENTRIES + 1);
+  });
+
+  it("records a verifiable digest for every shard", () => {
+    const { shards, indexJson } = buildCatalog([entry(1)], "1.0.0");
+    const index = JSON.parse(indexJson);
+    index.shards.forEach((s: { path: string; sha256: string }, i: number) => {
+      expect(s.sha256).toBe(createHash("sha256").update(shards[i].json, "utf8").digest("hex"));
+    });
+  });
+
+  it("is deterministic: the same input yields the same index digest", () => {
+    const a = buildCatalog([entry(1)], "1.0.0");
+    const b = buildCatalog([entry(1)], "1.0.0");
     expect(a.digest.sha256).toBe(b.digest.sha256);
   });
 });
@@ -958,31 +1025,59 @@ export function readCatalogEntries(root = repoRoot) {
 }
 
 /**
- * Build the gzipped catalog document and its digest manifest. Deterministic:
- * no timestamps derived from the clock, so the same corpus and version always
- * produce the same bytes and the same digest.
+ * Serialize one document into its JSON, its gzip and the digest OF THE JSON.
+ * Deterministic: no timestamps derived from the clock, so the same input always
+ * produces the same bytes and the same digest.
  */
-export function buildCatalog(entries, version) {
-  const doc = {
-    schema: 1,
-    kind: "catalog",
-    package: "supply-chain-guard",
-    version,
-    entryCount: entries.length,
-    entries,
-  };
+function serialize(doc) {
   // Hash the DECOMPRESSED JSON, not the gzip bytes: an air-gapped mirror may
-  // serve the asset uncompressed and the digest must still verify. gzip output
+  // serve an asset uncompressed and the digest must still verify. gzip output
   // is also not guaranteed byte-stable across zlib versions, which would make a
   // digest over the compressed form spuriously mismatch.
   const json = JSON.stringify(doc);
   const gz = gzipSync(Buffer.from(json, "utf-8"), { level: 9 });
+  return { json, gz, sha256: createHash("sha256").update(json, "utf8").digest("hex") };
+}
+
+/** One shard holds at most this many entries. See the note above on why. */
+export const CATALOG_SHARD_MAX_ENTRIES = 50_000;
+
+/**
+ * Build the sharded catalog: an index document plus N gzipped shards.
+ *
+ * The chain of trust is package -> index -> shard. CATALOG_DIGEST in the
+ * package is the digest of the INDEX; the index carries a digest for each
+ * shard. A client installs nothing unless every link verifies, so a replaced
+ * asset at any level is caught.
+ */
+export function buildCatalog(entries, version) {
+  const shards = [];
+  for (let i = 0; i < Math.max(1, Math.ceil(entries.length / CATALOG_SHARD_MAX_ENTRIES)); i++) {
+    const slice = entries.slice(i * CATALOG_SHARD_MAX_ENTRIES, (i + 1) * CATALOG_SHARD_MAX_ENTRIES);
+    const path = `catalog-${String(i).padStart(3, "0")}.json.gz`;
+    const built = serialize({
+      schema: 1, kind: "catalog", package: "supply-chain-guard",
+      version, shard: i, entryCount: slice.length, entries: slice,
+    });
+    shards.push({ path, ...built, entryCount: slice.length });
+  }
+
+  const indexJson = JSON.stringify({
+    schema: 1,
+    kind: "catalog-index",
+    package: "supply-chain-guard",
+    version,
+    entryCount: entries.length,
+    shards: shards.map((s) => ({ path: s.path, sha256: s.sha256, entryCount: s.entryCount })),
+  });
+
   const digest = {
     version,
-    sha256: createHash("sha256").update(json, "utf8").digest("hex"),
+    sha256: createHash("sha256").update(indexJson, "utf8").digest("hex"),
     entryCount: entries.length,
+    shardCount: shards.length,
   };
-  return { json, gz, digest };
+  return { indexJson, shards, digest };
 }
 
 /** Render the committed TypeScript constant. Generated, never hand-edited. */
@@ -1006,7 +1101,7 @@ export function renderDigestModule(digest) {
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
   const version = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
-  const { gz, digest } = buildCatalog(readCatalogEntries(), version);
+  const { indexJson, shards, digest } = buildCatalog(readCatalogEntries(), version);
   const modulePath = join(repoRoot, "src", "catalog-digest.ts");
   const rendered = renderDigestModule(digest);
 
@@ -1017,9 +1112,13 @@ if (invokedDirectly) {
     }
     console.log(`catalog digest up to date (${digest.entryCount} entries, v${digest.version}).`);
   } else {
-    writeFileSync(join(repoRoot, "catalog.json.gz"), gz);
+    writeFileSync(join(repoRoot, "catalog-index.json"), indexJson);
+    for (const shard of shards) writeFileSync(join(repoRoot, shard.path), shard.gz);
     writeFileSync(modulePath, rendered);
-    console.log(`catalog:generate OK - ${digest.entryCount} entries, ${gz.length} bytes, sha256 ${digest.sha256.slice(0, 12)}...`);
+    console.log(
+      `catalog:generate OK - ${digest.entryCount} entries in ${digest.shardCount} shard(s), ` +
+      `index sha256 ${digest.sha256.slice(0, 12)}...`,
+    );
   }
 }
 ```
@@ -1037,7 +1136,7 @@ and extend `prebuild` again so a stale digest cannot be committed:
     "prebuild": "npm run check:aahp && npm run check:feed && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
 ```
 
-`src/catalog-digest.ts` is compiled into the package like any other source file, so nothing needs adding to `files`. Add `catalog.json.gz` to `.gitignore`: it is a build artifact rebuilt from the committed catalog, and committing a binary blob that changes on every import would bloat history.
+`src/catalog-digest.ts` is compiled into the package like any other source file, so nothing needs adding to `files`. Add `catalog-index.json` and `catalog-*.json.gz` to `.gitignore`: they are build artifacts rebuilt from the committed catalog, and committing binary blobs that change on every import would bloat history.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1241,7 +1340,11 @@ or a later edit can delete one silently.
 - [ ] **Step 8: Generate against the real tree and commit the digest module**
 
 Run `npm run catalog:generate`, then `npm run check:catalog`.
-Expected: the first writes `src/catalog-digest.ts` and `catalog.json.gz`; the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit `src/catalog-digest.ts`.
+Expected: the first writes `src/catalog-digest.ts`, `catalog-index.json` and one empty shard; the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit `src/catalog-digest.ts`.
+
+An empty catalog still produces ONE shard, not zero. That keeps the index shape
+identical whether the catalog is empty or holds a million entries, so the client
+never needs a special case and Phase 1 exercises the same code path Phase 3 will.
 
 - [ ] **Step 9: Commit**
 
@@ -1607,8 +1710,8 @@ consumers who want the guarantee rather than the signal."
 **Interfaces:**
 - Consumes: `decodeCatalogBody` (Task 6), `parseFeedPayload` (Task 5), `CATALOG_CACHE_FILE` (Task 8)
 - Produces:
-  - `export const DEFAULT_CATALOG_URL_TEMPLATE = "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/catalog.json.gz";`
-  - `export function catalogUrlFor(version: string, template?: string): string`
+  - `export const DEFAULT_CATALOG_URL_TEMPLATE = "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/{file}";`
+  - `export function catalogUrlFor(version: string, file: string, template?: string): string`
   - `refreshFeed` return type gains `catalog?: { entryCount: number; cachePath: string }`
 
 - [ ] **Step 1: Write the failing test**
@@ -1618,15 +1721,20 @@ import { catalogUrlFor, DEFAULT_CATALOG_URL_TEMPLATE } from "../feed.js";
 
 describe("catalogUrlFor", () => {
   it("pins the asset to the installed version, not latest", () => {
-    expect(catalogUrlFor("6.2.0")).toBe(
-      "https://github.com/homeofe/supply-chain-guard/releases/download/v6.2.0/catalog.json.gz",
+    expect(catalogUrlFor("6.2.0", "catalog-index.json")).toBe(
+      "https://github.com/homeofe/supply-chain-guard/releases/download/v6.2.0/catalog-index.json",
     );
     expect(DEFAULT_CATALOG_URL_TEMPLATE).toContain("{version}");
-    expect(catalogUrlFor("6.2.0")).not.toContain("latest");
+    expect(catalogUrlFor("6.2.0", "catalog-index.json")).not.toContain("latest");
+  });
+  it("builds a shard URL from the index's path", () => {
+    expect(catalogUrlFor("6.2.0", "catalog-001.json.gz")).toBe(
+      "https://github.com/homeofe/supply-chain-guard/releases/download/v6.2.0/catalog-001.json.gz",
+    );
   });
   it("honours an override for an air-gapped mirror", () => {
-    expect(catalogUrlFor("6.2.0", "https://mirror.internal/scg/{version}/catalog.json.gz"))
-      .toBe("https://mirror.internal/scg/6.2.0/catalog.json.gz");
+    expect(catalogUrlFor("6.2.0", "catalog-index.json", "https://mirror.example/scg/{version}/{file}"))
+      .toBe("https://mirror.example/scg/6.2.0/catalog-index.json");
   });
 });
 ```
@@ -1646,10 +1754,14 @@ Expected: FAIL, `catalogUrlFor is not a function`.
  * version pinning is also what makes a stale cache detectable.
  */
 export const DEFAULT_CATALOG_URL_TEMPLATE =
-  "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/catalog.json.gz";
+  "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/{file}";
 
-export function catalogUrlFor(version: string, template = DEFAULT_CATALOG_URL_TEMPLATE): string {
-  return template.replace("{version}", version);
+export function catalogUrlFor(
+  version: string,
+  file: string,
+  template = DEFAULT_CATALOG_URL_TEMPLATE,
+): string {
+  return template.replace("{version}", version).replace("{file}", file);
 }
 ```
 
@@ -1662,18 +1774,41 @@ Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must
     const version = CATALOG_DIGEST.version;
     let catalog: RefreshResult | undefined;
     try {
-      const catalogBody = decodeCatalogBody(
-        (await fetchHttpsBuffer(catalogUrlFor(version), limits)).body,
-      );
-      const catalogEntries = parseFeedPayload(catalogBody, "catalog");
+      // Chain of trust: verify the index against the digest compiled into this
+      // package, then verify every shard against the index. Nothing is cached
+      // unless all of it verifies, because a partially installed catalog is
+      // worse than none: it would look present while silently omitting entries.
+      const indexBody = (await fetchHttpsBuffer(catalogUrlFor(version, "catalog-index.json"), limits))
+        .body.toString("utf-8");
+      if (createHash("sha256").update(indexBody, "utf8").digest("hex") !== CATALOG_DIGEST.sha256) {
+        throw new Error("catalog index does not match the digest shipped in this package");
+      }
+      const index = JSON.parse(indexBody) as {
+        kind?: string; shards?: Array<{ path: string; sha256: string }>;
+      };
+      if (index.kind !== "catalog-index" || !Array.isArray(index.shards)) {
+        throw new Error("catalog index is malformed");
+      }
+
+      const entries: FeedIOC[] = [];
+      for (const shard of index.shards) {
+        const body = decodeCatalogBody(
+          (await fetchHttpsBuffer(catalogUrlFor(version, shard.path), limits)).body,
+        );
+        if (createHash("sha256").update(body, "utf8").digest("hex") !== shard.sha256) {
+          throw new Error(`catalog shard ${shard.path} does not match the digest in the index`);
+        }
+        entries.push(...parseFeedPayload(body, "catalog"));
+      }
+
       const catalogPath = path.join(cacheDir, CATALOG_CACHE_FILE);
       fs.writeFileSync(catalogPath, JSON.stringify({
         version,
-        sha256: createHash("sha256").update(catalogBody, "utf8").digest("hex"),
+        sha256: CATALOG_DIGEST.sha256,
         timestamp: new Date().toISOString(),
-        entries: catalogEntries,
+        entries,
       }, null, 2));
-      catalog = { entryCount: catalogEntries.length, cachePath: catalogPath };
+      catalog = { entryCount: entries.length, cachePath: catalogPath };
     } catch { /* the missing-catalog finding reports this; the feed refresh stands */ }
 ```
 
@@ -1752,13 +1887,23 @@ In the `release` job, between "Extract changelog for this version" and "Create G
               version: /version: "([^"]+)"/.exec(src)[1],
               sha256: /sha256: "([^"]+)"/.exec(src)[1],
               entryCount: Number(/entryCount: (\d+)/.exec(src)[1]),
+              shardCount: Number(/shardCount: (\d+)/.exec(src)[1]),
             };
+            // Every shard the index names must exist before we publish, or
+            // clients verify the index and then fail on a missing asset.
+            const idx = JSON.parse(fs.readFileSync('catalog-index.json', 'utf8'));
+            for (const s of idx.shards) {
+              if (!fs.existsSync(s.path)) {
+                console.error('index names ' + s.path + ' but it was not generated');
+                process.exit(1);
+              }
+            }
             const tagged = process.env.GITHUB_REF_NAME.replace(/^v/, '');
             if (built.version !== tagged) {
               console.error('catalog digest version ' + built.version + ' does not match tag ' + tagged);
               process.exit(1);
             }
-            console.log('catalog asset: ' + built.entryCount + ' entries, sha256 ' + built.sha256);
+            console.log('catalog: ' + built.entryCount + ' entries in ' + built.shardCount + ' shard(s), index sha256 ' + built.sha256);
           "
 ```
 
@@ -1770,7 +1915,7 @@ Then change the release creation step to attach the asset:
           gh release create "$GITHUB_REF_NAME" \
             --title "supply-chain-guard $GITHUB_REF_NAME" \
             --notes-file release_notes.md \
-            catalog.json.gz
+            catalog-index.json catalog-*.json.gz
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
