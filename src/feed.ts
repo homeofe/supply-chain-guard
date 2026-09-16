@@ -26,12 +26,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { gunzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
 import { CATALOG_DIGEST } from "./catalog-digest.js";
 import {
   CACHE_DIR,
   FEED_CACHE_FILE,
+  CATALOG_CACHE_FILE,
   FEED_REMOTE_LIMITS,
   isValidFeedIOC,
   type CatalogState,
@@ -43,6 +45,41 @@ import {
 /** Published feed location: the committed feed.json on the main branch. */
 export const DEFAULT_FEED_URL =
   "https://raw.githubusercontent.com/homeofe/supply-chain-guard/main/feed.json";
+
+/** Where the catalog assets are published for a tagged release. */
+export const DEFAULT_CATALOG_URL_TEMPLATE =
+  "https://github.com/homeofe/supply-chain-guard/releases/download/v{version}/{file}";
+
+/** Substitute a release version and an asset name into a catalog URL template. */
+export function catalogUrlFor(
+  version: string,
+  file: string,
+  template: string = DEFAULT_CATALOG_URL_TEMPLATE,
+): string {
+  return template.replace("{version}", version).replace("{file}", file);
+}
+
+/**
+ * Where to look for the catalog, given where the feed was fetched from.
+ *
+ * The catalog follows the feed. Someone who points this at a mirror, an
+ * air-gapped copy or a test server is asking for THAT source's view of the
+ * corpus, and reaching past it to a hardcoded github.com URL would mix two
+ * origins in one scan without saying so.
+ *
+ * It also keeps the unit tests honest: the bounds suite mocks node:https by
+ * forwarding to node:http against a loopback server, so a hardcoded public host
+ * here would have every one of those tests make a real outbound request.
+ */
+export function catalogTemplateForFeedUrl(feedUrl: string): string {
+  if (feedUrl === DEFAULT_FEED_URL) return DEFAULT_CATALOG_URL_TEMPLATE;
+  // Built by string surgery rather than through URL, whose serializer
+  // percent-encodes the braces the template is made of.
+  const withoutQuery = feedUrl.split(/[?#]/)[0];
+  const lastSlash = withoutQuery.lastIndexOf("/");
+  if (lastSlash === -1) return DEFAULT_CATALOG_URL_TEMPLATE;
+  return `${withoutQuery.slice(0, lastSlash + 1)}{file}`;
+}
 
 // ---------------------------------------------------------------------------
 // Feed statistics (offline)
@@ -355,6 +392,25 @@ export interface RefreshResult {
   entryCount: number;
   /** Absolute or relative path of the cache file that was written. */
   cachePath: string;
+  /**
+   * The catalog, when it was fetched, verified and installed this run.
+   *
+   * Absent means it was not installed. The feed refresh still succeeded: the
+   * catalog is a second document with its own failure modes, and losing it must
+   * not cost the caller the feed it asked for.
+   */
+  catalog?: { entryCount: number; cachePath: string };
+  /**
+   * Why the catalog was not installed, when it was not.
+   *
+   * Recorded rather than swallowed. A 404, a truncated shard and a digest
+   * mismatch are three very different events: the last one says the published
+   * asset does not match what this release pins, which is either a broken
+   * publish or someone replacing the scanner's detection data. Reporting all
+   * three as one silent "no catalog" line would hide exactly the case worth
+   * seeing.
+   */
+  catalogError?: string;
 }
 
 /**
@@ -523,6 +579,97 @@ async function httpsGetBody(url: string, limits: RemoteRequestLimits): Promise<s
  * download is abandoned, nothing is written, and the previous cache stays in
  * effect.
  */
+/** sha256 of a string, as lowercase hex. */
+function sha256Hex(text: string): string {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+/**
+ * Fetch, verify and install the catalog. Throws with a specific reason.
+ *
+ * The chain of trust runs package -> index -> shard, and every link is checked
+ * before anything is written:
+ *
+ *  - the index must hash to CATALOG_DIGEST.sha256, which ships compiled into
+ *    this package, so a replaced release asset is caught against an anchor the
+ *    publisher of that asset does not control;
+ *  - each shard must hash to the digest the index recorded for it;
+ *  - each shard must parse as a catalog document.
+ *
+ * Nothing is written until every shard has verified, so a run that fails
+ * halfway leaves the previous catalog in place rather than a partial one.
+ */
+async function installCatalog(
+  feedUrl: string,
+  cacheDir: string,
+  limits: RemoteRequestLimits,
+): Promise<{ entryCount: number; cachePath: string }> {
+  const version = CATALOG_DIGEST.version;
+  const template = catalogTemplateForFeedUrl(feedUrl);
+
+  const indexBody = (
+    await fetchHttpsBuffer(catalogUrlFor(version, "catalog-index.json", template), limits)
+  ).body.toString("utf-8");
+
+  const indexDigest = sha256Hex(indexBody);
+  if (indexDigest !== CATALOG_DIGEST.sha256) {
+    throw new Error(
+      `catalog index digest ${indexDigest.slice(0, 12)} does not match the ` +
+        `${CATALOG_DIGEST.sha256.slice(0, 12)} this release pins`,
+    );
+  }
+
+  const index = JSON.parse(indexBody) as {
+    kind?: string;
+    shards?: Array<{ path: string; sha256: string }>;
+  };
+  // The `shards` half is load-bearing: the loop below indexes it. The `kind`
+  // half cannot fire while the digest check above precedes it, because any
+  // document whose kind differs from the generated one hashes differently and
+  // is rejected there first. It is kept as a shape assertion, not as a guard,
+  // and a mutation that removes it leaves every test green: that is expected
+  // here rather than a gap in the tests.
+  if (index.kind !== "catalog-index" || !Array.isArray(index.shards)) {
+    throw new Error("catalog index is not a catalog-index document");
+  }
+
+  const entries: FeedIOC[] = [];
+  for (const shard of index.shards) {
+    const raw = (await fetchHttpsBuffer(catalogUrlFor(version, shard.path, template), limits)).body;
+    // Digest the DECODED document, matching how the generator computes it: a
+    // mirror may serve the asset uncompressed, and gzip output is not
+    // byte-stable across zlib versions.
+    const body = decodeCatalogBody(raw);
+    const digest = sha256Hex(body);
+    if (digest !== shard.sha256) {
+      throw new Error(
+        `catalog shard ${shard.path} digest ${digest.slice(0, 12)} does not match the ` +
+          `${String(shard.sha256).slice(0, 12)} the index records`,
+      );
+    }
+    entries.push(...parseFeedPayload(body, "catalog"));
+  }
+
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const cachePath = path.join(cacheDir, CATALOG_CACHE_FILE);
+  fs.writeFileSync(
+    cachePath,
+    JSON.stringify({
+      version,
+      sha256: CATALOG_DIGEST.sha256,
+      // Over the entries as written. The two fields above prove where the
+      // document came from; this one is what lets the reader notice the file
+      // changing afterwards, which is the case that would silently narrow
+      // detection on the next scan.
+      checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+      timestamp: new Date().toISOString(),
+      entries,
+    }),
+  );
+
+  return { entryCount: entries.length, cachePath };
+}
+
 export async function refreshFeed(
   feedUrl: string = DEFAULT_FEED_URL,
   cacheDir: string = CACHE_DIR,
@@ -540,7 +687,19 @@ export async function refreshFeed(
       JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
     );
 
-    return { entryCount: entries.length, cachePath };
+    // The catalog is a second, independent document. Its failures are recorded
+    // and returned, never thrown: a caller who asked to refresh the feed got
+    // the feed, and a missing catalog is reported by the scan itself through
+    // THREAT_FEED_CATALOG_MISSING rather than by failing the refresh.
+    let catalog: RefreshResult["catalog"];
+    let catalogError: string | undefined;
+    try {
+      catalog = await installCatalog(feedUrl, cacheDir, limits);
+    } catch (err) {
+      catalogError = err instanceof Error ? err.message : String(err);
+    }
+
+    return { entryCount: entries.length, cachePath, catalog, catalogError };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to refresh threat feed from ${feedUrl}: ${message}`);

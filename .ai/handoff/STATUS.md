@@ -1,3 +1,63 @@
+## Phase 1 Task 10: feed refresh installs the catalog (2026-09-16, claude-opus-5)
+
+`refreshFeed` now fetches, verifies and installs the catalog after the feed.
+This is the piece that writes the cache Task 8 reads, so with it the runtime
+path is complete end to end.
+
+Every link is checked against an anchor the serving side does not control: the
+index must hash to `CATALOG_DIGEST.sha256`, which is compiled into the package,
+and each shard must hash to the digest that index recorded. Nothing is written
+until every shard has verified, so a run that fails halfway leaves the previous
+catalog in place rather than a partial one. The cache records the entries
+checksum Task 8 verifies; without it that check is skipped and the corrupt
+reason can never fire.
+
+**The catalog follows the feed.** The plan hardcodes the public release URL.
+`catalogTemplateForFeedUrl` derives the catalog location from where the feed was
+fetched, falling back to the release template only for the default feed URL.
+Two reasons, one of them a bug the plan would have shipped:
+
+- Someone pointing the tool at a mirror or an air-gapped copy is asking for THAT
+  source's view of the corpus. Reaching past it to a hardcoded public host would
+  mix two origins in one scan without saying so.
+- `src/__tests__/issue-170-feed-bounds.test.ts` mocks `node:https` by forwarding
+  to `node:http` against a loopback server. A hardcoded public host would have
+  made every one of those unit tests issue a real outbound request.
+
+**Failures are recorded, not swallowed.** The plan's catch discards the reason,
+which makes a 404, a truncated shard and a digest mismatch indistinguishable.
+The last one says the published asset does not match what this release pins,
+which is either a broken publish or someone replacing the scanner's detection
+data, and collapsing all three into one silent line hides exactly the case worth
+seeing. `RefreshResult.catalogError` carries it and the CLI prints it.
+
+A catalog failure never fails the refresh: the caller asked for the feed and got
+the feed, and a missing catalog is reported by the scan itself through
+`THREAT_FEED_CATALOG_MISSING`.
+
+**The happy path is proved against the real assets.** The test builds the index
+and shards with the generator the release runs, over the committed catalog, at
+the committed version, so the index digest IS `CATALOG_DIGEST.sha256` by
+construction rather than by a fixture agreeing with itself.
+
+**An existing test had to change**, which the plan does not mention.
+`feed.test.ts` asserted `expect(https.get).toHaveBeenCalledOnce()`, which stops
+meaning what it says once refreshFeed fetches a second document over the same
+mocked transport. It now asserts the FEED call specifically.
+
+**Mutation results**, baseline and post-restore green at 12 tests. Cuts that go
+red: trusting the index digest, trusting each shard digest, not writing the
+entries checksum, letting a catalog failure fail the whole refresh (5 tests),
+and always using the public release template.
+
+**One cut stays green by design.** Removing the `kind` comparison on the index
+changes nothing, because any document whose kind differs hashes differently and
+is rejected by the digest check that precedes it. The `Array.isArray(shards)`
+half of the same condition IS load-bearing, since the loop indexes it. The
+comment in the code says which half is which, so the next person to cut it is
+not left concluding the tests are weak.
+
+
 ## Phase 1 Task 9: THREAT_FEED_CATALOG_MISSING and the catalog knob (2026-09-16, claude-opus-5)
 
 The safety net. Without it a scan that consulted a fraction of the corpus

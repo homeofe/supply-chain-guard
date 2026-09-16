@@ -405,7 +405,16 @@ describe("refreshFeed", () => {
     const result = await refreshFeed("https://feed.invalid/feed.json", tmpDir);
     expect(result.entryCount).toBe(1);
     expect(result.cachePath).toBe(path.join(tmpDir, FEED_CACHE_FILE));
-    expect(https.get).toHaveBeenCalledOnce();
+    // The FEED is fetched exactly once. This used to assert the total call
+    // count, which stopped meaning that when refreshFeed began fetching the
+    // catalog as a second document from the same mocked transport.
+    const feedCalls = (https.get as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter(
+      (call) => {
+        const options = call[0] as { hostname?: string; path?: string };
+        return options.hostname === "feed.invalid" && options.path === "/feed.json";
+      },
+    );
+    expect(feedCalls).toHaveLength(1);
 
     const cached = JSON.parse(fs.readFileSync(result.cachePath, "utf-8")) as {
       timestamp: string;

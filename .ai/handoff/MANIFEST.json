@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789591213",
-    "timestamp": "2026-09-16T20:40:14Z",
-    "commit": "9485f3b",
+    "session_id": "cli-1789591684",
+    "timestamp": "2026-09-16T20:48:04Z",
+    "commit": "c728e1e",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:1b78ed4bf157aa2676ecc5472eab285698776532211807a399ff3cef14f3d9a1",
-      "updated": "2026-09-16T20:40:12Z",
-      "lines": 9610,
-      "summary": "The safety net. Without it a scan that consulted a fraction of the corpus"
+      "checksum": "sha256:30c35c11333583276ef003bd80f873eec1b1bd271891a508af598c9cfe56acc9",
+      "updated": "2026-09-16T20:48:02Z",
+      "lines": 9670,
+      "summary": "`refreshFeed` now fetches, verifies and installs the catalog after the feed."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T20:40:13Z",
+      "updated": "2026-09-16T20:48:04Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:80807f85fd3f9583eb5e50aecc52fa2192d55aaeaabe85cba93b1431293deff7",
-      "updated": "2026-09-16T20:40:13Z",
+      "checksum": "sha256:e68e442d7d0e5691ca2ba6196e9a397dd7f4b3d109e9b817169a1d4f2bec2ad1",
+      "updated": "2026-09-16T20:48:04Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:639aa732a7704f62b0e766049bdaf53e4251d534150fa02ab3968679d7887289",
-      "updated": "2026-09-16T20:40:13Z",
+      "checksum": "sha256:cf36490406d0e40698d940dee6547f378a6d01bb60f2ae50a0f934d584aed1e5",
+      "updated": "2026-09-16T20:48:04Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "The safety net. Without it a scan that consulted a fraction of the corpus Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "`refreshFeed` now fetches, verifies and installs the catalog after the feed. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 112429,
-    "full_read": 124896
+    "manifest_plus_core": 113138,
+    "full_read": 125605
   }
 }
