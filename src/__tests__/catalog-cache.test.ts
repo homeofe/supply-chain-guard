@@ -152,6 +152,24 @@ describe("catalog cache availability", () => {
     expect(feed.some((e) => e.value === NOVEL)).toBe(false);
   });
 
+  // Deleting one line must not skip verification. While the comparison was
+  // guarded on the field being present, removing it was enough to have the
+  // entries merged unread, which defeats the check entirely.
+  it("refuses a catalog with no checksum at all", () => {
+    const dir = tmp();
+    fs.writeFileSync(
+      path.join(dir, CATALOG_CACHE_FILE),
+      JSON.stringify({
+        version: CATALOG_DIGEST.version,
+        sha256: CATALOG_DIGEST.sha256,
+        entries: [entryFor(NOVEL)],
+      }),
+    );
+    const feed = loadThreatIntel(dir);
+    expect(lastCatalogState()).toMatchObject({ available: false, reason: "corrupt" });
+    expect(feed.some((e) => e.value === NOVEL)).toBe(false);
+  });
+
   // The control in the other direction: a cache whose checksum was recomputed
   // after a legitimate rewrite is accepted, so the check is not simply refusing
   // everything.

@@ -10417,10 +10417,13 @@ export function loadThreatIntel(
           entryCount: 0,
           cachedVersion: cached.version,
         };
-      } else if (
-        typeof cached.checksum === "string" &&
-        cached.checksum !== catalogEntriesChecksum(cached.entries)
-      ) {
+      } else if (cached.checksum !== catalogEntriesChecksum(cached.entries)) {
+        // REQUIRED, not optional. An earlier version only compared the checksum
+        // when the field was present, which made the check trivially avoidable:
+        // deleting one line from the cache file skipped verification entirely
+        // and the entries merged unread. There are no caches in the wild
+        // without it, because this has never shipped, so there is nothing to be
+        // tolerant of. A missing checksum is a cache this code did not write.
         // The entries do not match the checksum written beside them. A
         // truncated or edited cache is refused rather than merged: merging a
         // short cache would silently remove indicators, which is the failure

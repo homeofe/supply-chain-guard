@@ -2053,23 +2053,8 @@ export async function importUpstreamFeed({
   const digestModulePath = join(root, "src", "catalog-digest.ts");
   const original = readFileSync(threatIntelPath, "utf8");
 
-  // Route each accepted entry by the SAME policy the migration and the gates
-  // use. Without this the bundle starts growing again on the next daily import
-  // and the migration is undone within weeks, silently, because nothing else
-  // looks at where a newly imported entry landed.
-  // Rule 1 is bounded by CURATION rather than by type, deliberately: an
-  // unconditional "every non-package entry stays" would grow the bundle forever
-  // with no way to stop it. The design closes the loss risk with a gate instead,
-  // and check:feed-partition does reject an atomic indicator that reached the
-  // catalog.
-  //
-  // That gate fires at the next build, which is the wrong moment for an
-  // automated import: the tree has already been rewritten by then, and the
-  // daily job leaves a broken repository behind for someone to untangle.
-  // Refuse here, before anything is written, and name the entries so the fix is
-  // obvious. Measured on the v6.1.3 feed this is unreachable: 401 of the 404
-  // non-package entries carry curation and none of the other 3 is old enough to
-  // move. It exists for the import that changes that.
+  // Both stores are read before anything is written, so the catch below can put
+  // either back exactly as it was.
   const catalogPath = join(root, "data", "threat-catalog.jsonl");
   const originalCatalog = readFileSync(catalogPath, "utf8");
   const originalDigestModule = readFileSync(digestModulePath, "utf8");
