@@ -24,7 +24,9 @@
     "audit:blocklist": "node scripts/audit-blocklist.mjs",
     "feed:import": "node scripts/import-threat-feed.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
-    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:handoff && npm run check:self-scan",
+    "check:feed-partition": "node scripts/check-feed-partition.mjs",
+    "check:feed-budget": "node scripts/check-feed-budget.mjs",
+    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:feed-partition && npm run check:feed-budget && npm run check:handoff && npm run check:self-scan",
     "prepublishOnly": "npm run build",
     "prepare": "tsc"
   },

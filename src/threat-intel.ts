@@ -22407,15 +22407,30 @@ export async function updateThreatFeed(
 // must be scanned normally - an attacker cannot smuggle code past the check by
 // naming a file feed.json, because any extra key or non-scalar value fails it.
 const FEED_DOC_KEYS = new Set(["schema", "package", "version", "entryCount", "entries", "timestamp", "generatedAt"]);
-// Mirrors the FeedIOC interface (plus the legacy "note"/"ecosystem" keys). It
-// MUST list every field the feed can carry: "source" and "lastSeen" are part of
-// FeedIOC, and entries imported from upstream advisory databases populate
-// "source" with their provenance (see scripts/import-threat-feed.mjs). Leaving
-// a real field out here would make the project's own feed.json fail this check
-// and get scanned as ordinary content - the v5.4.0 phantom-findings bug.
+// Mirrors the FeedIOC interface exactly. It MUST list every field the feed can
+// carry: "source" and "lastSeen" are part of FeedIOC, and entries imported from
+// upstream advisory databases populate "source" with their provenance (see
+// scripts/import-threat-feed.mjs). Leaving a real field out here would make the
+// project's own feed.json fail this check and get scanned as ordinary content -
+// the v5.4.0 phantom-findings bug.
+//
+// "note" and "ecosystem" were here as legacy tolerances and were REMOVED, for
+// the same reason the list exists: a key that cannot be carried has no business
+// widening the exemption. Neither is a field of FeedIOC, so isValidFeedIOC never
+// examined them and they were accepted at any length with any control
+// character, which is what let a feed-SHAPED file carry arbitrary text through
+// this exemption and skip every content scanner.
+//
+// Measured before removing them, both directions:
+//   - no released feed.json carries either key, checked across v5.10.0, v5.20.0,
+//     v5.28.0, v6.0.0 and v6.1.3, and 0 of the current 20,969 entries use them;
+//   - a cache file cannot carry them either, because refreshFeed() writes what
+//     parseFeedPayload() returns, and that is normalizeFeedIOC() output, which
+//     rebuilds each entry from FeedIOC fields alone.
+// So no document this check is meant to accept can contain them.
 const FEED_ENTRY_KEYS = new Set([
   "type", "value", "severity", "confidence", "family", "campaign", "source",
-  "firstSeen", "lastSeen", "note", "ecosystem",
+  "firstSeen", "lastSeen",
 ]);
 
 /**
@@ -22455,6 +22470,69 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
       if (!FEED_ENTRY_KEYS.has(k)) return false;
       if (typeof v !== "string" && typeof v !== "number") return false;
     }
+    // The full runtime contract. Key-and-scalar checking alone accepts
+    // objects the loader itself would quarantine, so without this the
+    // exemption could be claimed by a document that is merely feed-SHAPED
+    // rather than an actual feed.
+    if (!isValidFeedIOC(entry)) return false;
+  }
+  return true;
+}
+
+/** Basename of the committed catalog store. */
+export const CATALOG_FILE = "threat-catalog.jsonl";
+
+/**
+ * Exact repository-relative path of the catalog store. The exemption is bound
+ * to this path, not merely to the basename: a basename match would let ANY
+ * scanned repository place a file with this name at any depth and have it
+ * skipped, which is an evasion primitive rather than a convenience.
+ */
+export const CATALOG_RELATIVE_PATH = "data/threat-catalog.jsonl";
+
+/**
+ * Structural check: is this file supply-chain-guard's own catalog store?
+ *
+ * Same reasoning as isInertThreatFeedFile above, for the JSONL catalog: it
+ * holds RAW IOC values as machine-readable detection data, collectFiles() does
+ * not exclude data/, and without this check the project's own self-scan drowns
+ * in phantom criticals from its own protection data - the v5.4.0 dogfooding
+ * bug in a new file shape.
+ *
+ * Shares FEED_ENTRY_KEYS with the feed check so the two cannot drift apart.
+ * Strictness is the security property: every non-empty line must be a JSON
+ * object whose every key is allowlisted and whose every value is an inert
+ * scalar. Any deviation -> the file is scanned like everything else.
+ */
+export function isInertThreatCatalogFile(filename: string, content: string): boolean {
+  // Exact relative path, not a basename. Without this, any scanned repository
+  // could place a file with this name at any depth and have every content
+  // scanner skip it.
+  if (filename.replace(/\\/g, "/") !== CATALOG_RELATIVE_PATH) return false;
+
+  for (const line of content.split("\n")) {
+    if (line.trim() === "") continue;
+    let entry: unknown;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      return false;
+    }
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+
+    // Every key allowlisted and every value an inert scalar, as for the feed.
+    for (const [k, v] of Object.entries(entry as Record<string, unknown>)) {
+      if (!FEED_ENTRY_KEYS.has(k)) return false;
+      if (typeof v !== "string" && typeof v !== "number") return false;
+    }
+
+    // `note` needs no special case here: it is no longer in FEED_ENTRY_KEYS,
+    // so the loop above already rejects it. See the note on that constant.
+
+    // A complete, real FeedIOC. Key-and-scalar checking alone accepts objects
+    // that the loader would quarantine, so requiring the full contract is what
+    // makes "this is our own inert detection data" an actual claim.
+    if (!isValidFeedIOC(entry)) return false;
   }
   return true;
 }

@@ -85,7 +85,7 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, getDetectionSetProvenance } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
@@ -447,6 +447,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // structurally-validated detection data. Any deviation from the strict
     // feed schema fails the check and the file is scanned normally.
     if (isInertThreatFeedFile(relativePath, content)) continue;
+    if (isInertThreatCatalogFile(relativePath, content)) continue;
 
     // No target gets repository-wide trust. Only an exact inert path whose
     // content matches the manifest shipped with the running scanner receives a

@@ -426,23 +426,40 @@ old the catalog is.
 The memo key in `loadThreatIntel()` extends to cover the catalog cache identity,
 so a refreshed catalog is observed rather than served from a stale memo.
 
-### 4.6 The corpus must be exempt from the repository self-scan
+### 4.6 The catalog is exempted from the self-scan, as insurance
 
 `data/threat-catalog.jsonl` will contain tens of thousands of raw malicious
 package names, and in future possibly other raw indicator values. The scanner
-runs against its own repository in CI, and the corpus is ordinary repository
-content to it:
+runs against its own repository in CI, so the question is whether that corpus is
+scanned as ordinary content.
 
-- `collectFiles()` does not exclude `data/`.
-- `isInertThreatFeedFile()` accepts only the basenames `feed.json` and
-  `threat-feed.json`, and requires a JSON object with an `entries` array. A
-  JSONL file is neither.
-- `src/self-scan-files.json` is a source-file allowlist and lists no data path.
+**Measured during Phase 1, because an earlier revision of this section asserted
+it instead.** That revision said the corpus would "drown the self-scan in
+criticals" and block the phase. That is false, and the correction is worth more
+than the original claim:
 
-Left alone, Phase 1 would drown the self-scan in criticals from the project's
-own detection data and block the gate. This is not hypothetical: the comment on
-`isInertThreatFeedFile()` records the v5.4.0 dogfooding find of 169 findings on
-this repository's own `feed.json`, which is why the function exists.
+- `collectFiles()` does not exclude `data/`, so the file IS walked. That part
+  was right.
+- But `SCANNABLE_EXTENSIONS` in `src/patterns.ts` is an ALLOWLIST, and it
+  contains `.json` while it does not contain `.jsonl`. A file whose extension is
+  not in that set is counted and skipped before its content is ever examined.
+
+Measured directly: the same C2 domain written into `b.json` produces two
+findings, and written into `a.jsonl` produces zero. The catalog is inert today
+for a reason that has nothing to do with any guard, and the claim was accepted
+from a true observation about `collectFiles()` without testing the extension
+gate behind it.
+
+**The guard ships anyway, as insurance, and a test keeps that honest.** `.jsonl`
+is a common data format and `.json` is already in the allowlist, so adding it is
+a plausible one-line change. The moment it lands, the committed catalog becomes
+scannable and this guard becomes load-bearing. That is exactly the shape of the
+v5.4.0 dogfooding bug recorded on `isInertThreatFeedFile()`: 169 phantom
+criticals on this repository's own `feed.json`.
+
+A coupling test asserts both halves: safe if `.jsonl` is not scannable OR the
+guard recognizes the catalog, plus the guard working unconditionally. Adding the
+extension then stays a one-line change rather than a coverage incident.
 
 The design adds `isInertThreatCatalogFile(filename, content)` with strictness
 equal to the existing check, sharing its constants so the two cannot drift:
@@ -873,6 +890,8 @@ answers a different question, which is this project's most common defect class.
 | 12 | `src/threat-intel.ts` and `src/scanner.ts` are listed in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly every task and would block each commit | Every affected task regenerates and commits `self-scan-manifest.json` |
 | 13 | The partition treated `campaign`/`family` as the definition of "curated", but curation here lives in COMMENTS. 60 of 1,094 comment-anchored entries carry no such field, so their rationale would have been orphaned as they aged past the cutoff | Rule 3 in section 4.2: an entry beneath a curated comment block is immovable. Found while planning Phase 2 |
 | 14 | The claim that release immutability was off rested on `immutable_releases` reading `null`, which actually means the repo API does not expose the field at all. Absence was read as a value, which is the same mistake as entry 9 | Verified per release instead: `immutable` is a real field on the release object, and it is `false` on v6.1.1 through v6.1.3. Phase 2 asserts it on the next release |
+| 16 | Section 4.6 claimed the committed catalog would flood the self-scan. Measured while implementing Phase 1: `SCANNABLE_EXTENSIONS` is an allowlist containing `.json` but not `.jsonl`, so the catalog is never content-scanned, and the same C2 domain yields two findings in a `.json` file and zero in a `.jsonl` one. The claim was accepted from a true observation about `collectFiles()` without testing the extension gate behind it | Section 4.6 rewritten to what was measured. The guard still ships as insurance, with a test coupling it to the extension allowlist so adding `.jsonl` stays a one-line change |
+
 | 15 | The command given for enabling immutability, `PATCH /repos/{owner}/{repo} -f immutable_releases=true`, addressed a field that does not exist. GitHub ignored it silently, the setting was never enabled, and the verification in entry 14 could not detect that because it read the same non-existent field. A wrong command and a wrong check agreed with each other and looked like a working system | The feature has dedicated endpoints: `GET`, `PUT` and `DELETE` on `/repos/{owner}/{repo}/immutable-releases`, returning `{"enabled", "enforced_by_owner"}`. Enabled and verified `true` on 2026-09-16 |
 
 Defects 10 to 12 were found by re-auditing the design against the code before

@@ -1,3 +1,207 @@
+## Code-review findings on Tasks 1 to 4, all nine applied (2026-09-16, claude-opus-5)
+
+A structured review of the whole change found nine issues, four of them
+correctness bugs in code written the same day. All nine are applied.
+
+**An invalid `bundleCutoffDate` passed both gates.** The numeric-limit
+fail-open was fixed earlier in the session and the same class was left open for
+the date: `loadPartitionConfig` checked it was a string, and the only date
+validation sat inside `partitionTarget`, which `checkBudget` never calls and
+`checkPartition` only reaches per catalog line. With an empty catalog that
+throw is unreachable, so `not-a-date` shipped green. Validated where the limits
+are. Verified against the real repo: both gates now exit 1, and 0 after restore.
+
+**Three bugs in the cutoff suggestion**, which had itself been added in response
+to an earlier review finding:
+
+- it fired on a byte-only breach while solving for the ENTRY limit, so it
+  suggested a date that moved 0 of 3 entries and left the operator red with no
+  explanation. Now scoped to the constraint it actually solves.
+- it classified movability with a shape-only regex while the policy uses
+  `isoToEpoch`, so `2026-02-31` was movable to the gate and immovable to the
+  policy. The gate now imports the policy parser: the gate model of the policy
+  must BE the policy.
+- it reported `maxBundledEntries` as the resulting size, printing "brings the
+  bundle to 25000 entries" for a bundle holding three. It now returns and
+  reports the count the boundary actually produces.
+
+**Scope of check:feed-partition is now stated in the file.** It checks
+PLACEMENT, not validity. The full FeedIOC contract is enforced by a test that
+imports the real `isValidFeedIOC`, deliberately not duplicated into `.mjs`. The
+consequence is written down too: `npm run build` alone does not catch an entry
+the loader would quarantine, `npm test` does, and CI runs both.
+
+**Test fixtures no longer leak.** Roughly thirty temp directories per run were
+left behind, adding to the leftover `scg-issue54-empty-*` and `scg-two-tier-*`
+directories already on the Linux runner. Registered and removed in `afterEach`;
+measured delta is now 0 per run.
+
+**Violation messages are platform-independent.** `CATALOG_PATH` was built with
+`path.join`, so the same failure read `data	hreat-catalog.jsonl` on Windows
+and `data/threat-catalog.jsonl` on Linux and could not be grepped for
+consistently. Forward-slash literal for display, `path.join` only for the
+filesystem.
+
+**`extractBundledEntries` is memoized.** Both gates parsed and vm-evaluated the
+3.7 MB `src/threat-intel.ts` independently. Keyed on path, mtime and size so a
+regenerated file is re-read rather than served stale. Measured: 86 ms then
+0.1 ms in-process. Note the residual: `prebuild` runs each gate as its own
+`npm run`, so the file is still read once per PROCESS, twice per build. Closing
+that would mean merging the two gates into one script, which is a bigger change
+than this fix.
+
+**The exemption path narrowing is now pinned by a test.** Binding
+`isInertThreatCatalogFile` to the exact repository-relative path closes the
+basename evasion but means a scan rooted ABOVE the repository loses the
+exemption. That trade is deliberate and now has a test saying so.
+
+
+## The same weakness in isInertThreatFeedFile, fixed at the root (2026-09-16, claude-opus-5)
+
+The review finding on the catalog exemption applied equally to the older feed
+exemption, which predates this work. Fixed here rather than deferred.
+
+**Root cause, found by measuring rather than by reading.** `note` and
+`ecosystem` were in `FEED_ENTRY_KEYS` but are NOT fields of `FeedIOC`, so
+`isValidFeedIOC` never examined them: they were accepted at ANY length with ANY
+control character, while `source`, `family` and `campaign` are bounded at 512
+characters and reject control characters. A file named `feed.json` carrying
+`{"note":"curl ... | bash"}` was therefore skipped by every content scanner.
+
+**The first fix was wrong and measuring caught it.** Bounding the two fields at
+512 characters closed the 50,000-character case and left the 34-character case
+wide open, which is all an attacker needs. Length was never the property that
+mattered.
+
+**The right fix was to remove the keys**, and two measurements say that is
+safe in both directions:
+
+- no released `feed.json` carries either key, checked at v5.10.0, v5.20.0,
+  v5.28.0, v6.0.0 and v6.1.3, and 0 of the current 20,969 entries use them;
+- a cache file cannot carry them either, because `refreshFeed()` writes what
+  `parseFeedPayload()` returns, and that is `normalizeFeedIOC()` output, which
+  rebuilds each entry from `FeedIOC` fields alone.
+
+So no document this exemption is meant to accept can contain them, and a key
+that cannot be carried has no business widening a trust boundary. Both inert
+checks now also require every entry to satisfy `isValidFeedIOC`, which closes
+the separate hole where a merely feed-SHAPED document claimed the exemption.
+
+Two bespoke checks were then deleted as unreachable: the length bounding above,
+and the catalog explicit `note` rejection. With the keys gone the shared
+allowlist rejects them first, and duplicated mechanisms drift.
+
+**A claim I nearly published was wrong.** An earlier draft said a malicious
+remote feed could inject unvalidated notes into the merged feed.
+`normalizeFeedIOC` rebuilds from known fields, so they never reach it. The
+exposure is the inert-file exemption only, exactly as reported and no wider.
+
+Regression evidence, which is what this function exists for: the real
+`feed.json` with 20,969 entries and the cache shape both stay inert, and a real
+`scan .` of this repository reports 0 findings on `feed.json`, against the 169
+phantom criticals of the v5.4.0 dogfooding bug. 59 tests. Two reverts, two
+caught, green baseline and green post-restore.
+
+**One stale-artifact reading happened and is worth recording.** A first pass
+reported the hole still open on all three cases. The build had been run with
+its output discarded and its exit code unread, and editing `src/threat-intel.ts`
+makes `check:self-scan` stale, so `tsc` never ran and the probe read the
+previous `dist/`. Read the exit code.
+
+
+## Review findings on Tasks 1 to 4, all five real (2026-09-16, claude-opus-5)
+
+Automated review of PR 307 and PR 308 returned five findings. Every one was
+reproduced against the code before being accepted, and every one was real.
+
+**P1: the partition gate did not enforce the FeedIOC contract.** A catalog line
+missing `severity` passed the gate, and `loadThreatIntel()` filters the cached
+catalog through `isValidFeedIOC`, so the entry would be silently quarantined at
+scan time: the gate green, the detection gone. The signature
+gate-answers-a-different-question failure.
+
+The first fix was a `.mjs` mirror of `isValidFeedIOC`, and it was ABANDONED.
+Reading the real function showed it also enforces per-type value shapes,
+timestamp formats with offsets, and a `lastSeen >= firstSeen` ordering rule, and
+the first draft of the mirror had already guessed two constants wrong
+(`MAX_IOC_VALUE_LENGTH` is 2048, not 512; metadata fields are family, campaign
+and source, not five). A mirror that elaborate is a drift liability pretending
+to be a gate. The contract is now enforced in a vitest test that imports the
+REAL function, with a control asserting it rejects what the loader rejects.
+
+**P1: trailing junk in `firstSeen` routed a detection out of the bundle.**
+`isoToEpoch` sliced to 10 characters before applying the anchored regex, so
+`2020-01-01oops` parsed as a valid old date. Documented behaviour for an
+unparsable date is fail-open into the bundle; this did the opposite. Measured:
+all 20,958 dated entries are exactly YYYY-MM-DD, so the slice bought nothing.
+
+**P1: a typo in the config silently disabled the budget gate.**
+`loadPartitionConfig` returned the raw fields, and `entries.length > undefined`
+is false, so a missing or misspelled limit made `check:feed-budget` report
+success for any bundle size. Limits are now validated as finite non-negative
+numbers and a malformed config throws.
+
+**P2: the cutoff suggestion did not work on tied dates.** `partitionTarget`
+keeps everything `>=` the cutoff, so with a limit of 1 and two entries dated
+2026-09-05 the gate suggested 2026-09-05 and kept both: the advertised remedy
+left the gate red. It now walks distinct date boundaries newest first and takes
+the largest that fits, returning null when none does.
+
+**P2: the catalog exemption was bound to a basename.** Once `.jsonl` is added to
+`SCANNABLE_EXTENSIONS`, any scanned repository could place
+`threat-catalog.jsonl` at any depth and have every content scanner skip it, and
+`{"note":"curl ... | bash"}` was accepted because `note` is an allowlisted
+free-text field. Now bound to the exact path `data/threat-catalog.jsonl`, the
+`note` field is rejected outright, and every line must be a complete valid
+FeedIOC. The same weakness exists in the older `isInertThreatFeedFile` and is
+NOT addressed here; it predates this work and deserves its own change.
+
+Six reverts, six caught, against a green baseline of 90 tests and a green
+post-restore: the slice, the limit validation, the tied-date boundary, the
+exact-path binding, the note rejection, and the FeedIOC requirement.
+
+
+## Phase 1 Tasks 2 to 4: partition policy and its two gates (2026-09-16, claude-opus-5)
+
+Adds `scripts/feed-partition.mjs` (the routing rule), `feed-partition.config.json`,
+an empty `data/threat-catalog.jsonl`, and the two build gates
+`check:feed-partition` and `check:feed-budget`, both wired into `prebuild`.
+Detection is unchanged: the cutoff is 2000-01-01 and the limits sit above the
+current unsplit size, so the policy moves nothing in this phase.
+
+**24 tests. Twelve mutation cuts, twelve caught**, with a green baseline before
+and a green run after restoring: curation rule, undatable fail-open, date
+round-trip, invalid-cutoff throw, both-stores, atomic-indicator, placement,
+duplicate value, missing catalog file, entry limit, byte limit, and the cutoff
+suggestion.
+
+**One cut survived the first run, and it found dead code rather than a weak
+test.** `isoToEpoch` had three round-trip checks: year, month and day. Cutting
+the DAY check left all tests green. Brute-forced across 14,784 candidate date
+strings: there is no input where the day check is the one that fires, because a
+day overflow always moves the month or the year. It was unreachable. Removed,
+with the measurement recorded in a comment so it does not come back
+defensively. The re-run then caught 12 of 12.
+
+**Two fixtures were wrong in a way that only the real extractor could show.**
+`extractBundledEntries` requires the `BUNDLED_FEED` marker and refuses an empty
+bundle, both correct for the real file. The first fixtures emitted a bare
+`FEED_CHUNK_0` and several passed an empty bundle. Fixed the fixtures, not the
+code: an empty bundle genuinely means something broke.
+
+**Gates proved against the real repository, not only fixtures.** Planting
+`plogme@1.0.0` in the catalog while it is in the bundle exits 1 and names both
+the duplication and the misplacement; planting an `ip` entry exits 1 and names
+the campaign field as the fix; the empty catalog exits 0. Exit codes were read
+directly rather than through a pipe, because `cmd | tail; echo 0` reports the
+tail status and briefly did exactly that here.
+
+The budget gate names the exact date to set rather than only saying to move the
+cutoff forward, and a test asserts the suggested date actually achieves the
+limit. It suggests nothing when the immovable entries alone exceed it, which is
+a different problem from a stale cutoff.
+
+
 ## Plans hard-wrapped at 80 columns (2026-09-16, claude-opus-5)
 
 The plans were written with unwrapped paragraphs, up to 691 characters on one
@@ -21,6 +225,47 @@ the handoff, which regenerates `MANIFEST.json`, but a regenerated MANIFEST is
 not a STATUS update. The lesson is already written down for release commits and
 applies to any commit touching tracked files: `npm run build` is green while
 `aahp-verify` is red, so a docs-only change still needs a note here.
+## Phase 1 Task 1: inert catalog recognition (2026-09-16, claude-opus-5)
+
+First code of the catalog decoupling. Adds `isInertThreatCatalogFile()` to
+`src/threat-intel.ts`, wired into the scan walk in `src/scanner.ts` beside the
+existing `isInertThreatFeedFile()` call, sharing `FEED_ENTRY_KEYS` so the two
+cannot drift.
+
+**The design premise for this task was wrong, and running it is what showed
+that.** Section 4.6 claimed the committed catalog would flood the self-scan with
+criticals from the project own detection data. Measured instead:
+`SCANNABLE_EXTENSIONS` in `src/patterns.ts` is an ALLOWLIST that contains
+`.json` but not `.jsonl`, so a `.jsonl` file is counted and skipped before its
+content is ever examined. The same C2 domain written into `b.json` produces two
+findings; written into `a.jsonl` it produces zero.
+
+The first attempt to prove the wiring illustrates why this matters. A scan of a
+probe repo carrying 400 real feed entries reported zero findings on the catalog,
+which looked like success. The control, the same content under a different
+filename, also reported zero. The zero had nothing to do with the guard. A
+second attempt using only atomic indicators, which are what a content scan can
+match, also returned zero for both, and only then did the extension allowlist
+turn up.
+
+**The guard still ships, as insurance, with a test that keeps that honest.**
+`.jsonl` is a common data format and `.json` is already in the allowlist, so
+adding it is a plausible one-line change, and the moment it lands the committed
+catalog becomes scannable and this guard becomes load-bearing. That is exactly
+the v5.4.0 dogfooding bug recorded on `isInertThreatFeedFile()`: 169 phantom
+criticals on this repository own `feed.json`. A coupling test asserts safety if
+`.jsonl` is not scannable OR the guard recognizes the catalog, plus the guard
+working unconditionally, so adding the extension stays a one-line change rather
+than a coverage incident.
+
+Nine tests, all passing. Five mutation cuts, each isolated to the catalog
+function so it cannot hit its feed twin, each going red in exactly the test that
+covers it, with a green baseline before and a green run after restoring:
+basename, key allowlist, scalar check, JSON parse, and object shape.
+
+The plan placed these tests in `self-scan-recognition.test.ts`. They are in
+`feed.test.ts` instead, which is where the seventeen `isInertThreatFeedFile`
+assertions already live; the plan had guessed without checking.
 
 
 ## Catalog decoupling: every open exit closed (2026-09-16, claude-opus-5)

