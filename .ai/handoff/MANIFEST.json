@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789565735",
-    "timestamp": "2026-09-16T13:35:36Z",
-    "commit": "56125d3",
+    "session_id": "cli-1789566659",
+    "timestamp": "2026-09-16T13:51:00Z",
+    "commit": "548b002",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:20f0ec1ca8a9cd661e657ec3483e403777921c4aaa92e491d273c8e06629f9fb",
-      "updated": "2026-09-16T13:35:34Z",
-      "lines": 8584,
+      "checksum": "sha256:d60bec6e78e70a4230539d36fb209c0486876680350bdc45cd843ba288a96b69",
+      "updated": "2026-09-16T13:50:58Z",
+      "lines": 8620,
       "summary": "Design only, still no code. Spec:"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T13:35:35Z",
+      "updated": "2026-09-16T13:50:59Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:b81af33cb89bbb29a81a274a2c270224616015f85fa27153a21e62664cd065af",
-      "updated": "2026-09-16T13:35:35Z",
+      "updated": "2026-09-16T13:50:59Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:91617a4e7d8ef4dfb63d4172e90c1603e528b8d7957cdc1f923fde86dfa1783e",
-      "updated": "2026-09-16T13:35:35Z",
+      "updated": "2026-09-16T13:50:59Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Design only, still no code. Spec: Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 100223,
-    "full_read": 112688
+    "manifest_plus_core": 100699,
+    "full_read": 113164
   }
 }

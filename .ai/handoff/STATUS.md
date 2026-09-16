@@ -4,6 +4,10 @@ Design only, still no code. Spec:
 `docs/threat-feed-catalog-decoupling-design.md`. Phase 1 plan:
 `docs/plans/2026-09-16-threat-feed-catalog-phase-1.md`.
 
+**Twelve defects total across the design and the plan: seven from review, one
+found while writing the plan, four from a pre-merge re-audit. Eleven were real
+and one was a false claim of my own.**
+
 **The automated review of PR 305 found seven defects and every one was real.**
 Each was verified against the source before being accepted, not taken at face
 value. Six of the seven are this estate's signature defect: a claim or a guard
@@ -33,6 +37,38 @@ that reads correct and answers a different question.
    `collectFiles()` does not exclude `data/` and `isInertThreatFeedFile()` is
    basename-locked to `feed.json`. `isInertThreatCatalogFile()` added, sharing
    `FEED_ENTRY_KEYS` so the two cannot drift.
+
+**A pre-merge re-audit of the design against the code found four more, and one
+of them was a false claim this session had already published.** Details in
+section 11 of the spec. Numbers 10 to 12 are real: `policy.catalog` was added to
+`policy-schema.json` but not to `PolicyConfig` in `src/types.ts`, so `tsc` would
+have failed; `refreshFeed()` has no version in scope, so the version-pinned
+catalog URL could not be built; and `src/threat-intel.ts` and `src/scanner.ts`
+are both in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly
+every task and would have blocked each commit until the manifest was
+regenerated.
+
+**Number 9 was not a defect at all, and is the most useful entry in the table.**
+The re-audit claimed `__dirname` is undefined when vitest runs the TypeScript
+sources, sourced that from the defensive comment at `src/mcp-server.ts:59`, and
+wrote it into the spec and the plan as the justification for moving the catalog
+digest from a JSON file to a generated TypeScript constant. Then it was
+measured: this package has no `"type": "module"`, vitest transforms to CommonJS,
+and `__dirname` is a defined string with `require` available. A
+`__dirname`-relative read would have worked fine. The constant is still the
+right design, for reasons that are actually true (no file read on
+`loadThreatIntel()`'s hot path, typechecked, and it supplies the version that
+fixes number 11), but the published reason was false and survived a revision
+before anyone ran it. The rule this breaks is already written down: a surprising
+measurement gets re-measured before it is published. A design document is not
+exempt from that just because it contains no code.
+
+**Linux baseline, measured rather than assumed.** Full suite on `main` at
+v6.1.3 (`05c0729`), run on the Linux runner in a throwaway `/tmp` clone: **146
+files, 3565 tests, all passing, 54.7 seconds**. That is now recorded in the plan
+as the number Phase 1 must beat, and it confirms the Windows failures (two
+campaign tests plus the vscode-scanner archive tests) are environmental. The
+temp directory was removed afterwards.
 
 **An eighth defect was found while writing the plan, and it was ours.** The
 spec made `data/threat-corpus.jsonl` the single source of truth and regenerated

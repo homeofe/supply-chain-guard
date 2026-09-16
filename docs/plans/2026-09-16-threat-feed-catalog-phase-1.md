@@ -21,7 +21,9 @@ Copied verbatim from the project's rules. Every task's requirements implicitly i
 - **Never run the full test suite locally.** Run only the suite file covering the change: `npx vitest run src/__tests__/<file>.test.ts`. CI produces the full-suite verdict.
 - **Never bypass hooks** (`--no-verify`, `--no-gpg-sign`).
 - **`main` is protected.** All work lands through a squash-merged PR.
-- Two campaign tests (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) fail on Windows on unmodified `main`. That is an environment gap, not a regression.
+- **The green baseline is 146 files / 3565 tests, all passing.** Measured on 2026-09-16 on Linux against `main` at v6.1.3 (`05c0729`), 54.7 seconds wall clock. Any other number means something broke.
+- On Windows that baseline is unreachable and the difference is environmental, not a regression. Two campaign tests (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) fail there on unmodified `main`, and the vscode-scanner archive tests fail for a missing `zip` binary. Both pass on Linux. Never call the suite broken from a Windows run without first running the same suite on unmodified `main`.
+- For a real full-suite verdict without waiting for CI, use the Linux runner: `ssh openclaw`, clone into a fresh `mktemp -d /tmp/...` directory, `npm ci`, `npx vitest run`. That is under a minute against hours on Windows. Remove the temp directory afterwards.
 - **Every gate is proved by cutting it**, never by reading it: show a green baseline, make the cut, watch the specific assertion go red, restore, show green again.
 
 ---
@@ -144,8 +146,12 @@ Temporarily change `if (!FEED_ENTRY_KEYS.has(k)) return false;` to `if (false) r
 
 - [ ] **Step 6: Commit**
 
+
+**`src/threat-intel.ts` and `src/scanner.ts` are both listed in `src/self-scan-files.json`, so `check:self-scan` goes red the moment either is edited.** Run `npm run self-scan:generate` and include `self-scan-manifest.json` in this task's commit, or the next `npm run build` fails on a gate that has nothing to do with the change. `src/feed.ts` is NOT listed, so tasks touching only it are unaffected.
+
 ```bash
-git add src/threat-intel.ts src/scanner.ts src/__tests__/self-scan-recognition.test.ts
+npm run self-scan:generate
+git add src/threat-intel.ts src/scanner.ts self-scan-manifest.json src/__tests__/self-scan-recognition.test.ts
 git commit -m "feat(scanner): recognize the catalog store as inert detection data
 
 Same mechanism as isInertThreatFeedFile, extended to the JSONL catalog, and
@@ -715,7 +721,8 @@ Expected: PASS for the whole file. `expectedKind` defaults to `"feed"`, so every
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/feed.ts src/threat-intel.ts src/__tests__/feed.test.ts
+npm run self-scan:generate
+git add src/feed.ts src/threat-intel.ts self-scan-manifest.json src/__tests__/feed.test.ts
 git commit -m "feat(feed): discriminate catalog payloads and allow an empty one
 
 parseFeedPayload rejected every empty entries array, which is right for a
@@ -846,7 +853,29 @@ Integrity cannot rest on release-asset immutability: `immutable_releases` is `nu
 - Test: `src/__tests__/feed.test.ts`
 
 **Interfaces:**
-- Produces: `catalog.json.gz` and `catalog-digest.json` at the repo root, the latter copied into `dist/` at build time. Shape: `{ "version": string, "sha256": string, "entryCount": number }`
+- Produces:
+  - `catalog.json.gz` at the repo root (gitignored build artifact)
+  - `src/catalog-digest.ts`, a GENERATED and COMMITTED TypeScript constant:
+    `export const CATALOG_DIGEST = { version: string; sha256: string; entryCount: number }`
+
+**Why a TypeScript constant and not a JSON file read at runtime.** Three
+reasons:
+
+1. `loadThreatIntel()` runs on every scan and already does a `stat` plus a read
+   per cache file. A compiled-in constant costs nothing.
+2. It is typechecked, so it cannot drift into a shape the caller does not expect.
+3. It supplies the version `refreshFeed()` needs to build the version-pinned
+   catalog URL. That function has no version parameter and no access to
+   `package.json`, so without it Task 10 cannot be implemented at all.
+
+A note on what this is NOT. An earlier revision of this plan justified the
+constant by claiming `__dirname` is undefined when vitest runs the TypeScript
+sources, citing the defensive comment at `src/mcp-server.ts:59`. That was taken
+from a comment and never run. Measured on 2026-09-16: this package has no
+`"type": "module"`, vitest transforms to CommonJS, and `__dirname` is a defined
+string with `require` available. A `__dirname`-relative JSON read would have
+worked. Do not reintroduce that reasoning; the three reasons above are the real
+ones.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -857,11 +886,11 @@ import { createHash } from "node:crypto";
 
 describe("buildCatalog", () => {
   it("produces a gzipped catalog whose digest matches the manifest", () => {
-    const { gz, digest } = buildCatalog([], "9.9.9");
-    expect(digest.sha256).toBe(createHash("sha256").update(gz).digest("hex"));
+    const { json, digest } = buildCatalog([], "9.9.9");
+    expect(digest.sha256).toBe(createHash("sha256").update(json, "utf8").digest("hex"));
     expect(digest.version).toBe("9.9.9");
     expect(digest.entryCount).toBe(0);
-    const doc = JSON.parse(gunzipSync(gz).toString("utf-8"));
+    const doc = JSON.parse(json);
     expect(doc.kind).toBe("catalog");
     expect(doc.entries).toEqual([]);
   });
@@ -915,22 +944,56 @@ export function buildCatalog(entries, version) {
     entryCount: entries.length,
     entries,
   };
-  const gz = gzipSync(Buffer.from(JSON.stringify(doc), "utf-8"), { level: 9 });
+  // Hash the DECOMPRESSED JSON, not the gzip bytes: an air-gapped mirror may
+  // serve the asset uncompressed and the digest must still verify. gzip output
+  // is also not guaranteed byte-stable across zlib versions, which would make a
+  // digest over the compressed form spuriously mismatch.
+  const json = JSON.stringify(doc);
+  const gz = gzipSync(Buffer.from(json, "utf-8"), { level: 9 });
   const digest = {
     version,
-    sha256: createHash("sha256").update(gz).digest("hex"),
+    sha256: createHash("sha256").update(json, "utf8").digest("hex"),
     entryCount: entries.length,
   };
-  return { gz, digest };
+  return { json, gz, digest };
+}
+
+/** Render the committed TypeScript constant. Generated, never hand-edited. */
+export function renderDigestModule(digest) {
+  return [
+    "// GENERATED by scripts/generate-catalog.mjs. Do not edit by hand.",
+    "//",
+    "// Shipped inside the npm package so the integrity anchor is the immutable",
+    "// npm artifact and the tagged git tree, not a release asset that --clobber",
+    "// can replace. A constant rather than a JSON file read at runtime because",
+    "// __dirname is unavailable in some ESM runners (see src/mcp-server.ts).",
+    "export const CATALOG_DIGEST = {",
+    `  version: ${JSON.stringify(digest.version)},`,
+    `  sha256: ${JSON.stringify(digest.sha256)},`,
+    `  entryCount: ${digest.entryCount},`,
+    "} as const;",
+    "",
+  ].join("\n");
 }
 
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
   const version = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
   const { gz, digest } = buildCatalog(readCatalogEntries(), version);
-  writeFileSync(join(repoRoot, "catalog.json.gz"), gz);
-  writeFileSync(join(repoRoot, "catalog-digest.json"), `${JSON.stringify(digest, null, 2)}\n`);
-  console.log(`catalog:generate OK - ${digest.entryCount} entries, ${gz.length} bytes, sha256 ${digest.sha256.slice(0, 12)}...`);
+  const modulePath = join(repoRoot, "src", "catalog-digest.ts");
+  const rendered = renderDigestModule(digest);
+
+  if (process.argv.includes("--check")) {
+    if (readFileSync(modulePath, "utf8") !== rendered) {
+      console.error("src/catalog-digest.ts is stale; run `npm run catalog:generate` and commit it.");
+      process.exit(1);
+    }
+    console.log(`catalog digest up to date (${digest.entryCount} entries, v${digest.version}).`);
+  } else {
+    writeFileSync(join(repoRoot, "catalog.json.gz"), gz);
+    writeFileSync(modulePath, rendered);
+    console.log(`catalog:generate OK - ${digest.entryCount} entries, ${gz.length} bytes, sha256 ${digest.sha256.slice(0, 12)}...`);
+  }
 }
 ```
 
@@ -938,24 +1001,31 @@ In `package.json`, add the script, ship the digest, and ignore the asset from gi
 
 ```json
     "catalog:generate": "node scripts/generate-catalog.mjs",
+    "check:catalog": "node scripts/generate-catalog.mjs --check",
 ```
 
-Add `"catalog-digest.json"` to the `files` array so it reaches the package. Add `catalog.json.gz` to `.gitignore`: it is a build artifact rebuilt from the committed catalog, and committing a binary blob that changes on every import would bloat history.
+and extend `prebuild` again so a stale digest cannot be committed:
+
+```json
+    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
+```
+
+`src/catalog-digest.ts` is compiled into the package like any other source file, so nothing needs adding to `files`. Add `catalog.json.gz` to `.gitignore`: it is a build artifact rebuilt from the committed catalog, and committing a binary blob that changes on every import would bloat history.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 5: Generate against the real tree and commit the digest**
+- [ ] **Step 5: Generate against the real tree and commit the digest module**
 
-Run: `npm run catalog:generate`
-Expected: `catalog:generate OK - 0 entries, ... bytes, sha256 ...`. Commit `catalog-digest.json`; it is small, it must match the published asset, and it is what the client verifies against.
+Run `npm run catalog:generate`, then `npm run check:catalog`.
+Expected: the first writes `src/catalog-digest.ts` and `catalog.json.gz`; the second reports `catalog digest up to date (0 entries, v6.1.3).` Commit `src/catalog-digest.ts`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/generate-catalog.mjs catalog-digest.json package.json .gitignore src/__tests__/feed.test.ts
+git add scripts/generate-catalog.mjs src/catalog-digest.ts package.json .gitignore src/__tests__/feed.test.ts
 git commit -m "feat(feed): build the catalog asset and its shipped digest
 
 Integrity is anchored to a SHA-256 that travels inside the npm package
@@ -1020,7 +1090,7 @@ describe("catalog cache availability", () => {
 });
 ```
 
-Import `pkg` from `../../package.json` and `expectedDigest` from `../../catalog-digest.json` at the top of the file.
+Import `pkg` from `../../package.json` and `CATALOG_DIGEST` from `../catalog-digest.js` at the top of the file, and use `CATALOG_DIGEST.sha256` where the test writes `expectedDigest.sha256`.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -1053,18 +1123,11 @@ export function lastCatalogState(): CatalogState {
 }
 ```
 
-Add a helper that reads the shipped digest manifest. It sits beside the compiled module in `dist/`, and is absent in a source checkout during tests, which is itself a mismatch rather than a crash:
+Import the generated digest constant from Task 7. No filesystem access and no
+`__dirname`, so it resolves identically under vitest and in `dist/`:
 
 ```typescript
-function expectedCatalogDigest(): { version: string; sha256: string } | undefined {
-  for (const candidate of ["../catalog-digest.json", "../../catalog-digest.json"]) {
-    try {
-      const p = path.join(__dirname, candidate);
-      return JSON.parse(fs.readFileSync(p, "utf-8"));
-    } catch { /* try the next location */ }
-  }
-  return undefined;
-}
+import { CATALOG_DIGEST } from "./catalog-digest.js";
 ```
 
 Inside `loadThreatIntel`, after the existing feed-cache merge and before `lastCacheState = state;`, add the catalog merge. Note that a cache that fails any check is NOT merged: a version-mismatched catalog is not partial coverage to be used opportunistically, it is coverage the caller must be told is missing.
@@ -1077,15 +1140,14 @@ Inside `loadThreatIntel`, after the existing feed-cache merge and before `lastCa
       const cached = JSON.parse(fs.readFileSync(catalogPath, "utf-8")) as {
         version?: string; sha256?: string; entries?: FeedIOC[];
       };
-      const expected = expectedCatalogDigest();
       if (!Array.isArray(cached.entries)) {
         catalog = { available: false, reason: "unreadable", entryCount: 0 };
-      } else if (expected === undefined || cached.version !== expected.version) {
+      } else if (cached.version !== CATALOG_DIGEST.version) {
         catalog = {
           available: false, reason: "version-mismatch",
           entryCount: 0, cachedVersion: cached.version,
         };
-      } else if (cached.sha256 !== expected.sha256) {
+      } else if (cached.sha256 !== CATALOG_DIGEST.sha256) {
         catalog = {
           available: false, reason: "digest-mismatch",
           entryCount: 0, cachedVersion: cached.version,
@@ -1132,7 +1194,8 @@ Temporarily change `cached.version !== expected.version` to `false`. Re-run and 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/threat-intel.ts src/__tests__/threat-intel.test.ts
+npm run self-scan:generate
+git add src/threat-intel.ts self-scan-manifest.json src/__tests__/threat-intel.test.ts
 git commit -m "feat(feed): merge the catalog cache and define what unavailable means
 
 A readable cache is not a usable cache. After an upgrade, or a refresh where
@@ -1247,13 +1310,24 @@ export function catalogFindings(
 }
 ```
 
-In `src/scanner.ts`, at the site where `feedStalenessFindings(...)` results are pushed into the report, add the catalog findings immediately after, reading the policy value with `"optional"` as the default:
+In `src/scanner.ts`, line 661 currently reads `findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));`. `policy` is already in scope there, declared at line 234 as `const policy = loadPolicyConfig(scanDir)`. Add immediately after it:
 
 ```typescript
   findings.push(...catalogFindings(lastCatalogState(), policy?.catalog ?? "optional"));
 ```
 
-In `policy-schema.json`, add to `properties`:
+The policy value needs BOTH a schema entry and a TypeScript field, or `tsc` fails on `policy.catalog`. In `src/types.ts`, inside `interface PolicyConfig` (line 554), add:
+
+```typescript
+  /**
+   * Whether the downloadable historical indicator catalog must be present.
+   * "optional" (the default) reports a missing catalog as a medium trust
+   * finding; "required" reports it as critical and fails the gate.
+   */
+  catalog?: "optional" | "required";
+```
+
+Then in `policy-schema.json`, add to `properties`:
 
 ```json
     "catalog": {
@@ -1281,7 +1355,8 @@ Expected: `medium: The historical indicator catalog was not consulted by this sc
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/feed.ts src/scanner.ts policy-schema.json src/__tests__/feed.test.ts
+npm run self-scan:generate
+git add src/feed.ts src/scanner.ts src/types.ts policy-schema.json self-scan-manifest.json src/__tests__/feed.test.ts
 git commit -m "feat(scanner): report a missing or unverifiable catalog
 
 Fires on every scan where the catalog is absent, unreadable,
@@ -1353,6 +1428,10 @@ export function catalogUrlFor(version: string, template = DEFAULT_CATALOG_URL_TE
 Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must not fail the whole refresh: the feed is the more important document, and the missing-catalog finding already reports the gap.
 
 ```typescript
+    // CATALOG_DIGEST.version is the installed package's version, generated at
+    // build time. refreshFeed() has no version parameter and reading
+    // package.json at runtime would reintroduce the __dirname problem.
+    const version = CATALOG_DIGEST.version;
     let catalog: RefreshResult | undefined;
     try {
       const catalogBody = decodeCatalogBody(
@@ -1362,7 +1441,7 @@ Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must
       const catalogPath = path.join(cacheDir, CATALOG_CACHE_FILE);
       fs.writeFileSync(catalogPath, JSON.stringify({
         version,
-        sha256: createHash("sha256").update(catalogBody).digest("hex"),
+        sha256: createHash("sha256").update(catalogBody, "utf8").digest("hex"),
         timestamp: new Date().toISOString(),
         entries: catalogEntries,
       }, null, 2));
@@ -1370,19 +1449,12 @@ Extend `refreshFeed` to fetch the catalog after the feed. A catalog failure must
     } catch { /* the missing-catalog finding reports this; the feed refresh stands */ }
 ```
 
-Note the digest is taken over the DECODED body, which must match how `generate-catalog.mjs` computes it. Task 7 hashes the gzip bytes, so change one of them to agree. Hash the **decompressed** JSON in both places, because an air-gapped mirror may serve the asset uncompressed and the digest must still match. Update `generate-catalog.mjs` accordingly:
+The digest is taken over the DECODED body, matching how `generate-catalog.mjs`
+computes it in Task 7. Both sides hash the decompressed JSON, so an air-gapped
+mirror serving the asset uncompressed still verifies.
 
-```javascript
-  const json = JSON.stringify(doc);
-  const gz = gzipSync(Buffer.from(json, "utf-8"), { level: 9 });
-  const digest = {
-    version,
-    sha256: createHash("sha256").update(json, "utf8").digest("hex"),
-    entryCount: entries.length,
-  };
-```
-
-and adjust the Task 7 test to hash the JSON rather than the gzip bytes.
+Add the imports `createHash` from `node:crypto` and `CATALOG_DIGEST` from
+`./catalog-digest.js` at the top of `src/feed.ts`.
 
 In `src/cli.ts`, extend the `feed refresh` output so the operator sees both results:
 
@@ -1402,12 +1474,12 @@ Expected: PASS, 2 tests.
 
 - [ ] **Step 5: Confirm the digest agrees across both sides**
 
-Run: `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` and confirm the Task 7 tests still pass after the hashing change. Then run `npm run catalog:generate` and check that `catalog-digest.json` changed, since the digest is now over the JSON rather than the gzip bytes. Commit the regenerated digest.
+Run `npx vitest run src/__tests__/feed.test.ts -t "buildCatalog"` and confirm the Task 7 tests still pass. Then run `npm run check:catalog` and expect `catalog digest up to date`. The client and the generator must hash the same bytes, so if this disagrees every download would be rejected as a digest mismatch.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/feed.ts src/cli.ts scripts/generate-catalog.mjs catalog-digest.json src/__tests__/feed.test.ts
+git add src/feed.ts src/cli.ts src/__tests__/feed.test.ts
 git commit -m "feat(cli): feed refresh downloads the catalog alongside the feed
 
 One verb, both documents. The asset is pinned to the installed version
@@ -1447,7 +1519,12 @@ In the `release` job, between "Extract changelog for this version" and "Create G
           # every client would reject the download as a digest mismatch.
           node -e "
             const fs = require('node:fs');
-            const built = JSON.parse(fs.readFileSync('catalog-digest.json', 'utf8'));
+            const src = fs.readFileSync('src/catalog-digest.ts', 'utf8');
+            const built = {
+              version: /version: "([^"]+)"/.exec(src)[1],
+              sha256: /sha256: "([^"]+)"/.exec(src)[1],
+              entryCount: Number(/entryCount: (\d+)/.exec(src)[1]),
+            };
             const tagged = process.env.GITHUB_REF_NAME.replace(/^v/, '');
             if (built.version !== tagged) {
               console.error('catalog digest version ' + built.version + ' does not match tag ' + tagged);
@@ -1523,7 +1600,7 @@ npm run build
 npx --no-install aahp lint
 ```
 
-Expected: `check:aahp`, `check:feed`, `check:feed-partition`, `check:feed-budget`, `check:handoff`, `check:self-scan`, then `tsc`, all green; lint green.
+Expected: `check:aahp`, `check:feed`, `check:feed-partition`, `check:feed-budget`, `check:catalog`, `check:handoff`, `check:self-scan`, then `tsc`, all green; lint green.
 
 - [ ] **Step 4: Confirm the self-scan does not flag the catalog**
 
@@ -1542,7 +1619,18 @@ npx vitest run src/__tests__/feed.test.ts src/__tests__/threat-intel.test.ts \
   src/__tests__/campaigns.test.ts
 ```
 
-Expected: all pass except the two known Windows failures (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`). Confirm those two fail on unmodified `main` before attributing them to this work.
+Expected on Windows: all pass except the two known environment failures (`Phantom Bot C2 domain`, `GlassWASM stage-2 delivery host`) plus the vscode-scanner archive tests if that file is run. Confirm any failure also fails on unmodified `main` before attributing it to this work.
+
+Then get the real verdict, because a Windows run cannot produce one:
+
+```bash
+ssh openclaw
+WD=$(mktemp -d /tmp/scg-phase1-XXXXXX) && cd "$WD"
+git clone --quiet --branch feat/threat-feed-catalog-phase-1 https://github.com/homeofe/supply-chain-guard.git repo
+cd repo && npm ci --silent && npx vitest run --reporter=dot
+```
+
+Expected: 146 files and at least 3565 tests passing, zero failures. The baseline at v6.1.3 is exactly 146 / 3565; this phase adds test files, so both numbers must be HIGHER and the failure count must still be zero. Remove the temp directory when done.
 
 - [ ] **Step 6: Update the handoff and open the PR**
 

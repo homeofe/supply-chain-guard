@@ -8,8 +8,9 @@ Status: design approved, revised after review, not yet implemented.
 Date: 2026-09-16.
 Supersedes Tier 3 of `docs/threat-feed-bulk-backfill-strategy.md`.
 
-Revision note: the first draft carried seven defects found in review, and an
-eighth was found while writing the implementation plan against it. All are
+Revision note: the first draft carried seven defects found in review, an eighth
+was found while writing the implementation plan against it, and four more were
+found by re-auditing the design against the code before merging. All twelve are
 corrected below and recorded in section 11, because most of them are the same
 class of mistake this project keeps producing and the record is worth more than
 a clean-looking document.
@@ -112,7 +113,7 @@ src/threat-intel.ts FEED_CHUNK_n     <- authored bundle, comments preserved, com
 
 data/threat-catalog.jsonl            <- authored catalog, never compiled
         +--> catalog.json.gz              (published release asset)
-        +--> dist/catalog-digest.json     (expected version + SHA-256, in package)
+        +--> src/catalog-digest.ts        (generated constant: version + SHA-256)
 
 scripts/check-feed-partition.mjs     <- gate: validates placement across both
 ```
@@ -252,12 +253,34 @@ configured: `immutable_releases` is `null` and no ruleset enables it, and
 tag. Enabling the setting would help but is external state this design cannot
 assert.
 
-Instead, `scripts/generate-feed.mjs` computes the catalog's SHA-256 and writes
-`catalog-digest.json` (`{ version, sha256, entryCount }`, a few hundred bytes)
-into the published npm package. The client verifies the downloaded catalog
-against that digest before parsing it. The anchor is therefore the immutable npm
+Instead, `scripts/generate-catalog.mjs` computes the catalog's SHA-256 and writes
+it into `src/catalog-digest.ts`, a generated and committed TypeScript constant
+that compiles into the published package. The client verifies the downloaded
+catalog against it before parsing. The anchor is therefore the immutable npm
 artifact and the tagged git tree, not a mutable release asset. A replaced asset
 fails verification, is discarded, and the finding fires.
+
+**A constant rather than a JSON file read at runtime.** Three reasons, none of
+them portability:
+
+1. `loadThreatIntel()` is on the hot path of every scan and already performs a
+   `stat` and a read for each cache file. A constant costs nothing at runtime.
+2. It is typechecked and cannot drift into a shape the caller does not expect.
+3. It gives `refreshFeed()` the version to request. That function has no version
+   parameter and no access to `package.json`, so without the constant the
+   version-pinned catalog URL could not be built at all.
+
+An earlier revision justified this differently and wrongly, claiming
+`__dirname` is undefined under vitest and citing the defensive comment at
+`src/mcp-server.ts:59`. That was asserted from a comment rather than measured.
+Measured: this package has no `"type": "module"`, vitest transforms the sources
+to CommonJS, and `__dirname` is a defined string there. A JSON file located
+relative to `__dirname` would have worked. The constant is still the better
+design for the three reasons above, but it was not rescuing a broken one.
+
+Staleness is gated: `check:catalog` regenerates the constant and fails the build
+if the committed copy differs, so a digest can never drift from the catalog it
+describes.
 
 ### 4.5 Cache, merge, and what counts as unavailable
 
@@ -274,8 +297,7 @@ and the finding fires, when any of these holds:
 
 - the cache file is absent, unreadable or unparsable;
 - its recorded `version` does not equal the installed package version;
-- its recorded `sha256` does not equal the expected digest in
-  `dist/catalog-digest.json`.
+- its recorded `sha256` does not equal `CATALOG_DIGEST.sha256`.
 
 The version check is what closes the hole the first draft left open. After an
 upgrade, or after a refresh where the bundle succeeded and the catalog fetch
@@ -484,3 +506,20 @@ answers a different question, which is this project's most common defect class.
 | 6 | The cutoff was relative to the release date, which is not a committed input and is unavailable to a PR gate, so generated files would drift | `BUNDLE_CUTOFF_DATE` is a committed ISO date |
 | 7 | The committed catalog would be scanned as ordinary content and flood the self-scan, blocking Phase 1 | `isInertThreatCatalogFile()`, sharing the existing allowlist constants |
 | 8 | Regenerating `src/threat-intel.ts` from a JSONL corpus would delete the 792 curated comment lines inside the feed chunks, and the byte-identical Phase 1 check could never pass. Found while writing the implementation plan, not in review | Two authored stores instead of one generated store, section 4.1; placement enforced by a gate rather than by regeneration |
+| 9 | NOT A DEFECT, and recorded because the claim was published before it was measured. The digest was moved from a JSON file to a generated constant on the stated grounds that `__dirname` is undefined under vitest. Measured afterwards: it is a defined string, because this package is CommonJS. The change stands on its real merits (no read on the hot path, typechecked, supplies the version for fix 11) but the original reason was false | Rationale corrected in section 4.4; the design is unchanged |
+| 10 | `policy.catalog` was added to `policy-schema.json` only; `tsc` would have failed because `PolicyConfig` in `src/types.ts` has no such field | The field is added to both |
+| 11 | `refreshFeed()` has no version in scope, so the version-pinned catalog URL could not be built | `CATALOG_DIGEST.version` supplies it, from the same generated constant as fix 9 |
+| 12 | `src/threat-intel.ts` and `src/scanner.ts` are listed in `src/self-scan-files.json`, so `check:self-scan` turns red on nearly every task and would block each commit | Every affected task regenerates and commits `self-scan-manifest.json` |
+
+Defects 10 to 12 were found by re-auditing the design against the code before
+merging, after the review had already been addressed. All three are the same
+failure: a design that named a mechanism without checking how this repository
+actually implements it.
+
+Entry 9 is the same failure pointing the other way, and is the most useful line
+in this table. The re-audit produced a confident claim about `__dirname`, sourced
+from a code comment, and it went into this document before anyone ran it. It
+survived one revision. It was caught only because the claim was measured before
+merge, which is the rule this project already writes down: a surprising
+measurement gets re-measured before it is published. A design document is not
+exempt from that just because it contains no code.
