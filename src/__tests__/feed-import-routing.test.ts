@@ -7,7 +7,6 @@ import {
   renderCatalogEntry,
   routeEntries,
   assertNoAtomicInCatalog,
-  catalogOverrideAllowed,
 } from "../../scripts/import-threat-feed.mjs";
 import { partitionTarget } from "../../scripts/feed-partition.mjs";
 import { CATALOG_KEY_ORDER } from "../../scripts/feed-migrate.mjs";
@@ -234,51 +233,61 @@ describe("routeEntries", () => {
   });
 });
 
-describe("the --to-catalog override for explicit bulk backfills", () => {
-  // Why this exists, measured: firstSeen comes from the advisory's PUBLICATION
-  // date, and the deferred bulk ranges were selected by that same date, so every
-  // entry in one is "recent" to the date rule and routes to the bundle, even
-  // though the records describe malware from a year earlier and are exactly the
-  // historical corpus the catalog is for.
-  it("routes everything to the catalog when forced", () => {
-    const { toBundle, toCatalog } = routeEntries(
-      [entry({ value: "a@1", firstSeen: "2026-09-06" }), entry({ value: "b@1" })],
-      CONFIG,
-      { forceCatalog: true },
-    );
-    expect(toBundle).toEqual([]);
-    expect(toCatalog).toHaveLength(2);
+describe("rule 5: declared bulk-backfill windows", () => {
+  // Rule 4 reads age from firstSeen, which is the advisory's PUBLICATION date.
+  // The September 2026 waves are historical by content but were published on
+  // five days, so every entry carries a firstSeen inside the window and the
+  // date rule reads the whole corpus as fresh. Measured: 8,548 entries in one
+  // range, all bundle-bound, against a budget of 15,000.
+  const WINDOWED = {
+    ...CONFIG,
+    catalogWindows: [{ since: "2026-09-02", until: "2026-09-13", reason: "bulk backfill" }],
+  };
+
+  it("routes an entry published inside a declared window to the catalog", () => {
+    expect(partitionTarget(entry({ firstSeen: "2026-09-06" }), WINDOWED)).toBe("catalog");
   });
 
-  // The control: without the flag those same entries split by date, so the flag
-  // is doing the work rather than the fixture.
-  it("splits by date without the flag", () => {
-    const { toBundle, toCatalog } = routeEntries(
-      [entry({ value: "a@1", firstSeen: "2026-09-06" }), entry({ value: "b@1" })],
-      CONFIG,
-    );
-    expect(toBundle).toHaveLength(1);
-    expect(toCatalog).toHaveLength(1);
+  // The control: the SAME entry without the window goes to the bundle, so the
+  // window is doing the work rather than the date.
+  it("would otherwise be bundled by date", () => {
+    expect(partitionTarget(entry({ firstSeen: "2026-09-06" }), CONFIG)).toBe("bundle");
   });
 
-  // Confined to an explicit bounded range. On the rolling window it would
-  // silently route ordinary fresh intelligence out of the package.
-  it("is allowed only with an explicit since AND until", () => {
-    expect(catalogOverrideAllowed({ since: "2026-09-06", until: "2026-09-06" })).toBe(true);
-    expect(catalogOverrideAllowed({ since: "2026-09-06" })).toBe(false);
-    expect(catalogOverrideAllowed({ until: "2026-09-06" })).toBe(false);
-    expect(catalogOverrideAllowed({})).toBe(false);
-    expect(catalogOverrideAllowed()).toBe(false);
+  it("is inclusive on both ends, and excludes the days either side", () => {
+    expect(partitionTarget(entry({ firstSeen: "2026-09-02" }), WINDOWED)).toBe("catalog");
+    expect(partitionTarget(entry({ firstSeen: "2026-09-13" }), WINDOWED)).toBe("catalog");
+    expect(partitionTarget(entry({ firstSeen: "2026-09-01" }), WINDOWED)).toBe("bundle");
+    expect(partitionTarget(entry({ firstSeen: "2026-09-14" }), WINDOWED)).toBe("bundle");
   });
 
-  // Still subject to rule 1: an atomic indicator may not be forced across
-  // either, because the placement gate rejects it wherever it came from.
-  it("does not exempt atomic indicators", () => {
-    const { toCatalog } = routeEntries(
-      [entry({ type: "domain", value: "old.example" })],
-      CONFIG,
-      { forceCatalog: true },
-    );
-    expect(() => assertNoAtomicInCatalog(toCatalog)).toThrow(/import refused/);
+  // Curation still wins. A window is a statement about a bulk corpus, not a
+  // licence to move something a human deliberately kept.
+  it("never moves a curated entry", () => {
+    expect(
+      partitionTarget(entry({ firstSeen: "2026-09-06", campaign: "x" }), WINDOWED),
+    ).toBe("bundle");
+  });
+
+  // Package-only, so a declared window cannot quietly strip the offline scan of
+  // a domain or a hash.
+  it.each([["ip", "203.0.113.9"], ["domain", "burst.example"], ["hash", "c".repeat(64)]])(
+    "never moves a %s indicator by window",
+    (type, value) => {
+      expect(partitionTarget(entry({ type, value, firstSeen: "2026-09-06" }), WINDOWED)).toBe(
+        "bundle",
+      );
+    },
+  );
+
+  it("ignores an entry with no usable date", () => {
+    expect(partitionTarget(entry({ firstSeen: undefined }), WINDOWED)).toBe("bundle");
+  });
+
+  it("treats a config with no windows exactly as before", () => {
+    expect(partitionTarget(entry({ firstSeen: "2026-09-06" }), { ...CONFIG })).toBe("bundle");
+    expect(
+      partitionTarget(entry({ firstSeen: "2026-09-06" }), { ...CONFIG, catalogWindows: [] }),
+    ).toBe("bundle");
   });
 });

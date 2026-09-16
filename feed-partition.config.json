@@ -2,5 +2,12 @@
   "$comment": "Partition policy for the threat feed. See docs/threat-feed-catalog-decoupling-design.md section 4.2. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files with nobody editing them. From Phase 2 onward `npm run release:prepare` moves it as part of a release. Phase 2 set the decided values: 30 days before the 2026-09-16 release, 15000 entries, 2097152 bytes. The BYTE limit is the binding one after the migration (1.66 MB of 2 MiB used, roughly 3,400 entries of headroom, against 6,029 entries of headroom on the entry limit), so that is the gate a bulk import will trip first.",
   "bundleCutoffDate": "2026-08-17",
   "maxBundledEntries": 15000,
-  "maxBundleBytes": 2097152
+  "maxBundleBytes": 2097152,
+  "catalogWindows": [
+    {
+      "since": "2026-09-02",
+      "until": "2026-09-13",
+      "reason": "The GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus, published across five days. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh and would put 56,294 entries into a bundle budgeted at 15,000. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    }
+  ]
 }

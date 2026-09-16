@@ -1,3 +1,61 @@
+## Phase 3 pilot: one range drained, and two defects it found (2026-09-16, claude-opus-5)
+
+The 2026-09-06 range is drained: 8,548 entries into the catalog, which now holds
+20,546. The bundle is unchanged at 8,971, the two stores are disjoint, and the
+catalog has no internal duplicates. Its deferral entry is removed; four ranges
+remain.
+
+**Defect 1: the date rule cannot see a bulk backfill, and a flag was the wrong
+fix.**
+
+`firstSeen` is the advisory's PUBLICATION date, and the recovery commands select
+a range by that same date, so every entry in one carries a `firstSeen` inside
+the range. The date rule reads the whole historical corpus as fresh. Measured:
+8,548 entries, all bundle-bound. Across all five ranges that is 65,265 entries
+and about 12.1 MB against a budget of 15,000 and 2 MiB.
+
+Moving the cutoff past the burst was modelled and rejected: a 2026-09-14 cutoff
+leaves 1,215 entries in the bundle, destroying the property the 30-day window
+was chosen for.
+
+The first fix was an importer flag, `--to-catalog`. It worked, and it was wrong:
+the flag told the IMPORTER where to put an entry while `check:feed-partition`
+still asked `partitionTarget`, so the gate rejected all 8,548 correctly placed
+entries as belonging in the bundle. Two opinions about one decision, which is
+the exact failure the routing code's own comments warn against.
+
+The flag is gone. `catalogWindows` in `feed-partition.config.json` is rule 5,
+and the importer, the migration and the gate all read it. It is package-only, so
+a declared window can never strip the offline scan of a domain or a hash, and
+curation still wins over it. A malformed window throws rather than being
+ignored, because ignoring one would send an entire declared backfill to the
+bundle and the budget gate would then fail for a reason that looks nothing like
+the cause.
+
+**Defect 2: the importer deduped against the bundle alone.**
+
+That was correct until the migration moved 11,998 entries into the catalog.
+Those entries are still enforced at scan time, so re-importing one is a
+duplicate, not a new indicator. Deduping against the bundle alone would have
+undone the migration entry by entry: every migrated package would look absent to
+the next import that encountered it, be re-added to the bundle, and end up in
+both stores at once, which also breaks the disjointness the acceptance test
+asserts. `readCommittedCatalog` is now part of the dedupe input.
+
+This one did not fire on the pilot, because the drained range was never in the
+feed, and it would not have fired on any single test either. It was found by
+asking what `existing` meant now that there are two stores.
+
+**Mutation results.** Rule 5: removing the window rule, letting it move atomic
+indicators, making the bounds exclusive, and matching a non-string date all go
+red. The dedupe: deduping against the bundle alone goes red. The dry-run split
+and the atomic refusal were proved earlier in the session.
+
+**Remaining ranges:** 2026-09-02 (9,758), 2026-09-04 (9,937), 2026-09-10
+(8,891), 2026-09-13 (19,158). All four fall inside the declared window, so they
+route to the catalog without any further policy change.
+
+
 ## Phase 3 pilot dry run, and a defect it exposed in Task 4 (2026-09-16, claude-opus-5)
 
 **Preconditions confirmed before touching upstream:** catalog 11,998, bundle

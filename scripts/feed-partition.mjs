@@ -77,8 +77,27 @@ export function loadPartitionConfig(root = repoRoot) {
     );
   }
 
+  // Windows are optional, but a malformed one must not be silently ignored: a
+  // window that does not parse would send an entire declared backfill to the
+  // bundle, which is the failure the window exists to prevent.
+  const windows = raw.catalogWindows ?? [];
+  if (!Array.isArray(windows)) {
+    throw new Error("feed-partition.config.json: catalogWindows must be an array");
+  }
+  for (const w of windows) {
+    const ok =
+      w && typeof w.since === "string" && typeof w.until === "string" && w.since <= w.until;
+    if (!ok) {
+      throw new Error(
+        `feed-partition.config.json: catalogWindows entry ${JSON.stringify(w)} needs since and ` +
+          `until as ISO dates with since <= until`,
+      );
+    }
+  }
+
   return {
     bundleCutoffDate: raw.bundleCutoffDate,
+    catalogWindows: windows,
     maxBundledEntries: limit("maxBundledEntries"),
     maxBundleBytes: limit("maxBundleBytes"),
   };
@@ -104,9 +123,48 @@ export function loadPartitionConfig(root = repoRoot) {
  * only caller that moves entries a human already authored. Keeping it out of
  * this function is what lets the importer share the rule.
  */
+/**
+ * Whether a date falls inside a declared bulk-backfill window.
+ *
+ * Windows are inclusive on both ends and compared as ISO day strings, which
+ * sort lexicographically, so no parsing is needed and an unparseable date
+ * simply matches nothing.
+ */
+export function inCatalogWindow(firstSeen, config) {
+  if (typeof firstSeen !== "string") return false;
+  const windows = config.catalogWindows;
+  if (!Array.isArray(windows)) return false;
+  const day = firstSeen.slice(0, 10);
+  return windows.some((w) => day >= w.since && day <= w.until);
+}
+
 export function partitionTarget(entry, config) {
   // Rule 2: curated entries stay, whatever their type or age.
   if (entry.campaign !== undefined || entry.family !== undefined) return "bundle";
+
+  // Rule 5: a declared bulk-backfill window.
+  //
+  // Rule 4 reads age from `firstSeen`, which is the advisory's PUBLICATION date.
+  // That is the right axis for daily intelligence and the wrong one for a bulk
+  // backfill: the five September 2026 waves are historical by content, with MAL
+  // IDs spanning 2023 to 2026, but they were published on five days, so every
+  // entry in one carries a `firstSeen` inside that window and the date rule
+  // reads the whole corpus as fresh. Measured on the 2026-09-06 range: 8,548
+  // entries, all bundle-bound, against a budget of 15,000.
+  //
+  // The window lives in the CONFIG rather than in an importer flag so that one
+  // definition serves the importer, the migration and the placement gate. An
+  // earlier attempt put it in a flag; the gate then rejected 8,548 correctly
+  // placed entries, because the importer and the gate had two different
+  // opinions about where those entries belonged.
+  //
+  // Package-only on purpose: an atomic indicator is never moved by a window,
+  // so a declared window cannot quietly strip the offline scan of a domain or
+  // a hash. Those stay on the date rule, where rule 2 and the placement gate
+  // hold them.
+  if (entry.type === "package" && inCatalogWindow(entry.firstSeen, config)) {
+    return "catalog";
+  }
 
   const cutoff = isoToEpoch(config.bundleCutoffDate);
   if (cutoff === null) {

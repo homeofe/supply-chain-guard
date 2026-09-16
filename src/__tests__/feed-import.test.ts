@@ -1627,33 +1627,54 @@ describe("importUpstreamFeed failure mode", () => {
   // corpus. On the rolling window it would silently route ordinary fresh
   // intelligence out of the package, which is the one thing the bundled feed
   // exists to prevent, so the importer refuses rather than obeying.
-  it("refuses --to-catalog without an explicit range", async () => {
-    const { importUpstreamFeed } = await load();
-    await expect(
-      importUpstreamFeed({
-        root: tmpRoot,
-        toCatalog: true,
-        useOsv: false,
-        dryRun: true,
-        fetchImpl: singlePage([advisory()]),
-      }),
-    ).rejects.toThrow(/--to-catalog requires an explicit --since and --until/);
-  });
 
-  it("accepts --to-catalog with an explicit range and routes there", async () => {
+  // The bundle stopped being the whole committed feed when the migration moved
+  // 11,998 entries into the catalog. Those are still enforced at scan time, so
+  // re-importing one is a duplicate, not a new indicator. Deduping against the
+  // bundle alone would undo the migration entry by entry: every migrated package
+  // would look absent, be re-added to the bundle, and end up in both stores.
+  it("treats an entry already in the catalog as a duplicate", async () => {
     const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "scg-fixture-pkg",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
     const report = await importUpstreamFeed({
       root: tmpRoot,
-      toCatalog: true,
-      since: "2026-09-06",
-      until: "2026-09-06",
-      useOsv: false,
       dryRun: true,
+      useOsv: false,
       fetchImpl: singlePage([advisory()]),
     });
-    expect(report.addedToCatalog).toBe(report.added);
-    expect(report.addedToBundle).toBe(0);
+    expect(report.added).toBe(0);
   });
+
+  it("still imports an entry the catalog does not hold", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "some-other-package",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.added).toBe(1);
+  });
+
 
   it("writes nothing when everything upstream is already covered", async () => {
     const { importUpstreamFeed } = await load();

@@ -1568,6 +1568,24 @@ const CATALOG_FIELDS = [
 ];
 
 /**
+ * The catalog entries currently committed, or an empty list when there are none.
+ *
+ * Tolerant of an absent file on purpose: a consumer repository that has not
+ * adopted the catalog yet still imports, and a missing catalog there means "no
+ * catalog entries", not a broken checkout. A malformed one is a different
+ * matter and is left to throw, because silently deduping against nothing would
+ * re-import the whole corpus.
+ */
+export function readCommittedCatalog(root) {
+  const catalogPath = join(root, "data", "threat-catalog.jsonl");
+  if (!existsSync(catalogPath)) return [];
+  return readFileSync(catalogPath, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line));
+}
+
+/**
  * Refuse to send an atomic indicator to the catalog.
  *
  * Rule 1 is bounded by CURATION rather than by type, deliberately: an
@@ -1605,43 +1623,28 @@ export function assertNoAtomicInCatalog(toCatalog) {
  * the gate, and check:feed-partition would go red on a file nobody edited by
  * hand. partitionTarget is the single definition, shared with the migration.
  */
-export function routeEntries(entries, config, { forceCatalog = false } = {}) {
+export function routeEntries(entries, config) {
   const toBundle = [];
   const toCatalog = [];
   for (const entry of entries) {
-    const target = forceCatalog ? "catalog" : partitionTarget(entry, config);
-    (target === "catalog" ? toCatalog : toBundle).push(entry);
+    (partitionTarget(entry, config) === "catalog" ? toCatalog : toBundle).push(entry);
   }
   return { toBundle, toCatalog };
 }
 
 /**
- * Whether an explicit bulk backfill may be routed straight to the catalog.
+ * Where a bulk backfill goes is declared in feed-partition.config.json, not
+ * here.
  *
- * MEASURED, and the reason this exists. `firstSeen` comes from the advisory's
- * PUBLICATION date, and the deferred bulk ranges were selected by that same
- * date, so every entry in one carries a `firstSeen` inside the range. A range
- * published on 2026-09-06 is therefore "recent" to the date rule and routes to
- * the bundle, even though the records themselves describe malware from 2025 and
- * are exactly the historical corpus the catalog exists for.
+ * An earlier revision of this file carried a --to-catalog flag. It worked, and
+ * it was wrong: the flag told the IMPORTER where to put an entry while
+ * check:feed-partition still asked partitionTarget, so the gate rejected 8,548
+ * correctly placed entries as belonging in the bundle. Two opinions about one
+ * decision is the thing this module's own comments warn against.
  *
- * The first dry run measured that directly: 8,548 entries, all to the bundle.
- * Draining all five ranges that way would put 65,265 entries and about 12.1 MB
- * into a bundle budgeted at 15,000 entries and 2 MiB.
- *
- * Moving the cutoff past the burst instead was modelled and rejected: a cutoff
- * of 2026-09-14 leaves 1,215 entries in the bundle, destroying the property the
- * 30-day window was chosen for, that an offline install still carries a month
- * of fresh package intelligence.
- *
- * So the operator states it. The flag is confined to an explicit, bounded range
- * for a reason: on the daily rolling window it would silently route ordinary
- * fresh intelligence out of the package, which is the one thing the bundle
- * exists to prevent.
+ * `catalogWindows` in the config is the single definition, and the importer,
+ * the migration and the gate all read it.
  */
-export function catalogOverrideAllowed({ since, until } = {}) {
-  return Boolean(since && until);
-}
 
 /** Render one entry as a catalog JSONL line, in canonical field order. */
 export function renderCatalogEntry(entry) {
@@ -1783,7 +1786,6 @@ export async function importUpstreamFeed({
   ecosystems,
   filterHoldingPackages = false,
   ignoreDeferrals = false,
-  toCatalog: forceCatalog = false,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -1874,8 +1876,18 @@ export async function importUpstreamFeed({
 
   const { entries: normalizedCandidates, coalesced } = coalesceCandidates(mapped);
 
-  // 3. Dedupe against the feed that is actually committed.
-  const existing = extractBundledEntries(root);
+  // 3. Dedupe against the feed that is actually committed, which is now BOTH
+  //    stores. The bundle alone stopped being the committed feed when the
+  //    migration moved 11,998 entries into the catalog: those entries are still
+  //    enforced at scan time, so re-importing one is a duplicate, not a new
+  //    indicator.
+  //
+  //    Deduping against the bundle alone would undo the migration entry by
+  //    entry. Every migrated package would look absent to the next import that
+  //    encountered it, be re-added to the bundle, and end up in both stores at
+  //    once, which also breaks the disjointness the acceptance test asserts.
+  const bundled = extractBundledEntries(root);
+  const existing = [...bundled, ...readCommittedCatalog(root)];
   const { added: deduped, duplicates, covered } = dedupe(existing, normalizedCandidates);
 
   // 3b. Drop candidates a human has declined for good. Before --limit and before
@@ -2025,16 +2037,8 @@ export async function importUpstreamFeed({
   // uninformative: choosing between a slice and a deferral is the decision a
   // dry run exists to support, and a summary of zeros reads as "nothing would
   // be routed" rather than "not computed yet".
-  if (forceCatalog && !catalogOverrideAllowed({ since, until })) {
-    throw new Error(
-      "--to-catalog requires an explicit --since and --until. On the rolling window it " +
-        "would route ordinary fresh intelligence out of the package, which is the one thing " +
-        "the bundled feed exists to prevent.",
-    );
-  }
-
   const partitionConfig = loadPartitionConfig(root);
-  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig, { forceCatalog });
+  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig);
   report.addedToBundle = toBundle.length;
   report.addedToCatalog = toCatalog.length;
 
@@ -2196,7 +2200,6 @@ export function parseArgs(argv) {
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--filter-holding-packages") opts.filterHoldingPackages = true;
     else if (arg === "--ignore-deferrals") opts.ignoreDeferrals = true;
-    else if (arg === "--to-catalog") opts.toCatalog = true;
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
