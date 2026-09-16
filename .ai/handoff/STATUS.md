@@ -1,3 +1,61 @@
+## Phase 2 Task 5: acceptance, measured (2026-09-16, claude-opus-5)
+
+Phase 2 is complete. Every number below was measured on this branch, not
+projected.
+
+**The corpus is partitioned, not reduced:**
+
+| | Before | After |
+| --- | --- | --- |
+| `src/threat-intel.ts` | 3,717,957 bytes | 1,664,028 bytes |
+| Bundled entries | 20,969 | 8,971 |
+| Catalog entries | 0 | 11,998 |
+| Package, unpacked | 9.91 MB | 6.44 MB |
+| Module import, cold | 104.4 ms | 57.0 ms |
+
+Bundle plus catalog is 20,969, the two sets are disjoint, and all 706 curated
+comment lines survive with no orphaned comment groups.
+
+**The import-time projection was optimistic, and the correction is worth
+recording.** The design modelled import cost as linear at about 3.5 microseconds
+per entry and projected 75 ms falling to 32 ms. Measured like for like on this
+machine, same harness, same Node, three cold processes each: 104.4 ms at 20,969
+entries and 57.0 ms at 8,971. That is a 45 percent reduction against a projected
+57 percent. Per entry the cost is 4.98 microseconds before and 6.35 after, so it
+is NOT linear: a little over 2 ms is fixed ESM overhead and the rest does not
+scale down proportionally. The direction of the claim holds and the magnitude
+does not, which is why this is written down rather than left as the design's
+number.
+
+**The finding fires and clears, proved through the real CLI** rather than
+through the unit that produces it. Scanning a fixture directory with no catalog
+cache emits `THREAT_FEED_CATALOG_MISSING` at `medium`, saying "11998 historical
+indicators were not consulted by this scan". Installing a valid catalog cache
+and re-scanning emits nothing. Both directions matter: a finding that never
+clears is as useless as one that never fires.
+
+**Release immutability:** `repos/homeofe/supply-chain-guard/immutable-releases`
+reads `{"enabled": true, "enforced_by_owner": false}`. `v6.1.3` reads
+`immutable: false`, which is correct and permanent: the setting was enabled
+after that release and does not retrofit. The release-level half of this check
+can only be answered by the FIRST release published after the change, so it is
+carried forward to that release rather than claimed now. Do not try to answer it
+from the repository object's `immutable_releases` field; no such field exists
+there, it returns `null` whether the feature is on or off, and an earlier
+revision of this design was misled by exactly that for a day.
+
+**Catalog verifiability:** `check:catalog` is green, `CATALOG_DIGEST` reads
+version 6.1.3, entryCount 11998, shardCount 1. shardCount is asserted explicitly
+rather than only entryCount: sharding is what removes the catalog's ceiling, and
+a generator that silently stopped sharding would look identical on entry count
+alone. It crosses into two shards during Phase 3.
+
+**Full-suite verdict:** from CI on this branch, which runs the whole suite on
+Node 22 and Node 24. Not claimed from this Windows box, where the suite takes
+hours and where vscode-scanner and two campaigns tests fail on unmodified main
+for environment reasons.
+
+
 ## Phase 2 Task 4: the importer routes new entries (2026-09-16, claude-opus-5)
 
 Without this the bundle starts growing again on the next daily import and the
