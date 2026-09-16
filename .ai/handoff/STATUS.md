@@ -1,3 +1,66 @@
+## Phase 2 Task 3: the migration writer, and where it left the plan (2026-09-16, claude-opus-5)
+
+`applyMigration` plus the CLI and `scripts/release-prepare.mjs`. No entry has
+moved yet: this commit is the tooling, with the cutoff still at the Phase 1
+placeholder, and `node scripts/feed-migrate.mjs` reports `move 0` against the
+real file. That is the control the plan asks for, and it proves the migration is
+inert until the cutoff is deliberately moved rather than firing on whatever the
+config happens to say.
+
+**The plan's own sketch of this task carried the bug described in the previous
+entry**, and three more. Written out, it identified both entry lines and header
+lines by string identity, joined the result with `"\n"` (which rewrites every
+line ending on a Windows checkout, turning a removals-only diff into a whole-file
+rewrite), and rebuilt each catalog entry by running `/(\w+): "([^"]*)"/g` over
+the source line. The implementation differs on all four points:
+
+- lines are identified by index, not text
+- the original line ending is detected and preserved
+- catalog entries come from `extractBundledEntries`, the same `node:vm`
+  evaluation the build gates use, rather than from a regex over TypeScript
+- the parser and the evaluator are zipped by position and that correspondence is
+  CHECKED entry by entry, because if the two walks ever diverged the migration
+  would write one indicator into the catalog while deleting a different one from
+  the bundle, and both files would still look entirely plausible
+
+**Applying is opt-in.** The sketch wrote by default with `--dry-run` to opt out.
+For an operation that rewrites a 3.7 MB source file and appends to a published
+artifact, the safe outcome should be what happens when the flag is forgotten or
+misspelled, so `--write` applies and everything else is a dry run. `--dry-run` is
+still accepted, and an unrecognised option exits 2 rather than being ignored.
+
+**The catalog accumulates.** Each release moves the cutoff forward and migrates
+again, so the CLI appends. Overwriting would silently drop everything a previous
+release moved. Appending is only safe while the two sets are disjoint, which
+holds by construction because a migrated entry is no longer in the bundle to be
+moved twice, and "by construction" is exactly the kind of claim that stops being
+true unnoticed, so it is checked before the append.
+
+**`data/*.jsonl` is pinned to LF in `.gitattributes`.** The catalog is published
+and its digest is verified by consumers; with `core.autocrlf=true` a Windows
+checkout would rewrite it to CRLF and change every line ending, so a file that is
+byte-correct on Linux would fail its own integrity check here. Same reasoning as
+the vendored CycloneDX schemas already in that file.
+
+**`release-prepare.mjs` refuses to move the cutoff backwards.** Doing so does not
+return migrated entries to the bundle, since they are already in the catalog and
+gone from the source. It only makes the placement gate red on entries that are
+exactly where the policy put them, reporting a violation nobody introduced.
+`cutoffFor` takes `now` as a parameter and never reads the clock.
+
+**Mutation results**, baseline and post-restore green at 35 and 10 tests. Six
+cuts on `applyMigration`: canonical key order, the unknown-field refusal, header
+removal, the parser/evaluator check, the empty-bundle refusal, and headers by
+text instead of index. All red, each on its own test. Four cuts on
+`release-prepare`: date validation, window validation, the backwards guard, and
+copying rather than mutating the caller's config. All red.
+
+**`catalog:generate` does not exist and is not needed yet.** The plan's sequence
+named it, but sharding is Phase 3 and 11,998 entries sit far below the 50,000
+shard size. `applyMigration` writes `data/threat-catalog.jsonl` directly, which
+is the exact path Phase 1 bound the scanner exemption and the placement gate to.
+
+
 ## Phase 2 Tasks 1 and 2: the migration parser and planner (2026-09-16, claude-opus-5)
 
 `scripts/feed-migrate.mjs` reads `src/threat-intel.ts` at the LINE level rather

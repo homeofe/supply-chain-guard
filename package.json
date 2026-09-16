@@ -23,6 +23,8 @@
     "feed:generate": "node scripts/generate-feed.mjs",
     "audit:blocklist": "node scripts/audit-blocklist.mjs",
     "feed:import": "node scripts/import-threat-feed.mjs",
+    "feed:migrate": "node scripts/feed-migrate.mjs",
+    "release:prepare": "node scripts/release-prepare.mjs",
     "check:feed": "node scripts/generate-feed.mjs --check",
     "check:feed-partition": "node scripts/check-feed-partition.mjs",
     "check:feed-budget": "node scripts/check-feed-budget.mjs",

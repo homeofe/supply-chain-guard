@@ -29,3 +29,10 @@
 # stop matching, so the one check that says "this is still the official schema"
 # could no longer be run.
 src/__tests__/fixtures/cyclonedx/*.json text eol=lf
+
+# The threat catalog is a PUBLISHED artifact: consumers fetch it and verify its
+# digest against the one recorded at release time. With core.autocrlf=true a
+# Windows checkout would rewrite it to CRLF, changing every byte of every line
+# ending and therefore the digest, so a file that is byte-correct on Linux would
+# fail its own integrity check here. Same reason as the vendored schemas above.
+data/*.jsonl text eol=lf
