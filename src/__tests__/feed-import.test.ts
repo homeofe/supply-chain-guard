@@ -1623,6 +1623,38 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.addedToBundle).toBe(1);
   });
 
+  // --to-catalog is for an explicit, bounded backfill of a known-historical
+  // corpus. On the rolling window it would silently route ordinary fresh
+  // intelligence out of the package, which is the one thing the bundled feed
+  // exists to prevent, so the importer refuses rather than obeying.
+  it("refuses --to-catalog without an explicit range", async () => {
+    const { importUpstreamFeed } = await load();
+    await expect(
+      importUpstreamFeed({
+        root: tmpRoot,
+        toCatalog: true,
+        useOsv: false,
+        dryRun: true,
+        fetchImpl: singlePage([advisory()]),
+      }),
+    ).rejects.toThrow(/--to-catalog requires an explicit --since and --until/);
+  });
+
+  it("accepts --to-catalog with an explicit range and routes there", async () => {
+    const { importUpstreamFeed } = await load();
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      toCatalog: true,
+      since: "2026-09-06",
+      until: "2026-09-06",
+      useOsv: false,
+      dryRun: true,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.addedToCatalog).toBe(report.added);
+    expect(report.addedToBundle).toBe(0);
+  });
+
   it("writes nothing when everything upstream is already covered", async () => {
     const { importUpstreamFeed } = await load();
     fs.writeFileSync(

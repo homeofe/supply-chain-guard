@@ -734,6 +734,42 @@ Phase 1 sets the limits above the current unsplit size so the phase can land
 without moving an indicator, and Phase 2 tightens them to the values above in
 the same commit that moves the cutoff.
 
+## 6.1 What the date rule cannot see, measured during Phase 3
+
+Rule 4 partitions on `firstSeen`, and `firstSeen` is the advisory's PUBLICATION
+date. For daily intelligence that is the right axis: an advisory published last
+week is fresh, and an advisory published last year is history.
+
+It is the wrong axis for a bulk backfill. The five deferred ranges are historical
+by content, with MAL IDs spanning 2023 to 2026, but they were bulk-published on
+five days in September 2026, and the recovery commands select them by that same
+publication date. Every entry in a range therefore carries a `firstSeen` inside
+the range, so the date rule reads the entire corpus as fresh.
+
+Measured on the 2026-09-06 range: 8,548 entries, all routed to the bundle, none
+to the catalog. Extrapolated across all five: 65,265 entries and roughly 12.1 MB
+in a bundle budgeted at 15,000 entries and 2 MiB.
+
+Two fixes were considered:
+
+- **Move the cutoff past the burst.** Modelled: a cutoff of 2026-09-14 leaves
+  1,215 entries in the bundle. That destroys the property the 30-day window was
+  chosen for, which is that an offline install still carries a month of fresh
+  package intelligence, the part most likely to be in a lockfile someone is
+  scanning today. Rejected.
+- **Let the operator state it.** `npm run feed:import -- --since X --until Y
+  --to-catalog` routes an explicit, bounded range straight to the catalog. The
+  automatic policy is unchanged, so daily intelligence still lands in the bundle
+  by date, and the override cannot be used on the rolling window at all: the
+  importer refuses `--to-catalog` without both `--since` and `--until`, because
+  there it would silently route ordinary fresh intelligence out of the package.
+  Atomic indicators are still refused, so the override cannot smuggle one past
+  rule 1. Adopted.
+
+The override is a statement about provenance that only a human has: that this
+range is corpus rather than intelligence. It is recorded in the command, which
+is why it is a flag rather than a heuristic.
+
 ## 7. Migration
 
 Ordered so coverage never silently drops, and so that no phase depends on a

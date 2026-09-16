@@ -7,6 +7,7 @@ import {
   renderCatalogEntry,
   routeEntries,
   assertNoAtomicInCatalog,
+  catalogOverrideAllowed,
 } from "../../scripts/import-threat-feed.mjs";
 import { partitionTarget } from "../../scripts/feed-partition.mjs";
 import { CATALOG_KEY_ORDER } from "../../scripts/feed-migrate.mjs";
@@ -230,5 +231,54 @@ describe("routeEntries", () => {
     );
     expect(toBundle).toHaveLength(1);
     expect(toCatalog).toHaveLength(1);
+  });
+});
+
+describe("the --to-catalog override for explicit bulk backfills", () => {
+  // Why this exists, measured: firstSeen comes from the advisory's PUBLICATION
+  // date, and the deferred bulk ranges were selected by that same date, so every
+  // entry in one is "recent" to the date rule and routes to the bundle, even
+  // though the records describe malware from a year earlier and are exactly the
+  // historical corpus the catalog is for.
+  it("routes everything to the catalog when forced", () => {
+    const { toBundle, toCatalog } = routeEntries(
+      [entry({ value: "a@1", firstSeen: "2026-09-06" }), entry({ value: "b@1" })],
+      CONFIG,
+      { forceCatalog: true },
+    );
+    expect(toBundle).toEqual([]);
+    expect(toCatalog).toHaveLength(2);
+  });
+
+  // The control: without the flag those same entries split by date, so the flag
+  // is doing the work rather than the fixture.
+  it("splits by date without the flag", () => {
+    const { toBundle, toCatalog } = routeEntries(
+      [entry({ value: "a@1", firstSeen: "2026-09-06" }), entry({ value: "b@1" })],
+      CONFIG,
+    );
+    expect(toBundle).toHaveLength(1);
+    expect(toCatalog).toHaveLength(1);
+  });
+
+  // Confined to an explicit bounded range. On the rolling window it would
+  // silently route ordinary fresh intelligence out of the package.
+  it("is allowed only with an explicit since AND until", () => {
+    expect(catalogOverrideAllowed({ since: "2026-09-06", until: "2026-09-06" })).toBe(true);
+    expect(catalogOverrideAllowed({ since: "2026-09-06" })).toBe(false);
+    expect(catalogOverrideAllowed({ until: "2026-09-06" })).toBe(false);
+    expect(catalogOverrideAllowed({})).toBe(false);
+    expect(catalogOverrideAllowed()).toBe(false);
+  });
+
+  // Still subject to rule 1: an atomic indicator may not be forced across
+  // either, because the placement gate rejects it wherever it came from.
+  it("does not exempt atomic indicators", () => {
+    const { toCatalog } = routeEntries(
+      [entry({ type: "domain", value: "old.example" })],
+      CONFIG,
+      { forceCatalog: true },
+    );
+    expect(() => assertNoAtomicInCatalog(toCatalog)).toThrow(/import refused/);
   });
 });

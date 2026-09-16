@@ -1605,13 +1605,42 @@ export function assertNoAtomicInCatalog(toCatalog) {
  * the gate, and check:feed-partition would go red on a file nobody edited by
  * hand. partitionTarget is the single definition, shared with the migration.
  */
-export function routeEntries(entries, config) {
+export function routeEntries(entries, config, { forceCatalog = false } = {}) {
   const toBundle = [];
   const toCatalog = [];
   for (const entry of entries) {
-    (partitionTarget(entry, config) === "catalog" ? toCatalog : toBundle).push(entry);
+    const target = forceCatalog ? "catalog" : partitionTarget(entry, config);
+    (target === "catalog" ? toCatalog : toBundle).push(entry);
   }
   return { toBundle, toCatalog };
+}
+
+/**
+ * Whether an explicit bulk backfill may be routed straight to the catalog.
+ *
+ * MEASURED, and the reason this exists. `firstSeen` comes from the advisory's
+ * PUBLICATION date, and the deferred bulk ranges were selected by that same
+ * date, so every entry in one carries a `firstSeen` inside the range. A range
+ * published on 2026-09-06 is therefore "recent" to the date rule and routes to
+ * the bundle, even though the records themselves describe malware from 2025 and
+ * are exactly the historical corpus the catalog exists for.
+ *
+ * The first dry run measured that directly: 8,548 entries, all to the bundle.
+ * Draining all five ranges that way would put 65,265 entries and about 12.1 MB
+ * into a bundle budgeted at 15,000 entries and 2 MiB.
+ *
+ * Moving the cutoff past the burst instead was modelled and rejected: a cutoff
+ * of 2026-09-14 leaves 1,215 entries in the bundle, destroying the property the
+ * 30-day window was chosen for, that an offline install still carries a month
+ * of fresh package intelligence.
+ *
+ * So the operator states it. The flag is confined to an explicit, bounded range
+ * for a reason: on the daily rolling window it would silently route ordinary
+ * fresh intelligence out of the package, which is the one thing the bundle
+ * exists to prevent.
+ */
+export function catalogOverrideAllowed({ since, until } = {}) {
+  return Boolean(since && until);
 }
 
 /** Render one entry as a catalog JSONL line, in canonical field order. */
@@ -1754,6 +1783,7 @@ export async function importUpstreamFeed({
   ecosystems,
   filterHoldingPackages = false,
   ignoreDeferrals = false,
+  toCatalog: forceCatalog = false,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -1995,8 +2025,16 @@ export async function importUpstreamFeed({
   // uninformative: choosing between a slice and a deferral is the decision a
   // dry run exists to support, and a summary of zeros reads as "nothing would
   // be routed" rather than "not computed yet".
+  if (forceCatalog && !catalogOverrideAllowed({ since, until })) {
+    throw new Error(
+      "--to-catalog requires an explicit --since and --until. On the rolling window it " +
+        "would route ordinary fresh intelligence out of the package, which is the one thing " +
+        "the bundled feed exists to prevent.",
+    );
+  }
+
   const partitionConfig = loadPartitionConfig(root);
-  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig);
+  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig, { forceCatalog });
   report.addedToBundle = toBundle.length;
   report.addedToCatalog = toCatalog.length;
 
@@ -2158,6 +2196,7 @@ export function parseArgs(argv) {
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--filter-holding-packages") opts.filterHoldingPackages = true;
     else if (arg === "--ignore-deferrals") opts.ignoreDeferrals = true;
+    else if (arg === "--to-catalog") opts.toCatalog = true;
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
