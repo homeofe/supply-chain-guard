@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789589647",
-    "timestamp": "2026-09-16T20:14:08Z",
-    "commit": "f705994",
+    "session_id": "cli-1789590077",
+    "timestamp": "2026-09-16T20:21:17Z",
+    "commit": "b8aeab7",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f1dbe6bed5f9fa5c3c1d76543cfb9f783c2f2d63fb73221fcce75a3bba3cd2c6",
-      "updated": "2026-09-16T20:14:06Z",
-      "lines": 9433,
-      "summary": "The first two of the eight tasks that make the catalog reachable at runtime."
+      "checksum": "sha256:578d79216da02bf225a117610f70bce2c7afe8215ef1a902bc24534a8327da76",
+      "updated": "2026-09-16T20:21:15Z",
+      "lines": 9489,
+      "summary": "`scripts/generate-catalog.mjs` builds the publishable catalog and the committed"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T20:14:07Z",
+      "updated": "2026-09-16T20:21:16Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:210afe6ed509cc1e4026b1794afb2f987591d43dbf6bb7d9bc801aee907e2dcb",
-      "updated": "2026-09-16T20:14:07Z",
+      "checksum": "sha256:afb621e7052880ca6f3f6c4081b2d93462b1422ddeac183ae1357aad7deb2245",
+      "updated": "2026-09-16T20:21:16Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:c7418eb41bace1cdaea280ab494efd018898e2cbeaa08da94f0f547a2b34b91e",
-      "updated": "2026-09-16T20:14:07Z",
+      "checksum": "sha256:5cad797017f14eaa7dbddeab9b53f70a9cf0e1f0379b0a1d6be7384d8332a5a2",
+      "updated": "2026-09-16T20:21:16Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "The first two of the eight tasks that make the catalog reachable at runtime. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "`scripts/generate-catalog.mjs` builds the publishable catalog and the committed Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 110336,
-    "full_read": 122801
+    "manifest_plus_core": 110968,
+    "full_read": 123435
   }
 }

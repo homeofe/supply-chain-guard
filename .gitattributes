@@ -36,3 +36,8 @@ src/__tests__/fixtures/cyclonedx/*.json text eol=lf
 # ending and therefore the digest, so a file that is byte-correct on Linux would
 # fail its own integrity check here. Same reason as the vendored schemas above.
 data/*.jsonl text eol=lf
+
+# Generated and byte-compared by check:catalog. On a Windows checkout with
+# core.autocrlf=true an unpinned generated file materializes as CRLF and the
+# comparison would report a freshly generated file as stale.
+src/catalog-digest.ts text eol=lf

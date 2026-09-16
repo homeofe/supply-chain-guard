@@ -195,7 +195,7 @@ export function planMigration(source, config) {
 // rather than silently publishing a field the loader will not read back. The
 // legacy `note` and `ecosystem` fields were dropped from FEED_ENTRY_KEYS in
 // Phase 1, and this is what stops them reappearing through the catalog.
-const CATALOG_KEY_ORDER = [
+export const CATALOG_KEY_ORDER = [
   "type",
   "value",
   "severity",

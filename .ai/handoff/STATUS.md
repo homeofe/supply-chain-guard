@@ -1,3 +1,59 @@
+## Phase 1 Task 7: the catalog generator and its digest (2026-09-16, claude-opus-5)
+
+`scripts/generate-catalog.mjs` builds the publishable catalog and the committed
+digest. The chain of trust is package -> index -> shard: `CATALOG_DIGEST` in
+`src/catalog-digest.ts` is the digest of the INDEX, and the index carries a
+digest for each shard, so a replaced asset at any level is caught. The digest
+ships inside the npm package, which makes integrity independent of release-asset
+mutability: the anchor is the immutable npm artifact and the tagged tree, not an
+asset that `--clobber` can replace.
+
+`check:catalog` is now the fifth gate in `prebuild`, between `check:feed-budget`
+and `check:handoff`.
+
+**End-to-end proof rather than unit tests alone.** The generated gzip shard was
+decoded by the REAL client `decodeCatalogBody` from Task 6 and parsed by the
+REAL `parseFeedPayload(text, "catalog")` from Task 5, which accepted the empty
+catalog. That is design defect #3 demonstrating its own fix against a real
+generated artifact instead of a fixture.
+
+**Four corrections to the plan:**
+
+- **The key allowlist is imported, not mirrored.** The plan's draft listed
+  eleven allowed fields, including the legacy `note` and `ecosystem` that Phase 1
+  had already removed from `FEED_ENTRY_KEYS`. A publishing gate built from a
+  stale copy of the field list would have allowed exactly the fields the loader
+  refuses to read back. It now imports `CATALOG_KEY_ORDER` from
+  `scripts/feed-migrate.mjs`, so one definition serves the migration and the
+  gate, and a test asserts the two agree in both directions.
+- **No `generatedAt`.** The design's sample JSON shows one. A clock-derived
+  field would make the output a function of the day it ran, so `check:catalog`
+  would go red on an untouched tree the next morning. Same reasoning as the
+  committed bundle cutoff.
+- **The `--check` comparison strips CR on both sides**, and
+  `src/catalog-digest.ts` is pinned to LF in `.gitattributes`. An exact `!==`
+  on a Windows checkout reports a freshly generated file as stale.
+- **Hygiene and size are checked before anything is written or compared**, so a
+  refused run leaves no half-written asset and never reports "up to date" about
+  a catalog it would have refused to publish.
+
+**The hygiene gate reports line numbers and never values.** It runs in a public
+CI job, so a message echoing the offending string would publish exactly what the
+check exists to keep unpublished. There is a test asserting the value does not
+appear in the output.
+
+**Mutation results**, baseline and post-restore green at 31 tests. Nine cuts,
+each red on its own tests: the always-one-shard floor, ceil to floor when
+sharding, digesting the gzip bytes instead of the json, the key allowlist, the
+private-shape check, echoing the value in the report, letting the generator
+floor drift above the client's, re-admitting `note`/`ecosystem`, and the
+per-shard budget off by one.
+
+With the catalog still empty this produces version 6.1.3, entryCount 0,
+shardCount 1, and a stable index digest. Detection is unchanged: nothing reads
+the catalog yet. That is Task 8.
+
+
 ## Phase 1 Tasks 5 and 6: the payload parser and bounded decompression (2026-09-16, claude-opus-5)
 
 The first two of the eight tasks that make the catalog reachable at runtime.
