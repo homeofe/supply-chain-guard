@@ -1,3 +1,37 @@
+## Phase 1 Task 11: publish the catalog assets from CI (2026-09-16, claude-opus-5)
+
+The release job builds `catalog-index.json` and every `catalog-*.json.gz` and
+attaches them to the GitHub Release in the same `gh release create` call that
+creates it. Releases on this repository are immutable, so there is no later step
+that could attach a forgotten asset.
+
+**The order inside the build step is the whole point.**
+`generate-catalog.mjs --check` compares the COMMITTED `src/catalog-digest.ts`
+against what the committed catalog produces. Run after the generator has already
+rewritten that file, it compares the generator's output to itself and can never
+fail. A release could then ship a digest that does not describe the assets
+beside it, every client would refuse the download, and because the anchor is
+compiled into the package it could not be corrected without cutting a new
+version. `--check` runs first, then the generator. There is a test that pins
+that order, and cutting it goes red.
+
+**The generator must stay dependency-free.** The release job does not run
+`npm ci`; it checks out, sets up node and runs the script. An import of anything
+outside `node:` and its own siblings would fail only at release time, on a tag,
+where the version is already burned and the tag cannot be moved. A test asserts
+every import specifier in the generator is `node:` or relative, and it goes red
+when one is changed to a package name.
+
+**Mutation results**, baseline and post-restore green at 6 tests. Three cuts:
+`--check` moved after the generator, the assets dropped from the create command,
+and the generator given an external dependency.
+
+YAML validity was checked by parsing the workflow after the edit, not by
+reading it: an invalid key makes the ENTIRE file invalid and no job runs at all,
+which presents as "workflow file issue" rather than as a failing step. All six
+jobs still parse and the release job's steps are in the intended order.
+
+
 ## Phase 1 Task 10: feed refresh installs the catalog (2026-09-16, claude-opus-5)
 
 `refreshFeed` now fetches, verifies and installs the catalog after the feed.
