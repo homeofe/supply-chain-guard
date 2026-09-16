@@ -1,3 +1,55 @@
+## Phase 2 Tasks 1 and 2: the migration parser and planner (2026-09-16, claude-opus-5)
+
+`scripts/feed-migrate.mjs` reads `src/threat-intel.ts` at the LINE level rather
+than through `extractBundledEntries`, which evaluates the chunk arrays in a
+`node:vm` sandbox and therefore discards every comment. The comments are the
+point: the chunk literals carry hundreds of lines of curated rationale that
+`FeedIOC` has no field for.
+
+**A defect was caught before it was written.** The planner was going to identify
+lines by string identity. Entry lines are unique in this file (20,969 distinct
+of 20,969), so that looked safe. Header lines are not: the importer writes the
+same batch header into every chunk it touches on a given day, so 745 distinct
+texts cover 792 header lines. Two of those texts head a fully-moved group AND a
+group that still keeps entries. Deleting headers by text would have stripped the
+header from the second one, detaching **251 entries** from their provenance with
+no error and no diff anyone would question. Everything is now identified by
+zero-based line index, which is correct whether or not two lines read alike, and
+does not depend on the empirical uniqueness of entry lines either.
+
+**Two guards were disarmed by a cut and stayed green**, which is the finding
+rather than a reassurance:
+
+- `group.entries.length > 0` in `removeHeader` was unreachable: `parseChunks`
+  opens a group only on an entry line, so an entry-less group never exists. The
+  test covering it asserted `.every()` over an empty array, so it passed no
+  matter what the code did. The guard is gone and the test now asserts the
+  structural fact that makes it unnecessary.
+- `!group.isCurated` in the same expression could not change the result either,
+  because rule 3 already makes every entry under a curated block immovable, so
+  `moved` is always 0 there. Its test used a fixture carrying a `campaign`
+  field, so rule 2 kept the entry and the curated path was never exercised. It
+  is now an ASSERTION that throws, which is honest about being unreachable and
+  is strictly stronger: if rule 3 is ever narrowed the damage is removed curated
+  ENTRIES, not a removed header, so the migration stops outright instead of
+  quietly orphaning rationale. Verified: cutting rule 3 makes it fire against
+  the real file.
+
+**Mutation results**, baseline and post-restore both green at 20 tests. Rule 3
+cut: 3 red. `removeHeader` equality cut: 2 red. Entry-less groups made possible:
+1 red. Headers identified by text: 2 red. Entries identified by text: 1 red.
+The curated assertion cut stays green by design and is not claimed as proven.
+
+**Real-file dry run at a 30-day cutoff**: 11,998 move, 8,971 keep, 20,969 total
+matching `feed.json`, 0 curated entries in the move set, 44 headers removable,
+13 groups split. The design projected 11,998 / 8,971 / 20,969 and 45 / 14; the
+load-bearing numbers match exactly and the two header counts differ by one from
+a slightly different grouping rule.
+
+Nothing is applied yet. `feed.json` still holds all 20,969 entries and the
+catalog is still empty, so detection is unchanged by this commit.
+
+
 ## Code-review findings on Tasks 1 to 4, all nine applied (2026-09-16, claude-opus-5)
 
 A structured review of the whole change found nine issues, four of them

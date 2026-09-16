@@ -1,0 +1,179 @@
+// feed-migrate.mjs - move entries out of the compiled bundle into the catalog.
+//
+// This parses src/threat-intel.ts at the LINE level rather than through
+// extractBundledEntries(), which evaluates the array in a node:vm sandbox and
+// therefore discards every comment. The comments are the point: the chunk
+// literals carry hundreds of lines of curated rationale (why an apex is
+// deliberately not listed, why a maintainer is a victim rather than an
+// indicator, why an entry is version-pinned instead of name-blocked), and
+// FeedIOC has no field for any of it. A migration that cannot see those
+// comments cannot avoid orphaning them.
+//
+// Design: docs/threat-feed-catalog-decoupling-design.md sections 4.1 and 4.2.
+
+import { partitionTarget } from "./feed-partition.mjs";
+
+const CHUNK_START = /^const FEED_CHUNK_\d+: FeedIOC\[\] = \[/;
+const CHUNK_END = /^\];/;
+const COMMENT = /^\s*\/\//;
+const ENTRY = /^\s*\{ type:/;
+const IMPORTER_HEADER = /Imported from/i;
+
+/**
+ * Group the chunk literals into {header comments, entries beneath them}.
+ *
+ * A group starts at a run of comment lines and runs until the next such run, so
+ * every entry knows which comment block it sits under.
+ *
+ * Every line carries its zero-based `index`, and the migration deletes by that
+ * index rather than by string identity. Entry lines happen to be unique in the
+ * file today (20,969 distinct of 20,969), but header lines are NOT: the importer
+ * writes the same batch header into every chunk it touches on a given day, so
+ * 745 distinct header texts cover 792 header lines. Two of those texts head a
+ * fully-moved group AND a group that keeps entries, and deleting by text would
+ * strip the header from the second one, silently orphaning 251 entries from
+ * their provenance. Indices are correct whether or not two lines read alike.
+ *
+ * `line` is still the exact source line, unmodified, so the diff can be checked
+ * against what was planned.
+ *
+ * `isCurated` distinguishes a human-authored block from an importer batch
+ * header. That distinction is the whole basis of the comment anchor: the
+ * importer writes its own one-line header before each batch, so its output is
+ * never mistaken for curated rationale.
+ */
+export function parseChunks(source) {
+  const groups = [];
+  // Split on either ending and store each line WITHOUT its terminator, which
+  // is exactly what applyMigration compares against when it walks the source
+  // the same way. Storing a trailing \r here would match nothing on a CRLF
+  // checkout, and the migration would silently delete no entries at all.
+  const lines = source.split(/\r?\n/);
+
+  let inChunk = false;
+  let pending = [];
+  let current = null;
+
+  const flush = () => {
+    if (current) {
+      groups.push(current);
+      current = null;
+    }
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    if (CHUNK_START.test(line)) { inChunk = true; flush(); pending = []; continue; }
+    if (inChunk && CHUNK_END.test(line)) { inChunk = false; flush(); pending = []; continue; }
+    if (!inChunk) continue;
+
+    if (COMMENT.test(line)) {
+      if (current) flush();
+      pending.push({ line, index });
+      continue;
+    }
+
+    if (ENTRY.test(line)) {
+      if (!current) {
+        current = {
+          header: pending.map((p) => p.line),
+          headerIndices: pending.map((p) => p.index),
+          isCurated: pending.length > 0 && !IMPORTER_HEADER.test(pending[0].line),
+          entries: [],
+        };
+        pending = [];
+      }
+      const value = /value: "([^"]+)"/.exec(line);
+      const firstSeen = /firstSeen: "([^"]+)"/.exec(line);
+      current.entries.push({
+        line,
+        index,
+        value: value ? value[1] : "",
+        firstSeen: firstSeen ? firstSeen[1] : null,
+        hasCampaignField: /campaign:|family:/.test(line),
+        isPackage: /type: "package"/.test(line),
+      });
+      continue;
+    }
+    // A blank line keeps the current group open: the importer separates batches
+    // with one, and closing the group there would orphan the header.
+  }
+  flush();
+  return groups;
+}
+
+/**
+ * Decide what moves.
+ *
+ * Rules 1, 2 and 4 come from partitionTarget(), which the importer and the
+ * placement gate also use, so an entry cannot mean different things in
+ * different places.
+ *
+ * Rule 3, the comment anchor, is applied HERE and only here: an entry sitting
+ * beneath a curated comment block never moves. Curation in this repository is
+ * expressed in COMMENTS, not in fields, and 60 of the 1,094 comment-anchored
+ * entries carry no campaign or family at all. Without this rule their
+ * rationale is orphaned as they age past the cutoff, left describing a file
+ * that no longer contains what it describes.
+ *
+ * The importer never needs rule 3, because its own output is written beneath
+ * an importer batch header, which isCurated explicitly does not match. That is
+ * what lets partitionTarget stay a pure function of the entry.
+ */
+export function planMigration(source, config) {
+  const groups = parseChunks(source);
+  const move = [];
+  let keep = 0;
+  const report = [];
+
+  for (const group of groups) {
+    let moved = 0;
+    for (const entry of group.entries) {
+      // Reconstruct only what the rule reads. partitionTarget looks at
+      // campaign/family presence and firstSeen; the parser cannot know which
+      // of the two curation fields was present, and the rule does not care.
+      const immovable =
+        group.isCurated ||
+        partitionTarget(
+          {
+            type: entry.isPackage ? "package" : "other",
+            value: entry.value,
+            firstSeen: entry.firstSeen ?? undefined,
+            ...(entry.hasCampaignField ? { campaign: "present" } : {}),
+          },
+          config,
+        ) === "bundle";
+
+      if (immovable) { keep++; continue; }
+      move.push({ value: entry.value, line: entry.line, index: entry.index });
+      moved++;
+    }
+
+    // Rule 3 makes every entry under a curated block immovable, so a curated
+    // group can never report a moved entry. This is an ASSERTION, not a guard:
+    // it is unreachable today and is meant to stay that way. Written as a
+    // conjunct in removeHeader it was indistinguishable from dead code - cutting
+    // it left every test green, so it read as protection while protecting
+    // nothing. As an assertion it is both honest and stronger: if rule 3 is ever
+    // narrowed, the damage is not a removed header but removed curated ENTRIES,
+    // and the migration stops outright instead of quietly orphaning rationale.
+    if (group.isCurated && moved > 0) {
+      throw new Error(
+        `curated block reported ${moved} moved entries, which rule 3 forbids: ` +
+          (group.header[0] ?? "(no header)"),
+      );
+    }
+
+    report.push({
+      header: group.header,
+      headerIndices: group.headerIndices,
+      // parseChunks opens a group only on an entry line, so entries.length is
+      // never 0 here and "every entry moved" cannot be vacuously true.
+      removeHeader: moved === group.entries.length,
+      movedCount: moved,
+      keptCount: group.entries.length - moved,
+    });
+  }
+
+  return { move, keep, groups: report };
+}

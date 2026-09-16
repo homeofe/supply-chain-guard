@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789585320",
-    "timestamp": "2026-09-16T19:02:00Z",
-    "commit": "f56f28b",
+    "session_id": "cli-1789586949",
+    "timestamp": "2026-09-16T19:29:10Z",
+    "commit": "ccd3fcd",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b7e39fa5f8141ecba136fadd1a60e16b550d9ee8c721d7bf6355042e49372dd8",
-      "updated": "2026-09-16T19:01:59Z",
-      "lines": 9192,
-      "summary": "A structured review of the whole change found nine issues, four of them"
+      "checksum": "sha256:6804f8a704e8c7e88d92bc450ca31b858695e9130719e141c1af4674e925a847",
+      "updated": "2026-09-16T19:29:08Z",
+      "lines": 9244,
+      "summary": "`scripts/feed-migrate.mjs` reads `src/threat-intel.ts` at the LINE level rather"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-16T19:02:00Z",
+      "updated": "2026-09-16T19:29:09Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:66202653ed66223e447e3e71ac2cc0599975e2c8d719c37b7d630f3de0a7d2e0",
-      "updated": "2026-09-16T19:02:00Z",
+      "checksum": "sha256:89d1b91ce9d7fd25b41642bbb55154abf4601fb16d416a823c3b3982d2612d87",
+      "updated": "2026-09-16T19:29:09Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:aeb82f0d8447061acca58a46b1db5c0005b5fc18181b2a216b2f11ff9977e476",
-      "updated": "2026-09-16T19:02:00Z",
+      "checksum": "sha256:0b92cbedcf0ea04ce62a4acedcf4e067bb119307395c43e543be3e94ab9f2318",
+      "updated": "2026-09-16T19:29:09Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "A structured review of the whole change found nine issues, four of them Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "`scripts/feed-migrate.mjs` reads `src/threat-intel.ts` at the LINE level rather Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 107403,
-    "full_read": 119868
+    "manifest_plus_core": 108066,
+    "full_read": 120531
   }
 }
