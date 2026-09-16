@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789470235",
-    "timestamp": "2026-09-15T11:03:55Z",
-    "commit": "0d70c7e",
+    "session_id": "cli-1789560749",
+    "timestamp": "2026-09-16T12:12:29Z",
+    "commit": "1b74f56",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f2a9f4c1848250583436fbed8917cf0aff7fb4ed107c0faaab075aad05b69e06",
-      "updated": "2026-09-15T11:03:54Z",
-      "lines": 8348,
-      "summary": "Patch release. Carries everything that had accumulated under `[Unreleased]`:"
+      "checksum": "sha256:f0727b2a1271ba964adff92ab7f7e70c57b64f9da7ab6cd6db26f12c20c0a43c",
+      "updated": "2026-09-16T12:08:39Z",
+      "lines": 8415,
+      "summary": "Scheduled daily import. No version bump; the version belongs to the release."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:84bad6625f58ec8ca3ef66dab4f015088ca0bb36bd4392cbec53fedacd75fd78",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-09-15T11:11:51Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:737fb6a23655c1373d22ab9397bedd0c095df4164251276bfbc1ab997dc7eee9",
-      "updated": "2026-09-15T11:03:55Z",
+      "updated": "2026-09-16T12:12:29Z",
       "lines": 180,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3e29bb29013092a9b9703dc9e10a40a400807fce7a17e067081bc7470ab04dc1",
-      "updated": "2026-09-15T11:03:55Z",
+      "updated": "2026-09-16T12:12:29Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:03794dace2cf5c3dab17bd128c6a7bc07b08b58647341b785066efcd6fb52d59",
-      "updated": "2026-09-15T11:03:55Z",
+      "updated": "2026-09-16T12:12:29Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-08-26T08:53:07Z",
       "lines": 267,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-08-20T12:42:10Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-08-04T08:54:14Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-15T11:03:25Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Patch release. Carries everything that had accumulated under `[Unreleased]`: Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Scheduled daily import. No version bump; the version belongs to the release. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 97648,
-    "full_read": 110093
+    "manifest_plus_core": 98376,
+    "full_read": 110821
   }
 }

@@ -6343,4 +6343,129 @@ describe("Campaign Signatures", () => {
       ).toBeNull();
     });
   });
+
+  // =================================================================
+  // Campaigns enriched from primary vendor write-ups (2026-09-16 batch)
+  // =================================================================
+
+  describe("malicious Strapi CMS plugins targeting Guardarian (April 2026)", () => {
+    // The advisory databases never carried this cluster at all. safedep published
+    // the C2 and the account set; the version sets come from the npm registry time
+    // map, which records versions the write-up does not name.
+    it("flags the C2 host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "strapi-plugin-events.js"),
+        [
+          "// incident notes",
+          "const c2 = 'http://144.31.107.231:9999/exfil/';",
+          "const shell = '144.31.107.231:4444';",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+        "the bare C2 address must match",
+      ).toBeDefined();
+    });
+
+    // Every one of these names is an npm security holding package whose only
+    // published versions fall inside the campaign window, so a pin cannot hit a
+    // legitimate release - but a version the campaign never published still must
+    // not match, or the pin has quietly widened into a name block.
+    it("blocks the campaign packages at the published versions only", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("strapi-plugin-events", "3.6.8", feed),
+        "a published malicious version must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("strapi-plugin-events", "3.6.7", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+    });
+
+    // The write-up says "3.6.8 unless noted" and names 3.6.9 for strapi-plugin-api
+    // but not 3.6.10, and 3.6.10 for strapi-plugin-nordica but neither 3.6.8 nor
+    // 1.0.0. Pinning from the write-up alone would have left these undetected, so
+    // they are asserted explicitly rather than folded into the case above.
+    it("covers the versions the write-up omitted", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("strapi-plugin-api", "3.6.10", feed),
+        "strapi-plugin-api 3.6.10 is named only by the registry time map",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("strapi-plugin-nordica", "1.0.0", feed),
+        "strapi-plugin-nordica 1.0.0 is named only by the registry time map",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("strapi-plugin-nordica-lite", "3.6.9", feed),
+        "strapi-plugin-nordica-lite 3.6.9 is named only by the registry time map",
+      ).not.toBeNull();
+    });
+  });
+
+  describe("express-session-js remote-access trojan (April 2026)", () => {
+    // Contagious Interview typosquat of express-session. The C2, the staging
+    // paste and the tarball digest are the atomic indicators no database carries.
+    it("flags the C2 host, the staging paste and the tarball digest", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "notes.js"),
+        [
+          "// incident notes",
+          "const c2 = 'http://216.126.237.71:4801/';",
+          "const stage = 'https://jsonkeeper.com/b/YY8VI';",
+          "const sha = 'b5cca27ca1d792bd8c46b83fccfa4e5ba38916eb78877a19cbb39392ce98cc39';",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP"),
+        "the RAT C2 address must match",
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "the path-scoped staging paste must match",
+      ).toBeDefined();
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_MALWARE_HASH"),
+        "the tarball digest must match",
+      ).toBeDefined();
+    });
+
+    // jsonkeeper[.]com is a legitimate JSON-paste service. Only the attacker's own
+    // paste id is listed, so an unrelated mention of the service must stay clean.
+    it("does not flag the jsonkeeper apex on its own", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "docs.js"),
+        "const docs = 'https://jsonkeeper.com/';\nconst other = 'https://jsonkeeper.com/b/ABCDE';"
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_DEAD_DROP"),
+        "the paste service apex must not be flagged",
+      ).toBeUndefined();
+    });
+
+    // Both published versions are pinned: 1.19.0 from the write-up and 1.0.0,
+    // pushed after it and named only by the registry time map.
+    it("blocks express-session-js at the published versions only", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("express-session-js", "1.19.0", feed),
+        "the version the write-up names must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("express-session-js", "1.0.0", feed),
+        "the later version only the registry names must match",
+      ).not.toBeNull();
+      expect(
+        matchBareNpmIOC("express-session-js", "1.18.1", feed),
+        "a version the campaign never published must not match",
+      ).toBeNull();
+    });
+  });
 });

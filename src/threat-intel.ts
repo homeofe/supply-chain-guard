@@ -34,7 +34,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-15T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-16T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -21881,6 +21881,163 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "ip", value: "95.216.232.162", severity: "critical", confidence: 0.85, campaign: "pino-ulid RAT", source: "OSV MAL-2026-16154", firstSeen: "2026-09-14" },
   { type: "hash", value: "3a9089e9db3650dd6d1584fae709022002dc34854b961abfb014a90f0a7c6a50", severity: "critical", confidence: 0.85, campaign: "pino-ulid RAT", source: "OSV MAL-2026-16154", firstSeen: "2026-09-14" },
   { type: "ip", value: "103.170.217.184", severity: "critical", confidence: 0.85, campaign: "biz44 npm Campaign", source: "OSSF malicious-packages 1518 (ESTsecurity)", firstSeen: "2026-09-14" },
+
+  // Imported from GitHub Advisory Database (2026-09-02) - see docs/threat-feed-sources.md
+  { type: "package", value: "swnwall@1.2.10", severity: "critical", confidence: 1.0, source: "GHSA-8p3w-gp6g-xf77, MAL-2026-16211 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "strapi-plugin-pencc-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-77mj-c6xm-92j2, MAL-2026-16210 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "strapi-plugin-ccsuc-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-g2q3-qp84-8cj7, MAL-2026-16209 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "chai-as-agile@2.4.7", severity: "critical", confidence: 1.0, source: "GHSA-5724-m8w6-w6g2, MAL-2026-16207 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "@prime0/inimatch@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-853x-jxp5-rq5c, MAL-2026-16205 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "@prime0/pcomatch@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-736x-m99h-5pfg, MAL-2026-16206 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "tol8t@14.0.0", severity: "critical", confidence: 1.0, source: "GHSA-69x6-h25v-58j2, MAL-2026-16218 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-15" },
+  { type: "package", value: "@prime0/alanced-match@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wr38-cc44-847g, MAL-2026-16204 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "tetomood@12.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wwxg-wcx2-44fm, MAL-2026-16216 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "discord-resolvers@3.4.2", severity: "critical", confidence: 1.0, source: "GHSA-m6rp-5w7c-9q45, MAL-2026-16214 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "engin1@1.3.99", severity: "critical", confidence: 1.0, source: "GHSA-8v43-g45f-4c59, MAL-2026-16215 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "pypi:cli-anything-ai-market@1.0.17", severity: "critical", confidence: 1.0, source: "GHSA-94x6-gfxh-v73w, MAL-2026-16212 (amazon-inspector+kam193)", firstSeen: "2026-09-16" },
+  { type: "package", value: "pypi:cli-anything-ai-market@1.0.18", severity: "critical", confidence: 1.0, source: "GHSA-94x6-gfxh-v73w, MAL-2026-16212 (amazon-inspector+kam193)", firstSeen: "2026-09-16" },
+  { type: "package", value: "tetotest@14.0.0", severity: "critical", confidence: 1.0, source: "GHSA-25v6-77x2-2mwr, MAL-2026-16217 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "pypi:licloud@0.2.7a0", severity: "critical", confidence: 1.0, source: "GHSA-gwqx-5242-h5mw, MAL-2026-16219 (kam193)", firstSeen: "2026-09-16" },
+  { type: "package", value: "pypi:licloud@0.2.8", severity: "critical", confidence: 1.0, source: "GHSA-gwqx-5242-h5mw, MAL-2026-16219 (kam193)", firstSeen: "2026-09-16" },
+  { type: "package", value: "otel-span-adapter@1.0.4", severity: "critical", confidence: 1.0, source: "GHSA-f4c7-58f5-g8r9, MAL-2026-16208 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "otel-span-adapter@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-f4c7-58f5-g8r9, MAL-2026-16208 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "discord-players@3.4.2", severity: "critical", confidence: 1.0, source: "GHSA-qgp7-rhmr-pjmc, MAL-2026-16213 (amazon-inspector)", firstSeen: "2026-09-16" },
+  { type: "package", value: "plogme@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-q276-hmjg-47qw, MAL-2026-16199", firstSeen: "2026-09-08" },
+  { type: "package", value: "plogme@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-q276-hmjg-47qw, MAL-2026-16199", firstSeen: "2026-09-08" },
+  { type: "package", value: "plogme@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-q276-hmjg-47qw, MAL-2026-16199", firstSeen: "2026-09-08" },
+  { type: "package", value: "plogme@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-q276-hmjg-47qw, MAL-2026-16199", firstSeen: "2026-09-08" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.0", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.1", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.2", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.3", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.4", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.5", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.6", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "pypi:faiss-cpu-avx512@1.9.7", severity: "critical", confidence: 1.0, source: "GHSA-rghm-9c3j-wc97, MAL-2026-16203", firstSeen: "2026-09-14" },
+  { type: "package", value: "webpackbootstrapscripts@5.110.3", severity: "critical", confidence: 1.0, source: "GHSA-prhx-w9qf-6qqh, MAL-2026-16202", firstSeen: "2026-09-14" },
+  { type: "package", value: "@zaka13/thing@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-m9vr-9hpp-v65x, MAL-2026-16200", firstSeen: "2026-09-14" },
+  { type: "package", value: "webpackbootstrap5@5.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wvx4-99w4-gwvh, MAL-2026-16201", firstSeen: "2026-09-14" },
+  { type: "package", value: "kartykp-prod-oidc-test-pkg@1.0.3", severity: "critical", confidence: 0.9, source: "GHSA-v7jq-fcmp-3w93, MAL-2026-16197 (ghsa-malware)", firstSeen: "2026-09-15" },
+  { type: "package", value: "kartykp-prod-oidc-test-pkg@1.0.4", severity: "critical", confidence: 0.9, source: "GHSA-v7jq-fcmp-3w93, MAL-2026-16197 (ghsa-malware)", firstSeen: "2026-09-15" },
+  { type: "package", value: "kartykp-token-pkg@1.0.2", severity: "critical", confidence: 0.9, source: "GHSA-6qx5-2w7p-cf29, MAL-2026-16198 (ghsa-malware)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-yayccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-rw9q-wchq-m3jv, MAL-2026-16193 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-tryccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-cph2-r8rf-9v67, MAL-2026-16190 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-weccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-6mvh-5g6x-2jhr, MAL-2026-16192 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-revs01-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-f8wr-jqjq-4vvf, MAL-2026-16185 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "chai-as-crack@7.0.5", severity: "critical", confidence: 1.0, source: "GHSA-9q54-rq2g-8m87, MAL-2026-16196 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-ccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-64x7-hw7m-2wrx, MAL-2026-16180 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-proccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-46m5-637h-jmhh, MAL-2026-16182 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-revs02-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-c4gc-cwxr-w524, MAL-2026-16186 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-revsh-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-8ccq-6g42-37vx, MAL-2026-16187 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-uicc-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-77cj-57r4-c4fv, MAL-2026-16191 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-rs-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-xjgc-fw8x-c3xj, MAL-2026-16188 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-yesccresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-3xqj-h67p-8m5w, MAL-2026-16194 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-revs-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-8pr6-ghc9-rm9v, MAL-2026-16184 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-sucresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-whqm-wv8m-mvmr, MAL-2026-16189 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "alkajsdfoiwqeusdflkjsdf@3.7.3", severity: "critical", confidence: 1.0, source: "GHSA-5cjw-7pgr-hg89, MAL-2026-16174 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-plsresh-meeb@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-vm7q-xcf2-26r8, MAL-2026-16181 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "strapi-plugin-resh-meeb322k@3.6.8", severity: "critical", confidence: 1.0, source: "GHSA-m8xh-7643-8frr, MAL-2026-16183 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "n8n-nodes-buildcheck@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-39q8-5c9h-rj8c, MAL-2026-16177 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "fulfillment-cuprum-auth-widget@3.7.2", severity: "critical", confidence: 1.0, source: "GHSA-wh94-xh5h-j48v, MAL-2026-16176 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "fulfillment-cuprum-auth-widget@3.7.0-rc-37", severity: "critical", confidence: 1.0, source: "GHSA-wh94-xh5h-j48v, MAL-2026-16176 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "fulfillment-cuprum-auth-widget@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wh94-xh5h-j48v, MAL-2026-16176 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "fulfillment-cuprum-auth-widget@3.7.1", severity: "critical", confidence: 1.0, source: "GHSA-wh94-xh5h-j48v, MAL-2026-16176 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "process-tailwind@1.1.99", severity: "critical", confidence: 1.0, source: "GHSA-qm95-54f4-jjg8, MAL-2026-16179 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "csa-mfa@1.1.15", severity: "critical", confidence: 1.0, source: "GHSA-gqh9-2j3v-c5g6, MAL-2026-16175 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-15" },
+  { type: "package", value: "csa-mfa@1.1.16", severity: "critical", confidence: 1.0, source: "GHSA-gqh9-2j3v-c5g6, MAL-2026-16175 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-15" },
+  { type: "package", value: "process-lhpm@1.1.79", severity: "critical", confidence: 1.0, source: "GHSA-8x79-9h94-vj8g, MAL-2026-16178 (amazon-inspector)", firstSeen: "2026-09-15" },
+  { type: "package", value: "tailwind-forms-styles", severity: "critical", confidence: 1.0, source: "GHSA-q8wp-7xrg-83rx, MAL-2026-16195 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-15" },
+  { type: "package", value: "bender-rspack-config@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16221 (ossf-package-analysis)", firstSeen: "2026-09-15" },
+  { type: "package", value: "jexkcode@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+  { type: "package", value: "jexkcode@1.1.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+  { type: "package", value: "jexkcode@1.1.1", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+  { type: "package", value: "jexkcode@1.1.2", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+  { type: "package", value: "jexkcode@1.1.3", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+  { type: "package", value: "jexkcode@1.1.4", severity: "critical", confidence: 0.9, source: "MAL-2026-16220", firstSeen: "2026-09-16" },
+
+  // Malicious Strapi CMS plugins targeting the Guardarian crypto platform
+  // (safedep, April 3 2026; corroborated by The Hacker News and CyberSecurityNews).
+  // Thirty-six sock-puppet package names published from four npm accounts
+  // (umarbek1233, kekylf12, tikeqemif26, umar_bektembiev1) between 2026-03-31 and
+  // 2026-04-04, carrying eight payload variants: Redis RCE, Docker escape,
+  // PostgreSQL theft against guardarian* databases, and a persistent C2 agent at
+  // /tmp/.node_gc.js. The same actor is still publishing under this naming scheme:
+  // the *-meeb* entries imported for 2026-09-14 through 2026-09-16 are the current
+  // wave, so the origin cluster is a live gap rather than history.
+  //
+  // Every version below comes from the npm registry time map, not from the
+  // write-up, which says only "3.6.8 unless noted" and misses four names'
+  // extra versions. Every one of these names is now an npm security holding
+  // package whose only published versions fall inside the campaign window, so
+  // no legitimate release exists on any of them and the pins cannot false-positive.
+  { type: "package", value: "strapi-plugin-cron@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-config@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-server@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-database@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-core@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-hooks@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-monitor@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-events@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-logger@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-health@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-sync@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-seed@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-locale@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-form@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-notify@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-sitemap-gen@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-sync@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-cms@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-api@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-recon@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-stage@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-vhost@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-deep@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-finseven@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-hextest@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-cms-tools@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-content-sync@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-debug-tools@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-health-check@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-guardarian-ext@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-advanced-uuid@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-blurhash@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-api@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-api@3.6.9", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-api@3.6.10", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica@1.0.0", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica@3.6.10", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-lite@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-lite@3.6.9", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-lite@3.6.11", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-tools@3.6.8", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-tools@3.6.9", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  { type: "package", value: "strapi-plugin-nordica-tools@3.6.10", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+  // C2 the implants reach on :9999 (HTTP), :4444 (bash reverse shell) and :8888
+  // (Python reverse shell). A rented host carrying only the campaign's own
+  // endpoints, not shared CDN edge. Also in KNOWN_C2_IPS.
+  { type: "ip", value: "144.31.107.231", severity: "critical", confidence: 0.95, family: "StrapiGuardarianC2", campaign: "strapi-plugin Guardarian targeting", source: "safedep", firstSeen: "2026-04-03" },
+
+  // express-session-js remote-access trojan, Contagious Interview (safedep,
+  // April 1 2026; C2 address corroborated by The Hacker News). Typosquat of
+  // express-session published by npm account judebelingham, whose version was
+  // chosen to read as the next release of the real package (real: 1.18.1).
+  // Both published versions are pinned: the name has no legitimate history and
+  // is now an npm security holding package. 1.0.0 was pushed on 2026-04-06,
+  // after the write-up, and is named only by the registry time map.
+  { type: "package", value: "express-session-js@1.19.0", severity: "critical", confidence: 0.95, family: "ContagiousInterview", campaign: "express-session-js RAT", source: "safedep", firstSeen: "2026-04-01" },
+  { type: "package", value: "express-session-js@1.0.0", severity: "critical", confidence: 0.95, family: "ContagiousInterview", campaign: "express-session-js RAT", source: "safedep", firstSeen: "2026-04-01" },
+  // RAT C2 on :4801 (Socket.IO + API), :4806 (file upload), :4809 (browser DB
+  // sync). Also in KNOWN_C2_IPS.
+  { type: "ip", value: "216.126.237.71", severity: "critical", confidence: 0.95, family: "ContagiousInterview", campaign: "express-session-js RAT", source: "safedep", firstSeen: "2026-04-01" },
+  // Paste holding the ~93KB obfuscated RAT the dropper pulls and runs through
+  // Function.constructor on every require(). Path-scoped to the attacker's own
+  // paste id: jsonkeeper[.]com is a legitimate JSON-paste service and its apex is
+  // deliberately NOT listed, exactly as the pinochiomathm entry decided.
+  { type: "url", value: "jsonkeeper.com/b/YY8VI", severity: "critical", confidence: 0.95, family: "ContagiousInterview", campaign: "express-session-js RAT", source: "safedep", firstSeen: "2026-04-01" },
+  // Tarball digest (SHA256), round-tripped across two independent fetches.
+  { type: "hash", value: "b5cca27ca1d792bd8c46b83fccfa4e5ba38916eb78877a19cbb39392ce98cc39", severity: "critical", confidence: 0.95, family: "ContagiousInterview", campaign: "express-session-js RAT", source: "safedep", firstSeen: "2026-04-01" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
