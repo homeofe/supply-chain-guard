@@ -1087,12 +1087,17 @@ export function renderDigestModule(digest) {
     "//",
     "// Shipped inside the npm package so the integrity anchor is the immutable",
     "// npm artifact and the tagged git tree, not a release asset that --clobber",
-    "// can replace. A constant rather than a JSON file read at runtime because",
-    "// __dirname is unavailable in some ESM runners (see src/mcp-server.ts).",
+    "// can replace. sha256 is the digest of the catalog INDEX; the index carries",
+    "// a digest for each shard, so the chain runs package -> index -> shard.",
+    "//",
+    "// A constant rather than a JSON file read at runtime because it keeps a file",
+    "// read off loadThreatIntel()'s hot path, is typechecked, and supplies the",
+    "// version refreshFeed() needs to build the catalog URL.",
     "export const CATALOG_DIGEST = {",
     `  version: ${JSON.stringify(digest.version)},`,
     `  sha256: ${JSON.stringify(digest.sha256)},`,
     `  entryCount: ${digest.entryCount},`,
+    `  shardCount: ${digest.shardCount},`,
     "} as const;",
     "",
   ].join("\n");
@@ -1101,7 +1106,8 @@ export function renderDigestModule(digest) {
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
   const version = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")).version;
-  const { indexJson, shards, digest } = buildCatalog(readCatalogEntries(), version);
+  const entries = readCatalogEntries();
+  const { indexJson, shards, digest } = buildCatalog(entries, version);
   const modulePath = join(repoRoot, "src", "catalog-digest.ts");
   const rendered = renderDigestModule(digest);
 
@@ -1209,66 +1215,105 @@ export function checkCatalogHygiene(entries) {
 }
 ```
 
-Add the size ceiling alongside it. `CATALOG_MAX_DECOMPRESSED_BYTES` is compiled
-into every released client, so raising it later does nothing for clients already
-installed: a catalog that outgrows it simply stops installing for everyone on an
-older release, and those users cannot be reached. The only safe place to catch
-that is here, at build time.
+Add the PER-SHARD size ceiling alongside it. Sharding removes the total-size
+ceiling, but each individual shard must still decompress inside the client's
+`CATALOG_MAX_DECOMPRESSED_BYTES`, and that value is compiled into every released
+client: raising it later does nothing for installs that already exist. A shard
+that outgrew it would simply stop installing for everyone on an older release.
+The only safe place to catch that is here, at build time.
 
 ```javascript
-// Compatibility floor, not a tunable: this value is compiled into every
-// released client, so a catalog that outgrows it is unreadable by installs that
-// already exist and cannot be fixed by editing the constant. Budget at 75
-// percent of the floor so the shard-the-catalog decision is made deliberately
-// with headroom, rather than discovered by a user whose refresh stopped working.
+// The client's per-document decompression limit, mirrored from src/feed.ts.
+// This is a compatibility FLOOR, not a tunable: released clients carry their
+// own copy, so raising it here would not help a single existing install. The
+// drift test below asserts the two stay equal.
 export const CATALOG_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
-export const CATALOG_SIZE_BUDGET = 48 * 1024 * 1024;
 
-export function checkCatalogSize(json) {
-  const bytes = Buffer.byteLength(json, "utf8");
-  if (bytes <= CATALOG_SIZE_BUDGET) return [];
-  return [
-    `catalog is ${bytes} bytes, over the ${CATALOG_SIZE_BUDGET} byte budget ` +
-    `(${((bytes / CATALOG_MAX_DECOMPRESSED_BYTES) * 100).toFixed(0)} percent of the ` +
-    `${CATALOG_MAX_DECOMPRESSED_BYTES} byte client decompression limit). ` +
-    `Shard the catalog by name prefix; do NOT raise the client limit, because ` +
-    `released clients carry the old value and cannot be reached.`,
-  ];
+// A shard must stay well under the floor. At 50,000 entries and the measured
+// 165 serialized bytes per entry a shard is about 8.25 MB, so this sits four
+// times above anything the generator can currently produce. It exists so a
+// future change to the entry shape cannot quietly inflate a shard past what
+// old clients can read.
+export const CATALOG_SHARD_MAX_BYTES = 32 * 1024 * 1024;
+
+export function checkCatalogSize(shards) {
+  const violations = [];
+  for (const shard of shards) {
+    const bytes = Buffer.byteLength(shard.json, "utf8");
+    if (bytes <= CATALOG_SHARD_MAX_BYTES) continue;
+    violations.push(
+      `shard ${shard.path} is ${bytes} bytes, over the ${CATALOG_SHARD_MAX_BYTES} byte ` +
+      `per-shard budget (${((bytes / CATALOG_MAX_DECOMPRESSED_BYTES) * 100).toFixed(0)} percent ` +
+      `of the ${CATALOG_MAX_DECOMPRESSED_BYTES} byte client decompression limit). ` +
+      `Lower CATALOG_SHARD_MAX_ENTRIES; do NOT raise the client limit, because ` +
+      `released clients carry the old value and cannot be reached.`,
+    );
+  }
+  return violations;
 }
 ```
 
-Add its test:
+Add its tests, including the drift test. Two copies of a compatibility floor in
+two modules is exactly the kind of pair that silently diverges, and the whole
+point of the constant is that it matches what clients enforce:
 
 ```typescript
-import { checkCatalogSize, CATALOG_SIZE_BUDGET } from "../../scripts/generate-catalog.mjs";
+import { checkCatalogSize, CATALOG_SHARD_MAX_BYTES, CATALOG_MAX_DECOMPRESSED_BYTES as SCRIPT_FLOOR }
+  from "../../scripts/generate-catalog.mjs";
+import { CATALOG_MAX_DECOMPRESSED_BYTES as CLIENT_FLOOR } from "../feed.js";
 
 describe("checkCatalogSize", () => {
-  it("passes a catalog under the budget", () => {
-    expect(checkCatalogSize("x".repeat(1024))).toEqual([]);
+  it("passes shards under the per-shard budget", () => {
+    expect(checkCatalogSize([{ path: "catalog-000.json.gz", json: "x".repeat(1024) }])).toEqual([]);
   });
-  it("fails one byte over the budget", () => {
-    expect(checkCatalogSize("x".repeat(CATALOG_SIZE_BUDGET + 1)).join(" ")).toMatch(/over the .* byte budget/);
+  it("fails one byte over, naming the offending shard", () => {
+    const out = checkCatalogSize([{ path: "catalog-007.json.gz", json: "x".repeat(CATALOG_SHARD_MAX_BYTES + 1) }]).join(" ");
+    expect(out).toMatch(/catalog-007\.json\.gz/);
+    expect(out).toMatch(/per-shard budget/);
   });
-  it("tells the operator to shard rather than raise the client limit", () => {
-    expect(checkCatalogSize("x".repeat(CATALOG_SIZE_BUDGET + 1)).join(" ")).toMatch(/do NOT raise the client limit/);
+  it("tells the operator to shard smaller, not to raise the client limit", () => {
+    const out = checkCatalogSize([{ path: "catalog-000.json.gz", json: "x".repeat(CATALOG_SHARD_MAX_BYTES + 1) }]).join(" ");
+    expect(out).toMatch(/Lower CATALOG_SHARD_MAX_ENTRIES/);
+    expect(out).toMatch(/do NOT raise the client limit/);
+  });
+  it("checks every shard, not just the first", () => {
+    const big = "x".repeat(CATALOG_SHARD_MAX_BYTES + 1);
+    expect(checkCatalogSize([
+      { path: "catalog-000.json.gz", json: "small" },
+      { path: "catalog-001.json.gz", json: big },
+    ])).toHaveLength(1);
+  });
+
+  // The generator's copy of the client floor must equal the client's, or the
+  // gate is measuring against a limit nobody enforces.
+  it("mirrors the client decompression floor without drift", () => {
+    expect(SCRIPT_FLOOR).toBe(CLIENT_FLOOR);
+  });
+
+  // The per-shard budget must stay under the floor it is protecting.
+  it("keeps the per-shard budget under the client floor", () => {
+    expect(CATALOG_SHARD_MAX_BYTES).toBeLessThan(CLIENT_FLOOR);
   });
 });
 ```
 
-At the measured 165 serialized bytes per entry the budget is about 305,000
-entries, against 68,292 after Phase 3. That is 4.5 times the headroom, and the
-build fails long before any user is affected.
+At 50,000 entries and the measured 165 serialized bytes per entry a shard is
+about 8.25 MB, a quarter of the per-shard budget and an eighth of the client
+floor. Growth adds shards rather than enlarging one, so this gate protects the
+shape rather than the total.
 
-Wire all of it into both the `--check` and the write path, before anything is emitted:
+Wire both checks into the CLI block from Step 3, immediately after the catalog is
+built and BEFORE anything is written or compared, so neither the write path nor
+`--check` can pass on a catalog that violates them. `entries` and `shards` are
+already in scope there; do not rebuild:
 
 ```javascript
-  const entries = readCatalogEntries();
   const violations = [
     ...checkCatalogHygiene(entries),
-    ...checkCatalogSize(JSON.stringify({ schema: 1, kind: "catalog", entries })),
+    ...checkCatalogSize(shards),
   ];
   if (violations.length > 0) {
-    console.error(`\n  catalog hygiene: ${violations.length} violation(s)\n`);
+    console.error(`\n  catalog: ${violations.length} violation(s)\n`);
     for (const v of violations.slice(0, 25)) console.error(`    ${v}`);
     console.error("");
     process.exit(1);
@@ -1816,8 +1861,10 @@ The digest is taken over the DECODED body, matching how `generate-catalog.mjs`
 computes it in Task 7. Both sides hash the decompressed JSON, so an air-gapped
 mirror serving the asset uncompressed still verifies.
 
-Add the imports `createHash` from `node:crypto` and `CATALOG_DIGEST` from
-`./catalog-digest.js` at the top of `src/feed.ts`.
+Add the imports `createHash` from `node:crypto`, `CATALOG_DIGEST` from
+`./catalog-digest.js`, and the `FeedIOC` type from `./threat-intel.js` (already
+imported there for `parseFeedPayload`'s return type) at the top of
+`src/feed.ts`.
 
 In `src/cli.ts`, extend the `feed refresh` output so the operator sees both results:
 
