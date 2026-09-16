@@ -1,3 +1,70 @@
+## Threat-intel batch 2026-09-16 (claude-opus-5)
+
+Scheduled daily import. No version bump; the version belongs to the release.
+
+**Importer: 71 package IOCs.** Exit 0, no cap hit, no undrainable backlog, no
+page-cap slicing. 148 candidates skipped as `unmappable-version-range` (bounded
+ranges the scanner cannot resolve to discrete versions), 870 already duplicates and
+847 already covered by a bare-name IOC. Clusters in this batch: sixteen more
+`strapi-plugin-*-meeb*` names at 3.6.8, the `@prime0/*` picomatch impersonations,
+`csa-mfa`, `otel-span-adapter`, `process-tailwind` / `process-lhpm`, `jexkcode`,
+`plogme`, `pypi:faiss-cpu-avx512` and `pypi:cli-anything-ai-market`.
+
+**Deferrals unchanged.** The five recorded bulk-migration ranges suppressed 56,279
+candidates. No sixth wave appeared: 2026-09-15 and 2026-09-16 carried normal daily
+volume, so no new deferral range was written and none was needed.
+
+**One bare name in the batch, probed before acceptance.**
+`tailwind-forms-styles` was the only non-version-pinned candidate. The npm registry
+shows it as a security holding package: its two real versions (0.5.1, 0.5.2) are
+unpublished, there is no maintainer, and only the `0.0.1-security` placeholder
+remains. The name cannot hit anything legitimate, so the bare block stands.
+
+**Hand-added: 50 indicators across two campaigns the feed did not cover at all.**
+Both were found through STEP 1b enrichment and confirmed absent with the Grep tool
+against a known-present control, because bash `grep` returns false zeros in this
+MSYS shell.
+
+1. *Malicious Strapi CMS plugins targeting Guardarian* (safedep 2026-04-03,
+   corroborated by The Hacker News and CyberSecurityNews). 44 version pins across 36
+   names plus the C2 144[.]31[.]107[.]231. This is not a historical backfill: the
+   `*-meeb*` packages imported on 2026-09-14, 2026-09-15 and today are the same
+   actor's current wave, and the origin cluster was entirely uncovered.
+2. *express-session-js RAT, Contagious Interview* (safedep 2026-04-01, C2
+   corroborated by The Hacker News). Both published versions, the C2
+   216[.]126[.]237[.]71, the staging paste `jsonkeeper[.]com/b/YY8VI` and the tarball
+   SHA-256.
+
+**The write-up's version list was incomplete, and the registry said so.** safedep
+gives "3.6.8 unless noted". The npm `time` map shows four names also carried versions
+it never mentions: `strapi-plugin-api@3.6.10`, `strapi-plugin-nordica-tools@3.6.9`,
+`strapi-plugin-nordica-lite@3.6.9` and `strapi-plugin-nordica@1.0.0`, plus
+`express-session-js@1.0.0`, pushed on 2026-04-06 after the write-up. All 37 names were
+probed individually: every one is now an npm security holding package, and every
+version any of them ever carried falls inside the campaign window of 2026-03-31 to
+2026-04-06. No legitimate release exists on any of these names, so the pins cannot
+false-positive. Pinning from the write-up alone would have left five malicious
+versions undetected.
+
+**Deliberately not ingested.** safedep's threat-intel page lists
+216[.]126[.]229[.]166 and 216[.]126[.]227[.]239 alongside the confirmed C2, but only
+as machine-derived "communicates-with" observations that no write-up confirms. A bare
+IP that turns out to be shared hosting is the false positive that gets a scanner
+switched off, so they are left out and recorded here instead. Also not blocked: the
+`jsonkeeper[.]com` apex (a legitimate paste service, only the attacker's paste id is
+listed) and the four legitimate packages the RAT installs at runtime
+(`socket.io-client`, `screenshot-desktop`, `clipboardy`, `@nut-tree-fork/nut-js`).
+
+### Open for the owner
+
+- **The two unconfirmed 216[.]126[.]x[.]x addresses above.** If a second source names
+  either as C2, they should be ingested at confidence 0.85. Nothing to do until then.
+- **The bulk-migration deferral decision is still open and is now the largest
+  single gap in the feed**: 56,279 npm package names across five ranges, none of them
+  detected by anything else in the scanner. Unchanged by this batch, but it grew by
+  19,158 with Wave 5 and the alphabet walk has only reached `j`.
+
+
 ## Release v6.1.2 (2026-09-15, claude-opus-5)
 
 Patch release. Carries everything that had accumulated under `[Unreleased]`:

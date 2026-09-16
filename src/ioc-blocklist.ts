@@ -660,6 +660,25 @@ export const KNOWN_C2_IPS: string[] = [
   // shared JSON-hosting service and the report publishes no document id, so the
   // apex would flag unrelated projects. Single-source, confidence 0.85.
   "103.170.217.184",
+
+  // Malicious Strapi CMS plugins targeting the Guardarian crypto platform
+  // (safedep, April 3 2026; the address is also named by CyberSecurityNews).
+  // Reached by the implants on :9999 for HTTP C2 and :4444 / :8888 for the bash
+  // and Python reverse shells. The port is not part of the match, so the bare
+  // address is listed. A rented host carrying only the campaign's own endpoints,
+  // not shared CDN edge. The same actor is still publishing: the *-meeb* packages
+  // imported for 2026-09-14 through 2026-09-16 are the current wave.
+  "144.31.107.231",
+
+  // express-session-js remote-access trojan, Contagious Interview (safedep,
+  // April 1 2026; corroborated by The Hacker News). RAT C2 on :4801 for the
+  // Socket.IO channel and API, :4806 for file upload and :4809 for browser
+  // database sync. The port is not part of the match, so the bare address is
+  // listed. safedep's threat-intel page also shows 216[.]126[.]229[.]166 and
+  // 216[.]126[.]227[.]239 on the same actor's range, but only as machine-derived
+  // "communicates-with" observations that no write-up confirms, so they are
+  // deliberately NOT listed.
+  "216.126.237.71",
 ];
 
 // ---------------------------------------------------------------------------
@@ -878,6 +897,15 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // Fetched to os.tmpdir()/NOBLOX_CLI.exe and spawned detached with stdio ignored
   // on non-sandbox hosts. The host is also in KNOWN_C2_DOMAINS above.
   "trlxgames.netlify.app/TRLX.exe",
+
+  // express-session-js remote-access trojan, Contagious Interview (safedep,
+  // April 1 2026). Paste holding the ~93KB obfuscated RAT the dropper fetches and
+  // executes through Function.constructor on every require(). Path-scoped to the
+  // attacker's own paste id: jsonkeeper[.]com is a legitimate JSON-paste service
+  // and its apex is deliberately NOT listed, for the same reason as the
+  // pinochiomathm entry above. Listed without the www host label so both the bare
+  // and the www form match. The bare address is also in KNOWN_C2_IPS above.
+  "jsonkeeper.com/b/YY8VI",
 ];
 
 // ---------------------------------------------------------------------------
@@ -885,6 +913,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
 // ---------------------------------------------------------------------------
 
 export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
+  // express-session-js remote-access trojan, Contagious Interview (safedep,
+  // April 1 2026). Tarball digest of the single published malicious version,
+  // round-tripped as a well-formed 64-char digest across two independent fetches
+  // before ingestion.
+  "b5cca27ca1d792bd8c46b83fccfa4e5ba38916eb78877a19cbb39392ce98cc39": "express-session-js 1.19.0 malicious npm tarball, Contagious Interview RAT dropper (SHA256)",
+
   // mgc npm account takeover - UNC1069 / "Sapphire Sleet" WAVESHAPER.V2 (safedep,
   // April 2026). Tarball digest shared by all four trojanized versions. Single-source,
   // but round-tripped as a well-formed 64-char digest across two independent fetches

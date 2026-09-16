@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat-intelligence batch for 2026-09-16: 71 new package IOCs from the
+  advisory databases and 50 indicators added by hand from primary vendor
+  write-ups, covering two previously uncovered campaigns.
+- The April 2026 malicious Strapi CMS plugin campaign targeting the
+  Guardarian crypto platform (safedep, corroborated by The Hacker News and
+  CyberSecurityNews). Thirty-six sock-puppet package names published from four
+  npm accounts are now version-pinned, and the C2 144[.]31[.]107[.]231 is in
+  `KNOWN_C2_IPS`. The same actor is still publishing under this naming scheme:
+  the `*-meeb*` packages imported for 2026-09-14 through 2026-09-16 are the
+  current wave, so the origin cluster was a live gap rather than history.
+- `express-session-js` versions 1.19.0 and 1.0.0, a typosquat of
+  `express-session` that drops a full remote-access trojan (safedep, April
+  2026), linked to the Contagious Interview campaign. Its C2
+  216[.]126[.]237[.]71 is now in `KNOWN_C2_IPS`, the staging paste
+  `jsonkeeper[.]com/b/YY8VI` in `KNOWN_DEAD_DROPS`, and the tarball SHA-256 in
+  `KNOWN_MALICIOUS_HASHES`. The `jsonkeeper[.]com` apex is deliberately not
+  listed, and the legitimate packages the trojan installs at runtime are not
+  blocked.
+
+
 ## [6.1.2] - 2026-09-15
 
 ### Added
