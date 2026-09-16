@@ -1,3 +1,44 @@
+## Phase 3 pilot dry run, and a defect it exposed in Task 4 (2026-09-16, claude-opus-5)
+
+**Preconditions confirmed before touching upstream:** catalog 11,998, bundle
+8,971, five deferred ranges. All three match what Phase 2 was supposed to leave,
+so Phase 3 starts from the state the plan assumes.
+
+**The first dry run of the 2026-09-06 range found a defect in my own Task 4
+implementation.** It reported:
+
+```
+  New entries:          8548 (0 to the bundle, 0 to the catalog)
+```
+
+The routing was computed AFTER the `dryRun` early return, so a dry run never
+reached it and both counters stayed at their initial zero. That is worse than
+uninformative. Choosing between importing a large day and deferring it is the
+decision a dry run exists to support, and a summary of zeros reads as "nothing
+would be routed" rather than "not computed yet". An operator acting on it would
+conclude the catalog was not being used at all.
+
+Routing now runs before the early return. It is a pure function over the
+candidates and writes nothing, so there was never a reason for it to sit after.
+`assertNoAtomicInCatalog` moved with it, which is also the better place: a dry
+run is exactly when you want to find out that a range contains an atomic
+indicator that cannot be routed.
+
+The regression that would have caught it is now in place: the dry-run test
+asserts `addedToBundle + addedToCatalog === added`. Cutting the two assignments
+turns it red.
+
+**Phase 4 guidance updated at the same time.** The undrainable-backlog warning
+told the operator to slice or defer, which was the right advice when volume had
+nowhere to go. It now says the catalog absorbs volume first, and that deferral
+is for a block whose CORRECTNESS is undecided rather than one that is merely
+large. The "Written:" line names the catalog and the digest module when entries
+went there, instead of claiming only `src/threat-intel.ts + feed.json`.
+
+The exhaustive-by-default regression Phase 4 Task 3 Step 4 asks for already
+exists in `feed-import.test.ts`, so it was verified rather than added.
+
+
 ## Phase 2 Task 5: acceptance, measured (2026-09-16, claude-opus-5)
 
 Phase 2 is complete. Every number below was measured on this branch, not

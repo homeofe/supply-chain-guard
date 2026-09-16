@@ -1613,6 +1613,14 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.written).toBe(false);
     expect(report.entries[0].value).toBe("scg-fixture-pkg");
     expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
+
+    // The DESTINATION split has to be computed on a dry run too. Choosing
+    // between importing a large day and deferring it is the decision a dry run
+    // exists to support, and routing after the dry-run return made an 8,548
+    // entry backfill report "0 to the bundle, 0 to the catalog", which reads as
+    // "nothing would be routed" rather than "not computed yet".
+    expect(report.addedToBundle + report.addedToCatalog).toBe(report.added);
+    expect(report.addedToBundle).toBe(1);
   });
 
   it("writes nothing when everything upstream is already covered", async () => {

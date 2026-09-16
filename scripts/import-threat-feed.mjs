@@ -1987,6 +1987,23 @@ export async function importUpstreamFeed({
     written: false,
   };
 
+  // Routed BEFORE the dry-run return, so a dry run can show where the entries
+  // would go. It is a pure function over the candidates and writes nothing.
+  //
+  // This was the other way round at first, and the dry run for an 8,548-entry
+  // backfill reported "0 to the bundle, 0 to the catalog". That is worse than
+  // uninformative: choosing between a slice and a deferral is the decision a
+  // dry run exists to support, and a summary of zeros reads as "nothing would
+  // be routed" rather than "not computed yet".
+  const partitionConfig = loadPartitionConfig(root);
+  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig);
+  report.addedToBundle = toBundle.length;
+  report.addedToCatalog = toCatalog.length;
+
+  // Refused on a dry run too. The point of a dry run is to find this out before
+  // committing to the real one.
+  assertNoAtomicInCatalog(toCatalog);
+
   if (selected.length === 0 || dryRun) return report;
 
   // 5. Build the new source in memory and prove it re-parses to exactly the
@@ -1998,11 +2015,6 @@ export async function importUpstreamFeed({
   // use. Without this the bundle starts growing again on the next daily import
   // and the migration is undone within weeks, silently, because nothing else
   // looks at where a newly imported entry landed.
-  const partitionConfig = loadPartitionConfig(root);
-  const { toBundle, toCatalog } = routeEntries(selected, partitionConfig);
-  report.addedToBundle = toBundle.length;
-  report.addedToCatalog = toCatalog.length;
-
   // Rule 1 is bounded by CURATION rather than by type, deliberately: an
   // unconditional "every non-package entry stays" would grow the bundle forever
   // with no way to stop it. The design closes the loss risk with a gate instead,
@@ -2016,8 +2028,6 @@ export async function importUpstreamFeed({
   // obvious. Measured on the v6.1.3 feed this is unreachable: 401 of the 404
   // non-package entries carry curation and none of the other 3 is old enough to
   // move. It exists for the import that changes that.
-  assertNoAtomicInCatalog(toCatalog);
-
   const catalogPath = join(root, "data", "threat-catalog.jsonl");
   const originalCatalog = readFileSync(catalogPath, "utf8");
   const originalDigestModule = readFileSync(digestModulePath, "utf8");
@@ -2283,12 +2293,16 @@ if (isMain) {
           `  the queue is more runs away than it has days left in the --days ${report.daysApplied} window, so\n` +
           `  re-running on the defaults does NOT recover them: left alone they become a\n` +
           `  silent false negative, the same failure the page cap treats as fatal.\n\n` +
-          `  They are NOT unreachable. --since replaces the rolling window rather than\n` +
-          `  intersecting with it, so an explicit slice still fetches them on any later\n` +
-          `  date. This is what a bulk-publication spike looks like; import the busy\n` +
-          `  day(s) as explicit slices, which are exempt from this check:\n` +
+          `  They are NOT unreachable, and volume is no longer a reason to postpone\n` +
+          `  them. Entries older than the bundle cutoff are routed into the downloadable\n` +
+          `  catalog rather than into the package, so a bulk-publication spike costs\n` +
+          `  catalog size, which is sharded and unbounded, instead of install size.\n\n` +
+          `  --since replaces the rolling window rather than intersecting with it, so an\n` +
+          `  explicit slice still fetches them on any later date. Import the busy day(s)\n` +
+          `  as explicit slices, which are exempt from this check:\n` +
           `    npm run feed:import -- --since <YYYY-MM-DD> --until <YYYY-MM-DD>\n\n` +
-          `  Pass --allow-backlog to exit clean and leave the remainder for a slice.`,
+          `  Deferral is for a block whose CORRECTNESS is undecided, not for one that is\n` +
+          `  merely large. Pass --allow-backlog to exit clean and leave the remainder.`,
       );
     }
     for (const entry of report.entries.slice(0, 20)) {
@@ -2297,7 +2311,11 @@ if (isMain) {
     if (report.entries.length > 20) console.log(`    ... and ${report.entries.length - 20} more`);
     console.log(
       report.written
-        ? `\n  Written: src/threat-intel.ts + feed.json. Review the diff before committing.\n`
+        ? `\n  Written: src/threat-intel.ts + feed.json${
+            report.addedToCatalog > 0
+              ? ` + data/threat-catalog.jsonl (${report.addedToCatalog}) + src/catalog-digest.ts`
+              : ""
+          }. Review the diff before committing.\n`
         : `\n  Nothing written${report.dryRun ? " (--dry-run)" : ""}.\n`,
     );
   }
