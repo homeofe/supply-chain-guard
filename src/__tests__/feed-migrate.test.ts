@@ -7,6 +7,7 @@ import {
   parseChunks,
   planMigration,
   applyMigration,
+  parseArgs,
   renderCatalogLine,
 } from "../../scripts/feed-migrate.mjs";
 
@@ -304,5 +305,26 @@ describe("planMigration against the real file", () => {
     );
     const keptIdx = plan.groups.filter((g) => !g.removeHeader).flatMap((g) => g.headerIndices);
     expect(keptIdx.filter((i) => removableIdx.has(i))).toEqual([]);
+  });
+});
+
+describe("parseArgs", () => {
+  it("writes only with --write", () => {
+    expect(parseArgs(["--write"]).write).toBe(true);
+    expect(parseArgs([]).write).toBe(false);
+    expect(parseArgs(["--dry-run"]).write).toBe(false);
+  });
+
+  // A wrapper or an operator appending --dry-run to an existing write command
+  // is asking for nothing to happen. The cautious reading of a contradictory
+  // pair is the only safe one when the operation deletes entries.
+  it("refuses to write when --write and --dry-run are both given", () => {
+    const parsed = parseArgs(["--write", "--dry-run"]);
+    expect(parsed.write).toBe(false);
+    expect(parsed.conflict).toBe(true);
+  });
+
+  it("reports an unrecognised option instead of ignoring it", () => {
+    expect(parseArgs(["--wrtie"]).unknown).toEqual(["--wrtie"]);
   });
 });

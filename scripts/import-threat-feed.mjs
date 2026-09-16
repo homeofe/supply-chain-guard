@@ -2080,19 +2080,21 @@ export async function importUpstreamFeed({
       : original,
     now.toISOString().slice(0, 10),
   );
-  writeFileSync(threatIntelPath, updated);
-
-  if (toCatalog.length > 0) {
-    // One JSON object per line, in the catalog's canonical field order, so the
-    // file the generator reads back is the file the migration would have
-    // written. LF regardless of platform: the catalog is pinned to LF in
-    // .gitattributes because its digest is published.
-    const appended = toCatalog.map((entry) => renderCatalogEntry(entry)).join("\n");
-    const needsNewline = originalCatalog.length > 0 && !originalCatalog.endsWith("\n");
-    writeFileSync(catalogPath, `${originalCatalog}${needsNewline ? "\n" : ""}${appended}\n`);
-  }
+  const originalFeed = existsSync(feedPath) ? readFileSync(feedPath, "utf8") : null;
 
   try {
+    writeFileSync(threatIntelPath, updated);
+
+    if (toCatalog.length > 0) {
+      // One JSON object per line, in the catalog's canonical field order, so
+      // the file the generator reads back is the file the migration would have
+      // written. LF regardless of platform: the catalog is pinned to LF in
+      // .gitattributes because its digest is published.
+      const appended = toCatalog.map((entry) => renderCatalogEntry(entry)).join("\n");
+      const needsNewline = originalCatalog.length > 0 && !originalCatalog.endsWith("\n");
+      writeFileSync(catalogPath, `${originalCatalog}${needsNewline ? "\n" : ""}${appended}\n`);
+    }
+
     const reparsed = extractBundledEntries(root);
     // Against `bundled`, NOT `existing`. `existing` is the dedupe input and now
     // spans both stores; this assertion is about the BUNDLE re-parsing to what
@@ -2122,6 +2124,10 @@ export async function importUpstreamFeed({
     writeFileSync(threatIntelPath, original);
     writeFileSync(catalogPath, originalCatalog);
     writeFileSync(digestModulePath, originalDigestModule);
+    // feed.json too. It is regenerated inside the same try, so a failure after
+    // that point used to leave it describing a bundle that had been rolled
+    // back underneath it.
+    if (originalFeed !== null) writeFileSync(feedPath, originalFeed);
     throw new Error(
       `import aborted and rolled back: ${err instanceof Error ? err.message : String(err)}`,
     );

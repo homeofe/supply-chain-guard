@@ -6,8 +6,28 @@
   "catalogWindows": [
     {
       "since": "2026-09-02",
+      "until": "2026-09-02",
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-04",
+      "until": "2026-09-04",
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-06",
+      "until": "2026-09-06",
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-10",
+      "until": "2026-09-10",
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-13",
       "until": "2026-09-13",
-      "reason": "The GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus, published across five days. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh and would put 56,294 entries into a bundle budgeted at 15,000. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
     }
   ]
 }

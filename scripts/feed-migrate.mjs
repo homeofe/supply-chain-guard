@@ -300,14 +300,23 @@ export function applyMigration(source, entries, config) {
  * happens when the flag is forgotten or misspelled. --dry-run is still accepted
  * so the documented sequence keeps working, it is simply the default.
  */
-function parseArgs(argv) {
-  const write = argv.includes("--write");
+export function parseArgs(argv) {
   const unknown = argv.filter((a) => a.startsWith("--") && a !== "--write" && a !== "--dry-run");
-  return { write, unknown };
+  // --dry-run wins over --write. A wrapper or an operator appending --dry-run to
+  // an existing write command is asking for nothing to happen, and the more
+  // cautious reading of a contradictory pair is the only safe one here.
+  const conflict = argv.includes("--write") && argv.includes("--dry-run");
+  const write = argv.includes("--write") && !conflict;
+  return { write, unknown, conflict };
 }
 
 async function main(argv) {
-  const { write, unknown } = parseArgs(argv);
+  const { write, unknown, conflict } = parseArgs(argv);
+  if (conflict) {
+    console.error("--write and --dry-run contradict each other; nothing was written.");
+    process.exitCode = 2;
+    return;
+  }
   if (unknown.length > 0) {
     console.error(`Unknown option(s): ${unknown.join(", ")}`);
     console.error("Usage: node scripts/feed-migrate.mjs [--write]");
@@ -365,8 +374,14 @@ async function main(argv) {
     return;
   }
 
-  writeFileSync(target, result.source);
+  // Catalog FIRST, then the source. The two writes cannot be made atomic, so
+  // the order decides what a failure between them costs. Appending first means
+  // a failed source write leaves those entries in both stores, which the
+  // placement gate reports and a re-run corrects. Writing the source first
+  // would mean a failed append had already deleted them from the bundle
+  // without recording them anywhere, which is silent loss of detection data.
   appendFileSync(catalogPath, result.jsonl);
+  writeFileSync(target, result.source);
   console.log(
     `migrated ${result.moved.length} entries into ${CATALOG_RELATIVE_PATH} ` +
       `(now ${existingValues.size + result.moved.length} total).`,
