@@ -15,7 +15,7 @@ Change the policy here and the gate names every file that has to follow.
   "supportedMajors": [22, 24],
   "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "6.2.0",
+  "activeLtsReviewedIn": "6.3.0",
   "publishMajor": 22,
   "runtimeMajor": 22,
   "devBaseline": 22
@@ -67,6 +67,11 @@ already in maintenance, and the major consumers are actively migrating onto was 
 by `engines.node` and never run. The devDependency `@types/node` is on the Node 26 API
 surface, so an API that exists only above Node 22 would type-check clean, pass every
 leg of the matrix, and fail in a consumer's hands.
+
+Re-read against the same upstream schedule on **2026-09-17**: Node 24 remains
+Active LTS, while Node 26 is Current and is scheduled to enter Active LTS on
+2026-10-28. `activeLtsMajor` therefore remains 24, and the version-keyed review
+milestone moves to 6.3.0 so the next minor release must check the schedule again.
 
 **The invariant, asserted by the gate:** `max(supportedMajors)` is at or above
 `activeLtsMajor`, and at least one leg of the `compat` matrix is at or above it too.

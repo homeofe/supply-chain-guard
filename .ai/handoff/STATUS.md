@@ -1,3 +1,38 @@
+## v6.2.0 release preparation (2026-09-17)
+
+PR 309 was squash-merged at `64a8379` after every required check passed on
+its exact head. The release was then cut from that updated `main` on
+`release/v6.2.0`.
+
+Release preparation closed three additional gaps:
+
+- The committed release guide now includes `npm run release:prepare`, the
+  explicit migration write, and both feed generators. The catalog design is
+  aligned with that actual sequence, and CONTRIBUTING lists the new catalog
+  modules and data.
+- The 30-day cutoff advanced from 2026-08-17 to 2026-08-18. The migration
+  moved 186 package indicators, leaving 8,830 recent or curated indicators in
+  the offline bundle and 68,419 in the authenticated catalog. The documented
+  `chroma-client@0.5.7` campaign pin was returned to its curated block after
+  the campaign regression proved that a bulk-window overlap had moved it out
+  of the offline bundle.
+- The upstream Node release schedule was re-read. Node 24 remains Active LTS
+  and Node 26 remains Current, so `activeLtsMajor` stays 24 and the next
+  version-keyed review milestone moves to 6.3.0.
+
+Verification before the release pull request:
+
+- `npm run build` passed every AAHP, feed, partition, budget, catalog,
+  handoff and self-scan gate plus TypeScript.
+- A fresh Openclaw Linux checkout passed all 156 test files and all 3,836
+  tests. The temporary `/tmp` checkout was removed.
+- Tag `v6.2.0` and npm version `6.2.0` were both absent.
+
+The first AAHP Verify run on release PR 310 correctly failed because this
+STATUS entry was missing. This entry and the refreshed manifest close that
+handoff drift; the required checks must rerun on the amended exact head.
+
+
 ## Pre-merge review findings on PR 309, continued from a broken session (2026-09-17)
 
 The previous session hit the weekly Claude limit after a pre-merge review of

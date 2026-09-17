@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-09-17
+
+### Added
+
+- The threat feed is now split into a compiled-in bundle and a downloadable,
+  version-pinned catalog. Catalog indexes and gzip shards are authenticated
+  against a digest anchored in the installed package before any entries are
+  cached or enforced.
+- `feed refresh` downloads the matching catalog, and policies can set
+  `catalog: optional` or `catalog: required` to control how unavailable
+  historical coverage affects scan severity.
+- Release tooling advances the bundled 30-day intelligence window deliberately,
+  migrates older package indicators into the catalog, and publishes the catalog
+  assets with each GitHub release.
+
+### Changed
+
+- 68,419 historical package indicators now ship in the catalog while 8,830
+  recent and curated indicators remain available to fully offline scans. The
+  npm package is smaller and cold module import time fell from 104.4 ms to
+  57.0 ms in the measured acceptance run.
+
 ### Fixed
 
 - A scanned repository can no longer silence `THREAT_FEED_CATALOG_MISSING` by
@@ -32,6 +54,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   bundle-only, and `catalog: required` cannot be satisfied there.
 - Catalog windows match `firstSeen` with `isoToEpoch`, so a prefix-valid
   junk date cannot ride a declared bulk-backfill window out of the bundle.
+- A documented campaign pin can no longer be moved out of the offline bundle
+  when its publication date overlaps a declared bulk-backfill window.
 
 ## [6.1.3] - 2026-09-16
 
@@ -5759,7 +5783,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.1.3...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.0...HEAD
+[6.2.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.0
 [6.1.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.3
 [6.1.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.2
 [6.1.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.1
