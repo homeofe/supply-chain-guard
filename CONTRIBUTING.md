@@ -245,7 +245,8 @@ src/
   trust-signals.ts        # Positive trust indicators
   threat-intel.ts         # External IOC feed integration
   external-threat-intel.ts # Opt-in OSV, EPSS, CISA KEV and Scorecard clients
-  feed.ts                 # Feed stats + published-feed refresh (feed.json channel)
+  catalog-digest.ts       # Package-anchored catalog integrity metadata
+  feed.ts                 # Feed/catalog refresh, cache loading and feed stats
   risk-engine.ts          # Multi-dimensional risk scoring
   two-tier-scoring.ts     # Correlated threat gate and composite risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
@@ -272,6 +273,14 @@ src/
   cli.ts                  # CLI entry point
   types.ts                # TypeScript interfaces
   __tests__/              # Test files
+data/
+  threat-catalog.jsonl    # Historical, downloadable package indicators
+scripts/
+  feed-migrate.mjs        # Bundle-to-catalog migration planner and writer
+  feed-partition.mjs      # Shared bundle/catalog placement policy
+  generate-catalog.mjs    # Deterministic catalog index and shard generator
+  release-prepare.mjs     # Release-bound 30-day cutoff advancement
+feed-partition.config.json # Committed partition policy and catalog windows
 ```
 
 ## CI gates and required checks

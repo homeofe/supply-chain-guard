@@ -234,8 +234,8 @@ already there and Phase 1 moves nothing. That is what lets Phase 1 prove itself
 by leaving `src/threat-intel.ts` and `feed.json` untouched.
 
 **The cutoff moves automatically, as part of the release, and nowhere else.**
-`npm run release:prepare` sets it to 30 days before today, runs the migration
-and regenerates. That is the whole step; no one has to remember a date.
+`npm run release:prepare` sets it to 30 days before today; the release checklist
+then runs the migration and generators. No one has to remember a date.
 
 Two alternatives were rejected, and the reasons matter because they are what
 makes this durable:
@@ -1008,9 +1008,10 @@ between a design that works until it does not, and one that keeps working.
 
 ### No recurring manual step
 
-`BUNDLE_CUTOFF_DATE` is set by `npm run release:prepare` as part of the release,
-which already regenerates many files and is already reviewed and gated. It is
-not derived from the clock, because that would make generated files a function
+`BUNDLE_CUTOFF_DATE` is set by `npm run release:prepare` as part of the release.
+The release checklist then runs the migration and generators inside the same
+reviewed and gated change. It is not derived from the clock, because that would
+make generated files a function
 of the day they were generated. It is not derived from the newest feed entry,
 because that would put a migration inside every daily threat-intel pull request
 and make the diff unreviewable, and reviewing those diffs is a security control

@@ -260,15 +260,19 @@ like any other. In order:
    Bump `package.json` too, then run `npm install --package-lock-only`: npm rewrites
    the lockfile's version fields only at install time, so an edit-based bump leaves it
    a release behind.
-5. **`npm run feed:generate`**, since `feed.json` carries the version, and
+5. **`npm run release:prepare`**, then **`node scripts/feed-migrate.mjs --write`**.
+   This advances `bundleCutoffDate` to 30 days before the release and migrates
+   package indicators that have left the offline window into the catalog. The
+   cutoff moves only in this reviewed release commit, never during ordinary builds.
+6. **`npm run feed:generate`**, since `feed.json` carries the version, and
    **`npm run catalog:generate`**, since `src/catalog-digest.ts` carries it too and
    is byte-compared by `check:catalog` in `prebuild`. Both are generated, so a
    missed regeneration is a red gate rather than a silent drift.
-6. **`npm run build`** and **`npm test`** must be green.
-7. One commit for everything: code, docs and tests together.
-8. Open a pull request and squash-merge it once the required checks pass.
-9. Tag the **merged** commit on `main`, never the pre-merge commit, and push the tag.
-   Pushing the tag is what triggers publish, the GitHub Release, the `v5` fast-forward
+7. **`npm run build`** and **`npm test`** must be green.
+8. One commit for everything: code, docs and tests together.
+9. Open a pull request and squash-merge it once the required checks pass.
+10. Tag the **merged** commit on `main`, never the pre-merge commit, and push the tag.
+   Pushing the tag is what triggers publish, the GitHub Release, the `vN` fast-forward
    and the multi-arch image build.
 
    This step is now enforced rather than remembered. Both publish paths run
@@ -290,7 +294,7 @@ like any other. In order:
    arguments, so it always checks against `main`. A release cut from a maintenance branch
    would exit `6`, and authorising one means passing `--branch` in the workflow, which is
    a deliberate edit rather than something that can happen by accident. That matches the
-   two-branch model in step 10 below.
+   two-branch model in step 11 below.
 
    Why it is needed: required status checks are a property of `refs/heads/main` and are
    never evaluated on a `refs/tags/*` push, so of the three contexts branch protection
@@ -310,7 +314,7 @@ like any other. In order:
    commit already contains it, and an actor who controls the commit can omit the step.
    Restricting who may create `refs/tags/v*` is the control for that case and is an open
    owner decision on https://github.com/homeofe/supply-chain-guard/issues/167.
-10. Delete the branch and confirm it is gone on **both** sides. When a release is
+11. Delete the branch and confirm it is gone on **both** sides. When a release is
     finished the repository carries `main` plus one floating major-ref branch per
     released major (`v5`, `v6`, ...) and no topic branches at all, no open pull
     requests and no open issues. The major refs are created and moved by CI, not by

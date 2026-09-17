@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789636183",
-    "timestamp": "2026-09-17T09:09:44Z",
-    "commit": "0d77ff9",
+    "session_id": "cli-1789637710",
+    "timestamp": "2026-09-17T09:35:11Z",
+    "commit": "f3dae9d",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a2f3dbe283c622d1c44f3c4bffa0216868f30a5859211a2fb52e8a35f06488c9",
-      "updated": "2026-09-17T09:07:59Z",
-      "lines": 10181,
-      "summary": "The previous session hit the weekly Claude limit after a pre-merge review of"
+      "checksum": "sha256:7690fe1a1336d86a599cea6859b6e06772b5d90002d0aa9bc0eda8705a29d50a",
+      "updated": "2026-09-17T09:34:57Z",
+      "lines": 10216,
+      "summary": "PR 309 was squash-merged at `64a8379` after every required check passed on"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:55ccf5930db9bf141be0f8302c1a4acf959a5edc26eb985116d29f7d900ab5d3",
-      "updated": "2026-09-16T12:42:05Z",
+      "checksum": "sha256:27d95c22aee5be082ada8258719fbd771956407bff78c7edf350da88bcc4fc18",
+      "updated": "2026-09-17T09:23:58Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-17T09:09:43Z",
-      "lines": 181,
+      "checksum": "sha256:d473773d99bff0758e6a2c1c23636081b54bf9cfb1c44ab57c3299bcf366ab4f",
+      "updated": "2026-09-17T09:35:10Z",
+      "lines": 182,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:5108a7068a66d37688a4129c9b359dd1819604271dbc7c8c033499b3d684dbcc",
-      "updated": "2026-09-17T09:09:43Z",
+      "checksum": "sha256:c4863ed1994cdcf85c0766a2826998451ba71b35906483aef64cce827b39e4ee",
+      "updated": "2026-09-17T09:35:10Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:b63096e21647580fb998838c8c3d6f48b48a70cfeadbc8fb1836bb690b04db09",
-      "updated": "2026-09-17T09:09:43Z",
+      "checksum": "sha256:4bd33ee941d5438829c041d8b8cfc51bc2809f8149afc88b352ba162dd851783",
+      "updated": "2026-09-17T09:35:10Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "The previous session hit the weekly Claude limit after a pre-merge review of Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "PR 309 was squash-merged at `64a8379` after every required check passed on Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 118921,
-    "full_read": 131388
+    "manifest_plus_core": 119252,
+    "full_read": 131744
   }
 }

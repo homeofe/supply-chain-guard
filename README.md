@@ -142,7 +142,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v6.1.3
+    rev: v6.2.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -174,7 +174,7 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.1.3 scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.2.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
@@ -874,7 +874,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v6.1.3
+      - uses: homeofe/supply-chain-guard@v6.2.0
         with:
           fail-on: critical
           comment-on-pr: true
@@ -962,7 +962,7 @@ two are never confused. If a deliberately frozen rule set is the intent, exclude
 the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.1.3
+- uses: homeofe/supply-chain-guard@v6.2.0
   with:
     exclude-rules: THREAT_FEED_STALE
 ```
@@ -1014,7 +1014,7 @@ preceding `feed refresh` in the workflow does not count. `catalog: required`
 on the Action therefore needs:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.1.3
+- uses: homeofe/supply-chain-guard@v6.2.0
   with:
     refresh-catalog: true
 ```
@@ -1025,7 +1025,7 @@ setting rather than firing on every scan. If scanning against the bundled set
 alone is the intent, exclude the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.1.3
+- uses: homeofe/supply-chain-guard@v6.2.0
   with:
     exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```
