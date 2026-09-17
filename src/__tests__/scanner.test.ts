@@ -53,6 +53,31 @@ describe("Core Scanner", () => {
     expect(report.partialScan).toBe(true);
   });
 
+  // The filters above would stay green if catalogFindings were never pushed.
+  // This is the wiring the partition design rests on: a scan that could not
+  // consult the catalog must say so through scan(), not only through a unit
+  // that is never called from the scanner.
+  it("reports THREAT_FEED_CATALOG_MISSING through scan() when the catalog is absent", async () => {
+    const report = await scan({
+      target: tempDir,
+      format: "json",
+      noHistory: true,
+    });
+    expect(report.findings.map((f) => f.rule)).toContain("THREAT_FEED_CATALOG_MISSING");
+  });
+
+  it("raises THREAT_FEED_CATALOG_MISSING to critical when catalog: required", async () => {
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    const report = await scan({
+      target: tempDir,
+      format: "json",
+      noHistory: true,
+    });
+    const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("critical");
+  });
+
   it("does not crash when package.json contains the valid JSON value null", async () => {
     fs.writeFileSync(path.join(tempDir, "package.json"), "null");
 

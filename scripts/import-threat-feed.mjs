@@ -55,6 +55,7 @@ import { dirname, join, resolve } from "node:path";
 import { buildFeed, serializeFeed, extractBundledEntries } from "./generate-feed.mjs";
 import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
 import { buildCatalog, renderDigestModule, readCatalogEntries } from "./generate-catalog.mjs";
+import { CATALOG_KEY_ORDER } from "./feed-migrate.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -540,13 +541,20 @@ export function splitPackageValue(value) {
  *   2. already covered - a bare-name IOC for the same ecosystem+package
  *      already fires on every version, so a version-pinned import adds nothing
  *
+ * Exact duplicates are checked against `existing` (bundle plus catalog). Bare
+ * names are taken from `bareFrom`, which defaults to `existing`. The importer
+ * passes the bundle alone: a catalog-only bare name is not available offline,
+ * so it must not suppress a pin that belongs in the bundle.
+ *
  * @returns {{added: Array<object>, duplicates: number, covered: number}}
  */
-export function dedupe(existing, incoming) {
+export function dedupe(existing, incoming, bareFrom = existing) {
   const seen = new Set();
   const bareNames = new Set();
   for (const entry of existing) {
     seen.add(`${entry.type}:${entry.value}`);
+  }
+  for (const entry of bareFrom) {
     if (entry.type !== "package") continue;
     const { prefix, name, version } = splitPackageValue(entry.value);
     if (version === undefined) bareNames.add(`${prefix}${name}`);
@@ -1555,17 +1563,7 @@ export function updateFeedGeneratedAt(source, date) {
 export const FEED_CHUNK_CAPACITY = 1000;
 
 /** The catalog's canonical field order, shared with the migration. */
-const CATALOG_FIELDS = [
-  "type",
-  "value",
-  "severity",
-  "confidence",
-  "family",
-  "campaign",
-  "source",
-  "firstSeen",
-  "lastSeen",
-];
+const CATALOG_FIELDS = CATALOG_KEY_ORDER;
 
 /**
  * The catalog entries currently committed, or an empty list when there are none.
@@ -1888,7 +1886,7 @@ export async function importUpstreamFeed({
   //    once, which also breaks the disjointness the acceptance test asserts.
   const bundled = extractBundledEntries(root);
   const existing = [...bundled, ...readCommittedCatalog(root)];
-  const { added: deduped, duplicates, covered } = dedupe(existing, normalizedCandidates);
+  const { added: deduped, duplicates, covered } = dedupe(existing, normalizedCandidates, bundled);
 
   // 3b. Drop candidates a human has declined for good. Before --limit and before
   // the undrainable check on purpose: a family that is covered elsewhere must not

@@ -1,3 +1,45 @@
+## Pre-merge review findings on PR 309, continued from a broken session (2026-09-17)
+
+The previous session hit the weekly Claude limit after a pre-merge review of
+[homeofe/supply-chain-guard#309](https://github.com/homeofe/supply-chain-guard/pull/309)
+confirmed eight findings and started to fix them. This session reconstructed
+that work and applied the confirmed defects, plus one unverified HIGH that
+survived a direct check.
+
+**Fixed, each with a test that went red before the production change:**
+
+- A forged empty catalog cache with public `version`/`sha256` and a
+  self-computed checksum no longer counts as available. The surviving entry
+  count must match `CATALOG_DIGEST.entryCount`. The GitHub Action passes
+  `--cache-dir "$SCG_RUN_DIR/cache"` so the checkout cannot plant a complete
+  junk catalog either.
+- `catalogWindows` bounds go through `isoToEpoch`. `"2026-9-13"` is refused.
+- The `catalog:` parser resets `sectionKnown`, so an over-indented key after
+  it no longer throws and discards the policy file.
+- `scan()` tests assert `THREAT_FEED_CATALOG_MISSING` is present, and
+  `catalog: required` raises it to critical. Cutting the `catalogFindings`
+  push turns those tests red.
+- Bundle plus catalog has a corpus floor of 77,249, so deletion is no longer
+  monotone-green.
+- README severity table matches the shipped map.
+- The importer uses `CATALOG_KEY_ORDER` instead of a second copy.
+- The release-job test no longer matches `--check` as the generator.
+- Catalog-only bare names no longer cover a new version pin. Measured: 53,539
+  of 68,234 catalog packages are bare. Exact duplicates against the catalog
+  are still dropped. Coverage is taken from the bundle only.
+
+**Not acted on, because the review itself refuted them:** the importer budget
+check, dry-run ENOENT on a missing catalog, applyMigration having no direct
+call, and the generator import-graph test.
+
+**Still open:** eight verifier agents in that review died on the weekly limit.
+The remaining unconfirmed titles were not re-run here. The data-loss one was
+the only HIGH among them and is the catalog-bare coverage fix above.
+
+**Owner decision not requested.** CI on the existing PR head is green; these
+fixes are not pushed yet.
+
+
 ## The catalog dedupe broke the re-parse assertion, and Phase 4 corrections (2026-09-16, claude-opus-5)
 
 **A regression I introduced, caught by a real import rather than by a test.**

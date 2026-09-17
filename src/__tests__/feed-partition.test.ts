@@ -384,6 +384,8 @@ describe("loadPartitionConfig, malformed limits", () => {
     ["a missing since", { catalogWindows: [{ until: "2026-09-13" }] }],
     ["a reversed range", { catalogWindows: [{ since: "2026-09-13", until: "2026-09-02" }] }],
     ["a non-string bound", { catalogWindows: [{ since: 20260902, until: "2026-09-13" }] }],
+    ["a missing zero-pad", { catalogWindows: [{ since: "2026-09-13", until: "2026-9-13" }] }],
+    ["a non-ISO spelling", { catalogWindows: [{ since: "09/02/2026", until: "09/13/2026" }] }],
   ])("refuses %s", (_label, extra) => {
     const root = write({
       bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20, ...extra,

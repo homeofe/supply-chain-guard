@@ -152,7 +152,7 @@ runs:
         FORMAT_FILE="$SCG_RUN_DIR/requested-report"
         FORMAT_ERR="$SCG_RUN_DIR/format.stderr"
         supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" \
-          --json-output "$JSON_FILE" "${FILTER_ARGS[@]}" \
+          --json-output "$JSON_FILE" --cache-dir "$SCG_RUN_DIR/cache" "${FILTER_ARGS[@]}" \
           > "$FORMAT_FILE" 2>"$FORMAT_ERR"
         SCAN_STATUS=$?
         set -e

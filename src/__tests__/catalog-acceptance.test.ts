@@ -63,14 +63,24 @@ const CATALOG_ENTRIES = [
 
 /** Write a catalog cache the loader accepts, exactly as refreshFeed writes it. */
 const installCatalog = (dir: string, entries: unknown[] = CATALOG_ENTRIES) => {
+  const pinned: number = CATALOG_DIGEST.entryCount;
+  const complete = entries.slice();
+  for (let i = complete.length; i < pinned; i++) {
+    complete.push({
+      type: "package",
+      value: `catalog-accept-pad-${i}@0.0.0`,
+      severity: "low",
+      confidence: 1,
+    });
+  }
   fs.writeFileSync(
     path.join(dir, CATALOG_CACHE_FILE),
     JSON.stringify({
       version: CATALOG_DIGEST.version,
       sha256: CATALOG_DIGEST.sha256,
-      checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+      checksum: createHash("sha256").update(JSON.stringify(complete), "utf8").digest("hex"),
       timestamp: new Date().toISOString(),
-      entries,
+      entries: complete,
     }),
   );
 };
@@ -139,7 +149,7 @@ describe("Phase 1 acceptance: an indicator that exists only in the catalog is de
     const dir = tmp();
     installCatalog(dir);
     expect(getDetectionSetProvenance(dir).effectiveEntryCount).toBe(
-      getBundledFeed().length + CATALOG_ENTRIES.length,
+      getBundledFeed().length + CATALOG_DIGEST.entryCount,
     );
   });
 });
@@ -191,10 +201,18 @@ describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
     expect(bundled.length).toBeGreaterThan(0);
     expect(catalogLines.length).toBeGreaterThan(0);
     expect(bundledValues.size).toBe(bundled.length);
+    expect(catalogValues.size).toBe(catalogLines.length);
 
     // Disjoint: an indicator in both would be carried twice and counted twice.
     const both = [...bundledValues].filter((v) => catalogValues.has(v));
     expect(both.slice(0, 3)).toEqual([]);
+
+    // Floor, not a pinned total. Deleting entries from either store used to
+    // leave this test green because every assertion is monotone under
+    // deletion. Bump the floor when the corpus grows; never lower it without
+    // a recorded reason. 9,015 bundled + 68,234 catalog as of the Phase 3
+    // drain that shipped on this branch.
+    expect(bundled.length + catalogLines.length).toBeGreaterThanOrEqual(77249);
   });
 
   it("the shipped digest describes the shipped catalog", () => {

@@ -85,8 +85,9 @@ export function loadPartitionConfig(root = repoRoot) {
     throw new Error("feed-partition.config.json: catalogWindows must be an array");
   }
   for (const w of windows) {
-    const ok =
-      w && typeof w.since === "string" && typeof w.until === "string" && w.since <= w.until;
+    const sinceEpoch = w && isoToEpoch(w.since);
+    const untilEpoch = w && isoToEpoch(w.until);
+    const ok = sinceEpoch !== null && untilEpoch !== null && sinceEpoch <= untilEpoch;
     if (!ok) {
       throw new Error(
         `feed-partition.config.json: catalogWindows entry ${JSON.stringify(w)} needs since and ` +

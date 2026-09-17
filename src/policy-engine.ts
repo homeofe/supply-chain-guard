@@ -225,6 +225,8 @@ function parseYamlConfig(content: string): PolicyConfig {
         });
       }
       currentSection = "";
+      currentSubSection = "";
+      sectionKnown = false;
       continue;
     }
 

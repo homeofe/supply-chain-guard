@@ -14,6 +14,7 @@ import {
   FEED_CACHE_FILE,
   getDetectionSetProvenance,
 } from "../threat-intel.js";
+import { catalogFindings } from "../feed.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
 
 const dirs: string[] = [];
@@ -57,6 +58,16 @@ const writeCatalog = (
   return doc;
 };
 
+/** A cache whose surviving entry count matches the pin this release compiles in. */
+const completeEntries = (keep: ReturnType<typeof entryFor>[] = [entryFor(NOVEL)]) => {
+  const pinned: number = CATALOG_DIGEST.entryCount;
+  const out = keep.slice();
+  for (let i = out.length; i < pinned; i++) {
+    out.push(entryFor(`catalog-pad-${i}@0.0.0`));
+  }
+  return out;
+};
+
 describe("catalog cache availability", () => {
   it("reports absent when no catalog has been downloaded", () => {
     const dir = tmp();
@@ -67,15 +78,45 @@ describe("catalog cache availability", () => {
 
   it("merges a matching catalog and reports it available", () => {
     const dir = tmp();
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
     const feed = loadThreatIntel(dir);
     expect(lastCatalogState()).toMatchObject({
       available: true,
-      entryCount: 1,
+      entryCount: CATALOG_DIGEST.entryCount,
       cachedVersion: CATALOG_DIGEST.version,
     });
-    expect(feed).toHaveLength(getBundledFeed().length + 1);
     expect(feed.some((e) => e.value === NOVEL)).toBe(true);
+  });
+
+  // A short cache with a matching header is the same shape as the empty
+  // forgery below. It is not this release's catalog, even when the checksum
+  // over its own entries is consistent.
+  it("refuses a short cache whose checksum matches its own entries", () => {
+    const dir = tmp();
+    writeCatalog(dir);
+    const feed = loadThreatIntel(dir);
+    expect(lastCatalogState()).toMatchObject({
+      available: false,
+      reason: "digest-mismatch",
+    });
+    expect(feed.some((e) => e.value === NOVEL)).toBe(false);
+  });
+
+  // version, sha256 and the self-checksum are all public or self-computed, so a
+  // scanned repository can commit an empty cache that looks well-formed. That
+  // used to mark the catalog available and silence THREAT_FEED_CATALOG_MISSING
+  // under catalog: required. A cache that does not carry this release's pinned
+  // entry count is not this release's catalog.
+  it("refuses an empty cache whose checksum was recomputed over the empty list", () => {
+    const dir = tmp();
+    writeCatalog(dir, {}, []);
+    const feed = loadThreatIntel(dir);
+    expect(lastCatalogState()).toMatchObject({
+      available: false,
+      reason: "digest-mismatch",
+    });
+    expect(feed).toHaveLength(getBundledFeed().length);
+    expect(catalogFindings(lastCatalogState(), "required")).toHaveLength(1);
   });
 
   it("refuses a catalog built for a different release", () => {
@@ -175,10 +216,13 @@ describe("catalog cache availability", () => {
   // everything.
   it("accepts a catalog whose checksum matches its entries", () => {
     const dir = tmp();
-    const two = [entryFor(NOVEL), entryFor("second-fixture-pkg@9.9.9")];
+    const two = completeEntries([entryFor(NOVEL), entryFor("second-fixture-pkg@9.9.9")]);
     writeCatalog(dir, {}, two);
     loadThreatIntel(dir);
-    expect(lastCatalogState()).toMatchObject({ available: true, entryCount: 2 });
+    expect(lastCatalogState()).toMatchObject({
+      available: true,
+      entryCount: CATALOG_DIGEST.entryCount,
+    });
   });
 
   it("quarantines malformed catalog entries instead of trusting them", () => {
@@ -186,7 +230,13 @@ describe("catalog cache availability", () => {
     const mixed = [entryFor(NOVEL), { type: "package", value: "", severity: "critical" }];
     writeCatalog(dir, {}, mixed as never);
     loadThreatIntel(dir);
-    expect(lastCatalogState()).toMatchObject({ available: true, entryCount: 1 });
+    // One surviving entry against a non-zero pin is not this release's catalog,
+    // so the malformed entry is not merged either.
+    expect(lastCatalogState()).toMatchObject({
+      available: false,
+      reason: "digest-mismatch",
+    });
+    expect(loadThreatIntel(dir).some((e) => e.value === NOVEL)).toBe(false);
   });
 });
 
@@ -199,16 +249,16 @@ describe("the catalog participates in the memo identity", () => {
     const before = loadThreatIntel(dir);
     expect(lastCatalogState().available).toBe(false);
 
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
     const after = loadThreatIntel(dir);
 
     expect(lastCatalogState().available).toBe(true);
-    expect(after.length).toBe(before.length + 1);
+    expect(after.length).toBe(before.length + CATALOG_DIGEST.entryCount);
   });
 
   it("sees a catalog that is removed after being merged", () => {
     const dir = tmp();
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
     const withCatalog = loadThreatIntel(dir);
     expect(lastCatalogState().available).toBe(true);
 
@@ -216,7 +266,7 @@ describe("the catalog participates in the memo identity", () => {
     const without = loadThreatIntel(dir);
 
     expect(lastCatalogState()).toMatchObject({ available: false, reason: "absent" });
-    expect(without.length).toBe(withCatalog.length - 1);
+    expect(without.length).toBe(withCatalog.length - CATALOG_DIGEST.entryCount);
   });
 });
 
@@ -228,7 +278,11 @@ describe("the catalog does not override the bundle", () => {
   it("keeps the bundled entry when both carry the same indicator", () => {
     const dir = tmp();
     const bundled = getBundledFeed()[0];
-    writeCatalog(dir, {}, [{ ...bundled, severity: "info", confidence: 0.01 }]);
+    writeCatalog(
+      dir,
+      {},
+      completeEntries([{ ...bundled, severity: "info", confidence: 0.01 }]),
+    );
 
     const feed = loadThreatIntel(dir);
     const match = feed.filter((e) => e.type === bundled.type && e.value === bundled.value);
@@ -242,12 +296,14 @@ describe("detection-set provenance counts the catalog", () => {
   // existed, so a merged catalog was reported as no coverage at all.
   it("reports the effective count with a catalog but no feed cache", () => {
     const dir = tmp();
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
     const provenance = getDetectionSetProvenance(dir);
 
     expect(provenance.cacheMerged).toBe(false);
     expect(provenance.bundledEntryCount).toBe(getBundledFeed().length);
-    expect(provenance.effectiveEntryCount).toBe(getBundledFeed().length + 1);
+    expect(provenance.effectiveEntryCount).toBe(
+      getBundledFeed().length + CATALOG_DIGEST.entryCount,
+    );
   });
 
   it("still reports the bundle alone when nothing is cached", () => {
@@ -258,7 +314,7 @@ describe("detection-set provenance counts the catalog", () => {
 
   it("leaves the feed cache state untouched by the catalog", () => {
     const dir = tmp();
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
     loadThreatIntel(dir);
     expect(getFeedCacheState()).toMatchObject({ present: false });
     expect(lastCatalogState().available).toBe(true);
@@ -273,11 +329,11 @@ describe("feed and catalog caches are independent", () => {
       path.join(dir, FEED_CACHE_FILE),
       JSON.stringify({ timestamp: new Date().toISOString(), entries: [feedOnly] }),
     );
-    writeCatalog(dir);
+    writeCatalog(dir, {}, completeEntries());
 
     const feed = loadThreatIntel(dir);
     expect(feed.some((e) => e.value === feedOnly.value)).toBe(true);
     expect(feed.some((e) => e.value === NOVEL)).toBe(true);
-    expect(feed).toHaveLength(getBundledFeed().length + 2);
+    expect(feed).toHaveLength(getBundledFeed().length + 1 + CATALOG_DIGEST.entryCount);
   });
 });

@@ -550,6 +550,29 @@ describe("dedupe", () => {
     expect(result.duplicates).toBe(0);
     expect(result.covered).toBe(0);
   });
+
+  // A catalog-only bare name is not available offline. Treating it as covering
+  // a fresh version pin would keep that pin out of the bundle, which is the
+  // store the offline scan actually consults. Exact duplicates against the
+  // catalog are still dropped: re-importing the same value is a duplicate,
+  // not a coverage claim.
+  it("does not treat a catalog-only bare name as covering a new version pin", async () => {
+    const { dedupe } = await load();
+    const catalogOnly = [
+      { type: "package", value: "catalog-bare", severity: "critical", confidence: 1 },
+    ];
+    const incoming = [
+      { type: "package", value: "catalog-bare@9.9.9", severity: "critical", confidence: 0.9 },
+    ];
+    const coveredByCatalog = dedupe(catalogOnly, incoming);
+    expect(coveredByCatalog.added).toEqual([]);
+    expect(coveredByCatalog.covered).toBe(1);
+
+    const notCoveredOffline = dedupe(catalogOnly, incoming, []);
+    expect(notCoveredOffline.added).toHaveLength(1);
+    expect(notCoveredOffline.covered).toBe(0);
+    expect(notCoveredOffline.duplicates).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1647,6 +1670,40 @@ describe("importUpstreamFeed failure mode", () => {
       fetchImpl: singlePage([advisory()]),
     });
     expect(report.added).toBe(0);
+  });
+
+  // 53k catalog entries are bare names. A catalog-only bare name is not
+  // available offline, so a fresh version pin that belongs in the bundle must
+  // still be imported. Exact duplicates against the catalog stay duplicates.
+  it("imports a version pin that only a catalog-only bare name would cover", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "scg-fixture-pkg",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([
+        advisory({
+          vulnerabilities: [
+            {
+              package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+              vulnerable_version_range: "= 9.9.9",
+            },
+          ],
+        }),
+      ]),
+    });
+    expect(report.added).toBe(1);
+    expect(report.addedToBundle).toBe(1);
   });
 
   // With a NON-EMPTY catalog and a real write. Every other test here leaves the

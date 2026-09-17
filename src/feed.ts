@@ -356,9 +356,11 @@ export function catalogSeverityFor(
  * Two cases deliberately return nothing, because a false positive here gets the
  * whole tool switched off, which is worse than the finding being absent:
  *
- * - The catalog IS available. An empty-but-valid catalog counts as available,
- *   which is what keeps `catalog: required` satisfiable in the phase where the
- *   published catalog is still empty.
+ * - The catalog IS available. That means loadThreatIntel accepted a cache
+ *   whose surviving entry count matches the count this release pins (or the
+ *   release pins an empty catalog). An empty cache is not available once the
+ *   pin is non-zero: version, sha256 and the self-checksum are all public or
+ *   self-computed, so a scanned repository can forge that header.
  * - The release pins an EMPTY catalog and the mode is `optional`. There is then
  *   no coverage to miss, so a finding would name zero indicators and appear on
  *   every scan for no reason. Under `required` it still fires, because that

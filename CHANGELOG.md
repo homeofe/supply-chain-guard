@@ -7,6 +7,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- A scanned repository can no longer silence `THREAT_FEED_CATALOG_MISSING` by
+  committing a forged empty catalog cache. The loader now requires the cached
+  entry count to match the count this release pins, and the GitHub Action
+  reads the cache from an isolated directory under `RUNNER_TEMP` rather than
+  from the checkout.
+- `catalogWindows` bounds are validated as ISO dates, so a missing zero-pad
+  can no longer route future package indicators out of the offline bundle.
+- The `catalog:` policy parser no longer throws on an over-indented key after
+  the setting, which previously discarded the whole policy file.
+- The daily importer no longer treats a catalog-only bare name as covering a
+  new version pin. Coverage of that kind is bundle-only, because the catalog
+  is not available offline.
+- `THREAT_FEED_CATALOG_MISSING` now has scan-level tests, so dropping the
+  scanner wiring can no longer leave the suite green.
+- The README severity table for that finding now matches the shipped map
+  (`absent` is info, `version-mismatch` is low).
+
 ## [6.1.3] - 2026-09-16
 
 ### Added

@@ -10438,12 +10438,27 @@ export function loadThreatIntel(
         // Same quarantine as the feed cache: cached remote data reaches the
         // per-file scan loop, so a malformed entry must never leave here.
         const catalogEntries = cached.entries.filter(isValidFeedIOC).map(normalizeFeedIOC);
-        feed = mergeFeeds(feed, catalogEntries);
-        catalog = {
-          available: true,
-          entryCount: catalogEntries.length,
-          cachedVersion: cached.version,
-        };
+        // version, sha256 and the self-checksum are public or self-computed.
+        // A cache that does not carry this release's pinned entry count is
+        // not this release's catalog: an empty list with a recomputed
+        // checksum used to mark the catalog available and silence
+        // THREAT_FEED_CATALOG_MISSING under catalog: required.
+        const pinned: number = CATALOG_DIGEST.entryCount;
+        if (pinned !== 0 && catalogEntries.length !== pinned) {
+          catalog = {
+            available: false,
+            reason: "digest-mismatch",
+            entryCount: 0,
+            cachedVersion: cached.version,
+          };
+        } else {
+          feed = mergeFeeds(feed, catalogEntries);
+          catalog = {
+            available: true,
+            entryCount: catalogEntries.length,
+            cachedVersion: cached.version,
+          };
+        }
       }
     } catch {
       catalog = { available: false, reason: "unreadable", entryCount: 0 };

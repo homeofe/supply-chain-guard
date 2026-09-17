@@ -986,9 +986,9 @@ why, and the reason matters:
 
 | Reason | Severity | What it means |
 |--------|----------|---------------|
-| not downloaded yet | medium | No catalog on this machine. Run a refresh. |
+| not downloaded yet | info | No catalog on this machine. Run a refresh. |
 | unreadable | medium | The cache could not be parsed. |
-| built for a different release | medium | Left over from an older version. |
+| built for a different release | low | Left over from an older version. |
 | does not match the pinned digest | high | Not the catalog this release expects. |
 | entries do not match their checksum | high | The cached data changed underneath the scanner. |
 

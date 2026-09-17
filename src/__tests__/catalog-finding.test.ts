@@ -27,8 +27,9 @@ describe("catalogFindings", () => {
   });
 
   // The guard that keeps `catalog: required` satisfiable in the phase where the
-  // published catalog is still empty. An empty-but-valid catalog is available,
-  // not missing, and must not fire even under the strictest mode.
+  // published catalog is still empty. loadThreatIntel only reports available
+  // with entryCount 0 when this release pins an empty catalog; once the pin is
+  // non-zero an empty cache is digest-mismatch instead.
   it("says nothing for an empty but valid catalog, in either mode", () => {
     expect(catalogFindings(state({ available: true, entryCount: 0 }), "optional")).toEqual([]);
     expect(catalogFindings(state({ available: true, entryCount: 0 }), "required")).toEqual([]);
@@ -193,7 +194,40 @@ describe("the catalog policy knob", () => {
     expect(config?.warnings ?? []).toEqual([]);
   });
 
+  // The catalog branch used to leave sectionKnown true with currentSection "".
+  // An over-indented key after it then evaluated KNOWN_SECTIONS[""].includes
+  // and threw; loadPolicyConfig swallowed that into null, discarding the whole
+  // file with no warning.
+  it("does not discard the file when catalog is followed by an over-indented key", () => {
+    const config = withConfig(
+      "rules:\n  disable:\n    - EVAL_ATOB\ncatalog: required\n  baseline:\n",
+    );
+    expect(config).not.toBeNull();
+    expect(config?.catalog).toBe("required");
+  });
+
   afterEach(() => {
     for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  });
+});
+
+describe("the README severity table matches the shipped map", () => {
+  // Two rows drifted when absent dropped from medium to info and
+  // version-mismatch from medium to low. Nothing in prebuild cross-checks
+  // the table, so an operator sizing --min-severity from the README would
+  // filter the finding out of a fresh install.
+  it("documents absent as info and version-mismatch as low", () => {
+    const readme = fs.readFileSync(
+      path.resolve(__dirname, "..", "..", "README.md"),
+      "utf8",
+    );
+    const table = readme.slice(
+      readme.indexOf("#### THREAT_FEED_CATALOG_MISSING"),
+      readme.indexOf("Set `catalog: required`"),
+    );
+    expect(table).toMatch(/not downloaded yet \| info /);
+    expect(table).toMatch(/built for a different release \| low /);
+    expect(catalogSeverityFor("absent", "optional")).toBe("info");
+    expect(catalogSeverityFor("version-mismatch", "optional")).toBe("low");
   });
 });

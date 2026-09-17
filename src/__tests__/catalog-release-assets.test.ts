@@ -16,7 +16,10 @@ const releaseJob = (() => {
 
 describe("the release job publishes the catalog assets", () => {
   it("builds them before creating the release", () => {
-    const build = releaseJob.indexOf("node scripts/generate-catalog.mjs");
+    // Do not match the --check invocation: "generate-catalog.mjs" is a prefix
+    // of "generate-catalog.mjs --check", so indexOf on the short string was
+    // the check line and this test never saw the generator.
+    const build = releaseJob.search(/node scripts\/generate-catalog\.mjs(?! --check)/);
     const create = releaseJob.indexOf("gh release create");
     expect(build).toBeGreaterThan(-1);
     expect(create).toBeGreaterThan(-1);

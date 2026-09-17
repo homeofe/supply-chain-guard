@@ -241,6 +241,7 @@ program
   .option("--two-tier", "Use two-tier gated verdict and risk scoring")
   .option("--scorecard <score>", "OpenSSF Scorecard score (0.0 - 10.0)")
   .option("--external-intel", "Look up OSV, EPSS, CISA KEV and OpenSSF Scorecard for the scanned project and feed them into the two-tier score (requires network; off by default)")
+  .option("--cache-dir <dir>", "Cache directory for the threat feed and catalog (default: .scg-cache)")
   .action(
     async (
       target: string,
@@ -265,6 +266,7 @@ program
         twoTier?: boolean;
         scorecard?: string;
         externalIntel?: boolean;
+        cacheDir?: string;
       },
     ) => {
       try {
@@ -291,6 +293,7 @@ program
           twoTier: opts.twoTier === true || opts.externalIntel === true || opts.scorecard !== undefined,
           scorecard: opts.scorecard !== undefined ? parseScorecardOption(opts.scorecard) : undefined,
           externalIntel: opts.externalIntel === true,
+          cacheDir: opts.cacheDir,
         };
 
         const report = await scan(options);

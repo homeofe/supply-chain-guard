@@ -103,6 +103,25 @@ describe("renderCatalogEntry", () => {
     }
   });
 
+  // The importer used to keep a second copy of this list. Dropping a field
+  // from that copy silently omitted it from every daily-import line, and the
+  // tests above could not see it: they only check order and subset of what
+  // was emitted. An entry that carries every catalog field must emit every
+  // catalog field.
+  it("emits every catalog field when the entry carries them", () => {
+    const parsed = JSON.parse(
+      renderCatalogEntry(
+        entry({
+          family: "fixture-family",
+          campaign: "fixture-campaign",
+          source: "GHSA-xxxx",
+          lastSeen: "2026-01-02",
+        }),
+      ),
+    );
+    expect(Object.keys(parsed)).toEqual(CATALOG_KEY_ORDER);
+  });
+
   it("is valid JSON on one line", () => {
     const line = renderCatalogEntry(entry());
     expect(line).not.toContain("\n");

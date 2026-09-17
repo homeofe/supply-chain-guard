@@ -758,6 +758,12 @@ export interface ScanOptions {
   /** Use bundled feed only without merging refreshed local cache (--hermetic) */
   hermetic?: boolean;
   /**
+   * Directory for the threat-feed and catalog caches. Defaults to `.scg-cache`
+   * under process.cwd(). Pass an isolated directory when the scan target must
+   * not control the catalog cache (the GitHub Action does this).
+   */
+  cacheDir?: string;
+  /**
    * Compute the two-tier gated verdict and composite risk score (--two-tier).
    *
    * Opt-in. While this was unconditional, every scan gained a `twoTierVerdict` and a

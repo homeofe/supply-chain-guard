@@ -280,8 +280,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
   }
 
-  // v4.5: Load threat intelligence feed
-  const threatFeed = loadThreatIntel();
+  // v4.5: Load threat intelligence feed. cacheDir is explicit so a scanned
+  // repository cannot plant `.scg-cache` and silence THREAT_FEED_CATALOG_MISSING.
+  const threatFeed = loadThreatIntel(options.cacheDir);
 
   // Internal-disclosure deny-list. Loaded once: the hashed terms come from the
   // committed policy file, the plaintext patterns from an unpublished file or

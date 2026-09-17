@@ -676,4 +676,13 @@ describe("Marketplace Action fail-closed contract", () => {
       commandReport.stdout.indexOf(`::${stop![1]}::`),
     );
   });
+
+  // CACHE_DIR is ".scg-cache" relative to cwd, and the Action's cwd is the
+  // checkout under scan. A committed cache there is target-controlled and
+  // used to silence THREAT_FEED_CATALOG_MISSING. The scan must use the
+  // isolated RUNNER_TEMP directory this step already creates.
+  it("does not read the catalog cache from the scanned checkout", () => {
+    expect(scanScript).toMatch(/SCG_RUN_DIR=\$\(mktemp -d "\$RUNNER_TEMP\/scg-action/);
+    expect(scanScript).toMatch(/--cache-dir "\$SCG_RUN_DIR\/cache"/);
+  });
 });
