@@ -16,6 +16,7 @@ import {
 } from "../threat-intel.js";
 import { catalogFindings } from "../feed.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
+import { readCatalogEntries } from "../../scripts/generate-catalog.mjs";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -29,9 +30,10 @@ const tmp = () => {
   return d;
 };
 
-// A value that cannot already be in the bundle, so a successful merge is
-// visible as a length change rather than being swallowed by mergeFeeds.
-const NOVEL = "catalog-only-fixture-pkg@9.9.9";
+// Positive cache tests use the real committed catalog because exact content,
+// not merely a synthetic replacement of the same size, is authenticated.
+const REAL_CATALOG = readCatalogEntries();
+const NOVEL = REAL_CATALOG[0].value as string;
 const entryFor = (value: string) => ({
   type: "package" as const,
   value,
@@ -58,16 +60,6 @@ const writeCatalog = (
   return doc;
 };
 
-/** A cache whose surviving entry count matches the pin this release compiles in. */
-const completeEntries = (keep: ReturnType<typeof entryFor>[] = [entryFor(NOVEL)]) => {
-  const pinned: number = CATALOG_DIGEST.entryCount;
-  const out = keep.slice();
-  for (let i = out.length; i < pinned; i++) {
-    out.push(entryFor(`catalog-pad-${i}@0.0.0`));
-  }
-  return out;
-};
-
 describe("catalog cache availability", () => {
   it("reports absent when no catalog has been downloaded", () => {
     const dir = tmp();
@@ -78,7 +70,7 @@ describe("catalog cache availability", () => {
 
   it("merges a matching catalog and reports it available", () => {
     const dir = tmp();
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
     const feed = loadThreatIntel(dir);
     expect(lastCatalogState()).toMatchObject({
       available: true,
@@ -103,10 +95,8 @@ describe("catalog cache availability", () => {
   });
 
   // version, sha256 and the self-checksum are all public or self-computed, so a
-  // scanned repository can commit an empty cache that looks well-formed. That
-  // used to mark the catalog available and silence THREAT_FEED_CATALOG_MISSING
-  // under catalog: required. A cache that does not carry this release's pinned
-  // entry count is not this release's catalog.
+  // scanned repository can commit an empty cache that looks well-formed. The
+  // package-anchored entries digest must still refuse it.
   it("refuses an empty cache whose checksum was recomputed over the empty list", () => {
     const dir = tmp();
     writeCatalog(dir, {}, []);
@@ -172,15 +162,14 @@ describe("catalog cache availability", () => {
     expect(lastCatalogState()).toMatchObject({ available: false, reason: "unreadable" });
   });
 
-  // The version and digest fields compare the cache against constants compiled
-  // into this package, so they cannot see an edit to the entries sitting beside
-  // them. The checksum is what makes an edited or truncated cache detectable.
+  // The checksum beside the entries makes an edited or truncated cache
+  // distinguishable from a self-consistent replacement, so the finding can
+  // report corruption rather than a package digest mismatch.
   // Removing entries is the dangerous direction: it silently disables
   // detection, and nothing else in this function would notice.
   it("refuses a catalog whose entries were edited under a valid header", () => {
     const dir = tmp();
-    const good = [entryFor(NOVEL), entryFor("second-fixture-pkg@9.9.9")];
-    writeCatalog(dir, {}, good);
+    writeCatalog(dir, {}, REAL_CATALOG);
     const file = path.join(dir, CATALOG_CACHE_FILE);
     const doc = JSON.parse(fs.readFileSync(file, "utf-8"));
 
@@ -211,13 +200,11 @@ describe("catalog cache availability", () => {
     expect(feed.some((e) => e.value === NOVEL)).toBe(false);
   });
 
-  // The control in the other direction: a cache whose checksum was recomputed
-  // after a legitimate rewrite is accepted, so the check is not simply refusing
-  // everything.
-  it("accepts a catalog whose checksum matches its entries", () => {
+  // The control in the other direction: the exact catalog produced by the
+  // release is accepted, so the check is not simply refusing everything.
+  it("accepts the exact catalog this release pins", () => {
     const dir = tmp();
-    const two = completeEntries([entryFor(NOVEL), entryFor("second-fixture-pkg@9.9.9")]);
-    writeCatalog(dir, {}, two);
+    writeCatalog(dir, {}, REAL_CATALOG);
     loadThreatIntel(dir);
     expect(lastCatalogState()).toMatchObject({
       available: true,
@@ -249,7 +236,7 @@ describe("the catalog participates in the memo identity", () => {
     const before = loadThreatIntel(dir);
     expect(lastCatalogState().available).toBe(false);
 
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
     const after = loadThreatIntel(dir);
 
     expect(lastCatalogState().available).toBe(true);
@@ -258,7 +245,7 @@ describe("the catalog participates in the memo identity", () => {
 
   it("sees a catalog that is removed after being merged", () => {
     const dir = tmp();
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
     const withCatalog = loadThreatIntel(dir);
     expect(lastCatalogState().available).toBe(true);
 
@@ -270,24 +257,21 @@ describe("the catalog participates in the memo identity", () => {
   });
 });
 
-describe("the catalog does not override the bundle", () => {
-  // mergeFeeds is first-wins on type:value and the catalog is merged last, so
-  // the compiled bundle and the fresher feed stay authoritative for anything
-  // all of them carry. A downloaded document must not be able to downgrade a
-  // severity that ships in the package.
-  it("keeps the bundled entry when both carry the same indicator", () => {
+describe("catalog content authentication", () => {
+  // Matching the public header, self-checksum and exact entry count used to be
+  // enough. Repeating one valid IOC to the pinned length proves that content,
+  // not just shape and size, is now anchored in the package.
+  it("refuses a self-consistent full-size replacement", () => {
     const dir = tmp();
-    const bundled = getBundledFeed()[0];
-    writeCatalog(
-      dir,
-      {},
-      completeEntries([{ ...bundled, severity: "info", confidence: 0.01 }]),
-    );
+    const forged = Array.from({ length: CATALOG_DIGEST.entryCount }, () => entryFor(NOVEL));
+    writeCatalog(dir, {}, forged);
 
     const feed = loadThreatIntel(dir);
-    const match = feed.filter((e) => e.type === bundled.type && e.value === bundled.value);
-    expect(match).toHaveLength(1);
-    expect(match[0].severity).toBe(bundled.severity);
+    expect(lastCatalogState()).toMatchObject({
+      available: false,
+      reason: "digest-mismatch",
+    });
+    expect(feed).toHaveLength(getBundledFeed().length);
   });
 });
 
@@ -296,7 +280,7 @@ describe("detection-set provenance counts the catalog", () => {
   // existed, so a merged catalog was reported as no coverage at all.
   it("reports the effective count with a catalog but no feed cache", () => {
     const dir = tmp();
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
     const provenance = getDetectionSetProvenance(dir);
 
     expect(provenance.cacheMerged).toBe(false);
@@ -314,7 +298,7 @@ describe("detection-set provenance counts the catalog", () => {
 
   it("leaves the feed cache state untouched by the catalog", () => {
     const dir = tmp();
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
     loadThreatIntel(dir);
     expect(getFeedCacheState()).toMatchObject({ present: false });
     expect(lastCatalogState().available).toBe(true);
@@ -329,7 +313,7 @@ describe("feed and catalog caches are independent", () => {
       path.join(dir, FEED_CACHE_FILE),
       JSON.stringify({ timestamp: new Date().toISOString(), entries: [feedOnly] }),
     );
-    writeCatalog(dir, {}, completeEntries());
+    writeCatalog(dir, {}, REAL_CATALOG);
 
     const feed = loadThreatIntel(dir);
     expect(feed.some((e) => e.value === feedOnly.value)).toBe(true);

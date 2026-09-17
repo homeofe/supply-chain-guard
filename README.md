@@ -996,6 +996,10 @@ The last two are not normal states. They say the scanner's own detection data is
 either corrupt or has been modified in place, which is a different problem from
 "not downloaded yet" and is worth looking at the machine for.
 
+The cache checksum is also compared with an entries digest compiled into the
+package. A cache with the right public header, recomputed checksum and entry
+count is still refused when its actual indicators differ from this release.
+
 Set `catalog: required` in `.supply-chain-guard.yml` to treat any of them as
 `critical`, so a scan that could not consult the full corpus fails the default
 gate rather than reporting a narrower result as success:

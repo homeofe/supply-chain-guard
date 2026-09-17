@@ -357,10 +357,9 @@ export function catalogSeverityFor(
  * whole tool switched off, which is worse than the finding being absent:
  *
  * - The catalog IS available. That means loadThreatIntel accepted a cache
- *   whose surviving entry count matches the count this release pins (or the
- *   release pins an empty catalog). An empty cache is not available once the
- *   pin is non-zero: version, sha256 and the self-checksum are all public or
- *   self-computed, so a scanned repository can forge that header.
+ *   whose canonical entries match the content digest this release pins (or
+ *   the release pins an empty catalog). The cache's public version/index
+ *   digest and self-computed checksum are not sufficient on their own.
  * - The release pins an EMPTY catalog and the mode is `optional`. There is then
  *   no coverage to miss, so a finding would name zero indicators and appear on
  *   every scan for no reason. Under `required` it still fires, because that
@@ -612,14 +611,16 @@ function sha256Hex(text: string): string {
 /**
  * Fetch, verify and install the catalog. Throws with a specific reason.
  *
- * The chain of trust runs package -> index -> shard, and every link is checked
- * before anything is written:
+ * The download chain of trust runs package -> index -> shard, and every link
+ * is checked before anything is written:
  *
  *  - the index must hash to CATALOG_DIGEST.sha256, which ships compiled into
  *    this package, so a replaced release asset is caught against an anchor the
  *    publisher of that asset does not control;
  *  - each shard must hash to the digest the index recorded for it;
- *  - each shard must parse as a catalog document.
+ *  - each shard must parse as a catalog document;
+ *  - the combined canonical entries must match CATALOG_DIGEST.entriesSha256,
+ *    which keeps the installed cache bound to the same package anchor.
  *
  * Nothing is written until every shard has verified, so a run that fails
  * halfway leaves the previous catalog in place rather than a partial one.
@@ -675,6 +676,14 @@ async function installCatalog(
     entries.push(...parseFeedPayload(body, "catalog"));
   }
 
+  const entriesChecksum = sha256Hex(JSON.stringify(entries));
+  if (entriesChecksum !== CATALOG_DIGEST.entriesSha256) {
+    throw new Error(
+      `catalog entries digest ${entriesChecksum.slice(0, 12)} does not match the ` +
+        `${CATALOG_DIGEST.entriesSha256.slice(0, 12)} this release pins`,
+    );
+  }
+
   fs.mkdirSync(cacheDir, { recursive: true });
   const cachePath = path.join(cacheDir, CATALOG_CACHE_FILE);
   fs.writeFileSync(
@@ -682,11 +691,9 @@ async function installCatalog(
     JSON.stringify({
       version,
       sha256: CATALOG_DIGEST.sha256,
-      // Over the entries as written. The two fields above prove where the
-      // document came from; this one is what lets the reader notice the file
-      // changing afterwards, which is the case that would silently narrow
-      // detection on the next scan.
-      checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+      // Over the entries as written. The reader checks it both against the
+      // file and against the package-anchored entries digest above.
+      checksum: entriesChecksum,
       timestamp: new Date().toISOString(),
       entries,
     }),

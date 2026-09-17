@@ -85,6 +85,49 @@ describe("Core Scanner", () => {
     expect(finding?.severity).toBe("critical");
   });
 
+  // The version and index digest are public, and the cache checksum can be
+  // recomputed by whoever writes the file. Entry count alone therefore cannot
+  // prove that a full-size cache is the catalog this package release pins.
+  it("rejects a self-consistent full-size forged catalog through scan()", async () => {
+    const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-forged-catalog-"));
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    const entries = Array.from({ length: CATALOG_DIGEST.entryCount }, () => ({
+      type: "package" as const,
+      value: "forged-catalog-entry@0.0.0",
+      severity: "low" as const,
+      confidence: 1,
+    }));
+    fs.writeFileSync(
+      path.join(cacheDir, CATALOG_CACHE_FILE),
+      JSON.stringify({
+        version: CATALOG_DIGEST.version,
+        sha256: CATALOG_DIGEST.sha256,
+        checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+        entries,
+      }),
+    );
+
+    try {
+      resetThreatIntelCache();
+      const report = await scan({
+        target: tempDir,
+        format: "json",
+        noHistory: true,
+        cacheDir,
+      });
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(lastCatalogState()).toMatchObject({
+        available: false,
+        reason: "digest-mismatch",
+      });
+    } finally {
+      resetThreatIntelCache();
+      fs.rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
+
   // The Action cwd is the checkout. Nested ecosystem scanners used to call
   // loadThreatIntel() with no cacheDir, overwriting lastCatalog from
   // checkout/.scg-cache before catalogFindings ran. A complete planted

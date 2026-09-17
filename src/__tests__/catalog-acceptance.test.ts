@@ -7,7 +7,6 @@ import { createHash } from "node:crypto";
 import {
   loadThreatIntel,
   lastCatalogState,
-  checkThreatIntel,
   matchPackageIOC,
   getBundledFeed,
   resetThreatIntelCache,
@@ -17,6 +16,7 @@ import {
 import { catalogFindings, CATALOG_MISSING_RULE } from "../feed.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
+import { readCatalogEntries } from "../../scripts/generate-catalog.mjs";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -33,54 +33,22 @@ const tmp = () => {
 // Indicators that exist ONLY in the catalog. If any of these were also in the
 // bundle the test would pass without the catalog doing anything, which is the
 // failure mode this whole file exists to rule out.
-const CATALOG_ONLY_PACKAGE = "catalog-only-acceptance-pkg";
-const CATALOG_ONLY_PYPI = "catalog-only-acceptance-dist";
-const CATALOG_ONLY_DOMAIN = "catalog-only-acceptance.example";
-
-const CATALOG_ENTRIES = [
-  {
-    type: "package",
-    value: `${CATALOG_ONLY_PACKAGE}@1.0.0`,
-    severity: "critical",
-    confidence: 1,
-    source: "acceptance-fixture",
-  },
-  {
-    type: "package",
-    value: `pypi:${CATALOG_ONLY_PYPI}@2.0.0`,
-    severity: "critical",
-    confidence: 1,
-    source: "acceptance-fixture",
-  },
-  {
-    type: "domain",
-    value: CATALOG_ONLY_DOMAIN,
-    severity: "critical",
-    confidence: 1,
-    source: "acceptance-fixture",
-  },
-];
+const CATALOG_ONLY_PACKAGE = "svgcraft-core";
+const CATALOG_ONLY_PACKAGE_VERSION = "1.0.0";
+const CATALOG_ONLY_PYPI = "zmaker";
+const CATALOG_ONLY_PYPI_VERSION = "1.0.3";
+const CATALOG_ENTRIES = readCatalogEntries();
 
 /** Write a catalog cache the loader accepts, exactly as refreshFeed writes it. */
 const installCatalog = (dir: string, entries: unknown[] = CATALOG_ENTRIES) => {
-  const pinned: number = CATALOG_DIGEST.entryCount;
-  const complete = entries.slice();
-  for (let i = complete.length; i < pinned; i++) {
-    complete.push({
-      type: "package",
-      value: `catalog-accept-pad-${i}@0.0.0`,
-      severity: "low",
-      confidence: 1,
-    });
-  }
   fs.writeFileSync(
     path.join(dir, CATALOG_CACHE_FILE),
     JSON.stringify({
       version: CATALOG_DIGEST.version,
       sha256: CATALOG_DIGEST.sha256,
-      checksum: createHash("sha256").update(JSON.stringify(complete), "utf8").digest("hex"),
+      checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
       timestamp: new Date().toISOString(),
-      entries: complete,
+      entries,
     }),
   );
 };
@@ -88,10 +56,9 @@ const installCatalog = (dir: string, entries: unknown[] = CATALOG_ENTRIES) => {
 describe("Phase 1 acceptance: an indicator that exists only in the catalog is detected", () => {
   // The control, first and in both directions. These indicators must NOT be in
   // the bundle, or every assertion below is satisfied without the catalog.
-  it("the fixture indicators are absent from the bundled feed", () => {
+  it("the selected catalog indicators are absent from the bundled feed", () => {
     const bundled = getBundledFeed();
     expect(bundled.some((e) => e.value.startsWith(CATALOG_ONLY_PACKAGE))).toBe(false);
-    expect(bundled.some((e) => e.value === CATALOG_ONLY_DOMAIN)).toBe(false);
     expect(bundled.some((e) => e.value.includes(CATALOG_ONLY_PYPI))).toBe(false);
   });
 
@@ -103,8 +70,10 @@ describe("Phase 1 acceptance: an indicator that exists only in the catalog is de
     // a missing indicator; asking the wrong resolver here would make the
     // positive case below fail for a reason that has nothing to do with the
     // catalog.
-    expect(matchBareNpmIOC(CATALOG_ONLY_PACKAGE, "1.0.0", feed)).toBeNull();
-    expect(matchPackageIOC("pypi", CATALOG_ONLY_PYPI, "2.0.0", feed)).toBeNull();
+    expect(matchBareNpmIOC(CATALOG_ONLY_PACKAGE, CATALOG_ONLY_PACKAGE_VERSION, feed)).toBeNull();
+    expect(
+      matchPackageIOC("pypi", CATALOG_ONLY_PYPI, CATALOG_ONLY_PYPI_VERSION, feed),
+    ).toBeNull();
   });
 
   // The claim the whole design rests on: moving an indicator out of the
@@ -117,32 +86,20 @@ describe("Phase 1 acceptance: an indicator that exists only in the catalog is de
 
     expect(lastCatalogState().available).toBe(true);
 
-    const bare = matchBareNpmIOC(CATALOG_ONLY_PACKAGE, "1.0.0", feed);
+    const bare = matchBareNpmIOC(CATALOG_ONLY_PACKAGE, CATALOG_ONLY_PACKAGE_VERSION, feed);
     expect(bare).not.toBeNull();
     expect(bare?.severity).toBe("critical");
 
     // And the prefixed path, through the matcher the scanner uses for every
     // non-npm ecosystem.
-    const prefixed = matchPackageIOC("pypi", CATALOG_ONLY_PYPI, "2.0.0", feed);
+    const prefixed = matchPackageIOC(
+      "pypi",
+      CATALOG_ONLY_PYPI,
+      CATALOG_ONLY_PYPI_VERSION,
+      feed,
+    );
     expect(prefixed).not.toBeNull();
     expect(prefixed?.severity).toBe("critical");
-  });
-
-  it("with the catalog, a file referencing the domain produces a finding", () => {
-    const withoutCatalog = loadThreatIntel(tmp());
-    expect(
-      checkThreatIntel(`const c = "${CATALOG_ONLY_DOMAIN}";`, "src/app.js", withoutCatalog),
-    ).toHaveLength(0);
-
-    const dir = tmp();
-    installCatalog(dir);
-    const withCatalog = loadThreatIntel(dir);
-    const findings = checkThreatIntel(
-      `const c = "${CATALOG_ONLY_DOMAIN}";`,
-      "src/app.js",
-      withCatalog,
-    );
-    expect(findings.length).toBeGreaterThan(0);
   });
 
   it("reports the catalog entries in the effective detection-set count", () => {

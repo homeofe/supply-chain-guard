@@ -8,9 +8,10 @@ survived a direct check.
 
 **Fixed, each with a test that went red before the production change:**
 
-- A forged empty catalog cache with public `version`/`sha256` and a
-  self-computed checksum no longer counts as available. The surviving entry
-  count must match `CATALOG_DIGEST.entryCount`. The GitHub Action passes
+- A forged catalog cache with public `version`/`sha256`, a self-computed
+  checksum and the pinned entry count no longer counts as available. The
+  canonical entries must match the package-anchored
+  `CATALOG_DIGEST.entriesSha256`. The GitHub Action passes
   `--cache-dir "$SCG_RUN_DIR/cache"`. Nested cargo/go/ruby/composer/nuget/
   python/mcp scanners reuse that feed instead of reloading cwd `.scg-cache`,
   and the finding is computed from a snapshot of the first load, so a
@@ -39,14 +40,21 @@ survived a direct check.
 check, dry-run ENOENT on a missing catalog, applyMigration having no direct
 call, and the generator import-graph test.
 
-**Still open:** eight verifier agents in that review died on the weekly limit.
-The remaining unconfirmed titles were not re-run here. The data-loss one was
-the only HIGH among them and is the catalog-bare coverage fix above.
+**Closed by the final merge-readiness pass:** eight verifier agents in the
+earlier review died on the weekly limit. This session reviewed the current
+exact diff directly and found the additional cache-authentication blocker
+described below; no other confirmed merge blocker remains.
 
 **Follow-up from the full PR review (2026-09-17).** Two remaining findings
 fixed: Action `refresh-catalog` input (off by default) downloads into the
 isolated cache so `catalog: required` can succeed; `inCatalogWindow` uses
 `isoToEpoch` so a prefix-valid junk date cannot match a declared window.
+
+The final merge-readiness pass found and fixed one more blocker: a full-size
+replacement cache with a recomputed checksum was accepted because only its
+entry count was package-pinned. The package now also pins the exact canonical
+entries digest, the loader checks it, and `scan()` has a regression proving
+`catalog: required` remains critical for a forged cache.
 
 **Owner decision not requested.** The review-fix commits are on the PR;
 this follow-up is the Action refresh input and the window date matcher.

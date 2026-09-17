@@ -113,7 +113,7 @@ src/threat-intel.ts FEED_CHUNK_n     <- authored bundle, comments preserved, com
 data/threat-catalog.jsonl            <- authored catalog, never compiled
         +--> catalog-index.json           (lists the shards + their digests)
         +--> catalog-000.json.gz ...      (published release assets, 50k each)
-        +--> src/catalog-digest.ts        (generated constant: version + index SHA-256)
+        +--> src/catalog-digest.ts        (generated: version + index/entries SHA-256)
 
 scripts/check-feed-partition.mjs     <- gate: validates placement across both
 ```
@@ -398,8 +398,8 @@ Two consequences this design takes seriously:
 ### 4.5 Cache, merge, and what counts as unavailable
 
 A second cache file, `threat-catalog.json`, beside the existing
-`threat-feed.json`. It records the catalog `version`, its `sha256` and the fetch
-timestamp alongside the entries.
+`threat-feed.json`. It records the catalog `version`, its index `sha256`, an
+entries checksum and the fetch timestamp alongside the entries.
 
 `loadThreatIntel()` merges bundle, then feed cache, then catalog cache, through
 the same `isValidFeedIOC` and `normalizeFeedIOC` quarantine the feed cache
@@ -410,7 +410,15 @@ and the finding fires, when any of these holds:
 
 - the cache file is absent, unreadable or unparsable;
 - its recorded `version` does not equal the installed package version;
-- its recorded `sha256` does not equal `CATALOG_DIGEST.sha256`.
+- its recorded `sha256` does not equal `CATALOG_DIGEST.sha256`;
+- its entries checksum does not match the entries beside it, or does not equal
+  the package-anchored `CATALOG_DIGEST.entriesSha256`.
+
+The second comparison is load-bearing after installation. The public version,
+index digest and entry count can be copied, and a checksum stored inside the
+cache can be recomputed over replacement entries. Pinning the canonical entries
+array in the package prevents a self-consistent full-size replacement from
+silencing `THREAT_FEED_CATALOG_MISSING` on the next process run.
 
 The version check is what closes the hole the first draft left open. After an
 upgrade, or after a refresh where the bundle succeeded and the catalog fetch
@@ -576,12 +584,14 @@ under pressure is how the ceiling problem would have reappeared in a different
 shape. Each shard is about 8.25 MB raw and 830 KB gzipped, an eighth of the
 per-document decompression cap, so no shard is ever near it.
 
-**The chain of trust runs package to index to shard.** `CATALOG_DIGEST`, the
-constant compiled into the package, is the SHA-256 of the index document. The
-index carries a SHA-256 for each shard. A client verifies the index against the
-compiled-in digest, then verifies every shard against the index, and installs
-nothing unless all of them match. A replaced asset at any level fails
-verification, is discarded, and the missing-catalog finding fires.
+**The download chain of trust runs package to index to shard.** `CATALOG_DIGEST`,
+the constant compiled into the package, carries the SHA-256 of the index
+document. The index carries a SHA-256 for each shard. A client verifies the
+index against the compiled-in digest, then verifies every shard against the
+index, and installs nothing unless all of them match. The same constant pins the
+canonical combined entries array so the installed cache remains authenticated
+after the verified index and shards have been discarded. A replacement at any
+level fails verification, is discarded, and the missing-catalog finding fires.
 
 **There is no total-size ceiling any more**, because growth adds shards rather
 than enlarging a document. What remains is a per-shard bound, which the
@@ -947,6 +957,7 @@ answers a different question, which is this project's most common defect class.
 | 13 | The partition treated `campaign`/`family` as the definition of "curated", but curation here lives in COMMENTS. 60 of 1,094 comment-anchored entries carry no such field, so their rationale would have been orphaned as they aged past the cutoff | Rule 3 in section 4.2: an entry beneath a curated comment block is immovable. Found while planning Phase 2 |
 | 14 | The claim that release immutability was off rested on `immutable_releases` reading `null`, which actually means the repo API does not expose the field at all. Absence was read as a value, which is the same mistake as entry 9 | Verified per release instead: `immutable` is a real field on the release object, and it is `false` on v6.1.1 through v6.1.3. Phase 2 asserts it on the next release |
 | 16 | Section 4.6 claimed the committed catalog would flood the self-scan. Measured while implementing Phase 1: `SCANNABLE_EXTENSIONS` is an allowlist containing `.json` but not `.jsonl`, so the catalog is never content-scanned, and the same C2 domain yields two findings in a `.json` file and zero in a `.jsonl` one. The claim was accepted from a true observation about `collectFiles()` without testing the extension gate behind it | Section 4.6 rewritten to what was measured. The guard still ships as insurance, with a test coupling it to the extension allowlist so adding `.jsonl` stays a one-line change |
+| 17 | The cache compared its public version/index digest and a self-computed checksum, then pinned only the surviving entry count. A scanned repository could replace the catalog with the same number of valid entries, recompute the checksum and silence `catalog: required` | `CATALOG_DIGEST.entriesSha256` pins the exact canonical entries array in the package; both refresh and load verify it |
 
 | 15 | The command given for enabling immutability, `PATCH /repos/{owner}/{repo} -f immutable_releases=true`, addressed a field that does not exist. GitHub ignored it silently, the setting was never enabled, and the verification in entry 14 could not detect that because it read the same non-existent field. A wrong command and a wrong check agreed with each other and looked like a working system | The feature has dedicated endpoints: `GET`, `PUT` and `DELETE` on `/repos/{owner}/{repo}/immutable-releases`, returning `{"enabled", "enforced_by_owner"}`. Enabled and verified `true` on 2026-09-16 |
 

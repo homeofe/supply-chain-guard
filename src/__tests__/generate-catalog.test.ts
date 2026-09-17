@@ -60,8 +60,12 @@ describe("buildCatalog", () => {
   // digest per shard. If either link is computed over the wrong bytes the chain
   // verifies nothing while still looking complete.
   it("digests the index, and the index digests each shard", () => {
-    const { indexJson, shards, digest } = buildCatalog(many(2), "1.2.3");
+    const entries = many(2);
+    const { indexJson, shards, digest } = buildCatalog(entries, "1.2.3");
     expect(digest.sha256).toBe(createHash("sha256").update(indexJson, "utf8").digest("hex"));
+    expect(digest.entriesSha256).toBe(
+      createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+    );
 
     const index = JSON.parse(indexJson);
     expect(index.kind).toBe("catalog-index");
@@ -87,6 +91,7 @@ describe("buildCatalog", () => {
     const b = buildCatalog(many(5), "1.2.3");
     expect(b.indexJson).toBe(a.indexJson);
     expect(b.digest.sha256).toBe(a.digest.sha256);
+    expect(b.digest.entriesSha256).toBe(a.digest.entriesSha256);
     expect(a.indexJson).not.toContain("generatedAt");
     expect(a.shards[0].json).not.toContain("generatedAt");
   });
@@ -103,11 +108,13 @@ describe("renderDigestModule", () => {
     const out = renderDigestModule({
       version: "1.2.3",
       sha256: "abc",
+      entriesSha256: "def",
       entryCount: 4,
       shardCount: 2,
     });
     expect(out).toContain('version: "1.2.3"');
     expect(out).toContain('sha256: "abc"');
+    expect(out).toContain('entriesSha256: "def"');
     expect(out).toContain("entryCount: 4");
     expect(out).toContain("shardCount: 2");
     expect(out).toContain("as const");
@@ -118,9 +125,25 @@ describe("renderDigestModule", () => {
   // FAIL. Without this, a comparison that always matched would look identical
   // to a gate that works.
   it("changes when the digest changes", () => {
-    const base = { version: "1.2.3", sha256: "abc", entryCount: 0, shardCount: 1 };
+    const base = {
+      version: "1.2.3",
+      sha256: "abc",
+      entriesSha256: "def",
+      entryCount: 0,
+      shardCount: 1,
+    };
     expect(renderDigestModule({ ...base, sha256: "def" })).not.toBe(renderDigestModule(base));
+    expect(renderDigestModule({ ...base, entriesSha256: "ghi" })).not.toBe(
+      renderDigestModule(base),
+    );
     expect(renderDigestModule({ ...base, entryCount: 1 })).not.toBe(renderDigestModule(base));
+  });
+
+  it("changes the entries digest when same-size content changes", () => {
+    const a = buildCatalog([entry("a@1")], "1.2.3").digest;
+    const b = buildCatalog([entry("b@1")], "1.2.3").digest;
+    expect(b.entryCount).toBe(a.entryCount);
+    expect(b.entriesSha256).not.toBe(a.entriesSha256);
   });
 });
 

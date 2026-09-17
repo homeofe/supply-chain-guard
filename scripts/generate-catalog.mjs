@@ -55,10 +55,10 @@ export const CATALOG_SHARD_MAX_ENTRIES = 50_000;
 /**
  * Build the sharded catalog: an index document plus N gzipped shards.
  *
- * The chain of trust is package -> index -> shard. CATALOG_DIGEST in the
- * package is the digest of the INDEX; the index carries a digest for each
- * shard. A client installs nothing unless every link verifies, so a replaced
- * asset at any level is caught.
+ * The download chain of trust is package -> index -> shard. CATALOG_DIGEST in
+ * the package is the digest of the INDEX; the index carries a digest for each
+ * shard. The package also pins the canonical entries array so the installed
+ * cache remains authenticated after the verified shards have been discarded.
  */
 export function buildCatalog(entries, version) {
   const shards = [];
@@ -90,6 +90,9 @@ export function buildCatalog(entries, version) {
   const digest = {
     version,
     sha256: createHash("sha256").update(indexJson, "utf8").digest("hex"),
+    entriesSha256: createHash("sha256")
+      .update(JSON.stringify(entries), "utf8")
+      .digest("hex"),
     entryCount: entries.length,
     shardCount: shards.length,
   };
@@ -104,7 +107,9 @@ export function renderDigestModule(digest) {
     "// Shipped inside the npm package so the integrity anchor is the immutable",
     "// npm artifact and the tagged git tree, not a release asset that --clobber",
     "// can replace. sha256 is the digest of the catalog INDEX; the index carries",
-    "// a digest for each shard, so the chain runs package -> index -> shard.",
+    "// a digest for each shard, so the download chain runs package -> index ->",
+    "// shard. entriesSha256 pins the canonical entries array after installation,",
+    "// so a self-consistent replacement cache is refused on the next process run.",
     "//",
     "// A constant rather than a JSON file read at runtime because it keeps a file",
     "// read off loadThreatIntel()'s hot path, is typechecked, and supplies the",
@@ -112,6 +117,7 @@ export function renderDigestModule(digest) {
     "export const CATALOG_DIGEST = {",
     `  version: ${JSON.stringify(digest.version)},`,
     `  sha256: ${JSON.stringify(digest.sha256)},`,
+    `  entriesSha256: ${JSON.stringify(digest.entriesSha256)},`,
     `  entryCount: ${digest.entryCount},`,
     `  shardCount: ${digest.shardCount},`,
     "} as const;",

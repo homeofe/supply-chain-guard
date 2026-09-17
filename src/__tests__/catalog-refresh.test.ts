@@ -174,6 +174,7 @@ describe("refreshFeed installs the catalog", () => {
     // Written so the reader can notice the file changing afterwards. Without
     // it the reader's corrupt check is skipped entirely.
     expect(cached.checksum).toBe(sha(JSON.stringify(cached.entries)));
+    expect(cached.checksum).toBe(CATALOG_DIGEST.entriesSha256);
   });
 
   // The anchor is the package constant, not anything the server said. A server

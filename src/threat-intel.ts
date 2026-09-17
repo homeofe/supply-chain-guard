@@ -10254,19 +10254,11 @@ let lastCatalog: CatalogState = { available: false, reason: "absent", entryCount
 /**
  * Checksum of a cached catalog's entries, over their canonical JSON.
  *
- * This is what makes the cache's recorded checksum mean something. The version
- * and digest fields compare the cache against constants compiled into this
- * package, so they catch a cache built for a DIFFERENT release, which is their
- * job. They cannot catch an edit to the entries themselves, because a reader
- * that compares a constant to a constant learns nothing about the payload
- * sitting next to them.
- *
- * What this does NOT defend against: a writer who edits the entries and
- * recomputes this checksum too. Nothing self-contained in the cache file can,
- * and the real anchor is the digest chain verified at download time. It closes
- * the accidental-corruption and naive-edit cases, and it means a silently
- * truncated cache is refused rather than merged, which is the failure that
- * would quietly disable detection.
+ * The value written into the cache is checked in two directions: against the
+ * entries beside it to catch truncation or edits, and against entriesSha256 in
+ * the generated package constant to preserve the verified download's trust
+ * after the index and shards have been discarded. A writer can recompute the
+ * cache field, but cannot make different entries match the package anchor.
  */
 function catalogEntriesChecksum(entries: unknown): string {
   return createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex");
@@ -10398,6 +10390,9 @@ export function loadThreatIntel(
         checksum?: string;
         entries?: FeedIOC[];
       };
+      const entriesChecksum = Array.isArray(cached.entries)
+        ? catalogEntriesChecksum(cached.entries)
+        : undefined;
       if (!Array.isArray(cached.entries)) {
         catalog = { available: false, reason: "unreadable", entryCount: 0 };
       } else if (cached.version !== CATALOG_DIGEST.version) {
@@ -10417,7 +10412,7 @@ export function loadThreatIntel(
           entryCount: 0,
           cachedVersion: cached.version,
         };
-      } else if (cached.checksum !== catalogEntriesChecksum(cached.entries)) {
+      } else if (cached.checksum !== entriesChecksum) {
         // REQUIRED, not optional. An earlier version only compared the checksum
         // when the field was present, which made the check trivially avoidable:
         // deleting one line from the cache file skipped verification entirely
@@ -10434,15 +10429,23 @@ export function loadThreatIntel(
           entryCount: 0,
           cachedVersion: cached.version,
         };
+      } else if (entriesChecksum !== CATALOG_DIGEST.entriesSha256) {
+        // The cache field is self-computed, so matching it only proves that the
+        // file is internally consistent. This comparison binds the payload to
+        // the exact canonical entries array compiled into the npm package.
+        catalog = {
+          available: false,
+          reason: "digest-mismatch",
+          entryCount: 0,
+          cachedVersion: cached.version,
+        };
       } else {
         // Same quarantine as the feed cache: cached remote data reaches the
         // per-file scan loop, so a malformed entry must never leave here.
         const catalogEntries = cached.entries.filter(isValidFeedIOC).map(normalizeFeedIOC);
-        // version, sha256 and the self-checksum are public or self-computed.
-        // A cache that does not carry this release's pinned entry count is
-        // not this release's catalog: an empty list with a recomputed
-        // checksum used to mark the catalog available and silence
-        // THREAT_FEED_CATALOG_MISSING under catalog: required.
+        // Keep the count check as a structural assertion after validation. The
+        // entries digest above authenticates the raw array; this catches a
+        // generated catalog whose entries do not survive the FeedIOC contract.
         const pinned: number = CATALOG_DIGEST.entryCount;
         if (pinned !== 0 && catalogEntries.length !== pinned) {
           catalog = {
