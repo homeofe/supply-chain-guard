@@ -1,3 +1,992 @@
+## Pre-merge review findings on PR 309, continued from a broken session (2026-09-17)
+
+The previous session hit the weekly Claude limit after a pre-merge review of
+[homeofe/supply-chain-guard#309](https://github.com/homeofe/supply-chain-guard/pull/309)
+confirmed eight findings and started to fix them. This session reconstructed
+that work and applied the confirmed defects, plus one unverified HIGH that
+survived a direct check.
+
+**Fixed, each with a test that went red before the production change:**
+
+- A forged catalog cache with public `version`/`sha256`, a self-computed
+  checksum and the pinned entry count no longer counts as available. The
+  canonical entries must match the package-anchored
+  `CATALOG_DIGEST.entriesSha256`. The GitHub Action passes
+  `--cache-dir "$SCG_RUN_DIR/cache"`. Nested cargo/go/ruby/composer/nuget/
+  python/mcp scanners reuse that feed instead of reloading cwd `.scg-cache`,
+  and the finding is computed from a snapshot of the first load, so a
+  complete planted catalog plus a dummy `Cargo.lock` cannot silence
+  `catalog: required`.
+- `catalogWindows` bounds go through `isoToEpoch`. `"2026-9-13"` is refused.
+- The `catalog:` parser resets `sectionKnown`, so an over-indented key after
+  it no longer throws and discards the policy file.
+- `scan()` tests assert `THREAT_FEED_CATALOG_MISSING` is present, and
+  `catalog: required` raises it to critical. Cutting the `catalogFindings`
+  push turns those tests red.
+- Bundle plus catalog has a corpus floor of 77,249, so deletion is no longer
+  monotone-green.
+- README severity table matches the shipped map.
+- The importer uses `CATALOG_KEY_ORDER` instead of a second copy.
+- The release-job test no longer matches `--check` as the generator.
+- Catalog-only bare names no longer cover a new version pin. Measured: 53,539
+  of 68,234 catalog packages are bare. Exact duplicates against the catalog
+  are still dropped. Coverage is taken from the bundle only.
+- Action `refresh-catalog` (off by default) downloads into the isolated cache
+  so `catalog: required` can succeed without reading checkout `.scg-cache`.
+- `inCatalogWindow` uses `isoToEpoch`, so a prefix-valid junk date cannot
+  match a declared bulk-backfill window.
+
+**Not acted on, because the review itself refuted them:** the importer budget
+check, dry-run ENOENT on a missing catalog, applyMigration having no direct
+call, and the generator import-graph test.
+
+**Closed by the final merge-readiness pass:** eight verifier agents in the
+earlier review died on the weekly limit. This session reviewed the current
+exact diff directly and found the additional cache-authentication blocker
+described below; no other confirmed merge blocker remains.
+
+**Follow-up from the full PR review (2026-09-17).** Two remaining findings
+fixed: Action `refresh-catalog` input (off by default) downloads into the
+isolated cache so `catalog: required` can succeed; `inCatalogWindow` uses
+`isoToEpoch` so a prefix-valid junk date cannot match a declared window.
+
+The final merge-readiness pass found and fixed one more blocker: a full-size
+replacement cache with a recomputed checksum was accepted because only its
+entry count was package-pinned. The package now also pins the exact canonical
+entries digest, the loader checks it, and `scan()` has a regression proving
+`catalog: required` remains critical for a forged cache.
+
+**Owner decision not requested.** The review-fix commits are on the PR;
+this follow-up is the Action refresh input and the window date matcher.
+
+
+## The catalog dedupe broke the re-parse assertion, and Phase 4 corrections (2026-09-16, claude-opus-5)
+
+**A regression I introduced, caught by a real import rather than by a test.**
+Widening the dedupe input to cover both stores also widened `existing`, and the
+post-write re-parse assertion was written against that same variable. The next
+real drain aborted with:
+
+```
+import aborted and rolled back: re-parse mismatch: expected 29517 entries, got 8971
+```
+
+29,517 is bundle plus catalog; 8,971 is the bundle, which is what
+`extractBundledEntries` returns and what the assertion is actually about. The
+rollback behaved correctly and nothing was lost, but no import could proceed.
+
+It compares against `bundled` now. The reason no test caught it is worth
+recording: every importer fixture left the catalog EMPTY, so the dedupe input
+and the bundle were always the same length and the two were indistinguishable.
+There is now a test that populates the catalog and performs a real write, and
+restoring the old comparison turns it red.
+
+**Two pipeline habits this repository already documents cost time again here.**
+The drain loop read `$?` after `npm run ... | grep`, which reports grep's status,
+so an import that had ABORTED printed `exit=0`. The replacement writes the
+importer's output to a file and reads the importer's own status. It also stops
+at the first failure instead of attempting the remaining ranges.
+
+**Phase 4 Task 3 Step 3: the operator instructions are corrected.**
+`~/.claude/scheduled-tasks/supply-chain-guard-daily-update/SKILL.md` is local to
+this machine and is not committed, so the correction is recorded here as well or
+the next machine keeps the stale copy:
+
+- It claimed the defaults are `--days 14 --limit 250 --max-pages 750`. Measured:
+  there is NO implicit limit. `appliedLimit` is `null` unless the operator passes
+  the flag, and the comment at the selection site says the importer is exhaustive
+  by default. The stale claim was not harmless: `--limit 250` against a deferred
+  range would have drained a fraction of it and left a remainder that no later
+  run proposes, because an explicit range is not re-offered by the daily job.
+- The undrainable-backlog guidance told the operator to slice or defer. It now
+  says volume is no longer a reason to postpone anything, names
+  `catalogWindows` as the way to declare a bulk-publication burst, and states
+  that deferral is for a block whose CORRECTNESS is undecided.
+
+**Phase 4 Task 3 Step 4** asks for a regression proving the importer is
+exhaustive without `--limit`. It already exists in `feed-import.test.ts`, so it
+was verified rather than added.
+
+
+## CI went red on the migration, and what it caught (2026-09-16, claude-opus-5)
+
+All five deferred ranges are drained. Catalog 68,234 across 2 shards, bundle
+9,015. CI failed on the way there and was right to. Three causes.
+
+**1. A real coverage regression.** `campaigns.test.ts` asserts specific campaign
+indicators resolve from `getBundledFeed()`, which is a deliberate contract: a
+documented campaign must be detectable from a bare install with no download.
+44 such entries carried no `campaign` or `family` field, so rule 2 could not see
+they were curated, and the cutoff moved them into the catalog. They were curated
+in the test suite and the README, not in the data.
+
+They are back in the bundle beneath a curated comment block, which is the
+designed mechanism for exactly this: rule 3 makes an entry under a curated
+header immovable regardless of age, and it required inventing no field values.
+The campaign suite is the gate that keeps it honest, and it is the gate that
+caught this.
+
+**2. The finding fired on every scan.** With the catalog non-empty,
+`THREAT_FEED_CATALOG_MISSING` fired at `medium` for every fresh install, because
+a fresh install has never had the chance to download anything. `medium` turns
+the badge from `clean`/`brightgreen` to yellow, so every user would have seen a
+yellow badge until they ran a refresh. A finding that fires for everyone on
+every run until they act is a nag, and a nag gets the tool switched off.
+
+`absent` is now `info`. It still names the rule and the number of unconsulted
+indicators in every report that lists findings; it no longer claims the scanned
+repository is less clean than it is. The ladder above it is about how much is
+actually wrong: `version-mismatch` low, `unreadable` medium, `digest-mismatch`
+and `corrupt` high, and everything critical under `catalog: required`. The two
+clean-fixture tests filter it the same way they already filter `SLSA_`, which is
+this repository's existing convention for a finding about the scanner's own
+posture rather than the repository's.
+
+**3. My own acceptance test hardcoded 8,971 and 11,998** and went red the moment
+a range was drained, which says nothing about whether an indicator was lost. It
+derives the counts now and asserts the invariant that matters: the two stores
+account for everything and overlap nowhere.
+
+**The process failure was mine.** I pushed repeatedly without waiting for CI,
+and the monitor I set expired without firing because each push restarted the
+run. The full suite is the gate that caught all three of these, and it runs on
+Linux in about two minutes. Push, then wait for it.
+
+Local run after the fixes: 927 tests, 2 failures, both the documented
+Windows-only `IOC_KNOWN_C2_DOMAIN` cases that fail on unmodified `main` and were
+absent from CI's own failure list.
+
+
+## Phase 3 pilot: one range drained, and two defects it found (2026-09-16, claude-opus-5)
+
+The 2026-09-06 range is drained: 8,548 entries into the catalog, which now holds
+20,546. The bundle is unchanged at 8,971, the two stores are disjoint, and the
+catalog has no internal duplicates. Its deferral entry is removed; four ranges
+remain.
+
+**Defect 1: the date rule cannot see a bulk backfill, and a flag was the wrong
+fix.**
+
+`firstSeen` is the advisory's PUBLICATION date, and the recovery commands select
+a range by that same date, so every entry in one carries a `firstSeen` inside
+the range. The date rule reads the whole historical corpus as fresh. Measured:
+8,548 entries, all bundle-bound. Across all five ranges that is 65,265 entries
+and about 12.1 MB against a budget of 15,000 and 2 MiB.
+
+Moving the cutoff past the burst was modelled and rejected: a 2026-09-14 cutoff
+leaves 1,215 entries in the bundle, destroying the property the 30-day window
+was chosen for.
+
+The first fix was an importer flag, `--to-catalog`. It worked, and it was wrong:
+the flag told the IMPORTER where to put an entry while `check:feed-partition`
+still asked `partitionTarget`, so the gate rejected all 8,548 correctly placed
+entries as belonging in the bundle. Two opinions about one decision, which is
+the exact failure the routing code's own comments warn against.
+
+The flag is gone. `catalogWindows` in `feed-partition.config.json` is rule 5,
+and the importer, the migration and the gate all read it. It is package-only, so
+a declared window can never strip the offline scan of a domain or a hash, and
+curation still wins over it. A malformed window throws rather than being
+ignored, because ignoring one would send an entire declared backfill to the
+bundle and the budget gate would then fail for a reason that looks nothing like
+the cause.
+
+**Defect 2: the importer deduped against the bundle alone.**
+
+That was correct until the migration moved 11,998 entries into the catalog.
+Those entries are still enforced at scan time, so re-importing one is a
+duplicate, not a new indicator. Deduping against the bundle alone would have
+undone the migration entry by entry: every migrated package would look absent to
+the next import that encountered it, be re-added to the bundle, and end up in
+both stores at once, which also breaks the disjointness the acceptance test
+asserts. `readCommittedCatalog` is now part of the dedupe input.
+
+This one did not fire on the pilot, because the drained range was never in the
+feed, and it would not have fired on any single test either. It was found by
+asking what `existing` meant now that there are two stores.
+
+**Mutation results.** Rule 5: removing the window rule, letting it move atomic
+indicators, making the bounds exclusive, and matching a non-string date all go
+red. The dedupe: deduping against the bundle alone goes red. The dry-run split
+and the atomic refusal were proved earlier in the session.
+
+**Remaining ranges:** 2026-09-02 (9,758), 2026-09-04 (9,937), 2026-09-10
+(8,891), 2026-09-13 (19,158). All four fall inside the declared window, so they
+route to the catalog without any further policy change.
+
+
+## Phase 3 pilot dry run, and a defect it exposed in Task 4 (2026-09-16, claude-opus-5)
+
+**Preconditions confirmed before touching upstream:** catalog 11,998, bundle
+8,971, five deferred ranges. All three match what Phase 2 was supposed to leave,
+so Phase 3 starts from the state the plan assumes.
+
+**The first dry run of the 2026-09-06 range found a defect in my own Task 4
+implementation.** It reported:
+
+```
+  New entries:          8548 (0 to the bundle, 0 to the catalog)
+```
+
+The routing was computed AFTER the `dryRun` early return, so a dry run never
+reached it and both counters stayed at their initial zero. That is worse than
+uninformative. Choosing between importing a large day and deferring it is the
+decision a dry run exists to support, and a summary of zeros reads as "nothing
+would be routed" rather than "not computed yet". An operator acting on it would
+conclude the catalog was not being used at all.
+
+Routing now runs before the early return. It is a pure function over the
+candidates and writes nothing, so there was never a reason for it to sit after.
+`assertNoAtomicInCatalog` moved with it, which is also the better place: a dry
+run is exactly when you want to find out that a range contains an atomic
+indicator that cannot be routed.
+
+The regression that would have caught it is now in place: the dry-run test
+asserts `addedToBundle + addedToCatalog === added`. Cutting the two assignments
+turns it red.
+
+**Phase 4 guidance updated at the same time.** The undrainable-backlog warning
+told the operator to slice or defer, which was the right advice when volume had
+nowhere to go. It now says the catalog absorbs volume first, and that deferral
+is for a block whose CORRECTNESS is undecided rather than one that is merely
+large. The "Written:" line names the catalog and the digest module when entries
+went there, instead of claiming only `src/threat-intel.ts + feed.json`.
+
+The exhaustive-by-default regression Phase 4 Task 3 Step 4 asks for already
+exists in `feed-import.test.ts`, so it was verified rather than added.
+
+
+## Phase 2 Task 5: acceptance, measured (2026-09-16, claude-opus-5)
+
+Phase 2 is complete. Every number below was measured on this branch, not
+projected.
+
+**The corpus is partitioned, not reduced:**
+
+| | Before | After |
+| --- | --- | --- |
+| `src/threat-intel.ts` | 3,717,957 bytes | 1,664,028 bytes |
+| Bundled entries | 20,969 | 8,971 |
+| Catalog entries | 0 | 11,998 |
+| Package, unpacked | 9.91 MB | 6.44 MB |
+| Module import, cold | 104.4 ms | 57.0 ms |
+
+Bundle plus catalog is 20,969, the two sets are disjoint, and all 706 curated
+comment lines survive with no orphaned comment groups.
+
+**The import-time projection was optimistic, and the correction is worth
+recording.** The design modelled import cost as linear at about 3.5 microseconds
+per entry and projected 75 ms falling to 32 ms. Measured like for like on this
+machine, same harness, same Node, three cold processes each: 104.4 ms at 20,969
+entries and 57.0 ms at 8,971. That is a 45 percent reduction against a projected
+57 percent. Per entry the cost is 4.98 microseconds before and 6.35 after, so it
+is NOT linear: a little over 2 ms is fixed ESM overhead and the rest does not
+scale down proportionally. The direction of the claim holds and the magnitude
+does not, which is why this is written down rather than left as the design's
+number.
+
+**The finding fires and clears, proved through the real CLI** rather than
+through the unit that produces it. Scanning a fixture directory with no catalog
+cache emits `THREAT_FEED_CATALOG_MISSING` at `medium`, saying "11998 historical
+indicators were not consulted by this scan". Installing a valid catalog cache
+and re-scanning emits nothing. Both directions matter: a finding that never
+clears is as useless as one that never fires.
+
+**Release immutability:** `repos/homeofe/supply-chain-guard/immutable-releases`
+reads `{"enabled": true, "enforced_by_owner": false}`. `v6.1.3` reads
+`immutable: false`, which is correct and permanent: the setting was enabled
+after that release and does not retrofit. The release-level half of this check
+can only be answered by the FIRST release published after the change, so it is
+carried forward to that release rather than claimed now. Do not try to answer it
+from the repository object's `immutable_releases` field; no such field exists
+there, it returns `null` whether the feature is on or off, and an earlier
+revision of this design was misled by exactly that for a day.
+
+**Catalog verifiability:** `check:catalog` is green, `CATALOG_DIGEST` reads
+version 6.1.3, entryCount 11998, shardCount 1. shardCount is asserted explicitly
+rather than only entryCount: sharding is what removes the catalog's ceiling, and
+a generator that silently stopped sharding would look identical on entry count
+alone. It crosses into two shards during Phase 3.
+
+**Full-suite verdict:** from CI on this branch, which runs the whole suite on
+Node 22 and Node 24. Not claimed from this Windows box, where the suite takes
+hours and where vscode-scanner and two campaigns tests fail on unmodified main
+for environment reasons.
+
+
+## Phase 2 Task 4: the importer routes new entries (2026-09-16, claude-opus-5)
+
+Without this the bundle starts growing again on the next daily import and the
+migration is undone within weeks, silently, because nothing else looks at where
+a newly imported entry landed.
+
+`routeEntries(entries, config)` splits accepted candidates through
+`partitionTarget`, the same function the migration and the placement gate use.
+The importer has no opinion of its own: if it did, an entry could be in the
+bundle to the importer and in the catalog to the gate, and `check:feed-partition`
+would go red on a file nobody edited by hand. Catalog-bound entries are appended
+to `data/threat-catalog.jsonl` in the canonical field order, the digest module is
+regenerated, and the summary reports both destinations so a run that silently
+sends everything one way is visible.
+
+Both stores roll back together on failure. Rolling back only the source would
+leave the catalog holding entries the bundle no longer knows about, which is a
+worse state than either failure alone.
+
+**The plan's own test for this task contradicted the design.** It asserted that
+a non-package IOC is never routed to the catalog. Design section 4.2 says the
+opposite, deliberately: rule 1 is bounded by CURATION rather than by type,
+because an unconditional "every non-package entry stays" is an unbounded rule
+that would grow the bundle forever with no mechanism to stop it. Measured on the
+v6.1.3 feed, 401 of 404 non-package entries already carry curation and none of
+the other 3 is old enough to move, so the bound costs nothing.
+
+That was checked rather than assumed, in both directions: `partitionTarget` has
+no type check, and the design's claim that "check:feed-partition fails the build
+if an atomic indicator would leave the bundle" is TRUE, at
+`scripts/check-feed-partition.mjs:76`. The migrated catalog is 11,998 entries and
+100 percent `package`, so nothing atomic moved.
+
+**One gap was real, and is closed.** The gate fires at the next build, which is
+the wrong moment for an automated daily import: the tree has already been
+rewritten, and the job leaves a broken repository behind for someone to untangle.
+`assertNoAtomicInCatalog` refuses before anything is written, and names the
+offending indicator.
+
+**Mutation results**, baseline and post-restore green at 23 tests. Cuts that go
+red: routing everything to the bundle (the migration undone), routing everything
+to the catalog, the catalog line losing its canonical field order, and the
+atomic-indicator refusal.
+
+**One cut initially stayed green, which was the finding.** The refusal was
+covered only by a test asserting the string appeared before the write in the
+source. Replacing the condition with `if (false)` left that string in place
+inside a dead branch, so a source-order test walked straight past it. The
+refusal is now an exported function with behavioural tests and a control in the
+other direction, and the cut goes red on four of them.
+
+**The fixtures had to become real repositories.** The importer now reads
+`feed-partition.config.json`, `data/threat-catalog.jsonl` and
+`src/catalog-digest.ts`, and two test fixtures built a temp root without them.
+Falling back to a default when the config is missing was considered and rejected:
+it would send every imported entry to the bundle, which is precisely the
+regression this task prevents, and it would do it without saying anything.
+
+
+## Phase 2 Task 3: the migration is applied (2026-09-16, claude-opus-5)
+
+11,998 indicators moved from the compiled bundle into the catalog. This is the
+step the earlier entry in this file recorded as BLOCKED, and it is unblocked
+because Phase 1 tasks 5 to 12 shipped the runtime path that reads them back.
+
+**Measured after the move:**
+
+| | Before | After |
+| --- | --- | --- |
+| `src/threat-intel.ts` | 3,717,957 bytes | 1,664,028 bytes |
+| `feed.json` | 20,969 entries | 8,971 entries |
+| `data/threat-catalog.jsonl` | 0 entries | 11,998 entries |
+| `CATALOG_DIGEST.entryCount` | 0 | 11,998 |
+| Curated comment lines | 706 | 706 |
+| Orphaned comment groups | 0 | 0 |
+
+Bundle plus catalog is 20,969, the two sets are disjoint, and every one of the
+11,998 committed catalog lines passes the real `isValidFeedIOC`, so nothing was
+quarantined on the way out.
+
+**The safety net is now live.** With the catalog non-empty, a scan that cannot
+consult it reports `THREAT_FEED_CATALOG_MISSING` at `medium`, saying "11998
+historical indicators were not consulted by this scan". In Phase 1 that path was
+deliberately silent because there was nothing to miss.
+
+**Five tests failed on the migration, all of them correctly.** They asserted the
+Phase 1 end state, and they were rewritten to assert the Phase 2 one rather than
+relaxed:
+
+- the two "catalog is empty, bundle unchanged" assertions became "bundle plus
+  catalog accounts for every indicator, with no overlap", plus a check that the
+  shipped digest describes the shipped catalog
+- "emits catalog lines the real isValidFeedIOC accepts" was validating the PLAN's
+  output, which is now empty. It now validates the COMMITTED catalog file, which
+  is the artifact that actually ships
+- the real-file collision control went red exactly as designed. The comment on
+  it said that if it ever failed the collision had gone away and both halves
+  should be re-derived rather than deleted. It had: the migration removed the
+  duplicated importer headers whose groups were fully moved, which is what it
+  was for. The synthetic case still covers the hazard
+- "the plan still moves something" became an IDEMPOTENCE test, which is the more
+  useful property: re-running at the committed cutoff moves nothing, because
+  everything that qualified is already across. A second test moves the cutoff
+  forward and asserts work IS found, so the idempotence is not passing because
+  the planner is inert for some other reason
+
+**`tsc` caught what the tests could not.** `CATALOG_DIGEST` is generated with
+`as const`, so `entryCount` carries the literal type of whatever the release
+pins. `entryCount === 0` became a type error the moment the catalog stopped
+being empty. Vitest does not typecheck, so 247 tests passed while `npm run
+build` failed. The type is widened at the use site with a comment, because the
+comparison is a real runtime condition over a generated value.
+
+
+## Phase 1 Task 12: acceptance, and the claim the design rests on (2026-09-16, claude-opus-5)
+
+Phase 1 is complete: tasks 1 to 12. The runtime catalog path exists end to end,
+and detection is unchanged because the shipped catalog is still empty.
+
+**The acceptance test proves the one claim everything else depends on:** an
+indicator that exists ONLY in the catalog is enforced exactly as one in the
+bundle. Moving 11,998 indicators out of the compiled bundle is safe only if that
+holds, and until now nothing asserted it.
+
+The proof runs in both directions, through the matchers the scanner itself uses:
+
+- the fixture indicators are absent from the bundled feed, so nothing can pass
+  without the catalog doing the work
+- without the catalog, neither the npm package, the PyPI package nor the domain
+  matches
+- with the catalog, all three match, and `checkThreatIntel` produces a finding
+  for a file referencing the catalog-only domain
+- the effective detection-set count includes them
+
+**A trap this repository has recorded before cost a debugging pass anyway.** A
+BARE package value means the npm namespace, and bare npm entries resolve through
+`matchBareNpmIOC`; `matchPackageIOC("npm", ...)` requires an explicit `npm:`
+prefix and returns null for a bare entry. The first version of this test asked
+the wrong resolver and read exactly like a missing indicator, which is what the
+existing note warns about. The test now uses `matchBareNpmIOC` for the bare npm
+entry and `matchPackageIOC` for a `pypi:`-prefixed one, so both paths are
+covered and the comment says why.
+
+**Phase 1 acceptance, measured:**
+
+| Criterion | Result |
+| --- | --- |
+| Catalog-only indicator detected | yes, npm and pypi and domain |
+| Detected without the catalog | no, for all three |
+| Absence reported, never silent | `THREAT_FEED_CATALOG_MISSING` |
+| Bundle unchanged | 20,969, matching `feed.json` |
+| Committed catalog | empty, `CATALOG_DIGEST.entryCount` 0 |
+| Digest reproducible | byte-identical across runs |
+| Gates | six in `prebuild`, all green |
+
+**What is still NOT true:** no indicator has moved. `feed.json` still carries
+all 20,969 and the catalog is still empty, so a bare install detects exactly
+what it detected before this branch. That is the correct Phase 1 end state, and
+Phase 2 is what changes it, now that there is something to change it into.
+
+
+## Phase 1 Task 11: publish the catalog assets from CI (2026-09-16, claude-opus-5)
+
+The release job builds `catalog-index.json` and every `catalog-*.json.gz` and
+attaches them to the GitHub Release in the same `gh release create` call that
+creates it. Releases on this repository are immutable, so there is no later step
+that could attach a forgotten asset.
+
+**The order inside the build step is the whole point.**
+`generate-catalog.mjs --check` compares the COMMITTED `src/catalog-digest.ts`
+against what the committed catalog produces. Run after the generator has already
+rewritten that file, it compares the generator's output to itself and can never
+fail. A release could then ship a digest that does not describe the assets
+beside it, every client would refuse the download, and because the anchor is
+compiled into the package it could not be corrected without cutting a new
+version. `--check` runs first, then the generator. There is a test that pins
+that order, and cutting it goes red.
+
+**The generator must stay dependency-free.** The release job does not run
+`npm ci`; it checks out, sets up node and runs the script. An import of anything
+outside `node:` and its own siblings would fail only at release time, on a tag,
+where the version is already burned and the tag cannot be moved. A test asserts
+every import specifier in the generator is `node:` or relative, and it goes red
+when one is changed to a package name.
+
+**Mutation results**, baseline and post-restore green at 6 tests. Three cuts:
+`--check` moved after the generator, the assets dropped from the create command,
+and the generator given an external dependency.
+
+YAML validity was checked by parsing the workflow after the edit, not by
+reading it: an invalid key makes the ENTIRE file invalid and no job runs at all,
+which presents as "workflow file issue" rather than as a failing step. All six
+jobs still parse and the release job's steps are in the intended order.
+
+
+## Phase 1 Task 10: feed refresh installs the catalog (2026-09-16, claude-opus-5)
+
+`refreshFeed` now fetches, verifies and installs the catalog after the feed.
+This is the piece that writes the cache Task 8 reads, so with it the runtime
+path is complete end to end.
+
+Every link is checked against an anchor the serving side does not control: the
+index must hash to `CATALOG_DIGEST.sha256`, which is compiled into the package,
+and each shard must hash to the digest that index recorded. Nothing is written
+until every shard has verified, so a run that fails halfway leaves the previous
+catalog in place rather than a partial one. The cache records the entries
+checksum Task 8 verifies; without it that check is skipped and the corrupt
+reason can never fire.
+
+**The catalog follows the feed.** The plan hardcodes the public release URL.
+`catalogTemplateForFeedUrl` derives the catalog location from where the feed was
+fetched, falling back to the release template only for the default feed URL.
+Two reasons, one of them a bug the plan would have shipped:
+
+- Someone pointing the tool at a mirror or an air-gapped copy is asking for THAT
+  source's view of the corpus. Reaching past it to a hardcoded public host would
+  mix two origins in one scan without saying so.
+- `src/__tests__/issue-170-feed-bounds.test.ts` mocks `node:https` by forwarding
+  to `node:http` against a loopback server. A hardcoded public host would have
+  made every one of those unit tests issue a real outbound request.
+
+**Failures are recorded, not swallowed.** The plan's catch discards the reason,
+which makes a 404, a truncated shard and a digest mismatch indistinguishable.
+The last one says the published asset does not match what this release pins,
+which is either a broken publish or someone replacing the scanner's detection
+data, and collapsing all three into one silent line hides exactly the case worth
+seeing. `RefreshResult.catalogError` carries it and the CLI prints it.
+
+A catalog failure never fails the refresh: the caller asked for the feed and got
+the feed, and a missing catalog is reported by the scan itself through
+`THREAT_FEED_CATALOG_MISSING`.
+
+**The happy path is proved against the real assets.** The test builds the index
+and shards with the generator the release runs, over the committed catalog, at
+the committed version, so the index digest IS `CATALOG_DIGEST.sha256` by
+construction rather than by a fixture agreeing with itself.
+
+**An existing test had to change**, which the plan does not mention.
+`feed.test.ts` asserted `expect(https.get).toHaveBeenCalledOnce()`, which stops
+meaning what it says once refreshFeed fetches a second document over the same
+mocked transport. It now asserts the FEED call specifically.
+
+**Mutation results**, baseline and post-restore green at 12 tests. Cuts that go
+red: trusting the index digest, trusting each shard digest, not writing the
+entries checksum, letting a catalog failure fail the whole refresh (5 tests),
+and always using the public release template.
+
+**One cut stays green by design.** Removing the `kind` comparison on the index
+changes nothing, because any document whose kind differs hashes differently and
+is rejected by the digest check that precedes it. The `Array.isArray(shards)`
+half of the same condition IS load-bearing, since the loop indexes it. The
+comment in the code says which half is which, so the next person to cut it is
+not left concluding the tests are weak.
+
+
+## Phase 1 Task 9: THREAT_FEED_CATALOG_MISSING and the catalog knob (2026-09-16, claude-opus-5)
+
+The safety net. Without it a scan that consulted a fraction of the corpus
+reports exactly the same clean result as one that consulted all of it, which is
+what makes moving indicators out of the bundle unsafe to ship.
+
+`catalogFindings(state, mode)` in `src/feed.ts`, wired into `src/scanner.ts`
+directly beside the staleness finding and above the path-ignore filter, carrying
+no `file` for the same reason that one does. `catalog: optional | required` is a
+top-level scalar in the policy file, in `policy-schema.json`, and documented in
+the README.
+
+**Severity follows the design, not the plan.** The plan specified a flat
+`medium` unless `required`. The design's table distinguishes `digest-mismatch`,
+and its reason is right: that state is never normal, it means the cached catalog
+was built from a different catalog than this release pins. The same argument
+applies to `corrupt`, which Task 8 added. Both are `high`, the other three are
+`medium`, and `required` raises everything to `critical`. The distinction is the
+only thing telling an operator whether to run a refresh or to go and look at the
+machine.
+
+**Two silences are deliberate, because a false positive gets a scanner switched
+off and that is worse than the finding being absent:**
+
+- An empty-but-valid catalog is AVAILABLE, not missing, in either mode. That is
+  what keeps `catalog: required` satisfiable in the phase where the published
+  catalog is still empty.
+- While the release pins an empty catalog, an unavailable catalog is silent
+  under `optional`: there is no coverage to miss, so the finding would name zero
+  indicators on every scan. Under `required` it still fires, because that
+  setting is a statement about the mechanism being in place.
+
+**A vacuous test was caught and fixed.** The severity assertions were written
+through `catalogFindings` and guarded with `if (optional.length > 0)`. While the
+catalog is empty that path returns nothing, so every severity assertion sat
+behind a condition that is never true: the whole medium-versus-high distinction
+was untested and would have stayed untested until the catalog first became
+non-empty. `catalogSeverityFor(reason, mode)` is now exported and asserted
+directly, with a separate wiring test that the finding carries what the map
+returns.
+
+**The policy parser needed a step the plan omits.** `catalog` is the one
+top-level SCALAR key, and every other top-level key opens a section, so without
+a branch ahead of the blanket rejection a valid `catalog: required` produced a
+warning and was dropped. It is deliberately NOT in `KNOWN_SECTIONS`, which would
+make `catalog:` open a section. An unrecognised value is reported rather than
+ignored: a typo would otherwise leave the default in place while the author
+believes the catalog is required, which is exactly the failure the setting
+exists to prevent.
+
+**Mutation results**, baseline and post-restore green at 21 tests. Eight cuts:
+firing when the catalog was consulted, removing the empty-catalog silence,
+extending that silence to `required`, the plan's flat `medium`, `required` no
+longer escalating, giving the finding a `file` so the ignore filter can drop it,
+accepting any policy value, and removing the parser branch.
+
+
+## Phase 1 Task 8: the catalog cache, the merge, and availability (2026-09-16, claude-opus-5)
+
+This is the task that makes the catalog reachable. `loadThreatIntel()` now reads
+a second cache file, `threat-catalog.json`, validates it, merges it and records
+why it did not when it did not. `lastCatalogState()` reports
+`absent | unreadable | version-mismatch | digest-mismatch | corrupt`.
+
+Detection is still unchanged in practice, because nothing writes that cache yet
+(Task 10) and the catalog is still empty. What changed is that the path exists
+and is proven.
+
+**Merge order is a decision, not an accident.** The catalog is merged LAST.
+`mergeFeeds` is first-wins on `type:value`, so the compiled bundle and the
+fresher feed stay authoritative for any indicator all three carry, and a
+downloaded document cannot downgrade a severity that ships inside the package.
+There is a test that writes a bundled indicator into the catalog at severity
+`info` and asserts the bundled severity survives.
+
+**The plan's digest check was not integrity, and now something is.** As
+specified, the cache records `sha256` and the reader compares it to
+`CATALOG_DIGEST.sha256`, a constant compiled into this package. That compares a
+constant to a constant: it catches a cache built for a different release, which
+is its job, but it can say nothing about the `entries` sitting beside it.
+Anyone able to write into `.scg-cache` could edit or truncate the entry list
+under a valid-looking header and have it merged. Truncation is the dangerous
+direction, because removing indicators disables detection silently and no other
+check in the function would notice.
+
+The cache now also records a `checksum` over the canonical JSON of its entries,
+which the reader recomputes. A truncated or edited cache is refused as
+`corrupt`. What this does NOT defend against is a writer who edits the entries
+and recomputes the checksum too; nothing self-contained in a cache file can, and
+the real anchor stays the digest chain verified at download time. It closes the
+accidental-corruption and naive-edit cases, and the comment in the code says
+exactly that rather than implying more.
+
+**A second reader was already drifting.** `getDetectionSetProvenance()` counted
+the bundle alone unless a FRESH feed cache existed, so a merged catalog would
+have been reported as no coverage at all: with a stale or absent feed cache it
+would print 8,971 while the process matched against 20,969. It now asks
+`loadThreatIntel()` for the effective set, which is memoized on the same inputs.
+
+**The memo key gained the catalog stamp.** Without it a catalog arriving after
+the first load stays invisible until the FEED cache happens to change, and the
+process keeps serving a set built before the catalog existed. Two tests cover
+it, one for a catalog appearing and one for a catalog being removed.
+
+**Mutation results**, baseline and post-restore green at 17 tests. Eight cuts:
+the version check, the index-digest check, the entries checksum, the catalog
+stamp in the memo key, merging the catalog first so it can override the bundle,
+the malformed-entry quarantine, provenance counting the bundle alone, and the
+structural entries-array guard.
+
+**One cut initially stayed green, which was the finding.** Removing the
+`Array.isArray(cached.entries)` guard left every test passing, because the test
+for it wrote `entries: 7` and, with the guard gone, still reached `"unreadable"`
+by way of the exception handler rather than the guard. The guard's real effect
+is ORDERING: shape is checked before provenance, so a malformed document is
+reported as unreadable rather than as built for the wrong release, which would
+send whoever reads it looking for a stale download instead of a corrupt file.
+A test that sets both a wrong version and a malformed body now pins that, and
+the cut goes red.
+
+
+## Phase 1 Task 7: the catalog generator and its digest (2026-09-16, claude-opus-5)
+
+`scripts/generate-catalog.mjs` builds the publishable catalog and the committed
+digest. The chain of trust is package -> index -> shard: `CATALOG_DIGEST` in
+`src/catalog-digest.ts` is the digest of the INDEX, and the index carries a
+digest for each shard, so a replaced asset at any level is caught. The digest
+ships inside the npm package, which makes integrity independent of release-asset
+mutability: the anchor is the immutable npm artifact and the tagged tree, not an
+asset that `--clobber` can replace.
+
+`check:catalog` is now the fifth gate in `prebuild`, between `check:feed-budget`
+and `check:handoff`.
+
+**End-to-end proof rather than unit tests alone.** The generated gzip shard was
+decoded by the REAL client `decodeCatalogBody` from Task 6 and parsed by the
+REAL `parseFeedPayload(text, "catalog")` from Task 5, which accepted the empty
+catalog. That is design defect #3 demonstrating its own fix against a real
+generated artifact instead of a fixture.
+
+**Four corrections to the plan:**
+
+- **The key allowlist is imported, not mirrored.** The plan's draft listed
+  eleven allowed fields, including the legacy `note` and `ecosystem` that Phase 1
+  had already removed from `FEED_ENTRY_KEYS`. A publishing gate built from a
+  stale copy of the field list would have allowed exactly the fields the loader
+  refuses to read back. It now imports `CATALOG_KEY_ORDER` from
+  `scripts/feed-migrate.mjs`, so one definition serves the migration and the
+  gate, and a test asserts the two agree in both directions.
+- **No `generatedAt`.** The design's sample JSON shows one. A clock-derived
+  field would make the output a function of the day it ran, so `check:catalog`
+  would go red on an untouched tree the next morning. Same reasoning as the
+  committed bundle cutoff.
+- **The `--check` comparison strips CR on both sides**, and
+  `src/catalog-digest.ts` is pinned to LF in `.gitattributes`. An exact `!==`
+  on a Windows checkout reports a freshly generated file as stale.
+- **Hygiene and size are checked before anything is written or compared**, so a
+  refused run leaves no half-written asset and never reports "up to date" about
+  a catalog it would have refused to publish.
+
+**The hygiene gate reports line numbers and never values.** It runs in a public
+CI job, so a message echoing the offending string would publish exactly what the
+check exists to keep unpublished. There is a test asserting the value does not
+appear in the output.
+
+**Mutation results**, baseline and post-restore green at 31 tests. Nine cuts,
+each red on its own tests: the always-one-shard floor, ceil to floor when
+sharding, digesting the gzip bytes instead of the json, the key allowlist, the
+private-shape check, echoing the value in the report, letting the generator
+floor drift above the client's, re-admitting `note`/`ecosystem`, and the
+per-shard budget off by one.
+
+With the catalog still empty this produces version 6.1.3, entryCount 0,
+shardCount 1, and a stable index digest. Detection is unchanged: nothing reads
+the catalog yet. That is Task 8.
+
+
+## Phase 1 Tasks 5 and 6: the payload parser and bounded decompression (2026-09-16, claude-opus-5)
+
+The first two of the eight tasks that make the catalog reachable at runtime.
+Both land in `src/feed.ts`, neither depends on the other, and neither changes
+detection: nothing calls the new code yet.
+
+**Task 5.** `parseFeedPayload` takes `expectedKind: "feed" | "catalog" = "feed"`.
+A document declaring no `kind` is a feed, which is what every published
+`feed.json` is today, so the default keeps all existing callers exact. The
+discriminator exists because both documents are fetched over the same transport
+from the same origin and carry different trust, so serving one where the other
+was asked for must not pass silently. The empty-entries check (design defect #3)
+is relaxed for LENGTH only, and only for a catalog: a missing or non-array
+`entries` is still a hard reject for both kinds. `FEED_DOC_KEYS` gained `kind`.
+
+**Task 6.** `decodeCatalogBody` inflates a gzip body with
+`maxOutputLength: CATALOG_MAX_DECOMPRESSED_BYTES` (64 MiB).
+
+**Three corrections to the plan, each measured rather than reasoned:**
+
+- **The plan's own mutation proof could not go red.** Its Step 5 raises
+  `CATALOG_MAX_DECOMPRESSED_BYTES` to 1 GiB, but the bomb fixture is sized
+  FROM that constant (`Buffer.alloc(CATALOG_MAX_DECOMPRESSED_BYTES + 1024)`), so
+  the bomb grows with the cap, the output still exceeds it, and the test stays
+  green while allocating and gzipping a gigabyte. The cut here mutates only the
+  literal passed to `gunzipSync`, leaving the exported constant alone.
+- **The design and the plan disagreed on an off-by-one.** Design section 4.3
+  mandates `maxOutputLength: N + 1`; the plan's snippet has no `+ 1`. Measured
+  on Node v24.14.1: `maxOutputLength: N` accepts exactly N bytes and throws at
+  N + 1. `archive-extractor.ts` uses `+ 1` only because it compares the length
+  itself afterwards; without that comparison the `+ 1` lets exactly one byte
+  over the cap through. The plan's form is the self-consistent one and is what
+  shipped.
+- **The plan's error regex matched only by accident.** The real over-cap message
+  is "Cannot create a Buffer larger than 67108864 bytes", which contains neither
+  "maxOutputLength" nor "size"; `/maxOutputLength|buffer|size/i` matched it
+  solely through the word "buffer". The code now discriminates on
+  `code === "ERR_BUFFER_TOO_LARGE"` and keeps the regex as a fallback.
+
+**A control the plan omitted.** A body at exactly the cap must be ACCEPTED.
+Without it the bomb test passes identically whether the cap is 64 MiB or one
+byte, and the off-by-one decision above is untested.
+
+**A limit worth writing down:** the uncompressed branch of `decodeCatalogBody`
+applies no size check. That is safe only because every caller arrives through
+`fetchHttpsBuffer` under `FEED_REMOTE_LIMITS`, whose 32 MiB wire cap sits below
+the 64 MiB expansion cap. Called on a locally read file the premise is gone, and
+the comment in the function says so.
+
+**Mutation results**, baseline and post-restore green at 73 tests. Eight cuts,
+each red on its own test: the kind discriminator, empty allowed for both kinds,
+empty refused for both, the null guard on `.kind`, the gunzip literal raised,
+the gunzip literal lowered, the gzip sniff removed, and corrupt gzip reported as
+over-cap. The cap is therefore proven in both directions.
+
+`check:self-scan` went red on the `FEED_DOC_KEYS` edit and was regenerated. A
+pre-implementation survey predicted it would not, which was wrong: the ordinary
+rule that any `src/` change restales it held.
+
+
+## BLOCKED: the Phase 2 migration cannot land yet (2026-09-16, claude-opus-5)
+
+**The migration was run against the real file, verified, and then reverted. It
+is not in this branch.** What is here is the tooling, which is inert: the cutoff
+is still the Phase 1 placeholder, `node scripts/feed-migrate.mjs` reports
+`move 0`, and all 20,969 entries remain in the bundle.
+
+**Why it was reverted.** The migration moves 11,998 indicators out of the
+compiled bundle, and nothing in the shipped package can read them back:
+
+- `THREAT_FEED_CATALOG_MISSING`, `kind: "catalog"`, `catalogUrl` and
+  `catalogDigest` appear only in the design and the three plan documents. There
+  is no occurrence of any of them anywhere in `src/`.
+- The only reference to the catalog in `src/` is `isInertThreatCatalogFile`,
+  which stops the scanner flagging the catalog as content. It is an exemption,
+  not a loader.
+- `data/` is not in the `files` array of `package.json`, so the catalog is not
+  published to npm either.
+
+Running the migration and packing drops the published package from 9.91 MB to
+6.40 MB, and the scanner would carry 8,971 indicators instead of 20,969. That is
+a 57 percent coverage loss with no error, no warning and no finding: exactly the
+silent false negative this repository exists to prevent.
+
+**This is an ordering violation, not a defect in the migration.** Design section
+7 is explicit that the phases are "ordered so coverage never silently drops",
+and it puts the runtime consumption path in **Phase 1**: "Add bounded gzip
+decompression, the `kind` check, the empty-catalog allowance, the digest file,
+the second cache, the merge and the availability conditions. Add
+`THREAT_FEED_CATALOG_MISSING` and the `catalog` policy knob." It then says of
+Phase 2: "This is the only step that reduces what a bare install detects, and it
+lands after the finding that reports it."
+
+The finding that reports it does not exist yet.
+
+**What actually landed in Phase 1 was Tasks 1 to 4 of twelve**: the inert
+catalog file, the shared partition policy, the placement gate and the budget
+gate. Tasks 5 to 12 are still open, and they are the ones that make the catalog
+reachable at runtime:
+
+| Task | Title |
+| --- | --- |
+| 5 | Teach the payload parser about catalogs |
+| 6 | Bounded gzip decompression in the transport |
+| 7 | Generate and ship the catalog digest |
+| 8 | Catalog cache, merge, and what counts as unavailable |
+| 9 to 12 | remaining Phase 1 tasks |
+
+Phase 1 was reported as fully landed in an earlier note in this file. That was
+wrong: it described the four tasks that were batched into the two pull requests,
+not the phase.
+
+**Next action, and it is a decision for the owner.** Phase 2's migration step is
+blocked until Phase 1 Tasks 5 to 12 ship. Phases 3 and 4 are about draining the
+five deferral ranges and retiring bulk deferral, so neither of them unblocks it
+either. Nothing else in Phase 2 is blocked: Task 4, the importer routing, does
+not move existing entries and can proceed.
+
+The migration itself is verified and reproducible in one command once the
+loader exists. Measured on the real file at a 2026-08-17 cutoff: 11,998 moved,
+8,971 kept, 20,969 accounted for, 0 indicators lost or duplicated, 0 orphaned
+comment groups, all 706 curated comment lines preserved, `src/threat-intel.ts`
+3.54 MB to 1.58 MB, and the rewritten source re-evaluated through the real
+`extractBundledEntries` to exactly 8,971.
+
+
+## Phase 2 Task 3: the migration writer, and where it left the plan (2026-09-16, claude-opus-5)
+
+`applyMigration` plus the CLI and `scripts/release-prepare.mjs`. No entry has
+moved yet: this commit is the tooling, with the cutoff still at the Phase 1
+placeholder, and `node scripts/feed-migrate.mjs` reports `move 0` against the
+real file. That is the control the plan asks for, and it proves the migration is
+inert until the cutoff is deliberately moved rather than firing on whatever the
+config happens to say.
+
+**The plan's own sketch of this task carried the bug described in the previous
+entry**, and three more. Written out, it identified both entry lines and header
+lines by string identity, joined the result with `"\n"` (which rewrites every
+line ending on a Windows checkout, turning a removals-only diff into a whole-file
+rewrite), and rebuilt each catalog entry by running `/(\w+): "([^"]*)"/g` over
+the source line. The implementation differs on all four points:
+
+- lines are identified by index, not text
+- the original line ending is detected and preserved
+- catalog entries come from `extractBundledEntries`, the same `node:vm`
+  evaluation the build gates use, rather than from a regex over TypeScript
+- the parser and the evaluator are zipped by position and that correspondence is
+  CHECKED entry by entry, because if the two walks ever diverged the migration
+  would write one indicator into the catalog while deleting a different one from
+  the bundle, and both files would still look entirely plausible
+
+**Applying is opt-in.** The sketch wrote by default with `--dry-run` to opt out.
+For an operation that rewrites a 3.7 MB source file and appends to a published
+artifact, the safe outcome should be what happens when the flag is forgotten or
+misspelled, so `--write` applies and everything else is a dry run. `--dry-run` is
+still accepted, and an unrecognised option exits 2 rather than being ignored.
+
+**The catalog accumulates.** Each release moves the cutoff forward and migrates
+again, so the CLI appends. Overwriting would silently drop everything a previous
+release moved. Appending is only safe while the two sets are disjoint, which
+holds by construction because a migrated entry is no longer in the bundle to be
+moved twice, and "by construction" is exactly the kind of claim that stops being
+true unnoticed, so it is checked before the append.
+
+**`data/*.jsonl` is pinned to LF in `.gitattributes`.** The catalog is published
+and its digest is verified by consumers; with `core.autocrlf=true` a Windows
+checkout would rewrite it to CRLF and change every line ending, so a file that is
+byte-correct on Linux would fail its own integrity check here. Same reasoning as
+the vendored CycloneDX schemas already in that file.
+
+**`release-prepare.mjs` refuses to move the cutoff backwards.** Doing so does not
+return migrated entries to the bundle, since they are already in the catalog and
+gone from the source. It only makes the placement gate red on entries that are
+exactly where the policy put them, reporting a violation nobody introduced.
+`cutoffFor` takes `now` as a parameter and never reads the clock.
+
+**Mutation results**, baseline and post-restore green at 35 and 10 tests. Six
+cuts on `applyMigration`: canonical key order, the unknown-field refusal, header
+removal, the parser/evaluator check, the empty-bundle refusal, and headers by
+text instead of index. All red, each on its own test. Four cuts on
+`release-prepare`: date validation, window validation, the backwards guard, and
+copying rather than mutating the caller's config. All red.
+
+**`catalog:generate` does not exist and is not needed yet.** The plan's sequence
+named it, but sharding is Phase 3 and 11,998 entries sit far below the 50,000
+shard size. `applyMigration` writes `data/threat-catalog.jsonl` directly, which
+is the exact path Phase 1 bound the scanner exemption and the placement gate to.
+
+
+## Phase 2 Tasks 1 and 2: the migration parser and planner (2026-09-16, claude-opus-5)
+
+`scripts/feed-migrate.mjs` reads `src/threat-intel.ts` at the LINE level rather
+than through `extractBundledEntries`, which evaluates the chunk arrays in a
+`node:vm` sandbox and therefore discards every comment. The comments are the
+point: the chunk literals carry hundreds of lines of curated rationale that
+`FeedIOC` has no field for.
+
+**A defect was caught before it was written.** The planner was going to identify
+lines by string identity. Entry lines are unique in this file (20,969 distinct
+of 20,969), so that looked safe. Header lines are not: the importer writes the
+same batch header into every chunk it touches on a given day, so 745 distinct
+texts cover 792 header lines. Two of those texts head a fully-moved group AND a
+group that still keeps entries. Deleting headers by text would have stripped the
+header from the second one, detaching **251 entries** from their provenance with
+no error and no diff anyone would question. Everything is now identified by
+zero-based line index, which is correct whether or not two lines read alike, and
+does not depend on the empirical uniqueness of entry lines either.
+
+**Two guards were disarmed by a cut and stayed green**, which is the finding
+rather than a reassurance:
+
+- `group.entries.length > 0` in `removeHeader` was unreachable: `parseChunks`
+  opens a group only on an entry line, so an entry-less group never exists. The
+  test covering it asserted `.every()` over an empty array, so it passed no
+  matter what the code did. The guard is gone and the test now asserts the
+  structural fact that makes it unnecessary.
+- `!group.isCurated` in the same expression could not change the result either,
+  because rule 3 already makes every entry under a curated block immovable, so
+  `moved` is always 0 there. Its test used a fixture carrying a `campaign`
+  field, so rule 2 kept the entry and the curated path was never exercised. It
+  is now an ASSERTION that throws, which is honest about being unreachable and
+  is strictly stronger: if rule 3 is ever narrowed the damage is removed curated
+  ENTRIES, not a removed header, so the migration stops outright instead of
+  quietly orphaning rationale. Verified: cutting rule 3 makes it fire against
+  the real file.
+
+**Mutation results**, baseline and post-restore both green at 20 tests. Rule 3
+cut: 3 red. `removeHeader` equality cut: 2 red. Entry-less groups made possible:
+1 red. Headers identified by text: 2 red. Entries identified by text: 1 red.
+The curated assertion cut stays green by design and is not claimed as proven.
+
+**Real-file dry run at a 30-day cutoff**: 11,998 move, 8,971 keep, 20,969 total
+matching `feed.json`, 0 curated entries in the move set, 44 headers removable,
+13 groups split. The design projected 11,998 / 8,971 / 20,969 and 45 / 14; the
+load-bearing numbers match exactly and the two header counts differ by one from
+a slightly different grouping rule.
+
+Nothing is applied yet. `feed.json` still holds all 20,969 entries and the
+catalog is still empty, so detection is unchanged by this commit.
+
+
 ## Code-review findings on Tasks 1 to 4, all nine applied (2026-09-16, claude-opus-5)
 
 A structured review of the whole change found nine issues, four of them

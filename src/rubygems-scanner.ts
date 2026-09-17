@@ -33,7 +33,7 @@ export function isRubyGemsFile(filename: string): boolean {
 /**
  * Scan RubyGems files in a directory.
  */
-export function scanRubyGemsFiles(dir: string): Finding[] {
+export function scanRubyGemsFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const gemfile = readOptionalUtf8File(
     dir,
@@ -49,12 +49,12 @@ export function scanRubyGemsFiles(dir: string): Finding[] {
   );
   if (gemfile === null && lockfile === null) return findings;
 
-  const feed = loadThreatIntel();
+  const iocFeed = feed ?? loadThreatIntel();
   if (gemfile !== null) {
-    findings.push(...scanGemfileContent(gemfile, GEMFILE, feed));
+    findings.push(...scanGemfileContent(gemfile, GEMFILE, iocFeed));
   }
   if (lockfile !== null) {
-    findings.push(...scanGemfileLockContent(lockfile, GEMFILE_LOCK, feed));
+    findings.push(...scanGemfileLockContent(lockfile, GEMFILE_LOCK, iocFeed));
   }
 
   return findings;

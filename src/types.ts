@@ -552,6 +552,16 @@ export interface ThreatIntelSource {
 // ---------------------------------------------------------------------------
 
 export interface PolicyConfig {
+  /**
+   * Whether the downloadable threat catalog must be present.
+   *
+   * `optional` (the default) reports a finding when the catalog could not be
+   * consulted and carries on. `required` raises that finding to `critical`, so
+   * a scan that could not consult the historical corpus fails the default
+   * `fail-on: critical` gate rather than reporting a narrower result as success.
+   */
+  catalog?: "optional" | "required";
+
   rules?: {
     disable?: string[];
     /**
@@ -747,6 +757,12 @@ export interface ScanOptions {
   checkRegistry?: boolean;
   /** Use bundled feed only without merging refreshed local cache (--hermetic) */
   hermetic?: boolean;
+  /**
+   * Directory for the threat-feed and catalog caches. Defaults to `.scg-cache`
+   * under process.cwd(). Pass an isolated directory when the scan target must
+   * not control the catalog cache (the GitHub Action does this).
+   */
+  cacheDir?: string;
   /**
    * Compute the two-tier gated verdict and composite risk score (--two-tier).
    *

@@ -85,7 +85,7 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance, lastCatalogState } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
 import { getChangedFiles } from "./diff-scanner.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
@@ -95,7 +95,7 @@ import { validateFindings } from "./active-validation.js";
 import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
-import { feedFreshness, feedStalenessFindings } from "./feed.js";
+import { feedFreshness, feedStalenessFindings, catalogFindings } from "./feed.js";
 import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
 import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
@@ -280,8 +280,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
   }
 
-  // v4.5: Load threat intelligence feed
-  const threatFeed = loadThreatIntel();
+  // v4.5: Load threat intelligence feed. The Action passes an isolated cacheDir
+  // under RUNNER_TEMP; the CLI default remains process.cwd() `.scg-cache`.
+  // Catalog availability is snapshotted here: nested scanners must not reload
+  // from a different directory and overwrite lastCatalog before the finding.
+  const threatFeed = loadThreatIntel(options.cacheDir);
+  const catalogState = lastCatalogState();
 
   // Internal-disclosure deny-list. Loaded once: the hashed terms come from the
   // committed policy file, the plaintext patterns from an unpublished file or
@@ -608,23 +612,23 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Calling them without existsSync gates preserves the distinction between an
   // absent optional target and a target whose stat/read operation failed.
   findings.push(...scanGitSecurity(scanDir));
-  findings.push(...scanCargoFiles(scanDir));
-  findings.push(...scanGoFiles(scanDir));
-  findings.push(...scanRubyGemsFiles(scanDir));
-  findings.push(...scanComposerFiles(scanDir));
+  findings.push(...scanCargoFiles(scanDir, threatFeed));
+  findings.push(...scanGoFiles(scanDir, threatFeed));
+  findings.push(...scanRubyGemsFiles(scanDir, threatFeed));
+  findings.push(...scanComposerFiles(scanDir, threatFeed));
 
   // NuGet discovery is a root-directory optimization that deliberately opens
   // the scanner on enumeration failure so scanNuGetFiles can report coverage.
   if (hasNuGetFiles(scanDir)) {
-    findings.push(...scanNuGetFiles(scanDir));
+    findings.push(...scanNuGetFiles(scanDir, threatFeed));
   }
 
-  findings.push(...scanPythonLockfiles(scanDir));
+  findings.push(...scanPythonLockfiles(scanDir, threatFeed));
 
   // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /
   // claude_desktop_config.json / .gemini/settings.json)
   if (hasMcpConfigFiles(scanDir)) {
-    const mcpFindings = scanMcpConfigs(scanDir);
+    const mcpFindings = scanMcpConfigs(scanDir, threatFeed);
     findings.push(...mcpFindings);
   }
   // Check AI agent skill / rules files (.claude, .cursorrules, CLAUDE.md, ...)
@@ -660,6 +664,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // on a frozen pin is told so instead of receiving another green check.
   // Carries no `file`, so the path-ignore filter below leaves it in place.
   findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));
+
+  // The companion to the staleness finding: that one says the rule set is old,
+  // this one says part of it was not consulted at all. catalogState is the
+  // snapshot from the load that produced threatFeed, so a later nested load
+  // cannot change what this scan reports. Carries no `file`, for the same
+  // reason: the path-ignore filter below drops anything that looks like a
+  // repo finding.
+  findings.push(...catalogFindings(catalogState, policy?.catalog ?? "optional"));
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own
@@ -915,7 +927,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // a github scan's scanDir lives inside it, and an assessment taken afterwards
   // would silently grade an empty path as Level 0 / non-git.
   const gitProv = resolveGitProvenance(scanDir);
-  const detectionSet = getDetectionSetProvenance();
+  const detectionSet = getDetectionSetProvenance(options.cacheDir);
   const slsaAssessment = assessSLSA(scanDir);
   // Opt-in only. An unconditional verdict changed the default text and JSON output
   // for every existing consumer, and attached a composite risk score derived from a

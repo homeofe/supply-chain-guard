@@ -33,7 +33,7 @@ export function isComposerFile(filename: string): boolean {
 /**
  * Scan Composer files in a directory.
  */
-export function scanComposerFiles(dir: string): Finding[] {
+export function scanComposerFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const composerJson = readOptionalUtf8File(
     dir,
@@ -49,12 +49,12 @@ export function scanComposerFiles(dir: string): Finding[] {
   );
   if (composerJson === null && composerLock === null) return findings;
 
-  const feed = loadThreatIntel();
+  const iocFeed = feed ?? loadThreatIntel();
   if (composerJson !== null) {
-    findings.push(...scanComposerJsonContent(composerJson, COMPOSER_JSON, feed));
+    findings.push(...scanComposerJsonContent(composerJson, COMPOSER_JSON, iocFeed));
   }
   if (composerLock !== null) {
-    findings.push(...scanComposerLockContent(composerLock, COMPOSER_LOCK, feed));
+    findings.push(...scanComposerLockContent(composerLock, COMPOSER_LOCK, iocFeed));
   }
 
   return findings;

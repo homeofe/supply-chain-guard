@@ -205,6 +205,31 @@ function parseYamlConfig(content: string): PolicyConfig {
       continue;
     }
 
+    // `catalog` is the one top-level SCALAR key. It is deliberately not in
+    // KNOWN_SECTIONS: putting it there would make `catalog:` open a section,
+    // and KNOWN_SECTIONS is documented above as the complete set of sections
+    // the parser understands. This branch has to run before the blanket
+    // rejection below, which would otherwise warn about a valid key.
+    if (indent === 0 && /^catalog\s*:/.test(trimmed)) {
+      const value = stripQuotes(trimmed.slice(trimmed.indexOf(":") + 1).trim());
+      if (value === "optional" || value === "required") {
+        config.catalog = value;
+      } else {
+        // Reported, never silently dropped: a typo here would otherwise leave
+        // the default in place while the author believes the catalog is
+        // required, which is the failure this setting exists to prevent.
+        warnings.push({
+          rule: "POLICY_UNKNOWN_KEY",
+          message: `catalog must be "optional" or "required", got "${value}"`,
+          line: lineNo,
+        });
+      }
+      currentSection = "";
+      currentSubSection = "";
+      sectionKnown = false;
+      continue;
+    }
+
     // Top-level scalar keys are not supported (every top-level key opens a
     // section). Do not let them fall through into a stale section context.
     if (indent === 0 && trimmed.includes(":") && !trimmed.startsWith("-")) {

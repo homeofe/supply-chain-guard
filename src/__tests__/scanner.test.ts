@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import { scan } from "../scanner.js";
+import {
+  CATALOG_CACHE_FILE,
+  lastCatalogState,
+  resetThreatIntelCache,
+} from "../threat-intel.js";
+import { CATALOG_DIGEST } from "../catalog-digest.js";
 
 describe("Core Scanner", () => {
   let tempDir: string;
@@ -31,9 +38,15 @@ describe("Core Scanner", () => {
     // v4.9: SLSA_LEVEL_0 (info severity, score=1) is emitted for directories
     // without any build scripts - this is a posture finding, not a security alert.
     // Unreleased: SCAN_ZERO_COVERAGE is the coverage signal, likewise not an alert.
+    // v6.2.0: THREAT_FEED_CATALOG_MISSING (info) says the optional historical
+    // catalog has not been downloaded on this machine. Same class again: it
+    // describes the scanner's own data, not this directory.
     // Verify no actual security/malware findings are present.
     const securityFindings = report.findings.filter(
-      (f) => !f.rule.startsWith("SLSA_") && f.rule !== "SCAN_ZERO_COVERAGE",
+      (f) =>
+        !f.rule.startsWith("SLSA_") &&
+        f.rule !== "SCAN_ZERO_COVERAGE" &&
+        f.rule !== "THREAT_FEED_CATALOG_MISSING",
     );
     expect(securityFindings).toHaveLength(0);
     expect(report.scanType).toBe("directory");
@@ -45,6 +58,123 @@ describe("Core Scanner", () => {
     expect(report.summary.filesScanned).toBe(0);
     expect(report.findings.map((f) => f.rule)).toContain("SCAN_ZERO_COVERAGE");
     expect(report.partialScan).toBe(true);
+  });
+
+  // The filters above would stay green if catalogFindings were never pushed.
+  // This is the wiring the partition design rests on: a scan that could not
+  // consult the catalog must say so through scan(), not only through a unit
+  // that is never called from the scanner.
+  it("reports THREAT_FEED_CATALOG_MISSING through scan() when the catalog is absent", async () => {
+    const report = await scan({
+      target: tempDir,
+      format: "json",
+      noHistory: true,
+    });
+    expect(report.findings.map((f) => f.rule)).toContain("THREAT_FEED_CATALOG_MISSING");
+  });
+
+  it("raises THREAT_FEED_CATALOG_MISSING to critical when catalog: required", async () => {
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    const report = await scan({
+      target: tempDir,
+      format: "json",
+      noHistory: true,
+    });
+    const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("critical");
+  });
+
+  // The version and index digest are public, and the cache checksum can be
+  // recomputed by whoever writes the file. Entry count alone therefore cannot
+  // prove that a full-size cache is the catalog this package release pins.
+  it("rejects a self-consistent full-size forged catalog through scan()", async () => {
+    const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-forged-catalog-"));
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    const entries = Array.from({ length: CATALOG_DIGEST.entryCount }, () => ({
+      type: "package" as const,
+      value: "forged-catalog-entry@0.0.0",
+      severity: "low" as const,
+      confidence: 1,
+    }));
+    fs.writeFileSync(
+      path.join(cacheDir, CATALOG_CACHE_FILE),
+      JSON.stringify({
+        version: CATALOG_DIGEST.version,
+        sha256: CATALOG_DIGEST.sha256,
+        checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+        entries,
+      }),
+    );
+
+    try {
+      resetThreatIntelCache();
+      const report = await scan({
+        target: tempDir,
+        format: "json",
+        noHistory: true,
+        cacheDir,
+      });
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(lastCatalogState()).toMatchObject({
+        available: false,
+        reason: "digest-mismatch",
+      });
+    } finally {
+      resetThreatIntelCache();
+      fs.rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
+
+  // The Action cwd is the checkout. Nested ecosystem scanners used to call
+  // loadThreatIntel() with no cacheDir, overwriting lastCatalog from
+  // checkout/.scg-cache before catalogFindings ran. A complete planted
+  // catalog plus a dummy Cargo.lock was enough to silence catalog: required.
+  it("does not let a nested scanner adopt a planted catalog from the scan cwd", async () => {
+    const isolated = fs.mkdtempSync(path.join(os.tmpdir(), "scg-iso-"));
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    fs.writeFileSync(
+      path.join(tempDir, "Cargo.lock"),
+      '[[package]]\nname = "example"\nversion = "1.0.0"\n',
+    );
+    const entries = Array.from({ length: CATALOG_DIGEST.entryCount }, (_, i) => ({
+      type: "package" as const,
+      value: `planted-catalog-${i}@0.0.0`,
+      severity: "low" as const,
+      confidence: 1,
+    }));
+    fs.mkdirSync(path.join(tempDir, ".scg-cache"));
+    fs.writeFileSync(
+      path.join(tempDir, ".scg-cache", CATALOG_CACHE_FILE),
+      JSON.stringify({
+        version: CATALOG_DIGEST.version,
+        sha256: CATALOG_DIGEST.sha256,
+        checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+        entries,
+      }),
+    );
+
+    const previous = process.cwd();
+    process.chdir(tempDir);
+    try {
+      resetThreatIntelCache();
+      const report = await scan({
+        target: ".",
+        format: "json",
+        noHistory: true,
+        cacheDir: isolated,
+      });
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(lastCatalogState().available).toBe(false);
+    } finally {
+      process.chdir(previous);
+      resetThreatIntelCache();
+      fs.rmSync(isolated, { recursive: true, force: true });
+    }
   });
 
   it("does not crash when package.json contains the valid JSON value null", async () => {

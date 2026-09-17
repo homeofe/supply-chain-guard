@@ -7,6 +7,32 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- A scanned repository can no longer silence `THREAT_FEED_CATALOG_MISSING` by
+  committing a forged catalog cache. The loader now requires the canonical
+  cached entries to match a package-anchored digest, not only the public header,
+  self-computed checksum and pinned entry count. The GitHub Action reads the
+  cache from an isolated directory under `RUNNER_TEMP`, nested ecosystem
+  scanners reuse that feed instead of reloading `.scg-cache` from cwd, and the
+  finding is computed from a snapshot of that first load.
+- `catalogWindows` bounds are validated as ISO dates, so a missing zero-pad
+  can no longer route future package indicators out of the offline bundle.
+- The `catalog:` policy parser no longer throws on an over-indented key after
+  the setting, which previously discarded the whole policy file.
+- The daily importer no longer treats a catalog-only bare name as covering a
+  new version pin. Coverage of that kind is bundle-only, because the catalog
+  is not available offline.
+- `THREAT_FEED_CATALOG_MISSING` now has scan-level tests, so dropping the
+  scanner wiring can no longer leave the suite green.
+- The README severity table for that finding now matches the shipped map
+  (`absent` is info, `version-mismatch` is low).
+- The GitHub Action can download the catalog into its isolated cache via
+  `refresh-catalog` (off by default). Without that input the Action is
+  bundle-only, and `catalog: required` cannot be satisfied there.
+- Catalog windows match `firstSeen` with `isoToEpoch`, so a prefix-valid
+  junk date cannot ride a declared bulk-backfill window out of the bundle.
+
 ## [6.1.3] - 2026-09-16
 
 ### Added

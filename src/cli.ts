@@ -241,6 +241,7 @@ program
   .option("--two-tier", "Use two-tier gated verdict and risk scoring")
   .option("--scorecard <score>", "OpenSSF Scorecard score (0.0 - 10.0)")
   .option("--external-intel", "Look up OSV, EPSS, CISA KEV and OpenSSF Scorecard for the scanned project and feed them into the two-tier score (requires network; off by default)")
+  .option("--cache-dir <dir>", "Cache directory for the threat feed and catalog (default: .scg-cache)")
   .action(
     async (
       target: string,
@@ -265,6 +266,7 @@ program
         twoTier?: boolean;
         scorecard?: string;
         externalIntel?: boolean;
+        cacheDir?: string;
       },
     ) => {
       try {
@@ -291,6 +293,7 @@ program
           twoTier: opts.twoTier === true || opts.externalIntel === true || opts.scorecard !== undefined,
           scorecard: opts.scorecard !== undefined ? parseScorecardOption(opts.scorecard) : undefined,
           externalIntel: opts.externalIntel === true,
+          cacheDir: opts.cacheDir,
         };
 
         const report = await scan(options);
@@ -989,7 +992,27 @@ feedCmd
       console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
       console.log(`  Cache file: ${result.cachePath}`);
       console.log(`  Every scan from now on merges these entries over the bundled feed.`);
-      console.log(`  They do not expire; refresh daily to keep picking up new IOCs.\n`);
+      console.log(`  They do not expire; refresh daily to keep picking up new IOCs.`);
+
+      // The catalog is reported separately because it fails separately. Naming
+      // the reason matters: a 404 means this release publishes no catalog, a
+      // digest mismatch means the published asset does not match what this
+      // release pins, and collapsing both into "not available" would hide the
+      // second one, which is the case worth acting on.
+      if (result.catalog) {
+        console.log(
+          `\n  Historical catalog installed: ${result.catalog.entryCount} entries.`,
+        );
+        console.log(`  Cache file: ${result.catalog.cachePath}`);
+      } else {
+        console.log(`\n  Historical catalog not installed.`);
+        if (result.catalogError) console.log(`  Reason: ${result.catalogError}`);
+        console.log(
+          `  Scans will match against the bundled and refreshed feed alone, and will`,
+        );
+        console.log(`  report THREAT_FEED_CATALOG_MISSING to say so.`);
+      }
+      console.log("");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`\n  Error: ${message}\n`);

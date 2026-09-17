@@ -20,3 +20,9 @@ docs/superpowers/
 # External model reviews - raw AI output, and this repo is public. Also keeps the
 # daily job's `git add -A` from sweeping them into a commit.
 docs/reviews/
+
+# Catalog release assets: built by `npm run catalog:generate` and uploaded to the
+# GitHub Release. Only the DIGEST (src/catalog-digest.ts) is committed, so the
+# integrity anchor is the npm artifact and the tagged tree, not these files.
+catalog-index.json
+catalog-*.json.gz

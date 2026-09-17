@@ -302,7 +302,7 @@ export function isCargoFile(filename: string): boolean {
 /**
  * Scan Cargo-related files in a directory.
  */
-export function scanCargoFiles(dir: string): Finding[] {
+export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
 
   // Scan Cargo.toml
@@ -335,7 +335,7 @@ export function scanCargoFiles(dir: string): Finding[] {
     findings,
   );
   if (cargoLock !== null) {
-    findings.push(...scanCargoLockContent(cargoLock, CARGO_LOCK));
+    findings.push(...scanCargoLockContent(cargoLock, CARGO_LOCK, feed));
   }
 
   // Scan proc-macro crates (look in src/ for files with proc_macro attribute)

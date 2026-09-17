@@ -135,6 +135,9 @@ describe("loadPartitionConfig", () => {
       bundleCutoffDate: "2001-02-03",
       maxBundledEntries: 7,
       maxBundleBytes: 9,
+      // Absent in the file means no declared bulk-backfill windows, which the
+      // loader normalizes to an empty list so every consumer can read it.
+      catalogWindows: [],
     });
   });
 });
@@ -322,6 +325,30 @@ describe("partitionTarget, trailing junk in firstSeen", () => {
   });
 });
 
+describe("partitionTarget, trailing junk against a catalog window", () => {
+  // Rule 5 used to prefix-slice firstSeen and compare it lexicographically to
+  // the window. The cutoff rule's fail-open test has no windows, so it could
+  // not see that "2026-09-06oops" still matched a declared window and left
+  // the bundle. isoToEpoch must be the matcher on both sides.
+  const withWindow = {
+    ...CONFIG,
+    catalogWindows: [{ since: "2026-09-06", until: "2026-09-06", reason: "bulk" }],
+  };
+
+  it("does not let a date-prefixed invalid string match a window", () => {
+    for (const bad of ["2026-09-06oops", "2026-09-06T00:00:00Z", "2026-09-06 ", "2026-09-062"]) {
+      expect(partitionTarget({ type: "package", value: "x@1", firstSeen: bad }, withWindow))
+        .toBe("bundle");
+    }
+  });
+
+  it("still routes a clean date inside the window to the catalog", () => {
+    expect(
+      partitionTarget({ type: "package", value: "x@1", firstSeen: "2026-09-06" }, withWindow),
+    ).toBe("catalog");
+  });
+});
+
 describe("loadPartitionConfig, malformed limits", () => {
   // A missing or misspelled limit returned undefined, and `n > undefined` is
   // false, so check:feed-budget reported success for ANY bundle size. One typo
@@ -359,7 +386,35 @@ describe("loadPartitionConfig, malformed limits", () => {
     const root = write({ bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20 });
     expect(loadPartitionConfig(root)).toEqual({
       bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20,
+      catalogWindows: [],
     });
+  });
+
+  it("accepts a well-formed catalog window", () => {
+    const root = write({
+      bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20,
+      catalogWindows: [{ since: "2026-09-02", until: "2026-09-13", reason: "bulk" }],
+    });
+    expect(loadPartitionConfig(root).catalogWindows).toHaveLength(1);
+  });
+
+  // A malformed window must not be silently ignored. Ignoring one would send an
+  // entire declared backfill to the bundle, which is the failure the window
+  // exists to prevent, and the budget gate would then fail for a reason that
+  // looks nothing like the cause.
+  it.each([
+    ["not an array", { catalogWindows: {} }],
+    ["a missing until", { catalogWindows: [{ since: "2026-09-02" }] }],
+    ["a missing since", { catalogWindows: [{ until: "2026-09-13" }] }],
+    ["a reversed range", { catalogWindows: [{ since: "2026-09-13", until: "2026-09-02" }] }],
+    ["a non-string bound", { catalogWindows: [{ since: 20260902, until: "2026-09-13" }] }],
+    ["a missing zero-pad", { catalogWindows: [{ since: "2026-09-13", until: "2026-9-13" }] }],
+    ["a non-ISO spelling", { catalogWindows: [{ since: "09/02/2026", until: "09/13/2026" }] }],
+  ])("refuses %s", (_label, extra) => {
+    const root = write({
+      bundleCutoffDate: "2026-06-01", maxBundledEntries: 10, maxBundleBytes: 20, ...extra,
+    });
+    expect(() => loadPartitionConfig(root)).toThrow(/catalogWindows/);
   });
 });
 

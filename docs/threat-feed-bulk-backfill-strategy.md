@@ -1,12 +1,28 @@
 # Threat-Feed Bulk Backfill Ingestion Strategy
 
-> **Superseded in part, 2026-09-16.** Tier 3 of section 3 below was the
-> starting point for
-> [the catalog decoupling design](threat-feed-catalog-decoupling-design.md),
-> which is the approved decision and carries the measurements that settled it.
-> Sections 1 and 2 here remain accurate and are still the evidence for why the
-> block cannot be declined. The entry counts in section 2 are the 2026-09-02
-> wave alone; the backlog is now 56,294 across five ranges.
+> **Section 3 is superseded in full, 2026-09-16.**
+> [The catalog decoupling design](threat-feed-catalog-decoupling-design.md) is
+> the approved decision and carries the measurements that settled it. Tier 3 was
+> its starting point; Tier 1 (staged slicing) and Tier 2 (liveness filtering)
+> are now moot for volume reasons too, because the catalog absorbs volume and is
+> sharded rather than bounded. Deferral remains, but for a block whose
+> CORRECTNESS is undecided, never for one that is merely large.
+>
+> Sections 1 and 2 remain accurate and are still the evidence for why the block
+> cannot be declined. The entry counts in section 2 are the 2026-09-02 wave
+> alone; the backlog is 56,294 across five ranges.
+>
+> **One thing measured during the drain belongs here, because section 1 is where
+> anyone will look for it.** These records are historical by CONTENT (MAL IDs
+> spanning 2023 to 2026) but recent by PUBLICATION: `firstSeen` is taken from
+> the advisory's published date, and the ranges were selected by that same date,
+> so every entry in a range carries a `firstSeen` inside it. The date-based
+> partition therefore reads the whole corpus as fresh and routes it to the
+> bundle. Draining all five ranges that way was measured at 65,265 entries and
+> about 12.1 MB against a budget of 15,000 and 2 MiB. A `catalogWindows` entry
+> in `feed-partition.config.json` is what states that a publication window is
+> corpus rather than intelligence, and the importer, the migration and the
+> placement gate all read it.
 
 This document outlines the strategy for handling large upstream threat-intelligence
 backfills, specifically addressing the GitHub Advisory Database / OpenSSF bulk backfill

@@ -550,6 +550,29 @@ describe("dedupe", () => {
     expect(result.duplicates).toBe(0);
     expect(result.covered).toBe(0);
   });
+
+  // A catalog-only bare name is not available offline. Treating it as covering
+  // a fresh version pin would keep that pin out of the bundle, which is the
+  // store the offline scan actually consults. Exact duplicates against the
+  // catalog are still dropped: re-importing the same value is a duplicate,
+  // not a coverage claim.
+  it("does not treat a catalog-only bare name as covering a new version pin", async () => {
+    const { dedupe } = await load();
+    const catalogOnly = [
+      { type: "package", value: "catalog-bare", severity: "critical", confidence: 1 },
+    ];
+    const incoming = [
+      { type: "package", value: "catalog-bare@9.9.9", severity: "critical", confidence: 0.9 },
+    ];
+    const coveredByCatalog = dedupe(catalogOnly, incoming);
+    expect(coveredByCatalog.added).toEqual([]);
+    expect(coveredByCatalog.covered).toBe(1);
+
+    const notCoveredOffline = dedupe(catalogOnly, incoming, []);
+    expect(notCoveredOffline.added).toHaveLength(1);
+    expect(notCoveredOffline.covered).toBe(0);
+    expect(notCoveredOffline.duplicates).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1518,6 +1541,7 @@ describe("importUpstreamFeed failure mode", () => {
   let tmpRoot: string;
   let threatIntelPath: string;
   let feedPath: string;
+  let catalogPath: string;
 
   const FAKE_THREAT_INTEL = [
     "export interface FeedIOC { type: string }",
@@ -1536,6 +1560,30 @@ describe("importUpstreamFeed failure mode", () => {
     fs.writeFileSync(threatIntelPath, FAKE_THREAT_INTEL);
     fs.writeFileSync(path.join(tmpRoot, "package.json"), JSON.stringify({ version: "9.9.9" }));
     fs.writeFileSync(feedPath, '{"schema":1,"entries":[{"type":"domain","value":"existing.example"}]}\n');
+
+    // The importer routes every accepted entry through the partition policy, so
+    // the fixture has to be a repository that HAS one. Falling back to a default
+    // when the config is missing would be worse than failing: it would send
+    // everything to the bundle, which is the exact regression the routing
+    // exists to prevent, and it would do it silently.
+    catalogPath = path.join(tmpRoot, "data", "threat-catalog.jsonl");
+    fs.mkdirSync(path.join(tmpRoot, "data"));
+    fs.writeFileSync(catalogPath, "");
+    fs.writeFileSync(
+      path.join(tmpRoot, "feed-partition.config.json"),
+      JSON.stringify({
+        // Older than every fixture entry, so routing is a no-op here and these
+        // tests keep asserting what they were written for. The routing itself
+        // has its own describe block with its own cutoff.
+        bundleCutoffDate: "2000-01-01",
+        maxBundledEntries: 15000,
+        maxBundleBytes: 2097152,
+      }),
+    );
+    fs.writeFileSync(
+      path.join(tmpRoot, "src", "catalog-digest.ts"),
+      'export const CATALOG_DIGEST = {\n  version: "9.9.9",\n  sha256: "",\n  entryCount: 0,\n  shardCount: 1,\n} as const;\n',
+    );
   });
 
   afterEach(() => {
@@ -1588,7 +1636,125 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.written).toBe(false);
     expect(report.entries[0].value).toBe("scg-fixture-pkg");
     expect(fs.readFileSync(threatIntelPath).equals(before)).toBe(true);
+
+    // The DESTINATION split has to be computed on a dry run too. Choosing
+    // between importing a large day and deferring it is the decision a dry run
+    // exists to support, and routing after the dry-run return made an 8,548
+    // entry backfill report "0 to the bundle, 0 to the catalog", which reads as
+    // "nothing would be routed" rather than "not computed yet".
+    expect(report.addedToBundle + report.addedToCatalog).toBe(report.added);
+    expect(report.addedToBundle).toBe(1);
   });
+
+  // The bundle stopped being the whole committed feed when the migration moved
+  // 11,998 entries into the catalog. Those are still enforced at scan time, so
+  // re-importing one is a duplicate, not a new indicator. Deduping against the
+  // bundle alone would undo the migration entry by entry: every migrated package
+  // would look absent, be re-added to the bundle, and end up in both stores.
+  it("treats an entry already in the catalog as a duplicate", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "scg-fixture-pkg",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.added).toBe(0);
+  });
+
+  // 53k catalog entries are bare names. A catalog-only bare name is not
+  // available offline, so a fresh version pin that belongs in the bundle must
+  // still be imported. Exact duplicates against the catalog stay duplicates.
+  it("imports a version pin that only a catalog-only bare name would cover", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "scg-fixture-pkg",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([
+        advisory({
+          vulnerabilities: [
+            {
+              package: { ecosystem: "npm", name: "scg-fixture-pkg" },
+              vulnerable_version_range: "= 9.9.9",
+            },
+          ],
+        }),
+      ]),
+    });
+    expect(report.added).toBe(1);
+    expect(report.addedToBundle).toBe(1);
+  });
+
+  // With a NON-EMPTY catalog and a real write. Every other test here leaves the
+  // catalog empty, which makes the dedupe input and the bundle the same length
+  // and hides an assertion that confuses the two. A real import aborted with
+  // "expected 29517 entries, got 8971" because the re-parse check compared the
+  // bundle against bundle-plus-catalog.
+  it("writes successfully when the catalog is already populated", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      [
+        JSON.stringify({ type: "package", value: "cat-a", severity: "critical", confidence: 1 }),
+        JSON.stringify({ type: "package", value: "cat-b", severity: "critical", confidence: 1 }),
+      ].join("\n") + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+
+    expect(report.added).toBe(1);
+    expect(report.written).toBe(true);
+    expect(report.addedToBundle).toBe(1);
+    // The catalog is untouched by a bundle-bound import.
+    expect(fs.readFileSync(catalogPath, "utf8").trim().split("\n")).toHaveLength(2);
+  });
+
+  it("still imports an entry the catalog does not hold", async () => {
+    const { importUpstreamFeed } = await load();
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        type: "package",
+        value: "some-other-package",
+        severity: "critical",
+        confidence: 1,
+      }) + "\n",
+    );
+
+    const report = await importUpstreamFeed({
+      root: tmpRoot,
+      dryRun: true,
+      useOsv: false,
+      fetchImpl: singlePage([advisory()]),
+    });
+    expect(report.added).toBe(1);
+  });
+
 
   it("writes nothing when everything upstream is already covered", async () => {
     const { importUpstreamFeed } = await load();
@@ -1999,6 +2165,23 @@ describe("ecosystem filter", () => {
     const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scg-eco-"));
     try {
       fs.mkdirSync(path.join(tmpRoot, "src"));
+      // Same reason as the main fixture: the importer routes every accepted
+      // entry through the partition policy, so the fixture repository has to
+      // have one.
+      fs.mkdirSync(path.join(tmpRoot, "data"));
+      fs.writeFileSync(path.join(tmpRoot, "data", "threat-catalog.jsonl"), "");
+      fs.writeFileSync(
+        path.join(tmpRoot, "feed-partition.config.json"),
+        JSON.stringify({
+          bundleCutoffDate: "2000-01-01",
+          maxBundledEntries: 15000,
+          maxBundleBytes: 2097152,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(tmpRoot, "src", "catalog-digest.ts"),
+        'export const CATALOG_DIGEST = { version: "9.9.9", sha256: "", entryCount: 0, shardCount: 1 } as const;\n',
+      );
       fs.writeFileSync(
         path.join(tmpRoot, "src", "threat-intel.ts"),
         [

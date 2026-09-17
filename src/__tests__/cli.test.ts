@@ -139,7 +139,13 @@ describe("CLI scan – clean fixture", () => {
     expect(status).toBe(0);
     const parsed = JSON.parse(stdout) as { findings: Array<{ rule: string; severity: string }>; score: number };
     // v4.9: SLSA posture findings (info) may appear for directories without build provenance
-    const securityFindings = parsed.findings.filter((f) => !f.rule.startsWith("SLSA_"));
+    // v6.2.0: THREAT_FEED_CATALOG_MISSING likewise. Both describe the SCANNER's
+    // own posture, not the scanned repository: the first says the build has no
+    // provenance to check, the second that the optional historical catalog has
+    // not been downloaded on this machine. A clean fixture is still clean.
+    const securityFindings = parsed.findings.filter(
+      (f) => !f.rule.startsWith("SLSA_") && f.rule !== "THREAT_FEED_CATALOG_MISSING",
+    );
     expect(securityFindings).toHaveLength(0);
     expect(parsed.summary?.critical ?? 0).toBe(0);
     expect(parsed.summary?.high ?? 0).toBe(0);
@@ -150,9 +156,11 @@ describe("CLI scan – clean fixture", () => {
     expect(status).toBe(0);
     const parsed = JSON.parse(stdout) as { version: string; runs: Array<{ results: Array<{ ruleId: string }> }> };
     expect(parsed.version).toBe("2.1.0");
-    // v4.9: SLSA posture findings may appear; filter them out
+    // v4.9: SLSA posture findings may appear; filter them out. v6.2.0:
+    // THREAT_FEED_CATALOG_MISSING likewise, for the same reason - it describes
+    // the scanner's own optional data, not this repository.
     const securityResults = (parsed.runs[0].results ?? []).filter(
-      (r) => !r.ruleId.startsWith("SLSA_"),
+      (r) => !r.ruleId.startsWith("SLSA_") && r.ruleId !== "THREAT_FEED_CATALOG_MISSING",
     );
     expect(securityResults).toHaveLength(0);
   });

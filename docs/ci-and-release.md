@@ -260,7 +260,10 @@ like any other. In order:
    Bump `package.json` too, then run `npm install --package-lock-only`: npm rewrites
    the lockfile's version fields only at install time, so an edit-based bump leaves it
    a release behind.
-5. **`npm run feed:generate`**, since `feed.json` carries the version.
+5. **`npm run feed:generate`**, since `feed.json` carries the version, and
+   **`npm run catalog:generate`**, since `src/catalog-digest.ts` carries it too and
+   is byte-compared by `check:catalog` in `prebuild`. Both are generated, so a
+   missed regeneration is a red gate rather than a silent drift.
 6. **`npm run build`** and **`npm test`** must be green.
 7. One commit for everything: code, docs and tests together.
 8. Open a pull request and squash-merge it once the required checks pass.
