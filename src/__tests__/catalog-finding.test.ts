@@ -230,4 +230,17 @@ describe("the README severity table matches the shipped map", () => {
     expect(catalogSeverityFor("absent", "optional")).toBe("info");
     expect(catalogSeverityFor("version-mismatch", "optional")).toBe("low");
   });
+
+  it("documents that the Action needs refresh-catalog for catalog: required", () => {
+    const readme = fs.readFileSync(
+      path.resolve(__dirname, "..", "..", "README.md"),
+      "utf8",
+    );
+    const section = readme.slice(
+      readme.indexOf("#### THREAT_FEED_CATALOG_MISSING"),
+      readme.indexOf("### Action Inputs"),
+    );
+    expect(section).toMatch(/refresh-catalog: true/);
+    expect(section).toMatch(/bundle-only unless `refresh-catalog` is `true`/);
+  });
 });

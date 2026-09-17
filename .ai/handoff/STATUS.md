@@ -30,6 +30,10 @@ survived a direct check.
 - Catalog-only bare names no longer cover a new version pin. Measured: 53,539
   of 68,234 catalog packages are bare. Exact duplicates against the catalog
   are still dropped. Coverage is taken from the bundle only.
+- Action `refresh-catalog` (off by default) downloads into the isolated cache
+  so `catalog: required` can succeed without reading checkout `.scg-cache`.
+- `inCatalogWindow` uses `isoToEpoch`, so a prefix-valid junk date cannot
+  match a declared bulk-backfill window.
 
 **Not acted on, because the review itself refuted them:** the importer budget
 check, dry-run ENOENT on a missing catalog, applyMigration having no direct
@@ -39,8 +43,13 @@ call, and the generator import-graph test.
 The remaining unconfirmed titles were not re-run here. The data-loss one was
 the only HIGH among them and is the catalog-bare coverage fix above.
 
-**Owner decision not requested.** CI on the existing PR head is green; these
-fixes are not pushed yet.
+**Follow-up from the full PR review (2026-09-17).** Two remaining findings
+fixed: Action `refresh-catalog` input (off by default) downloads into the
+isolated cache so `catalog: required` can succeed; `inCatalogWindow` uses
+`isoToEpoch` so a prefix-valid junk date cannot match a declared window.
+
+**Owner decision not requested.** The review-fix commits are on the PR;
+this follow-up is the Action refresh input and the window date matcher.
 
 
 ## The catalog dedupe broke the re-parse assertion, and Phase 4 corrections (2026-09-16, claude-opus-5)

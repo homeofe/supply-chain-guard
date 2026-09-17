@@ -45,6 +45,10 @@ inputs:
     description: "Post findings as a PR comment (true/false)"
     required: false
     default: "true"
+  refresh-catalog:
+    description: "Download the historical catalog into an isolated cache before scanning (true/false). Needed for catalog: required. Off by default so the Action stays offline."
+    required: false
+    default: "false"
 
 outputs:
   score:
@@ -92,6 +96,7 @@ runs:
         SCG_EXCLUDE_RULES: ${{ inputs['exclude-rules'] }}
         SCG_FAIL_ON: ${{ inputs['fail-on'] }}
         SCG_COMMENT_ON_PR: ${{ inputs['comment-on-pr'] }}
+        SCG_REFRESH_CATALOG: ${{ inputs['refresh-catalog'] }}
       run: |
         set +e
 
@@ -102,6 +107,7 @@ runs:
         SCG_FORMAT="${SCG_FORMAT:-markdown}"
         FAIL_SEVERITY="${SCG_FAIL_ON:-critical}"
         COMMENT_ON_PR="${SCG_COMMENT_ON_PR:-true}"
+        REFRESH_CATALOG="${SCG_REFRESH_CATALOG:-false}"
         case "$SCG_FORMAT" in
           text|json|markdown|sarif|sbom|html|badge|gitlab|junit) ;;
           *) echo "Invalid format input. Allowed: text, json, markdown, sarif, sbom, html, badge, gitlab, junit." >&2; exit 1 ;;
@@ -109,6 +115,10 @@ runs:
         case "$COMMENT_ON_PR" in
           true|false) ;;
           *) echo "Invalid comment-on-pr input. Allowed: true, false." >&2; exit 1 ;;
+        esac
+        case "$REFRESH_CATALOG" in
+          true|false) ;;
+          *) echo "Invalid refresh-catalog input. Allowed: true, false." >&2; exit 1 ;;
         esac
         case "$SCG_MIN_SEVERITY" in
           ""|info) MIN_SEVERITY_RANK=0 ;;
@@ -151,6 +161,13 @@ runs:
         JSON_FILE="$SCG_RUN_DIR/canonical-report.json"
         FORMAT_FILE="$SCG_RUN_DIR/requested-report"
         FORMAT_ERR="$SCG_RUN_DIR/format.stderr"
+        # Isolated from the checkout: a committed .scg-cache is not the source.
+        # A failed refresh still runs the bundled scan; THREAT_FEED_CATALOG_MISSING
+        # is how the scan reports that the catalog was not consulted.
+        if [ "$REFRESH_CATALOG" = "true" ]; then
+          supply-chain-guard feed refresh --cache-dir "$SCG_RUN_DIR/cache" ||
+            echo "Catalog refresh failed; the scan will report THREAT_FEED_CATALOG_MISSING." >&2
+        fi
         supply-chain-guard scan "$SCG_PATH" --format "$SCG_FORMAT" \
           --json-output "$JSON_FILE" --cache-dir "$SCG_RUN_DIR/cache" "${FILTER_ARGS[@]}" \
           > "$FORMAT_FILE" 2>"$FORMAT_ERR"

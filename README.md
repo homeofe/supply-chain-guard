@@ -1004,6 +1004,17 @@ gate rather than reporting a narrower result as success:
 catalog: required
 ```
 
+The GitHub Action is bundle-only unless `refresh-catalog` is `true`. It caches
+into an isolated directory under `RUNNER_TEMP`, not into the checkout, so a
+preceding `feed refresh` in the workflow does not count. `catalog: required`
+on the Action therefore needs:
+
+```yaml
+- uses: homeofe/supply-chain-guard@v6.1.3
+  with:
+    refresh-catalog: true
+```
+
 An empty catalog is a valid catalog: while a release publishes no historical
 indicators there is nothing to miss, and the rule stays quiet under the default
 setting rather than firing on every scan. If scanning against the bundled set
@@ -1025,6 +1036,7 @@ alone is the intent, exclude the rule by name:
 | `exclude-rules` | Comma-separated rule IDs to exclude | |
 | `fail-on` | Fail check at this severity or above, including `info` | `critical` |
 | `comment-on-pr` | Post or update a PR comment | `true` |
+| `refresh-catalog` | Download the historical catalog into the isolated Action cache before scanning. Needed for `catalog: required`. | `false` |
 
 Coverage failures are fail-closed regardless of `fail-on`: the Action exits
 nonzero, sets `partial-scan` to `true` and `risk-level` to `partial`, and posts

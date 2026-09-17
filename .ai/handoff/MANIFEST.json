@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789630725",
-    "timestamp": "2026-09-17T07:38:46Z",
-    "commit": "ac5f701",
+    "session_id": "cli-1789633925",
+    "timestamp": "2026-09-17T08:32:05Z",
+    "commit": "53a37a3",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3b74669adfda953252fc2a9ab65280ba50d3da1b522534fb2f4114ea26b93382",
-      "updated": "2026-09-17T07:38:43Z",
-      "lines": 10164,
+      "checksum": "sha256:7cf4eadd281565c27e458c7231f8ec25b8a5f0f2c23df8e239c486e4e46f7b35",
+      "updated": "2026-09-17T08:31:53Z",
+      "lines": 10173,
       "summary": "The previous session hit the weekly Claude limit after a pre-merge review of"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6281cbf2154debf50db1ffdda1af26fd071b3d099f82c4f81ebd0b75c43caf12",
-      "updated": "2026-09-17T07:38:45Z",
+      "updated": "2026-09-17T08:32:05Z",
       "lines": 181,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:5108a7068a66d37688a4129c9b359dd1819604271dbc7c8c033499b3d684dbcc",
-      "updated": "2026-09-17T07:38:45Z",
+      "updated": "2026-09-17T08:32:05Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:b63096e21647580fb998838c8c3d6f48b48a70cfeadbc8fb1836bb690b04db09",
-      "updated": "2026-09-17T07:38:45Z",
+      "updated": "2026-09-17T08:32:05Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "The previous session hit the weekly Claude limit after a pre-merge review of Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 118737,
-    "full_read": 131204
+    "manifest_plus_core": 118841,
+    "full_read": 131308
   }
 }

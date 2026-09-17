@@ -26,6 +26,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   scanner wiring can no longer leave the suite green.
 - The README severity table for that finding now matches the shipped map
   (`absent` is info, `version-mismatch` is low).
+- The GitHub Action can download the catalog into its isolated cache via
+  `refresh-catalog` (off by default). Without that input the Action is
+  bundle-only, and `catalog: required` cannot be satisfied there.
+- Catalog windows match `firstSeen` with `isoToEpoch`, so a prefix-valid
+  junk date cannot ride a declared bulk-backfill window out of the bundle.
 
 ## [6.1.3] - 2026-09-16
 

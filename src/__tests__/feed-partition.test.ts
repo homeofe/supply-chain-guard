@@ -325,6 +325,30 @@ describe("partitionTarget, trailing junk in firstSeen", () => {
   });
 });
 
+describe("partitionTarget, trailing junk against a catalog window", () => {
+  // Rule 5 used to prefix-slice firstSeen and compare it lexicographically to
+  // the window. The cutoff rule's fail-open test has no windows, so it could
+  // not see that "2026-09-06oops" still matched a declared window and left
+  // the bundle. isoToEpoch must be the matcher on both sides.
+  const withWindow = {
+    ...CONFIG,
+    catalogWindows: [{ since: "2026-09-06", until: "2026-09-06", reason: "bulk" }],
+  };
+
+  it("does not let a date-prefixed invalid string match a window", () => {
+    for (const bad of ["2026-09-06oops", "2026-09-06T00:00:00Z", "2026-09-06 ", "2026-09-062"]) {
+      expect(partitionTarget({ type: "package", value: "x@1", firstSeen: bad }, withWindow))
+        .toBe("bundle");
+    }
+  });
+
+  it("still routes a clean date inside the window to the catalog", () => {
+    expect(
+      partitionTarget({ type: "package", value: "x@1", firstSeen: "2026-09-06" }, withWindow),
+    ).toBe("catalog");
+  });
+});
+
 describe("loadPartitionConfig, malformed limits", () => {
   // A missing or misspelled limit returned undefined, and `n > undefined` is
   // false, so check:feed-budget reported success for ANY bundle size. One typo

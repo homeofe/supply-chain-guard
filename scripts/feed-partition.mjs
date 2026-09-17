@@ -127,16 +127,21 @@ export function loadPartitionConfig(root = repoRoot) {
 /**
  * Whether a date falls inside a declared bulk-backfill window.
  *
- * Windows are inclusive on both ends and compared as ISO day strings, which
- * sort lexicographically, so no parsing is needed and an unparseable date
- * simply matches nothing.
+ * Windows are inclusive on both ends. Bounds are already ISO dates after
+ * loadPartitionConfig; firstSeen is parsed with the same isoToEpoch as the
+ * cutoff rule, so a prefix-valid junk string cannot match a window.
  */
 export function inCatalogWindow(firstSeen, config) {
-  if (typeof firstSeen !== "string") return false;
+  const seen = isoToEpoch(firstSeen);
+  if (seen === null) return false;
   const windows = config.catalogWindows;
   if (!Array.isArray(windows)) return false;
-  const day = firstSeen.slice(0, 10);
-  return windows.some((w) => day >= w.since && day <= w.until);
+  return windows.some((w) => {
+    const since = isoToEpoch(w.since);
+    const until = isoToEpoch(w.until);
+    if (since === null || until === null) return false;
+    return seen >= since && seen <= until;
+  });
 }
 
 export function partitionTarget(entry, config) {

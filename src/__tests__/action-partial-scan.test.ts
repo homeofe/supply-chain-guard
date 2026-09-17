@@ -465,9 +465,10 @@ describe("Marketplace Action fail-closed contract", () => {
   });
 
   it("uses bracket access for every hyphenated input and output expression", () => {
-    expect(action).not.toMatch(/\binputs\.(?:min-severity|exclude-rules|fail-on|comment-on-pr)\b/);
+    expect(action).not.toMatch(/\binputs\.(?:min-severity|exclude-rules|fail-on|comment-on-pr|refresh-catalog)\b/);
     expect(action).not.toMatch(/\bsteps\.scan\.outputs\.(?:findings-count|partial-scan|report-path|report-truncated)\b/);
     expect(action).toContain("inputs['min-severity']");
+    expect(action).toContain("inputs['refresh-catalog']");
     expect(action).toContain("steps.scan.outputs['findings-count']");
   });
 
@@ -684,5 +685,20 @@ describe("Marketplace Action fail-closed contract", () => {
   it("does not read the catalog cache from the scanned checkout", () => {
     expect(scanScript).toMatch(/SCG_RUN_DIR=\$\(mktemp -d "\$RUNNER_TEMP\/scg-action/);
     expect(scanScript).toMatch(/--cache-dir "\$SCG_RUN_DIR\/cache"/);
+  });
+
+  // Isolating the cache under RUNNER_TEMP with no refresh into that directory
+  // made catalog: required unsatisfiable on the Action: every run started
+  // empty, and a preceding feed refresh wrote cwd .scg-cache which this
+  // script ignored. The input is off by default so the Action stays offline.
+  it("can refresh the catalog into the isolated cache before scanning", () => {
+    expect(action).toContain("refresh-catalog:");
+    expect(action).toMatch(/refresh-catalog:[\s\S]*?default: "false"/);
+    expect(scanScript).toContain("Invalid refresh-catalog input. Allowed: true, false.");
+    const refresh = scanScript.indexOf("supply-chain-guard feed refresh --cache-dir \"$SCG_RUN_DIR/cache\"");
+    const scan = scanScript.indexOf("supply-chain-guard scan");
+    expect(refresh).toBeGreaterThan(-1);
+    expect(scan).toBeGreaterThan(refresh);
+    expect(scanScript).toMatch(/if \[ "\$REFRESH_CATALOG" = "true" \]/);
   });
 });
