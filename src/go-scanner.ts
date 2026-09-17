@@ -276,7 +276,7 @@ export function isGoFile(filename: string): boolean {
 /**
  * Scan Go module files in a directory.
  */
-export function scanGoFiles(dir: string): Finding[] {
+export function scanGoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
 
   // Scan go.mod
@@ -298,7 +298,7 @@ export function scanGoFiles(dir: string): Finding[] {
     findings,
   );
   if (goSum !== null) {
-    findings.push(...scanGoSumContent(goSum, GO_SUM));
+    findings.push(...scanGoSumContent(goSum, GO_SUM, feed));
   }
 
   // Preserve the historical module gate: standalone Go source is handled by

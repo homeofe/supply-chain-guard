@@ -35,7 +35,7 @@ export function isPythonLockfile(filename: string): boolean {
 /**
  * Scan Python lockfiles in a directory.
  */
-export function scanPythonLockfiles(dir: string): Finding[] {
+export function scanPythonLockfiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const poetry = readOptionalUtf8File(
     dir,
@@ -57,15 +57,15 @@ export function scanPythonLockfiles(dir: string): Finding[] {
   );
   if (poetry === null && uv === null && pipfile === null) return findings;
 
-  const feed = loadThreatIntel();
+  const iocFeed = feed ?? loadThreatIntel();
   if (poetry !== null) {
-    findings.push(...scanPoetryLockContent(poetry, POETRY_LOCK, feed));
+    findings.push(...scanPoetryLockContent(poetry, POETRY_LOCK, iocFeed));
   }
   if (uv !== null) {
-    findings.push(...scanUvLockContent(uv, UV_LOCK, feed));
+    findings.push(...scanUvLockContent(uv, UV_LOCK, iocFeed));
   }
   if (pipfile !== null) {
-    findings.push(...scanPipfileLockContent(pipfile, PIPFILE_LOCK, feed));
+    findings.push(...scanPipfileLockContent(pipfile, PIPFILE_LOCK, iocFeed));
   }
 
   return findings;

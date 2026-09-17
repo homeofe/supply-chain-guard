@@ -53,9 +53,9 @@ export function hasNuGetFiles(dir: string): boolean {
 /**
  * Scan NuGet files in a directory.
  */
-export function scanNuGetFiles(dir: string): Finding[] {
+export function scanNuGetFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
-  let feed: FeedIOC[] | undefined;
+  let iocFeed: FeedIOC[] | undefined = feed;
   const entries = listOptionalDirectory(dir, dir, ".", findings);
   if (entries === null) return findings;
 
@@ -78,11 +78,11 @@ export function scanNuGetFiles(dir: string): Finding[] {
     if (lower === NUGET_CONFIG) {
       findings.push(...scanNuGetConfigContent(content, name));
     } else {
-      feed ??= loadThreatIntel();
+      iocFeed ??= loadThreatIntel();
       if (lower === PACKAGES_LOCK) {
-        findings.push(...scanPackagesLockContent(content, name, feed));
+        findings.push(...scanPackagesLockContent(content, name, iocFeed));
       } else {
-        findings.push(...scanCsprojContent(content, name, feed));
+        findings.push(...scanCsprojContent(content, name, iocFeed));
       }
     }
   }

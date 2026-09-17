@@ -11,9 +11,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 - A scanned repository can no longer silence `THREAT_FEED_CATALOG_MISSING` by
   committing a forged empty catalog cache. The loader now requires the cached
-  entry count to match the count this release pins, and the GitHub Action
-  reads the cache from an isolated directory under `RUNNER_TEMP` rather than
-  from the checkout.
+  entry count to match the count this release pins, the GitHub Action reads
+  the cache from an isolated directory under `RUNNER_TEMP`, nested ecosystem
+  scanners reuse that feed instead of reloading `.scg-cache` from cwd, and
+  the finding is computed from a snapshot of that first load.
 - `catalogWindows` bounds are validated as ISO dates, so a missing zero-pad
   can no longer route future package indicators out of the offline bundle.
 - The `catalog:` policy parser no longer throws on an over-indented key after

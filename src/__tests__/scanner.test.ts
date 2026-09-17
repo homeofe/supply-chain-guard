@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import { scan } from "../scanner.js";
+import {
+  CATALOG_CACHE_FILE,
+  lastCatalogState,
+  resetThreatIntelCache,
+} from "../threat-intel.js";
+import { CATALOG_DIGEST } from "../catalog-digest.js";
 
 describe("Core Scanner", () => {
   let tempDir: string;
@@ -76,6 +83,55 @@ describe("Core Scanner", () => {
     const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
     expect(finding).toBeDefined();
     expect(finding?.severity).toBe("critical");
+  });
+
+  // The Action cwd is the checkout. Nested ecosystem scanners used to call
+  // loadThreatIntel() with no cacheDir, overwriting lastCatalog from
+  // checkout/.scg-cache before catalogFindings ran. A complete planted
+  // catalog plus a dummy Cargo.lock was enough to silence catalog: required.
+  it("does not let a nested scanner adopt a planted catalog from the scan cwd", async () => {
+    const isolated = fs.mkdtempSync(path.join(os.tmpdir(), "scg-iso-"));
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+    fs.writeFileSync(
+      path.join(tempDir, "Cargo.lock"),
+      '[[package]]\nname = "example"\nversion = "1.0.0"\n',
+    );
+    const entries = Array.from({ length: CATALOG_DIGEST.entryCount }, (_, i) => ({
+      type: "package" as const,
+      value: `planted-catalog-${i}@0.0.0`,
+      severity: "low" as const,
+      confidence: 1,
+    }));
+    fs.mkdirSync(path.join(tempDir, ".scg-cache"));
+    fs.writeFileSync(
+      path.join(tempDir, ".scg-cache", CATALOG_CACHE_FILE),
+      JSON.stringify({
+        version: CATALOG_DIGEST.version,
+        sha256: CATALOG_DIGEST.sha256,
+        checksum: createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex"),
+        entries,
+      }),
+    );
+
+    const previous = process.cwd();
+    process.chdir(tempDir);
+    try {
+      resetThreatIntelCache();
+      const report = await scan({
+        target: ".",
+        format: "json",
+        noHistory: true,
+        cacheDir: isolated,
+      });
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(lastCatalogState().available).toBe(false);
+    } finally {
+      process.chdir(previous);
+      resetThreatIntelCache();
+      fs.rmSync(isolated, { recursive: true, force: true });
+    }
   });
 
   it("does not crash when package.json contains the valid JSON value null", async () => {

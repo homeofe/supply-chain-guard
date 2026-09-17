@@ -11,8 +11,11 @@ survived a direct check.
 - A forged empty catalog cache with public `version`/`sha256` and a
   self-computed checksum no longer counts as available. The surviving entry
   count must match `CATALOG_DIGEST.entryCount`. The GitHub Action passes
-  `--cache-dir "$SCG_RUN_DIR/cache"` so the checkout cannot plant a complete
-  junk catalog either.
+  `--cache-dir "$SCG_RUN_DIR/cache"`. Nested cargo/go/ruby/composer/nuget/
+  python/mcp scanners reuse that feed instead of reloading cwd `.scg-cache`,
+  and the finding is computed from a snapshot of the first load, so a
+  complete planted catalog plus a dummy `Cargo.lock` cannot silence
+  `catalog: required`.
 - `catalogWindows` bounds go through `isoToEpoch`. `"2026-9-13"` is refused.
 - The `catalog:` parser resets `sectionKnown`, so an over-indented key after
   it no longer throws and discards the policy file.

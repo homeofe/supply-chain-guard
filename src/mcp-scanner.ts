@@ -67,16 +67,16 @@ export function hasMcpConfigFiles(dir: string): boolean {
 /**
  * Scan all MCP config files in a directory.
  */
-export function scanMcpConfigs(dir: string): Finding[] {
+export function scanMcpConfigs(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
-  const feed = loadThreatIntel();
+  const iocFeed = feed ?? loadThreatIntel();
 
   for (const rel of MCP_CONFIG_FILES) {
     const fullPath = path.join(dir, ...rel.split("/"));
     if (!fs.existsSync(fullPath)) continue;
     try {
       const content = fs.readFileSync(fullPath, "utf-8");
-      findings.push(...scanMcpConfigContent(content, rel, feed));
+      findings.push(...scanMcpConfigContent(content, rel, iocFeed));
     } catch { /* skip unreadable file */ }
   }
 
