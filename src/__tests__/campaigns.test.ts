@@ -5571,8 +5571,33 @@ describe("Campaign Signatures", () => {
     // version the campaign never published must not.
     it("pins the bin-name squats by version, never by bare name", () => {
       const feed = getBundledFeed();
-      for (const name of ["xbox-one-webdriver-cli", "ngsw-config", "bazelisk"]) {
-        expect(matchBareNpmIOC(name, "1.0.0", feed), name).toBeTruthy();
+      // All 21 packages safedep lists, not a sample: 20 of them arrived uncurated
+      // and a cutoff advance migrated every one out of the bundle in v6.2.1.
+      const published: Array<[string, string]> = [
+        ["xbox-one-webdriver-cli", "1.0.0"],
+        ["bazelisk", "1.0.0"],
+        ["broadcast-graphics-mcp", "1.0.0"],
+        ["chrome-enterprise-premium-mcp", "1.0.0"],
+        ["chromecast-webdriver-cli", "1.0.0"],
+        ["chromeos-webdriver-cli", "1.0.0"],
+        ["code-assist-mcp", "1.0.0"],
+        ["gaarf", "3.2.1"],
+        ["gaarf-bq", "1.0.0"],
+        ["gaarf-node", "1.0.0"],
+        ["gaarf-node-bq", "1.0.0"],
+        ["gemini-cli-a2a-server", "1.0.0"],
+        ["github-policy-bot", "1.0.0"],
+        ["karma-proxy", "1.0.0"],
+        ["localize-extract", "1.0.0"],
+        ["localize-translate", "1.0.0"],
+        ["ngsw-config", "1.0.0"],
+        ["tfjs-inference", "1.0.0"],
+        ["tizen-webdriver-cli", "1.0.0"],
+        ["upload-to-gcp", "3.2.1"],
+        ["wct-st", "1.0.0"],
+      ];
+      for (const [name, version] of published) {
+        expect(matchBareNpmIOC(name, version, feed), name).toBeTruthy();
         expect(
           matchBareNpmIOC(name, "9.9.9", feed),
           `${name}: a version the campaign never published must NOT match`,
