@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789637710",
-    "timestamp": "2026-09-17T09:35:11Z",
-    "commit": "f3dae9d",
+    "session_id": "cli-1789805310",
+    "timestamp": "2026-09-19T08:08:30Z",
+    "commit": "3c2628c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:7690fe1a1336d86a599cea6859b6e06772b5d90002d0aa9bc0eda8705a29d50a",
-      "updated": "2026-09-17T09:34:57Z",
-      "lines": 10216,
-      "summary": "PR 309 was squash-merged at `64a8379` after every required check passed on"
+      "checksum": "sha256:69aaa29b48d3634e9ca37b688d307dce5bf458eaff2702d4e03029254c12b147",
+      "updated": "2026-09-19T08:08:23Z",
+      "lines": 10253,
+      "summary": "Daily threat-intel run. Nothing released; the PR is for the owner to review."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:27d95c22aee5be082ada8258719fbd771956407bff78c7edf350da88bcc4fc18",
-      "updated": "2026-09-17T09:23:58Z",
+      "updated": "2026-09-17T09:39:25Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:d473773d99bff0758e6a2c1c23636081b54bf9cfb1c44ab57c3299bcf366ab4f",
-      "updated": "2026-09-17T09:35:10Z",
+      "updated": "2026-09-19T08:08:30Z",
       "lines": 182,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:c4863ed1994cdcf85c0766a2826998451ba71b35906483aef64cce827b39e4ee",
-      "updated": "2026-09-17T09:35:10Z",
+      "updated": "2026-09-19T08:08:30Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:4bd33ee941d5438829c041d8b8cfc51bc2809f8149afc88b352ba162dd851783",
-      "updated": "2026-09-17T09:35:10Z",
+      "updated": "2026-09-19T08:08:30Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "PR 309 was squash-merged at `64a8379` after every required check passed on Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Daily threat-intel run. Nothing released; the PR is for the owner to review. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 119252,
-    "full_read": 131744
+    "manifest_plus_core": 119705,
+    "full_read": 132197
   }
 }

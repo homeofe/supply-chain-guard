@@ -448,6 +448,16 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // netlify[.]app is shared hosting and blocking the apex would flag unrelated
   // projects. Single-source, so the matching feed entry carries confidence 0.85.
   "trlxgames.netlify.app",
+
+  // PhantomRaven LLM-generated npm infostealer (September 2026)
+  // Remote Dynamic Dependency abuse: package.json carries a URL dependency, so
+  // npm install fetches the payload tarball straight from the C2. Two lookalike
+  // artifact-registry apexes plus a personal one, all attacker-registered, so the
+  // specific subdomains published by CrowdStrike are listed rather than an apex.
+  "packages.storeartifact.com",
+  "registry.storageartifact.com",
+  "packages.storageartifact.com",
+  "npm.jpartifacts.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -679,6 +689,13 @@ export const KNOWN_C2_IPS: string[] = [
   // "communicates-with" observations that no write-up confirms, so they are
   // deliberately NOT listed.
   "216.126.237.71",
+
+  // PhantomRaven LLM-generated npm infostealer (September 2026)
+  // Payload delivery host behind the storeartifact / storageartifact / jpartifacts
+  // C2 domains. Named as the C2 server address by CrowdStrike and reproduced
+  // unchanged in the independent write-ups, so it is the host itself, not a
+  // shared service the packages merely happened to reach.
+  "54.173.15.59",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1361,6 +1378,21 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // writes and executes attacker-supplied bytes. Read from the OSV JSON API rather
   // than a rendered page, so the digest is not subject to transcription drift.
   "3a9089e9db3650dd6d1584fae709022002dc34854b961abfb014a90f0a7c6a50": "pino-ulid dist/node/payload.js RAT agent (SHA256)",
+
+  // PhantomRaven LLM-generated npm infostealer (September 2026)
+  // Stealer stages pulled through the Remote Dynamic Dependency chain. The first
+  // two are reproduced byte for byte in a second independent rendering of the
+  // CrowdStrike IOC table; the third appears only in the vendor write-up, so its
+  // feed entry carries confidence 0.85.
+  "c31831d47fcbf52ff1f4e61838611916a4276d005a564e69946d5dac04235eed": "PhantomRaven npm infostealer stage (SHA256)",
+  "95a7dcc6de46826b22c43bee7fc550f3b5e2e6cbc5f33b0c241faf523641cf63": "PhantomRaven npm infostealer stage (SHA256)",
+  "db3fe46df0a65fe9f8c99d2e11126a032a72e9814e354ce017448ce088a01e02": "PhantomRaven npm infostealer stage, single-source (SHA256)",
+
+  // Shai-Hulud worm payload republished after 111 days dormant (September 2026)
+  // Same index.js as the May 2026 wave, byte-identical, pushed to four packages
+  // within one hour and past registry malware scanning. The packages and the
+  // t[.]m-kosche[.]com C2 were already covered; only the payload digest was not.
+  "e37e3ddeeaaa9e0c4fdbcb829b4895a6521031c80053fc436625b61e6ee5b1a6": "Shai-Hulud worm index.js payload, 111-day republish (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
