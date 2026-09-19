@@ -28,6 +28,11 @@
       "since": "2026-09-13",
       "until": "2026-09-13",
       "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (MAL IDs spanning 2023 to 2026) but recent by publication, so the date rule alone reads it as fresh. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-17",
+      "until": "2026-09-17",
+      "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (11393 of 11695 entries carry MAL-2025 ids) but recent by publication, so the date rule alone reads it as fresh. The neighbouring days carry 34 and 23 entries. See docs/threat-feed-bulk-backfill-strategy.md section 1."
     }
   ]
 }

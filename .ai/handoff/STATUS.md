@@ -1,3 +1,49 @@
+## 2026-09-19 - threat intelligence update (claude-opus-5)
+
+Daily threat-intel run. Nothing released; the PR is for the owner to review.
+
+- Importer: 12,574 new package indicators over the 14-day window, 60 to the
+  bundle and 12,514 to the catalog. No page-cap truncation (477 of 750 pages),
+  nothing deferred or declined, 0 remaining behind a limit.
+- Declared 2026-09-17 as a `catalogWindows` day. It is Wave 6 of the GitHub
+  Advisory Database bulk migration: 11,695 entries on that one day, 11,393 of
+  them carrying MAL-2025 ids, where 2026-09-16 carried 34 and 2026-09-18 carried
+  23. Left undeclared it routed all 11,695 into the bundle and would have taken
+  it to 20,585 entries against a 15,000 budget.
+- 104 advisories skipped as `unmappable-version-range`. Unchanged handling: a
+  bounded range the scanner cannot resolve is reported, never forced in by hand.
+- Hand-added, curated so they stay in the bundle: PhantomRaven (CrowdStrike,
+  2026-09-15) four C2 domains, one IP, three payload digests, two carrier
+  packages; plus the Shai-Hulud 111-day republish payload digest (Aikido,
+  2026-09-07), whose carriers and C2 were already covered.
+- Probed all 11 bare names the importer proposed for the bundle. Seven are npm
+  security-holding packages. Four are live under the maintainer `kartyk-github`,
+  but every version of each was published inside the flagged burst and two of
+  them additionally received an npm `0.0.1-security` version, so no clean
+  release exists for any and the bare name is the right unit to block.
+
+Open for the owner:
+
+- **Decided (2026-09-19):** the nine attacker-controlled npm publisher accounts
+  CrowdStrike names are recorded in the curated PhantomRaven comment in
+  `src/threat-intel.ts` and in no collection. They are not an indicator: an npm
+  or PyPI handle is unreachable at scan time, measured as no `_npmUser` in 400
+  sampled installed `package.json` files, no publisher field in the lockfile,
+  and enumeration that 404s on the deleted accounts while returning
+  `@npm/types` for a live one. An `actor` field on `FeedIOC` was rejected for a
+  v6.2.0 reason: attribution only ever attaches to curated entries, and those
+  are the entries rule 1 pins into the byte-budgeted bundle permanently, so it
+  would be non-enforced bytes in the one place that can never be migrated out.
+  The rule now lives under "What is not an indicator" in CONVENTIONS.md, since
+  the same wall was hit on the Baileys campaign (see the comment at the
+  `fiora.nixel.my.id` entry) and re-derived from scratch both times. That Baileys
+  comment now points at the convention rather than reading as a missing feature:
+  a GitHub handle IS matchable, so the blocklist is its correct home, and the
+  absence of an account type on FeedIOC is a decision rather than a gap.
+- Wave 6 is the sixth declared catalog window in eighteen days. The windows are
+  still being added one day at a time by hand, after the fact, by whoever notices
+  the routing line. That works while a human reads the number every day.
+
 ## v6.2.0 release preparation (2026-09-17)
 
 PR 309 was squash-merged at `64a8379` after every required check passed on

@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 12,574 package indicators from the GitHub Advisory Database malware feed,
+  corroborated against OSV: 60 in the bundle and 12,514 in the catalog.
+- IOCs for the PhantomRaven npm infostealer (September 2026): four C2 domains,
+  one payload delivery host, three payload digests and the two carrier packages,
+  both of which npm has since replaced with security-holding names.
+- The payload digest for the Shai-Hulud worm republish of September 2026. The
+  four carrier packages and the shared C2 domain were already covered; the
+  republished `index.js` was byte-identical to the May 2026 wave.
+
+### Changed
+
+- `feed-partition.config.json` declares 2026-09-17 as a catalog window. That day
+  carried 11,695 of the 12,574 new indicators, 11,393 of them with MAL-2025 ids,
+  against 34 and 23 on the neighbouring days: a bulk migration of historical
+  corpus, recent only by publication date.
+
 ## [6.2.0] - 2026-09-17
 
 ### Added

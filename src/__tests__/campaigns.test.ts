@@ -6468,4 +6468,131 @@ describe("Campaign Signatures", () => {
       ).toBeNull();
     });
   });
+
+  // =================================================================
+  // PhantomRaven LLM-generated npm infostealer (September 2026)
+  // =================================================================
+
+  describe("PhantomRaven npm infostealer (September 2026)", () => {
+    it("should detect the npm.jpartifacts.com C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "rdd.js"),
+        'const dep = "https://npm.jpartifacts.com/payload.tgz";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the 54.173.15.59 payload delivery host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "host.js"),
+        'const c2 = "54.173.15.59";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the PhantomRaven stealer stage SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "c31831d47fcbf52ff1f4e61838611916a4276d005a564e69946d5dac04235eed";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // Both carrier packages are npm security-holding names with a single
+    // unpublished 9.9.0 behind them, so no clean release has ever existed and
+    // the bare name is the correct unit to block. Asserted through
+    // matchBareNpmIOC(), the resolver a bare npm entry is reachable from.
+    it("blocks both carrier packages at every version", () => {
+      const feed = getBundledFeed();
+      for (const name of ["transform-jsbi-to-bigint", "sort-imports-es6-autofix"]) {
+        expect(
+          matchBareNpmIOC(name, "9.9.0", feed),
+          `${name} must match at the published malicious version`,
+        ).not.toBeNull();
+        expect(
+          matchBareNpmIOC(name, "1.0.0", feed),
+          `${name} has no clean release, so every version must match`,
+        ).not.toBeNull();
+      }
+    });
+
+    // The control: jsbi is the legitimate package the first name rides on,
+    // and blocking the campaign must not reach it.
+    it("leaves the legitimate jsbi package alone", () => {
+      const feed = getBundledFeed();
+      expect(
+        matchBareNpmIOC("jsbi", "4.3.0", feed),
+        "the legitimate package the name typosquats must not match",
+      ).toBeNull();
+    });
+
+    // Curation keeps the whole set in the bundle: without campaign or family
+    // these entries become eligible to move to the catalog on the next
+    // migration, and a hand-added indicator is exactly the kind that has to
+    // stay detectable with no network.
+    it("keeps every PhantomRaven indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "PhantomRaven npm infostealer");
+      expect(set.length, "all 10 PhantomRaven indicators must be bundled").toBe(10);
+      for (const ioc of set) {
+        expect(ioc.family, `${ioc.value} must carry a family`).toBe("PhantomRaven");
+      }
+    });
+  });
+
+  // =================================================================
+  // Shai-Hulud worm payload republished after 111 days (September 2026)
+  // =================================================================
+
+  describe("Shai-Hulud 111-day republish (September 2026)", () => {
+    it("should detect the republished index.js payload SHA256", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "payload-hash.js"),
+        'const sha = "e37e3ddeeaaa9e0c4fdbcb829b4895a6521031c80053fc436625b61e6ee5b1a6";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The four carriers were already in the feed before this payload digest
+    // was known. They are the reason the republish was catchable at all, so
+    // they are asserted here rather than assumed.
+    it("still carries the four carrier packages", () => {
+      const feed = getBundledFeed();
+      for (const name of [
+        "feishu-docx-mcp",
+        "blueai-cli",
+        "bmc-i18n-extract-cli",
+        "bmc-translate-utils",
+      ]) {
+        expect(
+          feed.some((i) => i.type === "package" && i.value === name),
+          `${name} must still be carried as a bare npm IOC`,
+        ).toBe(true);
+      }
+    });
+  });
 });

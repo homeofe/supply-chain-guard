@@ -218,6 +218,42 @@ The repo-root **CLAUDE.md** is the authoritative, gated release process. Summary
 - Severity levels: `critical`, `high`, `medium`, `low`, `info`
 - Every rule must have a corresponding test case (positive + negative)
 
+### What is not an indicator
+
+An indicator enters a store only if a matcher can reach its value. The bundle
+and the catalog differ in delivery, not in contract: `check:feed-partition`
+holds that every IOC sits in exactly one store, and both stores are enforced at
+scan time. A value nothing can match is not routed by that question, it is
+outside it, and adding it anyway reads as coverage that does not exist.
+
+Registry publisher identity is the standing example. An npm or PyPI account
+handle appears nowhere a scan can see it, measured on 2026-09-19:
+
+- No `_npmUser` in any of 400 sampled installed `package.json` files. npm
+  strips it, so an installed tree carries no publisher.
+- No publisher field in `package-lock.json`. The `author` and `maintainers`
+  fields that do exist are self-declared by whoever published, so they are
+  target-controlled input rather than verified identity.
+- Enumerating an account back to its packages fails in both directions. The
+  deleted PhantomRaven accounts return 404, because npm removes the account
+  when it takes the malware down. A live account returns its whole portfolio:
+  `kartyk-github` returns 132 packages including `@npm/types`, so blocking by
+  account would flag npm's own infrastructure.
+
+`KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is not a counter-example. A GitHub handle is
+matchable because it appears as `github.com/<account>` text inside scanned
+files, and as a repository owner on a `github` scan. Both are offline reads of
+a value that is actually present.
+
+Attacker attribution therefore goes in the curated comment beside the entries
+it explains, the way a `catalogWindows` entry carries its `reason`. Do not add
+an account type to `FeedIOC`, do not open a parallel account collection, and do
+not fold handles into `source`, which means who reported an entry.
+
+The victim/attacker split still governs which handles are worth recording at
+all. A compromised maintainer is a victim: pin the bad versions and leave the
+account alone. Only attacker-created accounts are attribution worth keeping.
+
 ## Acceptance Criteria Lifecycle
 
 Every implementation task, and every issue an adapter links to one, carries one
