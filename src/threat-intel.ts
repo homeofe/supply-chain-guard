@@ -9937,6 +9937,15 @@ const FEED_CHUNK_20: FeedIOC[] = [
   // detectable offline, whatever the partition cutoff does later.
   // Both packages are npm security-holding names today, each with a single
   // unpublished 9.9.0 and no clean release ever, so they are blocked by name.
+  //
+  // The operator published through nine npm accounts: jpdhellonpm1, jpd15,
+  // jpd12, jpd13, npmhell, npmpackagejpd, npmtestdharsh, jpdhackerone11 and
+  // packagedharsh. They are recorded HERE, in prose, and deliberately not in a
+  // collection: registry publisher identity is unreachable at scan time, so an
+  // account entry in either store would be an indicator nothing can match. See
+  // "What is not an indicator" in .ai/handoff/CONVENTIONS.md. They are also not
+  // folded into source, which means who REPORTED an entry and elsewhere holds
+  // researcher and scanner handles.
   { type: "package", value: "transform-jsbi-to-bigint", severity: "critical", confidence: 1.0, family: "PhantomRaven", campaign: "PhantomRaven npm infostealer", source: "CrowdStrike PhantomRaven report", firstSeen: "2026-09-15" },
   { type: "package", value: "sort-imports-es6-autofix", severity: "critical", confidence: 1.0, family: "PhantomRaven", campaign: "PhantomRaven npm infostealer", source: "CrowdStrike PhantomRaven report", firstSeen: "2026-09-15" },
   { type: "domain", value: "packages.storeartifact.com", severity: "critical", confidence: 1.0, family: "PhantomRaven", campaign: "PhantomRaven npm infostealer", source: "CrowdStrike PhantomRaven report", firstSeen: "2026-09-15" },

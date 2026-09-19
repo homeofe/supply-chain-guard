@@ -24,13 +24,19 @@ Daily threat-intel run. Nothing released; the PR is for the owner to review.
 
 Open for the owner:
 
-- CrowdStrike names nine attacker-controlled **npm publisher accounts**
-  (`jpdhellonpm1`, `jpd15`, `jpd12`, `jpd13`, `npmhell`, `npmpackagejpd`,
-  `npmtestdharsh`, `jpdhackerone11`, `packagedharsh`). There is no home for them
-  in the data model: `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` is GitHub-specific and
-  `FeedIOC.type` has no account type. They were dropped rather than misfiled into
-  the GitHub list. Worth deciding whether an npm-publisher collection earns its
-  keep, since publisher identity is what ties this campaign together.
+- **Decided (2026-09-19):** the nine attacker-controlled npm publisher accounts
+  CrowdStrike names are recorded in the curated PhantomRaven comment in
+  `src/threat-intel.ts` and in no collection. They are not an indicator: an npm
+  or PyPI handle is unreachable at scan time, measured as no `_npmUser` in 400
+  sampled installed `package.json` files, no publisher field in the lockfile,
+  and enumeration that 404s on the deleted accounts while returning
+  `@npm/types` for a live one. An `actor` field on `FeedIOC` was rejected for a
+  v6.2.0 reason: attribution only ever attaches to curated entries, and those
+  are the entries rule 1 pins into the byte-budgeted bundle permanently, so it
+  would be non-enforced bytes in the one place that can never be migrated out.
+  The rule now lives under "What is not an indicator" in CONVENTIONS.md, since
+  the same wall was hit on the Baileys campaign (see the comment at the
+  `fiora.nixel.my.id` entry) and re-derived from scratch both times.
 - Wave 6 is the sixth declared catalog window in eighteen days. The windows are
   still being added one day at a time by hand, after the fact, by whoever notices
   the routing line. That works while a human reads the number every day.

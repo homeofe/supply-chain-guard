@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789805310",
-    "timestamp": "2026-09-19T08:08:30Z",
-    "commit": "3c2628c",
+    "session_id": "cli-1789807343",
+    "timestamp": "2026-09-19T08:42:23Z",
+    "commit": "363eb74",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:69aaa29b48d3634e9ca37b688d307dce5bf458eaff2702d4e03029254c12b147",
-      "updated": "2026-09-19T08:08:23Z",
-      "lines": 10253,
+      "checksum": "sha256:779867338fa96714bb483e9267f9ba39fa864a690d1997db9b5f3dcaafe0baad",
+      "updated": "2026-09-19T08:42:11Z",
+      "lines": 10259,
       "summary": "Daily threat-intel run. Nothing released; the PR is for the owner to review."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:d473773d99bff0758e6a2c1c23636081b54bf9cfb1c44ab57c3299bcf366ab4f",
-      "updated": "2026-09-19T08:08:30Z",
+      "updated": "2026-09-19T08:42:23Z",
       "lines": 182,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,20 +42,20 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:c4863ed1994cdcf85c0766a2826998451ba71b35906483aef64cce827b39e4ee",
-      "updated": "2026-09-19T08:08:30Z",
+      "updated": "2026-09-19T08:42:23Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:4bd33ee941d5438829c041d8b8cfc51bc2809f8149afc88b352ba162dd851783",
-      "updated": "2026-09-19T08:08:30Z",
+      "updated": "2026-09-19T08:42:23Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
-      "checksum": "sha256:74afc4f71db831532b7c4924f7575f1a8e805c59a259a5677dde9079942d1c04",
-      "updated": "2026-08-26T08:53:07Z",
-      "lines": 267,
+      "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
+      "updated": "2026-09-19T08:42:11Z",
+      "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
@@ -80,7 +80,7 @@
   "quick_context": "Daily threat-intel run. Nothing released; the PR is for the owner to review. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 119705,
-    "full_read": 132197
+    "manifest_plus_core": 119820,
+    "full_read": 132727
   }
 }
