@@ -3542,7 +3542,12 @@ const FEED_CHUNK_14: FeedIOC[] = [
   // The exfiltration host is corroborated by OSV MAL-2026-13470 (ynastore-baileys) in
   // addition to safedep, so it carries full confidence; the remaining two are
   // single-source and carry 0.85. The operator's GitHub account is covered by
-  // KNOWN_MALICIOUS_GITHUB_ACCOUNTS instead - FeedIOC has no account type.
+  // KNOWN_MALICIOUS_GITHUB_ACCOUNTS instead, which is the matchable home for a
+  // handle: a GitHub account appears as github.com/<account> text inside scanned
+  // files and as a repository owner on a github scan. FeedIOC has no account type
+  // by design, not for want of one. See "What is not an indicator" in
+  // .ai/handoff/CONVENTIONS.md, which also records why a registry publisher handle
+  // gets no equivalent home.
   { type: "domain", value: "fiora.nixel.my.id", severity: "critical", confidence: 1.0, family: "BaileysChannelFarm", campaign: "Baileys WhatsApp Channel Farming", source: "safedep, OSV MAL-2026-13470", firstSeen: "2026-08-31" },
   { type: "domain", value: "levvicode.cloud", severity: "critical", confidence: 0.85, family: "BaileysChannelFarm", campaign: "Baileys WhatsApp Channel Farming", source: "safedep", firstSeen: "2026-08-31" },
   { type: "url", value: "raw.githubusercontent.com/LevviCodeID/Levi4than/refs/heads/main/levvleys.json", severity: "critical", confidence: 0.85, family: "BaileysChannelFarm", campaign: "Baileys WhatsApp Channel Farming", source: "safedep", firstSeen: "2026-08-31" },

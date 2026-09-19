@@ -36,7 +36,10 @@ Open for the owner:
   would be non-enforced bytes in the one place that can never be migrated out.
   The rule now lives under "What is not an indicator" in CONVENTIONS.md, since
   the same wall was hit on the Baileys campaign (see the comment at the
-  `fiora.nixel.my.id` entry) and re-derived from scratch both times.
+  `fiora.nixel.my.id` entry) and re-derived from scratch both times. That Baileys
+  comment now points at the convention rather than reading as a missing feature:
+  a GitHub handle IS matchable, so the blocklist is its correct home, and the
+  absence of an account type on FeedIOC is a decision rather than a gap.
 - Wave 6 is the sixth declared catalog window in eighteen days. The windows are
   still being added one day at a time by hand, after the fact, by whoever notices
   the routing line. That works while a human reads the number every day.
