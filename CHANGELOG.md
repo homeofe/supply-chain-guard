@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.2.1] - 2026-09-19
+
 ### Added
 
 - 12,574 package indicators from the GitHub Advisory Database malware feed,
@@ -24,6 +26,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   carried 11,695 of the 12,574 new indicators, 11,393 of them with MAL-2025 ids,
   against 34 and 23 on the neighbouring days: a bulk migration of historical
   corpus, recent only by publication date.
+- The bundle cutoff advanced from 2026-08-18 to 2026-08-20 and 327 package
+  indicators moved into the catalog, which now holds 81,260 entries against the
+  bundle's 8,574.
+
+### Fixed
+
+- All 21 packages of the npm Bin Entry Harvesting campaign stay detectable
+  offline. Twenty of them had arrived through the advisory importer with no
+  curation, so the cutoff advance migrated them into the catalog and left the
+  campaign one-of-21 in the bundle. They are curated with the campaign, and the
+  regression test now asserts the full published set rather than a sample.
 
 ## [6.2.0] - 2026-09-17
 
@@ -5801,7 +5814,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.1...HEAD
+[6.2.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.1
 [6.2.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.0
 [6.1.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.3
 [6.1.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.1.2

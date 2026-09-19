@@ -1,3 +1,45 @@
+## v6.2.1 release preparation (2026-09-19)
+
+Patch release carrying the 2026-09-19 threat intelligence update, merged from
+PR 311 at `9388d15`. No behaviour change: indicators, one partition window and
+the account-attribution convention.
+
+- Version bumped at all 16 configured sites plus `package.json`, then
+  `npm install --package-lock-only` for the two lockfile fields. Every site was
+  counted before the rewrite and the script refuses on any count that does not
+  match, because a blanket replace is how the README CIDRs were destroyed once.
+  All 32 occurrences were genuine version strings this time; no CIDR collision
+  exists at 6.2.0.
+- `release:prepare` advanced `bundleCutoffDate` from 2026-08-18 to 2026-08-20,
+  and `feed-migrate --write` moved 347 package indicators out of the bundle.
+  The bundle is 8,554 entries and the catalog 81,280.
+- The migration was checked against the curated set rather than assumed: all 10
+  PhantomRaven indicators, the Shai-Hulud republish digest and the four carrier
+  packages are still in `feed.json`. That is the failure the v6.2.0 notes record,
+  where 44 documented campaign indicators left the package and only
+  `campaigns.test.ts` noticed.
+- **The cutoff advance broke a documented campaign, and the test caught it.**
+  `campaigns.test.ts` went red on npm Bin Entry Harvesting: `ngsw-config` and
+  `bazelisk` no longer resolved from the bundled feed. 20 of the campaign's 21
+  packages had arrived through the importer on 2026-08-19 with no curation, so
+  the move of the cutoff to 2026-08-20 migrated every one of them into the
+  catalog and left the campaign one-of-21 detectable offline. The safedep
+  write-up was re-read for the authoritative list rather than guessing which of
+  the 117 same-day imports belonged to the campaign, all 20 were curated back
+  into the bundle under a comment block, and the test now asserts all 21 names
+  instead of a sample of 3, so a later cutoff cannot repeat this quietly.
+- **Two guard-shape findings worth the owner's attention, neither fixed here:**
+  `check:feed-partition` is ONE-DIRECTIONAL. Stripping the `campaign` field from
+  a curated entry makes `partitionTarget` return `catalog` while the entry still
+  sits in the bundle, and the gate stays green: it only reports a catalog entry
+  that belongs in the bundle, never the reverse. Separately, what actually pins
+  a curated entry is the COMMENT anchor in `feed-migrate.mjs` (rule 3), not the
+  `campaign` field, so the field and the comment are two independent mechanisms
+  that happen to agree. An entry curated with a field but no comment block is
+  not protected from migration, which is the shape this release was bitten by.
+- SECURITY.md unchanged: the table is keyed by major and 6.x is already
+  supported. CONTRIBUTING.md unchanged: no new modules.
+
 ## 2026-09-19 - threat intelligence update (claude-opus-5)
 
 Daily threat-intel run. Nothing released; the PR is for the owner to review.
