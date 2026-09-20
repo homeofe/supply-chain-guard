@@ -1,3 +1,67 @@
+## v6.2.2 release preparation (2026-09-20) (claude-opus-5)
+
+Patch release carrying the 2026-09-20 threat intelligence update, merged from
+PR 313 at `37bbf5c`. No behaviour change: indicators, the scheduled bundle
+window advance, and a diagnosis for a long-standing local test failure.
+
+- Version bumped at all 16 configured sites plus `package.json`, then
+  `npm install --package-lock-only` for the two lockfile fields. Sites were read
+  from `aahp.config.json` rather than from the checklist in CLAUDE.md, which
+  still lists 15 and is missing `examples/github-action-basic.yml`.
+- **`src/threat-intel.ts` was NOT bumped globally, and must never be.** It holds
+  three occurrences of the old version and only one is a version string. The
+  other two are historical comments recording that the v6.2.1 cutoff advance
+  migrated the npm Bin Entry Harvesting packages, so a blanket replace would
+  have rewritten the project's account of what happened into a claim about a
+  release that had not happened yet. Only `bundledVersion` was changed. This is
+  the same shape as the README CIDR trap: the count matching is not evidence
+  that every occurrence means the same thing.
+- `release:prepare` advanced `bundleCutoffDate` from 2026-08-20 to 2026-08-21
+  and `feed-migrate --write` moved 68 package indicators out of the bundle. The
+  bundle is 8,506 entries and the catalog 81,821.
+- The migration was checked against the curated set, because this is exactly
+  where v6.2.1 broke a documented campaign and only `campaigns.test.ts` noticed.
+  That suite plus `feed`, `feed-partition` and `catalog-acceptance` is green at
+  567 of 569, and the two failures are the known Windows ones described below,
+  not campaign damage. No curated entry left the bundle.
+- `check:handoff` caught `NEXT_ACTIONS.md` still reading v6.2.1. The gate is
+  doing what it was added for: the hand-curated backlog is the one handoff file
+  `handoff:refresh` does not rewrite, so it drifts silently otherwise.
+- SECURITY.md unchanged: the table is keyed by major and 6.x is already
+  supported. CONTRIBUTING.md unchanged: no new modules.
+
+### The two Windows `IOC_KNOWN_C2_DOMAIN` failures are Defender, not a gap
+
+Carried in the notes since 2026-09-19 as a "known environment gap", which was a
+label rather than a diagnosis. It was measured this session and the cause is
+now known, so it should stop being re-investigated from scratch.
+
+Windows Defender classifies the two fixture payloads as malware and locks the
+file the moment it is written. `fs.statSync` still returns the correct size, but
+`fs.readFileSync` throws `UNKNOWN: unknown error, open <path>`, so the scanner
+never receives the bytes. `Get-MpThreatDetection` names the fixture paths with
+timestamps matching the test runs, ThreatID 2147974942 for the Phantom Bot
+payload and 2147971681 for the GlassWASM one.
+
+Controls that ruled out the plausible alternatives: both domains are present and
+correct in `KNOWN_C2_DOMAINS` and in the bundle; the fixture syntax is
+irrelevant, since the same wrapper passes with `edcf8b03c84634[.]lhr[.]life` and
+fails with `87e0bbc636999b[.]lhr[.]life`; the temp directory is irrelevant; and
+12 identical runs were 12 identical misses, so it is not flakiness. A fresh
+clone of the branch on a Linux host runs `campaigns.test.ts` at 432 of 432.
+
+**The scanner behaves correctly under this.** The blocked read produces
+`partialScan: true` with `PATH_SCAN_INCOMPLETE` and `SCAN_NO_SCANNABLE_FILES`,
+so an unreadable target is reported as an incomplete scan and never as clean.
+That is the fail-loud path working, which is why this is a harness artifact and
+not a false negative.
+
+One thing is worth the owner's attention and was deliberately not changed in a
+release commit: the test fails as a bare `expected undefined to be defined`,
+which carries no hint that the read was blocked. That is what let the label
+survive unexamined. Detecting the blocked read and skipping with a named reason
+would make the next occurrence self-explaining.
+
 ## 2026-09-20 - threat intelligence update (claude-opus-5)
 
 Daily threat-intel run. Nothing released; the PR is for the owner to review.
