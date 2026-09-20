@@ -7,6 +7,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 493 package indicators from the GitHub Advisory Database malware feed,
+  corroborated against OSV and routed entirely to the catalog: every one carries
+  a `firstSeen` of 2026-09-17, the declared catalog window for that day of the
+  historical-corpus bulk migration. The catalog now holds 81,753 entries and the
+  bundle is unchanged.
+
 ## [6.2.1] - 2026-09-19
 
 ### Added
