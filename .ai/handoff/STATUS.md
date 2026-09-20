@@ -1,3 +1,32 @@
+## 2026-09-20 - threat intelligence update (claude-opus-5)
+
+Daily threat-intel run. Nothing released; the PR is for the owner to review.
+
+- Importer: 47,580 GitHub advisories plus 458 OpenSSF MAL records over the
+  default 14-day window, 50,924 mapped, 49,841 already present and 11 covered by
+  a bare-name IOC. 493 new package indicators, 41 of them corroborated by OSV.
+  No cap, no truncation, no backlog: `remaining` and `undrainable` are both 0.
+- **Routing: 0 to the bundle, 493 to the catalog, and that was investigated
+  before applying.** An all-catalog day is the shape this job is told to
+  question. Every one of the 493 carries `firstSeen` 2026-09-17, which is
+  already a declared `catalogWindows` day, so the routing is rule 2 working, not
+  a cutoff mistake. No new window was declared. Catalog 81,260 -> 81,753; the
+  bundle is unchanged apart from `FEED_GENERATED_AT`.
+- The control mattered more than the count. `0 to the bundle` is also what a
+  broken window or a stale fetch looks like, so the newest upstream advisories
+  were checked directly: GitHub's newest malware advisories are dated 2026-09-19
+  and nothing is published for 2026-09-20 yet. Four of them were probed against
+  the committed stores by hand (`pypi:urc`, `keroeltop`, `pypi:py-venv-doctor`,
+  `internallib_v949`) and all four are already in the BUNDLE from PR 311. The
+  zero is therefore a real zero, not a query that missed.
+- 104 advisories skipped as `unmappable-version-range`, unchanged in kind from
+  previous runs: bounded ranges the importer refuses to expand into a bare name.
+- STEP 1b found nothing addable. Aikido, StepSecurity and The Hacker News were
+  checked for the 2026-09-18 to 2026-09-20 window; the newest IOC-bearing
+  write-ups are from August and early September and their atomic indicators are
+  already covered (`sfrclak[.]com` is in both `ioc-blocklist.ts` and the bundle).
+  Zero hand-added domains, IPs, hashes, accounts or dead drops this run.
+- No decline entry was added and no family was deferred.
 ## v6.2.1 release preparation (2026-09-19)
 
 Patch release carrying the 2026-09-19 threat intelligence update, merged from
