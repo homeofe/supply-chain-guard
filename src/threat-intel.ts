@@ -1593,34 +1593,12 @@ const FEED_CHUNK_12: FeedIOC[] = [
 
 
 
-  // Imported from GitHub Advisory Database (2026-08-15) - see docs/threat-feed-sources.md
-  { type: "package", value: "moidevy@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-4j24-mrxm-5jfj, MAL-2026-14348", firstSeen: "2026-08-21" },
-  { type: "package", value: "express-session-handler@2.3.3", severity: "critical", confidence: 1.0, source: "GHSA-w25r-wmr3-97hj, MAL-2026-14345", firstSeen: "2026-08-21" },
-  { type: "package", value: "chai-as-soul@2.3.5", severity: "critical", confidence: 1.0, source: "GHSA-c7j2-7fxx-qjq2, MAL-2026-14343", firstSeen: "2026-08-21" },
-  { type: "package", value: "chai-as-soul@2.3.6", severity: "critical", confidence: 1.0, source: "GHSA-c7j2-7fxx-qjq2, MAL-2026-14343", firstSeen: "2026-08-21" },
-  { type: "package", value: "@js-lib-team/env-parser@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-pqxh-h974-337x, MAL-2026-14344", firstSeen: "2026-08-21" },
-  { type: "package", value: "@next-fonts/font@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-9c7m-jf5w-pq4v, MAL-2026-14346", firstSeen: "2026-08-21" },
-  { type: "package", value: "@next-fonts/font@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-9c7m-jf5w-pq4v, MAL-2026-14346", firstSeen: "2026-08-21" },
-  { type: "package", value: "mcq-session@1.0.4", severity: "critical", confidence: 1.0, source: "GHSA-7hm6-5mgc-qm2c, MAL-2026-14347", firstSeen: "2026-08-21" },
-  { type: "package", value: "mcq-session@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-7hm6-5mgc-qm2c, MAL-2026-14347", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:reqcrypts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-p5hw-cgm2-4cp2, MAL-2026-14341", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:reqcrypts@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-p5hw-cgm2-4cp2, MAL-2026-14341", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:reqcrypts@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-p5hw-cgm2-4cp2, MAL-2026-14341", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:reqcrypts@0.1.3", severity: "critical", confidence: 1.0, source: "GHSA-p5hw-cgm2-4cp2, MAL-2026-14341", firstSeen: "2026-08-21" },
-  { type: "package", value: "coin-fees@20.1.1", severity: "critical", confidence: 1.0, source: "GHSA-c7m8-52wr-gcp3, MAL-2026-14342", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:tinymember", severity: "critical", confidence: 1.0, source: "GHSA-jpmw-jcm2-3wcq, MAL-2026-14340", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:append-only-vec@0.1.9", severity: "critical", confidence: 1.0, source: "GHSA-m9v3-f7h2-72cp, MAL-2026-14333", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:internment@0.8.7", severity: "critical", confidence: 1.0, source: "GHSA-mxq3-8c5w-crcm, MAL-2026-14337", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:aronenao", severity: "critical", confidence: 1.0, source: "GHSA-vqfg-g9r4-x39f, MAL-2026-14335", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:proc-macro-en", severity: "critical", confidence: 1.0, source: "GHSA-4v73-396v-6ph9, MAL-2026-14339", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:arone", severity: "critical", confidence: 1.0, source: "GHSA-7h2v-6jmm-f43m, MAL-2026-14334", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:aovine", severity: "critical", confidence: 1.0, source: "GHSA-r47g-vj55-h745, MAL-2026-14332", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:proc-macro1", severity: "critical", confidence: 1.0, source: "GHSA-m83q-4x86-96wh, MAL-2026-14338", firstSeen: "2026-08-21" },
-  { type: "package", value: "cargo:arrayref@0.3.10", severity: "critical", confidence: 1.0, source: "GHSA-jwh4-228v-r358, MAL-2026-14336", firstSeen: "2026-08-21" },
 
   // arrayref / proc-macro1 crates.io build-time dropper (August 2026) - atomic
   // indicators from vendor write-ups; the package IOCs came from the advisory
   // import above. See docs/threat-feed-sources.md.
+  { type: "package", value: "cargo:proc-macro1", severity: "critical", confidence: 1.0, source: "GHSA-m83q-4x86-96wh, MAL-2026-14338", firstSeen: "2026-08-21" },
+  { type: "package", value: "cargo:arrayref@0.3.10", severity: "critical", confidence: 1.0, source: "GHSA-jwh4-228v-r358, MAL-2026-14336", firstSeen: "2026-08-21" },
   { type: "domain", value: "hwsrv-798836.hostwindsdns.com", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
   { type: "ip", value: "23.254.165.112", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz, safedep", firstSeen: "2026-08-20" },
   { type: "ip", value: "23.254.167.107", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
@@ -1629,6 +1607,24 @@ const FEED_CHUNK_12: FeedIOC[] = [
   { type: "hash", value: "25ad700976873c76af785cb99b33c48db7df8b81f21d1e9e06b3676b9a9373ae", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
   { type: "hash", value: "61198155da51b838772eecf5bfaac6cbc4dcc388dccc56658fc28a8e831b34d4", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
   { type: "hash", value: "b5c1b5b0763a8809a644a8f92224653f0aca623a98eecc714d27f74b80fbe436", severity: "critical", confidence: 1.0, campaign: "arrayref Build-Time Dropper", source: "StepSecurity, Wiz", firstSeen: "2026-08-20" },
+
+  // Curated back into the bundle from the 2026-08-21 advisory import.
+  // campaigns.test.ts asserts every one of these against getBundledFeed(),
+  // so they are a stated offline-detection contract and not ordinary import
+  // volume: the bare npm names cover the all-versions resolver, and the two
+  // pypi: pairs cover ecosystem routing plus the clean-version negative.
+  // They arrived with no curation, so the cutoff advance to 2026-08-22 was
+  // about to migrate them out and take four assertions with them. This is a
+  // comment block on purpose: rule 3 in feed-migrate.mjs anchors on the
+  // comment, and a campaign field alone would not have held them.
+
+  { type: "package", value: "polymarket-trading-developer-tool", severity: "critical", confidence: 1.0, source: "GHSA-qh4r-g8mr-v3xp, MAL-2026-6714", firstSeen: "2026-08-21" },
+  { type: "package", value: "kelly-sizing", severity: "critical", confidence: 1.0, source: "GHSA-vj74-3pcr-5p7j, MAL-2026-14354", firstSeen: "2026-08-21" },
+  { type: "package", value: "saas-f-testing", severity: "critical", confidence: 1.0, source: "GHSA-fvrj-4h6r-8rcg, MAL-2026-12434", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:scrambleeer@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:scrambleeer@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:boto4@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
+  { type: "package", value: "pypi:boto4@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
 
   // Imported from GitHub Advisory Database (2026-08-08) - see docs/threat-feed-sources.md
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.8.10", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
@@ -1654,33 +1650,9 @@ const FEED_CHUNK_12: FeedIOC[] = [
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.4", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
   { type: "package", value: "lumen-pages-community@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-cf4g-g969-7qvx, MAL-2026-14356", firstSeen: "2026-08-22" },
   { type: "package", value: "fuel-react@91.0.0", severity: "critical", confidence: 1.0, source: "GHSA-77vr-cf3r-2v4w, MAL-2026-14355", firstSeen: "2026-08-22" },
-  { type: "package", value: "polymarket-trading-developer-tool", severity: "critical", confidence: 1.0, source: "GHSA-qh4r-g8mr-v3xp, MAL-2026-6714", firstSeen: "2026-08-21" },
-  { type: "package", value: "kelly-sizing", severity: "critical", confidence: 1.0, source: "GHSA-vj74-3pcr-5p7j, MAL-2026-14354", firstSeen: "2026-08-21" },
-  { type: "package", value: "@gfe/lx-watcher@1.5.3", severity: "critical", confidence: 1.0, source: "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353", firstSeen: "2026-08-21" },
-  { type: "package", value: "@gfe/lx-watcher@1.5.4", severity: "critical", confidence: 1.0, source: "GHSA-7jmf-xqv3-ggfj, MAL-2026-14353", firstSeen: "2026-08-21" },
-  { type: "package", value: "saas-f-testing", severity: "critical", confidence: 1.0, source: "GHSA-fvrj-4h6r-8rcg, MAL-2026-12434", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:scrambleeer@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:scrambleeer@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-jx7v-9c55-jw2v, MAL-2026-14350", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:requests-crypt@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-cf52-hr54-m53p, MAL-2026-14351", firstSeen: "2026-08-21" },
-  { type: "package", value: "rollup-packages-node-polyfills", severity: "critical", confidence: 1.0, source: "GHSA-gp6f-mxh4-x3mh, MAL-2026-12428", firstSeen: "2026-08-21" },
-  { type: "package", value: "pino-deploy", severity: "critical", confidence: 1.0, source: "GHSA-9hw3-p3rx-59cw, MAL-2024-2871", firstSeen: "2026-08-21" },
-  { type: "package", value: "express-bunker", severity: "critical", confidence: 1.0, source: "GHSA-w7r5-8cmj-m893, MAL-2026-10500", firstSeen: "2026-08-21" },
-  { type: "package", value: "react-native-ui-message", severity: "critical", confidence: 1.0, source: "GHSA-w3j6-3pww-qfcw, MAL-2026-12424", firstSeen: "2026-08-21" },
 ];
 
 const FEED_CHUNK_13: FeedIOC[] = [
-  // Imported from GitHub Advisory Database (2026-08-08) - see docs/threat-feed-sources.md
-  { type: "package", value: "react-hook-use-debounce-throttle-12", severity: "critical", confidence: 1.0, source: "GHSA-2x4w-64xc-78fv, MAL-2026-5909", firstSeen: "2026-08-21" },
-  { type: "package", value: "utils-common-helpers", severity: "critical", confidence: 1.0, source: "GHSA-fq4g-5xjj-r935, MAL-2026-5911", firstSeen: "2026-08-21" },
-  { type: "package", value: "react-fontawesome-icons", severity: "critical", confidence: 1.0, source: "GHSA-xvfg-jp9r-63q2, MAL-2026-12423", firstSeen: "2026-08-21" },
-  { type: "package", value: "qr-code-styling-temp", severity: "critical", confidence: 1.0, source: "GHSA-pp2c-4x5r-7h8j, MAL-2026-4655", firstSeen: "2026-08-21" },
-  { type: "package", value: "pvm-autodoc", severity: "critical", confidence: 1.0, source: "GHSA-9352-468r-x8fr, MAL-2026-12421", firstSeen: "2026-08-21" },
-  { type: "package", value: "postcss-animate-css-vars", severity: "critical", confidence: 1.0, source: "GHSA-432g-6qr7-8hvh, MAL-2026-12418", firstSeen: "2026-08-21" },
-  { type: "package", value: "tailwind-animate-css-plugin", severity: "critical", confidence: 1.0, source: "GHSA-5w98-j73p-rv7m, MAL-2026-14352", firstSeen: "2026-08-21" },
-  { type: "package", value: "polymarket-bot-logger", severity: "critical", confidence: 1.0, source: "GHSA-v4pc-gmg8-h48w, MAL-2026-10516", firstSeen: "2026-08-21" },
-  { type: "package", value: "polygon-toolkit-validator", severity: "critical", confidence: 1.0, source: "GHSA-67fh-9pjj-6cpw, MAL-2026-10641", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:boto4@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
-  { type: "package", value: "pypi:boto4@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
 
   // Imported from GitHub Advisory Database (2026-08-14T11:16:09Z) - see docs/threat-feed-sources.md
   { type: "package", value: "solidity-testing-utils@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-g5g4-w6x5-58j4, MAL-2026-14375", firstSeen: "2026-08-23" },
@@ -9225,7 +9197,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "afhmxiewpsf@1.0.3", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
   { type: "package", value: "afhmxiewpsf@1.0.4", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
   { type: "package", value: "afhmxiewpsf@1.0.5", severity: "critical", confidence: 0.9, source: "GHSA-59f6-ch49-395j, MAL-2026-16158 (ghsa-malware)", firstSeen: "2026-09-14" },
-  { type: "package", value: "@gfe/lx-watcher", severity: "critical", confidence: 1.0, source: "GHSA-wg37-hw83-hqwf, MAL-2026-14353 (amazon-inspector+ghsa-malware)", firstSeen: "2026-08-21" },
   { type: "package", value: "meraz-project-tracker", severity: "critical", confidence: 0.9, source: "GHSA-54v8-j59m-366h, MAL-2026-16161 (ghsa-malware)", firstSeen: "2026-09-14" },
   { type: "package", value: "@merazmz/project-tracker", severity: "critical", confidence: 0.9, source: "GHSA-x98w-cqq8-v3q2, MAL-2026-16157 (ghsa-malware)", firstSeen: "2026-09-14" },
   { type: "package", value: "lpulogin", severity: "critical", confidence: 0.9, source: "GHSA-5823-3hg3-27v8, MAL-2026-16160 (ghsa-malware)", firstSeen: "2026-09-14" },
@@ -10792,7 +10763,7 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
   }
 
   return {
-    bundledVersion: "6.2.2",
+    bundledVersion: "6.2.3",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
