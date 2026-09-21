@@ -24,14 +24,14 @@
     "src/dependency-confusion.ts": "2658aa4b22ba9cd49691ea27305ed0a14722034df82f7971e9dc1fff9e702f16",
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "5ae5de2ad9f205ca2e7a1e03bc9349467c70f62a3741a84a6a63ecacb997cff9",
-    "src/ioc-blocklist.ts": "9589130fcd3991058a8054345bbfd34ccd1058ce4bac2bc58f8535a5e7821341",
+    "src/ioc-blocklist.ts": "9994a0444676b5c01b3596b275f48ce6147c18eb1f85f4f5818eb7e295954e5b",
     "src/patterns.ts": "22f6b472b219c535f3eefa31eca7025fe3dd31409cde6b545376ff2314547333",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
     "src/reporter.ts": "9fc81ee7852700dbffb2f3ec7156dab73216535db736471fdf15a9338a11fb84",
     "src/scanner.ts": "fb978b2eefb00545efa31fe7c80bfd3c044b5ec66edfb9816a41eb033054ed06",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "0d7835eb90c4e9614d00ed935f1181300a273b436c72718f0567652476994204",
+    "src/threat-intel.ts": "d7d622cf17358616696dceee695974e351192303841ba8be03522af850d66911",
     "src/workflow-modeler.ts": "1ff70d4b2066a233b08a56e4d12c4b6736dc80e237dc19492aa1ed8568d90b9a"
   }
 }

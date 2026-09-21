@@ -37,7 +37,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-20T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-21T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -9584,6 +9584,79 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "tizen-webdriver-cli@1.0.0", severity: "critical", confidence: 1.0, campaign: "npm Bin Entry Harvesting", source: "GHSA-cffv-ggq7-fw2q, MAL-2026-13966", firstSeen: "2026-08-13" },
   { type: "package", value: "upload-to-gcp@3.2.1", severity: "critical", confidence: 1.0, campaign: "npm Bin Entry Harvesting", source: "GHSA-jx3f-5x53-4484, MAL-2026-14067", firstSeen: "2026-08-15" },
   { type: "package", value: "wct-st@1.0.0", severity: "critical", confidence: 1.0, campaign: "npm Bin Entry Harvesting", source: "GHSA-6r3v-5c9p-jv7v, MAL-2026-13990", firstSeen: "2026-08-14" },
+
+  // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
+  { type: "package", value: "testmgkregme@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-hc49-rwm2-p2w7, MAL-2026-16317 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1sdsd2@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-9mc8-mrvr-f664, MAL-2026-16316 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1ro@999.99.99", severity: "critical", confidence: 1.0, source: "GHSA-8rr3-xrmc-xvjf, MAL-2026-16315 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1ro@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-8rr3-xrmc-xvjf, MAL-2026-16315 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1df23@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-78p9-g7q9-mcjw, MAL-2026-16312 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1hh235@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-qrfc-3762-c24w, MAL-2026-16314 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "chai-testing@1.1.4", severity: "critical", confidence: 1.0, source: "GHSA-5jvh-cf7p-qx9w, MAL-2026-16307 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "chat-adapter-matrix@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-2rg8-m9rx-gfhf, MAL-2026-16308 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test1gg234@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-w7fw-w5xv-5p8v, MAL-2026-16313 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "test12vv36@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-7f39-795r-gxj4, MAL-2026-16311 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "npmscript_tesstalert_unpkg@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-r2rm-wm4f-f55p, MAL-2026-16309 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "npmscript_tesstalert_unpkg@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-r2rm-wm4f-f55p, MAL-2026-16309 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "npx-test-ma980@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-9vj4-6r95-2p6w, MAL-2026-16310 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbusedge2/authxsas@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-8mrv-jcm6-9rv3, MAL-2026-16303 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbusedge2/authxsas1@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-92qm-hjm8-mp6j, MAL-2026-16304 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbusedge2/auth@1.1.1", severity: "critical", confidence: 1.0, source: "GHSA-9hmg-mp2c-g9wr, MAL-2026-16302 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbusedge2/x@1.1.1", severity: "critical", confidence: 1.0, source: "GHSA-488m-x4jr-5x75, MAL-2026-16305 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@baanx/solana-lib@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-pvh9-27rp-6282, MAL-2026-16300 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbsuedge3/xar@1.1.1", severity: "critical", confidence: 1.0, source: "GHSA-rg8r-9wp3-7jrg, MAL-2026-16301 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@nimbusedge2/xa@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-m4pg-jjmc-xgr9, MAL-2026-16306 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@pwaplatform/module-sso-integration@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-20" },
+  { type: "package", value: "@pwaplatform/module-sso-integration@99.0.1", severity: "critical", confidence: 1.0, source: "GHSA-26h7-cmv3-wgv6, MAL-2026-16299 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-20" },
+  { type: "package", value: "starbucks-sdk@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16345 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pflag29424@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16342 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "siriusbeyond@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16343 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "sorrawit-dev-helper@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16344 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "keroeltopgg@99.99.99", severity: "critical", confidence: 0.9, source: "MAL-2026-16334 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "feed-widget-helper@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16332 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pf25133@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16339 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pflag14570@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16341 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "commerce-materials@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16330 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "element-plus-vite-cli@2.9.3", severity: "critical", confidence: 0.9, source: "MAL-2026-16331 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "element-plus-vite-cli@2.9.5", severity: "critical", confidence: 0.9, source: "MAL-2026-16331 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "byted-commerce-materials@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16326 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "chai-as-viem@1.1.3", severity: "critical", confidence: 0.9, source: "MAL-2026-16329 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "keroeltopkk@99.99.99", severity: "critical", confidence: 0.9, source: "MAL-2026-16335 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "bulk-add-sdk@1.99.99", severity: "critical", confidence: 0.9, source: "MAL-2026-16325 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "catwrestlingbird@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16327 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@asenfotech/unplugin-element-plus@2.9.5", severity: "critical", confidence: 0.9, source: "MAL-2026-16318 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@asenfotech/unplugin-element-plus@2.9.3", severity: "critical", confidence: 0.9, source: "MAL-2026-16318 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "catwrestlinghuman@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16328 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "my-cdn-script@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16337 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@siriusbeyond/utils@99.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16322 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "action-slack-message-root@1.0.1", severity: "critical", confidence: 0.9, source: "MAL-2026-16323 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@siriusbeyond/auth@99.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16320 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "keroeltopkkk@99.99.99", severity: "critical", confidence: 0.9, source: "MAL-2026-16336 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "homestack-cheer@1.1.9", severity: "critical", confidence: 0.9, source: "MAL-2026-16333 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@dbbhk/ui-components@99.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16319 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "better-envforge@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16324 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pf25262@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16340 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pf23727@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16338 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@siriusbeyond/ui@99.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-16321 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.105", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.3.100", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.106", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.103", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.102", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.104", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+
+  // Mini Shai-Hulud / TeamPCP durabletask PyPI compromise (MAL-2026-4174,
+  // May 2026). The three malicious versions were already pinned above; the
+  // atomic infrastructure behind them was not. family and campaign are set so
+  // these stay in the bundle and remain detectable with no network.
+  { type: "domain", value: "check.git-service.com", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "ip", value: "160.119.64.3", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "url", value: "check.git-service.com/rope.pyz", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "hash", value: "3de04fe2a76262743ed089efa7115f4508619838e77d60b9a1aab8b20d2cc8bf", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "hash", value: "7d80b3ef74ad7992b93c31966962612e4e2ceb93e7727cdbd1d2a9af47d44ba8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "hash", value: "5246e60c2ff10ae058abba14ef5ea22432465ad827ec5f5c5572999411d90b80", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "hash", value: "069ac1dc7f7649b76bc72a11ac700f373804bfd81dab7e561157b703999f44ce", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
+  { type: "package", value: "pypi:rrs@0.3.5", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

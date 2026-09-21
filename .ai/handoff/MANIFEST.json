@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789919999",
-    "timestamp": "2026-09-20T15:59:59Z",
-    "commit": "37bbf5c",
+    "session_id": "cli-1789969049",
+    "timestamp": "2026-09-21T05:37:29Z",
+    "commit": "74eb299",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:76dfd2967bfb851330a178d5c8390255003d84d4ea2f485ff647840403498eb0",
-      "updated": "2026-09-20T15:59:58Z",
-      "lines": 10397,
-      "summary": "Patch release carrying the 2026-09-20 threat intelligence update, merged from"
+      "checksum": "sha256:5ed66a48fd515dd4cd08c958bd4ce8dae4bf39c0c920df3444c39bb2a939687c",
+      "updated": "2026-09-21T05:37:09Z",
+      "lines": 10422,
+      "summary": "Importer: 66 new package indicators, 59 to the bundle and 7 to the catalog."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:e3b18d49bdb76437cc595d28d54a3d8f51a722d7cfbc7caadcc1636db35979fc",
-      "updated": "2026-09-20T15:59:14Z",
+      "updated": "2026-09-20T16:33:30Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:c0163f73f5352a5090d6dafa44025632e280f9f15cd899d6a84285f90b6d5f8d",
-      "updated": "2026-09-20T15:59:59Z",
+      "updated": "2026-09-21T05:37:29Z",
       "lines": 184,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-07-18T08:02:38Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:cdaf92823865c89c6119e3058022408a62824129fbd663303e38d45e5ca3e36b",
-      "updated": "2026-09-20T15:59:59Z",
+      "updated": "2026-09-21T05:37:29Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:8f2a8f44494d01add972c20f9d43a593136e670986df124494bdc4da1681761b",
-      "updated": "2026-09-20T15:59:59Z",
+      "updated": "2026-09-21T05:37:29Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-09-19T08:55:16Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-08-20T12:42:10Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-08-04T08:54:14Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-20T15:55:01Z",
+      "updated": "2026-06-28T09:06:54Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Patch release carrying the 2026-09-20 threat intelligence update, merged from Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Importer: 66 new package indicators, 59 to the bundle and 7 to the catalog. Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 121614,
-    "full_read": 134563
+    "manifest_plus_core": 121883,
+    "full_read": 134832
   }
 }

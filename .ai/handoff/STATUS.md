@@ -1,3 +1,28 @@
+## 2026-09-21 - daily threat-intel run (claude-opus-5)
+
+Importer: 66 new package indicators, 59 to the bundle and 7 to the catalog.
+81 advisories skipped as `unmappable-version-range`. No `--limit` passed and
+none reached, no page cap, no deferral and no decline. Every candidate was
+version-pinned, so no registry probe for a bare name was needed.
+
+Hand enrichment: the Mini Shai-Hulud / TeamPCP `durabletask` PyPI compromise
+(MAL-2026-4174, May 2026) was only partially covered. Added the primary C2
+`check[.]git-service[.]com`, its address `160[.]119[.]64[.]3`, the `rope.pyz`
+stage-2 URL and four SHA-256 digests, all read from the OSV JSON indicator
+block rather than a rendered page.
+
+Deliberately NOT added, and open for the owner:
+
+- Two tarball digests for `durabletask` 1.4.2 and 1.4.3 appear in one vendor
+  write-up but in no second source and not in the OSV record, which carries
+  integrity digests for 1.4.1 only. A long hex string from a single rendered
+  page is exactly the shape that arrives corrupted, so they were left out.
+- The `xploitrsturtle2` handle is attributed to the TeamPCP operator at
+  medium-to-high confidence, and the sources describe it posting on X rather
+  than publishing packages. `KNOWN_MALICIOUS_GITHUB_ACCOUNTS` blocks by name,
+  so a persona handle on the wrong platform is a false-positive risk and it
+  was left out.
+
 ## v6.2.2 release preparation (2026-09-20) (claude-opus-5)
 
 Patch release carrying the 2026-09-20 threat intelligence update, merged from

@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 66 package indicators from the GitHub Advisory Database malware feed,
+  corroborated against OSV: 59 in the bundle and 7 in the catalog. The seven
+  catalog-bound entries carry a `firstSeen` before the bundle cutoff (six from
+  2025-10-30, one from 2026-05-13); every entry is version-pinned and no bare
+  package name was proposed.
+- Atomic infrastructure for the Mini Shai-Hulud / TeamPCP `durabletask` PyPI
+  compromise of May 2026 (MAL-2026-4174). The three malicious versions and the
+  `t[.]m-kosche[.]com` fallback were already covered; the primary C2
+  `check[.]git-service[.]com`, its address `160[.]119[.]64[.]3`, the
+  `rope.pyz` stage-2 fetch URL and four file digests were not.
+
 ## [6.2.2] - 2026-09-20
 
 ### Added
