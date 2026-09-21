@@ -81819,3 +81819,10 @@
 {"type":"package","value":"happy-dlscord.js","severity":"critical","confidence":1,"source":"GHSA-6gjr-97pp-w2cw, MAL-2026-4575","firstSeen":"2026-08-20"}
 {"type":"package","value":"gehneb","severity":"critical","confidence":1,"source":"GHSA-q9pf-x337-xr68, MAL-2026-4570","firstSeen":"2026-08-20"}
 {"type":"package","value":"expect-dotenv","severity":"critical","confidence":1,"source":"GHSA-h7q6-7chv-cgh2, MAL-2026-14316 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-20"}
+{"type":"package","value":"epic-admin-node-services@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49113 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-admin-node-services@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49113 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-adminportal-frontend@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49114 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-adminportal-frontend@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49114 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"egstore-graphql-client@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49111 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"egstore-graphql-client@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49111 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"hardhat-core@2.1.2","severity":"critical","confidence":1,"source":"MAL-2026-3713 (amazon-inspector+ossf-package-analysis)","firstSeen":"2026-05-13"}

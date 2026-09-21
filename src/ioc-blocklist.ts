@@ -457,6 +457,14 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "packages.storeartifact.com",
   "registry.storageartifact.com",
   "packages.storageartifact.com",
+
+  // Mini Shai-Hulud / TeamPCP durabletask PyPI compromise (MAL-2026-4174,
+  // May 2026). Primary C2 and stage-2 delivery host: the trojanized
+  // durabletask 1.4.1 through 1.4.3 fetch rope.pyz from it at import time.
+  // The packages and the t[.]m-kosche[.]com fallback were already covered
+  // here, the primary host was not. Read from the OSV JSON indicator block
+  // and corroborated by the vendor write-ups.
+  "check.git-service.com",
   "npm.jpartifacts.com",
 ];
 
@@ -695,6 +703,12 @@ export const KNOWN_C2_IPS: string[] = [
   // C2 domains. Named as the C2 server address by CrowdStrike and reproduced
   // unchanged in the independent write-ups, so it is the host itself, not a
   // shared service the packages merely happened to reach.
+
+  // Mini Shai-Hulud / TeamPCP durabletask PyPI compromise (MAL-2026-4174,
+  // May 2026). Address behind check[.]git-service[.]com, named in the OSV
+  // record's own indicator block rather than derived from a passive-DNS
+  // observation, so it is the attacker host and not shared hosting.
+  "160.119.64.3",
   "54.173.15.59",
 ];
 
@@ -922,6 +936,12 @@ export const KNOWN_DEAD_DROPS: string[] = [
   // and its apex is deliberately NOT listed, for the same reason as the
   // pinochiomathm entry above. Listed without the www host label so both the bare
   // and the www form match. The bare address is also in KNOWN_C2_IPS above.
+
+  // Mini Shai-Hulud / TeamPCP durabletask stage-2 payload (MAL-2026-4174,
+  // May 2026). The 28 KB rope.pyz the import-time dropper fetches and runs.
+  // Listed without the scheme so an hxxps:// mention in an incident note and
+  // a real fetch URL both match. The host is also in KNOWN_C2_DOMAINS above.
+  "check.git-service.com/rope.pyz",
   "jsonkeeper.com/b/YY8VI",
 ];
 
@@ -1392,6 +1412,17 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // Same index.js as the May 2026 wave, byte-identical, pushed to four packages
   // within one hour and past registry malware scanning. The packages and the
   // t[.]m-kosche[.]com C2 were already covered; only the payload digest was not.
+
+  // Mini Shai-Hulud / TeamPCP durabletask PyPI compromise (MAL-2026-4174,
+  // May 2026). Read from the OSV JSON API rather than a rendered page, so the
+  // digests are not subject to transcription drift. OSV carries integrity
+  // digests for 1.4.1 only; one vendor write-up also lists 1.4.2 and 1.4.3
+  // tarball digests, but no second source reproduces those two, so they are
+  // deliberately NOT listed.
+  "3de04fe2a76262743ed089efa7115f4508619838e77d60b9a1aab8b20d2cc8bf": "durabletask 1.4.1 sdist, TeamPCP trojanized (SHA256)",
+  "7d80b3ef74ad7992b93c31966962612e4e2ceb93e7727cdbd1d2a9af47d44ba8": "durabletask 1.4.1 wheel, TeamPCP trojanized (SHA256)",
+  "5246e60c2ff10ae058abba14ef5ea22432465ad827ec5f5c5572999411d90b80": "durabletask __init__.py import-time dropper (SHA256)",
+  "069ac1dc7f7649b76bc72a11ac700f373804bfd81dab7e561157b703999f44ce": "rope.pyz TeamPCP stage-2 credential stealer (SHA256)",
   "e37e3ddeeaaa9e0c4fdbcb829b4895a6521031c80053fc436625b61e6ee5b1a6": "Shai-Hulud worm index.js payload, 111-day republish (SHA256)",
 };
 
