@@ -1,6 +1,6 @@
 {
   "$comment": "Partition policy for the threat feed. See docs/threat-feed-catalog-decoupling-design.md section 4.2. bundleCutoffDate is an explicit committed date, never a rolling window: the generator and the gates run during ordinary prebuilds, so a clock-relative cutoff would make the same corpus cross it on a later day and drift the committed files with nobody editing them. From Phase 2 onward `npm run release:prepare` moves it to 30 days before the release as part of the reviewed release change. Phase 2 set the limits to 15000 entries and 2097152 bytes. The byte limit is the binding one after the migration, so that is the gate a bulk import will trip first; check:feed-budget reports the exact current usage and suggested cutoff.",
-  "bundleCutoffDate": "2026-08-21",
+  "bundleCutoffDate": "2026-08-22",
   "maxBundledEntries": 15000,
   "maxBundleBytes": 2097152,
   "catalogWindows": [

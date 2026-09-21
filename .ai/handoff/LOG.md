@@ -11,10 +11,11 @@
 
 This generated journal lists every release derived from CHANGELOG.md, newest first.
 
-## Releases (167, newest first)
+## Releases (168, newest first)
 
 | Version | Date | Headline |
 |---------|------|----------|
+| v6.2.3 | 2026-09-21 | 66 package indicators from the GitHub Advisory Database malware feed, |
 | v6.2.2 | 2026-09-20 | 493 package indicators from the GitHub Advisory Database malware feed, |
 | v6.2.1 | 2026-09-19 | 12,574 package indicators from the GitHub Advisory Database malware feed, |
 | v6.2.0 | 2026-09-17 | The threat feed is now split into a compiled-in bundle and a downloadable, |

@@ -1,3 +1,57 @@
+## v6.2.3 release preparation (2026-09-21) (claude-opus-5)
+
+Patch release carrying the 2026-09-21 threat intelligence update, merged from
+PR 315 at `0bc678e`. No behaviour change: indicators plus the scheduled bundle
+cutoff advance.
+
+- Version bumped at all 16 configured sites plus `package.json`, read from
+  `aahp.config.json` rather than from the checklist in CLAUDE.md, which still
+  lists 15. Occurrence counts were read off each file BEFORE replacing and the
+  script stops on any surprise, because three of the sites hold more matches
+  than the gate's minimum: `src/reporter.ts` 12, `README.md` 6, `server.json` 2.
+- **`package-lock.json` was left to `npm install --package-lock-only`.** It held
+  five matches for `6.2.2` and only two of them were ours: the other three are
+  the `chai` devDependency, which is coincidentally at 6.2.2. A blanket replace
+  would have rewritten a real dependency version and the version-sync gate would
+  have stayed green, because it only counts our two. Same shape as the README
+  CIDR trap.
+- `src/threat-intel.ts` held exactly one match this time, `bundledVersion`, so
+  the v6.2.2 hazard (historical comments naming the previous version) did not
+  recur. It is still not gate-able and was checked by hand.
+- `release:prepare` advanced `bundleCutoffDate` from 2026-08-21 to 2026-08-22.
+  The first `feed-migrate --write` moved 47 package indicators; after nine were
+  curated back it moves 38. The bundle is 8,534 entries and the catalog 81,866.
+- **The cutoff advance broke four documented assertions, exactly as in v6.2.1,
+  and only `campaigns.test.ts` noticed.** Checking the moved set for a
+  `campaign` or `family` field said zero curated entries moved, and that was
+  true and useless: curation here is expressed in COMMENTS, and all nine of the
+  affected entries sat under an importer batch header. The field check answers a
+  different question than the one it was read for. The tests are the check that
+  bites; the field scan is not.
+- The nine are the `arrayref` / `proc-macro1` crates.io pair, the bare npm names
+  `kelly-sizing`, `polymarket-trading-developer-tool` and `saas-f-testing`, and
+  the `pypi:boto4` and `pypi:scrambleeer` version pairs. They were moved under a
+  curated comment block, which is the mechanism `feed-migrate.mjs` rule 3
+  anchors on, not a `campaign` field: the v6.2.2 note already records that the
+  field and the comment are two independent mechanisms and only the comment
+  pins an entry. The crates.io pair went into the arrayref block that already
+  held that campaign's atomic indicators.
+- **A measurement error worth recording.** The first pass at finding documented
+  entries among the moved set derived the bare package name with
+  `value.split('@')[0]`, which is the EMPTY STRING for every scoped package,
+  and `haystack.includes('')` is always true. That reported 15 documented
+  entries including six that appear nowhere in the tests or the README. The
+  corrected extraction, run with a control in both directions (a name known to
+  be present and one known to be absent), reports nine. A substring probe needs
+  a negative control or it will happily confirm anything.
+- All seven prebuild gates green plus `tsc`, and `aahp lint` green against the
+  pinned 3.12.0. The full-suite verdict comes from CI on the release PR; the two
+  local `IOC_KNOWN_C2_DOMAIN` failures are the known Defender-locked fixtures and
+  fail identically on unmodified `main`.
+
+Carried open items from the 2026-09-21 intel run, unchanged by this release:
+the two uncorroborated `durabletask` 1.4.2 and 1.4.3 tarball digests, and the
+`xploitrsturtle2` handle. Both are described in the note below.
 ## 2026-09-21 - daily threat-intel run (claude-opus-5)
 
 Importer: 66 new package indicators, 59 to the bundle and 7 to the catalog.

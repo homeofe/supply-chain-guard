@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.2.3] - 2026-09-21
+
 ### Added
 
 - 66 package indicators from the GitHub Advisory Database malware feed,
@@ -19,6 +21,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `t[.]m-kosche[.]com` fallback were already covered; the primary C2
   `check[.]git-service[.]com`, its address `160[.]119[.]64[.]3`, the
   `rope.pyz` stage-2 fetch URL and four file digests were not.
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-21 to 2026-08-22 and 38 package
+  indicators moved into the catalog. The bundle holds 8,534 entries and the
+  catalog 81,866.
+
+### Fixed
+
+- Nine indicators from the 2026-08-21 advisory import are curated back into
+  the bundle under a comment block. They arrived uncurated, so the cutoff
+  advance would have migrated them into the catalog even though
+  `campaigns.test.ts` asserts each one against the bundled feed: the
+  `arrayref` and `proc-macro1` crates.io dropper pair, the bare npm names
+  `kelly-sizing`, `polymarket-trading-developer-tool` and `saas-f-testing`,
+  and the `pypi:boto4` and `pypi:scrambleeer` version pairs that cover
+  ecosystem routing. Offline detection of all nine is unchanged.
 
 ## [6.2.2] - 2026-09-20
 
@@ -5837,7 +5856,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.3...HEAD
+[6.2.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.3
 [6.2.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.2
 [6.2.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.1
 [6.2.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.0
