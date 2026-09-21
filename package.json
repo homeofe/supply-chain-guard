@@ -90,6 +90,6 @@
     "ajv-formats": "^3.0.1",
     "packageurl-js": "^2.0.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   }
 }
