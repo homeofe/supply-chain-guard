@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.2.4] - 2026-09-22
+
 ### Added
 
 - 58 package indicators from the GitHub Advisory Database malware feed,
@@ -29,6 +31,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `176[.]97[.]114[.]232`, `45[.]11[.]59[.]140`, `85[.]137[.]56[.]245` and
   `85[.]137[.]56[.]10`, three sample SHA-1 digests, and the four GitHub
   accounts hosting the weaponized candidate repositories.
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-22 to 2026-08-23 and 8 package
+  indicators moved into the catalog. The 21 `@postman-cse/okta-aio-linux-arm64`
+  version pins were curated back into the bundle first: they arrived under an
+  importer batch header, and `campaigns.test.ts` asserts them against the
+  bundled feed as the dependency-confusion negative control, so the advance
+  would otherwise have migrated a documented assertion out of the package.
+- Dev-dependency bumps: `vitest` and `@vitest/coverage-v8` to 5.0.1,
+  `@types/node` to 26.6.1, `@babel/parser` to 8.0.6.
 
 ## [6.2.3] - 2026-09-21
 
@@ -5879,7 +5892,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.3...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.4...HEAD
+[6.2.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.4
 [6.2.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.3
 [6.2.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.2
 [6.2.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.1

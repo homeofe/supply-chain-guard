@@ -3,29 +3,29 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790059605",
-    "timestamp": "2026-09-22T06:46:45Z",
-    "commit": "8739bcd",
+    "session_id": "cli-1790060830",
+    "timestamp": "2026-09-22T07:07:10Z",
+    "commit": "0e9447a",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:04bf03639db1dd05c701aa6eea4dab3fff1792ff46b13e745262d2335c7281c5",
-      "updated": "2026-09-22T06:46:21Z",
-      "lines": 10588,
-      "summary": "Carries the four open dependabot dev-dependency bumps into one reviewed commit,"
+      "checksum": "sha256:72e7f10ddb85063b5d969b13498820187a607ccaaead4f07b4febb8c3709c72f",
+      "updated": "2026-09-22T07:06:39Z",
+      "lines": 10638,
+      "summary": "Patch release carrying the 2026-09-22 threat intelligence update (PR 321) and"
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:89bfdeaf056155dd89c762a39724a2160e3493c35c5394bedb7d3367aba91ec1",
-      "updated": "2026-09-21T06:24:12Z",
+      "checksum": "sha256:a77ea310f95195990367cb62a3fe28eecc1472ac1d7d87a81a85439187274b24",
+      "updated": "2026-09-22T07:07:09Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:79f09afc4ab2ac5af3581324d688a2d340dc07add9a1b20c895b89a152daa728",
-      "updated": "2026-09-22T06:46:45Z",
-      "lines": 185,
+      "checksum": "sha256:1535a2e58c5d2a69acbae7de21571ca1fc5e3e9fc88b4461752d809a5186c79d",
+      "updated": "2026-09-22T07:07:10Z",
+      "lines": 186,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:7a89872a730c1b5fe9a535b2f29db25d7498a986abbddd0d1748a377f1f7566c",
-      "updated": "2026-09-22T06:46:45Z",
+      "checksum": "sha256:b6715b4e60a013fb1b3542d3aff058731d91a25a9a3806dba04755a0ba48db90",
+      "updated": "2026-09-22T07:07:10Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:31ab5df7e654cb3505a5cba8c68ea50a576023e9ab6d700eac37da19d9512e2e",
-      "updated": "2026-09-22T06:46:45Z",
+      "checksum": "sha256:e79fc5015674288e3fd0d6b49202fe81f4175db3904729cc15af67a65cd6b299",
+      "updated": "2026-09-22T07:07:10Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Carries the four open dependabot dev-dependency bumps into one reviewed commit, Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Patch release carrying the 2026-09-22 threat intelligence update (PR 321) and Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 123941,
-    "full_read": 136910
+    "manifest_plus_core": 124517,
+    "full_read": 137507
   }
 }

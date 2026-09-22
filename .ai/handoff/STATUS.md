@@ -1,3 +1,53 @@
+## v6.2.4 release preparation (2026-09-22) (claude-opus-5)
+
+Patch release carrying the 2026-09-22 threat intelligence update (PR 321) and
+the consolidated dev-dependency bumps (PR 322). No behaviour change: indicators,
+dependency versions and the scheduled cutoff advance.
+
+- Version bumped at all 16 configured `versionSites` plus `package.json`, read
+  from `aahp.config.json` rather than from the checklist in CLAUDE.md.
+  `package-lock.json` was left to `npm install --package-lock-only`.
+- Occurrence counts were taken BEFORE replacing, and a boundary-anchored pattern
+  was used rather than a blanket replace. No substring collisions this time: the
+  README CIDRs do not contain `6.2.3`, unlike the v6.2.2 case.
+- **`src/threat-intel.ts` held TWO matches, and only one of them was ours.** The
+  second is a comment written earlier in this same session that names v6.2.3 as
+  a historical event ("Third time this has happened (v6.2.1, v6.2.3, here)").
+  Bumping it would have falsified the comment, and `version-sync` would have
+  stayed green because its minimum for that file is 1. Only `bundledVersion` was
+  replaced, and the historical reference is asserted to survive. This is the
+  v6.2.2 hazard recurring, one release after it was recorded as not recurring.
+
+### The cutoff advance broke a documented assertion for the THIRD time
+
+`release:prepare` moved `bundleCutoffDate` from 2026-08-22 to 2026-08-23. The
+first `feed-migrate` plan moved 29 entries; `campaigns.test.ts` then went red on
+"pins the @postman-cse dependency-confusion versions (npm)".
+
+The 21 `@postman-cse/okta-aio-linux-arm64` pins arrived under an importer batch
+header with no curation. They survived the v6.2.3 advance only because their
+`firstSeen` of 2026-08-22 sat exactly ON that cutoff; one more day moved them.
+They were relocated to the end of their chunk under a curated comment block,
+which is the mechanism `feed-migrate.mjs` rule 3 anchors on, and the plan then
+moved 8 instead of 29.
+
+**The migration was reverted and re-run rather than patched afterwards.** Adding
+the entries back to the bundle after they had been written to the catalog would
+have put them in both stores, which `check:feed-partition` rejects. Curating
+first and migrating once is the only order that works.
+
+The remaining 8 were checked against the test suite and the README with a
+control in both directions before being allowed to move: none is asserted
+anywhere. Only the two known Windows/Defender `IOC_KNOWN_C2_DOMAIN` failures
+remain in `campaigns.test.ts`.
+
+**This is now a pattern, not an accident.** Three consecutive releases have had
+the cutoff advance migrate a test-asserted entry out of the bundle, and each
+time the entry was found by the suite going red rather than by any gate. A
+`check:feed-partition` that also asserted "every value named in
+`src/__tests__/` is in the bundle" would catch it at the gate instead. Not
+attempted here because it is a gate change and this is a release.
+
 ## Dependency bumps 2026-09-22 (claude-opus-5)
 
 Carries the four open dependabot dev-dependency bumps into one reviewed commit,

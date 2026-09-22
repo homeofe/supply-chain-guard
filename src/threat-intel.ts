@@ -1626,7 +1626,17 @@ const FEED_CHUNK_12: FeedIOC[] = [
   { type: "package", value: "pypi:boto4@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
   { type: "package", value: "pypi:boto4@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-ffh8-mpww-qp8g, MAL-2026-14349", firstSeen: "2026-08-21" },
 
-  // Imported from GitHub Advisory Database (2026-08-08) - see docs/threat-feed-sources.md
+
+  // Curated back into the bundle from the 2026-08-22 advisory import.
+  // campaigns.test.ts pins these against getBundledFeed(): one published
+  // version must match and the neighbouring 0.7.0 must NOT, which is the
+  // dependency-confusion negative control for the whole @postman-cse scope.
+  // They arrived under an importer batch header with no curation, so the
+  // cutoff advance to 2026-08-23 migrated them out and took that assertion
+  // with it. Third time this has happened (v6.2.1, v6.2.3, here), and the
+  // field scan does not catch it: rule 3 in feed-migrate.mjs anchors on a
+  // comment block, and a campaign field alone would not hold these.
+
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.8.10", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.8.11", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.9.0", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
@@ -1648,8 +1658,6 @@ const FEED_CHUNK_12: FeedIOC[] = [
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.6", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.5", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
   { type: "package", value: "@postman-cse/okta-aio-linux-arm64@0.11.4", severity: "critical", confidence: 1.0, source: "GHSA-h84r-259m-g3fg, MAL-2026-14357", firstSeen: "2026-08-22" },
-  { type: "package", value: "lumen-pages-community@9.9.9", severity: "critical", confidence: 1.0, source: "GHSA-cf4g-g969-7qvx, MAL-2026-14356", firstSeen: "2026-08-22" },
-  { type: "package", value: "fuel-react@91.0.0", severity: "critical", confidence: 1.0, source: "GHSA-77vr-cf3r-2v4w, MAL-2026-14355", firstSeen: "2026-08-22" },
 ];
 
 const FEED_CHUNK_13: FeedIOC[] = [
@@ -1687,12 +1695,6 @@ const FEED_CHUNK_13: FeedIOC[] = [
   { type: "package", value: "6-viewsight-web@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-g8jq-29p5-5qrp, MAL-2026-14365", firstSeen: "2026-08-23" },
   { type: "package", value: "2-loadsight-web@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-4f5v-fg99-x9xc, MAL-2026-14363", firstSeen: "2026-08-23" },
   { type: "package", value: "2-loadsight-web@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-4f5v-fg99-x9xc, MAL-2026-14363", firstSeen: "2026-08-23" },
-  { type: "package", value: "stillm4ddpocs-demo-widget@999.9.9", severity: "critical", confidence: 1.0, source: "GHSA-ghqx-mmmj-m486, MAL-2026-14360", firstSeen: "2026-08-22" },
-  { type: "package", value: "stillm4ddpocs-demo-gadget@999.9.10", severity: "critical", confidence: 1.0, source: "GHSA-452p-xh57-7mqp, MAL-2026-14361", firstSeen: "2026-08-22" },
-  { type: "package", value: "stillm4ddpocs-demo-gadget@999.9.20", severity: "critical", confidence: 1.0, source: "GHSA-452p-xh57-7mqp, MAL-2026-14361", firstSeen: "2026-08-22" },
-  { type: "package", value: "stillm4ddpocs-demo-gadget@999.9.12", severity: "critical", confidence: 1.0, source: "GHSA-452p-xh57-7mqp, MAL-2026-14361", firstSeen: "2026-08-22" },
-  { type: "package", value: "internallib_v902", severity: "critical", confidence: 1.0, source: "GHSA-3p65-4jqj-5j69, MAL-2026-14359", firstSeen: "2026-08-22" },
-  { type: "package", value: "pypi:scrambleeeer@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-xw2j-24j3-3282, MAL-2026-14358", firstSeen: "2026-08-22" },
 
   // Imported from GitHub Advisory Database (2026-08-15) - see docs/threat-feed-sources.md
   { type: "package", value: "sm-oauth@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-7x7x-6w24-fch9, MAL-2026-14398", firstSeen: "2026-08-24" },
@@ -10835,7 +10837,7 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
   }
 
   return {
-    bundledVersion: "6.2.3",
+    bundledVersion: "6.2.4",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
