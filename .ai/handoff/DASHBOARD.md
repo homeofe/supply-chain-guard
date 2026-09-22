@@ -32,16 +32,16 @@ binary may fail locally; the authoritative Ubuntu CI environment provides it.
 
 | Package | Range |
 |---------|-------|
-| @babel/parser | ^8.0.5 |
+| @babel/parser | ^8.0.6 |
 | @elvatis_com/aahp | 3.12.0 |
-| @types/node | ^26.5.1 |
-| @vitest/coverage-v8 | ^5.0.0 |
+| @types/node | ^26.6.1 |
+| @vitest/coverage-v8 | ^5.0.1 |
 | ajv | ^8.20.0 |
 | ajv-formats | ^3.0.1 |
 | commander | ^14.0.3 |
 | packageurl-js | ^2.0.1 |
 | typescript | ^7.0.2 |
-| vitest | ^5.0.0 |
+| vitest | ^5.0.1 |
 
 Overrides: none.
 

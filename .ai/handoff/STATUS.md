@@ -1,3 +1,46 @@
+## Dependency bumps 2026-09-22 (claude-opus-5)
+
+Carries the four open dependabot dev-dependency bumps into one reviewed commit,
+which is the route `aahp-verify.yml`'s own header prescribes. Bot PRs 317, 318,
+319 and 320 are closed as superseded, restoring the zero-open-PR invariant before
+the next release.
+
+- `vitest` and `@vitest/coverage-v8` 5.0.0 -> 5.0.1, `@types/node` 26.5.1 ->
+  26.6.1, `@babel/parser` 8.0.5 -> 8.0.6. All patch or minor, all devDependencies.
+  Caret ranges preserved, so `--save-exact` was NOT used: only
+  `@elvatis_com/aahp` is exact-pinned here and it is untouched at 3.12.0.
+- Landed as ONE commit on purpose. All four bot PRs touch `package.json` AND
+  `package-lock.json`, and vitest and coverage-v8 share lockfile entries, so
+  merging them individually would have produced a conflict cascade after the
+  first merge and four separate CI waits.
+
+### A recorded premise that had quietly expired
+
+The decision in the 2026-09-01 note NOT to adopt
+`handoffImpact.nonImpactingModifiedFiles` rests on two reasons, and **reason 1 is
+no longer true**. It says dependabot PRs "stay unmergeable either way" because
+they are already red on `check:handoff`. They are not, and have not been for some
+time: `check:handoff` is GREEN on all four of PRs 317-320, and both
+`compat (Node NN)` legs pass. `aahp-verify` Layer 2 is the only thing blocking
+them.
+
+Measured rather than inferred: bumping `@babel/parser` to `^8.0.6` in
+`package.json` on an otherwise clean tree leaves `npm run check:handoff` green,
+while `npm run handoff:refresh` does rewrite the Toolchain row from `^8.0.5` to
+`^8.0.6`. The cause is deliberate and documented - `ungateToolchainVersions()` in
+`scripts/scg-handoff-docs.mjs` blanks that column for COMPARISON only, because
+the table derives entirely from `package.json` in the same commit and therefore
+cannot encode a stale claim. That change removed reason 1 as a side effect, and
+the `handoffImpact` decision was never revisited against it.
+
+**Reason 2 still stands and is why nothing was changed here:** listing
+`package.json` would exempt a lone `engines` / `scripts` / `files` edit too, since
+Layer 2 exempts a listed file whenever it is the ONLY modification. In a package
+that publishes to npm, `scripts` is precisely the install-time attack surface this
+tool exists to scan for. So the option is live and cheap if the daily friction is
+ever judged worse than that, but it is an owner decision and was put to the owner
+rather than taken here.
+
 ## v6.2.3 release preparation (2026-09-21) (claude-opus-5)
 
 Patch release carrying the 2026-09-21 threat intelligence update, merged from

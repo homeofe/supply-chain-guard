@@ -3,28 +3,28 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1789971454",
-    "timestamp": "2026-09-21T06:17:34Z",
-    "commit": "0bc678e",
+    "session_id": "cli-1790059163",
+    "timestamp": "2026-09-22T06:39:24Z",
+    "commit": "642cfd6",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:073dbe3ac856cc2e7b1a443bdaa503b1dd6f90255abf78b66abc4290d9b86740",
-      "updated": "2026-09-21T06:17:33Z",
-      "lines": 10476,
-      "summary": "Patch release carrying the 2026-09-21 threat intelligence update, merged from"
+      "checksum": "sha256:a903cf0de1a729d3c13eaf4900c8137d658ed31eb3992ec9b98d50e10bd0fd21",
+      "updated": "2026-09-22T06:39:23Z",
+      "lines": 10519,
+      "summary": "Carries the four open dependabot dev-dependency bumps into one reviewed commit,"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:89bfdeaf056155dd89c762a39724a2160e3493c35c5394bedb7d3367aba91ec1",
-      "updated": "2026-09-21T06:06:42Z",
+      "updated": "2026-09-21T06:24:12Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:79f09afc4ab2ac5af3581324d688a2d340dc07add9a1b20c895b89a152daa728",
-      "updated": "2026-09-21T06:17:34Z",
+      "updated": "2026-09-22T06:39:23Z",
       "lines": 185,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:7f9db4ea032c7018d27af35731a6a754b3489bc5c6f55b8f678e7e9021d12f22",
-      "updated": "2026-09-21T06:17:34Z",
+      "checksum": "sha256:7a89872a730c1b5fe9a535b2f29db25d7498a986abbddd0d1748a377f1f7566c",
+      "updated": "2026-09-22T06:39:23Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:31ab5df7e654cb3505a5cba8c68ea50a576023e9ab6d700eac37da19d9512e2e",
-      "updated": "2026-09-21T06:17:34Z",
+      "updated": "2026-09-22T06:39:23Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Patch release carrying the 2026-09-21 threat intelligence update, merged from Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Carries the four open dependabot dev-dependency bumps into one reviewed commit, Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 122594,
-    "full_read": 135563
+    "manifest_plus_core": 123085,
+    "full_read": 136054
   }
 }
