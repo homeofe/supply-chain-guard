@@ -40,6 +40,75 @@ that publishes to npm, `scripts` is precisely the install-time attack surface th
 tool exists to scan for. So the option is live and cheap if the daily friction is
 ever judged worse than that, but it is an owner decision and was put to the owner
 rather than taken here.
+## Threat intel 2026-09-22 (claude-opus-5)
+
+Scheduled daily run. 58 package indicators imported from the GitHub Advisory
+Database malware feed (48 bundle, 10 catalog) plus 17 atomic indicators added
+by hand for one campaign. No version bump; the owner cuts the release.
+
+- **Routing was read, not assumed.** The cutoff is 2026-08-22 and exactly the
+  ten candidates with an older `firstSeen` went to the catalog; the other 48
+  are dated 2026-09-19 or later. 44 of them fall on 2026-09-21, which is
+  ordinary daily volume and not a bulk publication, so no `catalogWindows`
+  entry was added and none was needed.
+- **All 14 bare npm names were probed against the registry before acceptance.**
+  Every one resolves to an npm security holding package: a single
+  `0.0.1-security` version, description "security holding package", no real
+  maintainer. That is positive evidence npm has already taken the name down, so
+  a bare-name block cannot break a package with a legitimate release history.
+  Three of the fourteen (`de-morgan`, `transform-es2015-unicode-regex`,
+  `math-universe`) read as plausible real library names and would have been the
+  dangerous ones to accept on name shape alone; the probe is what settled them,
+  not the shape.
+- **PhantomRaven was re-proposed by the search pass and correctly skipped.**
+  Its full infrastructure set landed on 2026-09-19 via PR 311 and is already in
+  the bundle. Checked before writing anything, as a partially covered campaign
+  would have needed extending rather than skipping.
+- The new campaign is **TraderTraitor `FLATROOF` / `ROOFDECK`** (SentinelLabs,
+  September 2026): DPRK ARM64 Rust macOS backdoors delivered through fake
+  job-interview Terraform repositories. A poisoned `.terraform.lock.hcl` points
+  `terraform init` at a typosquatted provider registry, which is a
+  dependency-resolution attack and squarely in scope for this scanner. 13 feed
+  entries (6 domains, 4 IPs, 3 hashes) plus 4 GitHub accounts.
+- Every hand-added entry carries `campaign` and `family`, and
+  `campaigns.test.ts` asserts the count against `getBundledFeed()`. Without
+  that the next cutoff advance migrates them out of the package, which is the
+  failure v6.2.1 and v6.2.3 both hit.
+
+### Deliberate omissions, each with a reason
+
+- **The operator's mkcert certificate SAN list was NOT ingested**, apart from
+  the two entries (`grenight[.]com`, `storage[.]hubpage[.]cloud`) that are
+  independently listed as C2. The rest are certificate subject names only, and
+  several (`anesthesiaschool[.]com`, `tinklify[.]com`) resolve as ordinary
+  businesses. Blocking a SAN is not evidence the host is attacker-controlled.
+- **Only the full `technicais[.]sytes[.]net` label is listed.** `sytes[.]net`
+  is a No-IP dynamic-DNS apex shared by everyone who uses the service. There is
+  a negative test asserting an unrelated `*.sytes.net` host stays clean.
+- **The two TLS certificate fingerprints were NOT added to
+  `KNOWN_MALICIOUS_HASHES`.** That collection feeds `checkFileDigest`, which
+  indexes every 64-hex key as a FILE digest. A certificate fingerprint is not a
+  digest of any file, so the SHA-256 one would enter the file-digest index as a
+  value nothing can ever match. That is the same category confusion the
+  `FILE_DIGEST_ALGORITHMS` comment already records for Git object ids, and it
+  should not be widened.
+- **GemStuffer (RubyGems, ~3,000 packages) was found and not ingested.** It is
+  absent from both stores. It is a bulk package corpus with no atomic
+  indicator to add, and hand-transcribing thousands of gem names out of news
+  coverage is exactly what the advisory-database path exists to avoid. Left for
+  the importer if those gems are published as CWE-506 advisories.
+
+### Carried open item
+
+The three TraderTraitor hashes are published as **SHA-1 only**. Length 40 is
+deliberately excluded from `FILE_DIGEST_ALGORITHMS`, because the collection
+mixes genuine file SHA-1s with Git object ids and nothing in the data tells
+them apart, so these three match as TEXT and not as file content. That is
+partial coverage and it is recorded in the code comment beside them. The fix is
+the data-modelling one the existing comment already names: type the collection
+so a file SHA-1 and a commit id are distinguishable, after which 40-hex file
+digests can be matched safely. Not attempted here, because it is a scanner
+change and this is an intel run.
 
 ## v6.2.3 release preparation (2026-09-21) (claude-opus-5)
 

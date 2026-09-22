@@ -466,6 +466,29 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // and corroborated by the vendor write-ups.
   "check.git-service.com",
   "npm.jpartifacts.com",
+  // TraderTraitor FLATROOF / ROOFDECK macOS backdoors (September 2026).
+  // DPRK subgroup (also tracked as UNC4899 / PUKCHONG / Jade Sleet) delivered
+  // ARM64 Rust backdoors through fake job-interview Terraform repositories: a
+  // poisoned .terraform.lock.hcl points `terraform init` at a typosquatted
+  // provider registry, which serves the implant.
+  //
+  // The three registry.* hosts are the typosquatted provider registries. They
+  // matter to a dependency scanner directly: a lockfile naming one of them in
+  // place of registry[.]terraform[.]io is the whole attack. Corroborated by a
+  // second vendor write-up independently of the primary IOC table.
+  "registry.hashicorp-aws.com",
+  "registry.hashicorp-aws.io",
+  "registry.hashicorp-terraform.io",
+  // Backdoor C2. technicais[.]sytes[.]net is a No-IP dynamic-DNS subdomain, so
+  // only the full label is listed; the sytes[.]net apex is a shared provider
+  // and is NOT blocked. storage[.]hubpage[.]cloud and grenight[.]com are
+  // attacker-registered and appear both in the C2 list and on the operator's
+  // own mkcert certificates, which is what distinguishes them from the rest of
+  // that certificate list (not ingested: those are SAN entries only, and some
+  // resolve to unrelated legitimate businesses).
+  "technicais.sytes.net",
+  "storage.hubpage.cloud",
+  "grenight.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -710,6 +733,15 @@ export const KNOWN_C2_IPS: string[] = [
   // observation, so it is the attacker host and not shared hosting.
   "160.119.64.3",
   "54.173.15.59",
+  // TraderTraitor FLATROOF / ROOFDECK macOS backdoors (September 2026).
+  // Dedicated backdoor C2 and staging addresses from the vendor's own IOC
+  // table, not passive-DNS derivations, so none of these is shared hosting.
+  // 176[.]97[.]114[.]232 is FLATROOF; the rest serve ROOFDECK, with
+  // 85[.]137[.]56[.]10 used for staging.
+  "176.97.114.232",
+  "45.11.59.140",
+  "85.137.56.245",
+  "85.137.56.10",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1424,6 +1456,15 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "5246e60c2ff10ae058abba14ef5ea22432465ad827ec5f5c5572999411d90b80": "durabletask __init__.py import-time dropper (SHA256)",
   "069ac1dc7f7649b76bc72a11ac700f373804bfd81dab7e561157b703999f44ce": "rope.pyz TeamPCP stage-2 credential stealer (SHA256)",
   "e37e3ddeeaaa9e0c4fdbcb829b4895a6521031c80053fc436625b61e6ee5b1a6": "Shai-Hulud worm index.js payload, 111-day republish (SHA256)",
+  // TraderTraitor FLATROOF / ROOFDECK macOS backdoors (September 2026).
+  // Published as SHA-1 only. Length 40 is deliberately absent from
+  // FILE_DIGEST_ALGORITHMS (see the comment there), so these are matched as
+  // text rather than as file digests, exactly like the NadMesh SHA-1 above.
+  // That is partial coverage and is intentional: reporting a file as malware
+  // on a 40-hex match would collide with the Git object ids also held here.
+  "02df07a173ab03b82a4fb6a08973fff8b1467f28": "TraderTraitor FLATROOF macOS backdoor, disguised as SystemUpdate (SHA1)",
+  "c491d477dbe0ae04e9aed9dbe237144c03f73ec4": "TraderTraitor ROOFDECK macOS backdoor, disguised as iSync (SHA1)",
+  "5728b11d30586bbfc1d8bd12df1c722a06e767a2": "TraderTraitor ROOFDECK stripped variant, disguised as loginwindow (SHA1)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1599,6 +1640,17 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // libsignal-node maintainers are VICTIMS of the impersonation and stay unlisted.
   // Single-source, so the matching feed entries carry confidence 0.85.
   "skyzopedia",
+  // TraderTraitor fake job-interview repositories (September 2026). Accounts
+  // created by the operators to host the weaponized Terraform "candidate"
+  // projects, not compromised developers: each exists only to carry a poisoned
+  // .terraform.lock.hcl. The targeted victims are not listed. These four
+  // appear in the primary vendor IOC table only and were not reproduced by the
+  // downstream reporting. FeedIOC has no account type, so this collection is
+  // their only carrier and they have no feed entry to carry a confidence.
+  "exubient0",
+  "radupopa369",
+  "chainstacker",
+  "Steed-LHV",
 ];
 
 // ---------------------------------------------------------------------------

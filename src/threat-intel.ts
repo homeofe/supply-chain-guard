@@ -37,7 +37,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-21T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-22T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -9628,6 +9628,77 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "hash", value: "5246e60c2ff10ae058abba14ef5ea22432465ad827ec5f5c5572999411d90b80", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
   { type: "hash", value: "069ac1dc7f7649b76bc72a11ac700f373804bfd81dab7e561157b703999f44ce", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Mini Shai-Hulud durabletask", source: "OSV MAL-2026-4174", firstSeen: "2026-05-19" },
   { type: "package", value: "pypi:rrs@0.3.5", severity: "critical", confidence: 0.9, source: "MAL-2026-16346 (amazon-inspector)", firstSeen: "2026-09-21" },
+
+  // Imported from GitHub Advisory Database (2026-09-08) - see docs/threat-feed-sources.md
+  { type: "package", value: "test-react-app-in", severity: "critical", confidence: 0.9, source: "GHSA-wm2w-4m2r-mv73, MAL-2026-16374 (ghsa-malware)", firstSeen: "2026-09-22" },
+  { type: "package", value: "test-react-app-out", severity: "critical", confidence: 0.9, source: "GHSA-vx3p-fwmg-p7g8, MAL-2026-16375 (ghsa-malware)", firstSeen: "2026-09-22" },
+  { type: "package", value: "test-react-app-way", severity: "critical", confidence: 0.9, source: "GHSA-264w-9h55-v637, MAL-2026-16376 (ghsa-malware)", firstSeen: "2026-09-22" },
+  { type: "package", value: "@uol-afiliados/affiliated-config-lib@102.0.0", severity: "critical", confidence: 1.0, source: "GHSA-mh6g-473c-fvhx, MAL-2026-16370 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@zig-design-system/react", severity: "critical", confidence: 0.9, source: "GHSA-rqjq-px4f-2m8r, MAL-2026-16372 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "wos-library", severity: "critical", confidence: 0.9, source: "GHSA-mfwv-9gcf-2mww, MAL-2026-16373 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@vite-tab/tabui", severity: "critical", confidence: 0.9, source: "GHSA-q5h9-3mvh-45cf, MAL-2026-16371 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@uh-platform/domain-widget@100.0.0", severity: "critical", confidence: 1.0, source: "GHSA-xh82-8x4m-9w6c, MAL-2026-16359 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@asdfaskdjfksadhfkasf/nadaver2@102.0.0", severity: "critical", confidence: 1.0, source: "GHSA-p368-v58m-82vj, MAL-2026-16357 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:pullgetsage@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-4whg-cvj9-8v3f, MAL-2026-16366 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@uh-platform/webcard@99.0.0", severity: "critical", confidence: 1.0, source: "GHSA-5h99-j25f-5q62, MAL-2026-16362 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "bytepack-probe-a7x3@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-pjjj-2389-rwj6, MAL-2026-16364 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "bytepack-probe-a7x3@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-pjjj-2389-rwj6, MAL-2026-16364 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@uh-platform/nadaver2@102.0.0", severity: "critical", confidence: 1.0, source: "GHSA-99r3-9hc2-372p, MAL-2026-16361 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@uh-platform/nadaver@102.0.0", severity: "critical", confidence: 1.0, source: "GHSA-5r3f-92qc-25rr, MAL-2026-16360 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@uh-platform/cloud@101.0.0", severity: "critical", confidence: 1.0, source: "GHSA-g4jv-48fc-mhh2, MAL-2026-16358 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "blue-string-formatter-utilss@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-4g26-86h7-34h3, MAL-2026-16363 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "my-ctf-helper-script-9921@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-qhgh-m36j-h879, MAL-2026-16365 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "math-universe", severity: "critical", confidence: 0.9, source: "GHSA-97cg-r346-fg22, MAL-2026-16367 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "mathsbase", severity: "critical", confidence: 0.9, source: "GHSA-v4cx-64j6-84xm, MAL-2026-16369 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "mathmain", severity: "critical", confidence: 0.9, source: "GHSA-v6mx-2p6p-3628, MAL-2026-16368 (ghsa-malware)", firstSeen: "2026-09-21" },
+  { type: "package", value: "hardhat-devkit@2.3.6", severity: "critical", confidence: 1.0, source: "GHSA-2wmg-qp72-3736, MAL-2026-16349 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@woodpecker-web-shared/components@2.20.5", severity: "critical", confidence: 1.0, source: "GHSA-8hq6-gvg5-x8wq, MAL-2026-16354 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "gemini-computer-use@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-4cwr-c4gf-f9r4, MAL-2026-16355 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "bnppf-flag-icons@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-r56f-8237-82ch, MAL-2026-16350 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@insiderintelligence/componentlibrary@9.9.10", severity: "critical", confidence: 1.0, source: "GHSA-5h4w-mvwx-ff8q, MAL-2026-16353 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "hardhat-base@2.2.2", severity: "critical", confidence: 1.0, source: "GHSA-g59v-28j4-2r85, MAL-2026-16348 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "hardhat-base@2.2.0", severity: "critical", confidence: 1.0, source: "GHSA-g59v-28j4-2r85, MAL-2026-16348 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:starlette-healthchecks@1.3.1", severity: "critical", confidence: 1.0, source: "GHSA-6g46-rqp7-42mp, MAL-2026-16356 (kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:starlette-healthchecks@1.3.2", severity: "critical", confidence: 1.0, source: "GHSA-6g46-rqp7-42mp, MAL-2026-16356 (kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@baanx/abis@9.9.11", severity: "critical", confidence: 1.0, source: "GHSA-r554-rpx4-qw24, MAL-2026-16351 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "@baanx/blockchain-config@9.9.11", severity: "critical", confidence: 1.0, source: "GHSA-7cc3-jjqj-wrm5, MAL-2026-16352 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "radio-player-theme@6.0.0", severity: "critical", confidence: 1.0, source: "GHSA-3rj7-hf4w-jh5c, MAL-2026-16347", firstSeen: "2026-09-19" },
+];
+
+const FEED_CHUNK_21: FeedIOC[] = [
+  // Imported from GitHub Advisory Database (2026-09-08) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:rrs@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.1.3", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.1.4", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.1.5", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.1.7", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.1.8", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.2.0", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.2.1", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.2.2", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.3.101", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.107", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.108", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "pypi:rrs@0.4.109", severity: "critical", confidence: 1.0, source: "GHSA-5w9q-gw92-3wq8, MAL-2026-16346 (amazon-inspector+kam193)", firstSeen: "2026-09-21" },
+  { type: "package", value: "npmscript_tesstalert_unpkg@1.1.8", severity: "critical", confidence: 1.0, source: "GHSA-r2rm-wm4f-f55p, MAL-2026-16309 (amazon-inspector)", firstSeen: "2026-09-21" },
+  { type: "package", value: "npmscript_tesstalert_unpkg@1.1.7", severity: "critical", confidence: 1.0, source: "GHSA-r2rm-wm4f-f55p, MAL-2026-16309 (amazon-inspector)", firstSeen: "2026-09-21" },
+  // TraderTraitor FLATROOF / ROOFDECK macOS backdoors (SentinelLabs, September
+  // 2026). Curated enrichment, not an advisory-database import: these atomic
+  // indicators carry campaign and family so the partition policy keeps them in
+  // the bundle and they stay detectable with no network.
+  { type: "domain", value: "registry.hashicorp-aws.com", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "domain", value: "registry.hashicorp-aws.io", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "domain", value: "registry.hashicorp-terraform.io", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "domain", value: "technicais.sytes.net", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "domain", value: "storage.hubpage.cloud", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "domain", value: "grenight.com", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "ip", value: "176.97.114.232", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "ip", value: "45.11.59.140", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "ip", value: "85.137.56.245", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "ip", value: "85.137.56.10", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "hash", value: "02df07a173ab03b82a4fb6a08973fff8b1467f28", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "hash", value: "c491d477dbe0ae04e9aed9dbe237144c03f73ec4", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
+  { type: "hash", value: "5728b11d30586bbfc1d8bd12df1c722a06e767a2", severity: "critical", confidence: 1.0, family: "TraderTraitor", campaign: "TraderTraitor FLATROOF/ROOFDECK macOS backdoors", source: "SentinelLabs TraderTraitor report", firstSeen: "2026-09-22" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
@@ -9658,6 +9729,7 @@ const BUNDLED_FEED: FeedIOC[] = [
   ...FEED_CHUNK_18,
   ...FEED_CHUNK_19,
   ...FEED_CHUNK_20,
+  ...FEED_CHUNK_21,
 ];
 
 // Exported so the feed channel (feed.ts: "feed refresh") writes its download
