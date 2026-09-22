@@ -81864,3 +81864,13 @@
 {"type":"package","value":"polymarket-bot-logger","severity":"critical","confidence":1,"source":"GHSA-v4pc-gmg8-h48w, MAL-2026-10516","firstSeen":"2026-08-21"}
 {"type":"package","value":"polygon-toolkit-validator","severity":"critical","confidence":1,"source":"GHSA-67fh-9pjj-6cpw, MAL-2026-10641","firstSeen":"2026-08-21"}
 {"type":"package","value":"@gfe/lx-watcher","severity":"critical","confidence":1,"source":"GHSA-wg37-hw83-hqwf, MAL-2026-14353 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-21"}
+{"type":"package","value":"emoji-prints-fancy","severity":"critical","confidence":1,"source":"GHSA-m523-mggx-3fgr, MAL-2026-14298 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"transform-es2015-unicode-regex","severity":"critical","confidence":1,"source":"GHSA-jcxm-5v55-599q, MAL-2026-13612 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-07"}
+{"type":"package","value":"de-morgan","severity":"critical","confidence":1,"source":"GHSA-2vc2-gwg3-2gpx, MAL-2026-14264 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"react-context-form-tdsss","severity":"critical","confidence":1,"source":"GHSA-pg33-6m24-4p63, MAL-2026-6512 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-06-26"}
+{"type":"package","value":"wos-library-ui","severity":"critical","confidence":1,"source":"GHSA-wh36-rj36-m3ff, MAL-2026-13467 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-06"}
+{"type":"package","value":"@epic-mw/localization@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2022-251 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"@epic-mw/localization@1.9.9","severity":"critical","confidence":0.9,"source":"MAL-2022-251 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"pypi:starlette-healthcheck@1.3.0","severity":"critical","confidence":1,"source":"MAL-2026-6724 (amazon-inspector+kam193)","firstSeen":"2026-07-01"}
+{"type":"package","value":"pypi:starlette-healthcheck@1.2.0","severity":"critical","confidence":1,"source":"MAL-2026-6724 (amazon-inspector+kam193)","firstSeen":"2026-07-01"}
+{"type":"package","value":"pypi:starlette-healthcheck@1.3.1","severity":"critical","confidence":1,"source":"MAL-2026-6724 (amazon-inspector+kam193)","firstSeen":"2026-07-01"}

@@ -7,6 +7,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 58 package indicators from the GitHub Advisory Database malware feed,
+  corroborated against OSV: 48 in the bundle and 10 in the catalog. The ten
+  catalog-bound entries carry a `firstSeen` before the bundle cutoff. Fourteen
+  are bare npm names; every one was probed against the registry first and all
+  fourteen resolve to an npm security holding package with a single
+  `0.0.1-security` version and no maintainer, so no package with a legitimate
+  release history is name-blocked.
+- Atomic infrastructure for the TraderTraitor `FLATROOF` / `ROOFDECK` macOS
+  backdoors of September 2026, a DPRK campaign that delivers ARM64 Rust
+  implants through fake job-interview Terraform repositories. A poisoned
+  `.terraform.lock.hcl` points `terraform init` at a typosquatted provider
+  registry, so the three registry hosts
+  (`registry[.]hashicorp-aws[.]com`, `registry[.]hashicorp-aws[.]io`,
+  `registry[.]hashicorp-terraform[.]io`) are dependency-resolution indicators
+  in their own right. Added with them: the backdoor C2
+  `technicais[.]sytes[.]net`, `storage[.]hubpage[.]cloud` and
+  `grenight[.]com`, the four C2 and staging addresses
+  `176[.]97[.]114[.]232`, `45[.]11[.]59[.]140`, `85[.]137[.]56[.]245` and
+  `85[.]137[.]56[.]10`, three sample SHA-1 digests, and the four GitHub
+  accounts hosting the weaponized candidate repositories.
+
 ## [6.2.3] - 2026-09-21
 
 ### Added

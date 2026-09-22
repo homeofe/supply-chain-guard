@@ -6620,4 +6620,118 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // TraderTraitor FLATROOF / ROOFDECK macOS backdoors (September 2026)
+  // =================================================================
+
+  describe("TraderTraitor FLATROOF/ROOFDECK (September 2026)", () => {
+    it("should detect a typosquatted Terraform provider registry", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "provider.js"),
+        'const registry = "https://registry.hashicorp-aws.com/v1/providers";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the ROOFDECK C2 domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const host = "storage.hubpage.cloud";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the FLATROOF C2 address", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "addr.js"),
+        'const c2 = "176.97.114.232";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "IOC_KNOWN_C2_IP");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // Published as SHA-1, which FILE_DIGEST_ALGORITHMS deliberately excludes,
+    // so this asserts the text path and not checkFileDigest(). That is the
+    // coverage these three hashes actually have.
+    it("should detect the FLATROOF sample SHA1 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha1 = "02df07a173ab03b82a4fb6a08973fff8b1467f28";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The control, in the other direction: the whole campaign turns on a
+    // lockfile naming a typosquat INSTEAD of the real HashiCorp registry, so
+    // flagging the real one would make the rule worse than useless.
+    it("leaves the legitimate HashiCorp registry alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        'const registry = "https://registry.terraform.io/v1/providers";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(
+        finding,
+        "registry.terraform.io is the legitimate provider registry",
+      ).toBeUndefined();
+    });
+
+    // The shared No-IP apex must not be blocked: only the attacker's full
+    // subdomain label is an indicator.
+    it("leaves the shared dynamic-DNS apex alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "dyndns.js"),
+        'const host = "someone-else.sytes.net";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(
+        finding,
+        "sytes.net is a shared dynamic-DNS provider, not an indicator",
+      ).toBeUndefined();
+    });
+
+    // Curated enrichment has to stay offline-detectable: without campaign and
+    // family these become eligible to move to the catalog on the next
+    // migration, which is how 44 documented indicators left the package once.
+    it("keeps every TraderTraitor indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter(
+        (i) => i.campaign === "TraderTraitor FLATROOF/ROOFDECK macOS backdoors",
+      );
+      expect(set.length, "all 13 TraderTraitor indicators must be bundled").toBe(13);
+      for (const ioc of set) {
+        expect(ioc.family, `${ioc.value} must carry a family`).toBe("TraderTraitor");
+      }
+    });
+  });
 });
