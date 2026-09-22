@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "supply-chain-guard",
-  "version": "6.2.3",
-  "entryCount": 8595,
+  "version": "6.2.4",
+  "entryCount": 8587,
   "generatedAt": "2026-09-22T00:00:00.000Z",
   "entries": [
     {
@@ -8568,22 +8568,6 @@
     },
     {
       "type": "package",
-      "value": "lumen-pages-community@9.9.9",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-cf4g-g969-7qvx, MAL-2026-14356",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "fuel-react@91.0.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-77vr-cf3r-2v4w, MAL-2026-14355",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
       "value": "solidity-testing-utils@1.2.0",
       "severity": "critical",
       "confidence": 1,
@@ -8837,54 +8821,6 @@
       "confidence": 1,
       "source": "GHSA-4f5v-fg99-x9xc, MAL-2026-14363",
       "firstSeen": "2026-08-23"
-    },
-    {
-      "type": "package",
-      "value": "stillm4ddpocs-demo-widget@999.9.9",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-ghqx-mmmj-m486, MAL-2026-14360",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "stillm4ddpocs-demo-gadget@999.9.10",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-452p-xh57-7mqp, MAL-2026-14361",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "stillm4ddpocs-demo-gadget@999.9.20",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-452p-xh57-7mqp, MAL-2026-14361",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "stillm4ddpocs-demo-gadget@999.9.12",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-452p-xh57-7mqp, MAL-2026-14361",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "internallib_v902",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-3p65-4jqj-5j69, MAL-2026-14359",
-      "firstSeen": "2026-08-22"
-    },
-    {
-      "type": "package",
-      "value": "pypi:scrambleeeer@0.1.0",
-      "severity": "critical",
-      "confidence": 1,
-      "source": "GHSA-xw2j-24j3-3282, MAL-2026-14358",
-      "firstSeen": "2026-08-22"
     },
     {
       "type": "package",
