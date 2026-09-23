@@ -502,6 +502,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "portfolio-devs.slack.com",
   "portfolio-testers.slack.com",
   "mediumstar.slack.com",
+  // universal_file_viewer XCSSET compromise on pub.dev (September 2026). The
+  // maintainer's machine was infected and the trojanized build hooks shipped in
+  // two releases; the hooks curl these hosts and pipe the response to sh.
+  // Single-source (Aikido), so the matching feed entries carry confidence 0.85.
+  "5yotmxcc54l9xda.ru",
+  "ejntin6hkjt7gj2.ru",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1481,6 +1487,10 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // Graphalgo campaign spreads to Terraform providers and Go modules (September 2026)
   "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f": "Graphalgo Terraform provider payload archive disguised as examples/resources/docker_container/import-resource.sqlite3 (SHA256)",
   "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5": "Graphalgo Go module payload disguised as btreex.sql (SHA256)",
+  // universal_file_viewer XCSSET compromise (September 2026): the pub.dev archive_sha256 of the
+  // two retracted releases, which pubspec.lock records verbatim as each package's sha256.
+  "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04": "universal_file_viewer 0.1.5 pub archive, XCSSET-trojanized (SHA256)",
+  "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d": "universal_file_viewer 0.1.6 pub archive, XCSSET-trojanized (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1876,7 +1886,7 @@ export function isKnownMaliciousAccount(owner: string): boolean {
  */
 function normalizePackageName(
   name: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions" | "pub",
 ): string {
   if (ecosystem === "pypi") {
     return name.trim().toLowerCase().replace(/[-_.]+/g, "-");
@@ -3143,7 +3153,7 @@ export function checkIOCBlocklist(
 export function checkBadVersion(
   name: string,
   version: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions" | "pub",
 ): Finding | null {
   // ruby/composer/nuget/cargo have no pinned entries yet (their curated IOCs
   // live in threat-intel.ts as ecosystem-prefixed package entries); the union

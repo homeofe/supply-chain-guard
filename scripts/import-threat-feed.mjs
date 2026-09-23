@@ -103,6 +103,7 @@ export const ECOSYSTEM_PREFIX = {
   // through OSV_ECOSYSTEM_ALIASES below.
   vscode: "vscode:",
   maven: "maven:",
+  pub: "pub:",
 };
 
 /** Feed ecosystem prefix -> OSV ecosystem name (for the corroboration query). */
@@ -117,6 +118,7 @@ export const OSV_ECOSYSTEM = {
   "vscode:": "VSCode",
   "openvsx:": "VSCode:https://open-vsx.org",
   "maven:": "Maven",
+  "pub:": "Pub",
 };
 
 /** Import ecosystem -> directory in OSV's public vulnerability export. */
@@ -130,6 +132,7 @@ export const OSV_ECOSYSTEM_DIRECTORY = {
   nuget: "NuGet",
   vscode: "VSCode",
   maven: "Maven",
+  pub: "Pub",
 };
 
 /**

@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8791,
+  "entryCount": 8797,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -72193,6 +72193,66 @@
       "campaign": "TeamPCP KICS Action compromise",
       "source": "Wiz, StepSecurity",
       "firstSeen": "2026-03-23"
+    },
+    {
+      "type": "package",
+      "value": "pub:universal_file_viewer@0.1.5",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "Aikido, pub.dev retraction",
+      "firstSeen": "2026-09-08"
+    },
+    {
+      "type": "package",
+      "value": "pub:universal_file_viewer@0.1.6",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "pub.dev retraction",
+      "firstSeen": "2026-09-08"
+    },
+    {
+      "type": "hash",
+      "value": "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "pub.dev archive_sha256",
+      "firstSeen": "2026-09-08"
+    },
+    {
+      "type": "hash",
+      "value": "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "pub.dev archive_sha256",
+      "firstSeen": "2026-09-08"
+    },
+    {
+      "type": "domain",
+      "value": "5yotmxcc54l9xda.ru",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "Aikido (single-source)",
+      "firstSeen": "2026-09-08"
+    },
+    {
+      "type": "domain",
+      "value": "ejntin6hkjt7gj2.ru",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "XCSSET",
+      "campaign": "universal_file_viewer XCSSET compromise",
+      "source": "Aikido (single-source)",
+      "firstSeen": "2026-09-08"
     }
   ]
 }

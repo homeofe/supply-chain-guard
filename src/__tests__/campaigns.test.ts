@@ -7032,4 +7032,45 @@ describe("Campaign Signatures", () => {
       expect(report.findings.filter((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toEqual([]);
     });
   });
+
+  // =================================================================
+  // universal_file_viewer XCSSET compromise on pub.dev (September 2026)
+  // =================================================================
+
+  describe("universal_file_viewer XCSSET (pub)", () => {
+    const lock = (version: string) => [
+      "packages:",
+      "  universal_file_viewer:",
+      '    dependency: "direct main"',
+      "    description:",
+      "      name: universal_file_viewer",
+      '      url: "https://pub.dev"',
+      "    source: hosted",
+      `    version: "${version}"`,
+      "sdks:",
+      '  dart: ">=3.0.0 <4.0.0"',
+    ].join("\n");
+
+    it("flags a retracted release locked in pubspec.lock", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.lock"), lock("0.1.5"));
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "PUB_MALICIOUS_PACKAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("universal_file_viewer@0.1.5");
+    });
+
+    it("flags an exact pin in pubspec.yaml exactly once", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.yaml"), "name: app\ndependencies:\n  universal_file_viewer: 0.1.6\n");
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "PUB_MALICIOUS_PACKAGE")).toHaveLength(1);
+    });
+
+    // The control: the package is legitimate and 0.1.7 is its clean release.
+    it("leaves the clean 0.1.7 release alone", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.lock"), lock("0.1.7"));
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "PUB_MALICIOUS_PACKAGE")).toEqual([]);
+    });
+  });
 });

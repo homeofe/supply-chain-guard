@@ -9948,6 +9948,18 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "actions:checkmarx/kics-github-action@3fdeadb81fbeddc1453163cc87bc173911fd47e2", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
   { type: "package", value: "actions:checkmarx/kics-github-action@310734c0ffd29438f6195a24e2cbbacfdc33c9ab", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
   { type: "package", value: "actions:checkmarx/kics-github-action@b974e53df1e3a2cd22ea90f0ec01882394feede4", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+
+  // universal_file_viewer XCSSET compromise on pub.dev (September 8 2026), the first compromised
+  // pub package on record. A legitimate package whose maintainer's machine was infected, so
+  // version-pinned: 0.1.5 and 0.1.6 are the two releases the maintainer retracted (pub.dev API,
+  // verified 2026-09-23); 0.1.7, the current release, is clean. The archive hashes are pub.dev's
+  // archive_sha256 values, which pubspec.lock records. The two C2 hosts are single-source.
+  { type: "package", value: "pub:universal_file_viewer@0.1.5", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido, pub.dev retraction", firstSeen: "2026-09-08" },
+  { type: "package", value: "pub:universal_file_viewer@0.1.6", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev retraction", firstSeen: "2026-09-08" },
+  { type: "hash", value: "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev archive_sha256", firstSeen: "2026-09-08" },
+  { type: "hash", value: "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev archive_sha256", firstSeen: "2026-09-08" },
+  { type: "domain", value: "5yotmxcc54l9xda.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
+  { type: "domain", value: "ejntin6hkjt7gj2.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

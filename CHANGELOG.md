@@ -62,6 +62,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   reachable across the fork network; tags are never indicators, because each
   incident ended with them deleted or restored. The MCP `ioc_lookup` tool
   accepts `actions`.
+- Dart / Flutter (pub) package matching (`src/pub-scanner.ts`, rule
+  `PUB_MALICIOUS_PACKAGE`) against a new `pub:` feed ecosystem. `pubspec.lock`
+  is read for pub.dev-hosted packages with their exact versions, keyed by
+  `description.name` (what pub downloads) rather than the map key, which a
+  hostile lockfile controls; `pubspec.yaml` dependencies, dev dependencies and
+  overrides are read with only exact pins counted as versions. Git, path, sdk
+  and privately hosted packages are never looked up. The importer maps the
+  GitHub `pub` ecosystem and the OSV `Pub` export. First entries: the
+  `universal_file_viewer` XCSSET compromise of September 2026, the first
+  compromised pub.dev package on record, pinned to the two releases the
+  maintainer retracted (0.1.5, 0.1.6), with their archive hashes and two
+  single-source C2 hosts (`5yotmxcc54l9xda[.]ru`, `ejntin6hkjt7gj2[.]ru`).
+  The MCP `ioc_lookup` tool accepts `pub`.
 
 ### Fixed
 

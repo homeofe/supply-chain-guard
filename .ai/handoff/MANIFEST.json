@@ -3,9 +3,9 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790153892",
-    "timestamp": "2026-09-23T08:58:12Z",
-    "commit": "e46ad60",
+    "session_id": "cli-1790154315",
+    "timestamp": "2026-09-23T09:05:15Z",
+    "commit": "d9b14bc",
     "phase": "idle",
     "duration_minutes": 0
   },
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T08:58:11Z",
+      "updated": "2026-09-23T09:05:14Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:5dfb4bcd0ac5187a0068a7930ed5c4365f358e2ec83343e79af729fc36545988",
-      "updated": "2026-09-23T08:58:11Z",
+      "checksum": "sha256:aa4ca3290c3708dc9f91f9439cb203e3f357ee49b858ff0f88bad9e6a3a4c2e3",
+      "updated": "2026-09-23T09:05:14Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:55cfa7868497d69ed3a9193c8e879f6e34e7ddbc96dc589e234052443ddbe144",
-      "updated": "2026-09-23T08:58:11Z",
+      "checksum": "sha256:c6c91960dc708b83965f47a8be8e4f5c1c2e87c4ba6eaae665a54c14a1f308a6",
+      "updated": "2026-09-23T09:05:14Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -81,6 +81,6 @@
   "token_budget": {
     "manifest_only": 85,
     "manifest_plus_core": 125827,
-    "full_read": 138843
+    "full_read": 138844
   }
 }

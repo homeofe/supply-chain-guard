@@ -65,6 +65,7 @@ import { scanGoFiles } from "./go-scanner.js";
 import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scanner.js";
 import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
 import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
+import { isPubFile, scanPubContent } from "./pub-scanner.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
@@ -364,8 +365,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // directory scan reaches them. libs.versions.toml does, and is matched
     // here too so the maven: lookup has exactly one dispatch point.
     const mavenBuildFile = isMavenFile(relativePath);
+    // Same reason for pub: pubspec.lock has no scannable extension.
+    const pubspecFile = isPubFile(relativePath);
     const inlineContentTarget =
-      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile;
+      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile || pubspecFile;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -396,6 +399,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (mavenBuildFile) {
         findings.push(...scanMavenContent(prefetchedContent, relativePath, threatFeed));
+      }
+      if (pubspecFile) {
+        findings.push(...scanPubContent(prefetchedContent, relativePath, threatFeed));
       }
       if (nestedPythonLockfile) {
         findings.push(

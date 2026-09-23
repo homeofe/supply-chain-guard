@@ -232,6 +232,7 @@ src/
   terraform-scanner.ts    # Terraform/OpenTofu providers (.tf/.tf.json/.terraform.lock.hcl)
   extension-identity.ts   # VS Code / Open VSX extension IDs (recommendations, devcontainer, manifests)
   maven-scanner.ts        # Maven/Gradle artifacts (pom.xml/gradle.lockfile/build scripts/version catalogs)
+  pub-scanner.ts          # Dart/Flutter pub packages (pubspec.lock/pubspec.yaml)
   python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
