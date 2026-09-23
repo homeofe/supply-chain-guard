@@ -87,6 +87,13 @@ the workers independently with the mutation proof below.
   - two cuts whose anchors were wrong (re-anchored, red);
   - one redundant filter in the lockfile excuse pass: it can never change a result, because
     ignored and test-fixture manifests never record a name. It was deleted, not kept.
+- The full suite on the remote Linux runner then caught what the targeted runs could not: the
+  reachability and index-parity tests carried their own split-at-last-"@". They had agreed
+  with the matcher's Firefox bug, which is why the 28 dead entries passed a test built to find
+  exactly that.
+  - Switching them to the production splitter was not enough: the cut then stayed GREEN, because
+    guard and matcher shared the reverted code.
+  - Both now state the value grammar independently, and the cut is red (3 tests).
 
 ### Left open, deliberately
 
