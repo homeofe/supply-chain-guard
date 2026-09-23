@@ -20,7 +20,7 @@ packages:
     dependency: "direct main"
     description:
       name: hijacked_pkg
-      sha256: "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04"
+      sha256: "0000000000000000000000000000000000000000000000000000000000000000"
       url: "https://pub.dev"
     source: hosted
     version: "0.1.5"

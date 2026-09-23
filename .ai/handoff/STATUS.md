@@ -71,6 +71,19 @@ redundant code (see below). Full suite on openclaw after WP1: 158/158 files.
 - NEXT_ACTIONS said "Five tasks are ready" while its table said 4; the real
   number, after T-010, is 3 (T-009, T-011, T-012).
 
+### What only the full run caught (targeted suites were green)
+
+- `issue-205-zero-coverage.test.ts` used `pom.xml` as its example of "a file
+  this scanner does not read". Once Maven matching read it, the premise was
+  false, not the guard. The fixture is now an Ant `build.xml`, and a new test
+  pins the other side: a Maven project counts as scanned, exit 0.
+- The CI self-scan failed on this repository: the pub unit-test fixture
+  carried the REAL trojanized archive hash, which the scanner then correctly
+  flagged. The fixture uses a synthetic hash now. `npm run build` does not run
+  the self-scan, only CI does, so this class is invisible locally unless
+  `node dist/cli.js scan . --fail-on critical` is run by hand. **Run it before
+  pushing any change that adds IOC values to a test fixture.**
+
 ### Verification of third-party indicators
 
 A background research agent collected the Actions / pub / Docker candidates.
