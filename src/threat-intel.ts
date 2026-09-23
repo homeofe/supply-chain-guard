@@ -283,10 +283,12 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "domain", value: "flipboxstudio.info", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
   { type: "hash", value: "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
   { type: "hash", value: "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/lang", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/http-statuses", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/attributes", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/actions", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  // Corrected 2026-09-23: the four laravel-lang packages were carried here as WHOLE-NAME
+  // blocks. They are HIJACK VICTIMS, not attacker packages: Packagist lists 525 / 71 / 87 / 47
+  // versions going back to 2015-2023, laravel-lang/lang shipped a clean release on 2026-09-20,
+  // and it has 12.3M downloads. A whole-name block flagged every Laravel project using them as
+  // critical. What the incident actually shipped stays detected: the stealer's helpers.php by
+  // the two hashes above (file digest in vendor/) and its exfiltration host by domain.
 
   // Packagist 8-package GitHub-hosted Linux binary attack (May 23, 2026)
   // Coordinated supply-chain hit against 8 Composer packages on Packagist whose dev
@@ -294,14 +296,14 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // (gvfsd-network) from github.com/parikhpreyash4/systemd-network-helper-aa5c751f and
   // execute it from /tmp/.sshd. Attacker GitHub account removed after disclosure.
   // Attack mixed JS toolchain hooks into PHP projects to bypass Composer-side review.
-  { type: "package", value: "composer:moritz-sauer-13/silverstripe-cms-theme", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:crosiersource/crosierlib-base", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:devdojo/wave", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  // Corrected 2026-09-23: only the DEV BRANCHES of these packages carried the hook, so their
+  // tagged releases were never affected, and six of the eight are live with release histories
+  // (Packagist, 6 to 143 versions). Those six are no longer name-blocked; the hook itself stays
+  // detected through the parikhpreyash4 account in KNOWN_MALICIOUS_GITHUB_ACCOUNTS, which the
+  // payload URL names. devdojo/genesis and katanaui/katana are gone from Packagist and keep
+  // their name blocks, which can no longer match a clean install.
   { type: "package", value: "composer:devdojo/genesis", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
   { type: "package", value: "composer:katanaui/katana", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:elitedevsquad/sidecar-laravel", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:r2luna/brain", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:baskarcm/tzi-chat-ui", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
 
   // TrapDoor cross-ecosystem credential stealer (npm/PyPI/Crates.io, May 25, 2026)
   // Reported by The Hacker News on May 25, 2026. Single actor (ddjidd564) published

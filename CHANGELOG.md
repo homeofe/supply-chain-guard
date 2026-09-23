@@ -105,6 +105,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   dependencies too. The test that pinned the old behaviour was named "does
   NOT double-report a bare-name entry", but its own fixture had no direct
   dependencies, so it asserted the false negative.
+- **Ten live, legitimate Composer packages were blocked by name in every
+  version** and reported as critical in every project using them, among them
+  `laravel-lang/lang` (12.3M downloads, a clean release on 2026-09-20) and
+  `devdojo/wave`. They were hijack victims of two May 2026 incidents, not
+  attacker packages, which is exactly the case the feed rules say must be
+  version-pinned. Found by probing every whole-name non-npm entry (75) and
+  every curated whole-name npm entry (153) against its live registry. What the
+  incidents actually shipped stays detected: the Laravel-Lang stealer file by
+  hash and its exfiltration host, and the Packagist hook through the attacker's
+  GitHub account. The two packages of those incidents that Packagist removed
+  keep their blocks.
 - The importer no longer name-blocks hijacked legitimate extensions. OpenSSF
   records for GlassWorm-class incidents pair an "introduced: 0" range with the
   exact trojanized versions; read as a whole-package verdict, that would have

@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8825,
+  "entryCount": 8815,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -1159,69 +1159,6 @@
     },
     {
       "type": "package",
-      "value": "composer:laravel-lang/lang",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "DebugElevator",
-      "campaign": "Laravel-Lang DebugElevator",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:laravel-lang/http-statuses",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "DebugElevator",
-      "campaign": "Laravel-Lang DebugElevator",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:laravel-lang/attributes",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "DebugElevator",
-      "campaign": "Laravel-Lang DebugElevator",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:laravel-lang/actions",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "DebugElevator",
-      "campaign": "Laravel-Lang DebugElevator",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:moritz-sauer-13/silverstripe-cms-theme",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:crosiersource/crosierlib-base",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:devdojo/wave",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
       "value": "composer:devdojo/genesis",
       "severity": "critical",
       "confidence": 1,
@@ -1232,33 +1169,6 @@
     {
       "type": "package",
       "value": "composer:katanaui/katana",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:elitedevsquad/sidecar-laravel",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:r2luna/brain",
-      "severity": "critical",
-      "confidence": 1,
-      "family": "PHPBinaryDropper",
-      "campaign": "Packagist parikhpreyash4 Binary Attack",
-      "firstSeen": "2026-05-23"
-    },
-    {
-      "type": "package",
-      "value": "composer:baskarcm/tzi-chat-ui",
       "severity": "critical",
       "confidence": 1,
       "family": "PHPBinaryDropper",
