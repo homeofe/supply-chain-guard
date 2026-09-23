@@ -43,7 +43,7 @@ Every participating record carries the Grounded Reflection fields. Expired
 
 | Property | Value | Derived from |
 |----------|-------|--------------|
-| package.json version | 6.2.4 | package.json |
+| package.json version | 6.2.5 | package.json |
 | Source modules present | 80 | src/ file list |
 | Test files present | 156 | src/__tests__/ file list |
 | tsconfig `types: ["node"]` | yes | tsconfig.json |

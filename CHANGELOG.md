@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.2.5] - 2026-09-23
+
 ### Added
 
 - 281 package indicators from the GitHub Advisory Database malware feed and
@@ -28,6 +30,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   subdomains, never the `slack[.]com` apex), the Arbitrum Sepolia dead-drop
   contract, two payload SHA-256 digests, and the eight operator GitHub
   accounts. Single-source, so the feed entries carry confidence 0.85.
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-23 to 2026-08-24 and 45 package
+  indicators, all dated 2026-08-23 and none carrying a campaign or family,
+  moved into the catalog. None of them is asserted by a test or named in the
+  README or the docs, so no documented indicator left the package.
 
 ## [6.2.4] - 2026-09-22
 
@@ -5914,7 +5923,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.4...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.5...HEAD
+[6.2.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.5
 [6.2.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.4
 [6.2.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.3
 [6.2.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.2
