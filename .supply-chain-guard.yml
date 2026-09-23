@@ -14,11 +14,6 @@ suppress:
   - rule: GHA_OIDC_WRITE_PERM
     reason: OIDC permission required for npm Trusted Publishing; publish job has no third-party actions and all actions are pinned to commit SHAs
 
-  # The release job uses the built-in GitHub token only to create a GitHub
-  # Release through the gh CLI. No secret is sent to any external endpoint.
-  - rule: WORKFLOW_SECRET_TO_UPLOAD_PATH
-    reason: built-in GitHub token used only by the release job to publish a GitHub Release via the gh CLI; no secret leaves the workflow
-
   # npm v7+ lockfiles list every transitive dependency at the root
   # node_modules level by design. These are not orphaned packages and the
   # finding is informational only.

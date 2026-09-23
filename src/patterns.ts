@@ -13,7 +13,12 @@ import {
   matchCharacterCodeObfuscation,
 } from "./correlated-pattern-matchers.js";
 import {
+  BEACON_TRANSPORT_SOURCE,
+  WALLET_NAME_SOURCE,
+  WALLET_TARGET_SOURCE,
   createCoreBroadGapMatchers,
+  hasDnsC2Signal,
+  isAllowlistGuardedImportLine,
   hasDropperPayloadPreparation,
   hasShaiHuludCorroboration,
 } from "./broad-gap-pattern-matchers.js";
@@ -68,6 +73,31 @@ export function isPatternMatchAccepted(
 ): boolean {
   if (!pattern.valueFilter) return true;
   return pattern.valueFilter(match[pattern.valueGroup ?? 1] ?? "");
+}
+
+/**
+ * Severity of one reported hit. Most rules report their declared severity. A
+ * few rules match shapes that are ordinary until the same file corroborates
+ * them; those keep the finding and lower only its severity, because core rule
+ * ids are unique and a second entry cannot carry the lower level.
+ *
+ * Every loop that turns a PatternEntry hit into a Finding must call this, or
+ * the corroboration below is silently skipped.
+ */
+export function resolvePatternSeverity(
+  pattern: Pick<PatternEntry, "rule" | "severity">,
+  content: string,
+  hit: { line: number },
+): Severity {
+  switch (pattern.rule) {
+    case "C2_DOH_RESOLVER":
+    case "DEAD_DROP_DNS_TXT":
+      return hasDnsC2Signal(content, hit.line) ? pattern.severity : "low";
+    case "IMPORT_EXPRESSION":
+      return isAllowlistGuardedImportLine(content, hit.line) ? "info" : pattern.severity;
+    default:
+      return pattern.severity;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3326,29 +3356,34 @@ export const KNOWN_NATIVE_PACKAGES = new Set([
 // Network beacon and crypto miner detection (T-008)
 // ---------------------------------------------------------------------------
 
+/**
+ * Shared by both beacon twins. Minified vendored bundles put unrelated tokens
+ * next to each other, and the timeout twin used to scan them anyway.
+ */
+export const BEACON_NOT_FILE_PATTERN = /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i;
+
 export const BEACON_MINER_PATTERNS: PatternEntry[] = [
   // Beacon patterns: periodic network calls
   {
     name: "beacon-setinterval-fetch",
-    pattern:
-      "setInterval\\s*\\(.*(?:fetch|https?\\.(?:get|request)|axios|got|node-fetch|XMLHttpRequest)",
+    pattern: `setInterval\\s*\\(.*${BEACON_TRANSPORT_SOURCE}`,
     description:
       "Periodic network request detected (setInterval + fetch). This is a common beacon pattern for C2 communication.",
     severity: "medium",
     rule: "BEACON_INTERVAL_FETCH",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_INTERVAL_FETCH,
-    notFilePattern: /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i,
+    notFilePattern: BEACON_NOT_FILE_PATTERN,
     notTestFile: true,
   },
   {
     name: "beacon-settimeout-fetch",
-    pattern:
-      "setTimeout\\s*\\(.*(?:fetch|https?\\.(?:get|request)|axios|got|node-fetch)",
+    pattern: `setTimeout\\s*\\(.*${BEACON_TRANSPORT_SOURCE}`,
     description:
       "Delayed network request detected (setTimeout + fetch). May be a beacon with jitter.",
     severity: "medium",
     rule: "BEACON_TIMEOUT_FETCH",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_TIMEOUT_FETCH,
+    notFilePattern: BEACON_NOT_FILE_PATTERN,
     notTestFile: true,
   },
 
@@ -3777,9 +3812,9 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
   {
     name: "dynamic-import-expression",
     pattern:
-      "import\\s*\\(\\s*(?:`[^`]*\\$\\{|\\+|process\\.env|String\\.fromCharCode)",
+      "import\\s*\\(\\s*(?:`[^`]*\\$\\{|\\+|process\\.env|String\\.fromCharCode|(?:req|request)\\.(?:query|params|body|headers)\\b)",
     description:
-      "Dynamic import() with computed URL (template literal with expression, env variable, or string construction). Can load modules from attacker-controlled sources.",
+      "Dynamic import() with computed URL (template literal with expression, env variable, request input, or string construction). Can load modules from attacker-controlled sources. Reported at info when the template has a static prefix and extension and its one identifier was checked earlier in the same function against an anchored allowlist that admits no path characters.",
     severity: "medium",
     rule: "IMPORT_EXPRESSION",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.IMPORT_EXPRESSION,
@@ -3926,7 +3961,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     pattern:
       "(?:nslookup|dig)\\s+.*\\bTXT\\b|dns\\.resolveTxt|resolver\\.query.*TXT",
     description:
-      "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels.",
+      "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels. Reported at medium only with a C2 signal: an encoder call (base32, base64, hex) building the query line, or a decoded answer reaching eval, Function, vm, exec or child_process in the same file. Otherwise low, since SPF, DMARC and verification lookups read TXT records legitimately.",
     severity: "medium",
     rule: "DEAD_DROP_DNS_TXT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DEAD_DROP_DNS_TXT,
@@ -3952,7 +3987,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "vidar-wallet-theft",
     pattern:
-      "(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi|Trust.*Wallet).*(?:wallet|keystore|vault|seed|mnemonic)|wallet\\.dat",
+      `(?<![A-Za-z])(?:${WALLET_NAME_SOURCE}(?![a-z])|Trust(?![a-z]).*Wallet).*${WALLET_TARGET_SOURCE}|wallet\\.dat`,
     description:
       "Cryptocurrency wallet file/directory access. Infostealers target wallet files for fund theft.",
     severity: "high",
@@ -4256,9 +4291,9 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
   {
     name: "c2-doh-resolver",
     pattern:
-      "(?:cloudflare-dns\\.com|dns\\.google|dns\\.quad9\\.net)/dns-query|application/dns-json|application/dns-message",
+      "(?:cloudflare-dns\\.com|dns\\.google|dns\\.quad9\\.net)/(?:dns-query|resolve)|application/dns-json|application/dns-message",
     description:
-      "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
+      "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring. Reported at medium only with a C2 signal: an encoder call (base32, base64, hex) building the query line, or a decoded answer reaching eval, Function, vm, exec or child_process in the same file. Otherwise low, since DNSSEC and record checks use DoH legitimately.",
     severity: "medium",
     rule: "C2_DOH_RESOLVER",
     notFilePattern: SCANNER_SRC_OR_DOCS,

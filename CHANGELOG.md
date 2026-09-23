@@ -245,6 +245,58 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
+- **Rule precision (false positives that blocked `fail-on: medium` in real
+  repositories, where suppressing them was not an option).** Each fix keeps
+  every must-fire example of its draft firing at its severity.
+  - `INTERNAL_PRIVATE_IP`, `INTERNAL_PRIVATE_IPV6`, `INTERNAL_HOSTNAME`: pytest's
+    `test_*.py` files count as test files (exactly that basename form;
+    `testing.py`, `latest_net.py` and `contest.py` do not), from one shared
+    definition of the test-file forms.
+  - `INTERNAL_HOSTNAME`: `metadata.google.internal` is well-known
+    infrastructure, like the metadata address it names; a quoted dotted key
+    (`"status.internal": ...` in a translation catalogue or JSON) and attribute
+    access inside an f-string or template-literal field are not hosts, while a
+    value, a key with a scheme, and the literal part of a string still report.
+  - `INTERNAL_PRIVATE_IP`: a `10.x` number directly after a requirement marker
+    (`Req`, `Requirement`, `Section`, `Sec.`, `§`, `Control`, `Clause`,
+    `Annex`) is a requirement number, not an address; a private or ULA literal
+    in an explanatory comment of a file that implements private-range
+    classification is reported at info instead of medium.
+  - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: one data-URI exemption for both
+    passes, limited to `image/*` (not `image/svg+xml`, which can carry script),
+    `font/*` and the legacy font types. The file-level pass used to exempt
+    every media type.
+  - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
+    call with identifier boundaries (`setInterval(fetchNotifications, ...)`
+    and `forgotPassword` no longer match), and both rules share one exclusion
+    for minified and prose files.
+  - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal (an
+    encoded query name, or a decoded TXT answer reaching eval, Function, vm or
+    a process sink); an ordinary DNSSEC, SPF or DMARC lookup reports at low.
+  - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
+    extension whose only variable segment passed an anchored allowlist in the
+    same function reports at info.
+  - `VIDAR_WALLET_THEFT`: a wallet name inside a longer word (`phantomjs`,
+    `Atomicity`) or a target word running on (`seeding`, `vaulted`) no longer
+    matches.
+  - `WORKFLOW_SECRET_TO_UPLOAD_PATH` is a per-step check now: a stored secret
+    in the step's scope (its `env`, `run`, the job or workflow `env`, a job
+    container's env) and, in that same step, an egress command or an artifact
+    upload. Comments, `fetch-depth:`, `git fetch`, a URL inside a regex and
+    loopback health checks no longer count, the run's own token is governed by
+    `permissions:` rather than reported here, and a finding carries the step's
+    line. A reusable workflow from another repository that receives
+    `secrets: inherit` or a stored secret, and a local composite action that
+    makes an outbound call, are reported too.
+  - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
+    job container's env.
+  - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a
+    download; the recommendation no longer names a provenance check the rule
+    does not perform.
+  - `GHA_OIDC_WRITE_PERM`: the text says what the rule checks (the permission
+    itself), not a correlation with third-party steps it never makes.
+  - The file-level and DNS/import severities are applied through the scanner,
+    so a rule's severity can depend on corroboration in the same file.
 - **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
   file as JSONC, and the scanner parsed it as strict JSON, so a single comment
   or trailing comma made the whole file read as empty. The real Fake Font

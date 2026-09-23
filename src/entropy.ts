@@ -69,6 +69,24 @@ const MIN_STRING_LENGTH = 100;
 const MIN_FILE_SIZE = 500;
 
 /**
+ * Inlined images and fonts as base64 data: URIs are ordinary build output and
+ * high-entropy by construction. Only image/* and font/* are exempt, plus the
+ * legacy font types older CSS still uses (application/font-woff,
+ * application/x-font-ttf and the like). image/svg+xml is NOT exempt: an SVG is
+ * a document that can carry script. A text/javascript or
+ * application/octet-stream data URI is how a payload is smuggled, so it stays
+ * visible to both passes. The payload class excludes newlines, so removal
+ * never shifts a line number.
+ */
+const EXEMPT_DATA_URI =
+  /data:(?:image\/(?!svg\+xml)[A-Za-z0-9.+-]{1,64}|font\/[A-Za-z0-9.+-]{1,64}|application\/(?:x-)?font-(?:woff2?|ttf|otf|sfnt|opentype|truetype)|application\/vnd\.ms-fontobject);base64,[A-Za-z0-9+/=]+/gi;
+
+/** The one data URI exemption shared by the file-level and per-string passes. */
+export function stripExemptDataUris(content: string): string {
+  return content.replace(EXEMPT_DATA_URI, "");
+}
+
+/**
  * Analyze a file's content for high-entropy indicators.
  */
 export function analyzeEntropy(
@@ -79,14 +97,9 @@ export function analyzeEntropy(
 
   if (content.length < MIN_FILE_SIZE) return findings;
 
-  // Inlined assets (fonts, icons, images) as data: URIs are ordinary build
-  // output and are high-entropy by construction. Measure the file WITHOUT them
-  // so an inlined logo does not make a whole bundle look obfuscated; anything
-  // genuinely hidden in the remaining code still counts.
-  const withoutDataUris = content.replace(
-    /data:[^;,\s"'`]+;base64,[A-Za-z0-9+/=]+/g,
-    "",
-  );
+  // Both passes measure the same exempted text, so an inlined image the file
+  // check ignores cannot come back at high through the string check.
+  const withoutDataUris = stripExemptDataUris(content);
 
   // Check file-level entropy
   const fileEntropy = shannonEntropy(withoutDataUris);
@@ -102,7 +115,7 @@ export function analyzeEntropy(
   }
 
   // Check individual long strings for high entropy
-  const lines = content.split("\n");
+  const lines = withoutDataUris.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     // Extract string literals and long tokens

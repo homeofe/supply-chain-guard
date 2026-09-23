@@ -19,6 +19,7 @@ import {
   type WfStep,
   type WfJob,
 } from "./workflow-ast.js";
+import { textHasSecretReference, workflowScopes, type WorkflowScopes } from "./workflow-modeler.js";
 
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
@@ -140,12 +141,13 @@ export const WORKFLOW_PATTERNS: Array<
   // very attack), and PPE additionally depends on which trigger fires the
   // workflow.
   //
-  // OIDC token theft: id-token:write permission combined with outbound network call
+  // OIDC: a presence check on the permission. It does not look at which steps
+  // run with it, so the text must not claim a correlation it never made.
   {
     pattern: "id-token:\\s*write",
     description:
-      "Workflow requests OIDC id-token:write permission. If combined with unreviewed third-party actions or outbound curl, " +
-      "an attacker can steal the OIDC token to impersonate the workflow's cloud identity.",
+      "Workflow grants the OIDC id-token: write permission. Any step in a job that holds it can request a token for " +
+      "the workflow's cloud identity. This check reports the permission itself and does not inspect which steps run with it.",
     severity: "medium",
     rule: "GHA_OIDC_WRITE_PERM",
   },
@@ -967,11 +969,13 @@ function checkWorkflowPatterns(
   // physical line numbers; shortening a stripped comment cannot move any
   // surviving match to another line.
   const strippedContent = lines.map((line) => stripYamlComment(line)).join("\n");
+  const canonical = canonicalSecretExpressions(strippedContent);
 
   for (const pattern of WORKFLOW_PATTERNS) {
+    const secretRule = SECRET_LINE_RULES.has(pattern.rule);
     const matches = matchPatternInFile(
       pattern,
-      strippedContent,
+      secretRule ? canonical.text : strippedContent,
       relativePath,
       findings,
       pattern.flags ?? "i",
@@ -979,17 +983,61 @@ function checkWorkflowPatterns(
     if (!matches) continue;
 
     for (const match of matches) {
+      // On a rewritten line, show the workflow's own text, not the canonical form.
+      const shown = secretRule && canonical.lines.has(match.line)
+        ? (lines[match.line - 1] ?? "").trim()
+        : match.text;
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
         severity: pattern.severity,
         file: relativePath,
         line: match.line,
-        match: truncateMatch(match.text),
+        match: truncateMatch(shown),
         recommendation: getWorkflowRecommendation(pattern.rule),
       });
     }
   }
+}
+
+/** Line rules whose patterns name a secret as `${{ secrets.NAME }}`. */
+const SECRET_LINE_RULES = new Set(["GHA_SECRET_CURL", "GHA_SECRET_WGET", "GHA_ENV_EXFIL"]);
+
+/** The form the line patterns above are written against. */
+const DOT_SECRET_EXPR_RE = /^\s*secrets\./i;
+
+/**
+ * Rewrite every single-line `${{ ... }}` expression that references a secret
+ * in any expression form into the dot form the line patterns match, so those
+ * rules report every form exactly where they report the dot form. Line count
+ * and every other byte are preserved. Returns the 1-based lines rewritten.
+ */
+function canonicalSecretExpressions(text: string): { text: string; lines: Set<number> } {
+  const out: string[] = [];
+  const rewritten = new Set<number>();
+  let from = 0;
+  let line = 1;
+  for (;;) {
+    const open = text.indexOf("${{", from);
+    if (open < 0) break;
+    const close = text.indexOf("}}", open + 3);
+    if (close < 0) break;
+    const before = text.slice(from, open);
+    for (let k = before.indexOf("\n"); k >= 0; k = before.indexOf("\n", k + 1)) line++;
+    const expr = text.slice(open, close + 2);
+    const inner = expr.slice(3, -2);
+    out.push(before);
+    if (!inner.includes("\n") && !DOT_SECRET_EXPR_RE.test(inner) && hasSecretRef(expr)) {
+      out.push("${{ secrets.REFERENCE }}");
+      rewritten.add(line);
+    } else {
+      out.push(expr);
+      for (let k = inner.indexOf("\n"); k >= 0; k = inner.indexOf("\n", k + 1)) line++;
+    }
+    from = close + 2;
+  }
+  out.push(text.slice(from));
+  return { text: out.join(""), lines: rewritten };
 }
 
 /**
@@ -1137,8 +1185,12 @@ function checkActionReferences(
   }
 }
 
-/** A secret expression: `${{ secrets.NAME }}`. */
-const SECRET_EXPR_RE = /\$\{\{\s*secrets\.\w+\s*\}\}/;
+/**
+ * Every expression form of a secret reference, with the run's own
+ * GITHUB_TOKEN included: for an exfiltration rule, sending that token out is
+ * the danger, so it is not treated as ambient here.
+ */
+const hasSecretRef = (text: string): boolean => textHasSecretReference(text, true);
 
 /**
  * Commands that move data off the runner. `git fetch` is excluded: it pulls
@@ -1175,31 +1227,36 @@ function checkSecretsExfiltration(
 ): void {
   const lines = content.replace(/\r/g, "").split("\n");
 
-  let ast;
+  // Env scopes come from line regions as well as from the AST, whose env maps
+  // hold block maps only: an inline flow map (`env: { T: ... }`) is otherwise
+  // invisible at step, job and workflow level.
+  let scopes: WorkflowScopes | undefined;
   try {
-    ast = parseWorkflow(content);
+    scopes = workflowScopes(content);
   } catch {
-    ast = undefined;
+    scopes = undefined;
   }
 
   const envHasSecret = (env?: Record<string, string>): boolean =>
-    env !== undefined && Object.values(env).some((v) => SECRET_EXPR_RE.test(v));
+    env !== undefined && Object.values(env).some((v) => hasSecretRef(v));
 
   // Fail closed: a file this parser cannot break into steps still gets the old
   // coarse file-level check (reported at line 1), so nothing goes undetected.
-  const steps = ast?.jobs.flatMap((job) => job.steps.map((step) => ({ step, job })));
-  if (!steps || steps.length === 0) {
-    if (SECRET_EXPR_RE.test(content) && NETWORK_CMD_RE.test(content)) {
+  const steps = scopes?.jobs.flatMap((scope) =>
+    scope.steps.map((st) => ({ step: st.step, job: scope.job, stepEnv: st.env, jobEnv: scope.env })),
+  );
+  if (!scopes || !steps || steps.length === 0) {
+    if (hasSecretRef(content) && NETWORK_CMD_RE.test(content)) {
       pushExfilFinding(findings, relativePath, 1, true);
     }
     return;
   }
 
-  const workflowEnvSecret = envHasSecret(ast?.env);
+  const workflowEnvSecret = envHasSecret(scopes.ast.env) || hasSecretRef(scopes.workflowEnv);
   const stepStartLines = steps.map(({ step }) => step.line);
 
   for (let s = 0; s < steps.length; s++) {
-    const { step, job } = steps[s]!;
+    const { step, job, stepEnv, jobEnv } = steps[s]!;
     // Comment-stripped, so a commented-out example is not "runs a network
     // command" (and matches the line search below).
     const runCommands = (step.run ?? "")
@@ -1209,9 +1266,11 @@ function checkSecretsExfiltration(
     if (!step.run || !NETWORK_CMD_RE.test(runCommands)) continue;
 
     const secretInScope =
-      SECRET_EXPR_RE.test(step.run) ||
+      hasSecretRef(step.run) ||
       envHasSecret(step.env) ||
+      hasSecretRef(stepEnv) ||
       envHasSecret(job.env) ||
+      hasSecretRef(jobEnv) ||
       workflowEnvSecret;
     if (!secretInScope) continue;
 
@@ -1297,8 +1356,8 @@ function getWorkflowRecommendation(rule: string): string {
       "Never interpolate user-controlled GitHub context (issue body, PR title, commit message) directly into run: steps. " +
       "Store the value in an environment variable first: env: VALUE: ${{ github.event.issue.body }} then use $VALUE.",
     GHA_OIDC_WRITE_PERM:
-      "Audit all steps in this workflow when id-token:write is set. Ensure no third-party action or run step " +
-      "can exfiltrate the OIDC token. Scope permissions as narrowly as possible.",
+      "Grant id-token: write only on the job that needs it, and review that job's actions and run steps: " +
+      "any of them can request the OIDC token.",
     GHA_CACHE_POISONING:
       "Do not use github.head_ref in cache keys for workflows that can be triggered by untrusted PRs. " +
       "Use github.sha or a hash of locked dependency files instead.",

@@ -30,6 +30,7 @@ import {
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
   truncateMatch,
+  resolvePatternSeverity,
 } from "./patterns.js";
 import {
   maskMixedCommentsPreservingStrings,
@@ -1297,7 +1298,9 @@ function checkFilePatterns(
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
-        severity: pattern.severity,
+        // Most rules have one severity; d7 (DNS C2) and d8 (guarded dynamic
+        // import) depend on corroboration in the same file (see patterns.ts).
+        severity: resolvePatternSeverity(pattern, content, hit),
         file: relativePath,
         line: hit.line,
         match: truncateMatch(hit.text),

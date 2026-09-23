@@ -10,9 +10,51 @@
 import * as path from "node:path";
 import type { PatternEntry } from "./types.js";
 
+/**
+ * Test directory names every test-path matcher agrees on. Test-path exemptions
+ * are chosen by the scanned tree (it names its own files), so each entry is a
+ * place malware could hide; widen this only with a reason.
+ */
+const SHARED_TEST_DIRS = [
+  "tests?",
+  "__tests__",
+  "__fixtures__",
+  "__mocks__",
+  "__snapshots__",
+  "e2e",
+  "integration-tests?",
+  "fixtures?",
+  "testdata",
+  "test-data",
+];
+
+/**
+ * File-name forms of a test, shared by every test-path matcher: a `.test.` /
+ * `_spec.` style suffix, pytest's `conftest.py`, and pytest's default prefix
+ * collection form `test_*.py` (basename only, so `testing.py`, `latest_net.py`
+ * and `contest.py` stay production source).
+ */
+const TEST_FILE_NAME_SOURCE =
+  "[._-](?:test|spec|mock|fixture|stub|fake)\\.|(?:^|\\/)conftest\\.py$|(?:^|\\/)test_[^/]*\\.py$";
+
+/**
+ * Build a test-path matcher from the shared directory core, the shared file
+ * name forms, and any directory names one consumer adds on top.
+ */
+export function buildTestFilePattern(extraDirs: readonly string[] = []): RegExp {
+  const dirs = [...SHARED_TEST_DIRS, ...extraDirs].join("|");
+  return new RegExp(`(?:^|\\/)(?:${dirs})\\/|${TEST_FILE_NAME_SOURCE}`, "i");
+}
+
 /** Detect test / spec / fixture / mock files using normalized "/" paths. */
-export const TEST_FILE_PATTERN =
-  /(?:^|\/)(?:tests?|specs?|__tests__|__fixtures__|__mocks__|__snapshots__|snapshots?|e2e|integration-tests?|test-fixtures?|fixtures?|testdata|test-data|mocks?|stubs?|fakes?)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
+export const TEST_FILE_PATTERN = buildTestFilePattern([
+  "specs?",
+  "snapshots?",
+  "test-fixtures?",
+  "mocks?",
+  "stubs?",
+  "fakes?",
+]);
 
 export type ApplicablePattern = Pick<
   PatternEntry,

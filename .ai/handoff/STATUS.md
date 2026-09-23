@@ -1,3 +1,69 @@
+## D-062 rule fixes, all ten at once (2026-09-23) (claude-opus-5-5)
+
+The owner asked for every queued rule fix to land immediately rather than one PR per
+day, so all ten drafts (d1 to d10) and the three "worth reporting" items are in PR 326.
+Three workers took separate file groups; the lead wired the scanner, re-checked and
+extended their work, and ran an independent mutation spot-check.
+
+### Result
+
+- **The drafts:**
+  - d1: pytest `test_*.py`, one shared definition;
+  - d2: GCP metadata host;
+  - d3: dotted keys and replacement fields;
+  - d4: requirement numbers;
+  - d5: data-URI exemption, shared and narrowed;
+  - d6: beacon call shape and a shared exclusion;
+  - d7: DNS rules need a C2 signal for medium;
+  - d8: guarded dynamic import at info;
+  - d9: per-step secret-to-egress;
+  - d10: classifier comments at info.
+- **The "worth reporting" items:**
+  - VIDAR word boundaries;
+  - GHA_CROSS_WORKFLOW_ARTIFACT_TRUST: a listing is not a download;
+  - GHA_OIDC_WRITE_PERM text.
+- **Sibling rules brought to the same standard as d9:** GHA_SECRET_EXFIL_MULTILINE, GHA_SECRET_CURL,
+  GHA_SECRET_WGET and GHA_ENV_EXFIL. They recognise every expression form of a secret
+  reference, keep counting the run's own token (sending it out is the danger there), and
+  the multiline rule reads inline `env:` maps.
+- **Self-scan:** the repository's own suppression of WORKFLOW_SECRET_TO_UPLOAD_PATH was
+  removed. The rewritten rule reports 0 here, and a control workflow run through the same
+  CLI reports medium on the step line.
+- **Real data:** the workers compared old and new builds across the owner's local checkouts,
+  read-only. d9: 60 files before, 7 findings after. The four exfiltration rules: no
+  finding added or removed, with a control fixture proving the comparison sees a
+  difference.
+
+### Proof
+
+- Every draft's must-fire examples are tests. Every false-positive example is a test that
+  was red before the fix.
+- The workers ran 21 + 18 + 15 + 3 + 14 of their own mutation cuts, all red.
+- The lead's independent spot-check: 12 cuts, all red, with baseline and post-restore
+  green. That covers one per draft, the scanner severity wiring, and the ambient-token
+  flag in both directions.
+
+### Deliberate trade-offs (recorded, not hidden)
+
+- d3: a map keyed by host names with plain string values (`"db.internal": "primary"`) now
+  goes quiet, since it has the same shape as a translation key. A nested-value inventory
+  still reports.
+- d4: only `10.x` is exempt after a marker, because it is the only private range that
+  collides with PCI numbering.
+- d10: info also needs an explanatory word in the same comment block, so an
+  infrastructure note in a classifier file still reports at medium.
+- VIDAR: whole-word "phantom ... seed" in code still reports at high. Narrowing "seed"
+  broke a real stealer shape (`grab(.../Atomic/..., "seed")`), so the change was reverted.
+- d5: `image/svg+xml` is not exempt, since an SVG can carry script.
+
+### Private advisory
+
+- GHSA-pvhm-wc2r-q627 is a DRAFT, private to repository admins. It holds the d9
+  sentence the draft marked, as the owner decided, and notes the sibling rule's
+  identical gap.
+- It has no patched version yet. When the release that carries PR 326 is out, set
+  the patched version and publish it (an owner action).
+
 ## Pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
 
 The owner asked for a review before merge. Four reviewers ran one pass each over separate areas:
