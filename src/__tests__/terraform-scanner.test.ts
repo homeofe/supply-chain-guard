@@ -185,27 +185,82 @@ describe("Terraform registry modules (tfmodule:)", () => {
   });
 });
 
+// A provider `source` only exists inside terraform { required_providers { } }.
+const providers = (...entries: string[]) =>
+  ["terraform {", "  required_providers {", ...entries.map((e) => `    ${e}`), "  }", "}"].join("\n");
+
 describe("scanTerraformContent", () => {
   it("flags a bare-name provider IOC from a .tf source", () => {
-    const hits = rules('    docker = { source = "evil-ns/docker" }', "infra/main.tf");
+    const hits = rules(providers('docker = { source = "evil-ns/docker" }'), "infra/main.tf");
     expect(hits).toHaveLength(1);
     expect(hits[0]?.severity).toBe("critical");
     expect(hits[0]?.category).toBe("malware");
     expect(hits[0]?.confidence).toBe(0.9);
     expect(hits[0]?.file).toBe("infra/main.tf");
-    expect(hits[0]?.line).toBe(1);
+    expect(hits[0]?.line).toBe(3);
     expect(hits[0]?.description).toContain("evil-ns/docker");
     expect(hits[0]?.description).toContain("TestFamily");
   });
 
   it("matches case-insensitively, as the registry does", () => {
-    expect(rules('source = "EVIL-NS/Docker"', "main.tf")).toHaveLength(1);
+    expect(rules(providers('docker = { source = "EVIL-NS/Docker" }'), "main.tf")).toHaveLength(1);
   });
 
   // The feed side too: a hand-curated entry is not guaranteed to be lowercase.
   it("matches a feed entry written in mixed case", () => {
     const feed: FeedIOC[] = [{ type: "package", value: "terraform:Mixed-NS/Provider", severity: "critical", confidence: 1.0 }];
-    expect(scanTerraformContent('source = "mixed-ns/provider"', "main.tf", feed)).toHaveLength(1);
+    expect(scanTerraformContent(providers('p = { source = "mixed-ns/provider" }'), "main.tf", feed)).toHaveLength(1);
+  });
+
+  // `source` outside required_providers is a file, a module or an object key.
+  // Reading every `source = "a/b"` as a provider reported relative paths.
+  it("does NOT read source attributes outside required_providers as providers", () => {
+    const feed: FeedIOC[] = [
+      { type: "package", value: "terraform:conf/myapp", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "terraform:dist/index", severity: "critical", confidence: 1.0 },
+    ];
+    const content = [
+      'resource "null_resource" "x" {',
+      '  provisioner "file" {',
+      '    source = "conf/myapp"',
+      '    destination = "/etc/myapp"',
+      "  }",
+      "}",
+      'resource "aws_s3_object" "o" {',
+      '  source = "dist/index"',
+      "}",
+    ].join("\n");
+    expect(scanTerraformContent(content, "main.tf", feed)).toEqual([]);
+    expect(scanTerraformContent(providers('app = { source = "conf/myapp" }'), "main.tf", feed)).toHaveLength(1);
+  });
+
+  it("reads required_providers in .tf.json only, in object and array form", () => {
+    const feed: FeedIOC[] = [{ type: "package", value: "terraform:evil-ns/docker", severity: "critical", confidence: 1.0 }];
+    const objectForm = JSON.stringify({ terraform: { required_providers: { docker: { source: "evil-ns/docker" } } } });
+    const arrayForm = JSON.stringify({ terraform: [{ required_providers: [{ docker: { source: "evil-ns/docker" } }] }] });
+    const elsewhere = JSON.stringify({ resource: { aws_s3_object: { o: { source: "evil-ns/docker" } } } });
+    expect(scanTerraformContent(objectForm, "main.tf.json", feed)).toHaveLength(1);
+    expect(scanTerraformContent(arrayForm, "main.tf.json", feed)).toHaveLength(1);
+    expect(scanTerraformContent(elsewhere, "main.tf.json", feed)).toEqual([]);
+  });
+
+  it("matches registry submodules (//subdir) and .tf.json modules", () => {
+    const feed: FeedIOC[] = [{ type: "package", value: "tfmodule:evil-ns/iam/aws", severity: "critical", confidence: 1.0 }];
+    const sub = 'module "u" {\n  source = "evil-ns/iam/aws//modules/iam-user"\n}';
+    const json = JSON.stringify({ module: { u: { source: "evil-ns/iam/aws" } } });
+    expect(scanTerraformContent(sub, "main.tf", feed).map((f) => f.rule)).toEqual(["TERRAFORM_MALICIOUS_MODULE"]);
+    expect(scanTerraformContent(json, "main.tf.json", feed).map((f) => f.rule)).toEqual(["TERRAFORM_MALICIOUS_MODULE"]);
+    expect(scanTerraformContent('module "g" {\n  source = "git::https://example.com/evil-ns/iam/aws.git"\n}', "main.tf", feed)).toEqual([]);
+  });
+
+  // Unclosed blocks used to be re-read from every opening line (quadratic).
+  it("stays linear on unclosed module and lock-file blocks", () => {
+    const modules = 'module "a" {\n'.repeat(20000);
+    const lock = 'provider "registry.terraform.io/a/b" {\n'.repeat(20000);
+    const t = performance.now();
+    scanTerraformContent(modules, "main.tf", []);
+    scanTerraformContent(lock, ".terraform.lock.hcl", []);
+    expect(performance.now() - t).toBeLessThan(2000);
   });
 
   it("flags a lock-file provider and reports each provider once", () => {

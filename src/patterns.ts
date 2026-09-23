@@ -2034,12 +2034,25 @@ export type AutoRunLifecycleHook = (typeof AUTO_RUN_LIFECYCLE_HOOKS)[number];
  * auto-run command carrier: editor tasks, devcontainer lifecycle commands and
  * npm lifecycle hooks.
  *
- * Every repetition is bounded (8 option flags of up to 64 characters, 512 for
- * the path): the line is attacker-controlled, and validatePatternSet refuses
- * an unbounded gap in SUSPICIOUS_SCRIPTS for exactly that reason.
+ * The interpreter may be quoted or backticked (`bash -c "node x.woff2"`), carry
+ * a path (`/usr/bin/node`, `C:\node\node.exe`), and the asset may be quoted
+ * with spaces in it or have a redirect glued on (`x.woff2>/dev/null`).
+ *
+ * Every repetition is bounded (16 option flags of up to 128 characters,
+ * whitespace runs of 64, 512 for the path): the line is attacker-controlled,
+ * and validatePatternSet refuses an unbounded gap in SUSPICIOUS_SCRIPTS for
+ * exactly that reason. A run longer than a bound is not a realistic command.
  */
+const ASSET_EXTENSIONS = "(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)";
 export const ASSET_EXEC_PATTERN =
-  "(?:^|[\\s;&|(])(?:node|nodejs|deno(?:\\s{1,8}run)?|bun(?:\\s{1,8}run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\\.exe)?\\s{1,8}(?:-[-\\w=.:]{0,64}\\s{1,8}){0,8}[\"']?[^\\s\"'|&;]{0,512}\\.(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)(?=[\"'\\s|&;)]|$)";
+  "(?:^|[\\s;&|(\"'`])" +
+  "(?:[^\\s\"'`|&;<>()]{0,256}[\\\\/])?" +
+  "(?:node|nodejs|deno(?:\\s{1,64}run)?|bun(?:\\s{1,64}run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\\.exe)?" +
+  // A flag that introduces a command STRING (sh -c, bash -lc, node -e/-p,
+  // --eval, pwsh -Command) is not skipped: what follows is a command, not a
+  // file, and it is matched on its own from the quote that opens it.
+  "\\s{1,64}(?:-(?![a-z]{0,16}c\\s|[ep]\\s|-?(?:eval|print|command|encodedcommand)\\b)[-\\w=.:/@]{0,128}\\s{1,64}){0,16}" +
+  `(?:"[^"\\n]{0,512}\\.${ASSET_EXTENSIONS}"|'[^'\\n]{0,512}\\.${ASSET_EXTENSIONS}'|[^\\s"'\`|&;<>()]{0,512}\\.${ASSET_EXTENSIONS}(?=[\\s"'\`|&;<>)]|$))`;
 
 /** Package.json script patterns that are suspicious */
 export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [

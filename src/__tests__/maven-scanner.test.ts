@@ -157,15 +157,25 @@ describe("extractMavenCoordinates: remaining build formats", () => {
   });
 
   // A plugins {} id resolves through its marker artifact, id:id.gradle.plugin.
+  // kotlin("x") is shorthand for the id org.jetbrains.kotlin.x. (This test used
+  // to assert that kotlin("jvm") yields nothing, which encoded the gap.)
   it("reads plugins {} ids as their marker artifacts", () => {
-    const kts = 'plugins {\n  id("com.evil.plugin") version "2.0"\n  kotlin("jvm") version "2.0.0"\n}';
+    const kts = 'plugins {\n  id("com.evil.plugin") version "2.0"\n  kotlin("jvm") version "2.0.0"\n  kotlin("plugin.spring") version "2.0.0" apply false\n}';
     const groovy = "plugins {\n  id 'com.evil.plugin' version '2.0'\n  id 'java'\n}";
-    expect(coords(kts, "build.gradle.kts")).toEqual(["com.evil.plugin:com.evil.plugin.gradle.plugin@2.0"]);
+    expect(coords(kts, "build.gradle.kts")).toEqual([
+      "com.evil.plugin:com.evil.plugin.gradle.plugin@2.0",
+      "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin@2.0.0",
+      "org.jetbrains.kotlin.plugin.spring:org.jetbrains.kotlin.plugin.spring.gradle.plugin@2.0.0",
+    ]);
     expect(coords(groovy, "settings.gradle")).toEqual(["com.evil.plugin:com.evil.plugin.gradle.plugin@2.0"]);
+    // kotlin("stdlib") without a version is the dependency shorthand, not a plugin.
+    expect(coords('dependencies {\n  implementation(kotlin("stdlib"))\n}', "build.gradle.kts")).toEqual([]);
   });
 
   // %% appends the Scala binary version, which the build file does not state,
-  // so each binary version in use is a candidate.
+  // so each binary version in use is a candidate. The plain artifact name is
+  // never resolved by %%, so it is not a candidate (this test used to expect
+  // it, which was a false positive against a different artifact).
   it("reads SBT % and %% dependencies", () => {
     const sbt = [
       'libraryDependencies += "com.evil" % "stealer" % "1.0.0"',
@@ -176,11 +186,156 @@ describe("extractMavenCoordinates: remaining build formats", () => {
     ].join("\n");
     expect(coords(sbt, "build.sbt")).toEqual([
       "com.evil:stealer@1.0.0",
-      "com.evil:scala-lib@2.0.0",
+      "com.evil:scala-lib_2.11@2.0.0",
       "com.evil:scala-lib_2.12@2.0.0",
       "com.evil:scala-lib_2.13@2.0.0",
       "com.evil:scala-lib_3@2.0.0",
     ]);
+  });
+
+  it("does not report the plain artifact for %%, and expands %%% to Scala.js artifacts", () => {
+    expect(hits('libraryDependencies += "com.evil" %% "stealer" % "1.0.0"', "build.sbt")).toEqual([]);
+    expect(coords('libraryDependencies += "com.evil" %%% "scala-lib" % "2.0.0"', "build.sbt")).toEqual([
+      "com.evil:scala-lib_sjs1_2.11@2.0.0",
+      "com.evil:scala-lib_sjs1_2.12@2.0.0",
+      "com.evil:scala-lib_sjs1_2.13@2.0.0",
+      "com.evil:scala-lib_sjs1_3@2.0.0",
+    ]);
+  });
+
+  // A non-literal version is unknown: a whole-name entry fires, a pin cannot.
+  it("reads SBT dependencies whose version is a val", () => {
+    const sbt = [
+      'val libVersion = "2.0.1"',
+      'libraryDependencies += "com.evil" % "stealer" % libVersion',
+      'libraryDependencies += "org.hijacked" % "lib" % Versions.lib',
+      'libraryDependencies += "com.evil" %% "scala-lib" % scalaLibV',
+    ].join("\n");
+    expect(coords(sbt, "build.sbt")).toEqual([
+      "com.evil:stealer@-",
+      "org.hijacked:lib@-",
+      "com.evil:scala-lib_2.11@-",
+      "com.evil:scala-lib_2.12@-",
+      "com.evil:scala-lib_2.13@-",
+      "com.evil:scala-lib_3@-",
+    ]);
+    expect(hits(sbt, "build.sbt").map((f) => f.match)).toEqual(["com.evil:stealer"]);
+  });
+
+  // Gradle coordinates whose version is a variable, a catalog accessor or
+  // absent (platform/BOM-managed): the artifact is still resolved.
+  it("reads Gradle declarations with a non-literal or managed version", () => {
+    const groovy = [
+      "dependencies {",
+      '  implementation "com.evil:stealer:$stealerVersion"',
+      "  implementation 'org.hijacked:lib:${libs.versions.lib.get()}'",
+      '  api platform("org.bom:bom:$bomVersion")',
+      "  // implementation 'com.evil:commented'",
+      "}",
+    ].join("\n");
+    expect(coords(groovy, "build.gradle")).toEqual([
+      "com.evil:stealer@-",
+      "org.hijacked:lib@-",
+      "org.bom:bom@-",
+    ]);
+    const kts = [
+      "dependencies {",
+      '  implementation("com.evil:stealer:${libs.versions.x.get()}")',
+      '  testImplementation("com.evil:build-plugin")',
+      '  implementation("org.hijacked:lib:2.0.1")',
+      "}",
+    ].join("\n");
+    expect(coords(kts, "build.gradle.kts")).toEqual([
+      "com.evil:stealer@-",
+      "com.evil:build-plugin@-",
+      "org.hijacked:lib@2.0.1",
+    ]);
+    // The pin needs the exact version; an unknown one fires only whole-name entries.
+    expect(hits('dependencies { implementation("org.hijacked:lib:$v") }', "build.gradle.kts")).toEqual([]);
+    expect(hits('dependencies { implementation("com.evil:stealer") }', "build.gradle.kts")).toHaveLength(1);
+  });
+
+  // A quoted g:a outside a dependency declaration is not a dependency: a
+  // substitution target, an exclude, a log line.
+  it("does not read a version-less g:a string outside a dependency configuration", () => {
+    const kts = [
+      "configurations.all {",
+      '  resolutionStrategy.dependencySubstitution { substitute(module("com.evil:stealer")).using(module("org.safe:lib:1.0")) }',
+      '  exclude("com.evil:stealer")',
+      "}",
+      'println("com.evil:stealer")',
+      'val coordinate = "com.evil:stealer"',
+    ].join("\n");
+    expect(coords(kts, "build.gradle.kts")).toEqual(["org.safe:lib@1.0"]);
+  });
+
+  it("reads rich versions and the [plugins] table of a version catalog", () => {
+    const toml = [
+      "[versions]",
+      'lib = { strictly = "2.0.1" }',
+      "[libraries]",
+      'hijacked = { module = "org.hijacked:lib", version.ref = "lib" }',
+      'strict = { module = "com.evil:stealer", version = { strictly = "4.18.1" } }',
+      'required = { group = "com.evil", name = "build-plugin", version = { require = "3.0" } }',
+      'preferred = { module = "org.x:y", version = { prefer = "1.5" } }',
+      "[plugins]",
+      'boot = { id = "org.springframework.boot", version = "3.2.0" }',
+      'evil = { id = "com.evil.plugin", version.ref = "lib" }',
+      'short = "com.evil.short:1.0"',
+      "[bundles]",
+      'all = ["hijacked", "strict"]',
+    ].join("\n");
+    expect(coords(toml, "gradle/libs.versions.toml")).toEqual([
+      "org.hijacked:lib@2.0.1",
+      "com.evil:stealer@4.18.1",
+      "com.evil:build-plugin@3.0",
+      "org.x:y@1.5",
+      "org.springframework.boot:org.springframework.boot.gradle.plugin@3.2.0",
+      "com.evil.plugin:com.evil.plugin.gradle.plugin@2.0.1",
+      "com.evil.short:com.evil.short.gradle.plugin@1.0",
+    ]);
+    expect(hits(toml, "gradle/libs.versions.toml").map((f) => f.match)).toEqual([
+      "org.hijacked:lib@2.0.1",
+      "com.evil:stealer@4.18.1",
+      "com.evil:build-plugin@3.0",
+    ]);
+  });
+
+  // Properties can sit in several blocks; the top level wins over a profile.
+  it("merges pom properties from every block, the top level winning", () => {
+    const pom = `<project>
+  <profiles><profile><id>p</id><properties><lib.version>9.9</lib.version><evil.version>1.0</evil.version></properties></profile></profiles>
+  <dependencies>
+    <dependency><groupId>org.hijacked</groupId><artifactId>lib</artifactId><version>\${lib.version}</version></dependency>
+    <dependency><groupId>com.evil</groupId><artifactId>stealer</artifactId><version>\${evil.version}</version></dependency>
+  </dependencies>
+  <build><plugins><plugin><artifactId>x</artifactId><configuration><properties><other>7.7</other></properties></configuration></plugin></plugins></build>
+  <properties><lib.version>2.0.1</lib.version></properties>
+  <dependencies><dependency><groupId>org.a</groupId><artifactId>b</artifactId><version>\${other}</version></dependency></dependencies>
+</project>`;
+    expect(coords(pom, "pom.xml")).toEqual([
+      "org.hijacked:lib@2.0.1",
+      "com.evil:stealer@1.0",
+      "org.apache.maven.plugins:x@-",
+      "org.a:b@-",
+    ]);
+  });
+
+  it("stays linear on hostile build files", () => {
+    // Long whitespace runs after each keyword: the shape that makes
+    // `\s*\(?\s*` split one run every way before failing.
+    const ws = " ".repeat(100_000);
+    const gradle = ("implementation " + "a".repeat(100_000) + " '" + "b.".repeat(100_000) + "\n").repeat(3)
+      + "x".repeat(300_000) + "(\n" + " ".repeat(300_000) + "kotlin(\"a\")\n"
+      + `implementation${ws}x\n` + `id${ws}x\n` + `id 'a'${ws}version${ws}x\n` + `kotlin(${ws}"a")${ws}version${ws}x\n`;
+    const sbt = ('"a" % "b" % ' + "c".repeat(200_000) + "\n") + '"a" '.repeat(100_000) + "\n"
+      + `"a"${ws}%%${ws}"b"${ws}%${ws}!\n`;
+    const toml = "[libraries]\n" + ('x = { version = { strictly = "' + "1".repeat(100_000) + "\n").repeat(3);
+    const t0 = Date.now();
+    extractMavenCoordinates(gradle, "build.gradle.kts");
+    extractMavenCoordinates(sbt, "build.sbt");
+    extractMavenCoordinates(toml, "gradle/libs.versions.toml");
+    expect(Date.now() - t0).toBeLessThan(3000);
   });
 
   it("reads both maven_install.json formats", () => {

@@ -27,6 +27,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { lineOfNeedle } from "./text-lines.js";
 
 const LOCK_FILE = ".terraform.lock.hcl";
 
@@ -65,9 +66,15 @@ export interface TerraformModuleRef {
   line: number;
 }
 
-/** Module source: [public-host/]namespace/name/system, nothing else. */
+/**
+ * Module source: [public-host/]namespace/name/system, nothing else. A
+ * `//subdir` suffix selects a submodule of the same registry module
+ * (`terraform-aws-modules/iam/aws//modules/iam-user`) and is dropped.
+ */
 function parseModuleAddress(raw: string): string | null {
-  const parts = raw.trim().split("/");
+  const trimmed = raw.trim();
+  if (trimmed.includes("://")) return null;
+  const parts = trimmed.split("//")[0]!.split("/");
   if (parts.length === 4) {
     if (!PUBLIC_REGISTRY_HOSTS.has((parts[0] ?? "").toLowerCase())) return null;
     parts.shift();
@@ -99,15 +106,39 @@ export function extractTerraformModules(content: string, relativePath: string): 
     }
     return out;
   }
+  if (basename.endsWith(".tf.json")) {
+    // module: { name: { source, version } } or an array of such objects.
+    let doc: unknown;
+    try { doc = JSON.parse(content); } catch { return []; }
+    const out: TerraformModuleRef[] = [];
+    for (const block of jsonBlocks((doc as Record<string, unknown> | null)?.module)) {
+      for (const body of jsonBlocks(Object.values(block))) {
+        const source = body.source;
+        const version = body.version;
+        const address = typeof source === "string" ? parseModuleAddress(source) : null;
+        if (address) {
+          out.push({
+            address,
+            version: typeof version === "string" && EXACT_MODULE_VERSION.test(version.trim()) ? version.trim() : undefined,
+            line: lineOfNeedle(content, `"${source}"`),
+          });
+        }
+      }
+    }
+    return out;
+  }
   if (!basename.endsWith(".tf")) return [];
   const out: TerraformModuleRef[] = [];
   const lines = content.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     if (!/^\s*module\s+"[^"]*"\s*\{/.test(lines[i] ?? "")) continue;
     // Collect the block body by brace depth (a one-line block included).
+    // Modules do not nest, so scanning resumes after the block: each line is
+    // read once, and an unclosed block cannot make the scan quadratic.
     let depth = 0;
     let body = "";
-    for (let j = i; j < lines.length; j++) {
+    let j = i;
+    for (; j < lines.length; j++) {
       const line = lines[j] ?? "";
       body += line + "\n";
       depth += (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
@@ -117,8 +148,15 @@ export function extractTerraformModules(content: string, relativePath: string): 
     const version = /\bversion\s*=\s*"([^"]*)"/.exec(body)?.[1];
     const address = source ? parseModuleAddress(source) : null;
     if (address) out.push({ address, version: version && EXACT_MODULE_VERSION.test(version.trim()) ? version.trim() : undefined, line: i + 1 });
+    i = j;
   }
   return out;
+}
+
+/** HCL-JSON blocks: an object, or an array of objects. */
+function jsonBlocks(value: unknown): Record<string, unknown>[] {
+  const list = Array.isArray(value) ? value : [value];
+  return list.filter((v): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v));
 }
 
 /**
@@ -170,23 +208,54 @@ export function extractTerraformProviders(
       const address = parseProviderAddress(block[1] ?? "");
       let version: string | undefined;
       // The block body holds a hashes list closed by "]", so the first line
-      // that starts with "}" is the end of this provider block.
-      for (let j = i + 1; j < lines.length && !/^\s*\}/.test(lines[j] ?? ""); j++) {
+      // that starts with "}" is the end of this provider block. Scanning
+      // resumes after it, so each line is read once.
+      let j = i + 1;
+      for (; j < lines.length && !/^\s*\}/.test(lines[j] ?? ""); j++) {
         const v = /^\s*version\s*=\s*"([^"]+)"/.exec(lines[j] ?? "");
         if (v) version = v[1];
       }
       if (address) refs.push({ address, version, line: i + 1 });
+      i = j;
     }
     return refs;
   }
 
-  const attribute = basename.endsWith(".tf.json")
-    ? /"source"\s*:\s*"([^"]*)"/g
-    : /\bsource\s*=\s*"([^"]*)"/g;
+  if (basename.endsWith(".tf.json")) {
+    // terraform: { required_providers: { name: { source } } }, each level an
+    // object or an array of objects.
+    let doc: unknown;
+    try { doc = JSON.parse(content); } catch { return refs; }
+    for (const tf of jsonBlocks((doc as Record<string, unknown> | null)?.terraform)) {
+      for (const rp of jsonBlocks(tf.required_providers)) {
+        for (const provider of jsonBlocks(Object.values(rp))) {
+          const source = provider.source;
+          const address = typeof source === "string" ? parseProviderAddress(source) : null;
+          if (address) refs.push({ address, version: undefined, line: lineOfNeedle(content, `"${source}"`) });
+        }
+      }
+    }
+    return refs;
+  }
+
+  // .tf: `source = "ns/type"` is a provider address ONLY inside
+  // terraform { required_providers { ... } }. Everywhere else `source` is a
+  // file, a module or an object key (provisioner "file", aws_s3_object,
+  // local_file), and reading it as a provider reported someone's relative path.
+  const stack: string[] = [];
   for (let i = 0; i < lines.length; i++) {
-    for (const m of (lines[i] ?? "").matchAll(attribute)) {
-      const address = parseProviderAddress(m[1] ?? "");
-      if (address) refs.push({ address, version: undefined, line: i + 1 });
+    const line = lines[i] ?? "";
+    if (stack.includes("required_providers")) {
+      for (const m of line.matchAll(/\bsource\s*=\s*"([^"]*)"/g)) {
+        const address = parseProviderAddress(m[1] ?? "");
+        if (address) refs.push({ address, version: undefined, line: i + 1 });
+      }
+    }
+    const label = /^\s*([A-Za-z_][\w-]*)\b[^{]*\{/.exec(line)?.[1] ?? "{";
+    let first = true;
+    for (const ch of line) {
+      if (ch === "{") { stack.push(first ? label : "{"); first = false; }
+      else if (ch === "}") stack.pop();
     }
   }
   return refs;

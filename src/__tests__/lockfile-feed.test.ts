@@ -18,7 +18,7 @@ import * as path from "node:path";
 import { scan } from "../scanner.js";
 import { getBundledFeed } from "../threat-intel.js";
 import { checkBadVersion } from "../ioc-blocklist.js";
-import { lockfileFeedFindings, manifestReportedNames } from "../lockfile-feed.js";
+import { lockfileFeedFindings, excuseLockfileFindingsReportedByManifests } from "../lockfile-feed.js";
 
 const feed = getBundledFeed();
 
@@ -127,21 +127,87 @@ describe.each(["npm", "yarn", "pnpm", "bun"] as const)("%s lockfile", (kind) => 
   });
 });
 
-describe("manifestReportedNames", () => {
-  it("returns the INSTALLED name for an npm alias, as the manifest check does", () => {
-    const names = manifestReportedNames(JSON.stringify({
-      dependencies: { utils: "npm:real-target@1.0.0", plain: "^2.0.0" },
-      devDependencies: { dev: "1.0.0" },
-      optionalDependencies: { opt: "1.0.0" },
-      peerDependencies: { peer: "1.0.0" },
-    }));
-    expect([...names].sort()).toEqual(["dev", "opt", "peer", "plain", "real-target"]);
+// The excuse for a direct dependency is decided from what the scan REPORTED,
+// not from the lockfile's sibling package.json. Re-reading the sibling got
+// three cases wrong: a workspace (the direct dependency is declared in
+// packages/a/package.json, the lockfile sits at the root and called it
+// transitive), an ignored manifest and a test-fixture manifest (both excused
+// a package that nothing then reported).
+describe("lockfile excuse is decided by the scan's own findings", () => {
+  const write = (dir: string, rel: string, body: string) => {
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), body);
+  };
+  const dep = { name: bare, version: "1.2.3" };
+
+  it.each(["npm", "yarn", "pnpm"] as const)("reports a workspace member's direct dependency once (%s)", async (kind) => {
+    const dir = path.join(tmpRoot, `ws-${kind}`);
+    const [file, content] = lockfile(kind, [dep]);
+    write(dir, "package.json", JSON.stringify({ name: "root", private: true, workspaces: ["packages/*"] }));
+    write(dir, "packages/a/package.json", JSON.stringify({ name: "a", version: "1.0.0", dependencies: { [bare]: "^1.0.0" } }));
+    write(dir, file, content);
+    const r = await scan({ target: dir, format: "json", noHistory: true });
+    expect(rules(r, "MALICIOUS_DEPENDENCY")).toHaveLength(1);
+    expect(rules(r, "LOCKFILE_MALICIOUS_PACKAGE")).toEqual([]);
   });
 
-  // An unparseable manifest reports nothing, so nothing may be skipped either.
-  it("skips nothing when the manifest cannot be parsed", () => {
-    expect(manifestReportedNames("{ not json").size).toBe(0);
-    expect(manifestReportedNames(null).size).toBe(0);
+  it("still reports the lockfile when the manifest that declares it is ignored", async () => {
+    const dir = path.join(tmpRoot, "ignored-manifest");
+    const [file, content] = lockfile("npm", [dep]);
+    write(dir, "app/package.json", JSON.stringify({ name: "a", version: "1.0.0", dependencies: { [bare]: "^1.0.0" } }));
+    write(dir, `app/${file}`, content);
+    write(dir, ".scg.yml", "ignore:\n  - app/package.json\n");
+    const r = await scan({ target: dir, format: "json", noHistory: true });
+    expect(rules(r, "MALICIOUS_DEPENDENCY")).toEqual([]);
+    expect(rules(r, "LOCKFILE_MALICIOUS_PACKAGE")).toHaveLength(1);
+  });
+
+  it("drops only lockfile whole-name findings for reported names", () => {
+    const findings = [
+      { rule: "LOCKFILE_MALICIOUS_PACKAGE", match: "a@1.0.0", severity: "critical", description: "", recommendation: "" },
+      { rule: "LOCKFILE_MALICIOUS_PACKAGE", match: "b@2.0.0", severity: "critical", description: "", recommendation: "" },
+      { rule: "LOCKFILE_MALICIOUS_VERSION", match: "a@1.0.0", severity: "critical", description: "", recommendation: "" },
+    ] as Parameters<typeof excuseLockfileFindingsReportedByManifests>[0];
+    const kept = excuseLockfileFindingsReportedByManifests(findings, new Set(["a"]));
+    expect(kept.map((f) => `${f.rule}:${f.match}`)).toEqual(["LOCKFILE_MALICIOUS_PACKAGE:b@2.0.0", "LOCKFILE_MALICIOUS_VERSION:a@1.0.0"]);
+  });
+});
+
+// An npm alias ("x": "npm:evil@1.0.0") installs `evil` under an arbitrary
+// key. package-lock records the real package in `name`; yarn writes it after
+// "@npm:" in the entry header. Both used the key, so a transitive aliased
+// malicious package was reported by nothing.
+describe("npm aliases in lockfiles", () => {
+  it("matches the aliased package in package-lock.json and yarn.lock", async () => {
+    const dir = path.join(tmpRoot, "alias");
+    fs.mkdirSync(path.join(dir, "npm"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "yarn"), { recursive: true });
+    for (const sub of ["npm", "yarn"]) fs.writeFileSync(path.join(dir, sub, "package.json"), JSON.stringify({ name: "fx", version: "1.0.0" }));
+    fs.writeFileSync(path.join(dir, "npm", "package-lock.json"), JSON.stringify({
+      name: "fx", version: "1.0.0", lockfileVersion: 3,
+      packages: {
+        "": { name: "fx", version: "1.0.0" },
+        "node_modules/innocent-key": { name: bare, version: "1.2.3", resolved: `https://registry.npmjs.org/${bare}/-/x.tgz`, integrity: SRI },
+      },
+    }));
+    fs.writeFileSync(path.join(dir, "yarn", "yarn.lock"), ["# yarn lockfile v1", "",
+      `"innocent-key@npm:${bare}@1.2.3":`, '  version "1.2.3"',
+      `  resolved "https://registry.yarnpkg.com/${bare}/-/${bare}-1.2.3.tgz#abc"`, `  integrity ${SRI}`, ""].join("\n"));
+    const r = await scan({ target: dir, format: "json", noHistory: true });
+    const files = rules(r, "LOCKFILE_MALICIOUS_PACKAGE").map((f) => (f as { file?: string }).file?.replace(/\\/g, "/")).sort();
+    expect(files).toEqual(["npm/package-lock.json", "yarn/yarn.lock"]);
+  });
+
+  it("ignores workspace member entries in package-lock (not dependencies)", async () => {
+    const dir = path.join(tmpRoot, "ws-entry");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: "fx", version: "1.0.0" }));
+    fs.writeFileSync(path.join(dir, "package-lock.json"), JSON.stringify({
+      name: "fx", version: "1.0.0", lockfileVersion: 3,
+      packages: { "": { name: "fx", version: "1.0.0" }, [`packages/${bare}`]: { name: bare, version: "1.2.3" } },
+    }));
+    const r = await scan({ target: dir, format: "json", noHistory: true });
+    expect(rules(r, "LOCKFILE_MALICIOUS_PACKAGE")).toEqual([]);
   });
 });
 
@@ -154,6 +220,6 @@ describe("lockfileFeedFindings", () => {
       .map((i) => ({ name: i.value.slice(0, i.value.lastIndexOf("@")), version: i.value.slice(i.value.lastIndexOf("@") + 1) }))
       .find((d) => checkBadVersion(d.name, d.version, "npm") !== null);
     expect(blocklisted).toBeDefined();
-    expect(lockfileFeedFindings([blocklisted!], "yarn.lock", new Set(), feed)).toEqual([]);
+    expect(lockfileFeedFindings([blocklisted!], "yarn.lock", feed)).toEqual([]);
   });
 });

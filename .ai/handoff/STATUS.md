@@ -1,3 +1,110 @@
+## Pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
+
+The owner asked for a review before merge. Four reviewers ran one pass each over separate areas:
+- registry ecosystems;
+- Maven, Terraform, pub, Docker and Actions;
+- lockfiles, nested manifests and parsers;
+- editor tasks, fonts, extensions and the importer.
+
+The lead reviewed the public text, the data and the scan-level integration. Every finding was
+reproduced before it counted. The fixes landed in the same PR. Two fix workers took the registry
+parsers and the Maven/Docker/pub parsers on separate files; the lead did the rest and verified
+the workers independently with the mutation proof below.
+
+### What the review found (all fixed unless listed under "Left open")
+
+- **Privacy, pre-existing since v4.9:** a local `scan` sent every Python dependency name to
+  pypi.org, which contradicts the README's "zero network requests".
+  - Measured with every network API instrumented, over 21 manifest types: those were the only
+    outbound calls.
+  - Now opt-in via `--check-registry`, with the README disclosure updated.
+  - `offline-scan.test.ts` mocks `node:https` and asserts zero requests.
+- **Data:** 28 of 40 Firefox indicators could never match. The index split `name@domain` at the
+  last "@". Fixed with `splitPackageIOCValue`, which the coverage-matrix helper now shares.
+- **Public artefact:** the internal machine name was back in this file 4 times, after an earlier
+  deliberate redaction. It is replaced with "the remote Linux runner"; the OpenClaw product
+  references are kept.
+- **Fake Font rules:**
+  - the command pattern missed quoted or backticked interpreters, absolute interpreter paths,
+    long whitespace, a glued redirect and quoted spaced paths;
+  - a platform override was judged separately instead of merged into the task;
+  - a `{ value }` command object was ignored;
+  - `.code-workspace` task blocks were not read;
+  - the font check trusted 4 magic bytes that are also valid JavaScript;
+  - the font check counted text over bytes, so an accented comment hid the script;
+  - saved HTML pages were flagged.
+- **Importer:** "listed versions win" pinned attacker-created extensions too.
+  - `resolveExtensionBlockShape` now collapses the pins of an extension its registry REMOVED;
+    live, error or unclear answers keep the pins.
+  - Applied to the committed data: 18 extensions checked, 1 collapsed
+    (`vscode:cline-ai-main.cline-ai-agent`).
+- **Extensions:** an Open VSX-only hit on a workspace recommendation is now reported at medium,
+  and says which editors it applies to.
+- **Lockfiles:**
+  - the excuse for a direct dependency is now decided by what the scan's own package.json
+    checks reported, not by re-reading the sibling package.json. That fixes workspace double
+    reports and ignored or test-fixture manifests silencing a lockfile;
+  - npm aliases are matched in package-lock (`name`) and yarn (`@npm:`);
+  - package-lock workspace entries are no longer dependencies;
+  - Python manifests under vendor/ and target/ are skipped.
+- **Terraform:**
+  - `source` is only a provider inside `required_providers`; provisioner and s3 sources were
+    false positives;
+  - `.tf.json` modules and `//subdir` submodules are read;
+  - unclosed blocks were quadratic.
+- **Registry parsers:** Helm import-values, multi-line Package.swift and conanfile.py, Ansible
+  name vs src, Podfile.lock external/private pods and quoted entries, Firefox
+  `Extensions.Locked`, an Octave DESCRIPTION read as CRAN, and mix.exs tuples outside `deps`.
+- **Maven/Docker/pub:**
+  - Gradle and SBT non-literal versions;
+  - SBT `%%` reported the plain artifact, a false positive against a different artifact;
+  - `%%%`, catalog rich versions and `[plugins]`, and `kotlin("jvm")` plugins;
+  - all pom properties blocks;
+  - the GitLab `image:` map form, Helm repository+tag, `COPY --from=${ARG}`, `RUN --mount from=`
+    and GitLab `services:` lists;
+  - pub flow-map path/git/sdk false positives, and the official China mirror.
+- **Hostile-input slowdowns, several pre-existing:** per-hit newline counting, `\s+#` comment
+  stripping, XML comment and plugin-tag regexes, and mix.exs, container YAML, Maven plugin-id and
+  pub key regexes. All are linear now (shared `src/text-lines.ts`), each with a timing test.
+  - Some went from 8 to 33 seconds at a few hundred KB, and extrapolated to minutes or hours at
+    the 5 MB cap.
+  - The hexTuples guard was first reported as untestable. Measured instead: 14 ms vs 1,542 ms
+    at 700 KB. The test was enlarged until it bites.
+- **Claim:** the count is 15, not 16. Homebrew's only indicator (the Trivy tap release 0.69.4)
+  needs a version, and only the legacy `Brewfile.lock.json` records one. Current Homebrew docs say
+  `brew bundle` "does not and will not" have a lock file. Homebrew is now listed as a third
+  category ("ships an indicator, not counted"), via a `limitation` field in
+  `ecosystem-coverage.json`.
+  - A name block for the tap would be wrong: the archived tap's final formula is the clean 0.69.3.
+
+### Proof
+
+- Mutation proof over all three sets of fixes (lead, registry worker, Maven/Docker/pub worker):
+  37 cuts, all red, with baseline and post-restore green.
+- The first run left four survivors, each resolved:
+  - a UTF-8 vs byte decoding cut: a high-byte binary test was added, since only UTF-8 decoding
+    keeps it clean;
+  - two cuts whose anchors were wrong (re-anchored, red);
+  - one redundant filter in the lockfile excuse pass: it can never change a result, because
+    ignored and test-fixture manifests never record a name. It was deleted, not kept.
+
+### Left open, deliberately
+
+- **Test-fixture lockfiles still raise lockfile findings.**
+  - Version-pinned ones did on main already.
+  - A path-based test exemption is target-controlled: the scanned package decides which of its
+    paths look like tests, so widening one hands it a way to hide.
+- **SBT `cross CrossVersion.full`** (full Scala version suffix) is not expanded; the build file
+  does not state the version.
+- **Some multi-line forms are skipped rather than guessed:**
+  - pub flow maps spread over several lines;
+  - GitLab services items written as multi-line flow maps.
+- **Gradle custom configurations:** a non-literal version under a custom configuration name is
+  not read, a trade against false positives. Literal versions under any configuration are read.
+- **Two imported extensions look attacker-made but are still live on their registry, so they keep
+  their pins:** `vscode:AzureCdnInfo.edrtester`, `openvsx:TretinV3.forts-api-extention`. A
+  whole-id block needs a human decision (owner).
+
 ## Every open item closed before going further (2026-09-23) (claude-opus-5-5)
 
 Same branch (PR 326), unreleased. The owner asked for everything still open to be fixed before
@@ -69,7 +176,7 @@ Settles the open item the section below carried forward. Same branch (PR 326), u
   - their dates run from 2018 to 2025 because the injecting commits are backdated.
 - Ten modules have no retrievable version at all: proxy 404 on `@latest` three times each, and
   on the direct zip where a pseudo-version was known.
-- A real infected module, scanned on openclaw (NOT locally: Defender locks the extracted
+- A real infected module, scanned on the remote Linux runner (NOT locally: Defender locks the extracted
   `tasks.json`, which makes a local scan look clean for the wrong reason):
   - `glacialspring/static` scanned completely clean;
   - `git2md` was caught only through the `Xpos587` account string in `setup.py`.
@@ -97,7 +204,7 @@ Settles the open item the section below carried forward. Same branch (PR 326), u
 ### What only the real environment caught
 
 - The rule first passed every fixture test and all 10 cuts, pushed as `949a388`. The first run
-  against the REAL infected zips on openclaw found nothing in any of them.
+  against the REAL infected zips on the remote Linux runner found nothing in any of them.
 - Cause: the real `tasks.json` ends in a trailing comma. VS Code reads JSONC; the scanner used
   strict `JSON.parse`, threw, and returned no findings. That was true for EVERY editor-task rule,
   including the older download-exec one, so one comma evaded all of them. The fixtures were all
@@ -184,7 +291,7 @@ and implement what can be. Unreleased; everything lands under `[Unreleased]`.
 
 ### How the gaps were found (measured, not guessed)
 
-- OpenSSF malicious-packages corpus per ecosystem (shallow clone on openclaw):
+- OpenSSF malicious-packages corpus per ecosystem (shallow clone on the remote Linux runner):
   npm 221,520, PyPI 11,743, RubyGems 3,630, NuGet 777, crates.io 20, Go 18,
   **VS Code/Open VSX 21, Maven 2**, git 1, Packagist 1. Only the bold ones
   had no matcher.
@@ -216,7 +323,7 @@ and implement what can be. Unreleased; everything lands under `[Unreleased]`.
 Every new matcher has a mutation proof (baseline and post-restore green):
 WP1 10/10, WP2 12/12, WP3 6/6, WP4 11/11, WP5 11/11 cuts red. Survivors
 during the work were resolved either by a test (real gap) or by deleting the
-redundant code (see below). Full suite on openclaw after WP1: 158/158 files.
+redundant code (see below). Full suite on the remote Linux runner after WP1: 158/158 files.
 
 ### Defects found and fixed on the way
 
@@ -871,7 +978,7 @@ Verification before the release pull request:
 
 - `npm run build` passed every AAHP, feed, partition, budget, catalog,
   handoff and self-scan gate plus TypeScript.
-- A fresh Openclaw Linux checkout passed all 156 test files and all 3,836
+- A fresh checkout on the remote Linux runner passed all 156 test files and all 3,836
   tests. The temporary `/tmp` checkout was removed.
 - Tag `v6.2.0` and npm version `6.2.0` were both absent.
 

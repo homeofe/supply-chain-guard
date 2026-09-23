@@ -489,6 +489,9 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
     // npm keeps the whole-package reading: there the same shape is the normal
     // OpenSSF encoding of a typosquat.
     const pinListedVersions = PIN_LISTED_VERSIONS_ECOSYSTEMS.has(mappedEcosystem.ecosystem) && versions.length > 0;
+    // Pinned ONLY because of the rule above: the range said "every version".
+    // resolveExtensionBlockShape settles these against the registry.
+    const pinnedFromWholeRange = pinListedVersions && ranges.some(isWholePackageOsvRange);
     const wholePackage = ranges.some(isWholePackageOsvRange) && !pinListedVersions;
     const mappedVersions = wholePackage ? [undefined] : versions;
     if (mappedVersions.length === 0) {
@@ -515,6 +518,7 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
       entry._name = name;
       entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
       entry._origins = origins;
+      if (pinnedFromWholeRange && version !== undefined) entry._pinnedFromWholeRange = true;
       if (typeof record._indexModified === "string") {
         entry._queueDate = record._indexModified.slice(0, 10);
       }
@@ -1109,6 +1113,104 @@ export function countUndrainable(added, { limit, days, now = new Date() } = {}) 
     if (runsAway > daysLeftInWindow) count++;
   }
   return count;
+}
+
+/**
+ * Settle the block shape of extension records that mapOsvMalwareRecord pinned
+ * to their listed versions (`_pinnedFromWholeRange`).
+ *
+ * OpenSSF encodes BOTH a hijacked legitimate extension and an attacker-created
+ * one as "introduced: 0" plus the listed versions. Pinning is right for the
+ * first (its clean releases stay installable) and wrong for the second: a
+ * workspace recommendation carries no version, so a pinned attacker extension
+ * never matches it. The registry tells them apart: an extension the registry
+ * has REMOVED has no clean release anyone can install, so its pins collapse
+ * into one whole-extension block. A live extension, or any answer that is not
+ * a definitive "removed" (network error, rate limit, odd status), keeps its
+ * pins: failing towards pins can miss, failing towards a name block would flag
+ * every clean release of a victim.
+ *
+ * Open VSX answers 404 for a removed extension; the Marketplace gallery query
+ * answers 200 with an empty extension list (both measured 2026-09-23 against a
+ * live control).
+ */
+export async function resolveExtensionBlockShape(
+  candidates,
+  { fetchImpl = globalThis.fetch, concurrency = 8, timeoutMs = 5000 } = {},
+) {
+  const groups = new Map();
+  for (const c of candidates) {
+    if (!c._pinnedFromWholeRange) continue;
+    const key = `${c._ecosystemPrefix}${c._name}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+  }
+
+  async function isRemoved(prefix, id) {
+    const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined;
+    try {
+      if (prefix === "openvsx:") {
+        const [ns, ...rest] = id.split(".");
+        const res = await fetchImpl(`https://open-vsx.org/api/${encodeURIComponent(ns)}/${encodeURIComponent(rest.join("."))}`, {
+          headers: { "User-Agent": "supply-chain-guard-feed-importer" },
+          signal,
+        });
+        return res.status === 404;
+      }
+      if (prefix === "vscode:") {
+        const res = await fetchImpl("https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json;api-version=7.2-preview.1",
+            "User-Agent": "supply-chain-guard-feed-importer",
+          },
+          body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: id }], pageSize: 1 }], flags: 0 }),
+          signal,
+        });
+        if (res.status !== 200) return false;
+        const data = await res.json();
+        const extensions = data?.results?.[0]?.extensions;
+        return Array.isArray(extensions) && extensions.length === 0;
+      }
+    } catch {
+      // Not a definitive answer: keep the pins.
+    }
+    return false;
+  }
+
+  const collapsedKeys = new Set();
+  const keys = [...groups.keys()];
+  for (let i = 0; i < keys.length; i += concurrency) {
+    const chunk = keys.slice(i, i + concurrency);
+    const answers = await Promise.all(chunk.map((k) => {
+      const first = groups.get(k)[0];
+      return isRemoved(first._ecosystemPrefix, first._name);
+    }));
+    chunk.forEach((k, j) => { if (answers[j]) collapsedKeys.add(k); });
+  }
+
+  const entries = [];
+  const emitted = new Set();
+  for (const c of candidates) {
+    const key = c._pinnedFromWholeRange ? `${c._ecosystemPrefix}${c._name}` : null;
+    if (key && collapsedKeys.has(key)) {
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      const whole = { ...c, value: feedValue(c._ecosystemPrefix, c._name, undefined) };
+      delete whole._pinnedFromWholeRange;
+      entries.push(whole);
+      continue;
+    }
+    if (c._pinnedFromWholeRange) {
+      const kept = { ...c };
+      delete kept._pinnedFromWholeRange;
+      entries.push(kept);
+    } else {
+      entries.push(c);
+    }
+  }
+  return { entries, collapsed: collapsedKeys.size, checked: groups.size };
 }
 
 /**
@@ -1929,7 +2031,14 @@ export async function importUpstreamFeed({
     };
   }
 
-  const { entries: normalizedCandidates, coalesced } = coalesceCandidates(mapped);
+  const { entries: coalescedCandidates, coalesced } = coalesceCandidates(mapped);
+
+  // 2b. Extension records pinned only because OpenSSF lists versions: collapse
+  // the ones whose registry has removed the extension into a whole-extension
+  // block (see resolveExtensionBlockShape). Before dedupe, so a collapsed
+  // block is deduplicated against the committed stores like any candidate.
+  const extensionShape = await resolveExtensionBlockShape(coalescedCandidates, { fetchImpl, timeoutMs });
+  const normalizedCandidates = extensionShape.entries;
 
   // 3. Dedupe against the feed that is actually committed, which is now BOTH
   //    stores. The bundle alone stopped being the committed feed when the
@@ -2046,6 +2155,8 @@ export async function importUpstreamFeed({
     // each one's reason, gap and recovery command without re-reading the file.
     deferralRanges: deferralList,
     holdingPackagesFiltered,
+    extensionsChecked: extensionShape.checked,
+    extensionsCollapsed: extensionShape.collapsed,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
     corroboratedByOsv: [...osv.ids.keys()].length,

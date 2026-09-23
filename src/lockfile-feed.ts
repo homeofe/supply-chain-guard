@@ -65,24 +65,19 @@ export function manifestDependencyCandidates(
 }
 
 /**
- * Package names the package.json check reports on its own. Parsed the same
- * way that check parses, so an unparseable manifest reports nothing and
- * therefore excuses nothing here.
- */
-export function manifestReportedNames(manifestContent: string | null): Set<string> {
-  if (manifestContent === null) return new Set();
-  const pkg = parseJsonObject(manifestContent);
-  if (!pkg) return new Set();
-  return new Set([...manifestDependencyCandidates(pkg).values()].map((c) => c.name));
-}
-
-/**
  * Feed findings for the dependencies a lockfile resolves.
+ *
+ * A whole-name hit is reported here for every lockfile; the directory scan
+ * then drops it where a package.json in the SAME scan already reported the
+ * package as a direct dependency (excuseLockfileFindingsReportedByManifests).
+ * Deciding that from the findings the scan actually produced, instead of
+ * re-reading the sibling package.json, is what makes workspaces (the direct
+ * dependency lives in packages/a/package.json, the lockfile at the root),
+ * ignored manifests and test-fixture manifests come out right.
  */
 export function lockfileFeedFindings(
   deps: readonly LockfileDependency[],
   file: string,
-  reportedByManifest: ReadonlySet<string>,
   feed: FeedIOC[],
 ): Finding[] {
   const findings: Finding[] = [];
@@ -112,13 +107,12 @@ export function lockfileFeedFindings(
       continue;
     }
 
-    if (reportedByManifest.has(name)) continue;
     const key = `p:${name}`;
     if (seen.has(key)) continue;
     seen.add(key);
     findings.push({
       rule: "LOCKFILE_MALICIOUS_PACKAGE",
-      description: `Lockfile resolves "${name}", a package the threat feed lists as malicious in every version${attrib}. It is not a direct dependency, so another package pulls it in.`,
+      description: `Lockfile resolves "${name}", a package the threat feed lists as malicious in every version${attrib}. No package.json in this scan declares it, so another package pulls it in.`,
       severity: "critical",
       confidence: ioc.confidence ?? 0.95,
       category: "supply-chain",
@@ -128,4 +122,26 @@ export function lockfileFeedFindings(
     });
   }
   return findings;
+}
+
+/** The package name of a LOCKFILE_MALICIOUS_PACKAGE match (`name@version` or `name`). */
+function lockfileMatchName(match: string | undefined): string {
+  const m = match ?? "";
+  const at = m.lastIndexOf("@");
+  return at > 0 ? m.slice(0, at) : m;
+}
+
+/**
+ * Drop the lockfile whole-name findings for packages a package.json in the
+ * same scan already reported as a direct dependency (`reported` holds the
+ * INSTALLED names, aliases resolved). What remains is pulled in transitively.
+ */
+export function excuseLockfileFindingsReportedByManifests(
+  findings: Finding[],
+  reported: ReadonlySet<string>,
+): Finding[] {
+  if (reported.size === 0) return findings;
+  return findings.filter(
+    (f) => f.rule !== "LOCKFILE_MALICIOUS_PACKAGE" || !reported.has(lockfileMatchName(f.match)),
+  );
 }

@@ -140,6 +140,57 @@ describe("extractPubPackages", () => {
   });
 });
 
+describe("extractPubPackages: flow maps and mirrors", () => {
+  // The one-line flow map is the same dependency as the block form: path, git
+  // and sdk sources have no pub identity, whatever their key is called.
+  it("skips path, git and sdk dependencies written as flow maps", () => {
+    const yaml = [
+      "dependencies:",
+      "  evil_pkg: {path: ../evil_pkg}",
+      "  hijacked_pkg: { git: https://github.com/example/hijacked_pkg.git }",
+      "  flutter: {sdk: flutter}",
+      "  nested_git: {git: {url: https://github.com/example/x.git, ref: main}}",
+      "  http: ^1.2.0",
+    ].join("\n");
+    expect(names(yaml, "pubspec.yaml")).toEqual(["http@-"]);
+    expect(hits(yaml, "pubspec.yaml")).toEqual([]);
+  });
+
+  it("applies the hosted rules to a flow map", () => {
+    const yaml = [
+      "dependencies:",
+      "  hijacked_pkg: {hosted: https://pub.dev, version: 0.1.5}",
+      '  evil_pkg: {version: "^1.0.0"}',
+      "  private_pkg: {hosted: https://pub.internal.example, version: 1.0.0}",
+      "  named_private: {hosted: {name: evil_pkg, url: https://pub.internal.example}, version: 1.0.0}",
+      "  named_public: {hosted: {name: other_pkg, url: https://pub.dev}, version: 2.0.0}",
+    ].join("\n");
+    expect(names(yaml, "pubspec.yaml")).toEqual(["hijacked_pkg@0.1.5", "evil_pkg@-", "named_public@2.0.0"]);
+  });
+
+  // pub.flutter-io.cn is the mirror the Flutter docs name for China; it
+  // serves pub.dev's packages unchanged, so its lock entries are pub.dev ones.
+  it("accepts lock entries resolved through the official China mirror", () => {
+    const lock = LOCK.replace('url: "https://pub.dev"', 'url: "https://pub.flutter-io.cn"');
+    expect(names(lock, "pubspec.lock")).toEqual(["hijacked_pkg@0.1.5", "evil_pkg@1.0.0"]);
+    expect(hits(lock, "pubspec.lock").map((f) => f.match)).toContain("hijacked_pkg@0.1.5");
+    // A look-alike host is not the mirror.
+    const fake = LOCK.replace('url: "https://pub.dev"', 'url: "https://pub.flutter-io.cn.evil.example"');
+    expect(names(fake, "pubspec.lock")).toEqual(["evil_pkg@1.0.0"]);
+  });
+
+  it("stays linear on a hostile flow map", () => {
+    // Also a colon-free line with a long whitespace run, the shape that made
+    // the old lazy-key line regex quadratic.
+    const yaml = "dependencies:\n  x: {" + "{a: [b, ".repeat(100_000) + "\n  y: {" + "a,".repeat(300_000) + "}\n"
+      + "  z: {" + "{a: ".repeat(100_000) + "1" + "}".repeat(100_001) + "\n"
+      + "  a" + " ".repeat(200_000) + "b\n";
+    const t0 = Date.now();
+    extractPubPackages(yaml, "pubspec.yaml");
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+});
+
 describe("scanPubContent", () => {
   it("flags a hijacked version locked in pubspec.lock", () => {
     const found = hits(LOCK, "pubspec.lock");

@@ -151,6 +151,15 @@ range reading. A hijacked legitimate extension is published as an
 `openvsx:` the listed versions win, so only those releases are pinned. A
 record with no version list is still a whole-extension block.
 
+The same record shape also encodes an attacker-created extension, and a pin
+cannot catch that in a workspace recommendation, which carries no version. So
+the importer asks the registry (`resolveExtensionBlockShape`): an extension the
+Marketplace or Open VSX has REMOVED has no clean release anyone can install,
+and its pins collapse into one whole-extension block. A live extension, or any
+answer that is not a definitive "removed" (network error, rate limit, other
+status), keeps its pins, so a failed check can never name-block a victim. The
+run report counts `extensionsChecked` and `extensionsCollapsed`.
+
 ### Version skew
 
 A scanner older than the release that introduced a prefix still receives

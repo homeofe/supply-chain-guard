@@ -18,6 +18,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { stripHashComment, lineOfNeedle, lineAtOffset } from "./text-lines.js";
 
 export interface PackageRef {
   name: string;
@@ -77,14 +78,45 @@ function unquote(value: string): string {
   return m ? m[2]! : value.trim();
 }
 
-/** Line number (1-based) of the first line containing `needle`, else 1. */
-function lineOf(content: string, needle: string): number {
-  const idx = content.indexOf(needle);
-  if (idx < 0) return 1;
-  let line = 1;
-  for (let i = 0; i < idx; i++) if (content.charCodeAt(i) === 10) line++;
-  return line;
+/**
+ * Line lookup for identities that appear in document order (JSON lockfiles).
+ * Searching each needle from offset 0 is quadratic over thousands of entries,
+ * so the search resumes where the previous hit ended. Misses (out-of-order or
+ * absent needles) get a small budget of full-text searches; once it is spent
+ * every lookup answers line 1, so a hostile file whose needles never occur
+ * cannot make every lookup scan the whole text.
+ */
+function orderedLocator(content: string): (needle: string) => number {
+  let cursor = 0;
+  let misses = 16;
+  return (needle) => {
+    if (misses <= 0) return 1;
+    let idx = content.indexOf(needle, cursor);
+    if (idx < 0) {
+      misses--;
+      idx = content.indexOf(needle);
+    }
+    if (idx < 0) return 1;
+    cursor = idx + needle.length;
+    return lineAtOffset(content, idx);
+  };
 }
+
+/** Text with every complete XML comment removed, in linear time. */
+function stripXmlComments(text: string): string {
+  let out = "";
+  let pos = 0;
+  for (let open = text.indexOf("<!--"); open >= 0; open = text.indexOf("<!--", pos)) {
+    const close = text.indexOf("-->", open + 4);
+    // An unclosed comment is left in place, as the regex this replaces did:
+    // dropping the rest of the file would let one "<!--" hide an id.
+    if (close < 0) break;
+    out += text.slice(pos, open);
+    pos = close + 3;
+  }
+  return out + text.slice(pos);
+}
+
 
 /**
  * Git-hosted package identity as OSV's SwiftURL ecosystem spells it:
@@ -121,6 +153,7 @@ const swift: EcosystemMatcher = {
       if (!isObject(doc)) return out;
       const pins = Array.isArray(doc.pins) ? doc.pins
         : isObject(doc.object) && Array.isArray(doc.object.pins) ? doc.object.pins : [];
+      const lineOf = orderedLocator(content);
       for (const pin of pins) {
         if (!isObject(pin)) continue;
         // Local pins carry a path, which normalizeRepositoryUrl rejects.
@@ -128,19 +161,34 @@ const swift: EcosystemMatcher = {
           : typeof pin.repositoryURL === "string" ? pin.repositoryURL : undefined;
         const name = url ? normalizeRepositoryUrl(url) : null;
         const state = isObject(pin.state) ? pin.state : {};
-        if (name) out.push({ name, version: exactVersion(typeof state.version === "string" ? state.version : undefined), line: lineOf(content, url!) });
+        if (name) out.push({ name, version: exactVersion(typeof state.version === "string" ? state.version : undefined), line: lineOf(url!) });
       }
       return out;
     }
-    content.split(/\r?\n/).forEach((raw, i) => {
-      // Whole-line comments only: a "//" inside "https://" is not a comment.
-      if (raw.trim().startsWith("//")) return;
-      const line = raw;
-      for (const m of line.matchAll(/\.package\s*\(\s*(?:name\s*:\s*"[^"]*"\s*,\s*)?url\s*:\s*"([^"]+)"([^)]*)\)?/g)) {
-        const name = normalizeRepositoryUrl(m[1]!);
-        const exact = /(?:exact\s*:\s*|\.exact\s*\(\s*)"([^"]+)"/.exec(m[2] ?? "");
-        if (name) out.push({ name, version: exactVersion(exact?.[1]), line: i + 1 });
+    // Whole-line comments only: a "//" inside "https://" is not a comment.
+    // Blanking them keeps line numbers, and the arguments of one .package(
+    // may span lines (swift-format puts each on its own line).
+    const text = content.split("\n").map((raw) => (raw.trim().startsWith("//") ? "" : raw)).join("\n");
+    // Offsets just past each "(" of a ".package(" call.
+    const starts = Array.from(text.matchAll(/\.package\s*\(/g), (c) => c.index + c[0].length);
+    starts.forEach((start, k) => {
+      // The call ends at its matching ")", and never past the next .package(,
+      // so an unclosed call cannot make every later one rescan the file.
+      const limit = starts[k + 1] ?? text.length;
+      let depth = 1;
+      let end = limit;
+      for (let j = start; j < limit; j++) {
+        const c = text.charCodeAt(j);
+        if (c === 0x28) depth++;
+        else if (c === 0x29 && --depth === 0) { end = j; break; }
       }
+      const args = text.slice(start, end);
+      const url = /(?:^|[\s,(])(url\s*:\s*"([^"]+)")/.exec(args);
+      const name = url ? normalizeRepositoryUrl(url[2]!) : null;
+      if (!name) return;
+      const exact = /(?:exact\s*:\s*|\.exact\s*\(\s*)"([^"]+)"/.exec(args);
+      const offset = start + url!.index + url![0].length - url![1]!.length;
+      out.push({ name, version: exactVersion(exact?.[1]), line: lineAtOffset(text, offset) });
     });
     return out;
   },
@@ -150,6 +198,11 @@ const swift: EcosystemMatcher = {
 // ---------------------------------------------------------------------------
 // CocoaPods
 // ---------------------------------------------------------------------------
+
+/** Root pod of an entry ("Firebase/Core" is the Firebase pod), lowercase. */
+function podRoot(raw: string): string {
+  return unquote(raw).split("/")[0]!.trim().toLowerCase();
+}
 
 const cocoapods: EcosystemMatcher = {
   id: "cocoapods",
@@ -161,14 +214,38 @@ const cocoapods: EcosystemMatcher = {
     const out: PackageRef[] = [];
     const lines = content.split(/\r?\n/);
     if (basenameOf(p) === "Podfile.lock") {
+      // Pods fetched from a path, git or podspec (EXTERNAL SOURCES) or from a
+      // private spec repo (a non-trunk SPEC REPOS key) are not the trunk pod
+      // of that name, the same boundary the Podfile path draws for :path.
+      const external = new Set<string>();
+      let section = "";
+      let trunkRepo = false;
+      for (const raw of lines) {
+        if (/^\S/.test(raw)) { section = raw.trim(); continue; }
+        const key = /^ {2}(\S.*?):\s*$/.exec(raw);
+        if (section === "EXTERNAL SOURCES:" && key) external.add(podRoot(key[1]!));
+        if (section !== "SPEC REPOS:") continue;
+        // "trunk" (CocoaPods >= 1.7) or the master specs repo URL (older).
+        if (key) trunkRepo = /^(?:trunk|https:\/\/(?:github\.com\/cocoapods\/specs(?:\.git)?|cdn\.cocoapods\.org)\/?)$/i.test(unquote(key[1]!));
+        const item = /^ {4}- (.+)$/.exec(raw);
+        if (item && !trunkRepo) external.add(podRoot(item[1]!));
+      }
       let inPods = false;
       lines.forEach((raw, i) => {
         if (/^\S/.test(raw)) inPods = raw.trim() === "PODS:";
         if (!inPods) return;
         // Top-level entries are exact ("  - Name/Sub (1.2.3)"); nested
         // dependency lines carry constraints and are one level deeper.
-        const m = /^ {2}- "?([^\s"(]+)"? \(([^)]+)\):?$/.exec(raw);
-        if (m) out.push({ name: m[1]!.split("/")[0]!.toLowerCase(), version: exactVersion(m[2]), line: i + 1 });
+        // CocoaPods quotes the whole entry when it needs to:
+        // '  - "name (1.0.0)":'.
+        const entry = /^ {2}- (.+)$/.exec(raw);
+        if (!entry) return;
+        let body = entry[1]!.trimEnd();
+        if (body.endsWith(":")) body = body.slice(0, -1);
+        const m = /^([^\s"'(]+) \(([^)]+)\)$/.exec(unquote(body));
+        if (!m) return;
+        const name = podRoot(m[1]!);
+        if (!external.has(name)) out.push({ name, version: exactVersion(m[2]), line: i + 1 });
       });
       return out;
     }
@@ -188,6 +265,27 @@ const cocoapods: EcosystemMatcher = {
 // Hex (Elixir / Erlang)
 // ---------------------------------------------------------------------------
 
+/**
+ * {:atom, "requirement", opts} tuples on one line. The options run to the
+ * tuple's "}" but never past the next "{", so a line of unclosed tuples is
+ * read in linear time rather than rescanned from every "{".
+ */
+function hexTuples(line: string): Array<{ atom: string; requirement: string; rest: string }> {
+  const out: Array<{ atom: string; requirement: string; rest: string }> = [];
+  let close = -1;
+  for (const m of line.matchAll(/\{\s*:([a-z0-9_]+)\s*,\s*"([^"]+)"/g)) {
+    const from = m.index + m[0].length;
+    // One "}" far ahead serves every tuple before it: search again only
+    // once it is behind us.
+    if (close < from) close = line.indexOf("}", from);
+    if (close < 0) break;
+    const open = line.indexOf("{", from);
+    if (open >= 0 && open < close) continue;
+    out.push({ atom: m[1]!, requirement: m[2]!, rest: line.slice(from, close) });
+  }
+  return out;
+}
+
 const hex: EcosystemMatcher = {
   id: "hex",
   label: "Hex (Elixir/Erlang)",
@@ -205,14 +303,28 @@ const hex: EcosystemMatcher = {
       });
       return out;
     }
+    // Only the body of `defp deps` / `def deps` lists dependencies: aliases
+    // such as {:setup, "deps.get"} have the same tuple shape.
+    let depsIndent = -1;
+    let depsOneLine = false;
     lines.forEach((raw, i) => {
       const line = raw.replace(/#.*$/, "");
-      for (const m of line.matchAll(/\{\s*:([a-z0-9_]+)\s*,\s*"([^"]+)"([^}]*)\}/g)) {
-        const rest = m[3] ?? "";
-        if (/\b(?:git|github|path|in_umbrella)\s*:/.test(rest)) continue;
-        const renamed = /\bhex\s*:\s*:"?([a-z0-9_]+)"?/.exec(rest);
-        out.push({ name: renamed?.[1] ?? m[1]!, version: exactVersion(m[2]!.replace(/^==\s*/, "")), line: i + 1 });
+      const def = /^(\s*)defp?\s+deps\b(.*)$/.exec(line);
+      if (def) {
+        depsIndent = def[1]!.length;
+        // `defp deps, do: [...]` is a one-line body.
+        depsOneLine = /,\s*do\s*:/.test(def[2]!);
+      } else if (depsIndent >= 0 && /^\s*end\b/.test(line) && line.length - line.trimStart().length <= depsIndent) {
+        depsIndent = -1;
+        return;
       }
+      if (depsIndent < 0) return;
+      for (const t of hexTuples(line)) {
+        if (/\b(?:git|github|path|in_umbrella)\s*:/.test(t.rest)) continue;
+        const renamed = /\bhex\s*:\s*:"?([a-z0-9_]+)"?/.exec(t.rest);
+        out.push({ name: renamed?.[1] ?? t.atom, version: exactVersion(t.requirement.replace(/^==\s*/, "")), line: i + 1 });
+      }
+      if (depsOneLine) depsIndent = -1;
     });
     return out;
   },
@@ -236,33 +348,43 @@ const cran: EcosystemMatcher = {
     if (basenameOf(p) === "renv.lock") {
       const doc = parseJson(content);
       const pkgs = isObject(doc) && isObject(doc.Packages) ? doc.Packages : {};
+      const lineOf = orderedLocator(content);
       for (const entry of Object.values(pkgs)) {
         if (!isObject(entry) || typeof entry.Package !== "string") continue;
         // Repository-sourced packages only: GitHub, Bioconductor and local
         // sources are not CRAN identities.
         if (entry.Source !== undefined && entry.Source !== "Repository") continue;
-        out.push({ name: entry.Package, version: exactVersion(typeof entry.Version === "string" ? entry.Version : undefined), line: lineOf(content, `"Package": "${entry.Package}"`) });
+        out.push({ name: entry.Package, version: exactVersion(typeof entry.Version === "string" ? entry.Version : undefined), line: lineOf(`"Package": "${entry.Package}"`) });
       }
       return out;
     }
     // DESCRIPTION: DCF fields, continuation lines start with whitespace.
+    // Other tools use the same file name and format; GNU Octave packages even
+    // share field names. Only an R package DESCRIPTION (a Package: field, and
+    // no dependency on octave itself) names CRAN packages.
     const lines = content.split(/\r?\n/);
     let field = "";
+    let isPackage = false;
+    let octave = false;
     lines.forEach((raw, i) => {
       const head = /^([A-Za-z][A-Za-z0-9/._-]*):\s*(.*)$/.exec(raw);
       let value: string;
       if (head) { field = head[1]!; value = head[2]!; }
       else if (/^\s/.test(raw)) value = raw;
       else { field = ""; return; }
+      if (head && field === "Package" && value.trim()) isPackage = true;
       if (!DESCRIPTION_FIELDS.has(field)) return;
       for (const part of value.split(",")) {
-        const m = /^\s*([A-Za-z][A-Za-z0-9.]*)\s*(?:\(\s*([^)]*)\))?\s*$/.exec(part);
+        // Trimmed first: /^\s*name\s*(...)?\s*$/ backtracks quadratically
+        // over a long whitespace run that does not end the part.
+        const m = /^([A-Za-z][A-Za-z0-9.]*)(?:\s*\(([^)]*)\))?$/.exec(part.trim());
         if (!m || m[1] === "R") continue;
+        if (m[1]!.toLowerCase() === "octave") octave = true;
         const exact = /^==\s*(\S+)$/.exec(m[2]?.trim() ?? "");
         out.push({ name: m[1]!, version: exactVersion(exact?.[1]), line: i + 1 });
       }
     });
-    return out;
+    return isPackage && !octave ? out : [];
   },
   remediation: "Remove the package from DESCRIPTION / renv.lock, run renv::snapshot(), and remove it from the R library",
 };
@@ -294,14 +416,15 @@ const conan: EcosystemMatcher = {
     if (base === "conan.lock") {
       const doc = parseJson(content);
       if (!isObject(doc)) return out;
+      const lineOf = orderedLocator(content);
       for (const key of ["requires", "build_requires", "python_requires", "config_requires"]) {
         const list = doc[key];
-        if (Array.isArray(list)) for (const r of list) if (typeof r === "string") push(r, lineOf(content, r));
+        if (Array.isArray(list)) for (const r of list) if (typeof r === "string") push(r, lineOf(r));
       }
       // Conan 1 lockfile: graph_lock.nodes.*.ref
       const nodes = isObject(doc.graph_lock) && isObject(doc.graph_lock.nodes) ? doc.graph_lock.nodes : {};
       for (const node of Object.values(nodes)) {
-        if (isObject(node) && typeof node.ref === "string") push(node.ref, lineOf(content, node.ref));
+        if (isObject(node) && typeof node.ref === "string") push(node.ref, lineOf(node.ref));
       }
       return out;
     }
@@ -316,11 +439,27 @@ const conan: EcosystemMatcher = {
       });
       return out;
     }
+    // A requires tuple or list may span lines ("requires = (" ... ")"), so an
+    // opening bracket left unclosed on a requires line keeps reading string
+    // items until its closing bracket.
+    const REF = /["']([a-z0-9_][a-z0-9_.+-]*\/[^"']+)["']/gi;
+    let closer = "";
     lines.forEach((raw, i) => {
       const line = raw.replace(/#.*$/, "");
-      const isRequireLine = /\b(?:self\.)?(?:tool_|build_|test_|python_)?requires\b/.test(line);
-      if (!isRequireLine) return;
-      for (const m of line.matchAll(/["']([a-z0-9_][a-z0-9_.+-]*\/[^"']+)["']/gi)) push(m[1]!, i + 1);
+      if (closer) {
+        const end = line.indexOf(closer);
+        for (const m of (end < 0 ? line : line.slice(0, end)).matchAll(REF)) push(m[1]!, i + 1);
+        if (end >= 0) closer = "";
+        return;
+      }
+      const req = /\b(?:self\.)?(?:tool_|build_|test_|python_)?requires\b\s*(?:=\s*)?([([])?/.exec(line);
+      if (!req) return;
+      for (const m of line.matchAll(REF)) push(m[1]!, i + 1);
+      const open = req[1];
+      if (open) {
+        const want = open === "(" ? ")" : "]";
+        if (line.indexOf(want, req.index + req[0].length) < 0) closer = want;
+      }
     });
     return out;
   },
@@ -361,19 +500,30 @@ const helm: EcosystemMatcher = {
       }
       current = null;
     };
+    // Column of the "-" of the first dependency item, and of the keys inside
+    // an item. A deeper list (an item's import-values) is not a dependency,
+    // and its keys are not the dependency's own.
+    let dashCol = -1;
+    let keyCol = -1;
     lines.forEach((raw, i) => {
-      const text = raw.replace(/\s+#.*$/, "");
+      const text = stripHashComment(raw);
       // A top-level key starts a new section; a "- " list item may also sit at
       // column 0 (Chart.lock writes them that way) and belongs to the section.
-      if (/^\S/.test(text) && !text.startsWith("-")) { flush(); inDeps = /^dependencies\s*:/.test(text); return; }
+      if (/^\S/.test(text) && !text.startsWith("-")) { flush(); inDeps = /^dependencies\s*:/.test(text); dashCol = -1; return; }
       if (!inDeps || !text.trim()) return;
-      const item = /^\s*-\s+(\w+)\s*:\s*(.*)$/.exec(text);
-      const field = /^\s+(\w+)\s*:\s*(.*)$/.exec(text);
-      if (item) { flush(); current = { line: i + 1 }; }
-      const kv = item ?? field;
+      const item = /^(\s*)-(\s+)(\w+)\s*:\s*(.*)$/.exec(text);
+      if (item && (dashCol < 0 || item[1]!.length === dashCol)) {
+        flush();
+        dashCol = item[1]!.length;
+        keyCol = dashCol + 1 + item[2]!.length;
+        current = { line: i + 1 };
+      }
+      const field = /^(\s+)(\w+)\s*:\s*(.*)$/.exec(text);
+      const kv = item && item[1]!.length === dashCol ? [item[3]!, item[4]!]
+        : field && field[1]!.length === keyCol ? [field[2]!, field[3]!] : null;
       if (kv && current) {
-        const key = kv[1]!;
-        if (key === "name" || key === "version" || key === "repository") current[key] = unquote(kv[2]!);
+        const key = kv[0]!;
+        if (key === "name" || key === "version" || key === "repository") current[key] = unquote(kv[1]!);
       }
     });
     flush();
@@ -403,7 +553,7 @@ const ansible: EcosystemMatcher = {
     if (basenameOf(p) === "galaxy.yml") {
       let inDeps = false;
       lines.forEach((raw, i) => {
-        const text = raw.replace(/\s+#.*$/, "");
+        const text = stripHashComment(raw);
         if (/^\S/.test(text)) { inDeps = /^dependencies\s*:/.test(text); return; }
         if (!inDeps) return;
         const m = /^\s+["']?([a-z0-9_]+\.[a-z0-9_]+)["']?\s*:\s*(.*)$/i.exec(text);
@@ -413,15 +563,18 @@ const ansible: EcosystemMatcher = {
     }
     // requirements.yml: collections: / roles: lists, or a bare list of roles.
     let section: "collections" | "roles" | "" = "roles";
-    let current: { name?: string; version?: string; line: number; source?: string } | null = null;
+    let current: { name?: string; src?: string; version?: string; line: number; source?: string } | null = null;
     const flush = () => {
-      if (current?.name && GALAXY_NAME.test(current.name) && !current.source) {
-        out.push({ name: current.name.toLowerCase(), version: exactVersion(current.version), line: current.line });
+      // A role's Galaxy-shaped src is what gets installed; its name is then
+      // only a local alias. The name counts only when there is no src.
+      const id = current?.src ?? current?.name;
+      if (id && GALAXY_NAME.test(id) && !current!.source) {
+        out.push({ name: id.toLowerCase(), version: exactVersion(current!.version), line: current!.line });
       }
       current = null;
     };
     lines.forEach((raw, i) => {
-      const text = raw.replace(/\s+#.*$/, "");
+      const text = stripHashComment(raw);
       const top = /^(collections|roles)\s*:/.exec(text);
       if (top) { flush(); section = top[1] as "collections" | "roles"; return; }
       if (/^\S/.test(text) && !/^-/.test(text)) { flush(); section = ""; return; }
@@ -436,7 +589,11 @@ const ansible: EcosystemMatcher = {
         const key = kv[1]!;
         const value = unquote(kv[2]!);
         // A role "src" may be a Galaxy name or a git/URL source.
-        if (key === "name" || (key === "src" && GALAXY_NAME.test(value))) current.name ??= value;
+        if (key === "name") current.name ??= value;
+        else if (key === "src" && GALAXY_NAME.test(value)) {
+          if (section === "roles") current.src ??= value;
+          else current.name ??= value;
+        }
         else if (key === "src") current.source = value;
         else if (key === "version") current.version = value;
         else if (key === "source" || key === "type") {
@@ -466,12 +623,13 @@ const homebrew: EcosystemMatcher = {
     if (basenameOf(p) === "Brewfile.lock.json") {
       const doc = parseJson(content);
       const entries = isObject(doc) && isObject(doc.entries) ? doc.entries : {};
+      const lineOf = orderedLocator(content);
       for (const [kind, map] of Object.entries(entries)) {
         if (!isObject(map) || !["brew", "cask", "tap"].includes(kind)) continue;
         for (const [name, info] of Object.entries(map)) {
           const version = isObject(info) && typeof info.version === "string" ? info.version : undefined;
           const id = kind === "brew" ? name.toLowerCase() : `${kind}:${name.toLowerCase()}`;
-          out.push({ name: id, version: exactVersion(version), line: lineOf(content, `"${name}"`) });
+          out.push({ name: id, version: exactVersion(version), line: lineOf(`"${name}"`) });
         }
       }
       return out;
@@ -511,12 +669,13 @@ const browser: EcosystemMatcher = {
     const doc = parseJson(content);
     if (!isObject(doc)) return out;
     const parts = pathParts(p);
+    const lineOf = orderedLocator(content);
     const chromium = (id: string, version: string | undefined, needle: string) => {
       const lower = id.toLowerCase();
-      if (CHROMIUM_ID.test(lower)) out.push({ name: lower, version, line: lineOf(content, needle), ecosystems: ["chrome", "edge"] });
+      if (CHROMIUM_ID.test(lower)) out.push({ name: lower, version, line: lineOf(needle), ecosystems: ["chrome", "edge"] });
     };
     const firefox = (id: string, version: string | undefined) => {
-      if (id && id !== "*" && id.length <= 200) out.push({ name: id, version, line: lineOf(content, id), ecosystems: ["firefox"] });
+      if (id && id !== "*" && id.length <= 200) out.push({ name: id, version, line: lineOf(id), ecosystems: ["firefox"] });
     };
 
     if (basenameOf(p) === "manifest.json") {
@@ -552,6 +711,11 @@ const browser: EcosystemMatcher = {
         }
       }
     }
+    // Firefox Extensions.Locked lists add-on ids that users cannot remove.
+    // Extensions.Install holds download URLs, not ids, so it is not read.
+    if (isObject(doc.policies) && isObject(policies.Extensions) && Array.isArray(policies.Extensions.Locked)) {
+      for (const id of policies.Extensions.Locked) if (typeof id === "string") firefox(id.trim(), undefined);
+    }
     return out;
   },
   remediation: "Remove the extension from every browser profile and from managed policies, and rotate credentials and sessions used in that browser",
@@ -574,16 +738,25 @@ const jetbrains: EcosystemMatcher = {
   },
   extract(content, p) {
     const out: PackageRef[] = [];
-    const text = content.replace(/<!--[\s\S]*?-->/g, "");
+    const text = stripXmlComments(content);
     if (basenameOf(p) === "externalDependencies.xml") {
-      for (const m of text.matchAll(/<plugin\b[^>]*\bid\s*=\s*["']([^"']+)["']/g)) {
-        out.push({ name: m[1]!, version: undefined, line: lineOf(content, m[1]!) });
+      const lineOf = orderedLocator(content);
+      // Walk the <plugin tags by index: a regex with [^>]* rescans to the next
+      // ">" from every "<plugin", which is quadratic when none follows.
+      for (let at = text.indexOf("<plugin"); at >= 0;) {
+        const close = text.indexOf(">", at);
+        const tagEnd = close < 0 ? text.length : close;
+        const tag = text.slice(at, tagEnd);
+        const m = /^<plugin\b[^]*?\bid\s*=\s*["']([^"']+)["']/.exec(tag);
+        if (m) out.push({ name: m[1]!, version: undefined, line: lineOf(m[1]!) });
+        if (close < 0) break;
+        at = text.indexOf("<plugin", close);
       }
       return out;
     }
     const id = /<id>\s*([^<\s]+)\s*<\/id>/.exec(text)?.[1];
     const version = /<version>\s*([^<\s]+)\s*<\/version>/.exec(text)?.[1];
-    if (id) out.push({ name: id, version: exactVersion(version), line: lineOf(content, `<id>`) });
+    if (id) out.push({ name: id, version: exactVersion(version), line: lineOfNeedle(content, `<id>`) });
     return out;
   },
   remediation: "Uninstall the plugin from every IDE installation, remove it from .idea/externalDependencies.xml, and rotate API keys and tokens the IDE had access to",

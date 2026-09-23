@@ -169,7 +169,19 @@ export function scanExtensionReferences(
     if (seen.has(key)) continue;
     seen.add(key);
     const match = matchExtensionIOC(ref.publisher, ref.name, ref.version, BOTH_REGISTRIES, iocFeed);
-    if (match) findings.push(extensionFinding(ref, match, relativePath));
+    if (!match) continue;
+    const finding = extensionFinding(ref, match, relativePath);
+    // A recommendation, devcontainer entry or manifest does not say which
+    // registry installs it, and the same id can belong to different publishers
+    // on each. A hit that exists only in the Open VSX namespace is therefore
+    // real for VSCodium / Cursor / Open VSX users and possibly someone else's
+    // extension for Marketplace users: reported, but at medium and saying so.
+    if (match.registry === "openvsx") {
+      finding.severity = "medium";
+      finding.description +=
+        " Listed for Open VSX only: this applies if the workspace is opened in an editor that installs from Open VSX (VSCodium, Cursor, Gitpod and other VS Code forks); on the VS Code Marketplace the same id may belong to a different publisher.";
+    }
+    findings.push(finding);
   }
   return findings;
 }

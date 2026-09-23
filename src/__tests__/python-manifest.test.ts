@@ -110,4 +110,20 @@ describe("through a real directory scan (bundled feed)", () => {
     const files = report.findings.filter((f) => f.rule === "PYTHON_MALICIOUS_PACKAGE").map((f) => f.file.replace(/\\/g, "/")).sort();
     expect(files).toEqual(["requirements.txt", "service/requirements.txt"]);
   });
+
+  // vendor/ and target/ hold copies of installed dependencies; every sibling
+  // manifest dispatch skips them, and so must this one.
+  it("does not report vendored copies under vendor/ or target/", async () => {
+    const vdir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-pyvendor-"));
+    try {
+      for (const sub of ["vendor/lib", "target"]) {
+        fs.mkdirSync(path.join(vdir, sub), { recursive: true });
+        fs.writeFileSync(path.join(vdir, sub, "requirements.txt"), `${bare}\n`);
+      }
+      const report = await scan({ target: vdir, format: "json", noHistory: true });
+      expect(report.findings.filter((f) => f.rule === "PYTHON_MALICIOUS_PACKAGE")).toEqual([]);
+    } finally {
+      fs.rmSync(vdir, { recursive: true, force: true });
+    }
+  });
 });

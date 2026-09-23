@@ -136,4 +136,17 @@ describe("scanExtensionReferences", () => {
     const content = JSON.stringify({ recommendations: ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"] });
     expect(scanExtensionReferences(content, ".vscode/extensions.json", FEED)).toEqual([]);
   });
+
+  // A recommendation carries no registry. An id known malicious only on Open VSX
+  // may be a different publisher's extension on the Marketplace, so the hit is
+  // reported at medium and says which editors it applies to.
+  it("reports an Open VSX-only hit on a recommendation at medium, and a Marketplace hit at full severity", () => {
+    const feed: FeedIOC[] = [
+      { type: "package", value: "openvsx:ms-python.python", severity: "critical", confidence: 1.0 },
+      { type: "package", value: "vscode:evilpub.stealer", severity: "critical", confidence: 1.0 },
+    ];
+    const found = hits(JSON.stringify({ recommendations: ["ms-python.python", "evilpub.stealer"] }), ".vscode/extensions.json", feed);
+    expect(found.map((f) => `${f.match}:${f.severity}`)).toEqual(["ms-python.python:medium", "evilpub.stealer:critical"]);
+    expect(found[0]?.description).toContain("Open VSX only");
+  });
 });

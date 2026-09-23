@@ -11383,9 +11383,7 @@ function matchPackageIOCLinear(
     if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
 
     const rest = ioc.value.substring(prefix.length);
-    const at = rest.lastIndexOf("@");
-    const iocName = at > 0 ? rest.substring(0, at) : rest;
-    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    const { name: iocName, version: iocVersion } = splitPackageIOCValue(eco, rest);
 
     const nameMatches = normalizePackageIOCName(eco, iocName) === wantName;
     if (!nameMatches) continue;
@@ -11434,6 +11432,25 @@ export const CASE_INSENSITIVE_PACKAGE_ECOSYSTEMS: ReadonlySet<string> = new Set(
   "chrome", "edge", // Chromium extension ids are a-p, lowercase
 ]);
 
+/**
+ * Split the part of a prefixed feed value after "<eco>:" into name and version,
+ * at the last "@". The one exception is Firefox: its add-on ids are either a
+ * {GUID} or email-shaped ("name@domain"), so the tail after the last "@" is a
+ * version only when it looks like one. Splitting blindly read
+ * "bliss-heaven@webbrol.com" as name "bliss-heaven", version "webbrol.com", and
+ * 28 of the 40 bundled Firefox indicators could never match.
+ */
+export function splitPackageIOCValue(
+  ecosystem: string,
+  rest: string,
+): { name: string; version: string | undefined } {
+  const at = rest.lastIndexOf("@");
+  if (at <= 0) return { name: rest, version: undefined };
+  const tail = rest.substring(at + 1);
+  if (ecosystem === "firefox" && !/^\d[\w.+-]*$/.test(tail)) return { name: rest, version: undefined };
+  return { name: rest.substring(0, at), version: tail };
+}
+
 function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "pypi") return name.toLowerCase().replace(/[-_.]+/g, "-");
   if (CASE_INSENSITIVE_PACKAGE_ECOSYSTEMS.has(ecosystem)) return name.toLowerCase();
@@ -11456,11 +11473,9 @@ function getPackageIndex(entries: FeedIOC[]): Map<string, IndexedIOC[]> {
     const entryEco = ioc.value.substring(0, colon).toLowerCase();
 
     const rest = ioc.value.substring(colon + 1);
-    // Split "name@version" at the last "@". Ecosystem-prefixed names never
-    // start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
-    const at = rest.lastIndexOf("@");
-    const iocName = at > 0 ? rest.substring(0, at) : rest;
-    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    // Split "name@version" (see splitPackageIOCValue). Ecosystem-prefixed names
+    // never start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
+    const { name: iocName, version: iocVersion } = splitPackageIOCValue(entryEco, rest);
 
     const keyName = normalizePackageIOCName(entryEco, iocName);
     const key = `${entryEco}:${keyName}`;

@@ -22,6 +22,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { stripHashComment } from "./text-lines.js";
 
 export interface PubPackage {
   name: string;
@@ -29,7 +30,10 @@ export interface PubPackage {
   line: number;
 }
 
-const PUB_HOSTS = new Set(["https://pub.dev", "https://pub.dartlang.org"]);
+// pub.flutter-io.cn is the China mirror that the Flutter docs ("Using
+// Flutter in China") name for PUB_HOSTED_URL; it serves pub.dev's packages
+// unchanged, so a package locked through it is the pub.dev package.
+const PUB_HOSTS = new Set(["https://pub.dev", "https://pub.dartlang.org", "https://pub.flutter-io.cn"]);
 /** pub names are lowercase_with_underscores by rule. */
 const PUB_NAME = /^[a-z_][a-z0-9_]*$/;
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?$/;
@@ -54,9 +58,11 @@ interface Line {
 function readLines(content: string): Line[] {
   const out: Line[] = [];
   content.split(/\r?\n/).forEach((raw, i) => {
-    const text = raw.replace(/\s+#.*$/, "");
+    const text = stripHashComment(raw);
     if (!text.trim() || text.trim().startsWith("#")) return;
-    const m = /^(\s*)([^:\s][^:]*?)\s*:\s*(.*)$/.exec(text);
+    // Greedy up to the first colon, trimmed after: a lazy key followed by
+    // \s*: is quadratic on a colon-free line with a long whitespace run.
+    const m = /^([ \t]*)([^:\s][^:]*):[ \t]*(.*)$/.exec(text);
     if (!m) return;
     out.push({ indent: m[1]!.length, key: m[2]!.trim(), value: unquote(m[3]!.trim()), line: i + 1 });
   });
@@ -104,6 +110,56 @@ function extractLock(lines: Line[]): PubPackage[] {
   return out;
 }
 
+type Field = Pick<Line, "key" | "value">;
+
+/**
+ * Pairs of a one-line flow map `{a: b, c: {d: e}}`, nested maps flattened
+ * into the list the way the block form's descendant lines are. Commas are
+ * split at depth 0 only, and nesting is followed two levels (enough for
+ * `hosted: {url: ...}` / `git: {url: ...}`) so the work stays linear.
+ */
+function flowPairs(text: string, depth = 0): Field[] {
+  const out: Field[] = [];
+  const inner = text.slice(1, -1);
+  const parts: string[] = [];
+  let level = 0;
+  let start = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const c = inner[i];
+    if (c === "{" || c === "[") level++;
+    else if (c === "}" || c === "]") level--;
+    else if (c === "," && level === 0) {
+      parts.push(inner.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(inner.slice(start));
+  for (const part of parts) {
+    const colon = part.indexOf(":");
+    if (colon < 0) continue;
+    const key = unquote(part.slice(0, colon).trim());
+    const value = unquote(part.slice(colon + 1).trim());
+    if (value.startsWith("{") && value.endsWith("}")) {
+      out.push({ key, value: "" });
+      if (depth < 2) out.push(...flowPairs(value, depth + 1));
+    } else {
+      out.push({ key, value });
+    }
+  }
+  return out;
+}
+
+/** A dependency's map (block or flow form) to a pub package, or nothing. */
+function pubDependency(name: string, fields: Field[], line: number): PubPackage | undefined {
+  // `git`/`path`/`sdk` have no pub identity; `hosted` must name pub.dev.
+  if (fields.some((f) => f.key === "git" || f.key === "path" || f.key === "sdk")) return undefined;
+  const hosted = fields.find((f) => f.key === "hosted");
+  const hostedUrl = hosted?.value || fields.find((f) => f.key === "url")?.value;
+  if (hosted && hostedUrl && !PUB_HOSTS.has(hostedUrl.replace(/\/+$/, ""))) return undefined;
+  const version = fields.find((f) => f.key === "version")?.value;
+  return { name, version: version && EXACT_VERSION.test(version) ? version : undefined, line };
+}
+
 function extractPubspec(lines: Line[]): PubPackage[] {
   const out: PubPackage[] = [];
   lines.forEach((section, i) => {
@@ -112,6 +168,14 @@ function extractPubspec(lines: Line[]): PubPackage[] {
     const depIndent = body[0]?.indent;
     body.forEach((dep, k) => {
       if (dep.indent !== depIndent || !PUB_NAME.test(dep.key)) return;
+      if (dep.value.startsWith("{")) {
+        // Flow form: `name: {path: ../x}`. One that does not close on its
+        // line is not read, rather than guessed at as a pub.dev package.
+        if (!dep.value.endsWith("}")) return;
+        const pkg = pubDependency(dep.key, flowPairs(dep.value), dep.line);
+        if (pkg) out.push(pkg);
+        return;
+      }
       if (dep.value) {
         // Short form: `name: <constraint>`.
         out.push({ name: dep.key, version: EXACT_VERSION.test(dep.value) ? dep.value : undefined, line: dep.line });
@@ -120,12 +184,8 @@ function extractPubspec(lines: Line[]): PubPackage[] {
       // Long form: a map with `hosted`/`version`, or `git`/`path`/`sdk`.
       const fields: Line[] = [];
       for (let j = k + 1; j < body.length && body[j]!.indent > depIndent!; j++) fields.push(body[j]!);
-      if (fields.some((f) => f.key === "git" || f.key === "path" || f.key === "sdk")) return;
-      const hosted = fields.find((f) => f.key === "hosted");
-      const hostedUrl = hosted?.value || fields.find((f) => f.key === "url")?.value;
-      if (hosted && hostedUrl && !PUB_HOSTS.has(hostedUrl.replace(/\/+$/, ""))) return;
-      const version = fields.find((f) => f.key === "version")?.value;
-      out.push({ name: dep.key, version: version && EXACT_VERSION.test(version) ? version : undefined, line: dep.line });
+      const pkg = pubDependency(dep.key, fields, dep.line);
+      if (pkg) out.push(pkg);
     });
   });
   return out;

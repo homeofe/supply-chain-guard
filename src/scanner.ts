@@ -38,7 +38,7 @@ import { matchBareNpmIOC } from "./install-guard.js";
 import {
   lockfileFeedFindings,
   manifestDependencyCandidates,
-  manifestReportedNames,
+  excuseLockfileFindingsReportedByManifests,
   type LockfileDependency,
 } from "./lockfile-feed.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
@@ -136,6 +136,8 @@ import {
   isDevcontainerFile,
   scanDevcontainerCommandsContent,
   scanEditorTasksContent,
+  isCodeWorkspaceFile,
+  scanCodeWorkspaceContent,
 } from "./skills-scanner.js";
 import { checkDisguisedAsset } from "./disguised-asset.js";
 import {
@@ -323,6 +325,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     ...internalDisclosure.loadFindings,
   ];
 
+  // Direct dependencies the package.json check reported, by INSTALLED name
+  // (aliases resolved); see the lockfile excuse pass after the path filters.
+  // Only manifests the walk actually checks record anything: ignored paths
+  // are never walked and test-fixture manifests are never checked.
+  const manifestReports = new Set<string>();
+
   // Scan each file
   let filesScanned = 0;
   for (const filePath of allFiles) {
@@ -393,7 +401,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const pubspecFile = isPubFile(relativePath);
     // requirements*.txt has no scannable extension; pyproject.toml does, and is
     // matched here too so the pypi: lookup has one dispatch point.
-    const pythonManifest = isPythonManifest(relativePath);
+    const pythonManifest =
+      isPythonManifest(relativePath) &&
+      !pathSegments.some((segment) => segment === "vendor" || segment === "target");
     // Ruby, Composer, NuGet, Cargo and Go manifests below the scan root: their
     // own scanners read only the root (see nested-manifests.ts).
     const nestedManifest = isNestedManifest(relativePath);
@@ -405,9 +415,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const nestedJsLockfile =
       relativePath.includes("/") && JS_LOCKFILE_NAMES.has(basename) &&
       !pathSegments.some((segment) => segment === "vendor");
+    // *.code-workspace: its tasks block auto-runs like .vscode/tasks.json, and
+    // the extension is not a scannable one.
+    const codeWorkspace = isCodeWorkspaceFile(relativePath);
     const inlineContentTarget =
       isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile ||
-      pubspecFile || pythonManifest || nestedManifest || registryFile || nestedJsLockfile;
+      pubspecFile || pythonManifest || nestedManifest || registryFile || nestedJsLockfile || codeWorkspace;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -456,15 +469,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       if (registryFile) {
         findings.push(...scanRegistryFile(prefetchedContent, relativePath, threatFeed));
       }
+      if (codeWorkspace) {
+        findings.push(...scanCodeWorkspaceContent(prefetchedContent, relativePath));
+      }
       if (nestedJsLockfile) {
-        const manifestRel = path.posix.join(path.posix.dirname(relativePath), "package.json");
-        let manifestContent: string | null = null;
-        if (!TEST_FILE_REGEX.test(manifestRel)) {
-          try {
-            manifestContent = fs.readFileSync(path.join(path.dirname(filePath), "package.json"), "utf-8");
-          } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
-        }
-        findings.push(...checkJsLockfileContent(basename, prefetchedContent, relativePath, manifestContent, threatFeed));
+        findings.push(...checkJsLockfileContent(basename, prefetchedContent, relativePath, threatFeed));
       }
       if (nestedPythonLockfile) {
         findings.push(
@@ -611,7 +620,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       // Closes the gap where a directory scan of your own repo did not catch
       // a known-bad dependency (only the `npm <pkg>` path did). Patterns are
       // anchored, so only exact malicious names match.
-      checkMaliciousDependencyNames(content, relativePath, findings, threatFeed);
+      checkMaliciousDependencyNames(content, relativePath, findings, threatFeed, manifestReports);
 
       // Deep install hook analysis (v4.2)
       const hookScripts = extractInstallScripts(content);
@@ -638,17 +647,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Check package-lock.json for known-bad versions (v4.1)
     if (basename === "package-lock.json") {
-      // The sibling manifest, so the lockfile does not re-report what the
-      // package.json check reports. A manifest that check skips (a test
-      // fixture path) or cannot read excuses nothing.
-      const manifestRel = path.posix.join(path.posix.dirname(relativePath.replace(/\\/g, "/")), "package.json");
-      let manifestContent: string | null = null;
-      if (!TEST_FILE_REGEX.test(manifestRel)) {
-        try {
-          manifestContent = fs.readFileSync(path.join(path.dirname(filePath), "package.json"), "utf-8");
-        } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
-      }
-      checkLockfileBadVersions(content, relativePath, findings, threatFeed, manifestContent);
+      checkLockfileBadVersions(content, relativePath, findings, threatFeed);
     }
 
     // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
@@ -708,9 +707,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // v4.9: SLSA provenance verification
   findings.push(...verifySLSA(scanDir));
 
-  // v4.9: PyPI dependency confusion (if requirements.txt / pyproject.toml present)
+  // v4.9: PyPI dependency confusion (if requirements.txt / pyproject.toml present).
+  // The PyPI metadata lookups send every dependency name to pypi.org, so they
+  // run only with --check-registry: a local scan documents zero network
+  // requests. The offline checks (hallucinated names, coverage) always run.
   try {
-    const pypiConfusion = await scanPypiDependencyConfusion(scanDir);
+    const pypiConfusion = await scanPypiDependencyConfusion(scanDir, {
+      network: options.checkRegistry === true,
+    });
     findings.push(...pypiConfusion);
   } catch { /* skip if offline */ }
 
@@ -817,6 +821,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       );
     });
   }
+
+  // A lockfile's whole-name hit is excused only where a package.json in THIS
+  // scan reported the same package as a direct dependency. Workspace members,
+  // ignored manifests and test-fixture manifests then all come out right,
+  // which re-reading the lockfile's sibling package.json could not do.
+  findings = excuseLockfileFindingsReportedByManifests(findings, manifestReports);
 
   // The primary walk and specialized scanners may report the same failed path.
   // Keep one public coverage signal per normalized relative path.
@@ -1918,7 +1928,6 @@ function checkLockfileBadVersions(
   relativePath: string,
   findings: Finding[],
   feed: FeedIOC[],
-  manifestContent: string | null,
 ): void {
   const lock = parseJsonObject(content);
   if (!lock) return;
@@ -1926,12 +1935,17 @@ function checkLockfileBadVersions(
   const resolved: LockfileDependency[] = [];
 
   // lockfile v2+ uses "packages" key
-  const packages = lock.packages as Record<string, { version?: string }> | undefined;
+  const packages = lock.packages as Record<string, { version?: string; name?: string }> | undefined;
   if (packages) {
     for (const [pkgPath, entry] of Object.entries(packages)) {
       if (!pkgPath || !entry?.version) continue;
-      // Extract package name from path (e.g., "node_modules/axios" → "axios")
-      const name = pkgPath.replace(/^node_modules\//, "").replace(/^.*node_modules\//, "");
+      // Installed packages only: "" is the root and "packages/a" a workspace
+      // member, neither of which is a dependency.
+      if (!pkgPath.includes("node_modules/")) continue;
+      // The path names the install location; an npm alias ("x": "npm:evil@1")
+      // installs `evil` at node_modules/x and records the real package in
+      // `name`, which is what the feed describes.
+      const name = entry.name ?? pkgPath.replace(/^.*node_modules\//, "");
       if (!name) continue;
       resolved.push({ name, version: entry.version });
     }
@@ -1954,7 +1968,7 @@ function checkLockfileBadVersions(
     if (finding) findings.push({ ...finding, file: relativePath });
   }
   findings.push(
-    ...lockfileFeedFindings(resolved, relativePath, manifestReportedNames(manifestContent), feed),
+    ...lockfileFeedFindings(resolved, relativePath, feed),
   );
 }
 
@@ -2006,6 +2020,7 @@ function checkMaliciousDependencyNames(
   file: string,
   findings: Finding[],
   feed: FeedIOC[],
+  reported?: Set<string>,
 ): void {
   const parsed = parseJsonObject(content);
   if (!parsed) return;
@@ -2031,6 +2046,7 @@ function checkMaliciousDependencyNames(
         match: alias ?? name,
         recommendation: `Remove "${alias ?? name}" immediately and rotate any secrets exposed while it was installed.`,
       });
+      reported?.add(name);
     }
   }
 }

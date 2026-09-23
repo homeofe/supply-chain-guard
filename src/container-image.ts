@@ -5,10 +5,14 @@
  * entries: `docker:<name>@<tag>` or `docker:<name>@sha256:<digest>`.
  *
  * Where images are referenced:
- *   - Dockerfile / Containerfile: `FROM` (with `--platform`, `AS`) and
- *     `COPY --from=<image>`; build-stage names are not images and are skipped
+ *   - Dockerfile / Containerfile: `FROM` (with `--platform`, `AS`),
+ *     `COPY --from=<image>` and `RUN --mount=...,from=<image>`, all with global
+ *     ARGs expanded; build-stage names are not images and are skipped
  *   - any YAML (compose, Kubernetes, workflow `container:` / `services:`):
  *     `image:` values, plus `docker://<image>` in workflow `uses:`
+ *   - `image:` as a map: GitLab CI `name:`, and Helm-values `registry:` /
+ *     `repository:` with `tag:` / `digest:` (block or one-line flow form)
+ *   - GitLab CI `services:` as a list: bare image items and `name:` maps
  *
  * A DIGEST names content, so it is matched whatever repository name carries
  * it: the same manifest pulled through a mirror or re-pushed under another
@@ -23,6 +27,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { stripHashComment } from "./text-lines.js";
 
 export interface ImageReference {
   name: string;
@@ -142,28 +147,162 @@ export function extractImageReferences(content: string, relativePath: string): L
         if (from[2]) stages.add(from[2].toLowerCase());
         return;
       }
+      // An image named by COPY --from or by from= in a RUN --mount; a bare
+      // word there is a build stage (or a stage index), never pulled.
+      const pushSource = (value: string) => {
+        const image = expand(value);
+        if (!stages.has(image.toLowerCase()) && /[/:@]/.test(image) && parseImageReference(image)) {
+          out.push({ raw: image, line: i + 1 });
+        }
+      };
       const copy = /^COPY\s+(?:--\S+\s+)*--from=(\S+)/i.exec(line);
-      if (copy && !stages.has(copy[1]!.toLowerCase()) && /[/:@]/.test(copy[1]!) && parseImageReference(copy[1]!)) {
-        out.push({ raw: copy[1]!, line: i + 1 });
+      if (copy) pushSource(copy[1]!);
+      if (/^RUN\s/i.test(line)) {
+        for (const mount of line.matchAll(/--mount=(\S+)/g)) {
+          const from = mount[1]!.split(",").find((opt) => opt.startsWith("from="));
+          if (from) pushSource(from.slice("from=".length));
+        }
       }
     });
     return out;
   }
+  // `image:` in map form: GitLab CI `name:`, or Helm-values `registry:` /
+  // `repository:` / `tag:` / `digest:`. Only the image key's own direct
+  // children are paired, never siblings or deeper keys.
+  let block: { indent: number; childIndent: number | undefined; fields: Map<string, { value: string; line: number }> } | undefined;
+  const flush = () => {
+    if (block) pushImageMap(block.fields, out);
+    block = undefined;
+  };
+  // GitLab CI `services:` whose value is a LIST: items are a bare image or a
+  // map with `name:`. Compose and GitHub Actions `services:` are maps of
+  // service name -> {image: ...}, read by the image: path; their first child
+  // is not a list item, so this state is dropped on it and adds nothing.
+  let services: { keyIndent: number; itemIndent: number | undefined; contentIndent: number | undefined; named: boolean } | undefined;
+  const serviceEntry = (content: string, line: number) => {
+    if (content.startsWith("{") && content.endsWith("}")) {
+      const name = parseFlowMap(content, line).get("name");
+      if (name && parseImageReference(name.value)) out.push({ raw: name.value, line });
+      return;
+    }
+    // `key: value` needs whitespace (or the end) after the colon, which an
+    // image reference such as postgres:16 never has.
+    const kv = /^([A-Za-z_][A-Za-z0-9_-]*):(?:[ \t]+(.*))?$/.exec(content);
+    if (kv) {
+      const value = unquote(kv[2] ?? "");
+      if (kv[1] === "name" && value && services) {
+        services.named = true;
+        if (parseImageReference(value)) out.push({ raw: value, line });
+      }
+      return;
+    }
+    const value = unquote(content);
+    if (parseImageReference(value)) out.push({ raw: value, line });
+  };
   lines.forEach((raw, i) => {
-    const text = raw.replace(/\s+#.*$/, "");
+    const text = stripHashComment(raw);
+    const trimmed = text.trimStart();
+    if (services && trimmed && !trimmed.startsWith("#")) {
+      const indent = text.length - trimmed.length;
+      const isItem = trimmed === "-" || trimmed.startsWith("- ");
+      if (services.itemIndent === undefined) {
+        // A compact list may sit at the key's own indentation.
+        if (isItem && indent >= services.keyIndent) services.itemIndent = indent;
+        else services = undefined;
+      }
+      if (services && indent === services.itemIndent && isItem) {
+        const content = trimmed.slice(1).trimStart();
+        services.contentIndent = content ? indent + trimmed.length - content.length : undefined;
+        services.named = false;
+        if (content) serviceEntry(content, i + 1);
+      } else if (services && indent > services.itemIndent!) {
+        // `- alias: x` then `name: y`: a key at the item's own content column.
+        services.contentIndent ??= indent;
+        if (indent === services.contentIndent && !services.named) serviceEntry(trimmed, i + 1);
+      } else {
+        services = undefined;
+      }
+    }
+    const servicesKey = /^([ \t]*)services:[ \t]*(.*)$/.exec(text);
+    if (servicesKey) {
+      const value = servicesKey[2]!;
+      if (!value) {
+        services = { keyIndent: servicesKey[1]!.length, itemIndent: undefined, contentIndent: undefined, named: false };
+      } else if (value.startsWith("[") && value.endsWith("]") && !value.includes("{")) {
+        // One-line flow list of bare images.
+        for (const item of value.slice(1, -1).split(",")) {
+          const ref = unquote(item);
+          if (parseImageReference(ref)) out.push({ raw: ref, line: i + 1 });
+        }
+      }
+    }
+    if (block) {
+      if (!trimmed || trimmed.startsWith("#")) return;
+      const indent = text.length - trimmed.length;
+      if (indent > block.indent) {
+        block.childIndent ??= indent;
+        const kv = indent === block.childIndent ? /^([A-Za-z_]+):\s*(.*)$/.exec(trimmed) : null;
+        if (kv && !block.fields.has(kv[1]!)) block.fields.set(kv[1]!, { value: unquote(kv[2]!), line: i + 1 });
+        return;
+      }
+      flush();
+    }
     // `image: <ref>` anywhere, and a workflow's string-form `container: <ref>`
     // (the map form is `container:` followed by an `image:` line).
-    const image = /^\s*-?\s*(?:image|container):\s*(\S.*)$/.exec(text);
+    // Written as [ \t]*(?:-[ \t]*)? because \s*-?\s* is quadratic on a long
+    // run of whitespace (both \s* can split the same run every way).
+    const image = /^([ \t]*(?:-[ \t]*)?)(image|container):[ \t]*(\S.*)$/.exec(text);
     if (image) {
-      const value = unquote(image[1]!);
-      if (parseImageReference(value)) out.push({ raw: value, line: i + 1 });
+      const value = unquote(image[3]!);
+      if (value.startsWith("{") && value.endsWith("}") && image[2] === "image") {
+        pushImageMap(parseFlowMap(value, i + 1), out);
+      } else if (parseImageReference(value)) {
+        out.push({ raw: value, line: i + 1 });
+      }
+      return;
+    }
+    const opener = /^([ \t]*(?:-[ \t]*)?)image:[ \t]*$/.exec(text);
+    if (opener) {
+      block = { indent: opener[1]!.length, childIndent: undefined, fields: new Map() };
       return;
     }
     for (const m of text.matchAll(/docker:\/\/([^\s"'#]+)/g)) {
       if (parseImageReference(m[1]!)) out.push({ raw: m[1]!, line: i + 1 });
     }
   });
+  flush();
   return out;
+}
+
+type ImageMap = Map<string, { value: string; line: number }>;
+
+/** `{a: b, c: "d"}` on one line; nested values are kept as text, not parsed. */
+function parseFlowMap(value: string, line: number): ImageMap {
+  const fields: ImageMap = new Map();
+  for (const part of value.slice(1, -1).split(",")) {
+    const colon = part.indexOf(":");
+    if (colon < 0) continue;
+    const key = part.slice(0, colon).trim();
+    if (!fields.has(key)) fields.set(key, { value: unquote(part.slice(colon + 1)), line });
+  }
+  return fields;
+}
+
+/** Turn the direct children of one `image:` key into a reference. */
+function pushImageMap(fields: ImageMap, out: LocatedImageReference[]): void {
+  const name = fields.get("name");
+  if (name) {
+    if (parseImageReference(name.value)) out.push({ raw: name.value, line: name.line });
+    return;
+  }
+  const repository = fields.get("repository");
+  if (!repository?.value) return;
+  const registry = fields.get("registry")?.value;
+  const tag = fields.get("tag")?.value;
+  const digest = fields.get("digest")?.value;
+  const raw = `${registry ? `${registry.replace(/\/+$/, "")}/` : ""}${repository.value}`
+    + `${tag ? `:${tag}` : ""}${digest ? `@${digest}` : ""}`;
+  if (parseImageReference(raw)) out.push({ raw, line: repository.line });
 }
 
 const digestIndexCache = new WeakMap<FeedIOC[], Map<string, FeedIOC>>();

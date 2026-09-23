@@ -24,7 +24,7 @@ import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { parseJsonObject } from "./json-utils.js";
-import { lockfileFeedFindings, manifestReportedNames } from "./lockfile-feed.js";
+import { lockfileFeedFindings } from "./lockfile-feed.js";
 import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import {
   optionalFileExists,
@@ -123,7 +123,6 @@ export function checkJsLockfileContent(
   basename: string,
   content: string,
   relativePath: string,
-  manifestContent: string | null,
   feed: FeedIOC[],
 ): Finding[] {
   const findings: Finding[] = [];
@@ -153,7 +152,7 @@ export function checkJsLockfileContent(
     return findings;
   }
   for (const dep of deps) checkParsedDependency(dep, relativePath, findings);
-  findings.push(...lockfileFeedFindings(deps, relativePath, manifestReportedNames(manifestContent), feed));
+  findings.push(...lockfileFeedFindings(deps, relativePath, feed));
   return findings;
 }
 
@@ -163,16 +162,11 @@ export function checkJsLockfileContent(
  * package-lock.json files; this covers the root yarn/pnpm/bun lockfile.
  */
 function feedFindingsFor(
-  dir: string,
   deps: readonly ParsedLockDependency[],
   lockfileName: string,
   feed: FeedIOC[] | undefined,
 ): Finding[] {
-  let manifest: string | null = null;
-  try {
-    manifest = fs.readFileSync(path.join(dir, "package.json"), "utf-8");
-  } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
-  return lockfileFeedFindings(deps, lockfileName, manifestReportedNames(manifest), feed ?? loadThreatIntel());
+  return lockfileFeedFindings(deps, lockfileName, feed ?? loadThreatIntel());
 }
 
 // ---------------------------------------------------------------------------
@@ -571,7 +565,7 @@ export function checkPnpmLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
-  findings.push(...feedFindingsFor(dir, deps, lockfileName, feed));
+  findings.push(...feedFindingsFor(deps, lockfileName, feed));
   return findings;
 }
 
@@ -700,7 +694,7 @@ export function checkYarnLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
-  findings.push(...feedFindingsFor(dir, deps, lockfileName, feed));
+  findings.push(...feedFindingsFor(deps, lockfileName, feed));
   return findings;
 }
 
@@ -858,7 +852,11 @@ function parseYarnHeaderSpec(header: string): ParsedLockDependency | null {
   const firstSpec = (header.split(",")[0] ?? "").trim().replace(/^"/, "").replace(/"$/, "");
   const at = firstSpec.lastIndexOf("@");
   if (at <= 0) return null;
-  const name = firstSpec.slice(0, at);
+  let name = firstSpec.slice(0, at);
+  // An npm alias ("x@npm:evil@1.0.0", berry "x@npm:evil@^1") installs `evil`:
+  // the key before "@npm:" is arbitrary text, the package is what follows.
+  const alias = name.indexOf("@npm:");
+  if (alias > 0) name = name.slice(alias + "@npm:".length);
   if (name === "") return null;
   return { name, expectsIntegrity: false, sriIntegrity: true };
 }
@@ -915,7 +913,7 @@ export function checkBunLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
       }
     }
   }
-  findings.push(...feedFindingsFor(dir, deps, "bun.lock", feed));
+  findings.push(...feedFindingsFor(deps, "bun.lock", feed));
   return findings;
 }
 

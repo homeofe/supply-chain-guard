@@ -143,8 +143,8 @@
     },
     {
       "id": "ecosystem count",
-      "canonical": "16",
-      "advertised": 16,
+      "canonical": "15",
+      "advertised": 15,
       "phrase": "(\\d+)\\s+ecosystems\\b",
       "flags": "gi",
       "floorCmd": "scripts/count-ecosystems.mjs",

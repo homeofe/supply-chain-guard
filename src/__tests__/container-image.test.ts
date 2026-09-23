@@ -150,3 +150,188 @@ describe("scanImageReferences", () => {
     expect(hits("FROM evilns/tool:6.6.6\nFROM evilns/tool:6.6.6\n", "Dockerfile")).toHaveLength(1);
   });
 });
+
+// Real-world reference forms, checked against the BUNDLED feed entry
+// docker:aquasec/trivy@0.69.4 so a routing or prefix mistake would show.
+describe("scanImageReferences: map, values and BuildKit forms", () => {
+  const bundled = (content: string, file: string) =>
+    scanImageReferences(content, file).filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE");
+
+  // GitLab documents running Trivy exactly like this.
+  it("reads the GitLab CI image map form (name + entrypoint)", () => {
+    const ci = [
+      "trivy:",
+      "  stage: test",
+      "  image:",
+      "    name: aquasec/trivy:0.69.4",
+      '    entrypoint: [""]',
+      "  script:",
+      "    - trivy fs .",
+    ].join("\n");
+    const found = bundled(ci, ".gitlab-ci.yml");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.line).toBe(4);
+    expect(bundled('scan:\n  image: {name: "aquasec/trivy:0.69.4", entrypoint: [""]}\n', ".gitlab-ci.yml")).toHaveLength(1);
+  });
+
+  it("does not read a name: that is not under image:, nor a private-registry name", () => {
+    expect(bundled("job:\n  name: aquasec/trivy:0.69.4\n  image: alpine:3\n", ".gitlab-ci.yml")).toEqual([]);
+    expect(bundled("scan:\n  image:\n    name: registry.internal.example/aquasec/trivy:0.69.4\n", ".gitlab-ci.yml")).toEqual([]);
+  });
+
+  it("pairs Helm-values repository + tag / digest under the same image key", () => {
+    const block = [
+      "scanner:",
+      "  image:",
+      "    repository: aquasec/trivy",
+      '    tag: "0.69.4"',
+      "    pullPolicy: IfNotPresent",
+      "  replicas: 1",
+    ].join("\n");
+    expect(bundled(block, "values.yaml")).toHaveLength(1);
+    expect(bundled('image: {repository: aquasec/trivy, tag: "0.69.4"}\n', "values.yaml")).toHaveLength(1);
+    const digest = "27f446230c60bbf0b70e008db798bd4f33b7826f9f76f756606f5417100beef3";
+    expect(bundled(`image:\n  repository: aquasec/trivy\n  digest: sha256:${digest}\n`, "values.yaml")).toHaveLength(1);
+    // registry: is part of the name, so a Docker Hub registry still matches.
+    expect(bundled("image:\n  registry: docker.io\n  repository: aquasec/trivy\n  tag: 0.69.4\n", "values.yaml")).toHaveLength(1);
+  });
+
+  it("does not pair repository/tag that are not both under image:", () => {
+    // Not under an image key at all.
+    expect(bundled('scanner:\n  repository: aquasec/trivy\n  tag: "0.69.4"\n', "values.yaml")).toEqual([]);
+    // tag is a sibling of image:, not its child.
+    expect(bundled('image:\n  repository: aquasec/trivy\ntag: "0.69.4"\n', "values.yaml")).toEqual([]);
+    // A deeper grandchild is not the image's own tag.
+    expect(bundled('image:\n  repository: aquasec/trivy\n  extra:\n    tag: "0.69.4"\n', "values.yaml")).toEqual([]);
+    // A private registry makes it a different image.
+    expect(bundled("image:\n  registry: registry.internal.example\n  repository: aquasec/trivy\n  tag: 0.69.4\n", "values.yaml")).toEqual([]);
+    expect(bundled("image: {registry: registry.internal.example, repository: aquasec/trivy, tag: 0.69.4}\n", "values.yaml")).toEqual([]);
+  });
+
+  it("expands global ARGs in COPY --from as it does in FROM", () => {
+    const dockerfile = [
+      "ARG TRIVY_IMAGE=aquasec/trivy:0.69.4",
+      "FROM alpine:3.20",
+      "COPY --from=${TRIVY_IMAGE} /usr/local/bin/trivy /usr/local/bin/trivy",
+    ].join("\n");
+    const found = bundled(dockerfile, "Dockerfile");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.line).toBe(3);
+  });
+
+  it("reads from= inside RUN --mount, skipping build-stage names", () => {
+    const dockerfile = [
+      "FROM alpine:3.20 AS tools",
+      "FROM alpine:3.20",
+      "RUN --mount=type=cache,target=/root/.cache --mount=type=bind,from=aquasec/trivy:0.69.4,source=/usr/local/bin/trivy,target=/trivy /trivy fs /",
+    ].join("\n");
+    const found = bundled(dockerfile, "Dockerfile");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.line).toBe(3);
+    // A stage name in from= is not an image.
+    const stage = extractImageReferences(
+      "FROM aquasec/trivy:0.69.4 AS trivy\nFROM alpine:3.20\nRUN --mount=type=bind,from=trivy,target=/t /t/trivy\n",
+      "Dockerfile",
+    ).map((r) => r.raw);
+    expect(stage).toEqual(["aquasec/trivy:0.69.4", "alpine:3.20"]);
+    expect(bundled("FROM alpine:3.20\nRUN --mount=type=bind,from=registry.internal.example/aquasec/trivy:0.69.4 x\n", "Dockerfile")).toEqual([]);
+  });
+
+  // GitLab CI services: a LIST of bare image strings or maps with name:.
+  it("reads GitLab CI services list items, bare and map form, job-level and top-level", () => {
+    const ci = [
+      "services:",
+      "  - evilns/tool:6.6.6",
+      "test:",
+      "  services:",
+      "    - name: aquasec/trivy:0.69.4",
+      "      alias: trivy",
+      '      entrypoint: [""]',
+      "      command: [\"server\"]",
+      "    - alias: db",
+      "      name: postgres:16",
+      '    - "redis:7"',
+      "    - {name: mysql:8, alias: sql}",
+      "  script:",
+      "    - echo ok",
+    ].join("\n");
+    expect(extractImageReferences(ci, ".gitlab-ci.yml").map((r) => `${r.raw}:${r.line}`)).toEqual([
+      "evilns/tool:6.6.6:2",
+      "aquasec/trivy:0.69.4:5",
+      "postgres:16:10",
+      "redis:7:11",
+      "mysql:8:12",
+    ]);
+    expect(hits(ci, ".gitlab-ci.yml")).toHaveLength(1);
+    expect(bundled(ci, ".gitlab-ci.yml")).toHaveLength(1);
+    // A compact list at the key's own indentation is the same list.
+    expect(extractImageReferences("job:\n  services:\n  - name: evilns/tool:6.6.6\n  - postgres:16\n  script: [x]\n", ".gitlab-ci.yml")
+      .map((r) => r.raw)).toEqual(["evilns/tool:6.6.6", "postgres:16"]);
+    // One-line flow list.
+    expect(extractImageReferences("job:\n  services: [evilns/tool:6.6.6, redis]\n", ".gitlab-ci.yml").map((r) => r.raw))
+      .toEqual(["evilns/tool:6.6.6", "redis"]);
+  });
+
+  // Compose and GitHub Actions services are MAPS of name -> {image: ...}: the
+  // image: path reads them, and the list reader must add nothing.
+  it("reads a compose or GitHub Actions services map exactly once", () => {
+    const compose = [
+      "services:",
+      "  name:",
+      "    image: evilns/tool:6.6.6",
+      "  web:",
+      "    image: nginx:1.27",
+      "    command: [\"nginx\"]",
+    ].join("\n");
+    expect(extractImageReferences(compose, "docker-compose.yml").map((r) => r.raw)).toEqual(["evilns/tool:6.6.6", "nginx:1.27"]);
+    expect(hits(compose, "docker-compose.yml")).toHaveLength(1);
+    const gha = [
+      "jobs:",
+      "  test:",
+      "    services:",
+      "      scanner:",
+      "        image: evilns/tool:6.6.6",
+      "        ports:",
+      "          - 5432:5432",
+      "    steps:",
+      "      - name: evilns/tool:6.6.6",
+      "      - uses: actions/checkout@v4",
+    ].join("\n");
+    expect(extractImageReferences(gha, ".github/workflows/ci.yml").map((r) => r.raw)).toEqual(["evilns/tool:6.6.6"]);
+    expect(hits(gha, ".github/workflows/ci.yml")).toHaveLength(1);
+  });
+
+  it("does not read a name: or a bare item under any other list", () => {
+    const yaml = [
+      "steps:",
+      "  - name: evilns/tool:6.6.6",
+      "  - evilns/tool:6.6.6",
+      "containers:",
+      "  - name: evilns/tool:6.6.6",
+      "services:",
+      "  - name: ok",
+      "variables:",
+      "  - name: evilns/tool:6.6.6",
+      "  - evilns/tool:6.6.6",
+    ].join("\n");
+    expect(extractImageReferences(yaml, ".gitlab-ci.yml").map((r) => r.raw)).toEqual(["ok"]);
+    expect(hits(yaml, ".gitlab-ci.yml")).toEqual([]);
+  });
+
+  it("stays linear on hostile YAML and Dockerfile input", () => {
+    // A long whitespace run with no key after it is the classic shape for
+    // `\s*-?\s*`, which splits the run every way before failing.
+    const yaml = "image:\n" + "  repository: a\n".repeat(100_000) + ("image: {" + "a,".repeat(200_000) + "\n")
+      + " ".repeat(200_000) + "x\n" + "- " + " ".repeat(200_000) + "x\n"
+      // services list items: long keys, whitespace runs, many items.
+      + "services:\n" + "  - " + "a".repeat(200_000) + " b\n" + "    name" + " ".repeat(200_000) + "x\n"
+      + "  - name:" + " ".repeat(200_000) + "\n" + "  - x:1\n".repeat(100_000)
+      + "services: [" + "a,".repeat(200_000) + "\n";
+    const docker = "FROM alpine:3\n" + ("RUN " + "--mount=from=,".repeat(50_000) + "\n").repeat(4)
+      + "COPY " + "--a ".repeat(100_000) + "x\n";
+    const t0 = Date.now();
+    extractImageReferences(yaml, "values.yaml");
+    extractImageReferences(docker, "Dockerfile");
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+});

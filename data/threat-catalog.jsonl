@@ -82104,7 +82104,7 @@
 {"type":"package","value":"openvsx:ellacrity.recoil@0.7.4","severity":"critical","confidence":0.9,"source":"MAL-2025-191160 (google-open-source-security)","firstSeen":"2025-11-19"}
 {"type":"package","value":"openvsx:codejoy.codejoy-vscode-extension@1.8.3","severity":"critical","confidence":0.9,"source":"MAL-2025-191159 (google-open-source-security)","firstSeen":"2025-11-19"}
 {"type":"package","value":"openvsx:codejoy.codejoy-vscode-extension@1.8.4","severity":"critical","confidence":0.9,"source":"MAL-2025-191159 (google-open-source-security)","firstSeen":"2025-11-19"}
-{"type":"package","value":"vscode:cline-ai-main.cline-ai-agent@3.1.3","severity":"critical","confidence":0.9,"source":"MAL-2025-191157 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"vscode:cline-ai-main.cline-ai-agent","severity":"critical","confidence":0.9,"source":"MAL-2025-191157 (google-open-source-security)","firstSeen":"2025-11-19"}
 {"type":"package","value":"openvsx:CodeInKlingon.git-worktree-menu@1.0.9","severity":"critical","confidence":0.9,"source":"MAL-2025-191158 (google-open-source-security)","firstSeen":"2025-11-19"}
 {"type":"package","value":"openvsx:CodeInKlingon.git-worktree-menu@1.0.91","severity":"critical","confidence":0.9,"source":"MAL-2025-191158 (google-open-source-security)","firstSeen":"2025-11-19"}
 {"type":"package","value":"vscode:EffetMer.darkgpt","severity":"critical","confidence":0.9,"source":"MAL-2025-192568","firstSeen":"2025-12-10"}

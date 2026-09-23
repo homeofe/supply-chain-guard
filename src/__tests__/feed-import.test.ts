@@ -354,6 +354,67 @@ describe("mapOsvMalwareRecord", () => {
     ]);
   });
 
+  // The same record shape also encodes an attacker-created extension, which a
+  // version pin cannot catch in a recommendation (no version there). The
+  // registry decides: removed -> one whole-extension block; live or no
+  // definitive answer -> the pins stay.
+  describe("resolveExtensionBlockShape", () => {
+    const pinnedRecord = (ecosystem: string, name: string) =>
+      osvMalwareRecord({
+        affected: [{ package: { ecosystem, name }, ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }], versions: ["1.0.0", "1.0.1"] }],
+      });
+    const fakeRegistry = (removed: Set<string>, mode: "ok" | "throw" | "500" = "ok") =>
+      (async (url: string, init?: { body?: string }) => {
+        if (mode === "throw") throw new Error("network down");
+        if (mode === "500") return new Response("", { status: 500 });
+        if (url.startsWith("https://open-vsx.org/api/")) {
+          const id = url.slice("https://open-vsx.org/api/".length).split("/").map(decodeURIComponent).join(".");
+          return new Response("{}", { status: removed.has(`openvsx:${id}`) ? 404 : 200 });
+        }
+        const id = JSON.parse(init?.body ?? "{}").filters[0].criteria[0].value as string;
+        const extensions = removed.has(`vscode:${id}`) ? [] : [{ extensionName: id }];
+        return new Response(JSON.stringify({ results: [{ extensions }] }), { status: 200 });
+      }) as unknown as typeof fetch;
+
+    it("collapses the pins of an extension the registry removed, on both registries", async () => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = [
+        ...mapOsvMalwareRecord(pinnedRecord("VSCode", "scgpub.gone")).entries,
+        ...mapOsvMalwareRecord(pinnedRecord("VSCode:https://open-vsx.org", "scgpub.gone-ovsx")).entries,
+      ];
+      const { entries, collapsed } = await resolveExtensionBlockShape(candidates, {
+        fetchImpl: fakeRegistry(new Set(["vscode:scgpub.gone", "openvsx:scgpub.gone-ovsx"])),
+      });
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["vscode:scgpub.gone", "openvsx:scgpub.gone-ovsx"]);
+      expect(collapsed).toBe(2);
+      expect(entries.every((e: Record<string, unknown>) => !("_pinnedFromWholeRange" in e))).toBe(true);
+    });
+
+    it("keeps the pins of a live extension (a hijacked legitimate one)", async () => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = mapOsvMalwareRecord(pinnedRecord("VSCode", "scgpub.live")).entries;
+      const { entries } = await resolveExtensionBlockShape(candidates, { fetchImpl: fakeRegistry(new Set()) });
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["vscode:scgpub.live@1.0.0", "vscode:scgpub.live@1.0.1"]);
+    });
+
+    it.each(["throw", "500"] as const)("keeps the pins when the registry gives no definitive answer (%s)", async (mode) => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = mapOsvMalwareRecord(pinnedRecord("VSCode:https://open-vsx.org", "scgpub.unknown")).entries;
+      const { entries, collapsed } = await resolveExtensionBlockShape(candidates, { fetchImpl: fakeRegistry(new Set(["openvsx:scgpub.unknown"]), mode) });
+      expect(collapsed).toBe(0);
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["openvsx:scgpub.unknown@1.0.0", "openvsx:scgpub.unknown@1.0.1"]);
+    });
+
+    it("never touches entries it did not pin (npm, explicit ranges)", async () => {
+      const { resolveExtensionBlockShape } = await load();
+      const npm = { type: "package", value: "scg-fixture-x@1.0.0", severity: "critical", confidence: 1, _ecosystemPrefix: "", _name: "scg-fixture-x" };
+      let calls = 0;
+      const { entries } = await resolveExtensionBlockShape([npm], { fetchImpl: (async () => { calls++; return new Response("", { status: 404 }); }) as unknown as typeof fetch });
+      expect(entries).toEqual([npm]);
+      expect(calls).toBe(0);
+    });
+  });
+
   it("keeps a whole-package extension verdict when no versions are listed", async () => {
     const { mapOsvMalwareRecord } = await load();
     const result = mapOsvMalwareRecord(

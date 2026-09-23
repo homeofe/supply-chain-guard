@@ -7,7 +7,7 @@ import {
   MALICIOUS_PACKAGE_PATTERNS,
   PYPI_TYPOSQUAT_PATTERNS,
 } from "../patterns.js";
-import { matchPackageIOC, getBundledFeed } from "../threat-intel.js";
+import { matchPackageIOC, getBundledFeed, splitPackageIOCValue } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { checkPackageName } from "../npm-scanner.js";
 import type { Finding } from "../types.js";
@@ -7248,6 +7248,31 @@ describe("Campaign Signatures", () => {
         const id = e.value.slice("edge:".length);
         expect(feed.some((i) => i.value === `chrome:${id}`), id).toBe(false);
       }
+    });
+
+    // Firefox add-on ids are often email-shaped. Those entries were read as
+    // name@version and could never match (28 of the 40), while the tests only
+    // ever exercised a {GUID} id.
+    it("matches an email-shaped Firefox add-on id from the bundle", async () => {
+      const emailShaped = campaign("Firefox Offside wallet theft")
+        .map((i) => i.value.slice("firefox:".length))
+        .filter((id) => !id.startsWith("{"));
+      expect(emailShaped.length).toBeGreaterThanOrEqual(28);
+      const id = emailShaped[0];
+      fs.mkdirSync(path.join(tempDir, "addon"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, "addon", "manifest.json"), JSON.stringify({
+        manifest_version: 2, name: "x", version: "1.0.0",
+        browser_specific_settings: { gecko: { id } },
+      }));
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter((f) => f.rule === "BROWSER_MALICIOUS_EXTENSION");
+      expect(hits.map((f) => f.match?.split("@1.0.0")[0])).toEqual([id]);
+    });
+
+    it("still reads a version after an email-shaped Firefox id", () => {
+      expect(splitPackageIOCValue("firefox", "a@b.example@1.2.3")).toEqual({ name: "a@b.example", version: "1.2.3" });
+      expect(splitPackageIOCValue("firefox", "a@b.example")).toEqual({ name: "a@b.example", version: undefined });
+      expect(splitPackageIOCValue("npm", "x@b.example")).toEqual({ name: "x", version: "b.example" });
     });
 
     it("flags the removed JetBrains plugin required by a project", async () => {

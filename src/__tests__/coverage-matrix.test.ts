@@ -23,7 +23,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { scan } from "../scanner.js";
-import { getBundledFeed, type FeedIOC } from "../threat-intel.js";
+import { getBundledFeed, splitPackageIOCValue, type FeedIOC } from "../threat-intel.js";
 import { checkBadVersion } from "../ioc-blocklist.js";
 import coverage from "../ecosystem-coverage.json" with { type: "json" };
 
@@ -38,12 +38,14 @@ function bundled(prefix: string, shape: "pinned" | "bare", ok: (name: string, ve
     if (i.type !== "package") continue;
     if (prefix ? !i.value.startsWith(`${prefix}:`) : i.value.includes(":")) continue;
     const rest = prefix ? i.value.slice(prefix.length + 1) : i.value;
-    const at = rest.lastIndexOf("@");
-    if (shape === "pinned" && at > 0) {
-      const d = { name: rest.slice(0, at), version: rest.slice(at + 1) };
+    // The production splitter, so the matrix can never read a value differently
+    // from the matcher (it once saw email-shaped Firefox ids as "pinned").
+    const split = splitPackageIOCValue(prefix, rest);
+    if (shape === "pinned" && split.version !== undefined) {
+      const d = { name: split.name, version: split.version };
       if (ok(d.name, d.version)) return d;
     }
-    if (shape === "bare" && at <= 0 && ok(rest, "1.0.0")) return { name: rest, version: "1.0.0" };
+    if (shape === "bare" && split.version === undefined && ok(rest, "1.0.0")) return { name: rest, version: "1.0.0" };
   }
   return undefined;
 }

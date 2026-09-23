@@ -2313,8 +2313,18 @@ function recordMalformedManifest(
 /**
  * Scan a project directory for PyPI dependency confusion risks.
  * Reads requirements.txt and pyproject.toml.
+ *
+ * `network: false` keeps every offline check (AI-hallucinated names, manifest
+ * coverage records) and skips the PyPI metadata lookups, which send each
+ * dependency name to pypi.org. The directory `scan` passes false unless
+ * --check-registry is given, because it documents zero network requests; the
+ * `confusion` command, whose purpose is that lookup, keeps the default.
  */
-export async function scanPypiDependencyConfusion(projectDir: string): Promise<Finding[]> {
+export async function scanPypiDependencyConfusion(
+  projectDir: string,
+  options: { network?: boolean } = {},
+): Promise<Finding[]> {
+  const network = options.network !== false;
   const findings: Finding[] = [];
   const packageReferences: PypiPackageReference[] = [];
 
@@ -2382,6 +2392,9 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
       });
       continue;
     }
+
+    // Everything below asks pypi.org about this name.
+    if (!network) continue;
 
     // Internal name pattern
     const looksInternal = INTERNAL_NAME_PATTERNS.some((p) => p.test(normalizedName));

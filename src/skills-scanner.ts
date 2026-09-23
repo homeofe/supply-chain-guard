@@ -778,19 +778,37 @@ function collectTaskCommandLines(
       typeof runOptions === "object" &&
       (runOptions as Record<string, unknown>).runOn === "folderOpen";
 
+    // A platform override is MERGED into the task by VS Code: its command or
+    // args replace the base ones, the rest is inherited. Judging the override
+    // on its own missed `command: "node"` in the base with the asset in
+    // `windows.args`.
     const shapes: Record<string, unknown>[] = [t];
     for (const platform of ["windows", "linux", "osx"]) {
       const override = t[platform];
       if (override !== null && typeof override === "object") {
-        shapes.push(override as Record<string, unknown>);
+        shapes.push({ ...t, ...(override as Record<string, unknown>) });
       }
     }
 
+    // `command` may also be an object: { value, quoting }.
+    const renderCommand = (command: unknown): string => {
+      if (typeof command === "string") return command;
+      if (command !== null && typeof command === "object") {
+        const v = (command as Record<string, unknown>).value;
+        if (typeof v === "string") return v;
+      }
+      return "";
+    };
+
+    const seen = new Set<string>();
     for (const shape of shapes) {
-      const command = typeof shape.command === "string" ? shape.command : "";
+      const command = renderCommand(shape.command);
       const args = renderArgs(shape.args);
       const line = [command, ...args].filter(Boolean).join(" ").trim();
-      if (line) out.push({ line, autoRun });
+      if (line && !seen.has(line)) {
+        seen.add(line);
+        out.push({ line, autoRun });
+      }
     }
   }
   return out;
@@ -921,6 +939,30 @@ export function scanEditorTasksContent(
 ): Finding[] {
   const findings: Finding[] = [];
   for (const { line, autoRun } of collectTaskCommandLines(parseJsoncObject(content))) {
+    const finding = commandLineFinding(line, autoRun, relativePath, EDITOR_TASK_CARRIER);
+    if (finding) findings.push(finding);
+  }
+  return findings;
+}
+
+/** True for a VS Code multi-root workspace file, at any depth. */
+export function isCodeWorkspaceFile(relativePath: string): boolean {
+  return relativePath.toLowerCase().endsWith(".code-workspace");
+}
+
+/**
+ * Scan a *.code-workspace file. Its `tasks` block is a tasks.json document
+ * ({ version, tasks: [...] }) and auto-runs on folderOpen exactly like
+ * .vscode/tasks.json when the workspace is opened.
+ */
+export function scanCodeWorkspaceContent(
+  content: string,
+  relativePath: string,
+): Finding[] {
+  const doc = parseJsoncObject(content);
+  if (doc === null || typeof doc !== "object") return [];
+  const findings: Finding[] = [];
+  for (const { line, autoRun } of collectTaskCommandLines((doc as Record<string, unknown>).tasks)) {
     const finding = commandLineFinding(line, autoRun, relativePath, EDITOR_TASK_CARRIER);
     if (finding) findings.push(finding);
   }

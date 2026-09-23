@@ -9,17 +9,20 @@
  *   - `pom.xml`: `<dependency>`, `<plugin>`, `<extension>` and `<parent>`.
  *     Plugins and extensions execute during the build, so they are
  *     dependencies in the sense that matters here. A `${property}` version is
- *     resolved from the pom's own `<properties>`; anything else stays unknown.
+ *     resolved from the pom's own `<properties>` (top level, then profiles);
+ *     anything else stays unknown.
  *   - `gradle.lockfile`: `group:artifact:version=configurations`, exact.
- *   - `*.gradle` / `*.gradle.kts`: quoted `group:artifact:version` strings.
- *   - `gradle/libs.versions.toml`: the `[libraries]` table of a version catalog.
+ *   - `*.gradle` / `*.gradle.kts`: quoted `group:artifact:version` strings, and
+ *     `conf "group:artifact"` with a variable or no version (unknown).
+ *   - `gradle/libs.versions.toml`: the `[libraries]` and `[plugins]` tables of
+ *     a version catalog, including rich versions (`{ strictly = "v" }`).
  *   - Gradle named arguments (`group: 'g', name: 'a', version: 'v'` and the
  *     Kotlin `group = "g", name = "a", version = "v"` form).
- *   - Gradle `plugins { id("x") version "v" }`, as the plugin marker artifact
- *     `x:x.gradle.plugin` that the id resolves through.
- *   - SBT (`*.sbt`): `"g" % "a" % "v"`, and `"g" %% "a" % "v"`, whose artifact
- *     carries the Scala binary version the file does not state, so each
- *     binary version in use (2.12, 2.13, 3) is a candidate.
+ *   - Gradle `plugins { id("x") version "v" }` and `kotlin("x") version "v"`,
+ *     as the plugin marker artifact `x:x.gradle.plugin` the id resolves through.
+ *   - SBT (`*.sbt`): `"g" % "a" % v`, and `"g" %% "a" % v` / `%%%` (Scala.js),
+ *     whose artifact carries the Scala binary version the file does not state,
+ *     so each binary version (2.11, 2.12, 2.13, 3) is a candidate.
  *   - Bazel `maven_install.json` (rules_jvm_external), both lockfile formats.
  *
  * An unresolved version is passed as unknown, so only a whole-artifact entry
@@ -29,6 +32,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import { stripHashComment, lineAtOffset } from "./text-lines.js";
 
 export interface MavenCoordinate {
   group: string;
@@ -59,11 +63,6 @@ export function isMavenFile(relativePath: string): boolean {
   return basename.endsWith(".versions.toml") && parts[parts.length - 2] === "gradle";
 }
 
-function lineAt(content: string, offset: number): number {
-  let line = 1;
-  for (let i = 0; i < offset && i < content.length; i++) if (content.charCodeAt(i) === 10) line++;
-  return line;
-}
 
 /** Blank out a region, keeping newlines so offsets and line numbers survive. */
 function blank(text: string): string {
@@ -73,22 +72,22 @@ function blank(text: string): string {
 function extractPom(content: string): MavenCoordinate[] {
   const source = content.replace(/<!--[\s\S]*?-->/g, blank);
 
-  const properties = new Map<string, string>();
-  const propsBlock = /<properties>([\s\S]*?)<\/properties>/.exec(source);
-  if (propsBlock) {
-    for (const m of (propsBlock[1] ?? "").matchAll(/<([A-Za-z][\w.-]*)>\s*([^<]*?)\s*<\/\1>/g)) {
-      properties.set(m[1]!, m[2]!);
-    }
-  }
+  // Model properties live in the project's <properties> and in each
+  // profile's; a <properties> under a plugin <configuration> is plugin input,
+  // not a model property. The top level wins over a profile. Versions are
+  // resolved after the walk, since properties may follow the dependencies.
+  const topProperties = new Map<string, string>();
+  const profileProperties = new Map<string, string>();
   const resolve = (value: string | undefined): string | undefined => {
     if (value === undefined) return undefined;
-    const v = value.trim().replace(/\$\{([^}]+)\}/g, (_, key: string) => properties.get(key) ?? "\u0000");
+    const v = value.trim().replace(/\$\{([^}]+)\}/g, (_, key: string) =>
+      topProperties.get(key) ?? profileProperties.get(key) ?? "\u0000");
     return new RegExp(`^${VERSION}$`).test(v) ? v : undefined;
   };
 
   interface Frame { name: string; offset: number; fields: Record<string, string> }
   const stack: Frame[] = [];
-  const out: MavenCoordinate[] = [];
+  const pending: { group: string; artifact: string; version: string | undefined; line: number }[] = [];
   const tag = /<(\/?)([A-Za-z][\w.:-]*)\b[^>]*?(\/?)>/g;
   let textStart = 0;
   for (let m = tag.exec(source); m; m = tag.exec(source)) {
@@ -107,6 +106,12 @@ function extractPom(content: string): MavenCoordinate[] {
     const frame = stack[idx]!;
     stack.length = idx;
     const parent = stack[stack.length - 1];
+    if (parent?.name === "properties") {
+      const owner = stack[stack.length - 2]?.name;
+      const scope = owner === "project" ? topProperties : owner === "profile" ? profileProperties : undefined;
+      if (scope && !scope.has(name!)) scope.set(name!, text.trim());
+      continue;
+    }
     // Recorded on the DIRECT parent only, so an <exclusion>'s or a
     // <configuration>'s groupId never lands on the enclosing dependency.
     if ((name === "groupId" || name === "artifactId" || name === "version") && parent) {
@@ -115,11 +120,11 @@ function extractPom(content: string): MavenCoordinate[] {
       const group = frame.fields.groupId ?? (name === "plugin" ? DEFAULT_PLUGIN_GROUP : undefined);
       const artifact = frame.fields.artifactId;
       if (group && artifact && new RegExp(`^${ID}$`).test(group) && new RegExp(`^${ID}$`).test(artifact)) {
-        out.push({ group, artifact, version: resolve(frame.fields.version), line: lineAt(source, frame.offset) });
+        pending.push({ group, artifact, version: frame.fields.version, line: lineAtOffset(source, frame.offset) });
       }
     }
   }
-  return out;
+  return pending.map((c) => ({ ...c, version: resolve(c.version) }));
 }
 
 function extractGradleLockfile(content: string): MavenCoordinate[] {
@@ -154,14 +159,59 @@ function extractGradleScript(content: string): MavenCoordinate[] {
     for (const m of line.matchAll(re)) {
       out.push({ group: m[2]!, artifact: m[3]!, version: m[4], line: i + 1 });
     }
+    // Same artifact with a variable, catalog accessor or no version at all
+    // (platform/BOM-managed): the version is unknown, the artifact is not.
+    for (const m of line.matchAll(DECLARATION)) {
+      const [, configuration, , group, artifact, rest] = m;
+      if (!isGradleConfiguration(configuration!)) continue;
+      if (rest !== undefined && LITERAL_TAIL.test(rest)) continue; // read above, with its version
+      out.push({ group: group!, artifact: artifact!, version: undefined, line: i + 1 });
+    }
     const named = namedCoordinate(line);
     if (named) out.push({ ...named, line: i + 1 });
-    const plugin = new RegExp(`\\bid\\s*\\(?\\s*['"](${ID})['"]\\s*\\)?\\s+version\\s*\\(?\\s*['"](${VERSION})['"]`).exec(line);
+    const plugin = PLUGIN_ID.exec(line);
     if (plugin) {
       out.push({ group: plugin[1]!, artifact: `${plugin[1]}.gradle.plugin`, version: plugin[2], line: i + 1 });
     }
+    // kotlin("x") in plugins {} is the id org.jetbrains.kotlin.x; without a
+    // version it is the dependency shorthand instead, so a version is required.
+    const kotlin = KOTLIN_PLUGIN.exec(line);
+    if (kotlin) {
+      const id = `org.jetbrains.kotlin.${kotlin[1]}`;
+      out.push({ group: id, artifact: `${id}.gradle.plugin`, version: kotlin[2], line: i + 1 });
+    }
   });
   return out;
+}
+
+// Spacing is [ \t]* with no two runs adjacent: `\s*\(?\s*` is quadratic on a
+// long whitespace run, since both runs can split it every way.
+const PLUGIN_ID = new RegExp(
+  `\\bid[ \\t]*(?:\\([ \\t]*)?['"](${ID})['"](?:[ \\t]*\\))?[ \\t]+version[ \\t]*(?:\\([ \\t]*)?['"](${VERSION})['"]`);
+const KOTLIN_PLUGIN = new RegExp(
+  `\\bkotlin[ \\t]*\\([ \\t]*"([a-z][A-Za-z0-9_.-]*)"[ \\t]*\\)[ \\t]+version[ \\t]*(?:\\([ \\t]*)?"(${VERSION})"`);
+
+/** `conf "g:a[:rest]"`, `conf("g:a[:rest]")`, optionally wrapped in platform(...). */
+const DECLARATION = new RegExp(
+  `\\b([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?:\\([ \\t]*)?(?:(?:platform|enforcedPlatform|testFixtures)[ \\t]*\\([ \\t]*)?`
+  + `(['"])(${ID}):(${ID})(?::([^'"\\s]*))?\\2`, "g");
+/** A literal version tail, as the coordinate-string regex reads it. */
+const LITERAL_TAIL = new RegExp(`^${VERSION}(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9]+)?$`);
+
+const GRADLE_CONFIGURATIONS = new Set([
+  "implementation", "api", "compile", "compileOnly", "compileOnlyApi", "runtime", "runtimeOnly",
+  "annotationProcessor", "kapt", "ksp", "classpath", "developmentOnly", "detektPlugins", "lintChecks",
+  "coreLibraryDesugaring",
+]);
+const GRADLE_CONFIGURATION_SUFFIXES = ["Implementation", "Api", "CompileOnly", "RuntimeOnly", "AnnotationProcessor"];
+
+/**
+ * A dependency configuration: a version-less `"g:a"` elsewhere (a
+ * substitution target, an exclude, a log line) is not something the build
+ * resolves, so only a known configuration or a source-set variant counts.
+ */
+function isGradleConfiguration(name: string): boolean {
+  return GRADLE_CONFIGURATIONS.has(name) || GRADLE_CONFIGURATION_SUFFIXES.some((s) => name.length > s.length && name.endsWith(s));
 }
 
 /** `group: 'g', name: 'a', version: 'v'` (Groovy) or `group = "g", name = "a", version = "v"` (Kotlin). */
@@ -177,17 +227,22 @@ function namedCoordinate(line: string): Omit<MavenCoordinate, "line"> | null {
   return { group, artifact, version: version && new RegExp(`^${VERSION}$`).test(version) ? version : undefined };
 }
 
-/** Scala binary versions an SBT `%%` dependency may resolve to. */
-const SCALA_BINARY_VERSIONS = ["2.12", "2.13", "3"];
+/** Scala binary versions an SBT `%%` / `%%%` dependency may resolve to. */
+const SCALA_BINARY_VERSIONS = ["2.11", "2.12", "2.13", "3"];
 
 function extractSbt(content: string): MavenCoordinate[] {
   const out: MavenCoordinate[] = [];
-  const re = new RegExp(`"(${ID})"\\s*(%%?)\\s*"(${ID})"\\s*%\\s*"(${VERSION})"`, "g");
+  // The version is a string literal or a val (`% libVersion`, `% V.lib`),
+  // which stays unknown.
+  const re = new RegExp(`"(${ID})"[ \\t]*(%{1,3})[ \\t]*"(${ID})"[ \\t]*%[ \\t]*(?:"(${VERSION})"|[A-Za-z_][A-Za-z0-9_.]*)`, "g");
   content.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.replace(/\/\/.*$/, "");
     for (const m of line.matchAll(re)) {
       const [, group, op, artifact, version] = m;
-      const artifacts = op === "%%" ? [artifact!, ...SCALA_BINARY_VERSIONS.map((v) => `${artifact}_${v}`)] : [artifact!];
+      // %% resolves only the _<scala binary> artifact and %%% the Scala.js
+      // one; the plain name is a different artifact the build never fetches.
+      const artifacts = op === "%" ? [artifact!]
+        : SCALA_BINARY_VERSIONS.map((v) => `${artifact}_${op === "%%%" ? "sjs1_" : ""}${v}`);
       for (const a of artifacts) out.push({ group: group!, artifact: a, version, line: i + 1 });
     }
   });
@@ -241,9 +296,27 @@ function extractVersionCatalog(content: string): MavenCoordinate[] {
   const out: MavenCoordinate[] = [];
   const versions = new Map<string, string>();
   const libraries: { key: string; value: string; line: number }[] = [];
+  const plugins: { value: string; line: number }[] = [];
   let section = "";
+
+  const str = (body: string, key: string): string | undefined =>
+    new RegExp(`(?:^|[{,\\s])${key.replace(/\./g, "\\.")}\\s*=\\s*"([^"]*)"`).exec(body)?.[1];
+  // A rich version `{ strictly = "x" }` (or require / prefer): strictly is
+  // what resolves; prefer is chosen over a require lower bound.
+  const rich = (body: string): string | undefined =>
+    str(body, "strictly") ?? str(body, "prefer") ?? str(body, "require");
+  /** `version = "x"`, `version.ref = "k"` or `version = { strictly = "x" }` inside a table body. */
+  const versionOf = (body: string): string | undefined => {
+    const ref = str(body, "version.ref");
+    if (ref !== undefined) return versions.get(ref);
+    const plain = str(body, "version");
+    if (plain !== undefined) return plain;
+    const open = /(?:^|[{,\s])version\s*=\s*\{/.exec(body);
+    return open ? rich(body.slice(open.index)) : undefined;
+  };
+
   content.split(/\r?\n/).forEach((raw, i) => {
-    const line = raw.replace(/\s+#.*$/, "").trim();
+    const line = stripHashComment(raw).trim();
     const header = /^\[([^\]]+)\]$/.exec(line);
     if (header) {
       section = header[1]!.trim();
@@ -251,16 +324,17 @@ function extractVersionCatalog(content: string): MavenCoordinate[] {
     }
     const kv = /^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/.exec(line);
     if (!kv) return;
+    const value = kv[2]!.trim();
     if (section === "versions") {
-      const v = /^"([^"]*)"$/.exec(kv[2]!.trim());
-      if (v) versions.set(kv[1]!, v[1]!);
+      const v = /^"([^"]*)"$/.exec(value)?.[1] ?? (value.startsWith("{") ? rich(value) : undefined);
+      if (v !== undefined) versions.set(kv[1]!, v);
     } else if (section === "libraries") {
-      libraries.push({ key: kv[1]!, value: kv[2]!.trim(), line: i + 1 });
+      libraries.push({ key: kv[1]!, value, line: i + 1 });
+    } else if (section === "plugins") {
+      plugins.push({ value, line: i + 1 });
     }
   });
 
-  const str = (body: string, key: string): string | undefined =>
-    new RegExp(`(?:^|[{,\\s])${key.replace(/\./g, "\\.")}\\s*=\\s*"([^"]*)"`).exec(body)?.[1];
   const idRe = new RegExp(`^${ID}$`);
   const verRe = new RegExp(`^${VERSION}$`);
 
@@ -278,11 +352,26 @@ function extractVersionCatalog(content: string): MavenCoordinate[] {
         group = str(lib.value, "group");
         artifact = str(lib.value, "name");
       }
-      const ref = str(lib.value, "version.ref");
-      version = ref !== undefined ? versions.get(ref) : str(lib.value, "version");
+      version = versionOf(lib.value);
     }
     if (group && artifact && idRe.test(group) && idRe.test(artifact)) {
       out.push({ group, artifact, version: version && verRe.test(version) ? version : undefined, line: lib.line });
+    }
+  }
+
+  // [plugins]: a plugin id resolves through its marker artifact id:id.gradle.plugin.
+  for (const plugin of plugins) {
+    let id: string | undefined;
+    let version: string | undefined;
+    const plain = new RegExp(`^"(${ID})(?::(${VERSION}))?"$`).exec(plugin.value);
+    if (plain) {
+      [, id, version] = plain;
+    } else if (plugin.value.startsWith("{")) {
+      id = str(plugin.value, "id");
+      version = versionOf(plugin.value);
+    }
+    if (id && idRe.test(id)) {
+      out.push({ group: id, artifact: `${id}.gradle.plugin`, version: version && verRe.test(version) ? version : undefined, line: plugin.line });
     }
   }
   return out;

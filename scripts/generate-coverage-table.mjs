@@ -40,16 +40,25 @@ export function countByPrefix(values, prefixes) {
   return n;
 }
 
-/** Split the declared ecosystems by whether any indicator ships for them. */
+/**
+ * Split the declared ecosystems: indicators ship and can match (`withData`,
+ * the only ones counted as covered), indicators ship but can only match a
+ * legacy format no current tool writes (`limited`, declared by a `limitation`
+ * in src/ecosystem-coverage.json), and no indicator yet (`without`).
+ */
 export function ecosystemsWithData(coverage, bundleValues, catalogValues) {
   const withData = [];
+  const limited = [];
   const without = [];
   for (const e of coverage.ecosystems) {
     const bundled = countByPrefix(bundleValues, e.prefixes);
     const catalog = countByPrefix(catalogValues, e.prefixes);
-    (bundled || catalog ? withData : without).push({ ...e, bundled, catalog });
+    const row = { ...e, bundled, catalog };
+    if (!bundled && !catalog) without.push(row);
+    else if (e.limitation) limited.push(row);
+    else withData.push(row);
   }
-  return { withData, without };
+  return { withData, limited, without };
 }
 
 export function renderTable(coverage, bundleValues, catalogValues) {
@@ -57,14 +66,15 @@ export function renderTable(coverage, bundleValues, catalogValues) {
     "| Ecosystem | Files read | Rule | Indicators shipped | Imported automatically from |",
     "| --- | --- | --- | --- | --- |",
   ];
-  const { withData, without } = ecosystemsWithData(coverage, bundleValues, catalogValues);
-  const byId = new Map([...withData, ...without].map((e) => [e.id, e]));
+  const { withData, limited, without } = ecosystemsWithData(coverage, bundleValues, catalogValues);
+  const byId = new Map([...withData, ...limited, ...without].map((e) => [e.id, e]));
   for (const declared of coverage.ecosystems) {
     const e = byId.get(declared.id);
-    const data = e.bundled && e.catalog ? "bundle + catalog"
+    const shipped = e.bundled && e.catalog ? "bundle + catalog"
       : e.bundled ? "bundle"
         : e.catalog ? "catalog"
           : "none yet (matcher ready)";
+    const data = e.limitation && (e.bundled || e.catalog) ? `${shipped} (legacy format only)` : shipped;
     const files = e.formats.map((f) => `\`${f}\``).join(", ");
     const rules = e.rules.map((r) => `\`${r}\``).join(", ");
     rows.push(`| ${e.label} | ${files} | ${rules} | ${data} | ${e.import} |`);
@@ -81,10 +91,13 @@ const joinList = (items) =>
  * "ecosystems", so the claims gate reads exactly one number here.
  */
 export function renderList(coverage, bundleValues, catalogValues) {
-  const { withData, without } = ecosystemsWithData(coverage, bundleValues, catalogValues);
+  const { withData, limited, without } = ecosystemsWithData(coverage, bundleValues, catalogValues);
   const lines = [
     `- Known-malicious indicators ship for ${withData.length} ecosystems: ${joinList(withData.map((e) => e.label))}.`,
   ];
+  for (const e of limited) {
+    lines.push(`- ${e.label} has a tested matcher and ships an indicator, but is not counted: ${e.limitation}.`);
+  }
   if (without.length) {
     lines.push(
       `- Matchers are built and tested, but no malicious package is publicly known yet, for ${without.length} more: ${joinList(without.map((e) => e.label))}. ` +

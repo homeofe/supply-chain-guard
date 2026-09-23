@@ -9,7 +9,8 @@
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { checkBadVersion } from "./ioc-blocklist.js";
+import { checkBadVersion } from "./ioc-blocklist.js";
+import { stripHashComment } from "./text-lines.js";
 import {
   listOptionalDirectory,
   matchPatternInFile,
@@ -484,7 +485,7 @@ export function scanCargoTomlDependencies(
   };
   const lines = content.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
-    const line = (lines[i] ?? "").replace(/\s+#.*$/, "").trim();
+    const line = stripHashComment((lines[i] ?? "")).trim();
     if (line.startsWith("[")) {
       flushSingle();
       const header = CARGO_DEP_TABLE.exec(line);

@@ -224,6 +224,220 @@ describe("jetbrains", () => {
   });
 });
 
+// Every manifest is attacker-controlled and may be up to 5 MB. Each shape
+// below took seconds (8-14 s measured) before its parser was made linear.
+describe("hostile input stays linear", () => {
+  const timed = (fn: () => unknown) => {
+    const start = performance.now();
+    fn();
+    return performance.now() - start;
+  };
+  const LIMIT_MS = 1000;
+  const shapes: Array<[string, string, () => string]> = [
+    ["cran DESCRIPTION whitespace run", "DESCRIPTION", () => `Package: x\nImports: a${" ".repeat(60_000)}!\n`],
+    ["plugin.xml unclosed comments", "src/main/resources/META-INF/plugin.xml", () => "<!--".repeat(80_000)],
+    ["externalDependencies.xml repeated <plugin", ".idea/externalDependencies.xml", () => "<plugin ".repeat(40_000)],
+    ["mix.exs unclosed tuples", "mix.exs", () => `defp deps do\n  [${'{:a, "b"'.repeat(40_000)}\nend\n`],
+    // 120k tuples (~1 MB): searching for "}" again per tuple took seconds here,
+    // the cached close search in hexTuples keeps it at milliseconds.
+    ["mix.exs unclosed tuples before one final }", "mix.exs", () => `defp deps do\n  [${'{:a, "b"'.repeat(120_000)}}]\nend\n`],
+    ["renv.lock with 8,000 packages", "renv.lock", () => {
+      const pkgs: Record<string, unknown> = {};
+      for (let i = 0; i < 8000; i++) pkgs[`p${i}`] = { Package: `p${i}`, Version: "1.0.0", Source: "Repository", Repository: "CRAN", Hash: "a".repeat(32) };
+      return JSON.stringify({ R: { Version: "4.3.0" }, Packages: pkgs }, null, 2);
+    }],
+    ["renv.lock whose needles are never found", "renv.lock", () => {
+      const pkgs: Record<string, unknown> = {};
+      for (let i = 0; i < 8000; i++) pkgs[`p${i}`] = { Package: `p${i}`, Version: "1.0.0", Hash: "a".repeat(64) };
+      return JSON.stringify({ Packages: pkgs });
+    }],
+    ["Package.resolved with 8,000 pins", "Package.resolved", () => {
+      const pins = [];
+      for (let i = 0; i < 8000; i++) pins.push({ identity: `p${i}`, kind: "remoteSourceControl", location: `https://github.com/o/p${i}.git`, state: { revision: "a".repeat(40), version: "1.0.0" } });
+      return JSON.stringify({ pins, version: 2 }, null, 2);
+    }],
+    ["Package.swift repeated unclosed .package(", "Package.swift", () => '.package(url: "https://github.com/o/r", '.repeat(20_000)],
+    ["conanfile.py unclosed requires list", "conanfile.py", () => `requires = (\n${'"a/1", '.repeat(40_000)}`],
+  ];
+  for (const [label, file, make] of shapes) {
+    it(`${label} completes in well under 2 s`, () => {
+      const content = make();
+      const matcher = ECOSYSTEM_MATCHERS.find((x) => x.isFile(file))!;
+      expect(timed(() => matcher.extract(content, file)), label).toBeLessThan(LIMIT_MS);
+    });
+  }
+});
+
+describe("review findings", () => {
+  it("helm: an import-values list item is not a new dependency, in either order", () => {
+    const before = [
+      "dependencies:",
+      "  - name: evil-chart",
+      "    import-values:",
+      "      - child: default.data",
+      "        parent: myimports",
+      "    repository: https://charts.example.com/stable",
+      "    version: 1.2.3",
+      "  - name: second",
+      "    repository: https://charts.example.com/stable",
+      "    version: 2.0.0",
+    ].join("\n");
+    const after = [
+      "dependencies:",
+      "  - name: evil-chart",
+      "    repository: https://charts.example.com/stable",
+      "    version: 1.2.3",
+      "    import-values:",
+      "      - child: default.data",
+      "      - name: not-a-dependency",
+      "        repository: https://charts.example.com/stable",
+    ].join("\n");
+    expect(refs("helm", before, "Chart.yaml")).toEqual([
+      "charts.example.com/stable/evil-chart@1.2.3",
+      "charts.example.com/stable/second@2.0.0",
+    ]);
+    expect(refs("helm", after, "Chart.yaml")).toEqual(["charts.example.com/stable/evil-chart@1.2.3"]);
+  });
+
+  it("swift: .package( arguments split across lines by a formatter", () => {
+    const pkg = [
+      "dependencies: [",
+      "    .package(",
+      '        url: "https://github.com/evil/multi.git",',
+      '        exact: "1.2.3"',
+      "    ),",
+      "    .package(",
+      '        url: "https://github.com/evil/ranged",',
+      '        from: "2.0.0"',
+      "    ),",
+      '    .package(url: "https://github.com/evil/single", .exact("3.0.0")),',
+      "    // .package(",
+      '    //     url: "https://github.com/evil/commented",',
+      "    // ),",
+      '    .package(path: "../Local"),',
+      "]",
+    ].join("\n");
+    const found = m("swift").extract(pkg, "Package.swift");
+    expect(found.map((r) => `${r.name}@${r.version ?? "-"}:${r.line}`)).toEqual([
+      "github.com/evil/multi@1.2.3:3",
+      "github.com/evil/ranged@-:7",
+      "github.com/evil/single@3.0.0:10",
+    ]);
+  });
+
+  it("conan: a multi-line requires tuple or list is read up to its closing bracket", () => {
+    const py = [
+      "class X(ConanFile):",
+      "    requires = (",
+      '        "evil/1.2.3",',
+      '        "fmt/10.1.1",  # formatting',
+      "    )",
+      "    tool_requires = [",
+      '        "cmake/3.27.0",',
+      "    ]",
+      '    name = "not/a-requirement"',
+      '    license = "MIT/X11"',
+    ].join("\n");
+    expect(refs("conan", py, "conanfile.py")).toEqual(["evil@1.2.3", "fmt@10.1.1", "cmake@3.27.0"]);
+  });
+
+  it("ansible: a role's Galaxy src wins over its alias name, in either order", () => {
+    const nameFirst = "roles:\n  - name: myalias\n    src: evilns.evilrole\n    version: 1.0.0\n";
+    const srcFirst = "roles:\n  - src: evilns.evilrole\n    name: my.alias\n";
+    const dottedAlias = "roles:\n  - name: my.alias\n    src: evilns.evilrole\n";
+    expect(refs("ansible", nameFirst, "requirements.yml")).toEqual(["evilns.evilrole@1.0.0"]);
+    expect(refs("ansible", srcFirst, "requirements.yml")).toEqual(["evilns.evilrole@-"]);
+    expect(refs("ansible", dottedAlias, "requirements.yml")).toEqual(["evilns.evilrole@-"]);
+    // No src: the name is the Galaxy identity. A git src is still skipped.
+    expect(refs("ansible", "roles:\n  - name: pub.role\n", "requirements.yml")).toEqual(["pub.role@-"]);
+    expect(refs("ansible", "roles:\n  - name: my.alias\n    src: https://github.com/x/r.git\n", "requirements.yml")).toEqual([]);
+  });
+
+  it("cocoapods: Podfile.lock skips external and non-trunk pods, reads quoted entries", () => {
+    const lock = [
+      "PODS:",
+      "  - AFNetworking (4.0.1)",
+      "  - LocalPod (1.0.0)",
+      "  - GitPod (2.0.0)",
+      "  - PrivatePod (3.0.0)",
+      '  - "quotedpod (1.0.0)":',
+      "    - AFNetworking (~> 4.0)",
+      '  - "evilpod/Sub (2.0.0)"',
+      "",
+      "DEPENDENCIES:",
+      "  - LocalPod (from `../LocalPod`)",
+      "",
+      "SPEC REPOS:",
+      "  trunk:",
+      "    - AFNetworking",
+      "    - quotedpod",
+      '    - "evilpod"',
+      "  https://github.com/private/specs.git:",
+      "    - PrivatePod",
+      "",
+      "EXTERNAL SOURCES:",
+      "  LocalPod:",
+      "    :path: \"../LocalPod\"",
+      "  GitPod:",
+      "    :git: https://github.com/x/gitpod.git",
+      "",
+      "COCOAPODS: 1.15.2",
+    ].join("\n");
+    expect(refs("cocoapods", lock, "Podfile.lock")).toEqual(["afnetworking@4.0.1", "quotedpod@1.0.0", "evilpod@2.0.0"]);
+    // The pre-1.7 master specs repo URL is trunk too.
+    const legacy = ["PODS:", "  - EvilPod (1.0.0)", "", "SPEC REPOS:", "  https://github.com/cocoapods/specs.git:", "    - EvilPod"].join("\n");
+    expect(refs("cocoapods", legacy, "Podfile.lock")).toEqual(["evilpod@1.0.0"]);
+  });
+
+  it("firefox: policies.Extensions.Locked ids are read; Extensions.Install URLs are not", () => {
+    const policy = JSON.stringify({ policies: { Extensions: {
+      Install: ["https://addons.example/evil.xpi"],
+      Locked: ["evil@addon.example", "other@addon.example"],
+    } } });
+    expect(m("chrome").extract(policy, "distribution/policies.json").map((r) => `${r.name}:${r.ecosystems}`))
+      .toEqual(["evil@addon.example:firefox", "other@addon.example:firefox"]);
+    // Chromium policies have no "policies" wrapper and no Extensions.Locked.
+    expect(m("chrome").extract(JSON.stringify({ Extensions: { Locked: ["x@y"] } }), "policies/managed/x.json")).toEqual([]);
+  });
+
+  it("cran: a GNU Octave or non-package DESCRIPTION is not read as CRAN", () => {
+    const octave = ["Package: signal", "Version: 1.4.5", "Depends: octave (>= 5.2.0), control (>= 3.3.1)", "License: GPL-3.0-or-later"].join("\n");
+    const octaveNameField = ["Name: signal", "Version: 1.4.5", "Depends: octave (>= 5.2.0), control (>= 3.3.1)"].join("\n");
+    const noPackage = ["Title: notes", "Depends: something"].join("\n");
+    expect(refs("cran", octave, "DESCRIPTION")).toEqual([]);
+    expect(refs("cran", octaveNameField, "DESCRIPTION")).toEqual([]);
+    expect(refs("cran", noPackage, "DESCRIPTION")).toEqual([]);
+    const r = ["Package: rpkg", "Version: 0.1.0", "Depends: R (>= 4.0), signal", "Imports: control"].join("\n");
+    expect(refs("cran", r, "DESCRIPTION")).toEqual(["signal@-", "control@-"]);
+  });
+
+  it("hex: only the deps body of mix.exs is read, not aliases or other tuples", () => {
+    const exs = [
+      "defmodule App.MixProject do",
+      "  use Mix.Project",
+      "  def project do",
+      '    [app: :app, version: "0.1.0", deps: deps(), aliases: aliases()]',
+      "  end",
+      "  defp aliases do",
+      '    [setup: ["deps.get"], test: [{:setup, "deps.get"}]]',
+      "  end",
+      "  defp deps do",
+      "    [",
+      '      {:evil_pkg, "~> 1.0"},',
+      '      {:pinned, "== 2.0.0"}',
+      "    ]",
+      "  end",
+      "  defp other do",
+      '    {:not_a_dep, "1.0.0"}',
+      "  end",
+      "end",
+    ].join("\n");
+    expect(refs("hex", exs, "mix.exs")).toEqual(["evil_pkg@-", "pinned@2.0.0"]);
+    const oneLine = 'defmodule A do\n  defp deps, do: [{:evil_pkg, "1.0.0"}]\n  def x, do: {:nope, "1.0.0"}\nend\n';
+    expect(refs("hex", oneLine, "mix.exs")).toEqual(["evil_pkg@1.0.0"]);
+  });
+});
+
 describe("scanRegistryFile", () => {
   const FEED: FeedIOC[] = [
     { type: "package", value: "edge:abcdefghijklmnopabcdefghijklmnop", severity: "critical", confidence: 1.0 },

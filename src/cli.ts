@@ -236,7 +236,7 @@ program
   .option("--export-graph <format>", "Export attack graph (json or mermaid)")
   .option("--sbom-output <file>", "Write CycloneDX 1.6 SBOM to a separate file")
   .option("--no-history", "Do not write risk history to .scg-history/ in the scanned repo")
-  .option("--check-registry", "Compare the local package.json version against the npm registry 'latest' dist-tag (requires network; off by default)")
+  .option("--check-registry", "Query public registries (requires network; off by default): npm 'latest' version drift for package.json, and PyPI metadata for each Python dependency (dependency-confusion signals). Sends those package names to npm and PyPI")
   .option("--all-findings", "Show every finding in text output instead of grouping repeated rule/file matches")
   .option("--two-tier", "Use two-tier gated verdict and risk scoring")
   .option("--scorecard <score>", "OpenSSF Scorecard score (0.0 - 10.0)")

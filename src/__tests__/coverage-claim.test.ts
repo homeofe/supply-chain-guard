@@ -36,6 +36,23 @@ describe("ecosystem coverage claim", () => {
     expect(text).toContain("for 2 more: Beta and npm.");
   });
 
+  // An ecosystem whose only indicators need a format no current tool writes
+  // (Homebrew: the legacy Brewfile.lock.json) ships data but is not covered.
+  it("lists a limited ecosystem separately and never counts it", () => {
+    const limitedCoverage = {
+      ecosystems: [
+        { id: "a", label: "Alpha", prefixes: ["alpha"] },
+        { id: "h", label: "Homebrew", prefixes: ["homebrew"], limitation: "needs a legacy lock file" },
+      ],
+    };
+    const split = ecosystemsWithData(limitedCoverage, ["alpha:x", "homebrew:t/f@1.0"], []);
+    expect(split.withData.map((e: { id: string }) => e.id)).toEqual(["a"]);
+    expect(split.limited.map((e: { id: string }) => e.id)).toEqual(["h"]);
+    const text = renderList(limitedCoverage, ["alpha:x", "homebrew:t/f@1.0"], []);
+    expect(text.match(/(\d+)\s+ecosystems\b/gi)).toEqual(["1 ecosystems"]);
+    expect(text).toContain("Homebrew has a tested matcher and ships an indicator, but is not counted: needs a legacy lock file.");
+  });
+
   it("agrees on the real data: count script, generated README list and advertised claim", () => {
     const { coverage: real, bundleValues, catalogValues } = load();
     const shipped = ecosystemsWithData(real, bundleValues, catalogValues).withData.length;

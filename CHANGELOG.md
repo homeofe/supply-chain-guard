@@ -172,17 +172,68 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - README, npm description, GitHub Action description and repository About
   rewritten around the ecosystem coverage, with the generated table replacing
   the hand-kept "Supported Ecosystems" list.
-- The advertised ecosystem count is 16: only ecosystems whose indicators
-  actually ship are counted. The eight with a tested matcher and no publicly
-  known malicious package (Swift, CocoaPods, Hex, CRAN, Conan, Terraform
-  modules, Helm, Ansible Galaxy) are named separately. Both lists are generated
-  from the shipped data and checked by `check:coverage`, and the count script
-  behind the claims gate uses the same split.
+- The advertised ecosystem count is 15: only ecosystems whose indicators
+  actually ship AND can match a format current tools write are counted. The
+  eight with a tested matcher and no publicly known malicious package (Swift,
+  CocoaPods, Hex, CRAN, Conan, Terraform modules, Helm, Ansible Galaxy) are
+  named separately, and so is Homebrew: its one indicator (the compromised
+  Trivy tap release 0.69.4) needs a version, which only the legacy
+  `Brewfile.lock.json` records, and current Homebrew writes no lock file. All
+  lists are generated from the shipped data and `src/ecosystem-coverage.json`,
+  checked by `check:coverage`, and the count script behind the claims gate uses
+  the same split.
 
 ### Fixed
 
 - `.claude/settings.json` hooks are parsed leniently too (comments, trailing
   commas), so one stray comma no longer hides every hook from the scan.
+- **A local `scan` sent Python dependency names to pypi.org.** The README
+  promises that `scan` on a local path makes no network requests unless
+  `--check-registry` is passed, but the PyPI dependency-confusion lookup ran on
+  every scan of a project with `requirements.txt` or `pyproject.toml`,
+  including internal-looking package names (measured with every network API
+  instrumented: the only outbound traffic of a scan over 21 manifest types was
+  one pypi.org request per Python dependency). The lookups now need
+  `--check-registry`; the offline checks (known AI-hallucinated names,
+  manifest coverage) still run on every scan.
+- **28 of the 40 bundled Firefox add-on indicators could never match.** Feed
+  values were split at their last "@", so an email-shaped add-on id
+  (`name@domain`) was read as a name plus a version. Firefox ids now keep the
+  domain; only a version-shaped tail is a version.
+- The Fake Font loader checks were hardened after review: the command pattern
+  now catches a quoted or backticked interpreter (`bash -c "node x.woff2"`), an
+  absolute interpreter path, a quoted asset path with spaces and a redirect
+  glued to the path, and still ignores `sh -c '...'` command strings that
+  only mention an image; a platform override is merged into its task the way
+  VS Code does it, a `{ value }` command object is read, and the tasks block of
+  a `.code-workspace` file is checked. `ASSET_DISGUISED_SCRIPT` no longer
+  trusts a font's first bytes (`true;`, `OTTO=0;` and `wOF2=0;` are font magic
+  numbers AND valid JavaScript), measures text over UTF-8 so an accented
+  comment cannot hide the script, and ignores a saved HTML or SVG page.
+- Lockfile whole-name findings are excused only by what the scan itself
+  reported: a direct dependency declared in a workspace member's package.json
+  is no longer reported a second time (and called transitive) by the root
+  lockfile, while an ignored or test-fixture manifest no longer silences the
+  lockfile. npm aliases are matched in `package-lock.json` (the entry's
+  `name`) and `yarn.lock` (`x@npm:<package>`), and workspace member entries of
+  a package-lock are no longer read as dependencies.
+- The importer collapses the version pins of an extension the Marketplace or
+  Open VSX has removed into a whole-extension block (see
+  docs/threat-feed-sources.md); one catalog entry,
+  `vscode:cline-ai-main.cline-ai-agent`, was corrected this way.
+- A workspace recommendation matched only by an Open VSX entry is reported at
+  medium and says it applies to Open VSX editors (VSCodium, Cursor), since the
+  same id may be another publisher's extension on the Marketplace.
+- Terraform: `source` is read as a provider only inside
+  `terraform { required_providers }` (a provisioner `file` or `aws_s3_object`
+  source was read as one), `.tf.json` modules and `//subdir` registry
+  submodules are matched, and unclosed module or lock-file blocks no longer
+  make the scan quadratic.
+- Manifest parsers that a crafted file could stall for minutes (line numbers
+  counted from the start for every hit, and a `\s+#` comment-strip regex that
+  backtracks on long whitespace) are linear now.
+- Python manifests under `vendor/` and `target/` are skipped like every other
+  nested manifest.
 - **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
   file as JSONC, and the scanner parsed it as strict JSON, so a single comment
   or trailing comma made the whole file read as empty. The real Fake Font
