@@ -1,3 +1,24 @@
+## v6.2.5 release preparation (2026-09-23) (claude-opus-5-5)
+
+Patch release carrying the 2026-09-23 threat intelligence update (PR 324:
+281 advisory-database package IOCs plus the Graphalgo Terraform/Go wave). No
+behaviour change beyond indicators and the scheduled cutoff advance.
+
+- Version bumped at all 16 configured `versionSites` plus `package.json`, read
+  from `aahp.config.json`. Every occurrence of the old version was listed per
+  file BEFORE replacing and all 33 were live version references (no historical
+  mention this time), replaced with a boundary-anchored pattern.
+  `package-lock.json` was left to `npm install --package-lock-only`.
+- `bundleCutoffDate` advanced 2026-08-23 -> 2026-08-24. The `feed-migrate`
+  plan moved 45 entries, all `firstSeen` 2026-08-23 importer entries with no
+  `campaign`/`family`. **Checked before `--write`, not after:** none of the 45
+  values (nor their bare names) appears in `src/__tests__`, `README.md` or
+  `docs/`, with a control in the other direction (a value known to be asserted,
+  `gogets.dev/btreex`, was found by the same lookup). So unlike v6.2.1, v6.2.3
+  and v6.2.4, no curation was needed.
+- The two Graphalgo Terraform providers still have no matcher; that open item
+  is recorded in the 2026-09-23 threat-intel note below.
+
 ## Threat intel 2026-09-23 (claude-opus-5-5)
 
 Daily scheduled run. No version bump, no release: the owner cuts that.
