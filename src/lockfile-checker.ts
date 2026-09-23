@@ -19,10 +19,13 @@
  * - Lockfile version downgrades
  */
 
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { parseJsonObject } from "./json-utils.js";
+import { lockfileFeedFindings, manifestReportedNames } from "./lockfile-feed.js";
+import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import {
   optionalFileExists,
   readOptionalUtf8File,
@@ -98,13 +101,31 @@ interface ParsedLockDependency {
  * A repo can contain several lockfiles (e.g. after a package-manager
  * migration); all present ones are checked.
  */
-export function checkLockfile(dir: string): Finding[] {
+export function checkLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   return [
     ...checkNpmLockfile(dir),
-    ...checkPnpmLockfile(dir),
-    ...checkYarnLockfile(dir),
-    ...checkBunLockfile(dir),
+    ...checkPnpmLockfile(dir, feed),
+    ...checkYarnLockfile(dir, feed),
+    ...checkBunLockfile(dir, feed),
   ];
+}
+
+/**
+ * Threat-feed findings for a non-npm lockfile. package-lock.json is matched on
+ * the per-file scan path in scanner.ts instead, which also covers nested
+ * package-lock.json files; this covers the root yarn/pnpm/bun lockfile.
+ */
+function feedFindingsFor(
+  dir: string,
+  deps: readonly ParsedLockDependency[],
+  lockfileName: string,
+  feed: FeedIOC[] | undefined,
+): Finding[] {
+  let manifest: string | null = null;
+  try {
+    manifest = fs.readFileSync(path.join(dir, "package.json"), "utf-8");
+  } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
+  return lockfileFeedFindings(deps, lockfileName, manifestReportedNames(manifest), feed ?? loadThreatIntel());
 }
 
 // ---------------------------------------------------------------------------
@@ -488,7 +509,7 @@ function checkOrphanedDependencies(
  * Check pnpm-lock.yaml for lockfile issues.
  * Supports v6 ("/name@1.2.3") and v9 ("name@1.2.3") package-key styles.
  */
-export function checkPnpmLockfile(dir: string): Finding[] {
+export function checkPnpmLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const lockfileName = "pnpm-lock.yaml";
   const lockfilePath = path.join(dir, lockfileName);
   const findings: Finding[] = [];
@@ -503,6 +524,7 @@ export function checkPnpmLockfile(dir: string): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
+  findings.push(...feedFindingsFor(dir, deps, lockfileName, feed));
   return findings;
 }
 
@@ -616,7 +638,7 @@ function parsePnpmPackageKey(rawKey: string): ParsedLockDependency | null {
  * like 'name@^1.0.0:') and Berry v2+ (YAML with __metadata, keys like
  * "name@npm:^1.0.0") automatically.
  */
-export function checkYarnLockfile(dir: string): Finding[] {
+export function checkYarnLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const lockfileName = "yarn.lock";
   const lockfilePath = path.join(dir, lockfileName);
   const findings: Finding[] = [];
@@ -631,6 +653,7 @@ export function checkYarnLockfile(dir: string): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
+  findings.push(...feedFindingsFor(dir, deps, lockfileName, feed));
   return findings;
 }
 
@@ -803,7 +826,7 @@ function parseYarnHeaderSpec(header: string): ParsedLockDependency | null {
  * with a low-severity finding instead. When both exist, bun uses the text
  * lockfile, so the binary one is not flagged.
  */
-export function checkBunLockfile(dir: string): Finding[] {
+export function checkBunLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const textPath = path.join(dir, "bun.lock");
   const binaryPath = path.join(dir, "bun.lockb");
@@ -835,12 +858,17 @@ export function checkBunLockfile(dir: string): Finding[] {
   }
 
   const packages = (lock as { packages?: unknown }).packages;
+  const deps: ParsedLockDependency[] = [];
   if (packages && typeof packages === "object") {
     for (const entry of Object.values(packages as Record<string, unknown>)) {
       const dep = parseBunPackageEntry(entry);
-      if (dep) checkParsedDependency(dep, "bun.lock", findings);
+      if (dep) {
+        checkParsedDependency(dep, "bun.lock", findings);
+        deps.push(dep);
+      }
     }
   }
+  findings.push(...feedFindingsFor(dir, deps, "bun.lock", feed));
   return findings;
 }
 

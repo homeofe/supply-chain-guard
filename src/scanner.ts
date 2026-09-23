@@ -34,7 +34,13 @@ import {
 import {
   maskMixedCommentsPreservingStrings,
 } from "./correlated-pattern-matchers.js";
-import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
+import { matchBareNpmIOC } from "./install-guard.js";
+import {
+  lockfileFeedFindings,
+  manifestDependencyCandidates,
+  manifestReportedNames,
+  type LockfileDependency,
+} from "./lockfile-feed.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
 import {
   hasPartialScanFinding,
@@ -581,7 +587,17 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Check package-lock.json for known-bad versions (v4.1)
     if (basename === "package-lock.json") {
-      checkLockfileBadVersions(content, relativePath, findings, threatFeed);
+      // The sibling manifest, so the lockfile does not re-report what the
+      // package.json check reports. A manifest that check skips (a test
+      // fixture path) or cannot read excuses nothing.
+      const manifestRel = path.posix.join(path.posix.dirname(relativePath.replace(/\\/g, "/")), "package.json");
+      let manifestContent: string | null = null;
+      if (!TEST_FILE_REGEX.test(manifestRel)) {
+        try {
+          manifestContent = fs.readFileSync(path.join(path.dirname(filePath), "package.json"), "utf-8");
+        } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
+      }
+      checkLockfileBadVersions(content, relativePath, findings, threatFeed, manifestContent);
     }
 
     // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
@@ -610,7 +626,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   }
 
   // Check lockfile integrity (T-006)
-  const lockfileFindings = checkLockfile(scanDir);
+  const lockfileFindings = checkLockfile(scanDir, threatFeed);
   findings.push(...lockfileFindings);
 
   // Check GitHub Actions workflows (#9)
@@ -1833,9 +1849,12 @@ function checkLockfileBadVersions(
   relativePath: string,
   findings: Finding[],
   feed: FeedIOC[],
+  manifestContent: string | null,
 ): void {
   const lock = parseJsonObject(content);
   if (!lock) return;
+
+  const resolved: LockfileDependency[] = [];
 
   // lockfile v2+ uses "packages" key
   const packages = lock.packages as Record<string, { version?: string }> | undefined;
@@ -1845,62 +1864,29 @@ function checkLockfileBadVersions(
       // Extract package name from path (e.g., "node_modules/axios" → "axios")
       const name = pkgPath.replace(/^node_modules\//, "").replace(/^.*node_modules\//, "");
       if (!name) continue;
-      const finding = checkBadVersion(name, entry.version, "npm");
-      if (finding) {
-        findings.push({ ...finding, file: relativePath });
-        continue; // one finding per dependency; the blocklist is the more specific source
-      }
-      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
+      resolved.push({ name, version: entry.version });
     }
   }
 
-  // lockfile v1 uses "dependencies" key
-  const deps = lock.dependencies as Record<string, { version?: string }> | undefined;
-  if (deps && !packages) {
-    for (const [name, entry] of Object.entries(deps)) {
-      if (!entry?.version) continue;
-      const finding = checkBadVersion(name, entry.version, "npm");
-      if (finding) {
-        findings.push({ ...finding, file: relativePath });
-        continue;
-      }
-      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
+  // lockfile v1 uses "dependencies" key, nested for non-hoisted versions
+  type V1Entry = { version?: string; dependencies?: Record<string, V1Entry> };
+  const walkV1 = (deps: Record<string, V1Entry> | undefined): void => {
+    for (const [name, entry] of Object.entries(deps ?? {})) {
+      if (entry?.version) resolved.push({ name, version: entry.version });
+      walkV1(entry?.dependencies);
     }
+  };
+  if (!packages) walkV1(lock.dependencies as Record<string, V1Entry> | undefined);
+
+  // The hand-kept blocklist is the more specific source: one finding per
+  // dependency, and the feed matcher below skips what it covers.
+  for (const { name, version } of resolved) {
+    const finding = version ? checkBadVersion(name, version, "npm") : null;
+    if (finding) findings.push({ ...finding, file: relativePath });
   }
-}
-
-/**
- * One feed finding for a resolved lockfile dependency, or nothing.
- *
- * Bare-name feed entries are deliberately NOT reported from here. They already
- * fire through checkMaliciousDependencyNames on the package.json path, and a
- * lockfile lists every transitive dependency, so emitting them again would
- * double-report each one and multiply it across the tree.
- */
-function pushPinnedFeedFinding(
-  name: string,
-  version: string,
-  relativePath: string,
-  findings: Finding[],
-  feed: FeedIOC[],
-): void {
-  const ioc = matchBareNpmIOC(name, version, feed);
-  if (!ioc) return;
-  // A bare-name entry matches ANY version, so it would have hit regardless of
-  // the lockfile. Only an entry pinned to this exact version is new information.
-  if (ioc.value.lastIndexOf("@") <= 0) return;
-
-  const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
-  findings.push({
-    rule: "LOCKFILE_MALICIOUS_VERSION",
-    description: `Lockfile resolves "${name}" to ${version}, a version listed in the threat feed as malicious${attrib}.`,
-    severity: "critical",
-    confidence: ioc.confidence ?? 0.95,
-    category: "supply-chain",
-    file: relativePath,
-    match: `${name}@${version}`,
-    recommendation: `Remove ${name}@${version}. Update the lockfile to a clean version and rotate any credentials the install may have had access to.`,
-  });
+  findings.push(
+    ...lockfileFeedFindings(resolved, relativePath, manifestReportedNames(manifestContent), feed),
+  );
 }
 
 /**
@@ -1954,31 +1940,12 @@ function checkMaliciousDependencyNames(
 ): void {
   const parsed = parseJsonObject(content);
   if (!parsed) return;
-  const pkg = parsed as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
-  };
   // Collect the package that is actually INSTALLED for each entry, not the key.
   // An npm alias ("utils": "npm:chalk-tempalte@1.0.0") installs the target while
   // the key is arbitrary attacker-chosen text, so keying off Object.keys() alone
-  // let a known-malicious package scan completely clean.
-  const candidates = new Map<string, { name: string; version?: string; alias?: string }>();
-  for (const group of [
-    pkg.dependencies,
-    pkg.devDependencies,
-    pkg.optionalDependencies,
-    pkg.peerDependencies,
-  ]) {
-    for (const [key, spec] of Object.entries(group ?? {})) {
-      const alias = resolveNpmAlias(spec);
-      const candidate = alias
-        ? { name: alias.name, version: alias.version, alias: key }
-        : { name: key, version: undefined as string | undefined };
-      candidates.set(`${candidate.name}@${candidate.version ?? ""}`, candidate);
-    }
-  }
+  // let a known-malicious package scan completely clean. Shared with the
+  // lockfile matcher (lockfile-feed.ts) so the two agree on what is reported.
+  const candidates = manifestDependencyCandidates(parsed);
 
   for (const { name, version, alias } of candidates.values()) {
     const ioc = matchBareNpmIOC(name, version, feed);

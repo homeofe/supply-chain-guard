@@ -118,13 +118,17 @@ describe("pinned feed IOCs match a resolved lockfile version", () => {
     expect(hits(r.findings)).toEqual([]);
   });
 
-  it("does NOT double-report a bare-name entry from the lockfile", async () => {
-    // Bare-name entries match any version and already fire on the package.json
-    // path. A lockfile lists every transitive dependency, so reporting them here
-    // too would multiply one finding across the tree.
+  it("reports a TRANSITIVE bare-name entry once, under its own rule, not as a pinned version", async () => {
+    // This test used to be called "does NOT double-report a bare-name entry",
+    // on the premise that bare names already fire on the package.json path.
+    // Its own fixture disproved that: package.json has NO dependencies, so the
+    // package is transitive and nothing at all reported it. A bare-name hit is
+    // now LOCKFILE_MALICIOUS_PACKAGE; lockfile-feed.test.ts covers the
+    // direct-dependency case, where the lockfile stays silent.
     const dir = project("bare", { [bare]: "1.2.3" });
     const r = await scan({ target: dir, format: "json" });
     expect(hits(r.findings)).toEqual([]);
+    expect(r.findings.filter((f) => f.rule === "LOCKFILE_MALICIOUS_PACKAGE")).toHaveLength(1);
   });
 
   it("leaves an ordinary dependency tree clean", async () => {

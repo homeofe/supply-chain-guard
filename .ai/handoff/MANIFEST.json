@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790155200",
-    "timestamp": "2026-09-23T09:20:00Z",
-    "commit": "33f8e18",
+    "session_id": "cli-1790156349",
+    "timestamp": "2026-09-23T09:39:10Z",
+    "commit": "19d951b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
       "checksum": "sha256:3d61eefc41a7a5b48788f29cea13df36493b49826c53ef9d7720ad292d3626e7",
-      "updated": "2026-09-23T09:19:49Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 10885,
       "summary": "Follows the Terraform provider matcher on the same branch (PR 326). The owner"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-23T08:37:46Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T09:19:59Z",
+      "updated": "2026-09-23T09:39:08Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:ef2240033dc06396a77e238fd7747ce1ce682042d2098a70090a66c2c832e8bb",
-      "updated": "2026-09-23T09:19:59Z",
+      "checksum": "sha256:6469a5abfcd4e1a018e0207a019fc56426e71ab485dd942483fc199156826f70",
+      "updated": "2026-09-23T09:39:08Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:b73901ad270e41bd6af2b988d4d330cc4ca9784293fabc68adcaac64f69daa16",
-      "updated": "2026-09-23T09:19:59Z",
+      "checksum": "sha256:8deb6e849dc202529214772422aec6644bbfe442ba1e952cc46a95f06038d7f1",
+      "updated": "2026-09-23T09:39:08Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-23T08:26:29Z",
+      "updated": "2026-09-23T09:28:57Z",
       "lines": 4,
       "summary": "{"
     }
@@ -81,6 +81,6 @@
   "token_budget": {
     "manifest_only": 85,
     "manifest_plus_core": 127201,
-    "full_read": 140219
+    "full_read": 140220
   }
 }

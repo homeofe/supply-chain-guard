@@ -91,6 +91,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **Malicious npm packages pulled in transitively were reported by nothing.**
+  A whole-name threat-feed entry (the package is malicious in every version,
+  which is most of the npm feed) fired only on `package.json`, i.e. on DIRECT
+  dependencies; and `yarn.lock`, `pnpm-lock.yaml` and `bun.lock` were matched
+  only against the small hand-kept known-bad-version list, never against the
+  feed. Measured with a real scan: of two feed-only indicators in four lockfile
+  formats, 1 of 8 was detected. All four lockfiles now match the feed
+  (`LOCKFILE_MALICIOUS_VERSION` for a pinned version, the new
+  `LOCKFILE_MALICIOUS_PACKAGE` for a whole-name entry), once per package per
+  lockfile, while a direct dependency the `package.json` check already reports
+  is not reported again. npm v1 lockfiles are now walked into nested
+  dependencies too. The test that pinned the old behaviour was named "does
+  NOT double-report a bare-name entry", but its own fixture had no direct
+  dependencies, so it asserted the false negative.
 - The importer no longer name-blocks hijacked legitimate extensions. OpenSSF
   records for GlassWorm-class incidents pair an "introduced: 0" range with the
   exact trojanized versions; read as a whole-package verdict, that would have
