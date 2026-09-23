@@ -15,7 +15,7 @@
     "src/__tests__/mcp-server.test.ts": "12c3d62d19fb1009564e007c306d86169c56852fc9059859b155c4763f13d9bf",
     "src/__tests__/policy-engine.test.ts": "da4ac6ecf3d3a92412ccbf093e798a02e1c9029ac6cb67224ebd5746671ab27f",
     "src/__tests__/self-scan-recognition.test.ts": "5f60abe80f6141228f24b5155955f4b93c4281829ba9e83ab2a9249d938d4e07",
-    "src/__tests__/threat-intel.test.ts": "414eeb04030353ce1745ddce3136f0be9a1d7d04bd52b57a7f0b1813e1bde443",
+    "src/__tests__/threat-intel.test.ts": "654b44a4f9334e599d943103be39e16917373c427fda98e8ad3a6712ecb075e4",
     "src/active-validation.ts": "648f60ff6092943cab38936477b8f68aeb904daad0baf3a020581601a21bd250",
     "src/attack-graph.ts": "0e4499d8731df9470bf4e2e094272470b438e35ae760bbdc12f61eed3d92af06",
     "src/broad-gap-pattern-matchers.ts": "dbf54d00a5bcc030318d9204b31e1df17b2b9deb34609eba37a503efa14b144f",
