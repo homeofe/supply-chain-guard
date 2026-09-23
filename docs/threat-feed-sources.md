@@ -124,6 +124,7 @@ ecosystem with no matcher would be data no scan could ever use.
 | `maven` | `maven:` (`groupId:artifactId`) | `maven-scanner` (pom.xml, gradle.lockfile, build scripts, version catalogs) |
 | *(hand-curated)* | `actions:` (`owner/repo@<40-hex sha>`) | `github-actions-scanner` (`uses:` pinned to a known imposter commit) |
 | `pub` / OSV `Pub` | `pub:` | `pub-scanner` (pubspec.lock, pubspec.yaml) |
+| *(hand-curated)* | `docker:` (`name@tag` or `name@sha256:<digest>`) | `container-image` (Dockerfile FROM / COPY --from, YAML image:, docker://) |
 
 Everything else (GitHub Actions advisories, Swift, Hex, `other`) is counted in
 the run report under `unsupported-ecosystem` and skipped.

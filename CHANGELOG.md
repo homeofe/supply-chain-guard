@@ -75,6 +75,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   maintainer retracted (0.1.5, 0.1.6), with their archive hashes and two
   single-source C2 hosts (`5yotmxcc54l9xda[.]ru`, `ejntin6hkjt7gj2[.]ru`).
   The MCP `ioc_lookup` tool accepts `pub`.
+- Known-malicious container images (`src/container-image.ts`, rule
+  `DOCKER_MALICIOUS_IMAGE`) against a new `docker:` feed ecosystem
+  (`name@tag` or `name@sha256:<digest>`). Images are read from Dockerfile
+  `FROM` and `COPY --from=` (build-stage names skipped) and from YAML `image:`
+  values and `docker://` steps, so Compose files, Kubernetes manifests and
+  workflow containers are covered. A digest matches under any repository
+  name, since it names content; a tag matches only its own repository, and
+  the feed carries tags only where the tag never held clean content. Names
+  resolve as Docker does (`docker.io/` dropped, bare names under `library/`,
+  other registries kept distinct). First entries: the TeamPCP Trivy images
+  (tags 0.69.4 to 0.69.6 and all 14 digests from Aqua's advisory) and the
+  Checkmarx KICS images (9 digests and the two tags that were never
+  restored). The MCP `ioc_lookup` tool accepts `docker`.
 
 ### Fixed
 

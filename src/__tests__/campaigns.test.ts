@@ -7073,4 +7073,48 @@ describe("Campaign Signatures", () => {
       expect(report.findings.filter((f) => f.rule === "PUB_MALICIOUS_PACKAGE")).toEqual([]);
     });
   });
+
+  // =================================================================
+  // TeamPCP Trivy and Checkmarx KICS container images (2026)
+  // =================================================================
+
+  describe("TeamPCP Trivy / KICS container images", () => {
+    it("flags a Dockerfile built on a deleted malicious Trivy tag", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "Dockerfile"),
+        "FROM aquasec/trivy:0.69.4 AS scanner\nFROM node:22\nCOPY --from=scanner /usr/local/bin/trivy /usr/local/bin/trivy\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "DOCKER_MALICIOUS_IMAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.line).toBe(1);
+    });
+
+    it("flags a compose service pinned to a malicious KICS digest, once", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "docker-compose.yml"),
+        "services:\n  kics:\n    image: checkmarx/kics@sha256:2588a44890263a8185bd5d9fadb6bc9220b60245dbcbc4da35e1b62a6f8c230d\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toHaveLength(1);
+    });
+
+    it("flags a workflow step running a malicious image through docker://", async () => {
+      fs.mkdirSync(path.join(tempDir, ".github", "workflows"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".github", "workflows", "scan.yml"),
+        "on: push\njobs:\n  scan:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: docker://aquasec/trivy:0.69.5\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toBe(true);
+    });
+
+    // The controls: the clean 0.69.3 and the restored KICS latest are fine.
+    it("leaves clean and restored tags alone", async () => {
+      fs.writeFileSync(path.join(tempDir, "Dockerfile"), "FROM aquasec/trivy:0.69.3\nFROM checkmarx/kics:latest\n");
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toEqual([]);
+    });
+  });
 });

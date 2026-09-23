@@ -1,3 +1,114 @@
+## Ecosystem coverage expansion (2026-09-23) (claude-opus-5-5)
+
+Follows the Terraform provider matcher on the same branch (PR 326). The owner
+asked what else is missing once Terraform exists as an ecosystem, and to fix
+and implement what can be. Unreleased; everything lands under `[Unreleased]`.
+
+### How the gaps were found (measured, not guessed)
+
+- OpenSSF malicious-packages corpus per ecosystem (shallow clone on openclaw):
+  npm 221,520, PyPI 11,743, RubyGems 3,630, NuGet 777, crates.io 20, Go 18,
+  **VS Code/Open VSX 21, Maven 2**, git 1, Packagist 1. Only the bold ones
+  had no matcher.
+- GitHub Advisory Database malware advisories per ecosystem: **actions 0,
+  maven 2, pub 0, swift 0, erlang 0, other 0** (control: pip 11,723). So the
+  remaining high-value gaps (Actions, Pub, container images) are the ones no
+  database carries; their indicators come from vendor write-ups.
+- Code survey: no scanner read Maven/Gradle, pubspec, extension IDs or image
+  references at all; Actions had three hardcoded SHAs.
+
+### Shipped (one commit each)
+
+1. `vscode:` / `openvsx:` extension identity (T-010, now DONE):
+   `extension-identity.ts`, rule `VSCODE_MALICIOUS_EXTENSION`. 51 importer
+   entries (1 bundle, 50 catalog) plus curated Nx Console pins.
+2. `maven:`: `maven-scanner.ts`, rule `MAVEN_MALICIOUS_PACKAGE`; importer maps
+   GitHub and OSV Maven. Curated `org.mvnpm:posthog-node@4.18.1` (Shai-Hulud
+   2.0 via mvnpm) in the bundle, `io.github.leetcrunch:scribejava-core` in the
+   catalog (Maven Central 404; a look-alike of `com.github.scribejava`, which
+   is a different groupId and untouched).
+3. `actions:`: 117 imposter commits, feed-driven, rule
+   `GHA_KNOWN_MALICIOUS_SHA` kept. Matched by SHA whatever repo name is used.
+4. `pub:`: `pub-scanner.ts`, rule `PUB_MALICIOUS_PACKAGE`; universal_file_viewer
+   XCSSET pins (0.1.5, 0.1.6: the two retracted releases), archive hashes,
+   two single-source C2 hosts.
+5. `docker:`: `container-image.ts`, rule `DOCKER_MALICIOUS_IMAGE`; Trivy
+   0.69.4-0.69.6 tags + 14 digests, KICS 9 digests + 2 never-restored tags.
+
+Every new matcher has a mutation proof (baseline and post-restore green):
+WP1 10/10, WP2 12/12, WP3 6/6, WP4 11/11, WP5 11/11 cuts red. Survivors
+during the work were resolved either by a test (real gap) or by deleting the
+redundant code (see below). Full suite on openclaw after WP1: 158/158 files.
+
+### Defects found and fixed on the way
+
+- **Importer would have name-blocked 13 live, legitimate Open VSX
+  extensions.** GlassWorm-class OSV records pair "introduced: 0" with the exact
+  trojanized versions; read as whole-package, every clean release of e.g.
+  `jeronimoekerdt.color-picker-universal` (57 versions) would have been
+  flagged. For `vscode` the listed versions now win; npm keeps the old reading
+  (control test), where that shape encodes a typosquat. All 19 pinned versions
+  were checked to be 404 on Open VSX (control `redhat.java` 200).
+- **Two of three hardcoded "compromised action" SHAs did not exist.**
+  `d8462b4...` appears in no source; `3f401fe1...369b8cdfe4` was a corrupted
+  copy of the CLEAN reviewdog v1.3.0 commit `3f401fe1...375e39b887` (exists,
+  2024-03-12). "Correcting the typo" would have flagged every user of the
+  repaired tag. The one real SHA (`0e58ed86`, named in GHSA-mrrh-fwg8-r2c3)
+  was dated September 2025; the incident was March 2025.
+- **`^nrwl\.angular-console$` was an npm name pattern** for a hijacked VS Code
+  extension. No npm package of that name exists (registry 404), so it never
+  fired; and as a name block of a victim it would have been wrong if it had.
+  Replaced by `vscode:`/`openvsx:` pins of 18.95.0.
+- **A `.vsix` manifest with a UTF-8 BOM skipped every manifest check**
+  (JSON.parse threw, manifest treated as absent). Same class as the recorded
+  BOM exemption on package.json.
+- Maven files, `pubspec.lock` and Dockerfiles carry no SCANNABLE extension, so
+  a per-file dispatch never reaches them; the first Maven scan() test proved
+  it (unit green, scan red). They are matched on the inline path the
+  Dockerfile handling already used, which is also each file's single dispatch
+  point (a `.toml` catalog, `pubspec.yaml` and compose YAML each report once,
+  asserted).
+- NEXT_ACTIONS said "Five tasks are ready" while its table said 4; the real
+  number, after T-010, is 3 (T-009, T-011, T-012).
+
+### Verification of third-party indicators
+
+A background research agent collected the Actions / pub / Docker candidates.
+Nothing was ingested on its word alone:
+- all 116 action SHAs re-verified via the GitHub API (exists, expected clean
+  parent, not on the default branch); `0e58ed86` via the advisory text;
+- all 14 Trivy digests found verbatim in Aqua's GHSA-69fq-xp46-6x23 (read with
+  `gh`, not a web fetch); the 15th digest there is the cosign signature, not
+  an image, and is not listed;
+- all image tags and digests 404 on Docker Hub, controls 200;
+- pub.dev API confirms 0.1.5/0.1.6 retracted and the archive hashes.
+Not independently verified: the two XCSSET C2 hosts (single vendor, plus the
+agent's decode of the upstream commit), hence confidence 0.85.
+
+### Still not covered (the honest remainder)
+
+- **No data, so not built**: Swift/SwiftPM, CocoaPods, Hex, CRAN, Conan, Helm,
+  Ansible Galaxy, Homebrew, browser extensions, JetBrains plugins. Zero malware
+  records in either database today; the ecosystem pattern (prefix, matcher,
+  importer map, MCP enum, reachability) is now repeatable when data appears.
+- Maven: Kotlin DSL named-argument form (`group = "...", name = "..."`), Gradle
+  `plugins { id(...) version ... }` marker artifacts, SBT/Ivy, Bazel
+  `maven_install.json` are not read.
+- Terraform: provider addresses only; registry MODULE sources
+  (`ns/name/system`) are not matched.
+- Actions: `uses:` in composite `action.yml` files outside `.github/workflows`
+  is not checked against the SHA list (the Actions scanner only walks the
+  workflows directory).
+- Docker: `ARG`-parameterised `FROM ${BASE}` is not resolved.
+
+### Open decisions for the owner
+
+- Release shape: this branch now adds six ecosystems and several detection
+  fixes. It reads as a minor (v6.3.0), which also needs a SECURITY.md
+  supported-versions row.
+- Whether the remaining Maven forms and Terraform module sources are worth a
+  follow-up now, or only once there is an incident that needs them.
+
 ## Terraform provider matcher (2026-09-23) (claude-opus-5-5)
 
 Closes the open item from the 2026-09-23 threat-intel note: the Graphalgo

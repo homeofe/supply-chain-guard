@@ -672,7 +672,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 | RubyGems | `scan` | Gemfile, Gemfile.lock (malicious-gem IOCs, http/git sources) |
 | Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
 | NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
-| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. `docker-compose.yml` is read, but every Docker rule is anchored on a Dockerfile instruction keyword, so Compose `image:` values are not covered |
+| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. The Dockerfile hardening rules are anchored on Dockerfile instructions, so they do not read Compose files; known-malicious images (by tag or digest) are matched in Dockerfile `FROM` / `COPY --from=` and in every YAML `image:` value (Compose, Kubernetes, workflow containers) and `docker://` step |
 | Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets, known-malicious providers in required_providers and .terraform.lock.hcl) |
 | VS Code | `vscode`, `scan` | .vsix files, activation events, dangerous APIs; known-malicious extension IDs in `.vscode/extensions.json`, `devcontainer.json` and installed extension manifests |
 | GitHub Actions | `scan` | .github/workflows/*.yml |

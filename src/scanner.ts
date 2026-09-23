@@ -66,6 +66,7 @@ import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scann
 import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
 import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
 import { isPubFile, scanPubContent } from "./pub-scanner.js";
+import { isDockerfileSyntax, scanImageReferences } from "./container-image.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
@@ -394,6 +395,11 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       if (isDockerFile(basename)) {
         findings.push(...scanDockerFile(prefetchedContent, relativePath));
       }
+      // Known-malicious base images. Dockerfile syntax only: compose files are
+      // YAML and are matched once, on the per-file path below.
+      if (isDockerfileSyntax(relativePath)) {
+        findings.push(...scanImageReferences(prefetchedContent, relativePath, threatFeed));
+      }
       if (isConfigFile(basename)) {
         findings.push(...scanConfigFile(prefetchedContent, relativePath));
       }
@@ -589,6 +595,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // vscode: and openvsx: feed entries.
     if (isExtensionReferenceFile(relativePath)) {
       findings.push(...scanExtensionReferences(content, relativePath, threatFeed));
+    }
+
+    // Container images referenced from YAML (compose, Kubernetes manifests,
+    // workflow container:/services: and docker:// steps).
+    if (/\.ya?ml$/i.test(basename)) {
+      findings.push(...scanImageReferences(content, relativePath, threatFeed));
     }
   }
 

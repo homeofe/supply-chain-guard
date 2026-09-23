@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790154315",
-    "timestamp": "2026-09-23T09:05:15Z",
-    "commit": "d9b14bc",
+    "session_id": "cli-1790154938",
+    "timestamp": "2026-09-23T09:15:38Z",
+    "commit": "29d8a65",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4a5bf1838aa2449af50abbe4beab286fda84c8db84ef159dea2594d6c525136c",
-      "updated": "2026-09-23T08:26:29Z",
-      "lines": 10761,
-      "summary": "Closes the open item from the 2026-09-23 threat-intel note: the Graphalgo"
+      "checksum": "sha256:677ffe5faa808b6ee0272c279880174d8be394889b65b09405254d047e322bd3",
+      "updated": "2026-09-23T09:15:35Z",
+      "lines": 10872,
+      "summary": "Follows the Terraform provider matcher on the same branch (PR 326). The owner"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T09:05:14Z",
+      "updated": "2026-09-23T09:15:37Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:aa4ca3290c3708dc9f91f9439cb203e3f357ee49b858ff0f88bad9e6a3a4c2e3",
-      "updated": "2026-09-23T09:05:14Z",
+      "checksum": "sha256:ef2240033dc06396a77e238fd7747ce1ce682042d2098a70090a66c2c832e8bb",
+      "updated": "2026-09-23T09:15:37Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:c6c91960dc708b83965f47a8be8e4f5c1c2e87c4ba6eaae665a54c14a1f308a6",
-      "updated": "2026-09-23T09:05:14Z",
+      "checksum": "sha256:b73901ad270e41bd6af2b988d4d330cc4ca9784293fabc68adcaac64f69daa16",
+      "updated": "2026-09-23T09:15:37Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Closes the open item from the 2026-09-23 threat-intel note: the Graphalgo Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "Follows the Terraform provider matcher on the same branch (PR 326). The owner Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 125827,
-    "full_read": 138844
+    "manifest_plus_core": 127027,
+    "full_read": 140045
   }
 }

@@ -9960,6 +9960,47 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "hash", value: "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev archive_sha256", firstSeen: "2026-09-08" },
   { type: "domain", value: "5yotmxcc54l9xda.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
   { type: "domain", value: "ejntin6hkjt7gj2.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
+
+  // TeamPCP Trivy container images (March 19-23 2026). Tags 0.69.4, 0.69.5 and 0.69.6 only ever
+  // held the malicious builds and were deleted, so the TAGS are indicators as well as every
+  // index and per-platform digest. All digests appear verbatim in Aqua's advisory
+  // GHSA-69fq-xp46-6x23; all tags and digests return 404 on Docker Hub (verified 2026-09-23,
+  // with the clean 0.69.3 returning 200). The latest tag was malicious only during the window
+  // and is clean now, so it is not listed.
+  { type: "package", value: "docker:aquasec/trivy@0.69.4", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:27f446230c60bbf0b70e008db798bd4f33b7826f9f76f756606f5417100beef3", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:12c702212dee1cbec9471e9261501a3335963321fe76e60e5a715b5acd3c40a2", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:2d7cee41048988eec27615412e7c6e2e21046f2b5faa888c24e11ca6764058ed", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:ae3494bd6ae860d7727116681bd09fc7b20dc994ec7a8105738f0a623ea93427", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:43f46547efd488e56dcf862ed4d7cc342730a803f8d5bec5cac443028fefabef", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@0.69.5", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:5aaa1d7cfa9ca4649d6ffad165435c519dc836fa6e21b729a2174ad10b057d2b", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:95ff680103570179feb0c6667a9b9b2d98c53fa5a9a451265036810390bbe70a", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:4f7a06bb51714713ab308d2f8125f3b09ee1c3ffbba1a5ffd0cc80da95fbb6cc", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:edef8e5816eced552a909b878ff262c0c47776d3297bcc23796ad4cce1e85414", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@0.69.6", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:425cd3e1a2846ac73944e891250377d2b03653e6f028833e30fc00c1abbc6d33", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:dd8beb3b40df080b3fd7f9a0f5a1b02f3692f65c68980f46da8328ce8bb788ef", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:4b22cedea58780ff76735c3e08b9ee8cb5d06c908ffa868152f11d45349eb696", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:9efd59534d2b6b81b8b7a0eeb3ad0e74015f358650e24b9dab00c900d3118593", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:5e5fb53cf4ce5555171ff5206302ba2f4f66f5381bbf673c354c87a925473f07", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+
+  // Checkmarx KICS container images (April 22 2026), same breach as the audit.checkmarx.cx C2
+  // entries above. Only v2.1.21 and v2.1.21-debian never held clean content; alpine, debian,
+  // v2.1.20, v2.1.20-debian and latest were restored, so for those only the digests are
+  // indicators. Two independent secondary sources and no vendor advisory, hence 0.95; every
+  // tag and digest returns 404 on Docker Hub (verified 2026-09-23, latest returning 200).
+  { type: "package", value: "docker:checkmarx/kics@v2.1.21", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@v2.1.21-debian", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:2588a44890263a8185bd5d9fadb6bc9220b60245dbcbc4da35e1b62a6f8c230d", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:d186161ae8e33cd7702dd2a6c0337deb14e2b178542d232129c0da64b1af06e4", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:415610a42c5b51347709e315f5efb6fffa588b6ebc1b95b24abf28088347791b", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:222e6bfed0f3bb1937bf5e719a2342871ccd683ff1c0cb967c8e31ea58beaf7b", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:a6871deb0480e1205c1daff10cedf4e60ad951605fd1a4efaca0a9c54d56d1cb", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:ff7b0f114f87c67402dfc2459bb3d8954dd88e537b0e459482c04cffa26c1f07", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:a0d9366f6f0166dcbf92fcdc98e1a03d2e6210e8d7e8573f74d50849130651a0", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:26e8e9c5e53c972997a278ca6e12708b8788b70575ca013fd30bfda34ab5f48f", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:7391b531a07fccbbeaf59a488e1376cfe5b27aef757430a36d6d3a087c610322", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
@@ -11015,6 +11056,8 @@ function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "vscode" || ecosystem === "openvsx") return name.toLowerCase();
   // GitHub owner/repo names are case-insensitive (github-actions-scanner.ts).
   if (ecosystem === "actions") return name.toLowerCase();
+  // Image repository names are lowercase by the distribution spec (container-image.ts).
+  if (ecosystem === "docker") return name.toLowerCase();
   return name;
 }
 
