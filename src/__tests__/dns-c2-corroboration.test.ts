@@ -119,6 +119,25 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(severities("C2_DOH_RESOLVER", destructured)).toEqual(["medium"]);
   });
 
+  it("does not taint a helper by an encoder outside its body", () => {
+    const oneLine = [
+      "function domainOf(x) { return x.split('.').slice(-2).join('.'); }",
+      '  const debugId = crypto.randomBytes(4).toString("hex");',
+      "export async function spf(domain) {",
+      "  const records = await dns.resolveTxt(domainOf(domain));",
+      "}",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", oneLine)).toEqual(["low"]);
+    const multiLine = [
+      "function domainOf(x) {",
+      "  return x.split('.').slice(-2).join('.');",
+      "}",
+      'const debugId = crypto.randomBytes(4).toString("hex");',
+      "const records = await dns.resolveTxt(domainOf(domain));",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", multiLine)).toEqual(["low"]);
+  });
+
   it("stays linear with many hits and long assignment chains above each", { timeout: performanceBudget(60_000) }, () => {
     const block = (i: number): string => {
       const chain = Array.from({ length: 200 }, (_, k) => (k === 0 ? `v${i}_0 = base32(x)` : `v${i}_${k} = v${i}_${k - 1}`)).join("; ");

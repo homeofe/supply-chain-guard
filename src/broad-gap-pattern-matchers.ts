@@ -821,13 +821,32 @@ function encodedNameReachesLine(content: string, line: number): boolean {
   if (DNS_ENCODED_NAME.test(hitText)) return true;
   const tainted = new Set<string>();
   // A helper declared in the window whose body encodes: calling it is using it.
+  // Its body is followed by brace depth, so an encoder after it has closed
+  // does not taint it.
   let helper: string | undefined;
+  let depth = 0;
+  let opened = false;
   for (let k = Math.max(1, line - DNS_ENCODER_WINDOW); k < line; k++) {
     const bounds = lineBounds(content, k);
     if (!bounds) continue;
     const text = content.slice(bounds[0], Math.min(bounds[1], bounds[0] + DNS_WINDOW_LINE_CHARS));
-    helper = FUNCTION_DECL_RE.exec(text)?.[1] ?? helper;
-    if (helper !== undefined && DNS_ENCODED_NAME.test(text)) tainted.add(helper);
+    const declaration = FUNCTION_DECL_RE.exec(text);
+    if (declaration) {
+      helper = declaration[1];
+      depth = 0;
+      opened = false;
+    }
+    if (helper !== undefined) {
+      const body = declaration ? text.slice(declaration.index) : text;
+      if (DNS_ENCODED_NAME.test(body)) tainted.add(helper);
+      for (const ch of body) {
+        if (ch === "{") {
+          depth++;
+          opened = true;
+        } else if (ch === "}") depth--;
+      }
+      if (opened && depth <= 0) helper = undefined;
+    }
     for (const statement of text.split(";")) {
       const m = ASSIGNMENT_RE.exec(statement);
       if (!m || !(DNS_ENCODED_NAME.test(m[2]!) || mentionsAny(m[2]!, tainted))) continue;

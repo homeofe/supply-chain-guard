@@ -1,3 +1,51 @@
+## Fourth review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Three reviewers again: the file model, DNS together with every public claim, and a
+real-data rerun of the workflow rules. The real-data rerun covered 189 workflow
+directories: every workspace checkout and every workflow shipped inside `node_modules`.
+Every workflow rule except this one was identical to `main`. `main` reported 72
+findings on this rule that the PR drops, and all 72 were `main` false positives. The
+public-text reviewer found no false claim.
+
+### Fixed
+
+- **Deploy keys over ssh.** Nine real deploy pipelines write an SSH key from a secret
+  and then run `ssh -i key user@host`. `main` caught them only by accident, and the PR
+  missed them, because `ssh` was not egress and the key lived under `$RUNNER_TEMP`.
+  `ssh` to a host that is not loopback now counts as egress (`ssh-keygen`,
+  `ssh-keyscan` and a directory named `ssh/` do not). A write whose directory is a
+  variable is followed by its file name.
+- **The file model, per command.** Taint was per step, so a step that only read a
+  tainted file tainted every path in the step. Commands are now read one by one:
+  - a command holds the secret when it names it, a variable assigned from it, dumps
+    the environment, or reads a tainted file;
+  - what that command writes or names is followed by full path, with its directories;
+  - a heredoc body stays with its command.
+
+  Opaque writes (`dd of=`, `openssl -out`, `pathlib`, `>|`) are covered without
+  listing them, and so are readers that never name the file (`tar czf a.tgz .`,
+  `zip -r`, a glob).
+- **Uploads.** An upload reaches a tainted file only when its `path:` covers it. A
+  secret in `logs/dist/x` no longer makes an upload of `dist/` a finding.
+- **DNS helper.** A helper declared above the query is followed by brace depth. An
+  encoder after the helper has closed no longer taints it.
+- **Globs, found by the lead's own timing probe before any reviewer.** A 5 MiB
+  flood of glob words against 250 tainted files took more than 60 s. Answers are now
+  cached per glob, and distinct globs are capped at 256 per job, past which a glob
+  counts as covering (fail closed). The worst shape now takes 1.9 s.
+- **Proof:** 59 mutation cuts, all red, run on the Linux runner. The first pass left
+  four survivors: the per-command model had made the tests for tee, the PowerShell
+  cmdlets, Python writes and  stop exercising their parsers. Each now has a
+  test in the one situation where that parser decides the outcome.
+
+### Process
+
+- From this round on the review agents run on the same model as the lead, at the
+  owner's request.
+- Two of the round's "false positives" were true positives: a secret written into
+  the uploaded `dist/` and into a `package.json` that was then sent. Every finding is
+  reproduced before anything changes.
+
 ## Third review round of PR 326 (2026-09-23) (claude-opus-5-5)
 
 Three reviewers again: workflow egress, entropy and DNS, and a real-data comparison.

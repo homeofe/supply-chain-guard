@@ -32,14 +32,41 @@ const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
  * Other ways a step sends data out, counted as egress without looking for a
  * loopback target: HTTP clients in Node, Python and PowerShell, and file transfer
  * tools that always reach another host. `scp`/`rsync` count only with a
- * `host:path` argument (see isRemoteCopy). `gh api` is left out on purpose:
+ * `host:path` argument (see isRemoteCopy), `ssh` only with a destination that
+ * is not loopback (see isSshEgress). `gh api` is left out on purpose:
  * a token sent to GitHub's own API is that token's intended audience.
  */
 const OTHER_EGRESS_RE =
-  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w.-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(/i;
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w./-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(/i;
+
+/** The `ssh` command word (not `ssh-keygen`, `ssh-add`, `ssh-keyscan`, or a directory `ssh/`). */
+const SSH_CMD_RE = /(?<![\w.-])ssh(?![\w./-])/;
+
+/** ssh options that take a value, so the value is not the destination. */
+const SSH_VALUE_FLAGS = new Set([
+  "-B", "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l", "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w",
+]);
+
+/** `ssh` to a destination that is not loopback. */
+function isSshEgress(segment: string): boolean {
+  const cmd = SSH_CMD_RE.exec(segment);
+  if (!cmd) return false;
+  const words = shellWords(segment.slice(cmd.index + cmd[0].length));
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i]!;
+    if (SSH_VALUE_FLAGS.has(word)) {
+      i++;
+      continue;
+    }
+    if (word.startsWith("-")) continue;
+    // The first other word is the destination.
+    return !isLoopbackTarget(word.replace(/^[^@]*@/, ""));
+  }
+  return false;
+}
 
 /** The `scp`/`rsync` command word; its arguments are read by isRemoteCopy. */
-const REMOTE_COPY_CMD_RE = /(?<![\w.-])(?:scp|rsync)(?![\w.-])/;
+const REMOTE_COPY_CMD_RE = /(?<![\w.-])(?:scp|rsync)(?![\w./-])/;
 
 /**
  * One whole shell word naming a remote path, `[user@]host:path`. Anchored and
@@ -73,7 +100,7 @@ function isRemoteCopy(segment: string): boolean {
 const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(/;
 
 /**
- * Where a redirection in one shell word writes to: `>f`, `x>f`, `1>>f`, or
+ * Where a redirection in one shell word writes to: `>f`, `x>f`, `1>>f`, `>|f`, or
  * `>` with the file as the next word (`""`). `2>`, `>&2`, `=>` and `->` are
  * not file writes of the step's output. `undefined` when the word has none.
  */
@@ -84,7 +111,7 @@ function redirectTarget(word: string): string | undefined {
   if (/[=<>-]$/.test(before)) return undefined;
   const fd = /\d*$/.exec(before)![0];
   if (fd !== "" && fd !== "1") return undefined;
-  const rest = word.slice(at + (word[at + 1] === ">" ? 2 : 1));
+  const rest = word.slice(at + (word[at + 1] === ">" || word[at + 1] === "|" ? 2 : 1));
   if (rest.startsWith("&") || rest.startsWith(">")) return undefined;
   return rest;
 }
@@ -93,14 +120,15 @@ function redirectTarget(word: string): string | undefined {
  * Files a step writes: redirection targets, `tee` arguments, PowerShell
  * `Out-File`/`Set-Content`/`Add-Content`, Node `writeFile`/`appendFile` and
  * Python `open(..., "w"|"a"|"x"|"+")`. A target this reader cannot name (a
- * variable, a glob, a computed path) is `null`. The runner's own files and
+ * variable, a glob, a computed path) is `null`, unless only its directory is
+ * computed, then it is its file name. The runner's own files and
  * devices are left out: `$GITHUB_ENV`/`$GITHUB_OUTPUT` are PERSISTS_ENV_RE's,
  * and the step summary is not readable by later steps.
  */
 function fileTargets(exec: string): Array<string | null> {
   const out: Array<string | null> = [];
   const joined = exec.replace(/\\\n/g, " ");
-  for (const segment of joined.split(/&&|\|\||[;|\n]/)) {
+  for (const segment of joined.split(/&&|\|\||[;\n]|(?<!>)\|/)) {
     const words = shellWords(segment);
     for (let i = 0; i < words.length; i++) {
       const word = words[i]!;
@@ -138,35 +166,205 @@ function fileTargets(exec: string): Array<string | null> {
   }
   return out
     .filter((t) => t === null || !/GITHUB_(?:ENV|OUTPUT|PATH|STEP_SUMMARY)|^\/dev\//.test(t))
-    .map((t) => (t === null || /[$`*?{}]/.test(t) || t.trim() === "" ? null : t));
+    .map((t) => {
+      if (t === null || t.trim() === "") return null;
+      if (!/[$`*?{}]/.test(t)) return t;
+      // `$RUNNER_TEMP/ssh/deploy_key`: the directory is unknown, the name is not.
+      const name = t.slice(Math.max(t.lastIndexOf("/"), t.lastIndexOf("\\")) + 1);
+      return name !== "" && !/[$`*?{}]/.test(name) ? name : null;
+    });
 }
 
-/** Most file names followed per job; past this, any later file read counts. */
+/** Most file paths followed per job; past this, any later file read counts. */
 const MAX_TAINTED_FILES = 256;
 
-/** The path components a later step could name a written file by. */
-function fileNameParts(target: string): string[] {
-  return target.split(/[\\/]/).filter((part) => part !== "" && part !== "." && part !== ".." && part !== "~");
-}
-
-/** Tokens a file name can appear as; `/`, `@`, quotes and brackets separate them. */
-const FILE_TOKEN_RE = /[\w.+~-]+/g;
+/**
+ * Most distinct globs matched per job. Each is compiled and tested against
+ * every tainted path, so a flood of distinct globs would be quadratic; past
+ * this, a glob counts as covering a tainted file (fail closed).
+ */
+const MAX_GLOB_EVALUATIONS = 256;
 
 /**
- * Path-like words of a step (`bundle.tgz`, `out/`), for a step that reads a
- * tainted file: whatever it produces (an archive, an encrypted copy, a `cp`)
- * is named among its words, without enumerating each tool's output flag.
- * Options, URLs and variables are left out.
+ * Files written after a secret reached them, by full path. A later step reaches
+ * one by naming its basename in code (`open('key.txt')`, `$(base64 key.txt)`),
+ * or by a shell word naming the file, a directory above it, or a glob that
+ * matches it (`tar czf a.tgz dist`, `curl -T "*.txt"`, `zip -r a.zip .`).
  */
-function pathLikeWords(exec: string): string[] {
-  const out: string[] = [];
-  for (const segment of exec.replace(/\\\n/g, " ").split(/&&|\|\||[;|\n]/)) {
-    for (const word of shellWords(segment)) {
-      if (word.startsWith("-") || word.includes("://") || /[$`*?{}]/.test(word)) continue;
-      if (/[./\\]/.test(word) && /[A-Za-z]/.test(word)) out.push(word);
+class TaintedFiles {
+  readonly paths = new Set<string>();
+  readonly basenames = new Set<string>();
+  readonly dirs = new Set<string>();
+  private readonly globAnswers = new Map<string, boolean>();
+  private globEvaluations = 0;
+
+  get size(): number {
+    return this.paths.size;
+  }
+
+  add(target: string): void {
+    const path = normalizePath(target);
+    if (path === "" || path === ".") return;
+    this.paths.add(path);
+    this.globAnswers.clear();
+    const parts = path.split("/");
+    this.basenames.add(parts[parts.length - 1]!);
+    for (let i = 1; i < parts.length; i++) this.dirs.add(parts.slice(0, i).join("/"));
+  }
+
+  clear(): void {
+    this.paths.clear();
+    this.basenames.clear();
+    this.dirs.clear();
+    this.globAnswers.clear();
+  }
+
+  /** Does one shell word (a path, a directory, `.` or a glob) cover a tainted file? */
+  coveredBy(word: string): boolean {
+    const path = normalizePath(word);
+    if (path === "") return false;
+    if (path === ".") return this.paths.size > 0;
+    if (/[*?]/.test(path)) {
+      const known = this.globAnswers.get(path);
+      if (known !== undefined) return known;
+      if (this.globEvaluations >= MAX_GLOB_EVALUATIONS) return this.paths.size > 0;
+      this.globEvaluations++;
+      const glob = globToRegExp(path);
+      let covered = false;
+      for (const tainted of this.paths) {
+        if (glob.test(tainted) || glob.test(tainted.slice(tainted.lastIndexOf("/") + 1))) {
+          covered = true;
+          break;
+        }
+      }
+      this.globAnswers.set(path, covered);
+      return covered;
     }
+    return this.paths.has(path) || this.dirs.has(path);
+  }
+}
+
+/** `./a//b/` and `a\\b` to `a/b`; `.` stays `.`. */
+function normalizePath(word: string): string {
+  const path = word.replace(/\\/g, "/").replace(/\/{2,}/g, "/").replace(/^(?:\.\/)+/, "").replace(/\/+$/, "");
+  return path === "" && word.startsWith(".") ? "." : path;
+}
+
+/** A shell glob (`*`, `**`, `?`) as an anchored RegExp over a normalized path. */
+function globToRegExp(glob: string): RegExp {
+  let source = "";
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i]!;
+    if (ch === "*") {
+      if (glob[i + 1] === "*") {
+        source += ".*";
+        i++;
+      } else source += "[^/]*";
+    } else if (ch === "?") source += "[^/]";
+    else source += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  }
+  return new RegExp(`^${source}$`);
+}
+
+/** Tokens a file's basename can appear as in code; URLs are removed first. */
+const FILE_TOKEN_RE = /[\w.+~-]+/g;
+const URL_RE = /\b[a-z][\w+.-]*:\/\/[^\s'"`()<>]*/gi;
+
+/**
+ * Commands of a step: split at `&&`, `||`, `;` and newlines, but not at `|`,
+ * since a pipe carries data from one command to the next. A heredoc's body
+ * stays with the command that reads it (`base64 > f <<EOF` / `$T` / `EOF`).
+ */
+function commands(exec: string): string[] {
+  const out: string[] = [];
+  const lines = exec.replace(/\\\n/g, " ").split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    // An inline value keeps its key in the exec text (`- run: X=$T`).
+    let line = lines[i]!.replace(/^\s*(?:-\s+)?(?:run|script)\s*:\s*(?:[|>][-+0-9]*\s*$)?/, "");
+    const heredoc = /<<-?[^\S\n]*(['"]?)([A-Za-z_]\w{0,63})\1/.exec(line);
+    if (heredoc) {
+      const end = heredoc[2]!;
+      while (i + 1 < lines.length) {
+        const body = lines[++i]!;
+        if (body.trim() === end) break;
+        line += " " + body;
+      }
+    }
+    out.push(...line.split(/&&|\|\||;/));
   }
   return out;
+}
+
+/** `NAME=value`, `export NAME=`, `local NAME=`, `declare NAME=` at a command's start. */
+const SHELL_ASSIGN_RE = /^\s*(?:(?:export|local|declare|readonly)\s+)?([A-Za-z_]\w*)=/;
+
+/** A word's value after `key=` (`of=f.bin`), else the word. */
+function wordValue(word: string): string {
+  const m = /^[\w-]{1,32}=(.+)$/.exec(word);
+  return m ? m[1]! : word;
+}
+
+/** Does this command read a tainted file: by a basename in its code, or by a path word? */
+function commandReadsTainted(command: string, tainted: TaintedFiles): boolean {
+  if (tainted.size === 0) return false;
+  for (const m of command.replace(URL_RE, " ").matchAll(FILE_TOKEN_RE)) {
+    if (tainted.basenames.has(m[0])) return true;
+  }
+  for (const word of shellWords(command)) {
+    if (word.startsWith("-") || word.includes("://") || /[$`{}]/.test(word)) continue;
+    if (tainted.coveredBy(wordValue(word))) return true;
+  }
+  return false;
+}
+
+/**
+ * Files a command that holds the secret may have written, beyond what
+ * fileTargets names: its path-like words (`openssl ... -out enc.bin`,
+ * `dd of=f.bin`, `tar czf a.tgz dist`) and quoted file names in inline code
+ * (`Path('k.txt').write_text(...)`). Options, URLs and variables are left out.
+ */
+function commandOutputs(command: string): string[] {
+  const out: string[] = [];
+  const words = shellWords(command);
+  for (let i = 0; i < words.length; i++) {
+    const raw = words[i]!;
+    // Redirections are fileTargets' (stdout) or not the secret (`2> err.log`).
+    const redirect = /^(?:\d*|&)[<>]/.exec(raw);
+    if (redirect) {
+      if (/^(?:\d*|&)[<>]+[|&]?$/.test(raw)) i++;
+      continue;
+    }
+    const word = wordValue(raw);
+    if (word.startsWith("-") || word.includes("://") || /[$`*?{}]/.test(word)) continue;
+    if (/[./\\]/.test(word) && /[A-Za-z]/.test(word) && !/\s/.test(word)) out.push(word);
+  }
+  for (const m of command.matchAll(/(['"])([\w./~-]{1,256}\.[A-Za-z0-9]{1,8})\1/g)) out.push(m[2]!);
+  return out;
+}
+
+/**
+ * The paths an artifact upload names (`with: path:`, inline or as a block
+ * list; `!` exclusions skipped). `undefined` when none are stated, which
+ * counts as uploading everything.
+ */
+function uploadPaths(stepLines: string[]): string[] | undefined {
+  for (let k = 0; k < stepLines.length; k++) {
+    const m = /^(\s*)path\s*:\s*(.*)$/.exec(stepLines[k]!);
+    if (!m) continue;
+    const inline = m[2]!.trim().replace(/^[|>][-+]?$/, "");
+    if (inline !== "") return [inline.replace(/^(['"])(.*)\1$/, "$2")];
+    const indent = m[1]!.length;
+    const out: string[] = [];
+    for (let j = k + 1; j < stepLines.length; j++) {
+      const line = stepLines[j]!;
+      if (line.trim() === "") continue;
+      if (line.length - line.trimStart().length <= indent) break;
+      const entry = line.trim().replace(/^-\s*/, "").replace(/^(['"])(.*)\1$/, "$2");
+      if (entry !== "" && !entry.startsWith("!")) out.push(entry);
+    }
+    return out.length > 0 ? out : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -198,13 +396,6 @@ const IDENTIFIER_RE = /[A-Za-z_]\w*/g;
 function mentionsVariable(text: string, names: Set<string>): boolean {
   if (names.size === 0) return false;
   for (const m of text.matchAll(IDENTIFIER_RE)) if (names.has(m[0])) return true;
-  return false;
-}
-
-/** Does text name one of these files as a whole token (`key.txt`, not `key.txt2`)? */
-function mentionsFile(text: string, names: Set<string>): boolean {
-  if (names.size === 0) return false;
-  for (const m of text.matchAll(FILE_TOKEN_RE)) if (names.has(m[0])) return true;
   return false;
 }
 
@@ -320,7 +511,7 @@ function segmentHasEgress(segment: string): boolean {
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
-  if (OTHER_EGRESS_RE.test(segment) || isRemoteCopy(segment)) return true;
+  if (OTHER_EGRESS_RE.test(segment) || isRemoteCopy(segment) || isSshEgress(segment)) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
   return !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
@@ -533,14 +724,15 @@ export function workflowScopes(content: string): WorkflowScopes {
  * `env:`, in the job's `env:` (or its container's) or matrix, or in the
  * workflow `env:`. It stays in scope for every later step of the job once a
  * step holding it writes to `$GITHUB_ENV` or `$GITHUB_OUTPUT` (or exports it
- * from github-script). A step holds it when its code names the secret or a
- * variable carrying it; once such a step writes a file, the secret reaches
- * later steps that upload an artifact or name that file, and a step that
- * reads such a file and writes another passes it on. A file whose name the
- * step does not state reaches any later step that reads a file. An artifact
- * upload sends files, not the environment: a secret that is only in the
- * job's or workflow's env reaches it through a file, or through the upload
- * step's own env.
+ * from github-script). A command holds it when it names the secret or a
+ * variable carrying it, dumps the environment, or reads a tainted file; the
+ * files such a command writes or names become tainted, by full path. A later
+ * outbound call reaches a tainted file by naming it, a directory above it or
+ * a matching glob; an upload reaches it when its `path:` covers it. A file
+ * whose name the step does not state reaches any later step that reads a
+ * file. An artifact upload sends files, not the environment: a secret that
+ * is only in the job's or workflow's env reaches it through a file, or
+ * through the upload step's own env.
  * The step must itself make an outbound call or upload an artifact. `with:`
  * inputs are ignored except where the step's own code can read them: a local
  * composite action, or a `script:` body. A reusable workflow from another repository that is
@@ -585,7 +777,7 @@ function checkSecretToEgress(
     const jobSecret = workflowSecret || textHasStoredSecret(env) || matrixSecret;
     const jobSecretNames = [...workflowSecretNames, ...secretEnvNames(env)];
     let carriedEnv = false;
-    const taintedFiles = new Set<string>();
+    const tainted = new TaintedFiles();
     let unnamedFile = false;
 
     if (job.uses && !job.uses.startsWith("./")) {
@@ -612,33 +804,72 @@ function checkSecretToEgress(
         egress = "makes an outbound call";
         stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
       }
-      const readsTainted = mentionsFile(exec, taintedFiles) || (unnamedFile && execReadsFile(exec));
-      // An upload sends files, and a local action's steps are not read here.
-      const fileReaches =
-        (taintedFiles.size > 0 || unnamedFile) && egress !== null && (egress !== "makes an outbound call" || readsTainted);
+      const stepLines = stripped.slice(s, e);
+      const cmds = commands(exec);
+      const reads = (command: string): boolean =>
+        commandReadsTainted(command, tainted) || (unnamedFile && execReadsFile(command));
+      const readsTainted = cmds.some(reads);
+      let fileReaches = false;
+      if (egress === "uploads an artifact") {
+        // Only the named paths are uploaded; none named means everything.
+        const paths = uploadPaths(stepLines);
+        fileReaches =
+          unnamedFile ||
+          (tainted.size > 0 &&
+            (paths === undefined ||
+              paths.some((entry) => {
+                if (/\$\{\{/.test(entry)) return true;
+                const path = normalizePath(entry);
+                return tainted.coveredBy(entry) || [...tainted.paths].some((t) => path.endsWith(`/${t}`));
+              })));
+      } else if (egress !== null && egress !== "makes an outbound call") {
+        // A local action's steps are not read here.
+        fileReaches = tainted.size > 0 || unnamedFile;
+      } else if (egress !== null) {
+        fileReaches = readsTainted;
+      }
       const envReaches = egress !== "uploads an artifact" && (jobSecret || carriedEnv);
       if (egress && (stepSecret || envReaches || fileReaches)) {
         findings.push(finding(step.line, `a stored secret is in scope for a step in job "${job.id}" that ${egress}`));
       }
+
+      // Which commands hold the secret: they name it or a variable carrying
+      // it, dump the environment, or read a tainted file. After a $GITHUB_ENV
+      // export, or in a github-script step with a secret input, the whole step
+      // holds it, but then only its explicit file writes are followed.
       const secretNames = new Set([...jobSecretNames, ...secretEnvNames(linesText(stripped, regions, s, e, ["env"]))]);
-      const holdsSecret =
-        textHasStoredSecret(exec) ||
-        mentionsVariable(exec, secretNames) ||
-        (secretNames.size > 0 && ENV_DUMP_RE.test(exec)) ||
-        (matrixSecret && /\bmatrix\s*\./.test(exec)) ||
-        (/^actions\/github-script(?:@|$)/i.test(uses) && stepSecret) ||
-        carriedEnv ||
-        readsTainted;
-      if (holdsSecret) {
-        if (PERSISTS_ENV_RE.test(exec)) carriedEnv = true;
-        const written: Array<string | null> = fileTargets(exec);
-        if (readsTainted) written.push(...pathLikeWords(exec));
-        for (const target of written) {
+      const wholeStep = carriedEnv || (/^actions\/github-script(?:@|$)/i.test(uses) && stepSecret);
+      // Commands run in order, so a file written by one command is read by the
+      // next, and a variable assigned from the secret carries it on.
+      const holding: string[] = [];
+      for (const command of cmds) {
+        const holds =
+          textHasStoredSecret(command) ||
+          mentionsVariable(command, secretNames) ||
+          (secretNames.size > 0 && ENV_DUMP_RE.test(command)) ||
+          (matrixSecret && /\bmatrix\s*\./.test(command)) ||
+          reads(command);
+        if (!holds) continue;
+        holding.push(command);
+        const assigned = SHELL_ASSIGN_RE.exec(command)?.[1];
+        if (assigned !== undefined) secretNames.add(assigned);
+        for (const target of [...fileTargets(command), ...commandOutputs(command)]) {
           if (target === null) unnamedFile = true;
-          else for (const part of fileNameParts(target)) taintedFiles.add(part);
+          else tainted.add(target);
         }
-        if (taintedFiles.size > MAX_TAINTED_FILES) {
-          taintedFiles.clear();
+      }
+      if (wholeStep || holding.length > 0) {
+        if (wholeStep ? PERSISTS_ENV_RE.test(exec) : holding.some((command) => PERSISTS_ENV_RE.test(command))) {
+          carriedEnv = true;
+        }
+        if (wholeStep) {
+          for (const target of fileTargets(exec)) {
+            if (target === null) unnamedFile = true;
+            else tainted.add(target);
+          }
+        }
+        if (tainted.size > MAX_TAINTED_FILES) {
+          tainted.clear();
           unnamedFile = true;
         }
       }
