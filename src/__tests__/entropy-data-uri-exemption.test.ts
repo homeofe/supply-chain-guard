@@ -99,6 +99,18 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
     expect(found.map((finding) => finding.severity)).toEqual(["high"]);
   });
 
+  // A well-formed container is easy to forge; a file that could unpack its
+  // own "image" keeps the high verdict for it.
+  it.each([
+    ["vm", 'require("vm").runInThisContext(Buffer.from(LOGO.split(",")[1], "base64").toString());'],
+    ["eval of atob", 'eval(atob(LOGO.split(",")[1]));'],
+    ["child_process", 'require("child_process").execSync(Buffer.from(LOGO.slice(23), "base64").toString());'],
+  ])("keeps an inlined image at high in a file that decodes or runs code (%s)", (_label, sink) => {
+    const content = `const LOGO = "data:image/jpeg;base64,${JPEG}";\n${sink}\n`;
+    const found = analyzeEntropy(content, "src/logo.js").filter((finding) => finding.rule === "HIGH_ENTROPY_STRING");
+    expect(found.map((finding) => finding.severity)).toEqual(["high"]);
+  });
+
   it("does not let a payload ride behind the padding of a real image", () => {
     // 538 bytes, so the base64 ends in "==" before the appended payload.
     const padded = Buffer.concat([PNG_SIG, chunk("IHDR", Buffer.alloc(13)), chunk("IDAT", Buffer.concat([BODY, Buffer.alloc(1)])), chunk("IEND", Buffer.alloc(0))]);

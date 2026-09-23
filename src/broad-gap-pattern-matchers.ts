@@ -751,6 +751,8 @@ interface ContentMemo {
   dnsEncodedLine?: Map<number, boolean>;
   /** functions in the file whose body calls an encoder */
   dnsHelpers?: Set<string>;
+  /** the helper scan hit a cap: what it could not read counts as a signal */
+  dnsHelpersIncomplete?: boolean;
   regexConstants?: Map<string, { kind: string; body: string; flags: string }[]>;
   guardedImportEvaluations: number;
 }
@@ -796,7 +798,7 @@ const DNS_ENCODER_WINDOW = 5;
 /** Lines below a DNS hit read while its call is still open (a formatter broke it). */
 const DNS_CONTINUATION_LINES = 5;
 
-/** Characters of each line above the hit read for assignments. */
+/** Characters of each continuation line below the hit read with the query. */
 const DNS_WINDOW_LINE_CHARS = 4096;
 
 /**
@@ -815,6 +817,17 @@ const HELPER_DECL_RE =
 const MAX_HELPER_BODY = 16 * 1024;
 const MAX_HELPERS = 256;
 
+/** Characters the helper scan may visit per file, all helpers together. */
+const HELPER_SCAN_BUDGET = 4 * 1024 * 1024;
+
+/** Longest regex literal skipped while matching braces. */
+const MAX_REGEX_LITERAL = 256;
+
+/** Characters left for the helper scan of the current file. */
+interface ScanBudget {
+  left: number;
+}
+
 const IDENTIFIER_RE = /[A-Za-z_$][\w$]*/g;
 
 /** Is one of `names` used as an identifier in `text`? A set lookup per token, linear. */
@@ -825,9 +838,10 @@ function mentionsAny(text: string, names: Set<string>): boolean {
 }
 
 /** Index after the string starting at `at` (quote at `at`), or `limit`. */
-function skipString(content: string, at: number, limit: number): number {
+function skipString(content: string, at: number, limit: number, budget: ScanBudget): number {
   const quote = content[at];
   for (let i = at + 1; i < limit; i++) {
+    if (--budget.left < 0) return limit;
     const ch = content[i];
     if (ch === "\\") i++;
     else if (ch === quote) return i;
@@ -844,9 +858,11 @@ function regexCanStart(content: string, at: number): boolean {
 }
 
 /** Index of the closing `/` of a regex literal on this line, or `at` if none. */
-function skipRegex(content: string, at: number, limit: number): number {
+function skipRegex(content: string, at: number, limit: number, budget: ScanBudget): number {
   let inClass = false;
-  for (let i = at + 1; i < limit; i++) {
+  const end = Math.min(limit, at + 1 + MAX_REGEX_LITERAL);
+  for (let i = at + 1; i < end; i++) {
+    if (--budget.left < 0) return limit;
     const ch = content[i];
     if (ch === "\n") return at;
     if (ch === "\\") i++;
@@ -861,12 +877,13 @@ function skipRegex(content: string, at: number, limit: number): number {
  * The `}` closing the block opened at `open`, ignoring braces in strings,
  * comments and regex literals; `limit` if it does not close before it.
  */
-function closingBrace(content: string, open: number, limit: number): number {
+function closingBrace(content: string, open: number, limit: number, budget: ScanBudget): number {
   let depth = 0;
   for (let i = open; i < limit; i++) {
+    if (--budget.left < 0) return limit;
     const ch = content[i];
     if (ch === '"' || ch === "'" || ch === "`") {
-      i = skipString(content, i, limit);
+      i = skipString(content, i, limit, budget);
     } else if (ch === "/" && content[i + 1] === "/") {
       while (i < limit && content[i] !== "\n") i++;
     } else if (ch === "/" && content[i + 1] === "*") {
@@ -874,7 +891,7 @@ function closingBrace(content: string, open: number, limit: number): number {
       while (i < limit && !(content[i] === "*" && content[i + 1] === "/")) i++;
       i++;
     } else if (ch === "/" && regexCanStart(content, i)) {
-      i = skipRegex(content, i, limit);
+      i = skipRegex(content, i, limit, budget);
     } else if (ch === "{") {
       depth++;
     } else if (ch === "}" && --depth === 0) {
@@ -885,11 +902,16 @@ function closingBrace(content: string, open: number, limit: number): number {
 }
 
 /** Names of the functions in a file whose body calls an encoder. */
-function encodingHelpers(content: string): Set<string> {
+function encodingHelpers(content: string): { names: Set<string>; incomplete: boolean } {
   const names = new Set<string>();
+  const budget: ScanBudget = { left: HELPER_SCAN_BUDGET };
+  let incomplete = false;
   let read = 0;
   for (const m of content.matchAll(HELPER_DECL_RE)) {
-    if (++read > MAX_HELPERS) break;
+    if (++read > MAX_HELPERS || budget.left <= 0) {
+      incomplete = true;
+      break;
+    }
     const name = m[1] ?? m[2]!;
     const start = m.index + m[0].length;
     const limit = Math.min(content.length, start + MAX_HELPER_BODY);
@@ -903,7 +925,10 @@ function encodingHelpers(content: string): Set<string> {
     }
     let body: string;
     if (content[at] === "{") {
-      body = content.slice(at, closingBrace(content, at, limit) + 1);
+      const close = closingBrace(content, at, limit, budget);
+      // A body cut off by the cap or the budget was not read to its end.
+      if (close >= limit && limit < content.length) incomplete = true;
+      body = content.slice(at, close + 1);
     } else {
       // An expression body runs to the end of its line.
       let end = at;
@@ -912,7 +937,8 @@ function encodingHelpers(content: string): Set<string> {
     }
     if (DNS_ENCODED_NAME.test(body)) names.add(name);
   }
-  return names;
+  if (budget.left <= 0) incomplete = true;
+  return { names, incomplete };
 }
 
 /** The hit line, plus the lines below it while its parentheses are open. */
@@ -938,12 +964,20 @@ function encodedNameReachesLine(content: string, line: number): boolean {
   if (query === undefined) return false;
   if (DNS_ENCODED_NAME.test(query)) return true;
   const memo = memoFor(content);
-  memo.dnsHelpers ??= encodingHelpers(content);
+  if (memo.dnsHelpers === undefined) {
+    const helpers = encodingHelpers(content);
+    memo.dnsHelpers = helpers.names;
+    memo.dnsHelpersIncomplete = helpers.incomplete;
+  }
+  // What a cap left unread counts as a signal: the verdict before corroboration.
+  if (memo.dnsHelpersIncomplete) return true;
   const tainted = new Set<string>(memo.dnsHelpers);
   for (let k = Math.max(1, line - DNS_ENCODER_WINDOW); k < line; k++) {
     const bounds = lineBounds(content, k);
     if (!bounds) continue;
-    const text = content.slice(bounds[0], Math.min(bounds[1], bounds[0] + DNS_WINDOW_LINE_CHARS));
+    // The whole line: it lies in at most DNS_ENCODER_WINDOW windows, so reading
+    // it in full stays linear, and nothing after a cut-off is missed.
+    const text = content.slice(bounds[0], bounds[1]);
     // One pass per line; each value runs to the end of its statement.
     if (!text.includes("=")) continue;
     // A value ends at the next `,` or `;` (the next declarator or statement),

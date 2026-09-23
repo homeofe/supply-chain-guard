@@ -191,6 +191,7 @@ export function analyzeEntropy(
   // The file-level pass ignores well-formed inlined images and fonts. The
   // string pass still reports them, at low: any container check can be
   // forged, so the exemption lowers the severity and never hides the data.
+  // In a file that decodes base64 or runs code they stay high.
   const withoutDataUris = stripExemptDataUris(content);
 
   // Check file-level entropy
@@ -209,6 +210,7 @@ export function analyzeEntropy(
   // Check individual long strings for high entropy, one finding per line.
   const original = content.split("\n");
   const lines = withoutDataUris.split("\n");
+  const decodesOrRuns = original.length > 0 && DECODES_OR_RUNS_RE.test(content);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     const hit = firstHighEntropyString(line);
@@ -231,8 +233,10 @@ export function analyzeEntropy(
     if (inlined) {
       findings.push({
         rule: "HIGH_ENTROPY_STRING",
-        description: `High-entropy data in an inlined image or font data: URI (${inlined.entropy.toFixed(2)}, ${inlined.str.length} chars). A well-formed image or font container is expected there, so this is reported at low.`,
-        severity: "low",
+        description: decodesOrRuns
+          ? `High-entropy data in an inlined image or font data: URI (${inlined.entropy.toFixed(2)}, ${inlined.str.length} chars), in a file that decodes base64 or runs code, so it may be unpacked here.`
+          : `High-entropy data in an inlined image or font data: URI (${inlined.entropy.toFixed(2)}, ${inlined.str.length} chars). A well-formed image or font container is expected there, so this is reported at low.`,
+        severity: decodesOrRuns ? "high" : "low",
         file: relativePath,
         line: i + 1,
         match: shorten(inlined.str),
@@ -244,6 +248,14 @@ export function analyzeEntropy(
 
   return findings;
 }
+
+/**
+ * A file that decodes base64 or runs code could be unpacking its own inlined
+ * "image": a well-formed container is easy to forge, so such a file keeps the
+ * high verdict for it.
+ */
+const DECODES_OR_RUNS_RE =
+  /\batob\s*\(|\bBuffer\s*\.\s*from\s*\([^\n]{0,200}?["'`](?:base64|base64url)["'`]|\b(?:b64decode|b32decode|a2b_base64)\s*\(|\bbase64\s+(?:-d|--decode)\b|\beval\s*\(|\bFunction\s*\(|\bvm\s*\.\s*[A-Za-z]|\bchild_process\b|\bexec(?:Sync|File|FileSync)?\s*\(|\bimportScripts\s*\(|\bnew\s+Worker\s*\(|\bdocument\s*\.\s*write\s*\(/;
 
 /** The first long string or token on a line above the string threshold. */
 function firstHighEntropyString(line: string): { str: string; entropy: number } | undefined {

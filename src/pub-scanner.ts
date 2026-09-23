@@ -64,7 +64,7 @@ function readLines(content: string): Line[] {
     // \s*: is quadratic on a colon-free line with a long whitespace run.
     const m = /^([ \t]*)([^:\s][^:]*):[ \t]*(.*)$/.exec(text);
     if (!m) return;
-    const value = m[3]!.trim().replace(/^&[\w-]+[ \t]+/, "");
+    const value = m[3]!.trim().replace(/^&[\w-]+(?:[ \t]+|$)/, "");
     out.push({ indent: m[1]!.length, key: unquote(m[2]!.trim()), value: unquote(value), line: i + 1 });
   });
   return out;
@@ -104,7 +104,7 @@ function extractLock(lines: Line[]): PubPackage[] {
     // a lockfile is target-controlled, so the key is never trusted over it.
     const name = desc.find((l) => l.key === "name")?.value ?? entry.key;
     const version = field("version", fieldIndent);
-    if (!url || !PUB_HOSTS.has(url.replace(/\/+$/, ""))) continue;
+    if (!url || !isPubHost(url)) continue;
     if (!PUB_NAME.test(name)) continue;
     out.push({ name, version: version && EXACT_VERSION.test(version) ? version : undefined, line: entry.line });
   }
@@ -157,9 +157,6 @@ function flowPairs(text: string, depth = 0): Field[] {
   return out;
 }
 
-/** Most lines one flow map is read over. */
-const MAX_FLOW_LINES = 64;
-
 /** Net `{` minus `}` in text, ignoring quoted strings. */
 function braceDepth(text: string): number {
   let depth = 0;
@@ -183,7 +180,7 @@ function braceDepth(text: string): number {
 function joinFlow(rawLines: string[], start: number, first: string, baseIndent: number): string {
   let text = first;
   let depth = braceDepth(first);
-  for (let j = start + 1; depth > 0 && j < rawLines.length && j <= start + MAX_FLOW_LINES; j++) {
+  for (let j = start + 1; depth > 0 && j < rawLines.length; j++) {
     const line = stripHashComment(rawLines[j]!);
     if (line.trim() === "") continue;
     const indent = line.length - line.trimStart().length;
@@ -205,6 +202,16 @@ function joinFlow(rawLines: string[], start: number, first: string, baseIndent: 
   return text.replace(/[,\s]+$/, "") + "}".repeat(Math.max(level, 0));
 }
 
+/** Is this the pub.dev registry (or a known mirror), however the URL is spelled? */
+function isPubHost(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return PUB_HOSTS.has(`${u.protocol}//${u.host}`);
+  } catch {
+    return PUB_HOSTS.has(url.replace(/\/+$/, "").toLowerCase());
+  }
+}
+
 /** A dependency's map (block or flow form) to a pub package, or nothing. */
 function pubDependency(name: string, fields: Field[], line: number): PubPackage | undefined {
   // `git`/`path`/`sdk` have no pub identity; `hosted` must name pub.dev.
@@ -215,7 +222,7 @@ function pubDependency(name: string, fields: Field[], line: number): PubPackage 
     // malformed map fails towards a report.
     const text = `${hosted.value} ${fields.find((f) => f.key === "url")?.value ?? ""}`;
     const url = /https?:\/\/[^\s,}'"]+/.exec(text)?.[0];
-    if (url !== undefined && !PUB_HOSTS.has(url.replace(/\/+$/, ""))) return undefined;
+    if (url !== undefined && !isPubHost(url)) return undefined;
   }
   const version = fields.find((f) => f.key === "version")?.value;
   return { name, version: version && EXACT_VERSION.test(version) ? version : undefined, line };

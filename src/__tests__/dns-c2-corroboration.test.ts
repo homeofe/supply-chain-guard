@@ -178,6 +178,44 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(performance.now() - started).toBeLessThan(performanceBudget(5_000));
   });
 
+  // What a cap leaves unread counts as a signal, never as a benign lookup.
+  it("fails towards medium when a cap stops the helper or window scan", () => {
+    const decoys = Array.from({ length: 260 }, (_, i) => `function d${i}() { return ${i}; }`);
+    const lateHelper = [...decoys, "function q() { return base32(secret); }", "dns.resolveTxt(q());"].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", lateHelper)).toEqual(["medium"]);
+    const longBody = ["function q() {", `  // ${"x".repeat(17 * 1024)}`, "  return base32(secret);", "}", "dns.resolveTxt(q());"].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", longBody)).toEqual(["medium"]);
+    // An assignment past the first 4,096 characters of a line is still read.
+    const longLine = [`const pad = "${"x".repeat(4200)}", q = base32(secret);`, "dns.resolveTxt(q);"].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", longLine)).toEqual(["medium"]);
+  });
+
+  it("stays linear on regex literals whose class never closes, and counts the unread rest as a signal", { timeout: performanceBudget(60_000) }, () => {
+    // 200 closed helpers, each under the body cap and together under the helper
+    // cap, whose regex-like text is far beyond the scan budget: the budget, not
+    // a cap, has to stop the scan.
+    const body = "function h(){" + "=/[".repeat(5_000) + "}\n";
+    const content = body.repeat(200) + "dns.resolveTxt(h())\n";
+    const started = performance.now();
+    const found = severities("DEAD_DROP_DNS_TXT", content);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(5_000));
+    // The scan budget ran out before every helper was read.
+    expect(found).toEqual(["medium"]);
+  });
+
+  it("reads a helper full of regex-like text to its end without spending the budget", () => {
+    // Each unclosed class is read for at most a few hundred characters, so one
+    // such helper does not exhaust the file's budget and the benign lookup stays low.
+    const content = [
+      "function h() {",
+      "  " + "=/[".repeat(5_000),
+      "}",
+      ...Array.from({ length: 6 }, (_, i) => `// filler ${i}`),
+      "dns.resolveTxt(h());",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["low"]);
+  });
+
   it("does not count comparisons with eval or Function as a sink", () => {
     const content = [
       "if (handler === eval || typeof handler == Function) throw new Error(\"blocked\");",

@@ -212,6 +212,14 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     ].join("\n"), "pubspec.yaml")).toEqual([]);
   });
 
+  it("reads a long flow-form section, an anchor on a map, and pub.dev however it is spelled", () => {
+    const many = Array.from({ length: 70 }, (_, i) => `  pkg_${i}: ^1.0.0,`);
+    expect(names(["dependencies: {", ...many, "  late_pin: 0.1.5}"].join("\n"), "pubspec.yaml")).toContain("late_pin@0.1.5");
+    expect(names("dependencies:\n  anchored_map: &m\n    version: 0.1.5\n", "pubspec.yaml")).toEqual(["anchored_map@0.1.5"]);
+    expect(names("dependencies:\n  upper: {hosted: https://PUB.DEV, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["upper@0.1.5"]);
+    expect(names("dependencies:\n  port: {hosted: 'https://pub.dev:443/', version: 0.1.5}\n", "pubspec.yaml")).toEqual(["port@0.1.5"]);
+  });
+
   it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {
     const yaml = "dependencies:\n" + "  a: {\n" + "    x: y\n".repeat(200_000);
     const t0 = Date.now();

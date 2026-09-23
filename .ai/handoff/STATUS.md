@@ -1,3 +1,54 @@
+## Sixth review round and the split (2026-09-23) (claude-opus-5-5)
+
+Three reviewers on the same model as the lead. The real-data comparison found no new
+false positive. It found two false negatives in the step-by-step secret-egress model
+(a key path inside a quoted ssh option; SSH keys that ssh uses without naming them),
+and both were fixed. The review of that model found five new inputs that stop the
+whole scan (path variables, working-directory, URLs, glob pairs, exported names), plus
+new false negatives and false positives.
+
+Decision by the owner, after six rounds: the step-by-step data-flow model for
+`WORKFLOW_SECRET_TO_UPLOAD_PATH` leaves this PR. It moves to its own change with its
+own review cycle, from a saved copy that includes this round's fixes. Every other part
+of the model's review history converged; this model grew new defect classes with each
+round, among them inputs that stop the scan.
+
+What ships here for the rule is a whole-file check with sharper parts, and it is
+linear:
+- every expression form of a stored secret, excluding the run's own token and
+  presence tests;
+- egress only in executed text;
+- the wider egress vocabulary;
+- each workflow file analysed on its own.
+
+It is proven by 13 mutation cuts, all red. The shared secret and egress helpers,
+`workflowScopes` and the GHA exfiltration rules stay as reviewed.
+
+### The rest of the round, fixed
+
+- **Entropy:** a forged image in a file that also decodes and runs it had dropped to
+  low, where `main` failed the scan. In a file that decodes base64 or runs code, an
+  inlined image stays high.
+- **DNS:**
+  - An unclosed regex class made the helper scan quadratic: 52 s on 5 MiB, now 0.1 s.
+    There is a file-wide scan budget, and each regex literal is read for at most 256
+    characters.
+  - Every scan limit now fails towards medium, the verdict before corroboration.
+  - Lines above the query are read in full.
+- **pub:** flow maps are read however many lines they span. Anchors on a map and
+  pub.dev's URL spelled differently are read too.
+- **Proof:** 8 mutation cuts, all red. The first pass left three survivors: two
+  limits that other limits masked in the test, and one rule made redundant by reading
+  full lines, which was removed.
+
+### Consequences
+
+- D-062 d9 (the step-by-step rule) and its private advisory are not part of this
+  release. The routine's bookkeeping is told so; the advisory stays a draft without a
+  patched version until the follow-up ships.
+- A secret in one step and a health check in another are still reported together;
+  that was d9's false positive.
+
 ## Fifth review round of PR 326 (2026-09-23) (claude-opus-5-5)
 
 From this round on, the reviewers ran on the same model as the lead, at the owner's

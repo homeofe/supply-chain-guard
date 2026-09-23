@@ -243,9 +243,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   the script declares itself, not only on the built-in ones; pubspec and
   GitLab CI `services:` flow maps written over several lines are read (from
   the raw text, so a closing brace on its own line counts, and a map that
-  never closes is still read); pubspec also reads a whole section written as
-  a flow map, quoted keys, YAML anchors before a version, and a `hosted:`
-  value that names no readable URL as pub.dev.
+  never closes is still read, however many lines it spans); pubspec also
+  reads a whole section written as a flow map, quoted keys, YAML anchors, a
+  `hosted:` value that names no readable URL as pub.dev, and pub.dev however
+  its URL is spelled (case, default port).
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
@@ -274,9 +275,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     signature, and a structure that accounts for every byte: PNG chunks to
     `IEND`, JPEG end marker, declared RIFF/WOFF/EOT/BMP sizes, BMFF boxes,
     font table directory, no data after inner padding) is left out of the
-    file-level pass and reported at low by the string pass, instead of high.
-    Anything else, a payload labelled `image/png` or appended after a real
-    image header included, is reported at high as before. The file-level pass
+    file-level pass and reported at low by the string pass, instead of high,
+    unless the file decodes base64 or runs code (it could unpack its own
+    "image"). Anything else, a payload labelled `image/png` or appended after
+    a real image header included, is reported at high as before. The file-level pass
     used to exempt every media type.
   - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
     call with identifier boundaries (`setInterval(fetchNotifications, ...)`
@@ -290,55 +292,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     (eval, Function, an alias or indirect call of either, vm, or a shell run
     with `-c`, anywhere in the file; or a decode together with a process
     sink). An ordinary DNSSEC, SPF or DMARC lookup reports at low, including
-    when an unrelated digest is encoded nearby.
+    when an unrelated digest is encoded nearby. Where a scan limit stops the
+    search for helpers (very many or very long functions), the lookup is
+    reported at medium, as it was before this corroboration.
   - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
     extension whose only variable segment passed an anchored allowlist in the
     same function reports at info.
   - `VIDAR_WALLET_THEFT`: a wallet name inside a longer word (`phantomjs`,
     `Atomicity`) or a target word running on (`seeding`, `vaulted`) no longer
     matches.
-  - `WORKFLOW_SECRET_TO_UPLOAD_PATH` is a per-step check now: a stored secret
-    in the step's scope (its `env`, `run`, the job or workflow `env`, a job
-    container's env) and, in that same step, an egress command or an artifact
-    upload. Comments, `fetch-depth:`, `git fetch`, a URL inside a regex and
-    loopback health checks no longer count, the run's own token is governed by
-    `permissions:` rather than reported here, and a finding carries the step's
-    line. A reusable workflow from another repository that receives
-    `secrets: inherit` or a stored secret, and a local composite action that
-    makes an outbound call, are reported too. A secret stays in scope for the
-    later steps of its job once a step holding it writes to `$GITHUB_ENV` or
-    `$GITHUB_OUTPUT`, the legacy `::set-output`/`::set-env`, or a variable
-    holding one of those files (or exports it from github-script), and after
-    an action that fetches credentials (Vault, AWS, Google, Azure, 1Password,
-    Bitwarden, Doppler, Infisical, Conjur). Within a step, commands are read
-    one by one: a command holds the secret when it names it or a variable
-    carrying it (also one assigned or `read` from it), prints the whole
-    environment as the command itself, or reads a file that holds it. What it
-    writes then holds it: redirections, `tee`, PowerShell file cmdlets, Node
-    and Python writes, the value of an output option (`-o`, `-out`, `of=`),
-    the destination of a copy and the archive of `tar`/`zip`. Files it only
-    reads, signs or uploads do not. Paths are placed in the workspace
-    (resolving `$GITHUB_WORKSPACE` and the step's `working-directory`),
-    outside it (`~`, `$HOME`, absolute), or under a directory that cannot be
-    known (`$RUNNER_TEMP/...`), and a later command reaches such a file by
-    naming it, a directory above it, `.` (workspace files only), or a glob
-    that matches it; a publishing step (artifacts, Pages, releases, caches)
-    reaches it when its paths cover it. A publishing step sends files, not
-    the environment, so a secret only in the job's or workflow's env reaches
-    it through a file, the step's own env, or a frontend build that inlines a
-    public build variable (`VITE_`, `NEXT_PUBLIC_` and the like). A local
-    composite action is read for what it writes and what it reads. A secret
-    only tested for presence (`secrets.X != ''`), and an `if:` line, is not a
-    use of it. A secret in `strategy.matrix` counts for the job, and Node
-    `http(s).request`/`get` and `axios`, Python `requests` (also a
-    `Session`)/`httpx`/`urllib`/`http.client`, github-script requests to a
-    host other than GitHub's API, PowerShell web cmdlets and `Net.WebClient`,
-    `Send-MailMessage`, `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a
-    remote host, `ssh` to a host that is not loopback and `git push` to a
-    remote that is not GitHub count as egress, also with the command name
-    split by shell quoting. A workflow file that cannot be modelled step by
-    step falls back to the whole-file check instead of ending the scan of the
-    others.
+  - `WORKFLOW_SECRET_TO_UPLOAD_PATH` stays a whole-file check, with sharper
+    parts: a stored secret is recognised in every expression form (bracket
+    access, the whole `secrets` context) but not the run's own token, nor a
+    secret only tested for presence (`secrets.X != ''`); an outbound call
+    counts only in executed text (`run:`, `script:`), with comments removed and
+    loopback calls, `git fetch` and `fetch-depth:` left out. Egress includes
+    Node `http(s).request`/`get` and `axios`, Python `requests`/`httpx`/
+    `urllib`/`http.client`, github-script requests to a host other than
+    GitHub's API, PowerShell web cmdlets, `Net.WebClient`, `Send-MailMessage`,
+    `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a remote host, `ssh` to a
+    host that is not loopback and `git push` to a remote that is not GitHub,
+    also with the command name split by shell quoting. A workflow file that
+    cannot be classified no longer ends the scan of the files after it. A
+    secret in one step and an outbound call in another are still reported
+    together.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a
