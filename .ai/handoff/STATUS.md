@@ -1,3 +1,71 @@
+## Fifth review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+From this round on, the reviewers ran on the same model as the lead, at the owner's
+request. Three reviewers:
+- the workflow rule end to end;
+- entropy, DNS, pub and test paths;
+- a real-data comparison against `main` over 110 checkouts and 318 `node_modules`
+  packages with workflows.
+
+The real-data run found no false positive from the PR. Its one false negative was
+the file-name exemption on `BEACON_TIMEOUT_FETCH` (below). The two code reviews
+found the most serious defects of the day. Several of them came from the earlier
+rounds' own fixes.
+
+### Fixed
+
+- **A workflow file that could not be modelled ended the scan of every later file.**
+  An unbounded spread threw inside a single try/catch around the whole loop, so a
+  decoy workflow could switch the rule off for a repository. Spreads over input-sized
+  arrays are loops now, in the modeler and the workflow parser. Each file is
+  analysed on its own; one that still fails falls back to the whole-file check.
+- **Exponential glob matching**, added in the fourth round: a 210-byte workflow hung
+  the scan. Globs are matched segment by segment without backtracking. Four more
+  inputs are linear now:
+  - a long env word;
+  - long fd digits before a redirection;
+  - a 400 KB deep path, which crashed V8 before;
+  - many secret names.
+
+  The per-job taint cap is enforced as paths are added.
+- **BEACON_TIMEOUT_FETCH exempted `*.min.js`**, a file name the scanned package
+  chooses. The timeout rule has no file-name exemption again, as on `main`.
+- **Entropy:** every container check can be forged. A well-formed inlined image is
+  therefore reported at low instead of being removed, and a payload after inner
+  base64 padding, or behind a zero-size first BMFF box, stays at high.
+- **DNS:**
+  - A TXT answer executed without a decode was low; a code sink now counts alone.
+  - Helpers are found anywhere in the file. Braces inside strings and regex literals
+    no longer close them early.
+  - Wrapped calls, comma declarations, member assignments and `toString(16)` count.
+- **pub:** a nested `hosted:` map over several lines, a flow-form section, quoted keys
+  and anchors now report. Flow maps are read from the raw text.
+- **The workflow rule, 18 flows `main` caught that the PR missed, and 17 false
+  positives.** Paths are placed in the workspace, outside it, or under an unknown
+  directory. Outputs are taken from write positions. Publishers, credential actions,
+  legacy exports, build-time inlining and local actions are followed. Presence checks,
+  `if:` lines, and `env`/`set` used as words are not uses. The CHANGELOG entry lists
+  the details.
+
+### Proof
+
+52 mutation cuts, all red for the right reason (every test file loaded and ran),
+with baseline and post-restore green, on the Linux runner. The first pass left eight
+that proved nothing:
+- four had no test that exercised them, and have one now;
+- one was an anchor spoiled by a shell heredoc;
+- one did not compile;
+- two showed dead code, a depth cap and a pub special case, which were removed.
+
+The same pass found a quadratic DNS value scan before any reviewer did, and it is
+linear now. The reviewers' fixtures are pinned as tests: 25 flows that must be
+followed, 20 shapes that must stay quiet, 18 DNS cases and the pub cases.
+
+### Left for later
+
+- Gaps that `main` does not catch either (more egress tools and actions) are listed
+  in the private maintainer handoff, not here.
+
 ## Fourth review round of PR 326 (2026-09-23) (claude-opus-5-5)
 
 Three reviewers again: the file model, DNS together with every public claim, and a

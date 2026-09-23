@@ -241,7 +241,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   states (`scalaVersion`, `crossScalaVersions`), `CrossVersion.binary` like
   `%%`; Gradle dependencies with a variable version are read on configurations
   the script declares itself, not only on the built-in ones; pubspec and
-  GitLab CI `services:` flow maps written over several lines are read.
+  GitLab CI `services:` flow maps written over several lines are read (from
+  the raw text, so a closing brace on its own line counts, and a map that
+  never closes is still read); pubspec also reads a whole section written as
+  a flow map, quoted keys, YAML anchors before a version, and a `hosted:`
+  value that names no readable URL as pub.dev.
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
@@ -264,26 +268,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     `Annex`) is a requirement number, not an address; a private or ULA literal
     in an explanatory comment of a file that implements private-range
     classification is reported at info instead of medium.
-  - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: one data-URI exemption for both
-    passes, limited to `image/*` (not `image/svg+xml`, which can carry script),
-    `font/*` and the legacy font types, and only when the decoded bytes are a
-    complete image or font container (its signature, and a structure that
-    accounts for every byte: PNG chunks to `IEND`, JPEG end marker, declared
-    RIFF/WOFF/EOT/BMP sizes, BMFF boxes, font table directory). A payload
-    labelled `image/png`, or appended after a real image header, is still
-    reported. The file-level pass used to exempt every media type.
+  - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: an inlined image or font
+    (`image/*` but not `image/svg+xml`, which can carry script, `font/*` and
+    the legacy font types) whose decoded bytes are a complete container (its
+    signature, and a structure that accounts for every byte: PNG chunks to
+    `IEND`, JPEG end marker, declared RIFF/WOFF/EOT/BMP sizes, BMFF boxes,
+    font table directory, no data after inner padding) is left out of the
+    file-level pass and reported at low by the string pass, instead of high.
+    Anything else, a payload labelled `image/png` or appended after a real
+    image header included, is reported at high as before. The file-level pass
+    used to exempt every media type.
   - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
     call with identifier boundaries (`setInterval(fetchNotifications, ...)`
-    and `forgotPassword` no longer match), and both rules share one exclusion
-    for minified and prose files.
-  - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal (an
-    encoder result that reaches the query: on its line, or assigned in the
-    five lines above (also through destructuring, or a helper function
-    declared there whose body encodes) and used by it; or a decoded TXT answer
-    reaching eval,
-    Function, an alias or indirect call of either, vm or a process sink); an
-    ordinary DNSSEC, SPF or DMARC lookup reports at low, including when an
-    unrelated digest is encoded nearby.
+    and `forgotPassword` no longer match). No file-name exclusion was added:
+    the scanned package chooses its file names.
+  - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal: an
+    encoder result that reaches the query (on the query, including the lines
+    a formatter wrapped it onto; through assignments, destructuring, comma
+    declarations or a member in the five lines above; or through a function
+    anywhere in the file whose body encodes), or an answer that is executed
+    (eval, Function, an alias or indirect call of either, vm, or a shell run
+    with `-c`, anywhere in the file; or a decode together with a process
+    sink). An ordinary DNSSEC, SPF or DMARC lookup reports at low, including
+    when an unrelated digest is encoded nearby.
   - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
     extension whose only variable segment passed an anchored allowlist in the
     same function reports at info.
@@ -300,20 +307,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     `secrets: inherit` or a stored secret, and a local composite action that
     makes an outbound call, are reported too. A secret stays in scope for the
     later steps of its job once a step holding it writes to `$GITHUB_ENV` or
-    `$GITHUB_OUTPUT` (or exports it from github-script). Within a step,
-    commands are read one by one: a command holds the secret when it names it
-    or a variable carrying it (also one assigned from it), dumps the whole
-    environment, or reads a file that holds it, and the files it writes or
-    names then hold it, followed by path. A later command reaches such a file
-    by naming it, a directory above it, `.`, or a glob that matches it; an
-    upload reaches it when its `path:` covers it. An artifact upload sends
-    files, not the environment, so a secret that is only in the job's or
-    workflow's env reaches it through a file or the upload step's own env. A
-    secret in `strategy.matrix` counts for the job, and Node
-    `http(s).request`/`get` and `axios`, Python `requests`/`httpx`/`urllib`,
-    PowerShell web cmdlets and `Net.WebClient`, `Send-MailMessage`,
-    `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a remote host and `ssh` to
-    a host that is not loopback count as egress.
+    `$GITHUB_OUTPUT`, the legacy `::set-output`/`::set-env`, or a variable
+    holding one of those files (or exports it from github-script), and after
+    an action that fetches credentials (Vault, AWS, Google, Azure, 1Password,
+    Bitwarden, Doppler, Infisical, Conjur). Within a step, commands are read
+    one by one: a command holds the secret when it names it or a variable
+    carrying it (also one assigned or `read` from it), prints the whole
+    environment as the command itself, or reads a file that holds it. What it
+    writes then holds it: redirections, `tee`, PowerShell file cmdlets, Node
+    and Python writes, the value of an output option (`-o`, `-out`, `of=`),
+    the destination of a copy and the archive of `tar`/`zip`. Files it only
+    reads, signs or uploads do not. Paths are placed in the workspace
+    (resolving `$GITHUB_WORKSPACE` and the step's `working-directory`),
+    outside it (`~`, `$HOME`, absolute), or under a directory that cannot be
+    known (`$RUNNER_TEMP/...`), and a later command reaches such a file by
+    naming it, a directory above it, `.` (workspace files only), or a glob
+    that matches it; a publishing step (artifacts, Pages, releases, caches)
+    reaches it when its paths cover it. A publishing step sends files, not
+    the environment, so a secret only in the job's or workflow's env reaches
+    it through a file, the step's own env, or a frontend build that inlines a
+    public build variable (`VITE_`, `NEXT_PUBLIC_` and the like). A local
+    composite action is read for what it writes and what it reads. A secret
+    only tested for presence (`secrets.X != ''`), and an `if:` line, is not a
+    use of it. A secret in `strategy.matrix` counts for the job, and Node
+    `http(s).request`/`get` and `axios`, Python `requests` (also a
+    `Session`)/`httpx`/`urllib`/`http.client`, github-script requests to a
+    host other than GitHub's API, PowerShell web cmdlets and `Net.WebClient`,
+    `Send-MailMessage`, `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a
+    remote host, `ssh` to a host that is not loopback and `git push` to a
+    remote that is not GitHub count as egress, also with the command name
+    split by shell quoting. A workflow file that cannot be modelled step by
+    step falls back to the whole-file check instead of ending the scan of the
+    others.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a

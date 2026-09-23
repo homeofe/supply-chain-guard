@@ -191,6 +191,27 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names(yaml, "pubspec.yaml")).toEqual(["bare_close@0.1.5", "comma_close@0.2.0", "never_closed@0.3.0", "http@-"]);
   });
 
+  it("reads nested hosted maps over several lines, section flow maps, quoted keys and anchors", () => {
+    expect(names([
+      "dependencies:",
+      "  nested_hosted: {hosted: {",
+      "      url: https://pub.dev},",
+      "    version: 0.1.5}",
+    ].join("\n"), "pubspec.yaml")).toEqual(["nested_hosted@0.1.5"]);
+    expect(names("dependencies: {section_flow: 0.1.5, local: {path: ../x}}\n", "pubspec.yaml")).toEqual(["section_flow@0.1.5"]);
+    expect(names('"dependencies":\n  "quoted_key": 0.1.5\n', "pubspec.yaml")).toEqual(["quoted_key@0.1.5"]);
+    expect(names("dependencies:\n  anchored: &v 0.1.5\n", "pubspec.yaml")).toEqual(["anchored@0.1.5"]);
+    // A hosted value that names no readable URL counts as pub.dev.
+    expect(names("dependencies:\n  garbled: {hosted: {, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["garbled@0.1.5"]);
+    // A git dependency, and a private host, are not pub.dev packages.
+    expect(names([
+      "dependencies:",
+      "  from_git: {",
+      "    version: 0.1.5, git: {url: x}}",
+      "  private_pkg: {hosted: {url: https://pub.internal.example}, version: 1.0.0}",
+    ].join("\n"), "pubspec.yaml")).toEqual([]);
+  });
+
   it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {
     const yaml = "dependencies:\n" + "  a: {\n" + "    x: y\n".repeat(200_000);
     const t0 = Date.now();

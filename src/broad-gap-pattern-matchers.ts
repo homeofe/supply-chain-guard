@@ -749,6 +749,8 @@ interface ContentMemo {
   dnsDecodeAndSink?: boolean;
   /** hasDnsC2Signal's query-side verdict per hit line */
   dnsEncodedLine?: Map<number, boolean>;
+  /** functions in the file whose body calls an encoder */
+  dnsHelpers?: Set<string>;
   regexConstants?: Map<string, { kind: string; body: string; flags: string }[]>;
   guardedImportEvaluations: number;
 }
@@ -781,28 +783,37 @@ function lineBounds(content: string, line: number): [number, number] | undefined
 }
 
 /**
- * An encoder call whose result reaches the query line: on that line itself,
- * or assigned to a variable in the lines just above that the query line uses
- * (directly or through further assignments). The name carries encoded data
- * out.
+ * An encoder call whose result reaches the query: on the query itself, in an
+ * assignment in the lines above that the query uses (directly or through
+ * further assignments), or inside a helper function the query calls.
  */
 const DNS_ENCODED_NAME =
-  /\b(?:base32|base64|b32encode|b64encode|btoa|hexlify|toHex|encodeBase32|encodeBase64|encodeHex)(?:\w{0,24}|\.\w{1,24})[^\S\n]*\(|\.toString[^\S\n]*\([^\S\n]*["'](?:hex|base64|base64url)["']/i;
+  /\b(?:base32|base64|b32encode|b64encode|btoa|hexlify|toHex|encodeBase32|encodeBase64|encodeHex)(?:\w{0,24}|\.\w{1,24})[^\S\n]*\(|\.toString[^\S\n]*\([^\S\n]*(?:["'`](?:hex|base64|base64url)["'`]|(?:16|36)[^\S\n]*\))/i;
+
 /** Lines above a DNS hit that are searched for the encoder call. */
 const DNS_ENCODER_WINDOW = 5;
+
+/** Lines below a DNS hit read while its call is still open (a formatter broke it). */
+const DNS_CONTINUATION_LINES = 5;
 
 /** Characters of each line above the hit read for assignments. */
 const DNS_WINDOW_LINE_CHARS = 4096;
 
 /**
- * `[const|let|var] name =`, `name +=`, or a destructuring target
- * (`const [a] =`, `const {a: b} =`) at the start of a statement.
+ * Assignment targets anywhere in a statement: `a =`, `a += `, `, b =` in a
+ * declaration list, `q.name =` (its base `q` is what the query names), and
+ * destructuring (`const [a] =`, `const {a: b} =`). `==` and `=>` are not.
  */
-const ASSIGNMENT_RE =
-  /^[^\S\n]*(?:(?:const|let|var)[^\S\n]+)?([A-Za-z_$][\w$]*|\[[^\]\n]{0,200}\]|\{[^}\n]{0,200}\})[^\S\n]*\+?=(?!=)([^]*)$/;
+const ASSIGN_TARGET_RE =
+  /(?:^|[,;(]|\b(?:const|let|var)\b)[^\S\n]*(\[[^\]\n]{0,200}\]|\{[^}\n]{0,200}\}|[A-Za-z_$][\w$]{0,64}(?:[^\S\n]*\.[^\S\n]*[A-Za-z_$][\w$]{0,64}){0,8})[^\S\n]*\+?=(?![=>])/g;
 
-/** `function name(` or `async function name(`, declaring a helper. */
-const FUNCTION_DECL_RE = /\bfunction[^\S\n]*\*?[^\S\n]+([A-Za-z_$][\w$]*)[^\S\n]*\(/;
+/** A named function: `function f(`, or `const f = function` / `(...) =>` / `x =>`. */
+const HELPER_DECL_RE =
+  /\bfunction[^\S\n]*\*?[^\S\n]+([A-Za-z_$][\w$]{0,64})[^\S\n]*\(|\b(?:const|let|var)[^\S\n]+([A-Za-z_$][\w$]{0,64})[^\S\n]*=[^\S\n]*(?:async[^\S\n]+)?(?:function\b|\([^()\n]{0,200}\)[^\S\n]*=>|[A-Za-z_$][\w$]{0,64}[^\S\n]*=>)/g;
+
+/** Longest helper body read, and most helpers read, per file. */
+const MAX_HELPER_BODY = 16 * 1024;
+const MAX_HELPERS = 256;
 
 const IDENTIFIER_RE = /[A-Za-z_$][\w$]*/g;
 
@@ -813,64 +824,169 @@ function mentionsAny(text: string, names: Set<string>): boolean {
   return false;
 }
 
-/** Does an encoder call's result reach this (1-based) line? */
-function encodedNameReachesLine(content: string, line: number): boolean {
-  const hit = lineBounds(content, line);
-  if (!hit) return false;
-  const hitText = content.slice(hit[0], hit[1]);
-  if (DNS_ENCODED_NAME.test(hitText)) return true;
-  const tainted = new Set<string>();
-  // A helper declared in the window whose body encodes: calling it is using it.
-  // Its body is followed by brace depth, so an encoder after it has closed
-  // does not taint it.
-  let helper: string | undefined;
+/** Index after the string starting at `at` (quote at `at`), or `limit`. */
+function skipString(content: string, at: number, limit: number): number {
+  const quote = content[at];
+  for (let i = at + 1; i < limit; i++) {
+    const ch = content[i];
+    if (ch === "\\") i++;
+    else if (ch === quote) return i;
+    else if (ch === "\n" && quote !== "`") return i;
+  }
+  return limit;
+}
+
+/** Can a `/` at `at` start a regex literal (not a division)? */
+function regexCanStart(content: string, at: number): boolean {
+  let k = at - 1;
+  while (k >= 0 && (content[k] === " " || content[k] === "\t")) k--;
+  return k < 0 || "(,=:[!&|?{};+-*%<>~^\n".includes(content[k]!);
+}
+
+/** Index of the closing `/` of a regex literal on this line, or `at` if none. */
+function skipRegex(content: string, at: number, limit: number): number {
+  let inClass = false;
+  for (let i = at + 1; i < limit; i++) {
+    const ch = content[i];
+    if (ch === "\n") return at;
+    if (ch === "\\") i++;
+    else if (ch === "[") inClass = true;
+    else if (ch === "]") inClass = false;
+    else if (ch === "/" && !inClass) return i;
+  }
+  return at;
+}
+
+/**
+ * The `}` closing the block opened at `open`, ignoring braces in strings,
+ * comments and regex literals; `limit` if it does not close before it.
+ */
+function closingBrace(content: string, open: number, limit: number): number {
   let depth = 0;
-  let opened = false;
+  for (let i = open; i < limit; i++) {
+    const ch = content[i];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i = skipString(content, i, limit);
+    } else if (ch === "/" && content[i + 1] === "/") {
+      while (i < limit && content[i] !== "\n") i++;
+    } else if (ch === "/" && content[i + 1] === "*") {
+      i += 2;
+      while (i < limit && !(content[i] === "*" && content[i + 1] === "/")) i++;
+      i++;
+    } else if (ch === "/" && regexCanStart(content, i)) {
+      i = skipRegex(content, i, limit);
+    } else if (ch === "{") {
+      depth++;
+    } else if (ch === "}" && --depth === 0) {
+      return i;
+    }
+  }
+  return limit;
+}
+
+/** Names of the functions in a file whose body calls an encoder. */
+function encodingHelpers(content: string): Set<string> {
+  const names = new Set<string>();
+  let read = 0;
+  for (const m of content.matchAll(HELPER_DECL_RE)) {
+    if (++read > MAX_HELPERS) break;
+    const name = m[1] ?? m[2]!;
+    const start = m.index + m[0].length;
+    const limit = Math.min(content.length, start + MAX_HELPER_BODY);
+    // Where the body starts: an arrow's first non-space character (possibly on
+    // the next line), or a function's opening brace after its parameters.
+    let at = start;
+    if (m[0].endsWith("=>")) {
+      while (at < limit && /\s/.test(content[at]!)) at++;
+    } else {
+      while (at < limit && at < start + 512 && content[at] !== "{") at++;
+    }
+    let body: string;
+    if (content[at] === "{") {
+      body = content.slice(at, closingBrace(content, at, limit) + 1);
+    } else {
+      // An expression body runs to the end of its line.
+      let end = at;
+      while (end < limit && content[end] !== "\n") end++;
+      body = content.slice(at, end);
+    }
+    if (DNS_ENCODED_NAME.test(body)) names.add(name);
+  }
+  return names;
+}
+
+/** The hit line, plus the lines below it while its parentheses are open. */
+function queryText(content: string, line: number): string | undefined {
+  const hit = lineBounds(content, line);
+  if (!hit) return undefined;
+  let text = content.slice(hit[0], hit[1]);
+  let open = 0;
+  for (const ch of text) open += ch === "(" ? 1 : ch === ")" ? -1 : 0;
+  for (let k = 1; k <= DNS_CONTINUATION_LINES && open > 0; k++) {
+    const next = lineBounds(content, line + k);
+    if (!next) break;
+    const more = content.slice(next[0], Math.min(next[1], next[0] + DNS_WINDOW_LINE_CHARS));
+    text += "\n" + more;
+    for (const ch of more) open += ch === "(" ? 1 : ch === ")" ? -1 : 0;
+  }
+  return text;
+}
+
+/** Does an encoder call's result reach the query on this (1-based) line? */
+function encodedNameReachesLine(content: string, line: number): boolean {
+  const query = queryText(content, line);
+  if (query === undefined) return false;
+  if (DNS_ENCODED_NAME.test(query)) return true;
+  const memo = memoFor(content);
+  memo.dnsHelpers ??= encodingHelpers(content);
+  const tainted = new Set<string>(memo.dnsHelpers);
   for (let k = Math.max(1, line - DNS_ENCODER_WINDOW); k < line; k++) {
     const bounds = lineBounds(content, k);
     if (!bounds) continue;
     const text = content.slice(bounds[0], Math.min(bounds[1], bounds[0] + DNS_WINDOW_LINE_CHARS));
-    const declaration = FUNCTION_DECL_RE.exec(text);
-    if (declaration) {
-      helper = declaration[1];
-      depth = 0;
-      opened = false;
-    }
-    if (helper !== undefined) {
-      const body = declaration ? text.slice(declaration.index) : text;
-      if (DNS_ENCODED_NAME.test(body)) tainted.add(helper);
-      for (const ch of body) {
-        if (ch === "{") {
-          depth++;
-          opened = true;
-        } else if (ch === "}") depth--;
+    // One pass per line; each value runs to the end of its statement.
+    if (!text.includes("=")) continue;
+    // A value ends at the next `,` or `;` (the next declarator or statement),
+    // so values do not overlap and reading them all is linear in the line.
+    for (const m of text.matchAll(ASSIGN_TARGET_RE)) {
+      const from = m.index + m[0].length;
+      let end = from;
+      while (end < text.length && text[end] !== "," && text[end] !== ";") end++;
+      const value = text.slice(from, end);
+      if (!(DNS_ENCODED_NAME.test(value) || mentionsAny(value, tainted))) continue;
+      const target = m[1]!;
+      if (target.startsWith("[") || target.startsWith("{")) {
+        for (const name of target.matchAll(IDENTIFIER_RE)) tainted.add(name[0]);
+      } else {
+        tainted.add(/^[A-Za-z_$][\w$]*/.exec(target)![0]);
       }
-      if (opened && depth <= 0) helper = undefined;
-    }
-    for (const statement of text.split(";")) {
-      const m = ASSIGNMENT_RE.exec(statement);
-      if (!m || !(DNS_ENCODED_NAME.test(m[2]!) || mentionsAny(m[2]!, tainted))) continue;
-      for (const name of m[1]!.matchAll(IDENTIFIER_RE)) tainted.add(name[0]);
     }
   }
-  return mentionsAny(hitText, tainted);
+  return mentionsAny(query, tainted);
 }
 
 /** A decode of fetched data ... */
 const DNS_ANSWER_DECODE =
-  /\batob[^\S\n]*\(|\bBuffer\.from[^\S\n]*\([^)\n]{0,200}["'](?:base64|base64url|hex)["']|\b(?:b64decode|b32decode|unhexlify|a2b_base64)[^\S\n]*\(|\bbytes\.fromhex[^\S\n]*\(/;
-/** ... and an execution sink in the same file. `.exec(` is RegExp, not a sink. */
+  /\batob[^\S\n]*\(|\bBuffer\.from[^\S\n]*\([^\n]{0,200}?["'](?:base64|base64url|hex)["']|\b(?:b64decode|b32decode|unhexlify|a2b_base64)[^\S\n]*\(|\bbytes\.fromhex[^\S\n]*\(/;
+
+/**
+ * Code execution: eval and Function, their aliases and indirect forms, vm, and
+ * a shell started with `-c`. A TXT answer reaching one of these is a C2 channel
+ * whether or not it was decoded first.
+ */
+const DNS_CODE_SINK =
+  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|(?<![=!<>])=(?!=)[^\S\n]*(?:(?:globalThis|window|self|global)[^\S\n]*\.[^\S\n]*)?(?:eval|Function)\b(?![^\S\n]*[.(\w])|[\w$\])][^\S\n]*\[[^\S\n]*['"](?:eval|Function)['"][^\S\n]*\]|\b(?:eval|Function)[^\S\n]*:[^\S\n]*[A-Za-z_$][\w$]{0,64}[^}\n]{0,40}\}[^\S\n]*=(?!=)|\([^\S\n]*0[^\S\n]*,[^\S\n]*(?:eval|Function)[^\S\n]*\)|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\b(?:spawn|spawnSync|execFile|execFileSync)[^\S\n]*\([^\S\n]*["'](?:sh|bash|zsh|dash|cmd(?:\.exe)?|powershell|pwsh)["'][^\S\n]*,[^\S\n]*\[[^\S\n]*["'](?:-c|\/c|-Command|-EncodedCommand)["']/;
+
+/** Process sinks, which count together with a decode. `.exec(` is RegExp, not a sink. */
 const DNS_ANSWER_SINK =
-  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|(?<![=!<>])=(?!=)[^\S\n]*(?:(?:globalThis|window|self|global)[^\S\n]*\.[^\S\n]*)?(?:eval|Function)\b(?![^\S\n]*[.(\w])|[\w$\])][^\S\n]*\[[^\S\n]*['"](?:eval|Function)['"][^\S\n]*\]|\b(?:eval|Function)[^\S\n]*:[^\S\n]*[A-Za-z_$][\w$]*[^}\n]{0,80}\}[^\S\n]*=(?!=)|\([^\S\n]*0[^\S\n]*,[^\S\n]*(?:eval|Function)[^\S\n]*\)|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
+  /\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
 
 /**
  * C2 corroboration for C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT. A DoH endpoint or
  * a TXT lookup is ordinary DNS tooling (DNSSEC checks, SPF/DMARC reads); what
- * makes it a channel is data going OUT in the query name (an encoder call on
- * the hit's line, or assigned above it and used on it: encodedNameReachesLine)
- * or an answer coming IN and being executed (a decode plus eval, Function, an
- * alias or indirect call of either, vm, exec or child_process anywhere in the
- * file).
+ * makes it a channel is data going OUT in the query name (encodedNameReachesLine)
+ * or an answer coming IN and being executed: code execution anywhere in the
+ * file (DNS_CODE_SINK), or a decode together with a process sink.
  */
 export function hasDnsC2Signal(content: string, line: number): boolean {
   const memo = memoFor(content);
@@ -883,7 +999,7 @@ export function hasDnsC2Signal(content: string, line: number): boolean {
   if (encoded) return true;
   if (memo.dnsDecodeAndSink === undefined) {
     memo.dnsDecodeAndSink =
-      DNS_ANSWER_DECODE.test(content) && DNS_ANSWER_SINK.test(content);
+      DNS_CODE_SINK.test(content) || (DNS_ANSWER_DECODE.test(content) && DNS_ANSWER_SINK.test(content));
   }
   return memo.dnsDecodeAndSink;
 }

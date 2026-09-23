@@ -84,6 +84,21 @@ export interface WorkflowAst {
 // Low-level line helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Smallest value, by a loop: spreading into `Math.min` throws a RangeError once the
+ * array outgrows the engine's argument limit, and the input decides its size.
+ */
+function minOf(values: readonly number[]): number {
+  let min = Infinity;
+  for (const v of values) if (v < min) min = v;
+  return min;
+}
+
+/** Append every item, by a loop, for the same reason as minOf. */
+function pushAll<T>(target: T[], items: readonly T[]): void {
+  for (const item of items) target.push(item);
+}
+
 function indentOf(line: string): number {
   let n = 0;
   while (n < line.length && line[n] === " ") n++;
@@ -303,9 +318,9 @@ function parseOn(
   if (headerValue) {
     const v = headerValue.trim();
     if (v.startsWith("[")) {
-      triggers.push(...parseFlowList(v));
+      pushAll(triggers, parseFlowList(v));
     } else if (v.startsWith("{")) {
-      triggers.push(...parseFlowMapKeys(v));
+      pushAll(triggers, parseFlowMapKeys(v));
     } else {
       triggers.push(v);
     }
@@ -316,7 +331,7 @@ function parseOn(
   // (blockBody already excludes comments, so the min is over real keys.)
   const body = blockBody(lines, headerIndex, indentOf(lines[headerIndex]!));
   if (body.length === 0) return { triggers, workflowRunWorkflows };
-  const childIndent = Math.min(...body.map((j) => indentOf(lines[j]!)));
+  const childIndent = minOf(body.map((j) => indentOf(lines[j]!)));
 
   for (const j of body) {
     if (indentOf(lines[j]!) !== childIndent) continue;
@@ -324,7 +339,7 @@ function parseOn(
     if (!kv) continue;
     triggers.push(kv.key);
     if (kv.key === "workflow_run") {
-      workflowRunWorkflows.push(...parseWorkflowRunWorkflows(lines, j, childIndent));
+      pushAll(workflowRunWorkflows, parseWorkflowRunWorkflows(lines, j, childIndent));
     }
   }
   return { triggers, workflowRunWorkflows };
@@ -342,7 +357,7 @@ function parseWorkflowRunWorkflows(
     const kv = parseKeyValue(stripComment(lines[j]!).trim());
     if (kv && kv.key === "workflows") {
       if (kv.value) {
-        result.push(...parseFlowList(kv.value));
+        pushAll(result, parseFlowList(kv.value));
       } else {
         // block list: subsequent `- name` items indented under `workflows:`
         for (const jj of blockBody(lines, j, indentOf(lines[j]!))) {
@@ -384,7 +399,7 @@ function parseJobs(lines: string[], jobsIndex: number, inner: boolean[]): WfJob[
   if (body.length === 0) return jobs;
 
   // Job ids are the shallowest keys inside the jobs block.
-  const jobIndent = Math.min(...body.filter((j) => !inner[j]).map((j) => indentOf(lines[j]!)));
+  const jobIndent = minOf(body.filter((j) => !inner[j]).map((j) => indentOf(lines[j]!)));
 
   for (let idx = 0; idx < body.length; idx++) {
     const j = body[idx]!;
@@ -415,7 +430,7 @@ function parseJob(
 
   const body = blockBody(lines, jobIndex, jobIndent);
   const jobChildIndent = body.length
-    ? Math.min(...body.filter((j) => !inner[j]).map((j) => indentOf(lines[j]!)))
+    ? minOf(body.filter((j) => !inner[j]).map((j) => indentOf(lines[j]!)))
     : jobIndent + 2;
 
   for (const j of body) {
@@ -457,7 +472,7 @@ function parseSteps(
   };
   const dashLines = body.filter((j) => !inner[j] && isDashLine(j));
   if (dashLines.length === 0) return steps;
-  const stepIndent = Math.min(...dashLines.map((j) => indentOf(lines[j]!)));
+  const stepIndent = minOf(dashLines.map((j) => indentOf(lines[j]!)));
 
   const starts = dashLines.filter((j) => indentOf(lines[j]!) === stepIndent);
   for (let s = 0; s < starts.length; s++) {

@@ -18,20 +18,20 @@
     "src/__tests__/threat-intel.test.ts": "654b44a4f9334e599d943103be39e16917373c427fda98e8ad3a6712ecb075e4",
     "src/active-validation.ts": "648f60ff6092943cab38936477b8f68aeb904daad0baf3a020581601a21bd250",
     "src/attack-graph.ts": "0e4499d8731df9470bf4e2e094272470b438e35ae760bbdc12f61eed3d92af06",
-    "src/broad-gap-pattern-matchers.ts": "9892725982b3d81db785722db4d1645c97784961f0df35d4f0f44172234f09b6",
+    "src/broad-gap-pattern-matchers.ts": "ab504f64d297e9735873474dc1e7597ae09bb869ad05f5675f059e29e4a1bd89",
     "src/config-scanner.ts": "9b385f18047d136e6153df2b0d48d118e8e0922b4af7ba56e0776d3af26b9c71",
     "src/correlation-engine.ts": "53c44c32d3aa411ba11ad4ffbf5a8552de5f8c2e19d220b1b34d4c8357ccb097",
     "src/dependency-confusion.ts": "64b6ce20c01704be0d62c39add90253bad84aefe9f3523098bb6bbdd6f75825b",
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "5ae5de2ad9f205ca2e7a1e03bc9349467c70f62a3741a84a6a63ecacb997cff9",
     "src/ioc-blocklist.ts": "77caa4f2c41ffb24691805f9e8ce7946f17bcebf4032877c8ea623871c72830f",
-    "src/patterns.ts": "f6810a2f117fe945e7e6394d6bc52417a9cf25fbd4af92e073e1c018676212e6",
+    "src/patterns.ts": "4e10ae3cb18ec575f902d416caba05e0bac91056a9c7d3b4a50ad925cee70305",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
     "src/reporter.ts": "25543634a052869790b12643a16ec2c757287d68828da10978be63439c5a9aa5",
     "src/scanner.ts": "78bd9fa3a3ea507fa0f6fe634f8ff0f8d7813b7ab539f50a7c150555ba3dddcc",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
     "src/threat-intel.ts": "9ef7175234b6887f217eadec42d2ae39e4b97b73f4a8daa34f396d75e48145a2",
-    "src/workflow-modeler.ts": "9ad34670add8307f56b35903b5f1649e6578217c0a0ff3d087712db2ae7d5c85"
+    "src/workflow-modeler.ts": "b061a1e628f303f8aa6f4622b9641b04bad43960bbccbeb0c23ba9477871d265"
   }
 }

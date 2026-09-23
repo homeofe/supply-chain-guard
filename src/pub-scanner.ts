@@ -64,7 +64,8 @@ function readLines(content: string): Line[] {
     // \s*: is quadratic on a colon-free line with a long whitespace run.
     const m = /^([ \t]*)([^:\s][^:]*):[ \t]*(.*)$/.exec(text);
     if (!m) return;
-    out.push({ indent: m[1]!.length, key: m[2]!.trim(), value: unquote(m[3]!.trim()), line: i + 1 });
+    const value = m[3]!.trim().replace(/^&[\w-]+[ \t]+/, "");
+    out.push({ indent: m[1]!.length, key: unquote(m[2]!.trim()), value: unquote(value), line: i + 1 });
   });
   return out;
 }
@@ -118,8 +119,8 @@ type Field = Pick<Line, "key" | "value">;
  * split at depth 0 only, and nesting is followed two levels (enough for
  * `hosted: {url: ...}` / `git: {url: ...}`) so the work stays linear.
  */
-function flowPairs(text: string, depth = 0): Field[] {
-  const out: Field[] = [];
+/** The top-level `key: value` pairs of a `{...}` flow map. */
+function topLevelPairs(text: string): Array<[string, string]> {
   const inner = text.slice(1, -1);
   const parts: string[] = [];
   let level = 0;
@@ -134,11 +135,18 @@ function flowPairs(text: string, depth = 0): Field[] {
     }
   }
   parts.push(inner.slice(start));
+  const out: Array<[string, string]> = [];
   for (const part of parts) {
     const colon = part.indexOf(":");
     if (colon < 0) continue;
-    const key = unquote(part.slice(0, colon).trim());
-    const value = unquote(part.slice(colon + 1).trim());
+    out.push([unquote(part.slice(0, colon).trim()), unquote(part.slice(colon + 1).trim())]);
+  }
+  return out;
+}
+
+function flowPairs(text: string, depth = 0): Field[] {
+  const out: Field[] = [];
+  for (const [key, value] of topLevelPairs(text)) {
     if (value.startsWith("{") && value.endsWith("}")) {
       out.push({ key, value: "" });
       if (depth < 2) out.push(...flowPairs(value, depth + 1));
@@ -149,44 +157,97 @@ function flowPairs(text: string, depth = 0): Field[] {
   return out;
 }
 
+/** Most lines one flow map is read over. */
+const MAX_FLOW_LINES = 64;
+
+/** Net `{` minus `}` in text, ignoring quoted strings. */
+function braceDepth(text: string): number {
+  let depth = 0;
+  let quote = "";
+  for (const ch of text) {
+    if (quote) {
+      if (ch === quote) quote = "";
+    } else if (ch === "'" || ch === '"') quote = ch;
+    else if (ch === "{") depth++;
+    else if (ch === "}") depth--;
+  }
+  return depth;
+}
+
+/**
+ * A flow map that starts with `first` on raw line `start`, joined with the
+ * raw lines that continue it, closing braces included. Reading stops at the
+ * closing brace, or at the next entry at the map's own indentation; a map
+ * that never closes is closed there, failing towards a report.
+ */
+function joinFlow(rawLines: string[], start: number, first: string, baseIndent: number): string {
+  let text = first;
+  let depth = braceDepth(first);
+  for (let j = start + 1; depth > 0 && j < rawLines.length && j <= start + MAX_FLOW_LINES; j++) {
+    const line = stripHashComment(rawLines[j]!);
+    if (line.trim() === "") continue;
+    const indent = line.length - line.trimStart().length;
+    if (indent <= baseIndent) break;
+    text += " " + line.trim();
+    depth += braceDepth(line);
+  }
+  // Cut at the brace that closes the map (a trailing `,` or text is not part of it).
+  let level = 0;
+  let quote = "";
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (quote) {
+      if (ch === quote) quote = "";
+    } else if (ch === "'" || ch === '"') quote = ch;
+    else if (ch === "{") level++;
+    else if (ch === "}" && --level === 0) return text.slice(0, i + 1);
+  }
+  return text.replace(/[,\s]+$/, "") + "}".repeat(Math.max(level, 0));
+}
+
 /** A dependency's map (block or flow form) to a pub package, or nothing. */
 function pubDependency(name: string, fields: Field[], line: number): PubPackage | undefined {
   // `git`/`path`/`sdk` have no pub identity; `hosted` must name pub.dev.
   if (fields.some((f) => f.key === "git" || f.key === "path" || f.key === "sdk")) return undefined;
   const hosted = fields.find((f) => f.key === "hosted");
-  const hostedUrl = hosted?.value || fields.find((f) => f.key === "url")?.value;
-  if (hosted && hostedUrl && !PUB_HOSTS.has(hostedUrl.replace(/\/+$/, ""))) return undefined;
+  if (hosted) {
+    // A hosted value that names no readable URL is taken as pub.dev, so a
+    // malformed map fails towards a report.
+    const text = `${hosted.value} ${fields.find((f) => f.key === "url")?.value ?? ""}`;
+    const url = /https?:\/\/[^\s,}'"]+/.exec(text)?.[0];
+    if (url !== undefined && !PUB_HOSTS.has(url.replace(/\/+$/, ""))) return undefined;
+  }
   const version = fields.find((f) => f.key === "version")?.value;
   return { name, version: version && EXACT_VERSION.test(version) ? version : undefined, line };
 }
 
-function extractPubspec(lines: Line[]): PubPackage[] {
+function extractPubspec(lines: Line[], rawLines: string[]): PubPackage[] {
   const out: PubPackage[] = [];
   lines.forEach((section, i) => {
     if (section.indent !== 0 || !DEPENDENCY_SECTIONS.has(section.key)) return;
+    if (section.value.startsWith("{")) {
+      // The whole section as one flow map: `dependencies: {name: 1.0.0}`.
+      const flow = joinFlow(rawLines, section.line - 1, section.value, 0);
+      for (const [name, value] of topLevelPairs(flow)) {
+        if (!PUB_NAME.test(name)) continue;
+        if (value.startsWith("{")) {
+          const pkg = pubDependency(name, flowPairs(value), section.line);
+          if (pkg) out.push(pkg);
+        } else {
+          out.push({ name, version: EXACT_VERSION.test(value) ? value : undefined, line: section.line });
+        }
+      }
+      return;
+    }
     const body = childrenOf(lines, i);
     const depIndent = body[0]?.indent;
     body.forEach((dep, k) => {
       if (dep.indent !== depIndent || !PUB_NAME.test(dep.key)) return;
       if (dep.value.startsWith("{")) {
-        // Flow form: `name: {path: ../x}`, or the same map continued on the
-        // following, deeper-indented lines (`name: {` / `path: ../x` / `}`),
-        // which are joined back into one map. Only lines up to the next
-        // dependency are read, so an unclosed map costs one pass. A closing
-        // brace alone on its line is not a `key: value` line and never reaches
-        // this loop, so it looks exactly like a map that never closes: both are
-        // read up to the next dependency, failing towards a report.
-        let flow = dep.value;
-        if (!flow.endsWith("}")) {
-          const parts = [flow.slice(1)];
-          for (let j = k + 1; j < body.length && body[j]!.indent > depIndent!; j++) {
-            const value = body[j]!.value.replace(/,$/, "");
-            const closes = value.endsWith("}") && !value.startsWith("{");
-            parts.push(`${body[j]!.key}: ${closes ? value.slice(0, -1) : value}`);
-            if (closes) break;
-          }
-          flow = `{${parts.map((p) => p.trim().replace(/,$/, "")).filter(Boolean).join(", ")}}`;
-        }
+        // Flow form: `name: {path: ../x}`, or the same map continued over the
+        // following lines, read from the raw text so that a closing brace on
+        // its own line counts (see joinFlow).
+        const flow = joinFlow(rawLines, dep.line - 1, dep.value, dep.indent);
         const pkg = pubDependency(dep.key, flowPairs(flow), dep.line);
         if (pkg) out.push(pkg);
         return;
@@ -212,7 +273,7 @@ function extractPubspec(lines: Line[]): PubPackage[] {
 export function extractPubPackages(content: string, relativePath: string): PubPackage[] {
   const lines = readLines(content);
   const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
-  return basename === "pubspec.lock" ? extractLock(lines) : extractPubspec(lines);
+  return basename === "pubspec.lock" ? extractLock(lines) : extractPubspec(lines, content.split(/\r?\n/));
 }
 
 /**

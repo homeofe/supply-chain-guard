@@ -37,7 +37,7 @@ const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
  * a token sent to GitHub's own API is that token's intended audience.
  */
 const OTHER_EGRESS_RE =
-  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w./-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(/i;
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w./-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(|\brequests[^\S\n]*\.[^\S\n]*Session[^\S\n]*\(|\bhttp\.client\b|\burllib3\b|\b(?:github|octokit)[^\S\n]*\.[^\S\n]*request[^\S\n]*\([^\S\n]*['"`](?:[A-Z]+[^\S\n]+)?https?:\/\/(?!api\.github\.com)/i;
 
 /** The `ssh` command word (not `ssh-keygen`, `ssh-add`, `ssh-keyscan`, or a directory `ssh/`). */
 const SSH_CMD_RE = /(?<![\w.-])ssh(?![\w./-])/;
@@ -94,10 +94,11 @@ function isRemoteCopy(segment: string): boolean {
 
 /**
  * A step that hands what it holds to the later steps of its job through their
- * environment: `$GITHUB_ENV`/`$GITHUB_OUTPUT`, or github-script's
- * `core.exportVariable` / `core.setOutput`.
+ * environment: `$GITHUB_ENV`/`$GITHUB_OUTPUT`, the legacy `::set-output` /
+ * `::set-env` commands, or github-script's `core.exportVariable` /
+ * `core.setOutput`.
  */
-const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(/;
+const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(|::set-(?:output|env)\b/;
 
 /**
  * Where a redirection in one shell word writes to: `>f`, `x>f`, `1>>f`, `>|f`, or
@@ -107,9 +108,10 @@ const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable
 function redirectTarget(word: string): string | undefined {
   const at = word.indexOf(">");
   if (at < 0) return undefined;
-  const before = word.slice(0, at);
-  if (/[=<>-]$/.test(before)) return undefined;
-  const fd = /\d*$/.exec(before)![0];
+  if (at > 0 && "=<>-".includes(word[at - 1]!)) return undefined;
+  let digits = at;
+  while (digits > 0 && word.charCodeAt(digits - 1) >= 48 && word.charCodeAt(digits - 1) <= 57) digits--;
+  const fd = word.slice(digits, at);
   if (fd !== "" && fd !== "1") return undefined;
   const rest = word.slice(at + (word[at + 1] === ">" || word[at + 1] === "|" ? 2 : 1));
   if (rest.startsWith("&") || rest.startsWith(">")) return undefined;
@@ -120,8 +122,8 @@ function redirectTarget(word: string): string | undefined {
  * Files a step writes: redirection targets, `tee` arguments, PowerShell
  * `Out-File`/`Set-Content`/`Add-Content`, Node `writeFile`/`appendFile` and
  * Python `open(..., "w"|"a"|"x"|"+")`. A target this reader cannot name (a
- * variable, a glob, a computed path) is `null`, unless only its directory is
- * computed, then it is its file name. The runner's own files and
+ * variable, a glob, a computed path) is `null`; a path with a computed
+ * directory is kept for placePath. The runner's own files and
  * devices are left out: `$GITHUB_ENV`/`$GITHUB_OUTPUT` are PERSISTS_ENV_RE's,
  * and the step summary is not readable by later steps.
  */
@@ -161,114 +163,244 @@ function fileTargets(exec: string): Array<string | null> {
   for (const m of joined.matchAll(/\b(?:writeFile|appendFile)(?:Sync)?[^\S\n]*\([^\S\n]*(?:(['"`])([^'"`\n]{0,512})\1)?/g)) {
     out.push(m[2] ?? null);
   }
-  for (const m of joined.matchAll(/\bopen[^\S\n]*\([^\S\n]*(?:(['"])([^'"\n]{0,512})\1|[\w.[\]]{1,128})[^\S\n]*,[^\S\n]*(?:mode[^\S\n]*=[^\S\n]*)?['"]([^'"\n]{0,8})['"]/g)) {
-    if (/[wax+]/.test(m[3]!)) out.push(m[2] ?? null);
-  }
+  for (const target of pythonOpenWrites(joined)) out.push(target);
   return out
     .filter((t) => t === null || !/GITHUB_(?:ENV|OUTPUT|PATH|STEP_SUMMARY)|^\/dev\//.test(t))
-    .map((t) => {
-      if (t === null || t.trim() === "") return null;
-      if (!/[$`*?{}]/.test(t)) return t;
-      // `$RUNNER_TEMP/ssh/deploy_key`: the directory is unknown, the name is not.
-      const name = t.slice(Math.max(t.lastIndexOf("/"), t.lastIndexOf("\\")) + 1);
-      return name !== "" && !/[$`*?{}]/.test(name) ? name : null;
-    });
+    .map((t) => (t === null || t.trim() === "" ? null : t));
 }
 
 /** Most file paths followed per job; past this, any later file read counts. */
 const MAX_TAINTED_FILES = 256;
 
+/** Longest path followed by name; a longer one counts as unnamed. */
+const MAX_TAINTED_PATH = 4096;
+
+/** Longest glob matched; a longer one counts as covering (fail closed). */
+const MAX_GLOB_LENGTH = 1024;
+
 /**
- * Most distinct globs matched per job. Each is compiled and tested against
- * every tainted path, so a flood of distinct globs would be quadratic; past
- * this, a glob counts as covering a tainted file (fail closed).
+ * Most distinct globs matched per job. Each is compared with every tainted
+ * path, so a flood of distinct globs would be quadratic; past this, a glob
+ * counts as covering a tainted file (fail closed).
  */
 const MAX_GLOB_EVALUATIONS = 256;
 
 /**
- * Files written after a secret reached them, by full path. A later step reaches
- * one by naming its basename in code (`open('key.txt')`, `$(base64 key.txt)`),
- * or by a shell word naming the file, a directory above it, or a glob that
- * matches it (`tar czf a.tgz dist`, `curl -T "*.txt"`, `zip -r a.zip .`).
+ * Where a written or named path lives:
+ *   - "relative": in the workspace (also `$GITHUB_WORKSPACE/x`, and `..`
+ *     resolved against the step's working-directory). Only these are inside
+ *     an upload of `.` or of a directory.
+ *   - "outside": the home directory or an absolute path, reached only by the
+ *     same path (`~/.npmrc` and `$HOME/.npmrc` are one key).
+ *   - "suffix": under a directory this reader cannot know
+ *     (`$RUNNER_TEMP/ssh/deploy_key`, `f'{d}/k.txt'`); followed by what is
+ *     written after the variable.
+ */
+interface PlacedPath {
+  kind: "relative" | "outside" | "suffix";
+  path: string;
+}
+
+/** `$NAME`, `${NAME}`, `${{ expr }}`, `%NAME%`, `{expr}`, `$(cmd)`: a computed part. */
+const PATH_VARIABLE_RE = /\$\{\{[^}]*\}\}|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_]\w*|%[A-Za-z_]\w*%|\{[^}]*\}/g;
+
+function placePath(raw: string, workDir: string): PlacedPath | undefined {
+  let word = raw.trim();
+  // Most words are a plain name: no separator, variable, home or dot segment.
+  if (/^[\w+@=:,-][\w.+@=:,-]*$/.test(word) && !word.startsWith(".")) {
+    return { kind: "relative", path: workDir === "" ? word : `${workDir}/${word}` };
+  }
+  word = word.replace(/\\/g, "/");
+  if (word === "" || /[*?`]/.test(word)) return undefined;
+  // The workspace, spelled as a variable, is the workspace root.
+  word = word.replace(/^(?:\$\{\{\s*github\.workspace\s*\}\}|\$\{?GITHUB_WORKSPACE\}?)(?=\/|$)/, ".");
+  // The current directory is the working directory.
+  word = word.replace(/^(?:\$\{?PWD\}?|\$\(pwd\))(?=\/|$)/, ".");
+  word = word.replace(/^(?:\$\{?HOME\}?|%USERPROFILE%)(?=\/|$)/, "~");
+  PATH_VARIABLE_RE.lastIndex = 0;
+  if (PATH_VARIABLE_RE.test(word)) {
+    // Only the literal part after the last computed part is known.
+    PATH_VARIABLE_RE.lastIndex = 0;
+    let end = 0;
+    for (const m of word.matchAll(PATH_VARIABLE_RE)) end = m.index + m[0].length;
+    const rest = word.slice(end);
+    if (!rest.startsWith("/")) return undefined;
+    const suffix = path.posix.normalize(rest.slice(1)).replace(/\/+$/, "");
+    return suffix === "" || suffix === "." || suffix.startsWith("..") ? undefined : { kind: "suffix", path: suffix };
+  }
+  // A piece of an expression split apart by the shell (`${{`, `}}/x`) is not a path.
+  if (/[${}%]/.test(word)) return undefined;
+  if (word.startsWith("~")) {
+    return { kind: "outside", path: path.posix.normalize(word).replace(/\/+$/, "") };
+  }
+  if (word.startsWith("/") || /^[A-Za-z]:\//.test(word)) {
+    return { kind: "outside", path: path.posix.normalize(word).replace(/\/+$/, "") };
+  }
+  const joined = path.posix.normalize(workDir === "" ? word : `${workDir}/${word}`).replace(/\/+$/, "");
+  if (joined.startsWith("..")) return { kind: "outside", path: joined };
+  return { kind: "relative", path: joined === "" ? "." : joined };
+}
+
+/** The step's `working-directory:`, relative to the workspace; "" when absent or computed. */
+function workingDirectory(stepLines: readonly string[]): string {
+  for (const line of stepLines) {
+    const m = /^\s*(?:-\s+)?working-directory\s*:\s*(.*?)\s*$/.exec(line);
+    if (!m) continue;
+    const value = m[1]!.replace(/^(['"])(.*)\1$/, "$2");
+    const placed = placePath(value, "");
+    return placed?.kind === "relative" && placed.path !== "." ? placed.path : "";
+  }
+  return "";
+}
+
+/**
+ * Files written after a secret reached them. A later step reaches one by
+ * naming it (as a path word, a directory above it, `.`, or a glob), or, for a
+ * dotted file name, by naming it anywhere in code (`open('key.txt')`,
+ * `$(base64 key.txt)`).
  */
 class TaintedFiles {
   readonly paths = new Set<string>();
-  readonly basenames = new Set<string>();
   readonly dirs = new Set<string>();
+  readonly outside = new Set<string>();
+  readonly outsideDirs = new Set<string>();
+  readonly suffixes = new Set<string>();
+  private readonly suffixBasenames = new Set<string>();
+  /** Dotted file names, which may be matched as tokens in code. */
+  readonly dottedNames = new Set<string>();
   private readonly globAnswers = new Map<string, boolean>();
   private globEvaluations = 0;
 
   get size(): number {
-    return this.paths.size;
+    return this.paths.size + this.outside.size + this.suffixes.size;
   }
 
-  add(target: string): void {
-    const path = normalizePath(target);
-    if (path === "" || path === ".") return;
-    this.paths.add(path);
+  /**
+   * Follow one written file. False when it cannot be followed by name: a
+   * computed or glob path, too long, or the job already follows
+   * MAX_TAINTED_FILES. The caller then treats it as an unnamed file.
+   */
+  add(raw: string, workDir: string): boolean {
+    const placed = placePath(raw, workDir);
+    if (placed === undefined) return false;
+    const { kind, path: p } = placed;
+    if (p === ".") return false;
+    const set = kind === "relative" ? this.paths : kind === "outside" ? this.outside : this.suffixes;
+    if (set.has(p)) return true;
+    if (p.length > MAX_TAINTED_PATH || this.size >= MAX_TAINTED_FILES) return false;
+    set.add(p);
     this.globAnswers.clear();
-    const parts = path.split("/");
-    this.basenames.add(parts[parts.length - 1]!);
-    for (let i = 1; i < parts.length; i++) this.dirs.add(parts.slice(0, i).join("/"));
+    const base = p.slice(p.lastIndexOf("/") + 1);
+    if (/\.[A-Za-z0-9]/.test(base)) this.dottedNames.add(base);
+    if (kind === "suffix") this.suffixBasenames.add(base);
+    const dirs = kind === "relative" ? this.dirs : kind === "outside" ? this.outsideDirs : undefined;
+    // Each ancestor is a prefix ending at a "/", so building them is linear.
+    if (dirs) for (let at = p.indexOf("/"); at > 0; at = p.indexOf("/", at + 1)) dirs.add(p.slice(0, at));
+    return true;
   }
 
-  clear(): void {
-    this.paths.clear();
-    this.basenames.clear();
-    this.dirs.clear();
-    this.globAnswers.clear();
-  }
-
-  /** Does one shell word (a path, a directory, `.` or a glob) cover a tainted file? */
-  coveredBy(word: string): boolean {
-    const path = normalizePath(word);
-    if (path === "") return false;
-    if (path === ".") return this.paths.size > 0;
-    if (/[*?]/.test(path)) {
-      const known = this.globAnswers.get(path);
-      if (known !== undefined) return known;
-      if (this.globEvaluations >= MAX_GLOB_EVALUATIONS) return this.paths.size > 0;
-      this.globEvaluations++;
-      const glob = globToRegExp(path);
-      let covered = false;
-      for (const tainted of this.paths) {
-        if (glob.test(tainted) || glob.test(tainted.slice(tainted.lastIndexOf("/") + 1))) {
-          covered = true;
-          break;
-        }
-      }
-      this.globAnswers.set(path, covered);
-      return covered;
+  /** Does one path word (a file, a directory above one, `.` or a glob) cover a tainted file? */
+  coveredBy(word: string, workDir: string): boolean {
+    if (this.size === 0) return false;
+    const trimmed = word.trim().replace(/\\/g, "/");
+    if (/[*?]/.test(trimmed) && !/[$%{`]/.test(trimmed)) return this.globCovers(trimmed, workDir);
+    const placed = placePath(trimmed, workDir);
+    if (placed === undefined) return false;
+    const { kind, path: p } = placed;
+    if (kind === "relative") {
+      if (p === ".") return this.paths.size > 0;
+      if (this.paths.has(p) || this.dirs.has(p)) return true;
+      return this.suffixMatches(p);
     }
-    return this.paths.has(path) || this.dirs.has(path);
+    if (kind === "outside") return this.outside.has(p) || this.outsideDirs.has(p) || this.suffixMatches(p);
+    // A computed directory: the same known rest, or a tainted path ending in it.
+    return this.suffixes.has(p) || this.suffixMatches(p) || this.paths.has(p);
+  }
+
+  /** Does a path end in a tainted suffix (`out/k.txt` against `k.txt`)? */
+  private suffixMatches(p: string): boolean {
+    const base = p.slice(p.lastIndexOf("/") + 1);
+    if (!this.suffixBasenames.has(base)) return false;
+    for (const s of this.suffixes) if (p === s || p.endsWith(`/${s}`)) return true;
+    return false;
+  }
+
+  private globCovers(glob: string, workDir: string): boolean {
+    const pattern = path.posix.normalize(workDir === "" ? glob : `${workDir}/${glob}`).replace(/^\.\//, "");
+    const known = this.globAnswers.get(pattern);
+    if (known !== undefined) return known;
+    if (this.globEvaluations >= MAX_GLOB_EVALUATIONS || pattern.length > MAX_GLOB_LENGTH) {
+      return this.paths.size + this.suffixes.size > 0;
+    }
+    this.globEvaluations++;
+    let covered = false;
+    const bareName = !pattern.includes("/");
+    for (const p of [...this.paths, ...this.suffixes]) {
+      const base = p.slice(p.lastIndexOf("/") + 1);
+      if (globMatches(pattern, p) || (bareName && segmentMatches(pattern, base))) {
+        covered = true;
+        break;
+      }
+    }
+    this.globAnswers.set(pattern, covered);
+    return covered;
   }
 }
 
-/** `./a//b/` and `a\\b` to `a/b`; `.` stays `.`. */
-function normalizePath(word: string): string {
-  const path = word.replace(/\\/g, "/").replace(/\/{2,}/g, "/").replace(/^(?:\.\/)+/, "").replace(/\/+$/, "");
-  return path === "" && word.startsWith(".") ? "." : path;
-}
-
-/** A shell glob (`*`, `**`, `?`) as an anchored RegExp over a normalized path. */
-function globToRegExp(glob: string): RegExp {
-  let source = "";
-  for (let i = 0; i < glob.length; i++) {
-    const ch = glob[i]!;
-    if (ch === "*") {
-      if (glob[i + 1] === "*") {
-        source += ".*";
-        i++;
-      } else source += "[^/]*";
-    } else if (ch === "?") source += "[^/]";
-    else source += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+/**
+ * Does one path segment match one glob segment (`*`, `?`, no `/`)? The
+ * iterative star match: it backtracks only to the last `*`, so it is at most
+ * quadratic in the segment lengths and never exponential.
+ */
+function segmentMatches(glob: string, text: string): boolean {
+  let g = 0;
+  let t = 0;
+  let star = -1;
+  let mark = 0;
+  while (t < text.length) {
+    if (g < glob.length && (glob[g] === "?" || glob[g] === text[t])) {
+      g++;
+      t++;
+    } else if (g < glob.length && glob[g] === "*") {
+      star = g++;
+      mark = t;
+    } else if (star >= 0) {
+      g = star + 1;
+      t = ++mark;
+    } else {
+      return false;
+    }
   }
-  return new RegExp(`^${source}$`);
+  while (g < glob.length && glob[g] === "*") g++;
+  return g === glob.length;
 }
 
-/** Tokens a file's basename can appear as in code; URLs are removed first. */
-const FILE_TOKEN_RE = /[\w.+~-]+/g;
-const URL_RE = /\b[a-z][\w+.-]*:\/\/[^\s'"`()<>]*/gi;
+/**
+ * Does a normalized path match a glob? Segment by segment, `**` spanning any
+ * number of directories, as a table over path positions: segments times
+ * positions, each a segmentMatches.
+ */
+function globMatches(glob: string, path: string): boolean {
+  const parts = path.split("/");
+  let reach: boolean[] = new Array<boolean>(parts.length + 1).fill(false);
+  reach[0] = true;
+  for (const segment of glob.split("/")) {
+    const next = new Array<boolean>(parts.length + 1).fill(false);
+    if (segment === "**") {
+      let seen = false;
+      for (let j = 0; j <= parts.length; j++) {
+        seen = seen || reach[j]!;
+        next[j] = seen;
+      }
+    } else {
+      for (let j = 0; j < parts.length; j++) {
+        if (reach[j] && segmentMatches(segment, parts[j]!)) next[j + 1] = true;
+      }
+    }
+    reach = next;
+  }
+  return reach[parts.length]!;
+}
 
 /**
  * Commands of a step: split at `&&`, `||`, `;` and newlines, but not at `|`,
@@ -290,77 +422,195 @@ function commands(exec: string): string[] {
         line += " " + body;
       }
     }
-    out.push(...line.split(/&&|\|\||;/));
+    for (const command of line.split(/&&|\|\||;/)) out.push(command);
   }
   return out;
 }
 
-/** `NAME=value`, `export NAME=`, `local NAME=`, `declare NAME=` at a command's start. */
-const SHELL_ASSIGN_RE = /^\s*(?:(?:export|local|declare|readonly)\s+)?([A-Za-z_]\w*)=/;
+/**
+ * `NAME=value`, `export NAME=`, `local NAME=`, `declare NAME=` at a command's
+ * start (group 1), or `read [-r] NAME` (group 2).
+ */
+const SHELL_ASSIGN_RE =
+  /^\s*(?:(?:export|local|declare|readonly)\s+)?([A-Za-z_]\w*)=|^\s*read\s+(?:-[A-Za-z]+\s+)*([A-Za-z_]\w*)/;
 
-/** A word's value after `key=` (`of=f.bin`), else the word. */
+/** `F=$GITHUB_ENV`: a variable that names the runner's env or output file. */
+const ENV_FILE_ASSIGN_RE = /^\s*(?:export\s+)?([A-Za-z_]\w*)=["']?\$\{?GITHUB_(?:ENV|OUTPUT)\b/;
+
+/** A word's value after `key=` (`of=f.bin`, `--output=x`), else the word. */
 function wordValue(word: string): string {
-  const m = /^[\w-]{1,32}=(.+)$/.exec(word);
+  const m = /^-{0,2}[\w-]{1,32}=(.+)$/.exec(word);
   return m ? m[1]! : word;
 }
 
-/** Does this command read a tainted file: by a basename in its code, or by a path word? */
-function commandReadsTainted(command: string, tainted: TaintedFiles): boolean {
+/** Tokens a dotted file name can appear as in code; URLs are removed first. */
+const FILE_TOKEN_RE = /[\w.+~-]+/g;
+const URL_RE = /\b[a-z][\w+.-]*:\/\/[^\s'"`()<>]*/gi;
+
+/** Does this command read a tainted file: a dotted name in its code, or a path word? */
+function commandReadsTainted(command: string, tainted: TaintedFiles, workDir: string): boolean {
   if (tainted.size === 0) return false;
-  for (const m of command.replace(URL_RE, " ").matchAll(FILE_TOKEN_RE)) {
-    if (tainted.basenames.has(m[0])) return true;
+  if (tainted.dottedNames.size > 0) {
+    for (const m of command.replace(URL_RE, " ").matchAll(FILE_TOKEN_RE)) {
+      if (tainted.dottedNames.has(m[0])) return true;
+    }
   }
-  for (const word of shellWords(command)) {
-    if (word.startsWith("-") || word.includes("://") || /[$`{}]/.test(word)) continue;
-    if (tainted.coveredBy(wordValue(word))) return true;
+  for (const raw of shellWords(command)) {
+    if (raw.startsWith("-") && !raw.includes("=")) continue;
+    if (raw.includes("://")) continue;
+    const word = wordValue(raw).replace(/^@/, "");
+    if (word !== "" && tainted.coveredBy(word, workDir)) return true;
   }
   return false;
 }
 
+/** Options whose value is a file the command writes. */
+const OUTPUT_FLAGS = new Set([
+  "-o", "--output", "-out", "--out", "-O", "--output-file", "--output-document", "--outfile",
+  "-outfile", "--out-file", "-OutFile", "-Destination", "--destination",
+]);
+
+/** Tools whose last positional argument is where they write. */
+const COPY_TOOLS = new Set(["cp", "mv", "install", "ln", "ditto", "copy", "xcopy", "robocopy", "Copy-Item", "Move-Item"]);
+
+/** Tools whose first positional argument is the archive they write. */
+const ARCHIVE_TOOLS = new Set(["zip", "jar", "rar"]);
+
 /**
- * Files a command that holds the secret may have written, beyond what
- * fileTargets names: its path-like words (`openssl ... -out enc.bin`,
- * `dd of=f.bin`, `tar czf a.tgz dist`) and quoted file names in inline code
- * (`Path('k.txt').write_text(...)`). Options, URLs and variables are left out.
+ * Files a command that holds the secret writes, beyond redirections
+ * (fileTargets): the value of an output option (`-o`, `-out`, `of=`,
+ * `--output=`), the destination of a copy (`cp k.txt bundle`), the archive of
+ * `tar -f`/`zip`/`7z a`, and quoted file names in inline code
+ * (`Path('k.txt').write_text(...)`). Input files are not outputs: a command
+ * that signs, uploads or packages a file does not write the secret into it.
  */
 function commandOutputs(command: string): string[] {
   const out: string[] = [];
-  const words = shellWords(command);
-  for (let i = 0; i < words.length; i++) {
-    const raw = words[i]!;
+  const words: string[] = [];
+  const all = shellWords(command);
+  for (let i = 0; i < all.length; i++) {
+    const w = all[i]!;
     // Redirections are fileTargets' (stdout) or not the secret (`2> err.log`).
-    const redirect = /^(?:\d*|&)[<>]/.exec(raw);
-    if (redirect) {
-      if (/^(?:\d*|&)[<>]+[|&]?$/.test(raw)) i++;
+    if (/^(?:\d*|&)[<>]/.test(w)) {
+      if (/^(?:\d*|&)[<>]+[|&]?$/.test(w)) i++;
       continue;
     }
-    const word = wordValue(raw);
-    if (word.startsWith("-") || word.includes("://") || /[$`*?{}]/.test(word)) continue;
-    if (/[./\\]/.test(word) && /[A-Za-z]/.test(word) && !/\s/.test(word)) out.push(word);
+    words.push(w);
   }
+  let t = 0;
+  while (t < words.length && (/^[A-Za-z_]\w*=/.test(words[t]!) || words[t] === "sudo" || words[t] === "time")) t++;
+  const tool = (words[t] ?? "").replace(/^.*[\\/]/, "");
+  const args = words.slice(t + 1);
+  for (let i = 0; i < args.length; i++) {
+    const w = args[i]!;
+    if (OUTPUT_FLAGS.has(w) && args[i + 1] !== undefined) out.push(args[++i]!);
+    else {
+      const m = /^(?:--output|--out|--output-file|--outfile|--output-document|-o|of)=(.+)$/.exec(w);
+      if (m) out.push(m[1]!);
+    }
+  }
+  const positional = args.filter((w) => !w.startsWith("-") && !w.includes("://"));
+  if (COPY_TOOLS.has(tool) && positional.length >= 2) out.push(positional[positional.length - 1]!);
+  if (tool === "tar") {
+    for (let i = 0; i < args.length; i++) {
+      const w = args[i]!;
+      const file = /^--file=(.+)$/.exec(w);
+      if (file) out.push(file[1]!);
+      else if ((w === "--file" || w === "-f" || (i === 0 && /^-?[A-Za-z]*f[A-Za-z]*$/.test(w))) && args[i + 1] !== undefined) {
+        out.push(args[i + 1]!);
+      }
+    }
+  }
+  if (ARCHIVE_TOOLS.has(tool) && positional[0] !== undefined) out.push(positional[0]);
+  if (/^7za?$/.test(tool) && positional.length >= 2) out.push(positional[1]!);
   for (const m of command.matchAll(/(['"])([\w./~-]{1,256}\.[A-Za-z0-9]{1,8})\1/g)) out.push(m[2]!);
   return out;
 }
 
 /**
- * The paths an artifact upload names (`with: path:`, inline or as a block
- * list; `!` exclusions skipped). `undefined` when none are stated, which
- * counts as uploading everything.
+ * Python `open(path, mode)` calls with a write mode: the literal path (an
+ * f-string's braces stay in it, for placePath), or null for a computed path
+ * (`os.path.join(...)`). Arguments are split at top-level commas.
  */
+function pythonOpenWrites(text: string): Array<string | null> {
+  const out: Array<string | null> = [];
+  for (const m of text.matchAll(/\bopen[^\S\n]*\(/g)) {
+    const args: string[] = [];
+    let depth = 1;
+    let quote = "";
+    let start = m.index + m[0].length;
+    const limit = Math.min(text.length, start + 512);
+    let i = start;
+    for (; i < limit && depth > 0; i++) {
+      const ch = text[i]!;
+      if (quote) {
+        if (ch === "\\") i++;
+        else if (ch === quote) quote = "";
+      } else if (ch === "'" || ch === '"') quote = ch;
+      else if (ch === "(" || ch === "[" || ch === "{") depth++;
+      else if (ch === ")" || ch === "]" || ch === "}") depth--;
+      else if (ch === "," && depth === 1) {
+        args.push(text.slice(start, i).trim());
+        start = i + 1;
+      }
+      if (ch === "\n") break;
+    }
+    if (depth !== 0) continue;
+    args.push(text.slice(start, i - 1).trim());
+    const modeArg = args.slice(1).find((a) => /^(?:mode\s*=\s*)?[bBrRuU]{0,2}['"][^'"]*['"]$/.test(a));
+    const mode = modeArg ? /['"]([^'"]*)['"]/.exec(modeArg)![1]! : "";
+    if (!/[wax+]/.test(mode)) continue;
+    const literal = /^[fFrRbBuU]{0,2}(['"])(.*)\1$/.exec(args[0] ?? "");
+    out.push(literal ? literal[2]! : null);
+  }
+  return out;
+}
+
+/**
+ * Actions that publish files: artifacts, Pages, releases, caches. Their paths
+ * are read from `path`, `files`, `publish_dir`, `folder` or `artifacts`.
+ * `actions/upload-artifact/merge` only merges artifacts already uploaded.
+ */
+const PUBLISH_ACTION_RE =
+  /^(?:actions\/upload-artifact|actions\/upload-pages-artifact|actions\/cache(?:\/save)?|softprops\/action-gh-release|ncipollo\/release-action|svenstaro\/upload-release-action|peaceiris\/actions-gh-pages|JamesIves\/github-pages-deploy-action)(?:@|$)/i;
+
+/**
+ * Actions that fetch credentials and put them in the environment of later
+ * steps, with the variable names they are known to set.
+ */
+const CREDENTIAL_ACTIONS: Array<[RegExp, string[]]> = [
+  [/^aws-actions\/configure-aws-credentials(?:@|$)/i, ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"]],
+  [/^google-github-actions\/auth(?:@|$)/i, ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE", "GOOGLE_GHA_CREDS_PATH"]],
+  [/^hashicorp\/vault-action(?:@|$)/i, []],
+  [/^azure\/login(?:@|$)/i, []],
+  [/^1password\/load-secrets-action(?:@|$)/i, []],
+  [/^bitwarden\/sm-action(?:@|$)/i, []],
+  [/^dopplerhq\/secrets-fetch-action(?:@|$)/i, []],
+  [/^infisical\/secrets-action(?:@|$)/i, []],
+  [/^cyberark\/conjur-action(?:@|$)/i, []],
+];
+
+/** The paths a publishing step names; `undefined` when none are stated (everything). */
 function uploadPaths(stepLines: string[]): string[] | undefined {
   for (let k = 0; k < stepLines.length; k++) {
-    const m = /^(\s*)path\s*:\s*(.*)$/.exec(stepLines[k]!);
+    const m = /^(\s*)(?:path|files|publish_dir|folder|artifacts|file|asset_path)\s*:\s*(.*)$/.exec(stepLines[k]!);
     if (!m) continue;
     const inline = m[2]!.trim().replace(/^[|>][-+]?$/, "");
-    if (inline !== "") return [inline.replace(/^(['"])(.*)\1$/, "$2")];
-    const indent = m[1]!.length;
     const out: string[] = [];
-    for (let j = k + 1; j < stepLines.length; j++) {
-      const line = stepLines[j]!;
-      if (line.trim() === "") continue;
-      if (line.length - line.trimStart().length <= indent) break;
-      const entry = line.trim().replace(/^-\s*/, "").replace(/^(['"])(.*)\1$/, "$2");
-      if (entry !== "" && !entry.startsWith("!")) out.push(entry);
+    const take = (entry: string): void => {
+      const e = entry.trim().replace(/^-\s*/, "").replace(/^(['"])(.*)\1$/, "$2").trim();
+      if (e !== "" && !e.startsWith("!")) out.push(e);
+    };
+    if (inline !== "") {
+      for (const part of inline.replace(/^(['"])(.*)\1$/, "$2").split(",")) take(part);
+    } else {
+      const indent = m[1]!.length;
+      for (let j = k + 1; j < stepLines.length; j++) {
+        const line = stepLines[j]!;
+        if (line.trim() === "") continue;
+        if (line.length - line.trimStart().length <= indent) break;
+        take(line);
+      }
     }
     return out.length > 0 ? out : undefined;
   }
@@ -368,34 +618,114 @@ function uploadPaths(stepLines: string[]): string[] | undefined {
 }
 
 /**
- * `NAME: value` pairs of env text, block or flow form. An unquoted value keeps
- * a whole `${{ ... }}` expression, and a value never starts at the `{` of a
- * flow map, so `env: { T: ... }` yields the pair inside it.
+ * Does a command print the whole environment? Only as the command itself:
+ * `env`, `printenv` or `set` with nothing after them but a pipe or a
+ * redirection, `export -p`, PowerShell's `env:` drive, `process.env` or
+ * `os.environ` taken whole. `env NODE_ENV=production npm run build`,
+ * `set -e`, `python -m venv env` and `kubectl set image` do not.
  */
-const ENV_PAIR_RE =
-  /([A-Za-z_][\w-]*)[ \t]*:[ \t]*("[^"\n]*"|'[^'\n]*'|(?:\$\{\{[^}\n]{0,512}\}\}|\$(?!\{\{)|[^$,{}[\n])*)/g;
+function isEnvDump(command: string): boolean {
+  if (!/env|set|environ/i.test(command)) return false;
+  if (/\bexport[^\S\n]+-p\b|\b(?:Get-ChildItem|gci|dir|ls)[^\S\n]+env:|\bprocess\.env\b(?![^\S\n]*[.[])|\bos\.environ\b(?![^\S\n]*[.[])/i.test(command)) {
+    return true;
+  }
+  const words = shellWords(command);
+  let i = 0;
+  while (i < words.length && (/^[A-Za-z_]\w*=/.test(words[i]!) || words[i] === "sudo")) i++;
+  const tool = (words[i] ?? "").replace(/^.*[\\/]/, "");
+  if (tool !== "env" && tool !== "printenv" && tool !== "set") return false;
+  const next = words[i + 1];
+  return next === undefined || /^[|>&]/.test(next);
+}
+
+/** Frontend build variables that a bundler inlines into its output. */
+const PUBLIC_BUILD_ENV_RE = /^(?:VITE_|NEXT_PUBLIC_|REACT_APP_|NUXT_PUBLIC_|GATSBY_|EXPO_PUBLIC_|VUE_APP_|STORYBOOK_|PUBLIC_)/;
+
+/** A frontend build or static export. */
+const BUILD_CMD_RE =
+  /\b(?:npm|pnpm|yarn|bun)(?:[^\S\n]+run)?[^\S\n]+(?:build|generate|export)\b|\b(?:vite|next|nuxt|nuxi|gatsby|astro|react-scripts|vue-cli-service|ng|expo)[^\S\n]+(?:build|generate|export)\b/;
+
+/** Variable names a command exports to later steps; empty when they cannot be told. */
+function exportedNames(text: string): string[] {
+  const names: string[] = [];
+  for (const m of text.matchAll(/\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(\s*['"`]([\w-]+)/g)) names.push(m[1]!);
+  for (const m of text.matchAll(/::set-(?:output|env)[^\S\n]+name=([\w-]+)::/g)) names.push(m[1]!);
+  if (/GITHUB_(?:ENV|OUTPUT)/.test(text) || />/.test(text)) {
+    for (const m of text.matchAll(/(?:^|[\s"'])([A-Za-z_]\w*)=/g)) if (!/^GITHUB_/.test(m[1]!)) names.push(m[1]!);
+  }
+  return names;
+}
 
 /**
- * Commands that write out the whole environment without naming a variable:
- * `printenv`, `env`, a bare `set` (not `set -e`), `export -p`, PowerShell's
- * `env:` drive, `process.env` or `os.environ` taken whole.
+ * `git push` to a remote that is not GitHub (a URL or `user@host:path`):
+ * committed files leave the runner. `origin` and GitHub remotes are the
+ * token's own audience.
  */
-const ENV_DUMP_RE =
-  /(?<![\w.$-])(?:printenv|env)(?![\w.:=-])|(?<![\w.$-])set(?![\w.=-])(?![^\S\n]+[-+])|\bexport[^\S\n]+-p\b|\b(?:Get-ChildItem|gci|dir|ls)[^\S\n]+env:|\bprocess\.env\b(?![^\S\n]*[.[])|\bos\.environ\b(?![^\S\n]*[.[])/i;
+function isGitPushEgress(segment: string): boolean {
+  const m = /(?<![\w.-])git[^\S\n]+push\b/.exec(segment);
+  if (!m) return false;
+  for (const word of shellWords(segment.slice(m.index + m[0].length))) {
+    const url = /^(?:https?|ssh|git):\/\/(?:[^@/\s]*@)?([^/:\s]+)/.exec(word);
+    const scp = /^[\w.-]+@([\w.-]+):/.exec(word);
+    const host = (url?.[1] ?? scp?.[1] ?? "").toLowerCase();
+    if (host !== "" && host !== "github.com" && !host.endsWith(".github.com")) return true;
+  }
+  return false;
+}
+
+/**
+ * A command word with shell quoting inside it (`c''url`, `c"u"rl`, `c\url`)
+ * reads as the plain word, so quoting cannot hide the tool.
+ */
+function unquoteWords(segment: string): string {
+  return segment
+    .replace(/(?<=[\w-])(?:''|"")|(?:''|"")(?=[\w-])/g, "")
+    .replace(/(?<=[\w-])(["'])([\w-]{1,32})\1(?=[\w-]|\s|$)/g, "$2")
+    .replace(/(?<=[\w-]|^|\s)\\(?=[A-Za-z])/g, "");
+}
+
+/**
+ * `NAME: value` pairs of env text, block or flow form. A key starts a line
+ * or follows `{` or `,`, so a long word with no colon is read once. An
+ * unquoted value keeps a whole `${{ ... }}` expression (single braces inside,
+ * as in `format('{0}', ...)`, included), and a value never starts at the `{`
+ * of a flow map, so `env: { T: ... }` yields the pair inside it.
+ */
+const ENV_PAIR_RE =
+  /(?:^|[{,])[ \t]*(?:-[ \t]+)?([A-Za-z_][\w-]{0,127})[ \t]*:[ \t]*("[^"\n]*"|'[^'\n]*'|(?:\$\{\{(?:[^}\n]|\}(?!\})){0,512}\}\}|\$(?!\{\{)|[^$,{}[\n])*)/gm;
+
+/** `NAME: |` or `NAME: >-`: a block scalar whose value is on the lines below. */
+const BLOCK_SCALAR_KEY_RE = /^([ \t]*)(?:-[ \t]+)?([A-Za-z_][\w-]{0,127})[ \t]*:[ \t]*[|>][-+0-9]*[ \t]*$/;
 
 /** Names of the env variables whose value is a stored secret. */
 function secretEnvNames(envText: string): string[] {
   const out: string[] = [];
   for (const m of envText.matchAll(ENV_PAIR_RE)) if (textHasStoredSecret(m[2]!)) out.push(m[1]!);
+  // Block scalars; each block's lines are read once, then skipped.
+  const lines = envText.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const m = BLOCK_SCALAR_KEY_RE.exec(lines[i]!);
+    if (!m) continue;
+    const indent = m[1]!.length;
+    let j = i + 1;
+    let value = "";
+    for (; j < lines.length; j++) {
+      const line = lines[j]!;
+      if (line.trim() !== "" && line.length - line.trimStart().length <= indent) break;
+      value += line + "\n";
+    }
+    if (textHasStoredSecret(value)) out.push(m[2]!);
+    i = j - 1;
+  }
   return out;
 }
 
 const IDENTIFIER_RE = /[A-Za-z_]\w*/g;
 
 /** Is one of these variables named in text (`$T`, `${T}`, `$env:T`, `process.env.T`)? */
-function mentionsVariable(text: string, names: Set<string>): boolean {
-  if (names.size === 0) return false;
-  for (const m of text.matchAll(IDENTIFIER_RE)) if (names.has(m[0])) return true;
+function mentionsVariable(text: string, names: Set<string>, more?: Set<string>): boolean {
+  if (names.size === 0 && (more === undefined || more.size === 0)) return false;
+  for (const m of text.matchAll(IDENTIFIER_RE)) if (names.has(m[0]) || more?.has(m[0])) return true;
   return false;
 }
 
@@ -507,7 +837,9 @@ function argsAreLoopbackOnly(args: string): boolean {
   return destinations > 0;
 }
 
-function segmentHasEgress(segment: string): boolean {
+function segmentHasEgress(raw: string): boolean {
+  const segment = unquoteWords(raw);
+  if (isGitPushEgress(segment)) return true;
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
@@ -534,6 +866,17 @@ function execTextHasEgress(text: string): boolean {
 const SECRETS_CONTEXT_RE =
   /(?<![\w.-])secrets(?![\w-])\s*(?:\.\s*([\w-]+)|\[\s*(?:'([^'\n]*)'|"([^"\n]*)")\s*\])?/gi;
 
+/**
+ * A secret only tested for presence: compared with an empty string, null or a
+ * boolean, or negated (`secrets.X != ''`, `!secrets.X`). The value never
+ * leaves the expression.
+ */
+const SECRET_REF_SOURCE = String.raw`secrets\s*(?:\.\s*[\w-]+|\[\s*(?:'[^'\n]*'|"[^"\n]*")\s*\])`;
+const SECRET_PRESENCE_RE = new RegExp(
+  String.raw`${SECRET_REF_SOURCE}\s*(?:==|!=)\s*(?:''|""|null|true|false)(?![\w'"])|(?:''|""|null)\s*(?:==|!=)\s*${SECRET_REF_SOURCE}|!{1,2}\s*${SECRET_REF_SOURCE}`,
+  "gi",
+);
+
 /** The run's own token: `github.token` or `github['token']`. */
 const GITHUB_TOKEN_CONTEXT_RE =
   /(?<![\w.-])github\s*(?:\.\s*token|\[\s*(?:'token'|"token")\s*\])(?![\w-])/i;
@@ -544,7 +887,8 @@ const GITHUB_TOKEN_CONTEXT_RE =
  * the whole context can reach a stored secret. With `ambientCounts`, the run
  * token counts too: sending it out is itself the danger for exfiltration rules.
  */
-function expressionUsesSecret(expr: string, ambientCounts: boolean): boolean {
+function expressionUsesSecret(raw: string, ambientCounts: boolean): boolean {
+  const expr = raw.replace(SECRET_PRESENCE_RE, " ");
   if (ambientCounts && GITHUB_TOKEN_CONTEXT_RE.test(expr)) return true;
   for (const m of expr.matchAll(SECRETS_CONTEXT_RE)) {
     if (ambientCounts) return true;
@@ -596,7 +940,31 @@ function linesText(stripped: string[], regions: WfRegion[], from: number, to: nu
   return out.join("\n");
 }
 
-const UPLOAD_ACTION_RE = /^actions\/upload-artifact(?:@|$)/i;
+
+/** The executed text of a local composite action, or undefined when it cannot be read. */
+function localActionExec(root: string, uses: string, cache: Map<string, string | undefined>): string | undefined {
+  const rel = uses.split("@")[0]!;
+  const target = path.resolve(root, rel);
+  const base = path.resolve(root);
+  if (target !== base && !target.startsWith(base + path.sep)) return undefined;
+  if (cache.has(target)) return cache.get(target);
+  let text: string | undefined;
+  for (const name of ["action.yml", "action.yaml"]) {
+    const file = path.join(target, name);
+    try {
+      if (!fs.statSync(file).isFile() || fs.statSync(file).size > MAX_ACTION_BYTES) continue;
+      const content = fs.readFileSync(file, "utf-8").replace(/\r/g, "");
+      const regions = classifyWorkflowLines(content);
+      const lines = stripYamlComments(content).split("\n");
+      text = linesText(lines, regions, 0, lines.length, ["exec"]);
+      break;
+    } catch {
+      /* missing or unreadable */
+    }
+  }
+  cache.set(target, text);
+  return text;
+}
 
 /**
  * Does a local composite action (`uses: ./path`) send data out? Its steps
@@ -744,6 +1112,7 @@ function checkSecretToEgress(
   relPath: string,
   root: string,
   actionCache: Map<string, boolean>,
+  actionTextCache: Map<string, string | undefined> = new Map(),
 ): Finding[] {
   const { ast, stripped, regions, workflowEnv, jobs } = workflowScopes(content);
 
@@ -760,13 +1129,7 @@ function checkSecretToEgress(
   });
 
   // Fail closed: a file whose jobs cannot be parsed keeps the coarse check.
-  if (ast.jobs.length === 0) {
-    const all = stripped.join("\n");
-    const uploads = stripped.some((l) => /^\s*-?\s*uses:\s*['"]?actions\/upload-artifact/i.test(l));
-    return textHasStoredSecret(all) && (uploads || execTextHasEgress(all))
-      ? [finding(1, "a stored secret and an outbound call or upload appear in a workflow whose jobs could not be parsed")]
-      : [];
-  }
+  if (ast.jobs.length === 0) return coarseSecretToEgress(content, file, relPath, "could not be parsed");
 
   const workflowSecret = textHasStoredSecret(workflowEnv);
   const workflowSecretNames = secretEnvNames(workflowEnv);
@@ -775,8 +1138,12 @@ function checkSecretToEgress(
   for (const { job, env, reusableSecrets, strategy, steps } of jobs) {
     const matrixSecret = textHasStoredSecret(strategy);
     const jobSecret = workflowSecret || textHasStoredSecret(env) || matrixSecret;
-    const jobSecretNames = [...workflowSecretNames, ...secretEnvNames(env)];
+    // Variables that carry a secret for every step of the job; exports and
+    // credential actions add to it.
+    const jobSecretNames = new Set([...workflowSecretNames, ...secretEnvNames(env)]);
     let carriedEnv = false;
+    // An export whose variable names cannot be told: later steps hold it wholesale.
+    let unknownExport = false;
     const tainted = new TaintedFiles();
     let unnamedFile = false;
 
@@ -788,94 +1155,141 @@ function checkSecretToEgress(
 
     for (const { step, s, e } of steps) {
       const uses = step.uses ?? "";
-      let egress: string | null = null;
+      const stepLines = stripped.slice(s, e);
+      // The whole step without its `if:`, which only tests a secret.
+      const stepAll = stepLines.filter((l) => !/^\s*(?:-\s+)?if\s*:/.test(l)).join("\n");
+      const workDir = workingDirectory(stepLines);
       const exec = linesText(stripped, regions, s, e, ["exec"]);
+      const isLocal = uses.startsWith("./");
+      const actionExec = isLocal ? localActionExec(root, uses, actionTextCache) : undefined;
+      const publishes = PUBLISH_ACTION_RE.test(uses);
+
       let stepSecret = textHasStoredSecret(linesText(stripped, regions, s, e, ["env", "exec"]));
-      // A script: body (actions/github-script) can read its own with: inputs.
-      if (/^actions\/github-script(?:@|$)/i.test(uses)) {
-        stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
+      // A script: body (actions/github-script) and a local action can read their with: inputs.
+      if (isLocal || /^actions\/github-script(?:@|$)/i.test(uses)) {
+        stepSecret = stepSecret || textHasStoredSecret(stepAll);
       }
-      if (UPLOAD_ACTION_RE.test(uses)) {
-        egress = "uploads an artifact";
-      } else if (uses.startsWith("./") && localActionHasEgress(root, uses, actionCache)) {
+      let egress: string | null = null;
+      if (publishes) {
+        egress = /^actions\/upload-artifact(?:@|$)/i.test(uses) ? "uploads an artifact" : "publishes files";
+      } else if (isLocal && localActionHasEgress(root, uses, actionCache)) {
         egress = "calls a local action that makes an outbound call";
-        stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
       } else if (execTextHasEgress(exec)) {
         egress = "makes an outbound call";
-        stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
+        stepSecret = stepSecret || textHasStoredSecret(stepAll);
       }
-      const stepLines = stripped.slice(s, e);
+
       const cmds = commands(exec);
       const reads = (command: string): boolean =>
-        commandReadsTainted(command, tainted) || (unnamedFile && execReadsFile(command));
-      const readsTainted = cmds.some(reads);
+        commandReadsTainted(command, tainted, workDir) || (unnamedFile && execReadsFile(command));
       let fileReaches = false;
-      if (egress === "uploads an artifact") {
-        // Only the named paths are uploaded; none named means everything.
+      if (egress !== null && publishes) {
+        // Only the named paths are published; none named means everything.
         const paths = uploadPaths(stepLines);
         fileReaches =
           unnamedFile ||
           (tainted.size > 0 &&
-            (paths === undefined ||
-              paths.some((entry) => {
-                if (/\$\{\{/.test(entry)) return true;
-                const path = normalizePath(entry);
-                return tainted.coveredBy(entry) || [...tainted.paths].some((t) => path.endsWith(`/${t}`));
-              })));
-      } else if (egress !== null && egress !== "makes an outbound call") {
-        // A local action's steps are not read here.
-        fileReaches = tainted.size > 0 || unnamedFile;
+            (paths === undefined || paths.some((entry) => /\$\{\{/.test(entry) || tainted.coveredBy(entry, workDir))));
+      } else if (egress !== null && isLocal) {
+        // The action's own commands, and the paths the step hands it.
+        const actionCmds = actionExec === undefined ? undefined : commands(actionExec);
+        fileReaches =
+          unnamedFile ||
+          (tainted.size > 0 &&
+            (actionCmds === undefined ||
+              commandReadsTainted(stepAll, tainted, workDir) ||
+              actionCmds.some((command) => commandReadsTainted(command, tainted, ""))));
       } else if (egress !== null) {
-        fileReaches = readsTainted;
+        fileReaches = cmds.some(reads);
       }
-      const envReaches = egress !== "uploads an artifact" && (jobSecret || carriedEnv);
+      // An upload or release sends files, not the environment.
+      const envReaches = !publishes && (jobSecret || carriedEnv);
       if (egress && (stepSecret || envReaches || fileReaches)) {
         findings.push(finding(step.line, `a stored secret is in scope for a step in job "${job.id}" that ${egress}`));
       }
 
       // Which commands hold the secret: they name it or a variable carrying
-      // it, dump the environment, or read a tainted file. After a $GITHUB_ENV
-      // export, or in a github-script step with a secret input, the whole step
-      // holds it, but then only its explicit file writes are followed.
-      const secretNames = new Set([...jobSecretNames, ...secretEnvNames(linesText(stripped, regions, s, e, ["env"]))]);
-      const wholeStep = carriedEnv || (/^actions\/github-script(?:@|$)/i.test(uses) && stepSecret);
-      // Commands run in order, so a file written by one command is read by the
-      // next, and a variable assigned from the secret carries it on.
-      const holding: string[] = [];
+      // it, dump the environment, or read a tainted file. Commands run in
+      // order, so a file one writes is read by the next, and a variable
+      // assigned from the secret carries it on.
+      const secretNames = new Set(secretEnvNames(linesText(stripped, regions, s, e, ["env"])));
+      const envFiles = new Set<string>();
+      const follow = (targets: Array<string | null>): void => {
+        for (const target of targets) if (target === null || !tainted.add(target, workDir)) unnamedFile = true;
+      };
+      const exportFrom = (text: string): void => {
+        carriedEnv = true;
+        const names = exportedNames(text);
+        if (names.length === 0) unknownExport = true;
+        for (const name of names) jobSecretNames.add(name);
+      };
+      // After an export of unknown names, or in a github-script step with a
+      // secret input, the whole step holds it, and its explicit writes are followed.
+      const wholeStep = unknownExport || (/^actions\/github-script(?:@|$)/i.test(uses) && stepSecret);
       for (const command of cmds) {
+        const envFile = ENV_FILE_ASSIGN_RE.exec(command)?.[1];
+        if (envFile !== undefined) envFiles.add(envFile);
         const holds =
           textHasStoredSecret(command) ||
-          mentionsVariable(command, secretNames) ||
-          (secretNames.size > 0 && ENV_DUMP_RE.test(command)) ||
+          mentionsVariable(command, jobSecretNames, secretNames) ||
+          (jobSecretNames.size + secretNames.size > 0 && isEnvDump(command)) ||
           (matrixSecret && /\bmatrix\s*\./.test(command)) ||
           reads(command);
         if (!holds) continue;
-        holding.push(command);
-        const assigned = SHELL_ASSIGN_RE.exec(command)?.[1];
-        if (assigned !== undefined) secretNames.add(assigned);
-        for (const target of [...fileTargets(command), ...commandOutputs(command)]) {
-          if (target === null) unnamedFile = true;
-          else tainted.add(target);
-        }
+        const assigned = SHELL_ASSIGN_RE.exec(command);
+        const name = assigned?.[1] ?? assigned?.[2];
+        if (name !== undefined) secretNames.add(name);
+        follow([...fileTargets(command), ...commandOutputs(command)]);
+        if (PERSISTS_ENV_RE.test(command) || (/>/.test(command) && mentionsVariable(command, envFiles))) exportFrom(command);
       }
-      if (wholeStep || holding.length > 0) {
-        if (wholeStep ? PERSISTS_ENV_RE.test(exec) : holding.some((command) => PERSISTS_ENV_RE.test(command))) {
-          carriedEnv = true;
-        }
-        if (wholeStep) {
-          for (const target of fileTargets(exec)) {
-            if (target === null) unnamedFile = true;
-            else tainted.add(target);
-          }
-        }
-        if (tainted.size > MAX_TAINTED_FILES) {
-          tainted.clear();
-          unnamedFile = true;
-        }
+      if (wholeStep) {
+        follow(fileTargets(exec));
+        if (PERSISTS_ENV_RE.test(exec)) exportFrom(exec);
+      }
+      // A local action handed a secret: what its own commands write or export.
+      if (isLocal && stepSecret && actionExec !== undefined) {
+        follow(fileTargets(actionExec));
+        for (const command of commands(actionExec)) follow(commandOutputs(command));
+        if (PERSISTS_ENV_RE.test(actionExec)) exportFrom(actionExec);
+      }
+      // A bundler inlines public build variables into what it writes.
+      if (BUILD_CMD_RE.test(exec) && [...jobSecretNames, ...secretNames].some((n) => PUBLIC_BUILD_ENV_RE.test(n))) {
+        unnamedFile = true;
+      }
+      // Credential actions put what they fetch in the environment of later steps.
+      for (const [re, names] of CREDENTIAL_ACTIONS) {
+        if (!re.test(uses)) continue;
+        carriedEnv = true;
+        const mapped = [...stepAll.matchAll(/\|\s*([A-Za-z_]\w*)\s*(?:;|$)/gm)].map((m) => m[1]!);
+        const known = [...names, ...mapped];
+        if (known.length === 0) unknownExport = true;
+        for (const n of known) jobSecretNames.add(n);
       }
     }
   }
   return findings;
+}
+
+/**
+ * The whole-file check a workflow falls back to when it cannot be modelled
+ * step by step: a stored secret and an outbound call or upload anywhere in it.
+ */
+function coarseSecretToEgress(content: string, file: string, relPath: string, why: string): Finding[] {
+  const stripped = stripYamlComments(content.replace(/\r/g, "")).split("\n");
+  const all = stripped.join("\n");
+  const uploads = stripped.some((l) => /^\s*-?\s*uses:\s*['"]?actions\/upload-artifact/i.test(l));
+  if (!textHasStoredSecret(all) || !(uploads || execTextHasEgress(all))) return [];
+  return [{
+    rule: "WORKFLOW_SECRET_TO_UPLOAD_PATH",
+    description: `Workflow "${file}": a stored secret and an outbound call or upload appear in a workflow whose steps ${why}. Verify secrets are not sent to external endpoints.`,
+    severity: "medium",
+    file: relPath,
+    line: 1,
+    confidence: 0.6,
+    category: "supply-chain",
+    recommendation:
+      "Scope the secret to the step that needs it, and keep outbound calls and artifact uploads in steps without stored secrets.",
+  }];
 }
 
 /**
@@ -888,17 +1302,29 @@ export function modelWorkflows(dir: string): Finding[] {
   if (!fs.existsSync(workflowDir)) return findings;
   const actionCache = new Map<string, boolean>();
 
+  let files: string[];
   try {
-    const files = fs.readdirSync(workflowDir).filter((f) =>
-      f.endsWith(".yml") || f.endsWith(".yaml"),
-    );
+    files = fs.readdirSync(workflowDir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+  } catch {
+    return findings;
+  }
 
-    for (const file of files) {
-      const fullPath = path.join(workflowDir, file);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const relPath = `.github/workflows/${file}`;
-
-      findings.push(...checkSecretToEgress(content, file, relPath, dir, actionCache));
+  // One file that cannot be read or modelled must not end the loop: every
+  // later workflow would go unscanned, and a decoy file could arrange that.
+  for (const file of files) {
+    const relPath = `.github/workflows/${file}`;
+    let content: string;
+    try {
+      content = fs.readFileSync(path.join(workflowDir, file), "utf-8");
+    } catch {
+      continue;
+    }
+    try {
+      for (const f of checkSecretToEgress(content, file, relPath, dir, actionCache)) findings.push(f);
+    } catch {
+      for (const f of coarseSecretToEgress(content, file, relPath, "could not be modelled")) findings.push(f);
+    }
+    {
 
       // Check for untrusted actions in release paths.
       // v5.2.23: the unpinned-action check is scoped to actual `uses:`
@@ -922,7 +1348,7 @@ export function modelWorkflows(dir: string): Finding[] {
         });
       }
     }
-  } catch { /* skip */ }
+  }
 
   return findings;
 }

