@@ -3,7 +3,7 @@
   "algorithm": "sha256",
   "files": {
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
-    "src/__tests__/campaigns.test.ts": "f0f05bb773fbb6fc96b0f19d7d11d415ac31ad8d4244b706139a4d96168a6f2c",
+    "src/__tests__/campaigns.test.ts": "036bd7a409e8035d66d0b93911380227e14cc5e9d994c0ebf1824132a9e8d8e3",
     "src/__tests__/core-broad-gap-matchers.test.ts": "1d7bccb8772299f1a982af42a5924d786e39ff4cda914d0a2e9f43d81c04ae61",
     "src/__tests__/file-digest.test.ts": "d243581d251ad76b89a66605a31af39276f16aabc15db005f5963ce7ac2a8ccc",
     "src/__tests__/go-scanner.test.ts": "af680d4fea983dfd31b9d9c1327a899c67dc7467e81f59ca2b702f01297e167b",
@@ -24,14 +24,14 @@
     "src/dependency-confusion.ts": "5db5297ba1175bbce53b2c604f29452aeccfe2ed85c9754f9b7c64548369a26b",
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "5ae5de2ad9f205ca2e7a1e03bc9349467c70f62a3741a84a6a63ecacb997cff9",
-    "src/ioc-blocklist.ts": "43c91f46875f31d56949ba3f40ea7c389395e63c5a5af241acbe3e6fea8a9d99",
+    "src/ioc-blocklist.ts": "b7d940a7443cc08bc2bba5414ae5aca53c3fb431c909d5458eb3b1d301423b5c",
     "src/patterns.ts": "22f6b472b219c535f3eefa31eca7025fe3dd31409cde6b545376ff2314547333",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
     "src/reporter.ts": "bc844db63f293bd0d7e21fe05194430202453b17085bdc2aa27f64cefd6e47b5",
     "src/scanner.ts": "51affb5134cf7e2b98f590c7c26280726f82547fc6dc0ae363357629ee1c54ae",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "aac607caa0745749c43b0e7789d17fcee51ac013349f8c58cc2d2d2818d3b3f1",
+    "src/threat-intel.ts": "68c8e4bcd56464e66f4f1d664a9c23577442a244e7ccdf6e4f71655c68908a04",
     "src/workflow-modeler.ts": "1ff70d4b2066a233b08a56e4d12c4b6736dc80e237dc19492aa1ed8568d90b9a"
   }
 }

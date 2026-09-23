@@ -6734,4 +6734,111 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // Graphalgo Terraform providers and Go modules (September 2026)
+  // =================================================================
+
+  describe("Graphalgo Terraform providers and Go modules (September 2026)", () => {
+    it("should flag a go.sum pulling the gogets.dev/btreex module", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "go.sum"),
+        "gogets.dev/btreex v0.1.0 h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n"
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "GO_MALICIOUS_MODULE"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the attacker Slack workspace used as C2", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.go"),
+        'package main\nconst ws = "https://mediumstar.slack.com"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the Arbitrum Sepolia dead-drop contract", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "chain.go"),
+        'package main\nconst contract = "0xAD02b5cDE693529d3bdA0266299501ad0193036C"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_WALLET"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the payload SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should flag the typosquatted kreuzwenker provider account", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "provider.js"),
+        'const src = "https://github.com/kreuzwenker/terraform-provider-docker";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The control: kreuzwerker is the legitimate provider publisher the
+    // typosquat imitates, and generic Slack webhooks are not indicators.
+    it("leaves the legitimate kreuzwerker publisher and Slack webhooks alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "clean.js"),
+        [
+          'const src = "https://github.com/kreuzwerker/terraform-provider-docker";',
+          'const hook = "https://hooks.slack.com/services/T000/B000/XXXX";',
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter(
+        (f) =>
+          f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT" ||
+          f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(hits, "kreuzwerker and hooks.slack.com are legitimate").toEqual([]);
+    });
+
+    it("keeps every Graphalgo indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter(
+        (i) => i.campaign === "Graphalgo Terraform providers and Go modules",
+      );
+      expect(set.length, "all 9 Graphalgo feed indicators must be bundled").toBe(9);
+      for (const ioc of set) {
+        expect(ioc.family, `${ioc.value} must carry a family`).toBe("Graphalgo");
+      }
+    });
+  });
 });

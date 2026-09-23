@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 281 package indicators from the GitHub Advisory Database malware feed and
+  the OpenSSF malicious-packages index: 117 in the bundle
+  and 164 in the catalog. The catalog-bound entries all carry a `firstSeen`
+  before the bundle cutoff; 140 of them are version pins across 19 `epic-*`
+  names from October 2025 advisories that were updated this week. 79 are
+  bare npm names; every one was probed against the registry first. 77 resolve
+  to an npm security holding package and the other two are scoped names that
+  no longer exist, so no package with a legitimate release history is
+  name-blocked.
+- The Graphalgo campaign's move to Terraform providers and Go modules
+  (September 2026). The Go RAT is delivered through the Go modules
+  `gocommunity[.]io/orderedbtree` and `gogets[.]dev/btreex`, now matched in
+  `go.sum`, and through the Terraform providers `gocommunity-io/dockerd` and
+  `kreuzwenker/docker`, a typosquat of the `kreuzwerker/docker` provider.
+  Added with them: the attacker-registered sites `gocommunity[.]io` and
+  `gogets[.]dev`, the three Slack workspaces used for C2 (only those
+  subdomains, never the `slack[.]com` apex), the Arbitrum Sepolia dead-drop
+  contract, two payload SHA-256 digests, and the eight operator GitHub
+  accounts. Single-source, so the feed entries carry confidence 0.85.
+
 ## [6.2.4] - 2026-09-22
 
 ### Added

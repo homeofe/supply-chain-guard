@@ -1,3 +1,63 @@
+## Threat intel 2026-09-23 (claude-opus-5-5)
+
+Daily scheduled run. No version bump, no release: the owner cuts that.
+
+### Importer
+
+`npm run feed:import` (default window, published >= 2026-09-09, no `--limit`):
+39,423 advisories over 395 pages, no page cap hit, no slicing needed.
+
+- **281 new: 117 to the bundle, 164 to the catalog.** The dry run an hour
+  earlier said 275 (111 / 164); six advisories landed in between and were
+  probed like the rest.
+- The catalog share is the date rule working, not a window problem: every
+  catalog-bound entry carries a `firstSeen` before the 2026-08-23 cutoff. 140
+  of the 164 are version pins across 19 `epic-*` names from October 2025
+  advisories (MAL-2025-491xx) that GitHub updated this week; the rest are
+  single entries from May to August 2026 plus two 2024 `faceplate-docs` pins.
+  No `catalogWindows` entry was added.
+- 81 skipped as `unmappable-version-range`, the same count as the 2026-09-21
+  run. Declined 0, deferred 0, remaining 0, undrainable 0.
+- **79 bare npm names, all probed against the registry before applying.** 77
+  are npm security holding packages (single placeholder version, no
+  maintainer or `npm-support`); `@uol-afiliados/affiliated-config-lib` and
+  `@asdfaskdjfksadhfkasf/nadaver2` return 404. Two holding names carry older
+  history in their `time` map (`anhn-cli` from 2020, `evm-validation` from
+  2024); npm replaced both with holding packages, so the name can no longer be
+  republished by anyone else and a name block is safe.
+
+### Enrichment: Graphalgo Terraform providers and Go modules
+
+Source: the Aikido write-up of 2026-09-22, fetched twice with identical hash
+strings; the package set is repeated by one downstream aggregator, which is
+not independent, so this is treated as single-source (feed confidence 0.85).
+
+- Go modules `go:gocommunity.io/orderedbtree`, `go:gogets.dev/btreex` (no
+  versions published, so name-level).
+- Domains `gocommunity[.]io`, `gogets[.]dev` (attacker-registered), plus the
+  Slack C2 workspaces `portfolio-devs`, `portfolio-testers`, `mediumstar`
+  (subdomains only, the `slack[.]com` apex is not listed).
+- Arbitrum Sepolia dead-drop contract in `KNOWN_C2_WALLETS`.
+- Two SHA-256 payload digests.
+- Eight operator GitHub accounts; `kreuzwenker` typosquats the legitimate
+  `kreuzwerker` publisher, which is asserted NOT to match.
+- **Not covered:** the Terraform providers `gocommunity-io/dockerd` and
+  `kreuzwenker/docker` themselves. The scanner has no Terraform registry
+  ecosystem, so a `.tf` `source = "kreuzwenker/docker"` is not matched; only
+  `github.com/<account>` references are. Also not ingested: the actor's X25519
+  public key (no collection carries keys).
+- Nine curated feed entries carry `family`/`campaign`, so they stay bundled.
+  New `campaigns.test.ts` block with a control in the other direction. Cut
+  proof: removing the entries turned all six positive tests red and the
+  control stayed green; restored.
+
+### Open
+
+- Terraform provider sources (`registry.terraform.io` namespace/type) have no
+  matcher. Worth a decision whether a `.tf` / `.terraform.lock.hcl` provider
+  rule belongs in the scanner, since this is the second Terraform-delivered
+  campaign in a week (TraderTraitor was the first).
+
 ## v6.2.4 release preparation (2026-09-22) (claude-opus-5)
 
 Patch release carrying the 2026-09-22 threat intelligence update (PR 321) and

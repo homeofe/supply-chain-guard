@@ -489,6 +489,19 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "technicais.sytes.net",
   "storage.hubpage.cloud",
   "grenight.com",
+  // Graphalgo campaign spreads to Terraform providers and Go modules (September
+  // 2026). gocommunity[.]io and gogets[.]dev are attacker-registered fake "Go
+  // package ecosystem" sites, registered within a day of the matching GitHub
+  // organizations, and double as the vanity import paths of the two malicious Go
+  // modules. The three Slack workspaces carry the RAT's Slack-bot C2 channel;
+  // only the attacker's workspace subdomains are listed, the slack[.]com apex is
+  // shared infrastructure and is NOT blocked. Single-source (Aikido), so the
+  // matching feed entries carry confidence 0.85.
+  "gocommunity.io",
+  "gogets.dev",
+  "portfolio-devs.slack.com",
+  "portfolio-testers.slack.com",
+  "mediumstar.slack.com",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1465,6 +1478,9 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   "02df07a173ab03b82a4fb6a08973fff8b1467f28": "TraderTraitor FLATROOF macOS backdoor, disguised as SystemUpdate (SHA1)",
   "c491d477dbe0ae04e9aed9dbe237144c03f73ec4": "TraderTraitor ROOFDECK macOS backdoor, disguised as iSync (SHA1)",
   "5728b11d30586bbfc1d8bd12df1c722a06e767a2": "TraderTraitor ROOFDECK stripped variant, disguised as loginwindow (SHA1)",
+  // Graphalgo campaign spreads to Terraform providers and Go modules (September 2026)
+  "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f": "Graphalgo Terraform provider payload archive disguised as examples/resources/docker_container/import-resource.sqlite3 (SHA256)",
+  "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5": "Graphalgo Go module payload disguised as btreex.sql (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -1651,6 +1667,21 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   "radupopa369",
   "chainstacker",
   "Steed-LHV",
+  // Graphalgo campaign spreads to Terraform providers and Go modules (September
+  // 2026). All eight are operator accounts per the vendor write-up, not victims:
+  // gocommunity-io and gogets-dev are the TA-controlled organizations,
+  // go-community-admin and steveb082 are their members, go-pack-tech, markcary3
+  // and kreuzwenker committed the malware, and victormmpp published a dropper
+  // repository with forged commits. kreuzwenker is a typosquat of the legitimate
+  // kreuzwerker Terraform provider publisher, which is NOT listed.
+  "gocommunity-io",
+  "gogets-dev",
+  "go-community-admin",
+  "steveb082",
+  "go-pack-tech",
+  "markcary3",
+  "kreuzwenker",
+  "victormmpp",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1764,6 +1795,11 @@ export const KNOWN_C2_WALLETS: Record<string, string> = {
   // as with the ChainDrop and Web3 dev-tooling entries above.
   "0xa322E5f39aDC2490Ef6f0121063eD311D3080e1a":
     "tailwindcss-contact-forms: Ethereum mainnet dead-drop C2 signalling address read by the obfuscated @tailwindcss/forms impersonation loader (September 2026)",
+  // Graphalgo campaign spreads to Terraform providers and Go modules (Aikido,
+  // September 2026). Encrypted dead-drop command contract on the Arbitrum Sepolia
+  // testnet. Single-source.
+  "0xAD02b5cDE693529d3bdA0266299501ad0193036C":
+    "Graphalgo: Arbitrum Sepolia smart-contract dead-drop C2 for the Go RAT delivered through Terraform providers and Go modules (September 2026)",
 };
 
 /**
