@@ -1,3 +1,52 @@
+## Final pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Five independent review agents each took one area of PR 326, plus PR 327 and how the
+two interact. They reproduced every finding against the built CLI. Six were real and
+are fixed in this PR. Each fix has tests and a mutation proof: 15 cuts, all red, with
+baseline and post-restore green.
+
+### Fixed
+
+- **d1, the pytest `test_*.py` form, silenced the malware rules.** It had been added to
+  the shared TEST_FILE_PATTERN, which gates every `notTestFile` PatternEntry (about 148
+  rules). `eval(atob(...))` in `test_backdoor.py` then scanned clean, while
+  `backdoor.py` was critical. This deviates from the draft's acceptance criterion
+  ("every notTestFile PatternEntry"): the form is now opt-in
+  (`buildTestFilePattern(dirs, { pytestPrefix })`), and only the three disclosure rules
+  use it. The scanned package names its own files, so a test-path exemption is never
+  widened for malware rules.
+- **d9 lost flows the old file-level rule caught.**
+  - A secret exported to `$GITHUB_ENV` or written to a file, then sent or uploaded by a
+    later step.
+  - A secret in `strategy.matrix`.
+  - Egress through Python `requests`, PowerShell `Invoke-WebRequest` or `scp`.
+
+  Now handled:
+  - a job carries the secret forward once a step holding it persists it (`>`, `>>`,
+    `tee`, `$GITHUB_ENV`/`$GITHUB_OUTPUT`; `2>&1` and `> /dev/null` do not count);
+  - the matrix counts as job scope;
+  - the egress tools listed in the CHANGELOG.
+
+  `gh api` stays out on purpose, because GitHub is that token's audience. A local
+  `rsync` stays out as well.
+- **d5 trusted the media-type label.** A random payload labelled `image/png` disappeared
+  from the per-string pass. The exemption now requires a real image or font signature
+  in the decoded bytes.
+- **d7 checked the encoder only on the hit's own line.** An encoded name built one line
+  above dropped to low. The check now covers the hit line plus the five lines above.
+  The sink also counts `const F = Function; F(...)`.
+- **pub:** a multi-line flow map that never closes was still read. It is now skipped,
+  as the code comment said.
+
+### Left for later
+
+- Four further gaps were found. Three already existed on main, and GitHub's own
+  masking of secrets in job outputs mostly closes the fourth. They describe how to
+  avoid a rule, so they are recorded in the private maintainer handoff, not here.
+- PR 327 (offline dependency-confusion tests): no issues found. The only conflict is
+  `.ai/handoff/MANIFEST.json`, in either order. Merge 327 first, then this PR, then run
+  `npm run handoff:refresh` on the result.
+
 ## D-062 rule fixes, all ten at once (2026-09-23) (claude-opus-5-5)
 
 The owner asked for every queued rule fix to land immediately rather than one PR per

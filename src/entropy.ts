@@ -76,14 +76,49 @@ const MIN_FILE_SIZE = 500;
  * a document that can carry script. A text/javascript or
  * application/octet-stream data URI is how a payload is smuggled, so it stays
  * visible to both passes. The payload class excludes newlines, so removal
- * never shifts a line number.
+ * never shifts a line number. The label alone is not trusted: a URI is only
+ * exempt when its decoded bytes start with a real image or font signature
+ * (see hasMediaSignature), so a payload relabelled `image/png` stays visible.
  */
 const EXEMPT_DATA_URI =
   /data:(?:image\/(?!svg\+xml)[A-Za-z0-9.+-]{1,64}|font\/[A-Za-z0-9.+-]{1,64}|application\/(?:x-)?font-(?:woff2?|ttf|otf|sfnt|opentype|truetype)|application\/vnd\.ms-fontobject);base64,[A-Za-z0-9+/=]+/gi;
 
+/**
+ * Leading bytes of the image and font formats that are inlined as data: URIs.
+ * An offset is given where the signature does not start at byte 0.
+ */
+const MEDIA_SIGNATURES: Array<[number, number[]]> = [
+  [0, [0x89, 0x50, 0x4e, 0x47]], // PNG
+  [0, [0xff, 0xd8, 0xff]], // JPEG
+  [0, [0x47, 0x49, 0x46, 0x38]], // GIF8
+  [0, [0x42, 0x4d]], // BMP
+  [0, [0x00, 0x00, 0x01, 0x00]], // ICO
+  [0, [0x00, 0x00, 0x02, 0x00]], // CUR
+  [0, [0x49, 0x49, 0x2a, 0x00]], // TIFF, little-endian
+  [0, [0x4d, 0x4d, 0x00, 0x2a]], // TIFF, big-endian
+  [8, [0x57, 0x45, 0x42, 0x50]], // WEBP (after RIFF....)
+  [4, [0x66, 0x74, 0x79, 0x70]], // ftyp: AVIF, HEIC
+  [0, [0x77, 0x4f, 0x46, 0x46]], // wOFF
+  [0, [0x77, 0x4f, 0x46, 0x32]], // wOF2
+  [0, [0x00, 0x01, 0x00, 0x00]], // TrueType
+  [0, [0x4f, 0x54, 0x54, 0x4f]], // OTTO (OpenType CFF)
+  [0, [0x74, 0x72, 0x75, 0x65]], // 'true' (Apple TrueType)
+  [34, [0x4c, 0x50]], // EOT magic number 0x504C, little-endian
+];
+
+/** Do the first bytes of a base64 payload match an image or font signature? */
+export function hasMediaSignature(base64: string): boolean {
+  const head = Buffer.from(base64.slice(0, 48), "base64");
+  return MEDIA_SIGNATURES.some(([offset, bytes]) =>
+    bytes.every((b, i) => head[offset + i] === b),
+  );
+}
+
 /** The one data URI exemption shared by the file-level and per-string passes. */
 export function stripExemptDataUris(content: string): string {
-  return content.replace(EXEMPT_DATA_URI, "");
+  return content.replace(EXEMPT_DATA_URI, (uri) =>
+    hasMediaSignature(uri.slice(uri.indexOf(",") + 1)) ? "" : uri,
+  );
 }
 
 /**

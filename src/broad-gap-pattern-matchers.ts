@@ -778,26 +778,34 @@ function lineBounds(content: string, line: number): [number, number] | undefined
   return [start, next === undefined ? content.length : next - 1];
 }
 
-/** An encoder call on the query line: the name carries encoded data out. */
+/**
+ * An encoder call on the query line or just above it (the encoded name is
+ * often built in a variable first): the name carries encoded data out.
+ */
 const DNS_ENCODED_NAME =
   /\b(?:base32|base64|b32encode|b64encode|btoa|hexlify|toHex|encodeBase32|encodeBase64|encodeHex)(?:\w{0,24}|\.\w{1,24})[^\S\n]*\(|\.toString[^\S\n]*\([^\S\n]*["'](?:hex|base64|base64url)["']/i;
+/** Lines above a DNS hit that are searched for the encoder call. */
+const DNS_ENCODER_WINDOW = 5;
+
 /** A decode of fetched data ... */
 const DNS_ANSWER_DECODE =
   /\batob[^\S\n]*\(|\bBuffer\.from[^\S\n]*\([^)\n]{0,200}["'](?:base64|base64url|hex)["']|\b(?:b64decode|b32decode|unhexlify|a2b_base64)[^\S\n]*\(|\bbytes\.fromhex[^\S\n]*\(/;
 /** ... and an execution sink in the same file. `.exec(` is RegExp, not a sink. */
 const DNS_ANSWER_SINK =
-  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
+  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|=[^\S\n]*(?:eval|Function)\b(?![^\S\n]*[.(\w])|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
 
 /**
  * C2 corroboration for C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT. A DoH endpoint or
  * a TXT lookup is ordinary DNS tooling (DNSSEC checks, SPF/DMARC reads); what
  * makes it a channel is data going OUT in the query name (an encoder call on
- * the hit's line) or an answer coming IN and being executed (a decode plus
- * eval, Function, vm, exec or child_process anywhere in the file).
+ * the hit's line or the DNS_ENCODER_WINDOW lines above it) or an answer coming
+ * IN and being executed (a decode plus eval, Function, an alias of either, vm,
+ * exec or child_process anywhere in the file).
  */
 export function hasDnsC2Signal(content: string, line: number): boolean {
-  const bounds = lineBounds(content, line);
-  if (bounds && DNS_ENCODED_NAME.test(content.slice(bounds[0], bounds[1]))) {
+  const first = lineBounds(content, Math.max(1, line - DNS_ENCODER_WINDOW));
+  const last = lineBounds(content, line);
+  if (first && last && DNS_ENCODED_NAME.test(content.slice(first[0], last[1]))) {
     return true;
   }
   const memo = memoFor(content);

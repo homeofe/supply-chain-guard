@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { extractPubPackages, isPubFile, scanPubContent } from "../pub-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
 import { performanceBudget } from "./performance-budget.js";
 
 const FEED: FeedIOC[] = [
@@ -173,6 +173,16 @@ describe("extractPubPackages: flow maps and mirrors", () => {
       "  http: ^1.2.0",
     ].join("\n");
     expect(names(yaml, "pubspec.yaml")).toEqual(["hijacked_pkg@0.1.5", "http@-"]);
+  });
+
+  it("does not read a multi-line flow map that never closes", () => {
+    const yaml = [
+      "dependencies:",
+      "  hijacked_pkg: {hosted: https://pub.dev,",
+      "    version: 0.1.5",
+      "  http: ^1.2.0",
+    ].join("\n");
+    expect(names(yaml, "pubspec.yaml")).toEqual(["http@-"]);
   });
 
   it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {

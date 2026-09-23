@@ -29,6 +29,26 @@ const NET_CMD_RE = /(?<![\w.-])(?:curl|wget|nc|ncat|netcat)(?![\w-])/;
 const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
 
 /**
+ * Other ways a step sends data out, counted as egress without looking for a
+ * loopback target: HTTP clients in Python and PowerShell, and file transfer
+ * tools that always reach another host. `scp`/`rsync` count only with a
+ * `host:path` argument (see REMOTE_COPY_RE). `gh api` is left out on purpose:
+ * a token sent to GitHub's own API is that token's intended audience.
+ */
+const OTHER_EGRESS_RE =
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b/i;
+
+/** `scp`/`rsync` followed somewhere by a `[user@]host:path` word (not `C:\`). */
+const REMOTE_COPY_RE = /(?<![\w.-])(?:scp|rsync)(?![\w-])[^\n]*?\s(?:[\w.-]+@)?[\w-]+(?:\.[\w-]+)*:(?![\\/]{2})/;
+
+/**
+ * A step that writes what it holds somewhere a later step of the same job can
+ * read: `$GITHUB_ENV`/`$GITHUB_OUTPUT`, a file redirection, or `tee`.
+ * `2>&1` and `> /dev/null` do not count.
+ */
+const PERSISTS_RE = /GITHUB_(?:ENV|OUTPUT)\b|(?<![0-9&>=-])>>?(?![>&]|\s*\/dev\/null)|(?<![\w.-])tee(?![\w-])|Out-File|Set-Content|Add-Content/;
+
+/**
  * Options whose next argument is a payload, header or local file rather than
  * the destination. Options that redirect traffic (--resolve, --proxy, --url,
  * --connect-to) are deliberately absent, so their value is checked as a target.
@@ -122,6 +142,7 @@ function segmentHasEgress(segment: string): boolean {
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
+  if (OTHER_EGRESS_RE.test(segment) || REMOTE_COPY_RE.test(segment)) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
   return !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
@@ -255,6 +276,8 @@ export interface JobScope {
   env: string;
   /** the job's `secrets:` block, for a reusable-workflow call */
   reusableSecrets: string;
+  /** the job's `strategy:` block, whose matrix values reach the steps as `matrix.*` */
+  strategy: string;
   steps: StepScope[];
 }
 
@@ -309,6 +332,7 @@ export function workflowScopes(content: string): WorkflowScopes {
     let topKey = "";
     const env: string[] = [];
     const reusableSecrets: string[] = [];
+    const strategy: string[] = [];
     for (let k = start + 1; k < end; k++) {
       const line = stripped[k]!;
       if (inStep[k - start] || line.trim() === "") continue;
@@ -317,8 +341,9 @@ export function workflowScopes(content: string): WorkflowScopes {
       if (indent === childIndent) topKey = /^\s*['"]?([\w-]+)['"]?\s*:/.exec(line)?.[1] ?? "";
       if ((topKey === "env" || topKey === "container") && regions[k] === "env") env.push(line);
       if (topKey === "secrets") reusableSecrets.push(line);
+      if (topKey === "strategy") strategy.push(line);
     }
-    return { job, env: env.join("\n"), reusableSecrets: reusableSecrets.join("\n"), steps };
+    return { job, env: env.join("\n"), reusableSecrets: reusableSecrets.join("\n"), strategy: strategy.join("\n"), steps };
   });
 
   return { ast, stripped, regions, workflowEnv: workflowEnv.join("\n"), jobs };
@@ -327,7 +352,10 @@ export function workflowScopes(content: string): WorkflowScopes {
 /**
  * WORKFLOW_SECRET_TO_UPLOAD_PATH, evaluated per step. A stored secret is in
  * scope for a step when it is referenced in that step's `run:`/`script:` or
- * `env:`, in the job's `env:` (or its container's), or in the workflow `env:`.
+ * `env:`, in the job's `env:` (or its container's) or matrix, or in the
+ * workflow `env:`. It stays in scope for every later step of the job once a
+ * step holding it writes to `$GITHUB_ENV`, `$GITHUB_OUTPUT` or a file, since
+ * a later step can read it from there.
  * The step must itself make an outbound call or upload an artifact. `with:`
  * inputs are ignored except where the step's own code can read them: a local
  * composite action, or a `script:` body. A reusable workflow from another repository that is
@@ -366,8 +394,9 @@ function checkSecretToEgress(
   const workflowSecret = textHasStoredSecret(workflowEnv);
 
   const findings: Finding[] = [];
-  for (const { job, env, reusableSecrets, steps } of jobs) {
-    const jobSecret = workflowSecret || textHasStoredSecret(env);
+  for (const { job, env, reusableSecrets, strategy, steps } of jobs) {
+    const jobSecret = workflowSecret || textHasStoredSecret(env) || textHasStoredSecret(strategy);
+    let carried = false;
 
     if (job.uses && !job.uses.startsWith("./")) {
       if (/^[ \t]*secrets[ \t]*:[ \t]*inherit[ \t]*$/m.test(reusableSecrets) || textHasStoredSecret(reusableSecrets)) {
@@ -389,9 +418,10 @@ function checkSecretToEgress(
         // A script: body (actions/github-script) can read its own with: inputs.
         stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
       }
-      if (egress && (stepSecret || jobSecret)) {
+      if (egress && (stepSecret || jobSecret || carried)) {
         findings.push(finding(step.line, `a stored secret is in scope for a step in job "${job.id}" that ${egress}`));
       }
+      if ((stepSecret || jobSecret) && PERSISTS_RE.test(linesText(stripped, regions, s, e, ["exec"]))) carried = true;
     }
   }
   return findings;

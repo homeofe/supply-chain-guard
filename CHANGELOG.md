@@ -241,7 +241,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   states (`scalaVersion`, `crossScalaVersions`), `CrossVersion.binary` like
   `%%`; Gradle dependencies with a variable version are read on configurations
   the script declares itself, not only on the built-in ones; pubspec and
-  GitLab CI `services:` flow maps written over several lines are read.
+  GitLab CI `services:` flow maps written over several lines are read (a
+  pubspec map that never closes is not guessed at).
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
@@ -251,7 +252,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   - `INTERNAL_PRIVATE_IP`, `INTERNAL_PRIVATE_IPV6`, `INTERNAL_HOSTNAME`: pytest's
     `test_*.py` files count as test files (exactly that basename form;
     `testing.py`, `latest_net.py` and `contest.py` do not), from one shared
-    definition of the test-file forms.
+    definition of the test-file forms. This form applies to these three rules
+    only: the scanned package names its own files, so the malware rules keep
+    reporting inside `test_*.py`.
   - `INTERNAL_HOSTNAME`: `metadata.google.internal` is well-known
     infrastructure, like the metadata address it names; a quoted dotted key
     (`"status.internal": ...` in a translation catalogue or JSON) and attribute
@@ -264,15 +267,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     classification is reported at info instead of medium.
   - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: one data-URI exemption for both
     passes, limited to `image/*` (not `image/svg+xml`, which can carry script),
-    `font/*` and the legacy font types. The file-level pass used to exempt
-    every media type.
+    `font/*` and the legacy font types, and only when the decoded bytes start
+    with a real image or font signature: a payload labelled `image/png` is
+    still reported. The file-level pass used to exempt every media type.
   - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
     call with identifier boundaries (`setInterval(fetchNotifications, ...)`
     and `forgotPassword` no longer match), and both rules share one exclusion
     for minified and prose files.
   - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal (an
-    encoded query name, or a decoded TXT answer reaching eval, Function, vm or
-    a process sink); an ordinary DNSSEC, SPF or DMARC lookup reports at low.
+    encoder call on the query line or the five lines above it, or a decoded
+    TXT answer reaching eval, Function or an alias of either, vm or a process
+    sink); an ordinary DNSSEC, SPF or DMARC lookup reports at low.
   - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
     extension whose only variable segment passed an anchored allowlist in the
     same function reports at info.
@@ -287,7 +292,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     `permissions:` rather than reported here, and a finding carries the step's
     line. A reusable workflow from another repository that receives
     `secrets: inherit` or a stored secret, and a local composite action that
-    makes an outbound call, are reported too.
+    makes an outbound call, are reported too. A secret stays in scope for the
+    later steps of its job once a step holding it writes to `$GITHUB_ENV`,
+    `$GITHUB_OUTPUT` or a file, a secret in `strategy.matrix` counts for the
+    job, and Python `requests`/`httpx`/`urllib`, PowerShell web cmdlets,
+    `sftp`/`ftp`/`socat`/`telnet` and `scp`/`rsync` to a remote host count as
+    egress.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a

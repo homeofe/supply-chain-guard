@@ -1199,7 +1199,10 @@ const PYTHON_FILE = /\.py$/i;
  * shared matcher adds (`spec/`, `snapshots/`, `test-fixtures/`, `mocks/`,
  * `stubs/`, `fakes/`), which stay armed here for the reason above.
  */
-const TEST_FILE = buildTestFilePattern();
+// The disclosure rules alone also treat pytest's `test_*.py` as a test: a test of an
+// address classifier must name private literals. The shared pattern that gates
+// the malware rules does not (see buildTestFilePattern).
+const TEST_FILE = buildTestFilePattern([], { pytestPrefix: true });
 
 /** What kind of surface a file is, which decides which rules stay armed. */
 export type FileSurface = "source" | "prose" | "example";
