@@ -97,7 +97,9 @@ function isRemoteCopy(segment: string): boolean {
 function isGitPushEgress(segment: string): boolean {
   const m = /(?<![\w.-])git[^\S\n]+push\b/.exec(segment);
   if (!m) return false;
-  for (const word of shellWords(segment.slice(m.index + m[0].length))) {
+  // An expression holds spaces (`${{ secrets.X }}`): keep it inside its word.
+  const rest = segment.slice(m.index + m[0].length).replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR");
+  for (const word of shellWords(rest)) {
     const url = /^(?:https?|ssh|git):\/\/(?:[^@/\s]*@)?([^/:\s]+)/.exec(word);
     const scp = /^[\w.-]+@([\w.-]+):/.exec(word);
     const host = (url?.[1] ?? scp?.[1] ?? "").toLowerCase();
@@ -189,6 +191,11 @@ function argsAreLoopbackOnly(args: string): boolean {
       if (/^\d*[<>]+&?$/.test(word)) skipNext = true;
       continue;
     }
+    if (/^-x./.test(word)) {
+      // A proxy written onto its option (`-xhost:3128`) carries the request.
+      if (!isLoopbackTarget(word.slice(2))) return false;
+      continue;
+    }
     if (word.startsWith("-") && word.length > 1) {
       const eq = word.indexOf("=");
       if (eq < 0) {
@@ -207,25 +214,85 @@ function argsAreLoopbackOnly(args: string): boolean {
   return destinations > 0;
 }
 
-function segmentHasEgress(raw: string): boolean {
+/** Public registries and GitHub itself: the audience of the tokens a release step holds. */
+const PUBLIC_HOSTS = new Set([
+  "github.com", "ghcr.io", "registry.npmjs.org", "registry.yarnpkg.com", "npm.pkg.github.com",
+  "pypi.org", "upload.pypi.org", "test.pypi.org", "files.pythonhosted.org",
+]);
+
+function isPublicHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/\.$/, "");
+  return PUBLIC_HOSTS.has(h) || h.endsWith(".github.com") || h.endsWith(".githubusercontent.com");
+}
+
+/** One shell word that is a URL, or an option set to one; group 1 is its host. */
+const URL_WORD_RE = /^(?:-{1,2}[\w-]{1,64}=)?(?:[a-z][\w.-]{0,31}\+)?(?:https?|ftps?|wss?):\/\/(?:[^@\/\s]*@)?([^\/:?#\s]+)/i;
+
+/**
+ * A URL handed to any program (`python send.py https://host ...`,
+ * `npm publish --registry=https://host`, a secret in `https://u:TOKEN@host`):
+ * the program is not known, so a destination other than loopback or a public
+ * registry counts as egress.
+ */
+function hasUrlArgument(segment: string): boolean {
+  for (const word of shellWords(segment.replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR"))) {
+    const m = URL_WORD_RE.exec(word);
+    if (m && !isLoopbackTarget(m[1]!) && !isPublicHost(m[1]!)) return true;
+  }
+  return false;
+}
+
+/**
+ * With a proxy set in the workflow (`HTTPS_PROXY: http://host`), a call to
+ * loopback still leaves the runner through the proxy.
+ */
+function segmentHasEgress(raw: string, proxied: boolean): boolean {
   const segment = unquoteWords(raw);
-  if (isGitPushEgress(segment)) return true;
+  if (isGitPushEgress(segment) || hasUrlArgument(segment)) return true;
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
-    if (m[2] === undefined || !isLoopbackTarget(m[2])) return true;
+    if (proxied || m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
   if (OTHER_EGRESS_RE.test(segment) || isRemoteCopy(segment) || isSshEgress(segment)) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
-  return !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
+  return proxied || !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
 }
 
 /** Does executed text (a run: or script: body, comments removed) send data out? */
-function execTextHasEgress(text: string): boolean {
+function execTextHasEgress(text: string, proxied: boolean): boolean {
   const joined = text.replace(/\\\n/g, " ");
   for (const segment of joined.split(/&&|\|\||[;&|\n]/)) {
-    if (segmentHasEgress(segment)) return true;
+    if (segmentHasEgress(segment, proxied)) return true;
   }
   return false;
+}
+
+/** A proxy variable set anywhere in the workflow, with its value in group 1. */
+const PROXY_VAR_RE = /\b(?:https?|all|ftp)_proxy['"]?[ \t]*[:=][ \t]*['"]?([^\s'",}]+)/gi;
+
+function hasOutboundProxy(text: string): boolean {
+  for (const m of text.matchAll(PROXY_VAR_RE)) {
+    if (!isLoopbackTarget(m[1]!)) return true;
+  }
+  return false;
+}
+
+/** A step written as a flow map on one line: `- { name: x, run: '...' }`. */
+const FLOW_STEP_RE = /^[ \t]*-[ \t]*\{/;
+const FLOW_RUN_KEY_RE = /[{,][ \t]*['"]?run['"]?[ \t]*:[ \t]*/;
+const FLOW_UPLOAD_RE = /[{,][ \t]*['"]?uses['"]?[ \t]*:[ \t]*['"]?actions\/upload-artifact(?:@|\/|['"\s,}]|$)/i;
+
+/** The `run:` value of a one-line flow-map step, outer quotes removed. */
+function flowStepRun(line: string): string {
+  const m = FLOW_RUN_KEY_RE.exec(line);
+  if (!m) return "";
+  const value = line.slice(m.index + m[0].length);
+  const q = value[0];
+  if (q === "'" || q === '"') {
+    const close = value.lastIndexOf(q);
+    return close > 0 ? value.slice(1, close) : value.slice(1);
+  }
+  return value;
 }
 
 /**
@@ -400,6 +467,27 @@ export function workflowScopes(content: string): WorkflowScopes {
 }
 
 /**
+ * One line with its shell comment removed: `#` at the start of a word, outside
+ * quotes, not escaped. Linear in the line.
+ */
+function stripShellComment(line: string): string {
+  let quote = "";
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!;
+    if (ch === "\\" && quote !== "'") {
+      i++;
+    } else if (quote) {
+      if (ch === quote) quote = "";
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+    } else if (ch === "#" && (i === 0 || line[i - 1] === " " || line[i - 1] === "\t")) {
+      return line.slice(0, i);
+    }
+  }
+  return line;
+}
+
+/**
  * WORKFLOW_SECRET_TO_UPLOAD_PATH, a whole-file check: a stored secret (not
  * the run's own token, and not one only tested for presence) and, in the same
  * workflow, an outbound call in executed text (`run:`, `script:`; comments
@@ -412,11 +500,20 @@ export function workflowScopes(content: string): WorkflowScopes {
 function checkSecretToEgress(content: string, file: string, relPath: string, regions = true): Finding[] {
   const text = content.replace(/\r/g, "");
   const stripped = stripYamlComments(text).split("\n");
-  const exec = regions
-    ? linesText(stripped, classifyWorkflowLines(text), 0, stripped.length, ["exec"])
-    : stripped.join("\n");
-  const uploads = stripped.some((l) => /^\s*-?\s*uses:\s*['"]?actions\/upload-artifact(?:@|['"\s]|$)/i.test(l));
-  if (!textHasStoredSecret(stripped.join("\n")) || !(uploads || execTextHasEgress(exec))) return [];
+  // Executed lines keep their shell text; only a shell comment is removed, with
+  // quotes and backslash escapes honoured (`echo "a\" #"; curl ...` runs curl).
+  const raw = text.split("\n");
+  const flowSteps = stripped.filter((l) => FLOW_STEP_RE.test(l));
+  const exec = [(regions ? linesText(raw, classifyWorkflowLines(text), 0, raw.length, ["exec"]) : text), ...flowSteps.map(flowStepRun)]
+    .join("\n")
+    .split("\n")
+    .map(stripShellComment)
+    .join("\n");
+  const uploads =
+    stripped.some((l) => /^[ \t]*(?:-[ \t]+)?uses:[ \t]*['"]?actions\/upload-artifact(?:@|\/|['"\s]|$)/i.test(l)) ||
+    flowSteps.some((l) => FLOW_UPLOAD_RE.test(l));
+  const all = stripped.join("\n");
+  if (!textHasStoredSecret(all) || !(uploads || execTextHasEgress(exec, hasOutboundProxy(all)))) return [];
   return [{
     rule: "WORKFLOW_SECRET_TO_UPLOAD_PATH",
     description: `Workflow "${file}": a stored secret and an outbound call or artifact upload appear in the same workflow. Verify secrets are not sent to external endpoints.`,
@@ -459,7 +556,11 @@ export function modelWorkflows(dir: string): Finding[] {
     try {
       for (const f of checkSecretToEgress(content, file, relPath)) findings.push(f);
     } catch {
-      for (const f of checkSecretToEgress(content, file, relPath, false)) findings.push(f);
+      try {
+        for (const f of checkSecretToEgress(content, file, relPath, false)) findings.push(f);
+      } catch {
+        /* neither reading worked: the release-path check below still runs */
+      }
     }
     {
 
@@ -470,8 +571,8 @@ export function modelWorkflows(dir: string): Finding[] {
       // `npm install -g npm@latest`, which is a Node toolchain install
       // step, not a GitHub Action reference. New regex requires the
       // `uses: <path>@<branch>` form.
-      const isReleasePath = /release|publish|deploy|npm.*publish/.test(content);
-      const hasUnpinnedAction = /^\s*-?\s*uses:\s+\S+@(?:main|master|latest|dev)\b/im.test(content);
+      const isReleasePath = /release|publish|deploy/.test(content);
+      const hasUnpinnedAction = /^[ \t]*(?:-[ \t]+)?uses:[ \t]+\S+@(?:main|master|latest|dev)\b/im.test(content);
 
       if (isReleasePath && hasUnpinnedAction) {
         findings.push({

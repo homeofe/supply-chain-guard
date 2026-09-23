@@ -105,6 +105,16 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
     ["vm", 'require("vm").runInThisContext(Buffer.from(LOGO.split(",")[1], "base64").toString());'],
     ["eval of atob", 'eval(atob(LOGO.split(",")[1]));'],
     ["child_process", 'require("child_process").execSync(Buffer.from(LOGO.slice(23), "base64").toString());'],
+    ["import of a data URL", 'const s = Buffer.from(LOGO.slice(23), enc); import("data:text/javascript," + s);'],
+    ["TextDecoder", "setTimeout(new TextDecoder().decode(Uint8Array.from(x)), 0);"],
+    ["Python decodebytes", 'f = compile(base64.decodebytes(LOGO[23:].encode()), "x", "exec")'],
+    ["an object URL", "import(URL.createObjectURL(new Blob([b])));"],
+    ["Reflect.construct", "Reflect.construct(Function2, [x])();"],
+    ["Python subprocess", "subprocess.run(x, shell=True)"],
+    ["PHP base64_decode", "file_put_contents($f, base64_decode($x));"],
+    ["Ruby instance_eval", "instance_eval(x)"],
+    ["WebAssembly", "WebAssembly.instantiate(x);"],
+    ["base64 -D", "run(`base64 -D x`)"],
   ])("keeps an inlined image at high in a file that decodes or runs code (%s)", (_label, sink) => {
     const content = `const LOGO = "data:image/jpeg;base64,${JPEG}";\n${sink}\n`;
     const found = analyzeEntropy(content, "src/logo.js").filter((finding) => finding.rule === "HIGH_ENTROPY_STRING");

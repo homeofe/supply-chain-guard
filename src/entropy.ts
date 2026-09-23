@@ -255,7 +255,7 @@ export function analyzeEntropy(
  * high verdict for it.
  */
 const DECODES_OR_RUNS_RE =
-  /\batob\s*\(|\bBuffer\s*\.\s*from\s*\([^\n]{0,200}?["'`](?:base64|base64url)["'`]|\b(?:b64decode|b32decode|a2b_base64)\s*\(|\bbase64\s+(?:-d|--decode)\b|\beval\s*\(|\bFunction\s*\(|\bvm\s*\.\s*[A-Za-z]|\bchild_process\b|\bexec(?:Sync|File|FileSync)?\s*\(|\bimportScripts\s*\(|\bnew\s+Worker\s*\(|\bdocument\s*\.\s*write\s*\(/;
+  /\batob\s*\(|\bBuffer\s*\.\s*from\s*\([^\n]{0,200}?["'`](?:base64|base64url)["'`]|b(?:64|32|16|85)decode\s*\(|\ba2b_base64\s*\(|\bbase64_decode\s*\(|\bdecode64\s*\(|\bdecode(?:bytes|string)\s*\(|\bTextDecoder\b|\bimport\s*\(\s*["'`]data:|\bbase64\s+(?:-d|-D|--decode)\b|\beval\b|\bFunction\s*[(,)]|\bReflect\s*\.\s*construct\b|\bvm\s*\.\s*[A-Za-z]|\bchild_process\b|\bsubprocess\b|\bos\s*\.\s*(?:system|popen|exec\w*)\b|\bexec(?:Sync|File|FileSync)?\s*\(|\bimportScripts\s*\(|\bcreateObjectURL\b|\bnew\s+Worker\s*\(|\bWebAssembly\b|\bsetTimeout\s*\(\s*["'`]|\binstance_eval\b|\bdocument\s*\.\s*write\s*\(/;
 
 /** The first long string or token on a line above the string threshold. */
 function firstHighEntropyString(line: string): { str: string; entropy: number } | undefined {

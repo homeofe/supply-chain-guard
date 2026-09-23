@@ -246,7 +246,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   never closes is still read, however many lines it spans); pubspec also
   reads a whole section written as a flow map, quoted keys, YAML anchors, a
   `hosted:` value that names no readable URL as pub.dev, and pub.dev however
-  its URL is spelled (case, default port).
+  its URL is spelled (case, default port, `http`, a trailing dot). A pubspec
+  that cannot be read is reported as a partial scan instead of ending the
+  scan.
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
@@ -305,14 +307,21 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     parts: a stored secret is recognised in every expression form (bracket
     access, the whole `secrets` context) but not the run's own token, nor a
     secret only tested for presence (`secrets.X != ''`); an outbound call
-    counts only in executed text (`run:`, `script:`), with comments removed and
-    loopback calls, `git fetch` and `fetch-depth:` left out. Egress includes
+    counts only in executed text (`run:`, `script:`, and the `run:` of a
+    one-line flow-map step), with shell comments removed (quotes and escapes
+    honoured) and loopback calls, `git fetch` and `fetch-depth:` left out;
+    with a proxy variable set in the workflow, a loopback call counts too.
+    A URL handed to any program counts unless it names loopback, GitHub or a
+    public package registry; that covers a secret in a URL's credentials and
+    a registry option set to another host. Egress includes
     Node `http(s).request`/`get` and `axios`, Python `requests`/`httpx`/
     `urllib`/`http.client`, github-script requests to a host other than
     GitHub's API, PowerShell web cmdlets, `Net.WebClient`, `Send-MailMessage`,
     `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a remote host, `ssh` to a
     host that is not loopback and `git push` to a remote that is not GitHub,
-    also with the command name split by shell quoting. A workflow file that
+    also with the command name split by shell quoting. An artifact upload
+    counts in every form of the action (`upload-artifact/merge`, a flow-map
+    step). A workflow file that
     cannot be classified no longer ends the scan of the files after it. A
     secret in one step and an outbound call in another are still reported
     together.

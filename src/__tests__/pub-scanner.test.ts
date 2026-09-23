@@ -220,6 +220,13 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names("dependencies:\n  port: {hosted: 'https://pub.dev:443/', version: 0.1.5}\n", "pubspec.yaml")).toEqual(["port@0.1.5"]);
   });
 
+  it("reads pub.dev over http or with a trailing dot, and survives a huge nested flow map", () => {
+    expect(names("dependencies:\n  plain: {hosted: http://pub.dev, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["plain@0.1.5"]);
+    expect(names("dependencies:\n  dotted: {hosted: https://pub.dev./, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["dotted@0.1.5"]);
+    const nested = "dependencies:\n  a: {x: {" + "k: v, ".repeat(700_000) + "}}\n";
+    expect(() => extractPubPackages(nested, "pubspec.yaml")).not.toThrow();
+  });
+
   it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {
     const yaml = "dependencies:\n" + "  a: {\n" + "    x: y\n".repeat(200_000);
     const t0 = Date.now();

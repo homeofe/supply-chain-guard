@@ -459,7 +459,20 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         findings.push(...scanMavenContent(prefetchedContent, relativePath, threatFeed));
       }
       if (pubspecFile) {
-        findings.push(...scanPubContent(prefetchedContent, relativePath, threatFeed));
+        try {
+          for (const finding of scanPubContent(prefetchedContent, relativePath, threatFeed)) findings.push(finding);
+        } catch {
+          findings.push({
+            rule: "PATH_SCAN_INCOMPLETE",
+            description: `${relativePath} could not be read as a pub manifest, so its dependencies were not checked against the threat feed.`,
+            severity: "info",
+            confidence: 1,
+            category: "info",
+            file: relativePath,
+            match: "unreadable pub manifest",
+            recommendation: "Treat this result as partial, not clean. Inspect this manifest by hand.",
+          });
+        }
       }
       if (pythonManifest) {
         findings.push(...scanPythonManifestContent(prefetchedContent, relativePath, threatFeed));

@@ -851,10 +851,19 @@ function skipString(content: string, at: number, limit: number, budget: ScanBudg
 }
 
 /** Can a `/` at `at` start a regex literal (not a division)? */
+/** Keywords after which a `/` starts a regex literal, not a division. */
+const REGEX_PREFIX_KEYWORDS = new Set([
+  "return", "typeof", "instanceof", "in", "of", "new", "delete", "void", "throw", "case", "do", "else", "yield", "await",
+]);
+
 function regexCanStart(content: string, at: number): boolean {
   let k = at - 1;
   while (k >= 0 && (content[k] === " " || content[k] === "\t")) k--;
-  return k < 0 || "(,=:[!&|?{};+-*%<>~^\n".includes(content[k]!);
+  if (k < 0 || "(,=:[!&|?{};+-*%<>~^\n".includes(content[k]!)) return true;
+  // `return /[}]/.test(d)`: a keyword, not an operand, before the slash.
+  let w = k;
+  while (w >= 0 && w > k - 16 && /[A-Za-z]/.test(content[w]!)) w--;
+  return REGEX_PREFIX_KEYWORDS.has(content.slice(w + 1, k + 1)) && (w < 0 || !/[\w$.]/.test(content[w]!));
 }
 
 /** Index of the closing `/` of a regex literal on this line, or `at` if none. */
@@ -863,6 +872,12 @@ function skipRegex(content: string, at: number, limit: number, budget: ScanBudge
   const end = Math.min(limit, at + 1 + MAX_REGEX_LITERAL);
   for (let i = at + 1; i < end; i++) {
     if (--budget.left < 0) return limit;
+    if (i === end - 1 && end < limit) {
+      // Cut off before its closing slash: what follows cannot be read as code,
+      // so the helper scan stops here and counts as incomplete.
+      budget.left = 0;
+      return limit;
+    }
     const ch = content[i];
     if (ch === "\n") return at;
     if (ch === "\\") i++;
@@ -978,14 +993,17 @@ function encodedNameReachesLine(content: string, line: number): boolean {
     // The whole line: it lies in at most DNS_ENCODER_WINDOW windows, so reading
     // it in full stays linear, and nothing after a cut-off is missed.
     const text = content.slice(bounds[0], bounds[1]);
-    // One pass per line; each value runs to the end of its statement.
     if (!text.includes("=")) continue;
-    // A value ends at the next `,` or `;` (the next declarator or statement),
-    // so values do not overlap and reading them all is linear in the line.
-    for (const m of text.matchAll(ASSIGN_TARGET_RE)) {
+    // A value ends at the next `,` or `;` (the next declarator or statement) or
+    // where the next assignment starts, so values never overlap and reading them
+    // all is linear in the line.
+    const matches = [...text.matchAll(ASSIGN_TARGET_RE)];
+    for (let i = 0; i < matches.length; i++) {
+      const m = matches[i]!;
       const from = m.index + m[0].length;
+      const stop = i + 1 < matches.length ? Math.max(from, matches[i + 1]!.index) : text.length;
       let end = from;
-      while (end < text.length && text[end] !== "," && text[end] !== ";") end++;
+      while (end < stop && text[end] !== "," && text[end] !== ";") end++;
       const value = text.slice(from, end);
       if (!(DNS_ENCODED_NAME.test(value) || mentionsAny(value, tainted))) continue;
       const target = m[1]!;

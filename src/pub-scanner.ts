@@ -149,7 +149,8 @@ function flowPairs(text: string, depth = 0): Field[] {
   for (const [key, value] of topLevelPairs(text)) {
     if (value.startsWith("{") && value.endsWith("}")) {
       out.push({ key, value: "" });
-      if (depth < 2) out.push(...flowPairs(value, depth + 1));
+      // A loop, not a spread: a spread of an input-sized array overflows the stack.
+      if (depth < 2) for (const field of flowPairs(value, depth + 1)) out.push(field);
     } else {
       out.push({ key, value });
     }
@@ -206,7 +207,8 @@ function joinFlow(rawLines: string[], start: number, first: string, baseIndent: 
 function isPubHost(url: string): boolean {
   try {
     const u = new URL(url);
-    return PUB_HOSTS.has(`${u.protocol}//${u.host}`);
+    const host = u.host.replace(/\.(?=:|$)/, "");
+    return PUB_HOSTS.has(`https://${host}`) && (u.protocol === "https:" || u.protocol === "http:");
   } catch {
     return PUB_HOSTS.has(url.replace(/\/+$/, "").toLowerCase());
   }

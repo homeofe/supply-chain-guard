@@ -1,3 +1,57 @@
+## Final check after the split (2026-09-23) (claude-opus-5-5)
+
+One more reviewer on the lead's model read the split branch. Its probes were then run
+again against the fixed build, and compared with `main`.
+
+### Blockers, fixed
+
+- **pub:** a deeply nested flow map overflowed the stack, and `scan()` rejected as a
+  whole. Nested pairs are now collected with a loop. A pub manifest that still cannot
+  be read is reported as a partial scan (`PATH_SCAN_INCOMPLETE`), and the other files
+  are still scanned.
+- **DNS:** assignment values that started inside the previous value made the window
+  quadratic. A value now ends where the next one starts: 4 MiB takes 8.8 s end to end
+  and stays linear.
+
+### Also fixed in this pass
+
+- **DNS:**
+  - A regex literal longer than the scan reads now counts as a scan limit, so the
+    verdict is medium.
+  - A `/` after `return`, `typeof` and similar keywords starts a regex.
+- **Workflow rule** (`WORKFLOW_SECRET_TO_UPLOAD_PATH`):
+  - Shell comments are removed quote- and escape-aware.
+  - A URL handed to any program counts as egress, unless it names loopback, GitHub or
+    a public registry. This includes `--opt=URL` and credentials in the URL.
+  - A proxy set in the workflow makes loopback calls count.
+  - One-line flow-map steps (`run:` and `upload-artifact`) are read.
+  - The upload and release regexes are linear.
+  - The fallback for an unclassifiable file is itself guarded.
+- **Entropy:** the decode and run signal also covers:
+  - `decodebytes`, `TextDecoder` and `import("data:`;
+  - `Reflect.construct`, `subprocess`, `base64_decode`, `instance_eval` and
+    `WebAssembly`;
+  - object URLs and `base64 -D`.
+- **pub:** pub.dev over `http` and with a trailing dot.
+
+### Proof
+
+- **Mutation cuts:** 34, all caught, with the unmutated baseline and the post-restore
+  run green. One cut (a DNS value read to the line end) hangs past the harness limit.
+  The first pass left three survivors. Each was a fixture that reached the verdict by
+  another path, not dead code:
+  - an `ssh://` push caught by the ssh rule;
+  - a flow-map run without a URL argument;
+  - a long-regex helper that also encoded.
+  The fixtures were narrowed, and all three cuts are red now.
+- **Test for the pub fallback:** the pub scanner is mocked to throw, and the scan still
+  finishes. Cutting the try/catch makes `scan()` reject.
+- **Comparison with main:** the reviewer's probes were rerun against main. Every
+  exfiltration shape that main reports and this branch does not is listed privately as
+  a known limit of the whole-file check. All of them are for the step-by-step follow-up.
+- **5 MiB timing:** every probe shape stays under about 1 s for the workflow rule and
+  the pub scanner.
+
 ## Sixth review round and the split (2026-09-23) (claude-opus-5-5)
 
 Three reviewers on the same model as the lead. The real-data comparison found no new
