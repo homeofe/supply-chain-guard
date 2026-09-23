@@ -122,8 +122,9 @@ ecosystem with no matcher would be data no scan could ever use.
 | OSV `VSCode` | `vscode:` | `extension-identity` (recommendations, devcontainer, manifests), `vscode-scanner` |
 | OSV `VSCode:https://open-vsx.org` | `openvsx:` | same as `vscode:` |
 | `maven` | `maven:` (`groupId:artifactId`) | `maven-scanner` (pom.xml, gradle.lockfile, build scripts, version catalogs) |
+| *(hand-curated)* | `actions:` (`owner/repo@<40-hex sha>`) | `github-actions-scanner` (`uses:` pinned to a known imposter commit) |
 
-Everything else (GitHub Actions, Pub, Swift, Hex, `other`) is counted in
+Everything else (GitHub Actions advisories, Pub, Swift, Hex, `other`) is counted in
 the run report under `unsupported-ecosystem` and skipped.
 
 Two prefixes exist only for hand-curated entries, because no advisory database

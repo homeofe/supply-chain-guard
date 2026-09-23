@@ -49,6 +49,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   pin; `io.github.leetcrunch:scribejava-core`, a removed look-alike of
   `com.github.scribejava:scribejava-core`, is in the catalog. The MCP
   `ioc_lookup` tool accepts `maven`.
+- Compromised GitHub Action commits are now threat-feed data (`actions:`
+  ecosystem, `owner/repo@<sha>`) instead of a hardcoded list, and the set is
+  real: 117 imposter commits from four incidents, each verified against the
+  GitHub API (the commit exists, is parented on the clean release of the day,
+  and is not on the default branch). They are the TeamPCP Trivy compromise of
+  March 2026 (75 `aquasecurity/trivy-action` and 7 `aquasecurity/setup-trivy`
+  commits), the TeamPCP KICS Action compromise (33
+  `Checkmarx/kics-github-action` commits), `reviewdog/action-setup` and
+  `tj-actions/changed-files` (March 2025). A workflow is matched by commit SHA
+  whatever repository name it uses, since a commit pushed from a fork is
+  reachable across the fork network; tags are never indicators, because each
+  incident ended with them deleted or restored. The MCP `ioc_lookup` tool
+  accepts `actions`.
 
 ### Fixed
 
@@ -66,6 +79,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - A `.vsix` whose `package.json` starts with a UTF-8 byte-order mark skipped
   every manifest check, because the parse threw and the manifest was treated
   as absent. The BOM is now stripped first.
+- Two of the three "known compromised action SHAs" the GitHub Actions scanner
+  carried did not exist. One appears in no source; the other was a corrupted
+  copy of the CLEAN `reviewdog/action-setup` v1.3.0 commit, one step from
+  flagging every user of the repaired tag if anyone had "fixed" its typo. The
+  one real entry (tj-actions `0e58ed86`) was labelled September 2025; the
+  incident was March 2025. All three were replaced by verified feed entries,
+  including the actual malicious reviewdog commit.
 
 ## [6.2.5] - 2026-09-23
 

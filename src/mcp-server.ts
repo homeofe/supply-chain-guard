@@ -112,9 +112,10 @@ const SEVERITY_VALUES = ["critical", "high", "medium", "low", "info"] as const;
 // or reachable from a file scanner, otherwise an indicator ships as detection
 // that can never fire. "go" is also scanned from go.mod and "terraform" from
 // .tf / .terraform.lock.hcl, "vscode" and "openvsx" from extension manifests,
-// recommendations and devcontainer files, "maven" from pom.xml and Gradle files; "jenkins" has no lockfile the
+// recommendations and devcontainer files, "maven" from pom.xml and Gradle files, "actions" (owner/repo + commit SHA)
+// from workflow uses: lines; "jenkins" has no lockfile the
 // scanner reads, so this offline lookup is its only reachable path. src/__tests__/collection-reachability.test.ts asserts the invariant.
-const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget", "go", "jenkins", "terraform", "vscode", "openvsx", "maven"] as const;
+const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget", "go", "jenkins", "terraform", "vscode", "openvsx", "maven", "actions"] as const;
 
 const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -220,7 +221,7 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
  * ruby:/composer:/nuget:/go:/jenkins:/terraform: entries do - see matchPackageIOC).
  * This matcher resolves those bare entries for the npm and pypi ecosystems.
  */
-const PREFIXED_ECOSYSTEMS = ["ruby:", "composer:", "nuget:", "go:", "jenkins:", "terraform:", "vscode:", "openvsx:", "maven:"];
+const PREFIXED_ECOSYSTEMS = ["ruby:", "composer:", "nuget:", "go:", "jenkins:", "terraform:", "vscode:", "openvsx:", "maven:", "actions:"];
 
 function matchBarePackageIOC(
   name: string,

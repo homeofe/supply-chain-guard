@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { scanGitHubActionsWorkflows } from "../github-actions-scanner.js";
+import { getBundledFeed } from "../threat-intel.js";
 
 /**
  * Helper: create a temp directory with .github/workflows/ structure
@@ -582,11 +583,65 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     steps:
-      - uses: tj-actions/changed-files@d8462b4fc879d893f8f3b49843bde065f3f07b82
+      - uses: tj-actions/changed-files@0e58ed8671d6b60d0890c21b07f8835ace038e67
 `);
     const findings = scanGitHubActionsWorkflows(tempDir);
     expect(findings.some((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toBe(true);
     expect(findings.find((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")?.severity).toBe("critical");
+  });
+
+  // Feed-driven (actions: entries). One of the 75 imposter commits the
+  // trivy-action tags were repointed to in March 2026.
+  it("should detect a TeamPCP trivy-action imposter commit", () => {
+    writeWorkflow(tempDir, "scan.yml", `
+on: push
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aquasecurity/trivy-action@7550f14b64c1c724035a075b36e71423719a1f30 # 0.34.2
+`);
+    const hit = scanGitHubActionsWorkflows(tempDir).find((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA");
+    expect(hit?.description).toContain("TeamPCP Trivy Actions compromise");
+    expect(hit?.line).toBe(7);
+  });
+
+  // A commit SHA names one commit object; pushed from a fork it is reachable
+  // under any repository of the fork network, so the match is by SHA alone.
+  it("should detect a malicious SHA referenced through another repository name", () => {
+    writeWorkflow(tempDir, "ci.yml", `
+on: push
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: someone-else/changed-files@0E58ED8671D6B60D0890C21B07F8835ACE038E67
+`);
+    expect(scanGitHubActionsWorkflows(tempDir).some((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toBe(true);
+  });
+
+  // Data contract the SHA index relies on: every bundled actions: entry is a
+  // lowercase owner/repo pinned to a lowercase 40-hex commit SHA.
+  it("keeps every bundled actions: entry a lowercase repo@sha pin", () => {
+    const entries = getBundledFeed().filter((i) => i.type === "package" && i.value.startsWith("actions:"));
+    expect(entries.length).toBeGreaterThanOrEqual(117);
+    for (const ioc of entries) {
+      expect(ioc.value, ioc.value).toMatch(/^actions:[a-z0-9_.-]+\/[a-z0-9_.-]+@[0-9a-f]{40}$/);
+      expect(ioc.campaign, `${ioc.value} must be curated`).toBeTruthy();
+    }
+  });
+
+  // The control: the clean 0.35.0 release every imposter commit was parented on.
+  it("should not flag the clean trivy-action release", () => {
+    writeWorkflow(tempDir, "scan.yml", `
+on: push
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+`);
+    expect(scanGitHubActionsWorkflows(tempDir).filter((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toEqual([]);
   });
 
   it("should not flag legitimate SHA-pinned action", () => {

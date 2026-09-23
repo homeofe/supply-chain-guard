@@ -11,6 +11,7 @@ import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { matchPatternInFile } from "./pattern-scanner.js";
 import { validatePatternSet } from "./patterns.js";
+import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import { WORKFLOW_BROAD_GAP_MATCHERS } from "./workflow-pattern-matchers.js";
 import {
   parseWorkflow,
@@ -172,18 +173,36 @@ export const WORKFLOW_PATTERNS: Array<
 validatePatternSet("WORKFLOW_PATTERNS", WORKFLOW_PATTERNS);
 
 /**
- * Known compromised action commit SHAs.
- * These SHAs are confirmed malicious and should never be used.
- * Sources: GitHub Security Advisories, supply chain incident reports.
+ * Known compromised action commits, from `actions:owner/repo@<sha>` feed
+ * entries (src/threat-intel.ts).
+ *
+ * Matched by SHA ALONE, whatever repository name the workflow uses: a commit
+ * SHA names one commit object, and a malicious commit pushed from a fork is
+ * reachable under every repository in the fork network. A tag is never an
+ * indicator here, because every incident so far ended with the tags deleted
+ * or restored to clean commits.
+ *
+ * This replaced a hardcoded three-entry map on 2026-09-23. Two of its three
+ * SHAs did not exist: one appears in no source, and one was a corrupted copy
+ * of the CLEAN reviewdog v1.3.0 commit. Only tj-actions 0e58ed86 was real.
  */
-const KNOWN_MALICIOUS_ACTION_SHAS = new Map<string, string>([
-  // tj-actions/changed-files - compromised September 2025 (GHSA-2025-tj-actions)
-  // Exfiltrated CI secrets to attacker-controlled server via public build logs
-  ["d8462b4fc879d893f8f3b49843bde065f3f07b82", "tj-actions/changed-files (Sep 2025 compromise)"],
-  ["0e58ed8671d6b60d0890c21b07f8835ace038e67", "tj-actions/changed-files (Sep 2025 compromise variant)"],
-  // reviewdog/action-setup - compromised as part of tj-actions attack chain
-  ["3f401fe1d58fe77e10d665ab713057369b8cdfe4", "reviewdog/action-setup (Sep 2025 attack chain)"],
-]);
+const actionShaIndexCache = new WeakMap<FeedIOC[], Map<string, FeedIOC>>();
+
+function knownMaliciousActionShas(feed: FeedIOC[]): Map<string, FeedIOC> {
+  const cached = actionShaIndexCache.get(feed);
+  if (cached) return cached;
+  const index = new Map<string, FeedIOC>();
+  for (const ioc of feed) {
+    if (ioc.type !== "package" || !ioc.value.toLowerCase().startsWith("actions:")) continue;
+    const at = ioc.value.lastIndexOf("@");
+    // Feed SHAs are lowercase by contract (asserted over the bundled feed in
+    // github-actions-scanner.test.ts); the workflow side is lowercased below.
+    const sha = at > 0 ? ioc.value.substring(at + 1) : "";
+    if (/^[0-9a-f]{40}$/.test(sha) && !index.has(sha)) index.set(sha, ioc);
+  }
+  actionShaIndexCache.set(feed, index);
+  return index;
+}
 
 /** Well-known official or trusted GitHub Action owners. */
 const TRUSTED_ACTION_OWNERS = new Set([
@@ -1026,10 +1045,14 @@ function checkActionReferences(
     const owner = actionPath.split("/")[0] ?? "";
 
     // Check against known malicious SHAs (highest priority - always critical)
-    if (SHA_PATTERN.test(ref) && KNOWN_MALICIOUS_ACTION_SHAS.has(ref)) {
+    const maliciousSha = SHA_PATTERN.test(ref)
+      ? knownMaliciousActionShas(loadThreatIntel()).get(ref.toLowerCase())
+      : undefined;
+    if (maliciousSha) {
+      const known = maliciousSha.value.substring("actions:".length);
       findings.push({
         rule: "GHA_KNOWN_MALICIOUS_SHA",
-        description: `Action "${actionRef}" references a KNOWN COMPROMISED commit SHA: ${KNOWN_MALICIOUS_ACTION_SHAS.get(ref)}. This SHA is confirmed malicious.`,
+        description: `Action "${actionRef}" references a KNOWN COMPROMISED commit SHA: ${known}${maliciousSha.campaign ? ` (${maliciousSha.campaign})` : ""}. This SHA is confirmed malicious.`,
         severity: "critical",
         file: relativePath,
         line: i + 1,
