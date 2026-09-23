@@ -105,8 +105,55 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - Docker: `FROM ${ARG}` resolves through global `ARG` defaults and
   `${NAME:-fallback}`, with Docker's scoping (an `ARG` inside a stage is not
   visible to a later `FROM`).
+- Ten more ecosystems with identity matching (`src/ecosystem-registry.ts`),
+  each with its own feed prefix and rule: Swift Package Manager
+  (`Package.swift`, `Package.resolved`; `swift:host/owner/repo`), CocoaPods
+  (`Podfile`, `Podfile.lock`), Hex (`mix.exs`, `mix.lock`), CRAN
+  (`DESCRIPTION`, `renv.lock`), Conan (`conanfile.txt`, `conanfile.py`,
+  `conan.lock`), Helm (`Chart.yaml`, `Chart.lock`, keyed by repository URL
+  and chart), Ansible Galaxy (`requirements.yml`, `galaxy.yml`), Homebrew
+  (`Brewfile`, `Brewfile.lock.json`, `tap/formula`), browser extensions
+  (Chromium and Firefox enterprise policies and installed extension
+  directories; `chrome:`, `edge:` and `firefox:` stay separate because each
+  store assigns its own IDs) and JetBrains plugins
+  (`.idea/externalDependencies.xml`, `META-INF/plugin.xml`). Git, path and
+  private-registry sources are never looked up as public identities. The
+  importer maps the GitHub `swift` and `erlang` ecosystems and the OSV
+  `SwiftURL`, `Hex` and `CRAN` exports; the MCP `ioc_lookup` tool accepts
+  every new ecosystem.
+- Curated indicators for the new ecosystems where a verified source exists:
+  the Cyberhaven Chrome extension compromise wave (32 exact malicious
+  versions), RedDirection (10 Chrome, 8 Edge), ShadyPanda (27 Chrome, 129
+  Edge), 66 Chrome extensions from Socket's removed set of 108, the Firefox
+  wallet-theft set (40), 15 fake AI JetBrains plugins, and the TeamPCP
+  `aquasecurity/trivy/trivy` 0.69.4 Homebrew formula. A hijacked legitimate
+  extension is pinned to its malicious versions only; a whole-extension block
+  is used only where the publisher itself turned malicious and the store has
+  removed or blocklisted it (each checked against the store on 2026-09-23;
+  extensions that are live again are left out). Swift, CocoaPods, Hex,
+  CRAN, Conan, Terraform modules, Helm and Ansible ship with no indicators
+  yet: their matchers are proven, and the importer or a curated entry fills
+  them when a malicious package is published.
+- `src/ecosystem-coverage.json` declares every supported ecosystem and file
+  format. The README coverage table is generated from it
+  (`npm run coverage:generate`, gated by the new `check:coverage` prebuild
+  step), the advertised ecosystem count is a build-gated claim, and
+  `coverage-matrix.test.ts` runs a real scan for every declared ecosystem and
+  format, at the scan root and one directory down, requiring exactly one
+  finding each. A declared format without a proof, or a fixture for an
+  undeclared one, fails the suite.
+
+### Changed
+
+- README, npm description, GitHub Action description and repository About
+  rewritten around the ecosystem coverage, with the generated table replacing
+  the hand-kept "Supported Ecosystems" list.
 
 ### Fixed
+
+- `yarn.lock`, `pnpm-lock.yaml` and `bun.lock` below the scan root were not
+  checked at all; they are now matched like the root lockfiles, against the
+  `package.json` beside them.
 
 - **Malicious npm packages pulled in transitively were reported by nothing.**
   A whole-name threat-feed entry (the package is malicious in every version,

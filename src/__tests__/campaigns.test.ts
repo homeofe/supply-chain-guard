@@ -7117,4 +7117,67 @@ describe("Campaign Signatures", () => {
       expect(report.findings.filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toEqual([]);
     });
   });
+
+  // =================================================================
+  // Browser extensions, JetBrains plugins, Homebrew (curated 2026-09-23)
+  // =================================================================
+
+  describe("curated browser / JetBrains / Homebrew indicators", () => {
+    const campaign = (name: string) => getBundledFeed().filter((i) => i.campaign === name);
+
+    it("keeps every curated set in the bundle, at the verified sizes", () => {
+      expect(campaign("Cyberhaven extension compromise wave")).toHaveLength(32);
+      expect(campaign("RedDirection browser hijack")).toHaveLength(18);
+      expect(campaign("ShadyPanda extension campaign")).toHaveLength(156);
+      expect(campaign("Socket 108 Chrome extensions")).toHaveLength(66);
+      expect(campaign("Firefox Offside wallet theft")).toHaveLength(40);
+      expect(campaign("JetBrains fake AI plugins")).toHaveLength(15);
+    });
+
+    // Cyberhaven's extension is a hijack victim: 24.10.4 was malicious, the
+    // fixed 24.10.5 and the live releases are not.
+    it("flags the hijacked Cyberhaven release in an installed profile, not the fixed one", async () => {
+      const install = (v: string) => {
+        const dir = path.join(tempDir, "Default", "Extensions", "pajkjnmeojmbapicmbpliphjmcekeaac", `${v}_0`);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ manifest_version: 3, name: "Cyberhaven", version: v }));
+      };
+      install("24.10.4");
+      install("24.10.5");
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter((f) => f.rule === "BROWSER_MALICIOUS_EXTENSION");
+      expect(hits.map((f) => f.match)).toEqual(["pajkjnmeojmbapicmbpliphjmcekeaac@24.10.4"]);
+    });
+
+    // A Chrome store id and an Edge store id are different extensions.
+    it("keeps the Chrome and Edge namespaces apart", () => {
+      const feed = getBundledFeed();
+      const edgeOnly = campaign("RedDirection browser hijack").filter((i) => i.value.startsWith("edge:"));
+      expect(edgeOnly).toHaveLength(8);
+      for (const e of edgeOnly) {
+        const id = e.value.slice("edge:".length);
+        expect(feed.some((i) => i.value === `chrome:${id}`), id).toBe(false);
+      }
+    });
+
+    it("flags the removed JetBrains plugin required by a project", async () => {
+      fs.mkdirSync(path.join(tempDir, ".idea"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, ".idea", "externalDependencies.xml"),
+        '<project version="4">\n  <component name="ExternalDependencies">\n    <plugin id="ord.cp.code.ai.kit" />\n  </component>\n</project>\n');
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "JETBRAINS_MALICIOUS_PLUGIN")).toBe(true);
+    });
+
+    // Only the compromised tap's 0.69.4; homebrew-core builds trivy from source.
+    it("flags the compromised Trivy tap release only", async () => {
+      const lock = (name: string, v: string) =>
+        JSON.stringify({ entries: { brew: { [name]: { version: v } } } });
+      fs.writeFileSync(path.join(tempDir, "Brewfile.lock.json"), lock("aquasecurity/trivy/trivy", "0.69.4"));
+      const hit = await scan({ target: tempDir, format: "text" });
+      expect(hit.findings.some((f) => f.rule === "HOMEBREW_MALICIOUS_PACKAGE")).toBe(true);
+      fs.writeFileSync(path.join(tempDir, "Brewfile.lock.json"), lock("trivy", "0.69.4"));
+      const core = await scan({ target: tempDir, format: "text" });
+      expect(core.findings.filter((f) => f.rule === "HOMEBREW_MALICIOUS_PACKAGE")).toEqual([]);
+    });
+  });
 });

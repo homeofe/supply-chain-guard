@@ -104,6 +104,10 @@ export const ECOSYSTEM_PREFIX = {
   vscode: "vscode:",
   maven: "maven:",
   pub: "pub:",
+  // GitHub's names for these; the OSV directories are mapped below.
+  swift: "swift:",
+  erlang: "hex:",
+  cran: "cran:",
 };
 
 /** Feed ecosystem prefix -> OSV ecosystem name (for the corroboration query). */
@@ -119,6 +123,9 @@ export const OSV_ECOSYSTEM = {
   "openvsx:": "VSCode:https://open-vsx.org",
   "maven:": "Maven",
   "pub:": "Pub",
+  "swift:": "SwiftURL",
+  "hex:": "Hex",
+  "cran:": "CRAN",
 };
 
 /** Import ecosystem -> directory in OSV's public vulnerability export. */
@@ -133,6 +140,9 @@ export const OSV_ECOSYSTEM_DIRECTORY = {
   vscode: "VSCode",
   maven: "Maven",
   pub: "Pub",
+  swift: "SwiftURL",
+  erlang: "Hex",
+  cran: "CRAN",
 };
 
 /**

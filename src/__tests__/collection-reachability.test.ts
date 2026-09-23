@@ -129,7 +129,7 @@ describe("collection reachability", () => {
     // MCP ioc_lookup enum. Kept as a literal so that widening it is a conscious
     // act reviewed alongside the code that makes the ecosystem reachable.
     const REACHABLE = new Set([
-      "npm", "pypi", "ruby", "composer", "nuget", "cargo", "go", "jenkins", "terraform", "vscode", "openvsx", "maven", "actions", "pub", "docker",
+      "npm", "pypi", "ruby", "composer", "nuget", "cargo", "go", "jenkins", "terraform", "vscode", "openvsx", "maven", "actions", "pub", "docker", "tfmodule", "swift", "cocoapods", "hex", "cran", "conan", "helm", "ansible", "homebrew", "chrome", "edge", "firefox", "jetbrains",
     ]);
 
     const unreachable: string[] = [];

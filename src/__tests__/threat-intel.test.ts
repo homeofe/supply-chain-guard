@@ -79,7 +79,8 @@ function referenceMatch(
   const prefix = `${eco}:`;
   const normalizeName = (value: string): string => {
     if (eco === "pypi") return value.toLowerCase().replace(/[-_.]+/g, "-");
-    return ["nuget", "terraform", "tfmodule", "vscode", "openvsx", "actions", "docker"].includes(eco) ? value.toLowerCase() : value;
+    return ["nuget", "terraform", "tfmodule", "vscode", "openvsx", "actions", "docker", "swift", "cocoapods", "hex",
+      "conan", "helm", "ansible", "homebrew", "chrome", "edge"].includes(eco) ? value.toLowerCase() : value;
   };
   const wantName = normalizeName(name);
 

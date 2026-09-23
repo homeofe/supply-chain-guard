@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8815,
+  "entryCount": 9143,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -72443,6 +72443,3286 @@
       "campaign": "Checkmarx KICS Breach",
       "source": "Socket, Docker",
       "firstSeen": "2026-04-22"
+    },
+    {
+      "type": "package",
+      "value": "chrome:pajkjnmeojmbapicmbpliphjmcekeaac@24.10.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nnpnnpemnckcfdebeekibpiijlicmpom@2.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:kkodiihpgodmdankclfibbiphjkfdenh@1.16.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:oaikpkmjciadfpddlpjjdapglcihgdle@1.0.12",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dpggmcodlahmljkhlmpgpdcffdaoccni@1.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:acmfnomgphggonodopogfbmkneepfgnh@4.00",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mnhffkhmpnefgklngfmlndmkimimbphc@4.40",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cedgndijpacnfbdggppddacngjfdkaca@0.0.11",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:egmennebgadmncfjafcemlecimkepcle@2.2.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:befflofjcniongenjmbkgkoljhgliihe@2.13.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:llimhhconnjiflfimocjggfjdlmlhblm@1.5.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:oeiomhmbaapihbilkfkhmlajkeegnjhe@3.18.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ekpkdmohpdnebfedjjfklhpefgpgaaji@1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eanofdhdfbcalhflpbdipkjjkoimeeod@1.4.9",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:igbodamhgjohafcenbcljfegbipdfjpk@2.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mbindhfolmpijhodmgkloeeppmkhpmhc@1.44",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hodiladlefdpcbemnbbcpclbmknkiaem@3.1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ndlbedplllcgconngcnfmkadhokfaaln@2.22.6",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cplhlgabfijoiabgkigdafklbhhdkahj@1.0.161",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jiofmdifioeejeilfkpegipdjiopiekl@1.1.61",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hihblcmlaaademjlakdpicchbjnnnkbo@3.0.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bbdnohkpnbkdkmnkddobeafboooinpla@1.0.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bibjgkidgpfbblifamdlkdlhgihmfohh@0.1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:pkgciiiancapdlpcbppfkmeaieppikkk@1.3.7",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:epikoohpebngmakjinphfiagogjcnddm@2.7.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:miglaibdlgminlepgeifekifakochlka@1.4.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ogbhbgkiojdollpjbhbamafmedkeockb@1.8.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bgejafhieobnfpjlpcjjggoboebonfcg@1.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:epdjhgbipjpbbhoccdeipghoihibnfja@1.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lbneaaedflankmgmfbmaplggbmjjmbae@1.3.8",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eaijffijbobmnonfhilihbejadplhddo@2.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hmiaoahjllhfgebflooeeefeiafpkfde@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "CyberhavenWave",
+      "campaign": "Cyberhaven extension compromise wave",
+      "source": "Secure Annex, Sekoia",
+      "firstSeen": "2024-12-24"
+    },
+    {
+      "type": "package",
+      "value": "chrome:kgmeffmlnkfnjpgmdndccklfigfhajen",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dpdibkjjgbaadnnjhkmmnenkmbnhpobj",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gaiceihehajjahakcglkhmdbbdclbnlf",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mlgbkfnjdmaoldgagamcnommbbnhfnhf",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eckokfcjbjbgjifpcbdmengnabecdakp",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mgbhdehiapbjamfgekfpebmhmnmcmemg",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cbajickflblmpjodnjoldpiicfmecmif",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:pdbfcnhlobhoahcamoefbfodpmklgmjm",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eokjikchkppnkdipbiggnmlkahcdkikp",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ihbiedpeaicgipncdnnkikeehnjiddck",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:jjdajogomggcjifnjgkpghcijgkbcjdi",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:mmcnmppeeghenglmidpmjkaiamcacmgm",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:ojdkklpgpacpicaobnhankbalkkgaafp",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:lodeighbngipjjedfelnboplhgediclp",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:hkjagicdaogfgdifaklcgajmgefjllmd",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:gflkbgebojohihfnnplhbdakoipdbpdm",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:kpilmncnoafddjpnbhepaiilgkdcieaf",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "edge:caibdnkmpnjhjdfnomfhijhmebigcelo",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "RedDirection",
+      "campaign": "RedDirection browser hijack",
+      "source": "Koi, eSentire",
+      "firstSeen": "2025-07-07"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eagiakjmjnblliacokhcalebgnhellfi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ibiejjpajlfljcgjndbonclhcbdcamai",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ogjneoecnllmjcegcfpaamfpbiaaiekh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jbnopeoocgbmnochaadfnhiiimfpbpmf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cdgonefipacceedbkflolomdegncceid",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gipnpcencdgljnaecpekokmpgnhgpela",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bpgaffohfacaamplbbojgbiicfgedmoi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ineempkjpmbdejmdgienaphomigjjiej",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nnnklgkfdfbdijeeglhjfleaoagiagig",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mljmfnkjmcdmongjnnnbbnajjdbojoci",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:llkncpcdceadgibhbedecmkencokjajg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nmfbniajnpceakchicdhfofoejhgjefb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ijcpbhmpbaafndchbjdjchogaogelnjl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:olaahjgjlhoehkpemnfognpgmkbedodk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gnhgdhlkojnlgljamagoigaabdmfhfeg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cihbmmokhmieaidfgamioabhhkggnehm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lehjnmndiohfaphecnjhopgookigekdk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hlcjkaoneihodfmonjnlnnfpdcopgfjk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hmhifpbclhgklaaepgbabgcpfgidkoei",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lnlononncfdnhdfmgpkdfoibmfdehfoj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nagbiboibhbjbclhcigklajjdefaiidc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ofkopmlicnffaiiabnmnaajaimmenkjn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ocffbdeldlbilgegmifiakciiicnoaeo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eaokmbopbenbmgegkmoiogmpejlaikea",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lhiehjmkpbhhkfapacaiheolgejcifgd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ondhgmkgppbdnogfiglikgpdkmkaiggk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:imdgpklnabbkghcbhmkbjbhcomnfdige",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:enkihkfondbngohnmlefmobdgkpmejha",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ipnidmjhnoipibbinllilgeohohehabl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fnnigcfbmghcefaboigkhfimeolhhbcp",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nlcebdoehkdiojeahkofcfnolkleembf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fhababnomjcnhmobbemagohkldaeicad",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nokknhlkpdfppefncfkdebhgfpfilieo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ljmcneongnlaecabgneiippeacdoimaa",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:onifebiiejdjncjpjnojlebibonmnhog",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:dbagndmcddecodlmnlcmhheicgkaglpk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fmgfcpjmmapcjlknncjgmbolgaecngfo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:kgmlodoegkmpfkbepkfhgeldidodgohd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hegpgapbnfiibpbkanjemgmdpmmlecbc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:gkanlgbbnncfafkhlchnadcopcgjkfli",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:oghgaghnofhhoolfneepjneedejcpiic",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fcidgbgogbfdcgijkcfdjcagmhcelpbc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nnceocbiolncfljcmajijmeakcdlffnh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:domfmjgbmkckapepjahpedlpdedmckbj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:cbkogccidanmoaicgphipbdofakomlak",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bmlifknbfonkgphkpmkeoahgbhbdhebh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ghaggkcfafofhcfppignflhlocmcfimd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hfeialplaojonefabmojhobdmghnjkmf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:boiciofdokedkpmopjnghpkgdakmcpmb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ibfpbjfnpcgmiggfildbcngccoomddmj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:idjhfmgaddmdojcfmhcjnnbhnhbmhipd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jhgfinhjcamijjoikplacnfknpchndgb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:cgjgmbppcoolfkbkjhoogdpkboohhgel",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:afooldonhjnhddgnfahlepchipjennab",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fkbcbgffcclobgbombinljckbelhnpif",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fpokgjmlcemklhmilomcljolhnbaaajk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hadkldcldaanpomhhllacdmglkoepaed",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:iedkeilnpbkeecjpmkelnglnjpnacnlh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hjfmkkelabjoojjmjljidocklbibphgl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:dhjmmcjnajkpnbnbpagglbbfpbacoffm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:cgehahdmoijenmnhinajnojmmlnipckl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fjigdpmfeomndepihcinokhcphdojepm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:chmcepembfffejphepoongapnlchjgil",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:googojfbnbhbbnpfpdnffnklipgifngn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fodcokjckpkfpegbekkiallamhedahjd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:igiakpjhacibmaichhgbagdkjmjbnanl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:omkjakddaeljdfgekdjebbbiboljnalk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:llilhpmmhicmiaoancaafdgganakopfg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nemkiffjklgaooligallbpmhdmmhepll",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:papedehkgfhnagdiempdbhlgcnioofnd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:glfddenhiaacfmhoiebfeljnfkkkmbjb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:pkjfghocapckmendmgdmppjccbplccbg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:gbcjipmcpedgndgdnfofbhgnkmghoamm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ncapkionddmdmfocnjfcfpnimepibggf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:klggeioacnkkpdcnapgcoicnblliidmf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:klgjbnheihgnmimajhohfcldhfpjnahe",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:acogeoajdpgplfhidldckbjkkpgeebod",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ekndlocgcngbpebppapnpalpjfnkoffh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:elckfehnjdbghpoheamjffpdbbogjhie",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:dmpceopfiajfdnoiebfankfoabfehdpn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:gpolcigkhldaighngmmmcjldkkiaonbg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:dfakjobhimnibdmkbgpkijoihplhcnil",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hbghbdhfibifdgnbpaogepnkekonkdgc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fppchnhginnfabgenhihpncnphhafmac",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ghhddclfklljabeodmcejjjlhoaaiban",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bppelgkcnhfkicolffhlkbdghdnjdkhi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ikgaleggljchgbihlaanjbkekmmgccam",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bdhjinjoglaijpffoamhhnhooeimgoap",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fjioinpkgmlcioajfnncgldldcnabffe",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:opncjjhgbllenobgbfjbblhghmdpmpbj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:cbijiaccpnkbdpgbmiiipedpepbhioel",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fbbmnieefocnacnecccgmedmcbhlkcpm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hmbacpfgehmmoloinfmkgkpjoagiogai",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:paghkadkhiladedijgodgghaajppmpcg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bafbmfpfepdlgnfkgfbobplkkaoakjcl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:kcpkoopmfjhdpgjohcbgkbjpmbjmhgoi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jelgelidmodjpmohbapbghdgcpncahki",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:lfgakdlafdenmaikccbojgcofkkhmolj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hdfknlljfbdfjdjhfgoonpphpigjjjak",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:kpfbijpdidioaomoecdbfaodhajbcjfl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fckphkcbpgmappcgnfieaacjbknhkhin",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:lhfdakoonenpbggbeephofdlflloghhi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ljjngehkphcdnnapgciajcdbcpgmpknc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ejfocpkjndmkbloiobcdhkkoeekcpkik",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ccdimkoieijdbgdlkfjjfncmihmlpanj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:agdlpnhabjfcbeiempefhpgikapcapjb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:mddfnhdadbofiifdebeiegecchpkbgdb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:alknmfpopohfpdpafdmobclioihdkhjh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hlglicejgohbanllnmnjllajhmnhjjel",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:iaccapfapbjahnhcmkgjjonlccbhdpjl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ehmnkbambjnodfbjcebjffilahbfjdml",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ngbfciefgjgijkkmpalnmhikoojilkob",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:laholcgeblfbgdhkbiidbpiofdcbpeeo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:njoedigapanaggiabjafnaklppphempm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:fomlombffdkflbliepgpgcnagolnegjn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jpoofbjomdefajdjcimmaoildecebkjc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nhdiopbebcklbkpfnhipecgfhdhdbfhb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:gdnhikbabcflemolpeaaknnieodgpiie",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bbdioggpbhhodagchciaeaggdponnhpa",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ikajognfijokhbgjdhgpemljgcjclpmn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:lmnjiioclbjphkggicmldippjojgmldk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ffgihbmcfcihmpbegcfdkmafaplheknk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:lgnjdldkappogbkljaiedgogobcgemch",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hiodlpcelfelhpinhgngoopbmclcaghd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:mnophppbmlnlfobakddidbcgcjakipin",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jbajdpebknffiaenkdhopebkolgdlfaf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ejdihbblcbdfobabjfebfjfopenohbjb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ikkoanocgpdmmiamnkogipbpdpckcahn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ileojfedpkdbkcchpnghhaebfoimamop",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:akialmafcdmkelghnomeneinkcllnoih",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:eholblediahnodlgigdkdhkkpmbiafoj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ipokalojgdmhfpagmhnjokidnpjfnfik",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hdpmmcmblgbkllldbccfdejchjlpochf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:iphacjobmeoknlhenjfiilbkddgaljad",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jiiggekklbbojgfmdenimcdkmidnfofl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:gkhggnaplpjkghjjcmpmnmidjndojpcn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:opakkgodhhongnhbdkgjgdlcbknacpaa",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nkjomoafjgemogbdkhledkoeaflnmgfi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ebileebbekdcpfjlekjapgmbgpfigled",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:oaacndacaoelmkhfilennooagoelpjop",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ljkgnegaajfacghepjiajibgdpfmcfip",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hgolomhkdcpmbgckhebdhdknaemlbbaa",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bboeoilakaofjkdmekpgeigieokkpgfn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:dkkpollfhjoiapcenojlmgempmjekcla",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:emiocjgakibimbopobplmfldkldhhiad",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:nchdmembkfgkejljapneliogidkchiop",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:lljplndkobdgkjilfmfiefpldkhkhbbd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hofaaigdagglolgiefkbencchnekjejl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:hohobnhiiohgcipklpncfmjkjpmejjni",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:jocnjcakendmllafpmjailfnlndaaklf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bjdclfjlhgcdcpjhmhfggkkfacipilai",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ahebpkbnckhgjmndfjejibjjahjdlhdb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:enaigkcpmpohpbokbfllbkijmllmpafm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:bpngofombcjloljkoafhmpcjclkekfbh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:cacbflgkiidgcekflfgdnjdnaalfmkob",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "edge:ibmgdfenfldppaodbahpgcoebmmkdbac",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "ShadyPanda",
+      "campaign": "ShadyPanda extension campaign",
+      "source": "Koi",
+      "firstSeen": "2025-12-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:aecccajigpipkpioaidignbgbeekglkd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:akifdnfipbeoonhoeabdicnlcdhghmpn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:alllblhkgghelnejlggmmgjbkdabidie",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:amkkjdjjgiiamenbopfpdmjcleecjjgg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bdnanfggeppmkfhkgmpojkhanoplkacc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bfoofgelpmalhcmedaaeogahlmbkopfd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:bnchgibgpgmlickioneccggfobljmhjc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cbfhnceafaenchbefokkngcbnejached",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cljengcehefhflhoahaambmkknjekjib",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:clpgopiimdjcilllcjncdkoeikkkcfbi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cmlbghnlnbjkdgfjlegkbjmadpbmlgjb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:cnibdhllkgidlgmaoanhkemjeklneolk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dbohcpohlgnhgjmfkakoniiplglpfhcb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dljlpildgknddpnahppkihgodokfjbnd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dlpiookhionidajbiopmaajeckifeehn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dmaibhbbpmdihedidicfeigilkbobcog",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dohenclhhdfljpjlnpjnephpccbdgmmb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:dpdemambcedffmnkfmkephnhhnclmcio",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eljfpgehlncincemdmmnebmnlcmfamhm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:enmmilgindjmffoljaojkcgloakmloen",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:eoklnfefipnjfeknpmigmogeeepddcch",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:fjfhejmbhpabkacpoddjbcfandjoacmb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:flkdjodmoefccepdihipjdlianmkmhgc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:fmajpchoiahphjiligpmghnhmabolhoh",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gaafhblhbnkekenogcjniofhbicchlke",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gfhcdakcnpahfdealajmhcapnhhablbp",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:gipmochingljoikdjakkdolfcbphmlom",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:haochenfmhglpholokliifmlpafilfdc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hdmppejcahhppjhkncagagopecddokpi",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:heljkmdknlfhiecpknceodpbokeipigo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hiofkndodabpioiheinoiojjobadpgmj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:hmlnefhgicedcmebmkjdcogieefbaagl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ihbkmfoadnfjgkpdmgcboiehapkiflme",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ijpgccpmogehkjhdmomckpkfcpbjlmnj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:imjmnghlhiimodfkdkgnfplhlobehnpm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jddinhnhplibccfmniaakhffpjpnaglp",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jmopjanoebpdbopigcbpjhiigmjolikk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jnmmbmkmbkcccpihjgnhjmhhkokfdnfe",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:jodocbbdcdclkhjkibnlfhbmllcpfkfo",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:kahcolfecjbejjjadhjafmihdnifonjf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:kjnakdbpijigdbfepipnbafnhbcfdkga",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:klglejfbdeipgklgaepnodpjcnhaihkd",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lefndgfmmbdklidbkeifpgclmpnhcilg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lfkknbmaifjomagejflmjklcmpadmmdg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ljbgkfbiifhpgpipepnfefijldolkhlm",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lmcpbhamfpbonaenickjclacodolkbdl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:lmgenhmehbcolpikplhkoelmagdhoojn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:maeccdadgnadblfddcmanhpofobhgfme",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mdcfennpfgkngnibjbpnpaafcjnhcjno",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mheomooihiffmcgldolenemmplpgoahn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mmbbjakjlpmndjlbhihlddgcdppblpka",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:mmecpiobcdbjkaijljohghhpfgngpjmk",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nbgligggjfgkpphhghhjdoiefbimgooc",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ncpdkpcgmdhhnmcjgiiifdhefmekdcnf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nkacmelgoeejhjgmmgflbcdhonpaplcg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nmegibgeklckejdlfhoadhhbgcdjnojb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:nodobilhjanebkafmpihkpoabiggnnfl",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:oanpifaoclmgmflmddlgkikfaggejobn",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:obifanppcpchlehkjipahhphbcbjekfa",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ocflhkadmmnlbieoiiekfcdcmjcfeahe",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:oejhnncfanbaogjlbknmlgjpleachclf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ogbaedmbbmmipljceodeimlckohbnfan",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ogogpebnagniggbnkbpjioobomdbmdcj",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:ojkbafekojdcedacileemekjdfdpkbkf",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:phfkdailnomcbcknpdmokejhellbecjb",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "chrome:pkghgkfjhjghinikeanecbgjehojfhdg",
+      "severity": "critical",
+      "confidence": 0.9,
+      "family": "Shared-C2 Chrome extensions",
+      "campaign": "Socket 108 Chrome extensions",
+      "source": "Socket",
+      "firstSeen": "2026-04-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:bliss-heaven@webbrol.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:bold-page-vault@addonslab.example",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:bright-save-feed@tabtools.org",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:chiro-di-red@tools.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:chiro-redok@webtools.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:cool-block-gear@protools.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:fast-akap-safe@browsertools.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:fast-map-safe@linktools.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:flex-clock-dash@extrakits.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:free-note-bolt@webtools.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:green-fam-heav@browsertool.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:herman-rich@browsertools.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:live-football-scores@live-scores.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:park-static-small@devblogs.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:peters-schools@webtoolbrowser.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:safe-stat-pure@proaddons.net",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:sharp-stat-gear@netplugs.net",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:swift-clip-link@fasttools.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:vibe-timer-fast@extrakits.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{91ac3e4f-1874-409d-b01f-aeb2409a23b8}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{b1f3c8a9-4a2e-4b7c-9e1f-8a3d6c5b4e2f}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d8a5f7c3-9e4b-2f2a-b1d7-8c7e9f4a2b3c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d8a5f7c3-9e4b-4f2a-b1d6-8c7e9f3a2b2c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d8a5f7c3-9e9b-2f8a-b1d6-8c1e9f4a2b7c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d8a5f9c3-9e4b-4f2a-b1d7-8c7e9f4a2b3c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d9a5f9c3-9e4b-2f3a-b2d7-8c8e9f4a2b3c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{f746f950-bd73-43de-bfe1-add342147853}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:bolt-save-vault@devplugs.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:core-note-nova@webtools.net",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:deep-tip-sharp@browsify.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:fast-zip-true@smartext.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:flex-lab-save@foxplugin.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:gear-save-tip@extrakits.example",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:pure-net-snap@fasttools.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:silver-fox@browser-app.com",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:smart-lab-glow@webkits.co",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{64d210f4-9b7f-489f-8207-e042400041b7}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{842fa1ed-b948-4bf8-b796-21044d3419eb}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{b0043917-9d75-425b-977a-4bb553f2a8ee}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "firefox:{d8a5f7c3-9e4b-2f2a-b1d7-8c7e9f4a2b7c}",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "OffsideWalletTheft",
+      "campaign": "Firefox Offside wallet theft",
+      "source": "Socket, Mozilla blocklist",
+      "firstSeen": "2026-03-01"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:org.sm.yms.toolkit",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.json.simple.kit",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:org.bug.find.tools",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:org.translate.ai.simple",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.yy.test.ai.simple",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.dev.ai.toolkit",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.json.view.simple",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.my.git.ai.kit",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:org.check.ai.ds",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.review.tool.code",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:org.code.assist.dev.tool",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.coder.ai.dpt",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.my.code.tools",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:ord.cp.code.ai.kit",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "jetbrains:com.dp.git.ai.tool",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "AIKeyStealer",
+      "campaign": "JetBrains fake AI plugins",
+      "source": "JetBrains, StepSecurity",
+      "firstSeen": "2026-06-16"
+    },
+    {
+      "type": "package",
+      "value": "homebrew:aquasecurity/trivy/trivy@0.69.4",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "TeamPCPBackdoor",
+      "campaign": "TeamPCP Trivy image compromise",
+      "source": "GHSA-69fq-xp46-6x23",
+      "firstSeen": "2026-03-19"
     }
   ]
 }

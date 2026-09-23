@@ -1,3 +1,68 @@
+## Remaining coverage, coverage gate and README rewrite (2026-09-23) (claude-opus-5-5)
+
+Same branch (PR 326), still unreleased. The owner asked, before v6.3.0, for
+everything under "Still not covered" in the section below, and for the README
+and repository description to be rewritten, with nothing claimed that is not
+proven. That list is now closed; this section supersedes it.
+
+### What was added
+
+- Maven: Kotlin named args, Gradle `plugins {}` marker artifacts, SBT (`%%`
+  expanded to 2.12 / 2.13 / 3), Bazel `maven_install.json` (v1 and v2).
+- Terraform registry modules (`tfmodule:`), including
+  `.terraform/modules/modules.json`.
+- Actions `uses:` in composite / Docker `action.yml` anywhere in the tree.
+- Docker `FROM ${ARG}` via global ARGs and `${X:-fallback}`.
+- Ten registry ecosystems in `src/ecosystem-registry.ts`: Swift, CocoaPods,
+  Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser extensions
+  (`chrome:` / `edge:` / `firefox:`), JetBrains.
+- Nested yarn / pnpm / bun lockfiles, which were never scanned below the root.
+
+### How "covered" is proven now
+
+- `src/ecosystem-coverage.json` is the single declaration: 24 ecosystems,
+  65 file formats.
+- `coverage-matrix.test.ts` runs a real `scan()` per declared format, at the
+  root and one directory down, and requires exactly one finding. That is 129
+  scan cases; workflows are root-only by definition.
+  Drift tests fail on a declared format with no fixture, a fixture for an
+  undeclared format, or a declared rule that is never emitted. Where the
+  bundle has no data, the indicator goes through the real feed cache file,
+  not a mocked matcher.
+- The README table is generated from that JSON (`coverage:generate`), and
+  `check:coverage` in prebuild fails on drift.
+- A new "ecosystem count" claim in `aahp.config.json` has the floor
+  `scripts/count-ecosystems.mjs` and covers README, package.json,
+  `.github/repo-about.txt` and action.yml.
+- Mutation proof for `ecosystem-registry.ts`, the registry and nested
+  lockfile dispatch, and the matrix drift tests: 18 distinct cuts, all red,
+  with baseline and post-restore green (182 and 161 tests). Three more cuts
+  target checks that were deleted as redundant after surviving an earlier
+  round, so there is nothing left for them to cut.
+
+### Data honesty
+
+- Eight ecosystems ship with NO indicators: Swift, CocoaPods, Hex, CRAN,
+  Conan, Terraform modules, Helm and Ansible. The README says "none yet
+  (matcher ready)" for them, generated from the shipped data rather than
+  written by hand.
+- Browser, JetBrains and Homebrew data is curated, and each identity was
+  checked against its store's current state on 2026-09-23:
+  - hijacked extensions are pinned to their malicious versions;
+  - whole-id blocks are used only for publisher-malicious extensions that
+    the store has removed or blocklisted;
+  - live-again extensions (42 of Socket's 108, and 3 ShadyPanda Edge
+    extensions) are deliberately excluded.
+
+### Open
+
+- Data question carried forward: the lambda-platform Go module and the
+  Contagious Interview Go repositories are whole-name entries that the
+  bare-name FP audit could not settle against a live registry. They need a
+  version or liveness check before the next cutoff.
+- Before v6.3.0: add the SECURITY.md supported-versions row (minor bump).
+  The release decision stays with the owner.
+
 ## Ecosystem coverage expansion (2026-09-23) (claude-opus-5-5)
 
 Follows the Terraform provider matcher on the same branch (PR 326). The owner

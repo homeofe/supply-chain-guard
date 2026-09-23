@@ -229,11 +229,13 @@ src/
   pypi-scanner.ts         # PyPI package analysis
   cargo-scanner.ts        # Rust/Cargo analysis (Cargo.toml/Cargo.lock/build.rs)
   go-scanner.ts           # Go module analysis (go.mod/go.sum)
-  terraform-scanner.ts    # Terraform/OpenTofu providers (.tf/.tf.json/.terraform.lock.hcl)
+  terraform-scanner.ts    # Terraform/OpenTofu providers and registry modules (.tf/.tf.json/.terraform.lock.hcl/modules.json)
   extension-identity.ts   # VS Code / Open VSX extension IDs (recommendations, devcontainer, manifests)
   maven-scanner.ts        # Maven/Gradle artifacts (pom.xml/gradle.lockfile/build scripts/version catalogs)
   pub-scanner.ts          # Dart/Flutter pub packages (pubspec.lock/pubspec.yaml)
-  container-image.ts      # Known-malicious container images (Dockerfile, compose/k8s/workflow YAML)
+  container-image.ts      # Known-malicious container images (Dockerfile incl. FROM ${ARG}, compose/k8s/workflow YAML)
+  ecosystem-registry.ts   # Identity matchers for Swift, CocoaPods, Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser extensions, JetBrains plugins
+  nested-manifests.ts     # Ruby/Composer/NuGet/Cargo/Go manifests below the scan root
   python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis
@@ -243,7 +245,9 @@ src/
   mcp-scanner.ts          # MCP server config analysis (.mcp.json, claude_desktop_config.json)
   mcp-server.ts           # Zero-dep MCP server (supply-chain-guard mcp)
   entropy.ts              # Shannon entropy analysis
-  lockfile-checker.ts     # Lockfile integrity
+  lockfile-checker.ts     # Lockfile integrity (npm, yarn, pnpm, bun; root and nested)
+  lockfile-feed.ts        # Lockfile dependencies (incl. transitive) matched against the threat feed
+  ecosystem-coverage.json # Declared ecosystem x file-format coverage (README table, claims gate, coverage-matrix test)
   config-scanner.ts       # Package manager configs
   git-scanner.ts          # Git hooks/submodules
   policy-engine.ts        # Policy config, baseline, suppressions

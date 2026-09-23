@@ -125,15 +125,25 @@ ecosystem with no matcher would be data no scan could ever use.
 | *(hand-curated)* | `actions:` (`owner/repo@<40-hex sha>`) | `github-actions-scanner` (`uses:` pinned to a known imposter commit) |
 | `pub` / OSV `Pub` | `pub:` | `pub-scanner` (pubspec.lock, pubspec.yaml) |
 | *(hand-curated)* | `docker:` (`name@tag` or `name@sha256:<digest>`) | `container-image` (Dockerfile FROM / COPY --from, YAML image:, docker://) |
+| `swift` / OSV `SwiftURL` | `swift:` (`host/owner/repo`) | `ecosystem-registry` (Package.swift, Package.resolved) |
+| `erlang` / OSV `Hex` | `hex:` | `ecosystem-registry` (mix.exs, mix.lock) |
+| OSV `CRAN` | `cran:` | `ecosystem-registry` (DESCRIPTION, renv.lock) |
 
-Everything else (GitHub Actions advisories, Swift, Hex, `other`) is counted in
-the run report under `unsupported-ecosystem` and skipped.
+Everything else (GitHub Actions advisories, `other`) is counted in the run
+report under `unsupported-ecosystem` and skipped.
 
-Two prefixes exist only for hand-curated entries, because no advisory database
-publishes those ecosystems: `jenkins:` (offline MCP lookup only) and
+Several prefixes exist only for hand-curated entries, because no advisory
+database publishes those ecosystems: `jenkins:` (offline MCP lookup only),
 `terraform:` (`terraform-scanner`, matching `namespace/type` on the public
 Terraform and OpenTofu registries from `.tf`, `.tf.json` and
-`.terraform.lock.hcl`).
+`.terraform.lock.hcl`), `tfmodule:` (`namespace/name/system` registry modules,
+including `.terraform/modules/modules.json`), and the `ecosystem-registry`
+prefixes `cocoapods:`, `conan:`, `helm:` (`repository-url/chart`), `ansible:`,
+`homebrew:` (`tap/formula`), `chrome:`, `edge:`, `firefox:` and `jetbrains:`.
+Chrome and Edge extension IDs are separate prefixes because the two stores
+assign IDs independently; a Chromium profile directory is read as Chrome.
+The coverage per ecosystem and file format is declared in
+`src/ecosystem-coverage.json` and proven by `coverage-matrix.test.ts`.
 
 Extension records are the one place the importer departs from the OpenSSF
 range reading. A hijacked legitimate extension is published as an

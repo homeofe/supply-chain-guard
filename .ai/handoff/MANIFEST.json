@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790157852",
-    "timestamp": "2026-09-23T10:04:13Z",
-    "commit": "fc4c58f",
+    "session_id": "cli-1790159791",
+    "timestamp": "2026-09-23T10:36:32Z",
+    "commit": "1d766ab",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3d61eefc41a7a5b48788f29cea13df36493b49826c53ef9d7720ad292d3626e7",
-      "updated": "2026-09-23T09:28:57Z",
-      "lines": 10885,
-      "summary": "Follows the Terraform provider matcher on the same branch (PR 326). The owner"
+      "checksum": "sha256:a28c882c180035c864e7afaa916c6a8a943606b4d93165b08a0f1acd178ab9d7",
+      "updated": "2026-09-23T10:36:27Z",
+      "lines": 10950,
+      "summary": "Same branch (PR 326), still unreleased. The owner asked, before v6.3.0, for"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T10:04:12Z",
+      "updated": "2026-09-23T10:36:31Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:b5784b364c4132233962a3f9baf43c2b36d7197083350f079f89d7b862c439ec",
-      "updated": "2026-09-23T10:04:12Z",
+      "checksum": "sha256:625f61be8c76ec5cbc7e3b2587478d00f30545177100264d2e6bbe4347654648",
+      "updated": "2026-09-23T10:36:31Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:098e7347dc6f2b779fcb0c74d354d8f93156b1868dc0936f2e79217e3de19139",
-      "updated": "2026-09-23T10:04:12Z",
+      "checksum": "sha256:dc44f4e767f506ce28ec3961bfc4ba3f9e686f77d5d7a8fc50339c0aca4b2c4c",
+      "updated": "2026-09-23T10:36:31Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "Follows the Terraform provider matcher on the same branch (PR 326). The owner Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "Same branch (PR 326), still unreleased. The owner asked, before v6.3.0, for Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 127201,
-    "full_read": 140222
+    "manifest_plus_core": 127838,
+    "full_read": 140860
   }
 }

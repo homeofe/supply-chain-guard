@@ -234,7 +234,7 @@ describe("mapAdvisory", () => {
       advisory({
         vulnerabilities: [
           {
-            package: { ecosystem: "swift", name: "github.com/example/thing" },
+            package: { ecosystem: "actions", name: "example/action" },
             vulnerable_version_range: ">= 0",
           },
         ],
@@ -402,6 +402,29 @@ describe("mapOsvMalwareRecord", () => {
     expect(result.skipped).toEqual([]);
     expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["maven:org.scgfixture:scg-artifact@4.18.1"]);
     expect(isValidFeedIOC(publicEntry(result.entries[0]))).toBe(true);
+  });
+
+  it.each([
+    ["SwiftURL", "github.com/scg-fixture/evil-pkg", "swift:github.com/scg-fixture/evil-pkg@1.0.0"],
+    ["Hex", "scg_fixture", "hex:scg_fixture@1.0.0"],
+    ["CRAN", "scgFixture", "cran:scgFixture@1.0.0"],
+    ["Pub", "scg_fixture", "pub:scg_fixture@1.0.0"],
+  ])("maps an OSV %s record to its feed prefix", async (ecosystem, name, value) => {
+    const { mapOsvMalwareRecord, publicEntry } = await load();
+    const result = mapOsvMalwareRecord(osvMalwareRecord({ affected: [{ package: { ecosystem, name }, versions: ["1.0.0"] }] }));
+    expect(result.skipped).toEqual([]);
+    expect(result.entries.map((e: FeedIOC) => e.value)).toEqual([value]);
+    expect(isValidFeedIOC(publicEntry(result.entries[0]))).toBe(true);
+  });
+
+  it.each([
+    ["swift", "github.com/scg-fixture/evil-pkg", "swift:github.com/scg-fixture/evil-pkg"],
+    ["erlang", "scg_fixture", "hex:scg_fixture"],
+    ["pub", "scg_fixture", "pub:scg_fixture"],
+  ])("maps a GitHub %s malware advisory to its feed prefix", async (ecosystem, name, value) => {
+    const { mapAdvisory } = await load();
+    const result = mapAdvisory(advisory({ vulnerabilities: [{ package: { ecosystem, name }, vulnerable_version_range: ">= 0" }] }));
+    expect(result.entries.map((e: FeedIOC) => e.value)).toEqual([value]);
   });
 
   it("still refuses a Maven name that could break out of a string literal", async () => {
@@ -2322,8 +2345,8 @@ describe("ecosystem filter", () => {
 
   it("names the valid ecosystems in the rejection", async () => {
     const { parseArgs } = await load();
-    expect(() => parseArgs(["--ecosystem", "swift"])).toThrow(/nuget/);
-    expect(() => parseArgs(["--ecosystem", "swift"])).toThrow(/maven/);
+    expect(() => parseArgs(["--ecosystem", "actions"])).toThrow(/nuget/);
+    expect(() => parseArgs(["--ecosystem", "actions"])).toThrow(/maven/);
   });
 });
 

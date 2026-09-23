@@ -50,7 +50,7 @@ import {
   recordUnreadablePath,
 } from "./pattern-scanner.js";
 import type { FeedIOC } from "./threat-intel.js";
-import { checkLockfile } from "./lockfile-checker.js";
+import { checkJsLockfileContent, checkLockfile, JS_LOCKFILE_NAMES } from "./lockfile-checker.js";
 import { isJsonObject, parseJsonObject } from "./json-utils.js";
 import {
   collectExtractedFiles,
@@ -77,6 +77,7 @@ import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-i
 import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
 import { isPubFile, scanPubContent } from "./pub-scanner.js";
 import { isNestedManifest, scanNestedManifest } from "./nested-manifests.js";
+import { isRegistryFile, scanRegistryFile } from "./ecosystem-registry.js";
 import { isDockerfileSyntax, scanImageReferences } from "./container-image.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
@@ -387,9 +388,17 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Ruby, Composer, NuGet, Cargo and Go manifests below the scan root: their
     // own scanners read only the root (see nested-manifests.ts).
     const nestedManifest = isNestedManifest(relativePath);
+    // Swift, CocoaPods, Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser
+    // extensions and JetBrains plugins (ecosystem-registry.ts), at any depth.
+    const registryFile = isRegistryFile(relativePath);
+    // yarn / pnpm / bun lockfiles below the root: checkLockfile() reads only
+    // the scan root, so a monorepo package's own lockfile was never checked.
+    const nestedJsLockfile =
+      relativePath.includes("/") && JS_LOCKFILE_NAMES.has(basename) &&
+      !pathSegments.some((segment) => segment === "vendor");
     const inlineContentTarget =
       isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile ||
-      pubspecFile || pythonManifest || nestedManifest;
+      pubspecFile || pythonManifest || nestedManifest || registryFile || nestedJsLockfile;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -434,6 +443,19 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (nestedManifest) {
         findings.push(...scanNestedManifest(prefetchedContent, relativePath, threatFeed));
+      }
+      if (registryFile) {
+        findings.push(...scanRegistryFile(prefetchedContent, relativePath, threatFeed));
+      }
+      if (nestedJsLockfile) {
+        const manifestRel = path.posix.join(path.posix.dirname(relativePath), "package.json");
+        let manifestContent: string | null = null;
+        if (!TEST_FILE_REGEX.test(manifestRel)) {
+          try {
+            manifestContent = fs.readFileSync(path.join(path.dirname(filePath), "package.json"), "utf-8");
+          } catch { /* no manifest: nothing is reported there, so nothing is skipped here */ }
+        }
+        findings.push(...checkJsLockfileContent(basename, prefetchedContent, relativePath, manifestContent, threatFeed));
       }
       if (nestedPythonLockfile) {
         findings.push(

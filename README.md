@@ -1,6 +1,6 @@
 # supply-chain-guard
 
-Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Maven/Gradle, Dart/Flutter (pub), RubyGems, Composer, NuGet, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents. Supports EU Cyber Resilience Act SBOM and component-documentation work, and NIS2 supply chain risk-management measures.
+Open-source supply-chain security scanner that runs locally and offline. It matches known-malicious packages, extensions, plugins, providers, container images and CI actions across 24 ecosystems, reading manifests and lockfiles at any depth of a repository, including the transitive dependencies a lockfile pins; and it analyses what you install for malware behavior: GlassWorm, Vidar, Shai-Hulud, fake AI tool repos, account takeovers and 350+ threat indicators in all. It generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents. Supports EU Cyber Resilience Act SBOM and component-documentation work, and NIS2 supply chain risk-management measures.
 
 [![npm version](https://img.shields.io/npm/v/supply-chain-guard?logo=npm)](https://www.npmjs.com/package/supply-chain-guard)
 [![npm downloads](https://img.shields.io/npm/dw/supply-chain-guard?logo=npm&label=weekly%20downloads)](https://www.npmjs.com/package/supply-chain-guard)
@@ -28,7 +28,7 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Maven/Gradle
 - [Policy Configuration](#policy-configuration-v44)
 - [Baseline Diffing](#baseline-diffing-v44)
 - [Example Output](#example-output)
-- [Supported Ecosystems](#supported-ecosystems)
+- [Ecosystem Coverage](#ecosystem-coverage)
 - [How It Compares](#how-it-compares)
 - [GitHub Action](#github-action)
 - [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp)
@@ -47,6 +47,18 @@ Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Maven/Gradle
 For a deep dive into how GlassWorm infiltrates the software supply chain and the detection techniques behind this tool, read the blog post: [How GlassWorm Gets In and How We Locked It Out](https://blog.elvatis.com/how-glassworm-gets-in-and-how-we-locked-it-out/).
 
 ## What It Detects
+
+### Known-Malicious Packages and Components
+- Package, extension, plugin and image identities matched against the threat feed in 24 ecosystems:
+  npm, PyPI, RubyGems, Composer, NuGet, Cargo, Go, Maven / Gradle / SBT / Bazel, Dart / Flutter, Swift,
+  CocoaPods, Hex, CRAN, Conan, Terraform providers and modules, Helm charts, Ansible Galaxy, container
+  images, GitHub Actions, Homebrew, VS Code / Open VSX extensions, Chrome / Edge / Firefox extensions and
+  JetBrains plugins. The full list of files read per ecosystem is in [Ecosystem Coverage](#ecosystem-coverage).
+- Manifests and lockfiles are read wherever they sit in the tree, so a monorepo service or a .NET project
+  in `src/App/` is covered, and a lockfile's transitive dependencies are matched, not only direct ones.
+- A version pin fires only on the exact malicious release; a hijacked legitimate package is never blocked
+  by name. Registry-specific identities stay separate (Marketplace vs Open VSX, Chrome vs Edge, public vs
+  private registries), and a commit SHA or image digest matches under any repository name.
 
 ### Malware Campaigns
 - GlassWorm campaign markers and Solana blockchain C2
@@ -73,10 +85,12 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 ### Infrastructure & CI/CD
 - GitHub Actions: unpinned actions, secrets exfiltration, encoded payloads, curl piping
 - Agentic workflows (GitLost class): AI-agent steps and gh-aw `.github/workflows/*.md` that ingest untrusted issue/PR text, hold a cross-repo token, and can post publicly - the prompt-injection data-leak posture
-- Dockerfile / Containerfile: curl pipe, base images on a moving channel tag or without a digest,
-  hardcoded secrets, SUID bits. Compose `image:` values are out of scope for every Docker rule
-  (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#base-image-pinning-decision-record))
-- Terraform/IaC: inline scripts, external modules, hardcoded secrets, known-malicious providers (`.tf`, `.tf.json`, `.terraform.lock.hcl`)
+- Dockerfile / Containerfile hardening: curl pipe, base images on a moving channel tag or without a
+  digest, hardcoded secrets, SUID bits. These rules read Dockerfile instructions only
+  (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#base-image-pinning-decision-record)); known-malicious
+  images are matched separately in Dockerfiles and in every YAML `image:` value (Compose, Kubernetes,
+  workflow containers), see [Ecosystem Coverage](#ecosystem-coverage)
+- Terraform/IaC: inline scripts, external modules, hardcoded secrets; known-malicious providers and registry modules are matched as listed in [Ecosystem Coverage](#ecosystem-coverage)
 - Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
 - Git hooks and submodule security
 
@@ -659,24 +673,68 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Supported Ecosystems
+## Ecosystem Coverage
 
-| Ecosystem | Command | What It Scans |
-|-----------|---------|---------------|
-| npm | `scan`, `npm` | package.json, install scripts, tarball; lockfiles: package-lock.json, pnpm-lock.yaml, yarn.lock (v1 + Berry), bun.lock |
-| PyPI | `pypi` | setup.py, setup.cfg, pyproject.toml, install hooks |
-| Cargo/Rust | `scan` | Cargo.toml, build.rs, proc macros |
-| Go | `scan` | go.mod, init() functions, CGo, plugin loading |
-| Maven/Gradle | `scan` | pom.xml (dependencies, build plugins, extensions), gradle.lockfile, build.gradle(.kts), libs.versions.toml (malicious-artifact IOCs) |
-| Dart/Flutter | `scan` | pubspec.lock, pubspec.yaml (malicious-package IOCs, pub.dev-hosted only) |
-| RubyGems | `scan` | Gemfile, Gemfile.lock (malicious-gem IOCs, http/git sources) |
-| Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
-| NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
-| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. The Dockerfile hardening rules are anchored on Dockerfile instructions, so they do not read Compose files; known-malicious images (by tag or digest) are matched in Dockerfile `FROM` / `COPY --from=` and in every YAML `image:` value (Compose, Kubernetes, workflow containers) and `docker://` step |
-| Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets, known-malicious providers in required_providers and .terraform.lock.hcl) |
-| VS Code | `vscode`, `scan` | .vsix files, activation events, dangerous APIs; known-malicious extension IDs in `.vscode/extensions.json`, `devcontainer.json` and installed extension manifests |
-| GitHub Actions | `scan` | .github/workflows/*.yml |
-| GitHub Repos | `repo` | Trust signals, releases, README lures |
+Two different claims live here, and they are proven differently.
+
+**Known-malicious identity matching.** For every ecosystem below, a directory scan reads the listed files
+at the scan root and at any depth below it, extracts the package, extension, plugin, provider, image or
+action identities, and matches them against the threat feed: the bundled indicators, and the downloadable
+catalog after `feed refresh`. A version pin fires only on the exact malicious release; a range or a
+constraint in a manifest leaves the version unknown, so only a whole-name entry can match there.
+
+This table is generated from [`src/ecosystem-coverage.json`](src/ecosystem-coverage.json) and checked by
+the build (`check:coverage`); it is not written by hand. Every row is proven by
+[`coverage-matrix.test.ts`](src/__tests__/coverage-matrix.test.ts), which puts an indicator into each
+listed file format, at the scan root and one directory down, runs a real scan and requires the rule to
+report it exactly once. A format listed here without such a test fails the build. "Indicators shipped"
+says whether any indicator exists today; "none yet (matcher ready)" means the matcher is proven but no
+malicious package is known in that ecosystem yet, and the importer or a curated entry will fill it.
+
+<!-- ecosystem-coverage:begin (generated by scripts/generate-coverage-table.mjs; edit src/ecosystem-coverage.json) -->
+| Ecosystem | Files read | Rule | Indicators shipped | Imported automatically from |
+| --- | --- | --- | --- | --- |
+| npm | `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` | `MALICIOUS_DEPENDENCY`, `LOCKFILE_MALICIOUS_VERSION`, `LOCKFILE_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| PyPI | `requirements.txt`, `pyproject.toml`, `poetry.lock`, `uv.lock`, `Pipfile.lock` | `PYTHON_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| RubyGems | `Gemfile`, `Gemfile.lock` | `RUBY_MALICIOUS_GEM` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| Composer (PHP) | `composer.json`, `composer.lock` | `COMPOSER_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| NuGet (.NET) | `packages.lock.json`, `*.csproj`, `packages.config` | `NUGET_MALICIOUS_PACKAGE` | bundle | GitHub Advisory Database, OpenSSF / OSV |
+| Cargo (Rust) | `Cargo.toml`, `Cargo.lock` | `CARGO_MALICIOUS_CRATE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| Go modules | `go.mod`, `go.sum` | `GO_MALICIOUS_MODULE` | bundle | GitHub Advisory Database, OpenSSF / OSV |
+| Maven / Gradle / SBT / Bazel | `pom.xml`, `gradle.lockfile`, `build.gradle`, `build.gradle.kts`, `libs.versions.toml`, `build.sbt`, `maven_install.json` | `MAVEN_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
+| Dart / Flutter (pub) | `pubspec.lock`, `pubspec.yaml` | `PUB_MALICIOUS_PACKAGE` | bundle | GitHub Advisory Database, OSV |
+| Swift Package Manager | `Package.resolved`, `Package.swift` | `SWIFT_MALICIOUS_PACKAGE` | none yet (matcher ready) | GitHub Advisory Database, OSV (SwiftURL) |
+| CocoaPods | `Podfile.lock`, `Podfile` | `COCOAPODS_MALICIOUS_POD` | none yet (matcher ready) | curated only |
+| Hex (Elixir / Erlang) | `mix.lock`, `mix.exs` | `HEX_MALICIOUS_PACKAGE` | none yet (matcher ready) | GitHub Advisory Database, OSV |
+| CRAN (R) | `renv.lock`, `DESCRIPTION` | `CRAN_MALICIOUS_PACKAGE` | none yet (matcher ready) | OSV |
+| Conan (C / C++) | `conan.lock`, `conanfile.txt`, `conanfile.py` | `CONAN_MALICIOUS_PACKAGE` | none yet (matcher ready) | curated only |
+| Terraform / OpenTofu providers | `*.tf (required_providers)`, `.terraform.lock.hcl` | `TERRAFORM_MALICIOUS_PROVIDER` | bundle | curated only |
+| Terraform / OpenTofu modules | `*.tf (module)`, `.terraform/modules/modules.json` | `TERRAFORM_MALICIOUS_MODULE` | none yet (matcher ready) | curated only |
+| Helm charts | `Chart.yaml`, `Chart.lock` | `HELM_MALICIOUS_CHART` | none yet (matcher ready) | curated only |
+| Ansible Galaxy | `requirements.yml`, `galaxy.yml` | `ANSIBLE_MALICIOUS_CONTENT` | none yet (matcher ready) | curated only |
+| Container images | `Dockerfile`, `docker-compose.yml`, `Kubernetes manifest (image:)` | `DOCKER_MALICIOUS_IMAGE` | bundle | curated only |
+| GitHub Actions | `.github/workflows/*.yml`, `action.yml (composite)` | `GHA_KNOWN_MALICIOUS_SHA` | bundle | curated only |
+| Homebrew | `Brewfile`, `Brewfile.lock.json` | `HOMEBREW_MALICIOUS_PACKAGE` | bundle | curated only |
+| VS Code / Open VSX extensions | `.vscode/extensions.json`, `devcontainer.json`, `installed extension package.json` | `VSCODE_MALICIOUS_EXTENSION` | bundle + catalog | OpenSSF / OSV (VSCode) |
+| Browser extensions (Chrome, Edge, Firefox) | `Chromium policy JSON`, `Firefox policies.json`, `installed Chromium extension`, `Firefox extension manifest` | `BROWSER_MALICIOUS_EXTENSION` | bundle | curated only |
+| JetBrains plugins | `.idea/externalDependencies.xml`, `META-INF/plugin.xml` | `JETBRAINS_MALICIOUS_PLUGIN` | bundle | curated only |
+<!-- ecosystem-coverage:end -->
+
+**Behavior and hardening analysis.** Independent of the feed, these read what a package or repository
+actually does:
+
+| Target | Command | What It Scans |
+|--------|---------|---------------|
+| npm package | `npm <pkg>`, `scan` | package.json install scripts and tarball contents: install-hook chains, obfuscation, exfiltration |
+| PyPI package | `pypi <pkg>` | setup.py, setup.cfg, pyproject.toml build hooks and package contents |
+| VS Code / Open VSX extension | `vscode <id or .vsix>` | activation events, dangerous APIs and bundled code, plus the extension's own identity |
+| Source trees | `scan` | code patterns across JavaScript, TypeScript, Python, shell, Go, Rust and more |
+| Cargo / Go | `scan` | build.rs, proc macros, go.mod replace directives, init() functions, CGo |
+| Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile hardening (instructions only) |
+| Terraform | `scan` | provisioners, external module sources, hardcoded secrets |
+| GitHub Actions | `scan` | .github/workflows: unpinned actions, secrets exfiltration, injection, agentic workflows |
+| npm lockfiles | `scan` | integrity hashes, non-registry resolved URLs, version downgrades (package-lock.json, pnpm-lock.yaml, yarn.lock v1 and Berry, bun.lock) |
+| GitHub repositories | `repo` | trust signals, releases, README lures |
 | Solana | `monitor` | C2 wallet memo transactions |
 
 ## How It Compares
@@ -687,7 +745,7 @@ There is one axis where it goes somewhere the others do not go at all. Credentia
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
-| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | npm (incl. pnpm/yarn/bun lockfiles), PyPI, Cargo, Go, Maven/Gradle, Dart/Flutter, RubyGems, Composer, NuGet, Docker, Terraform/IaC, VS Code extensions, GitHub Actions, GitHub repos | Yes (Apache-2.0) | No |
+| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | 24 ecosystems of packages, extensions, plugins, providers, images and CI actions (see [Ecosystem Coverage](#ecosystem-coverage)), plus GitHub repos | Yes (Apache-2.0) | No |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Known vulnerabilities in dependency inventories (OSV.dev database lookup) | Known-malicious versions via OSV MAL- entries only; no behavior or IOC analysis | Yes (offline mode available) | 11+ ecosystems, 19+ lockfile formats, container images, SBOM input | Yes (Apache-2.0) | No |
 | [Socket](https://socket.dev) | Proactive behavioral analysis of entire registries (SaaS) | Yes: 70+ risk types registry-wide, before advisories exist; engine is closed source and cloud-side | Yes | npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet, more; Actions workflows | CLI only (MIT); detection engine proprietary | Yes (except Firewall Free) |
 | [GuardDog](https://github.com/DataDog/guarddog) | Heuristic 0-10 risk scoring of individual packages (YARA + registry metadata) | Yes: heuristics only, no known-malware or campaign-IOC database; sandboxed scanning | No | npm, PyPI, Go, RubyGems, GitHub Actions, VS Code extensions | Yes (Apache-2.0) | No |

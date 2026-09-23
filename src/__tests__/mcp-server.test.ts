@@ -360,8 +360,8 @@ describe("MCP Server", () => {
 
     it("should return -32602 for an out-of-enum ecosystem", async () => {
       const response = await callTool("ioc_lookup", {
-        ecosystem: "homebrew",
-        name: "wget",
+        ecosystem: "bower",
+        name: "jquery",
       });
       expect(response.error?.code).toBe(-32602);
     });

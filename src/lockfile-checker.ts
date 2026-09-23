@@ -110,6 +110,53 @@ export function checkLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   ];
 }
 
+/** yarn / pnpm / bun lockfile names handled by checkJsLockfileContent. */
+export const JS_LOCKFILE_NAMES: ReadonlySet<string> = new Set(["yarn.lock", "pnpm-lock.yaml", "bun.lock"]);
+
+/**
+ * Every yarn / pnpm / bun lockfile check on already-read content, reported
+ * under the file's real relative path. checkLockfile() covers the scan root;
+ * this is what a lockfile BELOW the root (a monorepo package) goes through,
+ * where the root-only functions would never look.
+ */
+export function checkJsLockfileContent(
+  basename: string,
+  content: string,
+  relativePath: string,
+  manifestContent: string | null,
+  feed: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  let deps: ParsedLockDependency[] | null;
+  if (basename === "pnpm-lock.yaml") {
+    deps = parsePnpmLock(content);
+    if (deps === null) return [parseErrorFinding(relativePath, "pnpm install")];
+  } else if (basename === "yarn.lock") {
+    deps = parseYarnLock(content);
+    if (deps === null) return [parseErrorFinding(relativePath, "yarn install")];
+  } else if (basename === "bun.lock") {
+    let lock: unknown;
+    try {
+      lock = JSON.parse(stripJsonc(content)) as unknown;
+    } catch {
+      return [parseErrorFinding(relativePath, "bun install")];
+    }
+    deps = [];
+    const packages = (lock as { packages?: unknown }).packages;
+    if (packages && typeof packages === "object") {
+      for (const entry of Object.values(packages as Record<string, unknown>)) {
+        const dep = parseBunPackageEntry(entry);
+        if (dep) deps.push(dep);
+      }
+    }
+  } else {
+    return findings;
+  }
+  for (const dep of deps) checkParsedDependency(dep, relativePath, findings);
+  findings.push(...lockfileFeedFindings(deps, relativePath, manifestReportedNames(manifestContent), feed));
+  return findings;
+}
+
 /**
  * Threat-feed findings for a non-npm lockfile. package-lock.json is matched on
  * the per-file scan path in scanner.ts instead, which also covers nested
