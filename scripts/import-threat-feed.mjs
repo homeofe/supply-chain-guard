@@ -102,6 +102,7 @@ export const ECOSYSTEM_PREFIX = {
   // records; Open VSX records share the OSV directory and get their own prefix
   // through OSV_ECOSYSTEM_ALIASES below.
   vscode: "vscode:",
+  maven: "maven:",
 };
 
 /** Feed ecosystem prefix -> OSV ecosystem name (for the corroboration query). */
@@ -115,6 +116,7 @@ export const OSV_ECOSYSTEM = {
   "nuget:": "NuGet",
   "vscode:": "VSCode",
   "openvsx:": "VSCode:https://open-vsx.org",
+  "maven:": "Maven",
 };
 
 /** Import ecosystem -> directory in OSV's public vulnerability export. */
@@ -127,6 +129,7 @@ export const OSV_ECOSYSTEM_DIRECTORY = {
   rust: "crates.io",
   nuget: "NuGet",
   vscode: "VSCode",
+  maven: "Maven",
 };
 
 /**
@@ -248,6 +251,8 @@ const SAFE_PACKAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._+~/-]*$/;
 const SAFE_SCOPED_NAME = /^@[A-Za-z0-9][A-Za-z0-9._+~-]*\/[A-Za-z0-9][A-Za-z0-9._+~-]*$/;
 /** Go module paths carry dots and slashes; still no quotes or spaces. */
 const SAFE_MODULE_PATH = /^[A-Za-z0-9][A-Za-z0-9._+~/-]*$/;
+/** Maven coordinates are groupId:artifactId; the colon is the only addition. */
+const SAFE_MAVEN_COORDINATE = /^[A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*$/;
 const SAFE_VERSION = /^[A-Za-z0-9][A-Za-z0-9.+~!-]*$/;
 /** Advisory ids are echoed into the `source` field. */
 const SAFE_ADVISORY_ID = /^[A-Za-z0-9-]{1,64}$/;
@@ -277,7 +282,12 @@ export function parseVersionRange(range) {
 /** True if a package name is safe to serialize into the TypeScript feed. */
 export function isSafePackageName(name) {
   if (typeof name !== "string" || name.length === 0 || name.length > 214) return false;
-  return SAFE_SCOPED_NAME.test(name) || SAFE_PACKAGE_NAME.test(name) || SAFE_MODULE_PATH.test(name);
+  return (
+    SAFE_SCOPED_NAME.test(name) ||
+    SAFE_PACKAGE_NAME.test(name) ||
+    SAFE_MODULE_PATH.test(name) ||
+    SAFE_MAVEN_COORDINATE.test(name)
+  );
 }
 
 /** Build the feed `value` for a package coordinate. */

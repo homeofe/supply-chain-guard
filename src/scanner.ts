@@ -64,6 +64,7 @@ import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
 import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scanner.js";
 import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
+import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
@@ -358,8 +359,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       relativePath.includes("/") &&
       isPythonLockfile(basename) &&
       !pathSegments.some((segment) => segment === "vendor" || segment === "target");
+    // Maven / Gradle build files (pom.xml, gradle.lockfile, *.gradle[.kts])
+    // carry no scannable extension, so this inline path is the only place a
+    // directory scan reaches them. libs.versions.toml does, and is matched
+    // here too so the maven: lookup has exactly one dispatch point.
+    const mavenBuildFile = isMavenFile(relativePath);
     const inlineContentTarget =
-      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile;
+      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -387,6 +393,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (isConfigFile(basename)) {
         findings.push(...scanConfigFile(prefetchedContent, relativePath));
+      }
+      if (mavenBuildFile) {
+        findings.push(...scanMavenContent(prefetchedContent, relativePath, threatFeed));
       }
       if (nestedPythonLockfile) {
         findings.push(

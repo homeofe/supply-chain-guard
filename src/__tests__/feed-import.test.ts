@@ -234,7 +234,7 @@ describe("mapAdvisory", () => {
       advisory({
         vulnerabilities: [
           {
-            package: { ecosystem: "maven", name: "org.example:thing" },
+            package: { ecosystem: "swift", name: "github.com/example/thing" },
             vulnerable_version_range: ">= 0",
           },
         ],
@@ -385,6 +385,34 @@ describe("mapOsvMalwareRecord", () => {
       }),
     );
     expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["scg-fixture-typosquat"]);
+  });
+
+  it("maps a Maven record to a maven:group:artifact entry that the feed accepts", async () => {
+    const { mapOsvMalwareRecord, publicEntry } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "Maven", name: "org.scgfixture:scg-artifact" },
+            versions: ["4.18.1"],
+          },
+        ],
+      }),
+    );
+    expect(result.skipped).toEqual([]);
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["maven:org.scgfixture:scg-artifact@4.18.1"]);
+    expect(isValidFeedIOC(publicEntry(result.entries[0]))).toBe(true);
+  });
+
+  it("still refuses a Maven name that could break out of a string literal", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [{ package: { ecosystem: "Maven", name: 'org.scg:a"b' }, versions: ["1.0"] }],
+      }),
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unsafe-package-name");
   });
 
   it("rejects an unexpanded bounded range instead of broadening it", async () => {
@@ -2294,7 +2322,8 @@ describe("ecosystem filter", () => {
 
   it("names the valid ecosystems in the rejection", async () => {
     const { parseArgs } = await load();
-    expect(() => parseArgs(["--ecosystem", "maven"])).toThrow(/nuget/);
+    expect(() => parseArgs(["--ecosystem", "swift"])).toThrow(/nuget/);
+    expect(() => parseArgs(["--ecosystem", "swift"])).toThrow(/maven/);
   });
 });
 

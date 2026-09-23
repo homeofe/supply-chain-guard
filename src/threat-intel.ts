@@ -9801,6 +9801,14 @@ const FEED_CHUNK_21: FeedIOC[] = [
 
   // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
   { type: "package", value: "vscode:AzureCdnInfo.edrtester@1.0.4", severity: "critical", confidence: 0.9, source: "MAL-2026-16010", firstSeen: "2026-09-03" },
+
+  // Shai-Hulud 2.0 reached Maven Central through mvnpm, which republishes npm packages as
+  // Maven artifacts: the trojanized posthog-node 4.18.1 was mirrored as
+  // org.mvnpm:posthog-node 4.18.1 (GHSA-5f38-2pgv-jhg6, OSV MAL-2025-191470). Version-pinned:
+  // mvnpm and posthog-node are legitimate, only the mirrored worm release is malicious.
+  // Curated so the partition policy keeps it bundled, as the offline anchor of the maven:
+  // ecosystem.
+  { type: "package", value: "maven:org.mvnpm:posthog-node@4.18.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Shai-Hulud 2.0 mvnpm mirror", source: "GHSA-5f38-2pgv-jhg6, MAL-2025-191470", firstSeen: "2025-11-26" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

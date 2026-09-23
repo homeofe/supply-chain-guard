@@ -1,6 +1,6 @@
 # supply-chain-guard
 
-Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents. Supports EU Cyber Resilience Act SBOM and component-documentation work, and NIS2 supply chain risk-management measures.
+Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, Maven/Gradle, RubyGems, Composer, NuGet, Docker, Terraform, VS Code extensions, GitHub Actions and GitHub repositories. Detects malware campaigns (GlassWorm, Vidar, Shai-Hulud), fake AI tool repos, account takeovers, and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs with real dependency inventories, grades SLSA provenance (parses and structurally validates in-toto/DSSE attestations), and correlates findings into attack-chain incidents. Supports EU Cyber Resilience Act SBOM and component-documentation work, and NIS2 supply chain risk-management measures.
 
 [![npm version](https://img.shields.io/npm/v/supply-chain-guard?logo=npm)](https://www.npmjs.com/package/supply-chain-guard)
 [![npm downloads](https://img.shields.io/npm/dw/supply-chain-guard?logo=npm&label=weekly%20downloads)](https://www.npmjs.com/package/supply-chain-guard)
@@ -667,6 +667,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 | PyPI | `pypi` | setup.py, setup.cfg, pyproject.toml, install hooks |
 | Cargo/Rust | `scan` | Cargo.toml, build.rs, proc macros |
 | Go | `scan` | go.mod, init() functions, CGo, plugin loading |
+| Maven/Gradle | `scan` | pom.xml (dependencies, build plugins, extensions), gradle.lockfile, build.gradle(.kts), libs.versions.toml (malicious-artifact IOCs) |
 | RubyGems | `scan` | Gemfile, Gemfile.lock (malicious-gem IOCs, http/git sources) |
 | Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
 | NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
@@ -685,7 +686,7 @@ There is one axis where it goes somewhere the others do not go at all. Credentia
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
-| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | npm (incl. pnpm/yarn/bun lockfiles), PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, Terraform/IaC, VS Code extensions, GitHub Actions, GitHub repos | Yes (Apache-2.0) | No |
+| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | npm (incl. pnpm/yarn/bun lockfiles), PyPI, Cargo, Go, Maven/Gradle, RubyGems, Composer, NuGet, Docker, Terraform/IaC, VS Code extensions, GitHub Actions, GitHub repos | Yes (Apache-2.0) | No |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Known vulnerabilities in dependency inventories (OSV.dev database lookup) | Known-malicious versions via OSV MAL- entries only; no behavior or IOC analysis | Yes (offline mode available) | 11+ ecosystems, 19+ lockfile formats, container images, SBOM input | Yes (Apache-2.0) | No |
 | [Socket](https://socket.dev) | Proactive behavioral analysis of entire registries (SaaS) | Yes: 70+ risk types registry-wide, before advisories exist; engine is closed source and cloud-side | Yes | npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet, more; Actions workflows | CLI only (MIT); detection engine proprietary | Yes (except Firewall Free) |
 | [GuardDog](https://github.com/DataDog/guarddog) | Heuristic 0-10 risk scoring of individual packages (YARA + registry metadata) | Yes: heuristics only, no known-malware or campaign-IOC database; sandboxed scanning | No | npm, PyPI, Go, RubyGems, GitHub Actions, VS Code extensions | Yes (Apache-2.0) | No |

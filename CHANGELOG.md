@@ -36,6 +36,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   OSV `VSCode` export, including Open VSX records, and 51 extension entries
   were imported (1 to the bundle, 50 to the catalog). The MCP `ioc_lookup`
   tool accepts `vscode` and `openvsx`.
+- Maven / Gradle artifact matching (`src/maven-scanner.ts`, rule
+  `MAVEN_MALICIOUS_PACKAGE`) against a new `maven:<groupId>:<artifactId>`
+  feed ecosystem. A directory scan reads `pom.xml` (dependencies, and build
+  plugins, extensions and the parent, since those execute during the build;
+  `${property}` versions resolve from the pom's own properties; exclusions are
+  never reported), `gradle.lockfile` with exact versions, Groovy and Kotlin
+  DSL build scripts, and `gradle/libs.versions.toml`. The importer now takes
+  Maven advisories from both the GitHub Advisory Database and OSV instead of
+  skipping them. The Shai-Hulud 2.0 worm release mirrored to Maven Central
+  through mvnpm (`org.mvnpm:posthog-node` 4.18.1) is bundled as a curated
+  pin; `io.github.leetcrunch:scribejava-core`, a removed look-alike of
+  `com.github.scribejava:scribejava-core`, is in the catalog. The MCP
+  `ioc_lookup` tool accepts `maven`.
 
 ### Fixed
 

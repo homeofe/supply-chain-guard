@@ -82141,3 +82141,4 @@
 {"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.1.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
 {"type":"package","value":"openvsx:aquasecurityofficial.trivy-vulnerability-scanner@1.8.12","severity":"critical","confidence":0.9,"source":"MAL-2026-2230 (google-open-source-security)","firstSeen":"2026-03-26"}
 {"type":"package","value":"openvsx:aquasecurityofficial.trivy-vulnerability-scanner@1.8.13","severity":"critical","confidence":0.9,"source":"MAL-2026-2230 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"maven:io.github.leetcrunch:scribejava-core","severity":"critical","confidence":0.9,"source":"MAL-2025-2552 (google-open-source-security)","firstSeen":"2025-03-19"}

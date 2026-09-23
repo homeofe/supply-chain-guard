@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8673,
+  "entryCount": 8674,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -71013,6 +71013,16 @@
       "confidence": 0.9,
       "source": "MAL-2026-16010",
       "firstSeen": "2026-09-03"
+    },
+    {
+      "type": "package",
+      "value": "maven:org.mvnpm:posthog-node@4.18.1",
+      "severity": "critical",
+      "confidence": 1,
+      "family": "ShaiHuludWorm",
+      "campaign": "Shai-Hulud 2.0 mvnpm mirror",
+      "source": "GHSA-5f38-2pgv-jhg6, MAL-2025-191470",
+      "firstSeen": "2025-11-26"
     }
   ]
 }

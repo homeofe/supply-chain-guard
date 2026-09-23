@@ -6970,4 +6970,66 @@ describe("Campaign Signatures", () => {
       ]);
     });
   });
+
+  // =================================================================
+  // Shai-Hulud 2.0 via the mvnpm Maven mirror (November 2025)
+  // =================================================================
+
+  describe("Shai-Hulud 2.0 mvnpm mirror (Maven)", () => {
+    it("flags the mirrored worm release declared in a pom.xml", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "pom.xml"),
+        [
+          "<project>",
+          "  <properties><posthog.version>4.18.1</posthog.version></properties>",
+          "  <dependencies>",
+          "    <dependency>",
+          "      <groupId>org.mvnpm</groupId>",
+          "      <artifactId>posthog-node</artifactId>",
+          "      <version>${posthog.version}</version>",
+          "    </dependency>",
+          "  </dependencies>",
+          "</project>",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("org.mvnpm:posthog-node@4.18.1");
+    });
+
+    it("flags it in a Gradle lockfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "gradle.lockfile"),
+        "org.mvnpm:posthog-node:4.18.1=runtimeClasspath\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toBe(true);
+    });
+
+    // A version catalog carries a scannable extension (.toml) AND is a Maven
+    // file, so it must still be matched exactly once.
+    it("flags it once in a Gradle version catalog", async () => {
+      fs.mkdirSync(path.join(tempDir, "gradle"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, "gradle", "libs.versions.toml"),
+        ["[libraries]", 'posthog = "org.mvnpm:posthog-node:4.18.1"'].join("\n")
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toHaveLength(1);
+    });
+
+    // The control: mvnpm and posthog-node are legitimate; only the mirrored
+    // worm release is malicious.
+    it("leaves a clean posthog-node release alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "gradle.lockfile"),
+        "org.mvnpm:posthog-node:4.18.2=runtimeClasspath\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toEqual([]);
+    });
+  });
 });
