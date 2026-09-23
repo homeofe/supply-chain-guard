@@ -964,6 +964,43 @@ function looksLikeDependencySource(line: string): boolean {
 }
 
 /**
+ * Requirement names with the exact version where the line pins one (`==`),
+ * for threat-feed matching (python-lockfile-scanner.ts). Built on the same
+ * logical-line, comment, option and name helpers as parseRequirementsTxt, so
+ * both agree on which lines are dependencies. A range or a multi-clause
+ * specifier leaves the version unknown; includes and script sources are
+ * skipped because they name no package here.
+ */
+export function parseRequirementPins(content: string): { name: string; version: string | undefined }[] {
+  const out: { name: string; version: string | undefined }[] = [];
+  for (const rawLine of buildLogicalRequirementLines(content).lines) {
+    const line = stripRequirementComment(rawLine).trim();
+    if (line === "") continue;
+    if (optionArgument(line, "-r", "--requirement") !== null) continue;
+    if (optionArgument(line, "-c", "--constraint") !== null) continue;
+    if (line.startsWith("--requirements-from-script")) continue;
+    const editable = optionArgument(line, "-e", "--editable");
+    if (editable !== null) {
+      const name = parseRequirementName(editable, true) ?? parseLegacyEggName(editable);
+      if (name !== null) out.push({ name, version: undefined });
+      continue;
+    }
+    if (isRecognizedNonDependencyOption(line)) continue;
+    const name = parseRequirementName(line, true) ?? (looksLikeDependencySource(line) ? parseLegacyEggName(line) : null);
+    if (name === null) continue;
+    const spec = stripPerRequirementOptions(line).split(";")[0]!;
+    const exact = /^[^=<>!~@\s]+(?:\s*\[[^\]]*\])?\s*===?\s*([A-Za-z0-9][A-Za-z0-9.+!_-]*)\s*$/.exec(spec.trim());
+    out.push({ name, version: exact?.[1] });
+  }
+  return out;
+}
+
+/** Names declared by a pyproject.toml, from the same parser the confusion check uses. */
+export function pyprojectDependencyNames(content: string): string[] {
+  return parsePyprojectToml(content).names;
+}
+
+/**
  * Parse requirements.txt lines into package names while preserving a coverage
  * signal for malformed, delegated, or unsupported dependency entries.
  */

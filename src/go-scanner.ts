@@ -288,6 +288,7 @@ export function scanGoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   );
   if (goMod !== null) {
     findings.push(...scanGoContent(goMod, GO_MOD, "mod"));
+    findings.push(...scanGoModDependencies(goMod, GO_MOD, feed));
   }
 
   // Scan go.sum (resolved module inventory) for malicious modules
@@ -391,6 +392,56 @@ export function scanGoSumContent(
     }
   }
 
+  return findings;
+}
+
+/**
+ * Scan go.mod `require` (single-line and block form) and the target side of
+ * `replace` directives for modules matching go: feed IOCs. A replace target is
+ * what actually gets built, so it is matched as well as the original.
+ * go.mod versions are exact, so version pins apply.
+ */
+export function scanGoModDependencies(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+  const seen = new Set<string>();
+  const report = (module: string, version: string, line: number) => {
+    const key = `${module}@${version}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const ioc = matchPackageIOC("go", module, version, iocFeed);
+    if (ioc) findings.push(maliciousModuleFinding(module, version, ioc, relativePath, line));
+  };
+  const SPEC = /^([^\s]+)\s+(v[^\s]+)/;
+  let block: "require" | "replace" | null = null;
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").replace(/\/\/.*$/, "").trim();
+    if (!line) continue;
+    if (block) {
+      if (line === ")") { block = null; continue; }
+      handle(block, line, i + 1);
+      continue;
+    }
+    const open = /^(require|replace)\s*\($/.exec(line);
+    if (open) { block = open[1] as "require" | "replace"; continue; }
+    const single = /^(require|replace)\s+(.+)$/.exec(line);
+    if (single) handle(single[1] as "require" | "replace", single[2]!, i + 1);
+  }
+  function handle(kind: "require" | "replace", spec: string, line: number): void {
+    if (kind === "require") {
+      const m = SPEC.exec(spec);
+      if (m) report(m[1]!, m[2]!, line);
+      return;
+    }
+    const target = spec.split("=>")[1]?.trim();
+    const m = target ? SPEC.exec(target) : null;
+    if (m) report(m[1]!, m[2]!, line);
+  }
   return findings;
 }
 

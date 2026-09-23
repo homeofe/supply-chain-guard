@@ -20,6 +20,7 @@ import {
 
 /** NuGet-related file names (compared case-insensitively, .NET style) */
 const PACKAGES_LOCK = "packages.lock.json";
+const PACKAGES_CONFIG = "packages.config";
 const NUGET_CONFIG = "nuget.config";
 const CSPROJ_EXT = ".csproj";
 
@@ -34,7 +35,7 @@ const RESTORE_SOURCES = /<RestoreSources>([^<]*)<\/RestoreSources>/i;
  */
 export function isNuGetFile(filename: string): boolean {
   const lower = filename.toLowerCase();
-  return lower === PACKAGES_LOCK || lower === NUGET_CONFIG || lower.endsWith(CSPROJ_EXT);
+  return lower === PACKAGES_LOCK || lower === NUGET_CONFIG || lower === PACKAGES_CONFIG || lower.endsWith(CSPROJ_EXT);
 }
 
 /**
@@ -81,6 +82,8 @@ export function scanNuGetFiles(dir: string, feed?: FeedIOC[]): Finding[] {
       iocFeed ??= loadThreatIntel();
       if (lower === PACKAGES_LOCK) {
         findings.push(...scanPackagesLockContent(content, name, iocFeed));
+      } else if (lower === PACKAGES_CONFIG) {
+        findings.push(...scanPackagesConfigContent(content, name, iocFeed));
       } else {
         findings.push(...scanCsprojContent(content, name, iocFeed));
       }
@@ -169,6 +172,36 @@ export function scanCsprojContent(
     }
   }
 
+  return findings;
+}
+
+/** <package id="Name" version="1.2.3" /> (attribute order free) */
+const PACKAGES_CONFIG_ENTRY = /<package\b[^>]*/i;
+const ID_ATTR = /\bid\s*=\s*["']([^"']+)["']/i;
+const PKG_VERSION_ATTR = /\bversion\s*=\s*["']([^"']+)["']/i;
+
+/**
+ * Scan packages.config content (the pre-PackageReference .NET Framework
+ * manifest, still common in older solutions). Versions there are exact.
+ */
+export function scanPackagesConfigContent(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    // `<package\b` never matches the `<packages>` root element: \b fails before its "s".
+    const tag = PACKAGES_CONFIG_ENTRY.exec(lines[i] ?? "")?.[0];
+    if (!tag) continue;
+    const name = ID_ATTR.exec(tag)?.[1];
+    const version = PKG_VERSION_ATTR.exec(tag)?.[1];
+    if (!name) continue;
+    const ioc = matchPackageIOC("nuget", name, version, iocFeed);
+    if (ioc) findings.push(maliciousPackageFinding(name, version, ioc, relativePath, i + 1));
+  }
   return findings;
 }
 

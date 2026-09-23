@@ -314,6 +314,7 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
   );
   if (cargoToml !== null) {
     findings.push(...scanCargoContent(cargoToml, "Cargo.toml", "toml"));
+    findings.push(...scanCargoTomlDependencies(cargoToml, "Cargo.toml", feed));
   }
 
   // Scan build.rs
@@ -446,6 +447,64 @@ function maliciousCrateFinding(
 
 function truncate(value: string): string {
   return value.length > 120 ? value.substring(0, 120) + "..." : value;
+}
+
+/** A dependency table header: [dependencies], [dev-dependencies], [build-dependencies],
+ * [workspace.dependencies] and [target.'cfg(...)'.dependencies], or the
+ * single-dependency form [dependencies.name]. */
+const CARGO_DEP_TABLE = /^\[(?:workspace\.|target\.(?:'[^']*'|"[^"]*"|[^\]]+)\.)?(?:dev-|build-)?dependencies(?:\.("?)([A-Za-z0-9_-]+)\1)?\]\s*$/;
+
+/**
+ * Scan Cargo.toml dependency tables for crates matching cargo: feed IOCs.
+ * Versions there are requirements ("1.2" means ^1.2), not resolved versions,
+ * so only whole-crate entries can match; a version pin needs Cargo.lock. A
+ * renamed dependency (`alias = { package = "real" }`) is looked up by the
+ * crate that is actually fetched.
+ */
+export function scanCargoTomlDependencies(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+  const seen = new Set<string>();
+  const report = (crate: string, line: number) => {
+    if (seen.has(crate)) return;
+    seen.add(crate);
+    const ioc = matchPackageIOC("cargo", crate, undefined, iocFeed);
+    if (ioc) findings.push({ ...maliciousCrateFinding(crate, undefined, ioc, relativePath), line });
+  };
+
+  let inDeps = false;
+  let singleDep: { key: string; line: number; pkg?: string } | null = null;
+  const flushSingle = () => {
+    if (singleDep) report(singleDep.pkg ?? singleDep.key, singleDep.line);
+    singleDep = null;
+  };
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").replace(/\s+#.*$/, "").trim();
+    if (line.startsWith("[")) {
+      flushSingle();
+      const header = CARGO_DEP_TABLE.exec(line);
+      inDeps = header !== null && !header[2];
+      if (header?.[2]) singleDep = { key: header[2], line: i + 1 };
+      continue;
+    }
+    if (singleDep) {
+      const pkg = /^package\s*=\s*"([A-Za-z0-9_-]+)"/.exec(line);
+      if (pkg) singleDep.pkg = pkg[1];
+      continue;
+    }
+    if (!inDeps) continue;
+    const entry = /^("?)([A-Za-z0-9_-]+)\1\s*=\s*(.+)$/.exec(line);
+    if (!entry) continue;
+    const renamed = /\bpackage\s*=\s*"([A-Za-z0-9_-]+)"/.exec(entry[3]!);
+    report(renamed?.[1] ?? entry[2]!, i + 1);
+  }
+  flushSingle();
+  return findings;
 }
 
 /**

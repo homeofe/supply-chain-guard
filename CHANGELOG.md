@@ -105,6 +105,20 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   dependencies too. The test that pinned the old behaviour was named "does
   NOT double-report a bare-name entry", but its own fixture had no direct
   dependencies, so it asserted the false negative.
+- **Ruby, Composer, NuGet, Cargo and Go matched nothing outside the scan
+  root.** Their scanners read only the top directory, so a monorepo service,
+  a .NET project in `src/App/` or any project not at the repository root was
+  never checked against the feed; measured one directory down, all five
+  ecosystems detected nothing, in every format. Manifests below the root are
+  now matched with the same functions the root uses (`vendor/` and `target/`
+  excluded, as they hold copies of installed dependencies).
+- **Common manifests were not read at all:** `requirements.txt` (and
+  `requirements-*.txt`, `requirements/*.txt`, `constraints.txt`) and
+  `pyproject.toml` for PyPI, `packages.config` for NuGet, the dependency tables
+  of `Cargo.toml` (including renamed dependencies) and `go.mod` `require` and
+  `replace` targets for Go. A new coverage-matrix test puts a bundled
+  indicator into every ecosystem and file format, at the root and one
+  directory down, and requires a real scan to report it exactly once.
 - **Ten live, legitimate Composer packages were blocked by name in every
   version** and reported as critical in every project using them, among them
   `laravel-lang/lang` (12.3M downloads, a clean release on 2026-09-20) and

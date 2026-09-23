@@ -72,13 +72,16 @@ import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scann
 import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
 import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
 import { isPubFile, scanPubContent } from "./pub-scanner.js";
+import { isNestedManifest, scanNestedManifest } from "./nested-manifests.js";
 import { isDockerfileSyntax, scanImageReferences } from "./container-image.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
 import {
   isPythonLockfile,
+  isPythonManifest,
   scanPythonLockfileContent,
+  scanPythonManifestContent,
   scanPythonLockfiles,
 } from "./python-lockfile-scanner.js";
 import { checkIOCBlocklist, checkBadVersion, checkFileDigest } from "./ioc-blocklist.js";
@@ -374,8 +377,15 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const mavenBuildFile = isMavenFile(relativePath);
     // Same reason for pub: pubspec.lock has no scannable extension.
     const pubspecFile = isPubFile(relativePath);
+    // requirements*.txt has no scannable extension; pyproject.toml does, and is
+    // matched here too so the pypi: lookup has one dispatch point.
+    const pythonManifest = isPythonManifest(relativePath);
+    // Ruby, Composer, NuGet, Cargo and Go manifests below the scan root: their
+    // own scanners read only the root (see nested-manifests.ts).
+    const nestedManifest = isNestedManifest(relativePath);
     const inlineContentTarget =
-      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile || pubspecFile;
+      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile ||
+      pubspecFile || pythonManifest || nestedManifest;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -414,6 +424,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (pubspecFile) {
         findings.push(...scanPubContent(prefetchedContent, relativePath, threatFeed));
+      }
+      if (pythonManifest) {
+        findings.push(...scanPythonManifestContent(prefetchedContent, relativePath, threatFeed));
+      }
+      if (nestedManifest) {
+        findings.push(...scanNestedManifest(prefetchedContent, relativePath, threatFeed));
       }
       if (nestedPythonLockfile) {
         findings.push(
