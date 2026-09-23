@@ -1591,10 +1591,11 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // packages/extensions (162 release artifacts) across npm, Packagist, Go modules and Chrome
   // to deliver the DEV#POPPER RAT + OmniStealer via obfuscated JS loaders (fake .woff2 fonts
   // run from VS Code tasks; second stages fetched over TRON/Aptos/BNB RPC + XOR-decrypted eval).
-  // "Xpos587" is the compromised GitHub account behind the malicious Go module git2md; tracked
-  // here for source-reference matching. The broader "7span"/"sevenspan" and "Artiffusion-Inc"
-  // accounts are NOT blocked to avoid false positives on their legitimate, non-weaponized repos.
-  "Xpos587",
+  // "Xpos587" was listed here until 2026-09-23 and is REMOVED: it is the COMPROMISED account of
+  // the live project git2md, so an account entry flagged every reference to a real developer.
+  // The infected artifact is the one pinned git2md pseudo-version in threat-intel.ts, and the
+  // loader itself is EDITOR_TASK_EXECUTES_ASSET. The broader "7span"/"sevenspan" and
+  // "Artiffusion-Inc" accounts are likewise NOT blocked, for the same reason.
 
   // NeoShadow npm supply-chain attack (Aikido, 2026-01-05)
   // "cjh97123" is the npm publisher account that shipped all four typosquats (viem-js,

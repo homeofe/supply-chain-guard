@@ -142,6 +142,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   format, at the scan root and one directory down, requiring exactly one
   finding each. A declared format without a proof, or a fixture for an
   undeclared one, fails the suite.
+- `EDITOR_TASK_EXECUTES_ASSET`: a `.vscode/tasks.json` task that runs an
+  interpreter on a file named as a font, image or media asset (critical when
+  it runs on folder open). This is the Contagious Interview "Fake Font"
+  loader (`node ./public/fonts/fa-solid-400.woff2`, the font being obfuscated
+  JavaScript), which no existing rule detected: a real infected module from
+  the Go proxy scanned clean. Only option flags may sit between the
+  interpreter and the file, so a script that takes an asset as an argument is
+  not flagged.
 
 ### Changed
 
@@ -151,6 +159,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **Fifteen Go modules of the Contagious Interview "Fake Font" wave and
+  `github.com/Xpos587/git2md` were blocked by name in every version**, both in
+  the feed and as a name pattern, and the `Xpos587` account was a
+  malicious-account entry. All of them are developer repositories the wave
+  infected, not attacker-created modules; `lambda-platform/lambda` is a
+  framework released since 2021 whose 137 retrievable versions on the Go
+  module proxy are all clean. Every module was checked against the proxy's
+  module zips: the five pseudo-versions whose zip carries the loader are now
+  version-pinned, the ten modules with no retrievable version at all are no
+  longer listed, and the account entry is removed. A checkout that carries the
+  loader is caught by `EDITOR_TASK_EXECUTES_ASSET` whatever its name.
 - `yarn.lock`, `pnpm-lock.yaml` and `bun.lock` below the scan root were not
   checked at all; they are now matched like the root lockfiles, against the
   `package.json` beside them.

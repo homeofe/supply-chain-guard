@@ -1,3 +1,58 @@
+## Go victim entries and the Fake Font loader (2026-09-23) (claude-opus-5-5)
+
+Settles the open item the section below carried forward. Same branch (PR 326), unreleased.
+
+### Measured
+
+- 16 Go paths (15 from the Contagious Interview "Fake Font" wave, plus git2md from PolinRider)
+  were whole-name blocks in the feed. 15 of them were also in a `patterns.ts` name regex, and
+  `Xpos587` was an account entry.
+- Every path was checked against the Go module proxy, which keeps module zips, by opening each
+  served version and looking for the loader:
+  - the 799-byte `eslint-check` `.vscode/tasks.json`;
+  - a `.woff2` without the `wOF2` magic.
+- `lambda-platform/lambda`:
+  - 449 versions listed, 137 retrievable, released 2021 to 2026;
+  - all 137 clean, including all 16 published in 2026;
+  - the other 312 were never cached, and the origin is GitHub-blocked, so nobody can fetch them.
+- Five pseudo-versions carry the loader:
+  - `glacialspring/go-winsparkle`, `glacialspring/static`, `zainirfan13/graphql-client`,
+    `dexbotsdev/uniswap-v2-v3-arbitrage` and `Xpos587/git2md`;
+  - their dates run from 2018 to 2025 because the injecting commits are backdated.
+- Ten modules have no retrievable version at all: proxy 404 on `@latest` three times each, and
+  on the direct zip where a pseudo-version was known.
+- A real infected module, scanned on openclaw (NOT locally: Defender locks the extracted
+  `tasks.json`, which makes a local scan look clean for the wrong reason):
+  - `glacialspring/static` scanned completely clean;
+  - `git2md` was caught only through the `Xpos587` account string in `setup.py`.
+  - So the loader had no behavioural detection at all.
+
+### Changed
+
+- The five infected pseudo-versions are pinned. The ten unfetchable modules and
+  `lambda-platform/lambda` are no longer listed. The Go paths left the name-regex table, and
+  `Xpos587` left the account list.
+- New rule `EDITOR_TASK_EXECUTES_ASSET`: an interpreter running a font, image or media file from
+  a VS Code task. It is critical on folderOpen and high otherwise.
+- Mutation proof: 10 cuts, all red, with baseline and post-restore green. The cuts cover:
+  - the rule;
+  - its flag-only token guard;
+  - the interpreter word boundary;
+  - the severity escalation;
+  - each pin shape;
+  - lambda as a name block;
+  - the regex table;
+  - the account entry.
+- One cut first SURVIVED: the account negative test wrote only `go.mod`, which the account
+  check does not read. The test now imports the module from a `.go` file.
+
+### Not covered, deliberately
+
+- The rule reads `.vscode/tasks.json` at the scan root only, as the existing task rules do. A
+  loader inside a vendored module is not reached.
+- A bare fake font without the task is inert and is not flagged. Git LFS pointer files in font
+  directories would make a magic-byte rule noisy.
+
 ## Remaining coverage, coverage gate and README rewrite (2026-09-23) (claude-opus-5-5)
 
 Same branch (PR 326), still unreleased. The owner asked, before v6.3.0, for
@@ -56,10 +111,7 @@ proven. That list is now closed; this section supersedes it.
 
 ### Open
 
-- Data question carried forward: the lambda-platform Go module and the
-  Contagious Interview Go repositories are whole-name entries that the
-  bare-name FP audit could not settle against a live registry. They need a
-  version or liveness check before the next cutoff.
+- (Settled the same day, see "Go victim entries" below.)
 - Before v6.3.0: add the SECURITY.md supported-versions row (minor bump).
   The release decision stays with the owner.
 

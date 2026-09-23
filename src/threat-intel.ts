@@ -581,21 +581,24 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // still holding 4.2.11 or 1.2.9 is exactly what must be caught - without touching clean ones.
   { type: "package", value: "html-to-gutenberg@4.2.11", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
   { type: "package", value: "fetch-page-assets@1.2.9", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/lambda", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/ebarimt-rest-api", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/dan", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/reauheau/goaubio", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/glacialspring/go-winsparkle", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/glacialspring/static", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/bm-197/chill", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/naol7/dist-task-scheduler", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/anatoli-derese/a2sv-excercise", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/zainirfan13/graphql-client", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/hngi/team-fierce-backend-golang", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/rickt/slack-weather-bot", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/Barsu5489/commerce", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/Setsu548/Logistic", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  // Go modules of the same wave, CORRECTED 2026-09-23. These were 15 whole-name blocks. Every
+  // path is a developer repository the wave INFECTED (a backdated commit adding the 799-byte
+  // .vscode/tasks.json "eslint-check" loader plus JavaScript posing as
+  // public/fonts/fa-solid-400.woff2), not an attacker-created module, so a name block flags the
+  // owner's clean history. Measured against the Go module proxy, which keeps module zips:
+  // - lambda-platform/lambda is a framework released since 2021: 137 of its 449 versions are
+  //   retrievable and ALL are clean, including the 16 published in 2026. Dropped.
+  // - the four pinned below are the exact pseudo-versions whose proxy zip carries the loader
+  //   (their commit dates are forged, hence 2018-2025 timestamps). A clean restore gets a new
+  //   pseudo-version and is not matched.
+  // - the other ten have no retrievable version at all (proxy 404, repository deleted or
+  //   blocked), so no artifact exists to pin and nothing installable is protected by a name
+  //   block. Dropped. A checkout of any of them is still caught by what it contains:
+  //   EDITOR_TASK_EXECUTES_ASSET (skills-scanner.ts) flags the loader itself.
+  { type: "package", value: "go:github.com/glacialspring/go-winsparkle@v0.0.0-20250402002608-9d703488711b", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/glacialspring/static@v0.0.0-20181015024211-023dc73bc332", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/zainirfan13/graphql-client@v0.0.0-20220912215956-d304e79da123", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage@v0.0.0-20231007040513-b492291579de", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
   // Fresh DPRK "Contagious Interview" wave: 6 attacker-uploaded npm packages masquerade as
@@ -640,11 +643,12 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // Chrome. Obfuscated JS loaders (hidden in config.js / fake .woff2 fonts, run via VS Code tasks on
   // folder-open) decrypt a second stage fetched over TRON / Aptos / BNB Smart Chain RPC with an
   // embedded XOR key and eval() it, dropping the DEV#POPPER RAT + OmniStealer (credential/browser/
-  // wallet theft). Only the concretely enumerated malicious Go module is pinned here: git2md from
-  // the compromised account Xpos587 at v0.0.0-20260503100027-79bdb26ca95d. The npm/Composer package
+  // wallet theft). Only the concretely enumerated malicious Go module is pinned here (it was a bare
+  // name until 2026-09-23, blocking the live project): git2md from the compromised account Xpos587 at
+  // v0.0.0-20260503100027-79bdb26ca95d, whose proxy zip carries the loader. The npm/Composer package
   // names and the Chrome extension ID were not publicly enumerated at feed time and are omitted to
   // avoid guessing; git-history rewriting/force-pushes make the accounts' clean history untrustworthy.
-  { type: "package", value: "go:github.com/Xpos587/git2md", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
+  { type: "package", value: "go:github.com/Xpos587/git2md@v0.0.0-20260503100027-79bdb26ca95d", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
 
   // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026). 17
   // packages published ~July 7 across npm (13, versions 1.0.0-1.0.3) and PyPI

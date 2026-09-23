@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 9143,
+  "entryCount": 9132,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -2457,137 +2457,42 @@
     },
     {
       "type": "package",
-      "value": "go:github.com/lambda-platform/lambda",
+      "value": "go:github.com/glacialspring/go-winsparkle@v0.0.0-20250402002608-9d703488711b",
       "severity": "critical",
-      "confidence": 0.95,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
+      "source": "The Hacker News; loader verified in the Go proxy module zip",
       "firstSeen": "2026-06-29"
     },
     {
       "type": "package",
-      "value": "go:github.com/lambda-platform/ebarimt-rest-api",
+      "value": "go:github.com/glacialspring/static@v0.0.0-20181015024211-023dc73bc332",
       "severity": "critical",
-      "confidence": 0.95,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
+      "source": "The Hacker News; loader verified in the Go proxy module zip",
       "firstSeen": "2026-06-29"
     },
     {
       "type": "package",
-      "value": "go:github.com/lambda-platform/dan",
+      "value": "go:github.com/zainirfan13/graphql-client@v0.0.0-20220912215956-d304e79da123",
       "severity": "critical",
-      "confidence": 0.95,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
+      "source": "The Hacker News; loader verified in the Go proxy module zip",
       "firstSeen": "2026-06-29"
     },
     {
       "type": "package",
-      "value": "go:github.com/reauheau/goaubio",
+      "value": "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage@v0.0.0-20231007040513-b492291579de",
       "severity": "critical",
-      "confidence": 0.95,
+      "confidence": 1,
       "family": "InvisibleFerret",
       "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/glacialspring/go-winsparkle",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/glacialspring/static",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/bm-197/chill",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/naol7/dist-task-scheduler",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/anatoli-derese/a2sv-excercise",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/zainirfan13/graphql-client",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/hngi/team-fierce-backend-golang",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/rickt/slack-weather-bot",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/Barsu5489/commerce",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
-      "firstSeen": "2026-06-29"
-    },
-    {
-      "type": "package",
-      "value": "go:github.com/Setsu548/Logistic",
-      "severity": "critical",
-      "confidence": 0.95,
-      "family": "InvisibleFerret",
-      "campaign": "Contagious Interview Fake Font",
+      "source": "The Hacker News; loader verified in the Go proxy module zip",
       "firstSeen": "2026-06-29"
     },
     {
@@ -2700,7 +2605,7 @@
     },
     {
       "type": "package",
-      "value": "go:github.com/Xpos587/git2md",
+      "value": "go:github.com/Xpos587/git2md@v0.0.0-20260503100027-79bdb26ca95d",
       "severity": "critical",
       "confidence": 0.95,
       "family": "OmniStealer",

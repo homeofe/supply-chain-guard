@@ -796,6 +796,17 @@ function collectTaskCommandLines(
 }
 
 /**
+ * An interpreter executing a file whose extension says it is a font, image or
+ * media asset. That is the Contagious Interview "Fake Font" loader
+ * (`node ./public/fonts/fa-solid-400.woff2`, the woff2 being obfuscated
+ * JavaScript), and no legitimate task runs a font. Only flag-shaped tokens may
+ * sit between the interpreter and the file, so `node build.js images/a.png`
+ * (a real script taking an asset ARGUMENT) never matches.
+ */
+const TASK_ASSET_EXEC_REGEX =
+  /(?:^|[\s;&|(])(?:node|nodejs|deno(?:\s+run)?|bun(?:\s+run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\.exe)?\s+(?:-[-\w=.:]*\s+)*["']?[^\s"'|&;]*\.(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)(?=["'\s|&;)]|$)/i;
+
+/**
  * Scan a .vscode/tasks.json for dangerous task commands.
  *
  * Deliberately reuses the command vocabulary that already guards agent hooks
@@ -822,6 +833,24 @@ export function scanEditorTasksContent(
   }
 
   for (const { line, autoRun } of collectTaskCommandLines(parsed)) {
+    if (TASK_ASSET_EXEC_REGEX.test(line)) {
+      findings.push({
+        rule: "EDITOR_TASK_EXECUTES_ASSET",
+        description:
+          "Editor task runs an interpreter on a file named as a font, image or media asset, the disguise used by the Contagious Interview \"Fake Font\" loader." +
+          (autoRun
+            ? " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action."
+            : " The task runs when invoked."),
+        severity: autoRun ? "critical" : "high",
+        file: relativePath,
+        match: truncate(line),
+        confidence: 0.95,
+        category: "malware",
+        recommendation:
+          "Do not open this folder in an editor that runs tasks. Remove the task and inspect the referenced file: an asset that an interpreter executes is code.",
+      });
+      continue;
+    }
     const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
     const dangerous =
       downloadExec ||

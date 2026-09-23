@@ -168,17 +168,19 @@ describe("Go Module Scanner", () => {
 
     it("does not flag the verified a2sv coursework repo while retaining the real campaign", () => {
       const legitimate = "github.com/amantsehay/a2sv-go-course";
+      // The campaign entry is the infected pseudo-version, not the module name.
       const attacker = "github.com/glacialspring/go-winsparkle";
+      const infected = "v0.0.0-20250402002608-9d703488711b";
       const content = [
         `${legitimate} v1.0.0 h1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`,
-        `${attacker} v1.0.0 h1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=`,
+        `${attacker} ${infected} h1:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=`,
       ].join("\n");
 
       const hits = scanGoSumContent(content, "go.sum").filter(
         (finding) => finding.rule === "GO_MALICIOUS_MODULE",
       );
       expect(hits).toHaveLength(1);
-      expect(hits[0]?.match).toBe(`${attacker}@v1.0.0`);
+      expect(hits[0]?.match).toBe(`${attacker}@${infected}`);
       expect(hits[0]?.severity).toBe("critical");
     });
 

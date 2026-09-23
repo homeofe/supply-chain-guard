@@ -2251,14 +2251,12 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // at all. It is a real person's public learning repository that this table was
   // calling DPRK malware.
   //
-  // The rest of the cluster verified as attacker-controlled and is kept:
-  // lambda-platform/lambda and hngi/team-fierce-backend-golang are BLOCKED BY GITHUB
-  // for a terms-of-service violation (HTTP 403, blocked 2026-07-03); nine paths are
-  // gone (404); glacialspring/go-winsparkle and glacialspring/static both carry the
-  // identical 799-byte .vscode/tasks.json plus the woff2 payload, and "static" is a
-  // fork of gin-contrib/static whose injecting commit is backdated to the upstream
-  // 2018 history. The rule matches only the fork path, never gin-contrib/static.
-  "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
+  // The Go module paths of this wave were REMOVED from this table on 2026-09-23. They are
+  // developer repositories the wave infected, and a regex here blocks every version by name:
+  // lambda-platform/lambda, for one, is a framework released since 2021 whose 137 retrievable
+  // versions on the Go module proxy are all clean. The four with a verified infected
+  // pseudo-version are version-pinned feed entries in threat-intel.ts; the loader itself is
+  // detected by EDITOR_TASK_EXECUTES_ASSET, whatever repository carries it.
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
   // Six attacker-uploaded npm packages masquerading as Rollup polyfill tooling to facilitate

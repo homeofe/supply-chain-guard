@@ -150,19 +150,18 @@ describe("npm Scanner Patterns", () => {
         `${legit} is a student's coursework repo, not campaign infrastructure`,
       ).toEqual([]);
 
-      // BufferZoneCorp is deliberately NOT one of the paths asserted here. That
-      // account is also carried in KNOWN_MALICIOUS_GITHUB_ACCOUNTS, so writing its
-      // github.com path literally makes this file itself trip the repository's own
-      // self-scan at critical. Its cluster is covered by a separate rule and by
-      // that account entry; the two paths below exercise the rule this test is about.
-      for (const attacker of [
+      // The rest of that Go cluster left this table on 2026-09-23: they are
+      // infected victim repositories, now carried as version-pinned feed entries
+      // (see the Fake Font block in campaigns.test.ts). A name pattern for any of
+      // them would block every clean version again.
+      for (const victim of [
         "github.com/glacialspring/go-winsparkle",
         "github.com/lambda-platform/lambda",
       ]) {
         expect(
-          MALICIOUS_PACKAGE_PATTERNS.some((p) => new RegExp(p).test(attacker)),
-          `${attacker} must stay covered`,
-        ).toBe(true);
+          MALICIOUS_PACKAGE_PATTERNS.filter((p) => new RegExp(p).test(victim)),
+          `${victim} must not be a name pattern`,
+        ).toEqual([]);
       }
 
       // The rule targets the attacker's fork, never the upstream project it copies.

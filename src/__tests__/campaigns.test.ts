@@ -2151,7 +2151,42 @@ describe("Campaign Signatures", () => {
       }
     });
 
-    it("should match the malicious Go module paths against the malicious-name patterns", () => {
+    // The Go modules of this wave are INFECTED developer repositories. They were
+    // name-blocked until 2026-09-23, which flagged every version, including a
+    // framework (lambda-platform/lambda) whose 137 retrievable proxy versions are
+    // all clean. Only the pseudo-versions whose Go proxy zip carries the loader
+    // are indicators now.
+    const INFECTED_GO = [
+      ["github.com/glacialspring/go-winsparkle", "v0.0.0-20250402002608-9d703488711b"],
+      ["github.com/glacialspring/static", "v0.0.0-20181015024211-023dc73bc332"],
+      ["github.com/zainirfan13/graphql-client", "v0.0.0-20220912215956-d304e79da123"],
+      ["github.com/dexbotsdev/uniswap-v2-v3-arbitrage", "v0.0.0-20231007040513-b492291579de"],
+    ] as const;
+
+    const goScan = async (mod: string, ver: string) => {
+      fs.writeFileSync(
+        path.join(tempDir, "go.mod"),
+        `module example.com/consumer\n\ngo 1.22\n\nrequire ${mod} ${ver}\n`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      return report.findings.filter((f) => f.rule === "GO_MALICIOUS_MODULE");
+    };
+
+    it.each(INFECTED_GO)("flags the infected pseudo-version %s@%s", async (mod, ver) => {
+      const hits = await goScan(mod, ver);
+      expect(hits, `${mod}@${ver} carries the loader and must be flagged`).toHaveLength(1);
+      expect(hits[0]?.severity).toBe("critical");
+    });
+
+    it.each(INFECTED_GO)("does NOT flag another version of %s", async (mod) => {
+      expect(await goScan(mod, "v0.0.0-20260901000000-0123456789ab")).toEqual([]);
+    });
+
+    it("does NOT flag lambda-platform/lambda, whose retrievable versions are all clean", async () => {
+      expect(await goScan("github.com/lambda-platform/lambda", "v0.9.19")).toEqual([]);
+    });
+
+    it("carries no Go path of this wave as a name pattern", () => {
       for (const mod of [
         "github.com/lambda-platform/lambda",
         "github.com/lambda-platform/ebarimt-rest-api",
@@ -2161,15 +2196,18 @@ describe("Campaign Signatures", () => {
         "github.com/glacialspring/static",
         "github.com/bm-197/chill",
         "github.com/naol7/dist-task-scheduler",
+        "github.com/anatoli-derese/a2sv-excercise",
         "github.com/dexbotsdev/uniswap-v2-v3-arbitrage",
+        "github.com/zainirfan13/graphql-client",
+        "github.com/hngi/team-fierce-backend-golang",
         "github.com/rickt/slack-weather-bot",
         "github.com/Barsu5489/commerce",
         "github.com/Setsu548/Logistic",
       ]) {
-        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
-          new RegExp(pattern).test(mod),
-        );
-        expect(matches).toBe(true);
+        expect(
+          MALICIOUS_PACKAGE_PATTERNS.filter((pattern) => new RegExp(pattern).test(mod)),
+          `${mod} is an infected victim repository; a name pattern blocks every version`,
+        ).toEqual([]);
       }
     });
 
@@ -2295,18 +2333,37 @@ describe("Campaign Signatures", () => {
   // =================================================================
 
   describe("PolinRider DPRK Supply Chain (July 2026)", () => {
-    it("should flag the compromised Xpos587 GitHub account reference", async () => {
+    // Xpos587 is the COMPROMISED account of a live project (git2md). Until
+    // 2026-09-23 the account was a malicious-account entry and the module a bare
+    // name, which flagged every reference to a real developer. The indicator is
+    // the one pseudo-version whose Go proxy zip carries the loader.
+    const GIT2MD = "github.com/Xpos587/git2md";
+    const INFECTED = "v0.0.0-20260503100027-79bdb26ca95d";
+
+    const goModScan = async (ver: string) => {
+      fs.writeFileSync(
+        path.join(tempDir, "go.mod"),
+        `module example.com/consumer\n\ngo 1.22\n\nrequire ${GIT2MD} ${ver}\n`,
+      );
+      return (await scan({ target: tempDir, format: "text" })).findings;
+    };
+
+    it("flags the infected git2md pseudo-version", async () => {
+      const hits = (await goModScan(INFECTED)).filter((f) => f.rule === "GO_MALICIOUS_MODULE");
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.severity).toBe("critical");
+    });
+
+    it("does NOT flag another git2md version or the account itself", async () => {
+      // The account check reads source references, so import the module the way
+      // a consumer does; go.mod alone would leave that check untested.
       fs.writeFileSync(
         path.join(tempDir, "deps.go"),
-        'package main\nimport _ "github.com/Xpos587/git2md"'
+        `package main\nimport _ "${GIT2MD}"\n`,
       );
-
-      const report = await scan({ target: tempDir, format: "text" });
-      const finding = report.findings.find(
-        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
-      );
-      expect(finding).toBeDefined();
-      expect(finding?.severity).toBe("critical");
+      const findings = await goModScan("v0.0.0-20260901000000-0123456789ab");
+      expect(findings.filter((f) => f.rule === "GO_MALICIOUS_MODULE")).toEqual([]);
+      expect(findings.filter((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT")).toEqual([]);
     });
   });
 

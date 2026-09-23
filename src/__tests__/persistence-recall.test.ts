@@ -128,6 +128,70 @@ describe("scanEditorTasksContent", () => {
   });
 });
 
+// The Contagious Interview "Fake Font" loader, in the shape the Go proxy zips of
+// the infected modules carry: a hidden task that runs node on a .woff2 which is
+// really obfuscated JavaScript. Nothing in the line is eval, base64 or a
+// download, so the dangerous-command battery above never saw it.
+const FAKE_FONT_TASK = {
+  label: "eslint-check",
+  type: "shell",
+  command:
+    "(command -v node >/dev/null 2>&1 && node ./public/fonts/fa-solid-400.woff2) || (where node >nul 2>&1 && node ./public/fonts/fa-solid-400.woff2) || echo ''",
+  isBackground: true,
+  hide: true,
+  presentation: { reveal: "never", echo: false },
+  runOptions: { runOn: "folderOpen" },
+};
+
+describe("EDITOR_TASK_EXECUTES_ASSET", () => {
+  const rulesOf = (task: Record<string, unknown>) =>
+    scanEditorTasksContent(tasksJson(task), ".vscode/tasks.json").map((f) => `${f.rule}:${f.severity}`);
+
+  it("flags the Fake Font loader as critical when it runs on folder open", () => {
+    expect(rulesOf(FAKE_FONT_TASK)).toEqual(["EDITOR_TASK_EXECUTES_ASSET:critical"]);
+  });
+
+  it("is high when the task must be invoked", () => {
+    const { runOptions: _drop, ...manual } = FAKE_FONT_TASK;
+    expect(rulesOf(manual)).toEqual(["EDITOR_TASK_EXECUTES_ASSET:high"]);
+  });
+
+  it.each([
+    ["node in args", { command: "node", args: ["public/fonts/fa-solid-400.woff2"] }],
+    ["node with flags", { command: "node --no-warnings ./assets/logo.png" }],
+    ["deno run", { command: "deno run -A static/a.ttf" }],
+    ["python on an image", { command: "python3 img/banner.jpg" }],
+    ["windows override", { command: "echo ok", windows: { command: "node.exe", args: ["public\\fonts\\x.woff"] } }],
+    ["quoted path", { command: "node \"./public/fonts/fa-brands-400.woff2\"" }],
+  ])("flags %s", (_name, task) => {
+    expect(rulesOf({ label: "t", type: "shell", ...task })).toEqual(["EDITOR_TASK_EXECUTES_ASSET:high"]);
+  });
+
+  it.each([
+    ["a real script taking an asset argument", { command: "node", args: ["scripts/subset-font.js", "public/fonts/fa-solid-400.woff2"] }],
+    ["an image optimiser", { command: "node build.js images/a.png" }],
+    ["a copy of a font", { command: "cp public/fonts/a.woff2 dist/" }],
+    ["an npm script", { command: "npm", args: ["run", "fonts"] }],
+    ["a python module", { command: "python -m http.server" }],
+    ["an asset name that only starts with an interpreter name", { command: "nodemon ./a.png" }],
+  ])("does NOT flag %s", (_name, task) => {
+    expect(rulesOf({ label: "t", type: "shell", runOptions: { runOn: "folderOpen" }, ...task })).toEqual([]);
+  });
+
+  it("is reported by a directory scan of an infected checkout", async () => {
+    const dir = fixture("fake-font-loader", {
+      "go.mod": "module example.com/victim\n\ngo 1.22\n",
+      ".vscode/tasks.json": JSON.stringify({ version: "2.0.0", tasks: [FAKE_FONT_TASK] }, null, 2),
+      "public/fonts/fa-solid-400.woff2": " ".repeat(64) + "void 0;\n",
+    });
+    const report = await scan({ target: dir, format: "json" });
+    const hits = report.findings.filter((f) => f.rule === "EDITOR_TASK_EXECUTES_ASSET");
+    expect(hits).toHaveLength(1);
+    expect(hits[0].severity).toBe("critical");
+    expect(hits[0].file?.replace(/\\/g, "/")).toBe(".vscode/tasks.json");
+  });
+});
+
 describe("end-to-end persistence chain", () => {
   it("flags a .vscode/tasks.json autostart task through a real scan", async () => {
     const dir = fixture("tasks", {
