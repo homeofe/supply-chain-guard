@@ -95,6 +95,39 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(severities("C2_DOH_RESOLVER", content)).toEqual(["low"]);
   });
 
+  it("keeps an encoder call above the query that the query does not use at low", () => {
+    const content = [
+      'const digest = createHash("sha256").update(record).digest().toString("base64");',
+      "log.debug(`record digest ${digest}`);",
+      'const res = await fetch("https://dns.google/resolve?name=" + domain + "&type=TXT");',
+    ].join("\n");
+    expect(severities("C2_DOH_RESOLVER", content)).toEqual(["low"]);
+  });
+
+  it("does not count comparisons with eval or Function as a sink", () => {
+    const content = [
+      "if (handler === eval || typeof handler == Function) throw new Error(\"blocked\");",
+      'const cfg = Buffer.from(raw, "base64").toString();',
+      "const records = await dns.resolveTxt(domain);",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["low"]);
+  });
+
+  it.each([
+    "const F = globalThis.Function;\nF(payload)();",
+    "const { Function: F } = globalThis;\nF(payload)();",
+    "(0, eval)(payload);",
+    'window["eval"](payload);',
+  ])("reports a TXT answer reaching an aliased or indirect sink at medium: %s", (sink) => {
+    const content = [
+      "dns.resolveTxt(d, (e, r) => {",
+      '  const payload = Buffer.from(r[0][0], "base64").toString();',
+      sink,
+      "});",
+    ].join("\n");
+    expect(severities("DEAD_DROP_DNS_TXT", content)).toEqual(["medium"]);
+  });
+
   it("reports a TXT answer handed to an alias of Function at medium", () => {
     const content = [
       "dns.resolveTxt(d, (e, r) => {",

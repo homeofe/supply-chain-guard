@@ -172,22 +172,19 @@ function extractPubspec(lines: Line[]): PubPackage[] {
         // Flow form: `name: {path: ../x}`, or the same map continued on the
         // following, deeper-indented lines (`name: {` / `path: ../x` / `}`),
         // which are joined back into one map. Only lines up to the next
-        // dependency are read, so an unclosed map costs one pass. A map that
-        // never closes is not read, rather than guessed at as a pub.dev package.
+        // dependency are read, so an unclosed map costs one pass. A closing
+        // brace alone on its line is not a `key: value` line and never reaches
+        // this loop, so it looks exactly like a map that never closes: both are
+        // read up to the next dependency, failing towards a report.
         let flow = dep.value;
         if (!flow.endsWith("}")) {
-          let closed = false;
           const parts = [flow.slice(1)];
           for (let j = k + 1; j < body.length && body[j]!.indent > depIndent!; j++) {
-            const value = body[j]!.value;
+            const value = body[j]!.value.replace(/,$/, "");
             const closes = value.endsWith("}") && !value.startsWith("{");
             parts.push(`${body[j]!.key}: ${closes ? value.slice(0, -1) : value}`);
-            if (closes) {
-              closed = true;
-              break;
-            }
+            if (closes) break;
           }
-          if (!closed) return;
           flow = `{${parts.map((p) => p.trim().replace(/,$/, "")).filter(Boolean).join(", ")}}`;
         }
         const pkg = pubDependency(dep.key, flowPairs(flow), dep.line);

@@ -77,47 +77,100 @@ const MIN_FILE_SIZE = 500;
  * application/octet-stream data URI is how a payload is smuggled, so it stays
  * visible to both passes. The payload class excludes newlines, so removal
  * never shifts a line number. The label alone is not trusted: a URI is only
- * exempt when its decoded bytes start with a real image or font signature
- * (see hasMediaSignature), so a payload relabelled `image/png` stays visible.
+ * exempt when its decoded bytes are a complete image or font container (see
+ * isWellFormedMedia), so a payload relabelled `image/png`, or appended after a
+ * real image header, stays visible.
  */
 const EXEMPT_DATA_URI =
   /data:(?:image\/(?!svg\+xml)[A-Za-z0-9.+-]{1,64}|font\/[A-Za-z0-9.+-]{1,64}|application\/(?:x-)?font-(?:woff2?|ttf|otf|sfnt|opentype|truetype)|application\/vnd\.ms-fontobject);base64,[A-Za-z0-9+/=]+/gi;
 
 /**
- * Leading bytes of the image and font formats that are inlined as data: URIs.
- * An offset is given where the signature does not start at byte 0.
+ * Is a data: URI payload a complete image or font container? The decoded
+ * bytes must carry the format's signature AND its own structure must account
+ * for the whole blob (chunk walk to IEND, box walk, declared total length,
+ * end marker), so bytes appended after a real header are not exempt. A
+ * payload hidden inside a well-formed container is out of reach of any
+ * entropy check; the code that decodes and runs it is what other rules see.
  */
-const MEDIA_SIGNATURES: Array<[number, number[]]> = [
-  [0, [0x89, 0x50, 0x4e, 0x47]], // PNG
-  [0, [0xff, 0xd8, 0xff]], // JPEG
-  [0, [0x47, 0x49, 0x46, 0x38]], // GIF8
-  [0, [0x42, 0x4d]], // BMP
-  [0, [0x00, 0x00, 0x01, 0x00]], // ICO
-  [0, [0x00, 0x00, 0x02, 0x00]], // CUR
-  [0, [0x49, 0x49, 0x2a, 0x00]], // TIFF, little-endian
-  [0, [0x4d, 0x4d, 0x00, 0x2a]], // TIFF, big-endian
-  [8, [0x57, 0x45, 0x42, 0x50]], // WEBP (after RIFF....)
-  [4, [0x66, 0x74, 0x79, 0x70]], // ftyp: AVIF, HEIC
-  [0, [0x77, 0x4f, 0x46, 0x46]], // wOFF
-  [0, [0x77, 0x4f, 0x46, 0x32]], // wOF2
-  [0, [0x00, 0x01, 0x00, 0x00]], // TrueType
-  [0, [0x4f, 0x54, 0x54, 0x4f]], // OTTO (OpenType CFF)
-  [0, [0x74, 0x72, 0x75, 0x65]], // 'true' (Apple TrueType)
-  [34, [0x4c, 0x50]], // EOT magic number 0x504C, little-endian
-];
+export function isWellFormedMedia(base64: string): boolean {
+  const b = Buffer.from(base64, "base64");
+  const n = b.length;
+  if (n < 12) return false;
+  const at = (offset: number, bytes: number[]): boolean =>
+    bytes.every((v, i) => b[offset + i] === v);
 
-/** Do the first bytes of a base64 payload match an image or font signature? */
-export function hasMediaSignature(base64: string): boolean {
-  const head = Buffer.from(base64.slice(0, 48), "base64");
-  return MEDIA_SIGNATURES.some(([offset, bytes]) =>
-    bytes.every((b, i) => head[offset + i] === b),
-  );
+  // PNG: chunks (length, type, data, CRC) up to and including IEND.
+  if (at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    let pos = 8;
+    while (pos + 12 <= n) {
+      const next = pos + 12 + b.readUInt32BE(pos);
+      if (at(pos + 4, [0x49, 0x45, 0x4e, 0x44])) return next === n;
+      pos = next;
+    }
+    return false;
+  }
+  // JPEG: start and end of image markers.
+  if (at(0, [0xff, 0xd8, 0xff])) return b[n - 2] === 0xff && b[n - 1] === 0xd9;
+  // GIF87a / GIF89a, ending in the trailer byte.
+  if (at(0, [0x47, 0x49, 0x46, 0x38]) && (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61) {
+    return b[n - 1] === 0x3b;
+  }
+  // WEBP: the RIFF size covers everything after the first 8 bytes.
+  if (at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50])) {
+    return b.readUInt32LE(4) + 8 === n;
+  }
+  // BMP: declared file size.
+  if (at(0, [0x42, 0x4d])) return b.readUInt32LE(2) === n;
+  // ISO BMFF (AVIF, HEIC, the JPEG XL container): boxes tile the file.
+  if (at(4, [0x66, 0x74, 0x79, 0x70]) || at(0, [0, 0, 0, 0x0c, 0x4a, 0x58, 0x4c, 0x20])) {
+    let pos = 0;
+    while (pos + 8 <= n) {
+      let size = b.readUInt32BE(pos);
+      if (size === 0) return true;
+      if (size === 1) {
+        if (pos + 16 > n) return false;
+        size = b.readUInt32BE(pos + 8) * 2 ** 32 + b.readUInt32BE(pos + 12);
+      }
+      if (size < 8) return false;
+      pos += size;
+    }
+    return pos === n;
+  }
+  // ICO / CUR: the last image in the directory ends the file.
+  if (at(0, [0x00, 0x00]) && (b[2] === 1 || b[2] === 2) && b[3] === 0) {
+    const count = b.readUInt16LE(4);
+    if (count === 0 || 6 + 16 * count > n) return false;
+    let end = 0;
+    for (let i = 0; i < count; i++) {
+      const entry = 6 + 16 * i;
+      end = Math.max(end, b.readUInt32LE(entry + 12) + b.readUInt32LE(entry + 8));
+    }
+    return end === n;
+  }
+  // WOFF / WOFF2: declared total length.
+  if (at(0, [0x77, 0x4f, 0x46, 0x46]) || at(0, [0x77, 0x4f, 0x46, 0x32])) {
+    return b.readUInt32BE(8) === n;
+  }
+  // TrueType / OpenType: the table directory reaches the end (4-byte padding).
+  if (at(0, [0x00, 0x01, 0x00, 0x00]) || at(0, [0x4f, 0x54, 0x54, 0x4f]) || at(0, [0x74, 0x72, 0x75, 0x65])) {
+    const tables = b.readUInt16BE(4);
+    if (tables === 0 || 12 + 16 * tables > n) return false;
+    let end = 0;
+    for (let i = 0; i < tables; i++) {
+      const record = 12 + 16 * i;
+      end = Math.max(end, b.readUInt32BE(record + 8) + b.readUInt32BE(record + 12));
+    }
+    return end <= n && n - end < 4;
+  }
+  // EOT: declared size and the 0x504C magic number.
+  if (n > 36 && at(34, [0x4c, 0x50])) return b.readUInt32LE(0) === n;
+  return false;
 }
 
 /** The one data URI exemption shared by the file-level and per-string passes. */
 export function stripExemptDataUris(content: string): string {
   return content.replace(EXEMPT_DATA_URI, (uri) =>
-    hasMediaSignature(uri.slice(uri.indexOf(",") + 1)) ? "" : uri,
+    isWellFormedMedia(uri.slice(uri.indexOf(",") + 1)) ? "" : uri,
   );
 }
 

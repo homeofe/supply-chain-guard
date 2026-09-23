@@ -175,14 +175,20 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names(yaml, "pubspec.yaml")).toEqual(["hijacked_pkg@0.1.5", "http@-"]);
   });
 
-  it("does not read a multi-line flow map that never closes", () => {
+  it("reads a multi-line flow map closed by a bare brace, by `},`, or not at all", () => {
     const yaml = [
       "dependencies:",
-      "  hijacked_pkg: {hosted: https://pub.dev,",
+      "  bare_close: {",
+      "    hosted: {url: https://pub.dev},",
       "    version: 0.1.5",
+      "  }",
+      "  comma_close: {hosted: https://pub.dev,",
+      "    version: 0.2.0},",
+      "  never_closed: {hosted: https://pub.dev,",
+      "    version: 0.3.0",
       "  http: ^1.2.0",
     ].join("\n");
-    expect(names(yaml, "pubspec.yaml")).toEqual(["http@-"]);
+    expect(names(yaml, "pubspec.yaml")).toEqual(["bare_close@0.1.5", "comma_close@0.2.0", "never_closed@0.3.0", "http@-"]);
   });
 
   it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {

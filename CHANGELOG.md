@@ -241,8 +241,7 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   states (`scalaVersion`, `crossScalaVersions`), `CrossVersion.binary` like
   `%%`; Gradle dependencies with a variable version are read on configurations
   the script declares itself, not only on the built-in ones; pubspec and
-  GitLab CI `services:` flow maps written over several lines are read (a
-  pubspec map that never closes is not guessed at).
+  GitLab CI `services:` flow maps written over several lines are read.
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
   30 s and 4.6 s at a few hundred KB); both are linear now.
@@ -267,17 +266,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     classification is reported at info instead of medium.
   - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: one data-URI exemption for both
     passes, limited to `image/*` (not `image/svg+xml`, which can carry script),
-    `font/*` and the legacy font types, and only when the decoded bytes start
-    with a real image or font signature: a payload labelled `image/png` is
-    still reported. The file-level pass used to exempt every media type.
+    `font/*` and the legacy font types, and only when the decoded bytes are a
+    complete image or font container (its signature, and a structure that
+    accounts for every byte: PNG chunks to `IEND`, JPEG end marker, declared
+    RIFF/WOFF/EOT/BMP sizes, BMFF boxes, font table directory). A payload
+    labelled `image/png`, or appended after a real image header, is still
+    reported. The file-level pass used to exempt every media type.
   - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
     call with identifier boundaries (`setInterval(fetchNotifications, ...)`
     and `forgotPassword` no longer match), and both rules share one exclusion
     for minified and prose files.
   - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal (an
-    encoder call on the query line or the five lines above it, or a decoded
-    TXT answer reaching eval, Function or an alias of either, vm or a process
-    sink); an ordinary DNSSEC, SPF or DMARC lookup reports at low.
+    encoder result that reaches the query: on its line, or assigned in the
+    five lines above and used by it; or a decoded TXT answer reaching eval,
+    Function, an alias or indirect call of either, vm or a process sink); an
+    ordinary DNSSEC, SPF or DMARC lookup reports at low, including when an
+    unrelated digest is encoded nearby.
   - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
     extension whose only variable segment passed an anchored allowlist in the
     same function reports at info.
@@ -293,11 +297,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     line. A reusable workflow from another repository that receives
     `secrets: inherit` or a stored secret, and a local composite action that
     makes an outbound call, are reported too. A secret stays in scope for the
-    later steps of its job once a step holding it writes to `$GITHUB_ENV`,
-    `$GITHUB_OUTPUT` or a file, a secret in `strategy.matrix` counts for the
-    job, and Python `requests`/`httpx`/`urllib`, PowerShell web cmdlets,
-    `sftp`/`ftp`/`socat`/`telnet` and `scp`/`rsync` to a remote host count as
-    egress.
+    later steps of its job once a step holding it writes to `$GITHUB_ENV` or
+    `$GITHUB_OUTPUT` (or exports it from github-script); once it is written to
+    a file, it stays in scope for later steps that upload an artifact or read
+    a file. A secret in `strategy.matrix` counts for the job, and Python
+    `requests`/`httpx`/`urllib`, PowerShell web cmdlets and `Net.WebClient`,
+    `Send-MailMessage`, `sftp`/`ftp`/`socat`/`telnet` and `scp`/`rsync` to a
+    remote host count as egress.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a

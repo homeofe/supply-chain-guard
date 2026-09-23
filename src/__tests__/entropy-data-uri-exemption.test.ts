@@ -15,18 +15,48 @@ function uniformBase64(length: number): string {
 }
 
 const PAYLOAD = uniformBase64(640);
+const BODY = Buffer.from(PAYLOAD, "base64");
 
-/** A high-entropy payload behind a real file signature (padded to whole base64 groups). */
-function signed(signature: number[]): string {
-  const bytes = [...signature];
-  while (bytes.length % 3 !== 0) bytes.push(0);
-  return Buffer.from(bytes).toString("base64") + PAYLOAD;
-}
+const u32be = (n: number): Buffer => { const b = Buffer.alloc(4); b.writeUInt32BE(n); return b; };
+const u32le = (n: number): Buffer => { const b = Buffer.alloc(4); b.writeUInt32LE(n); return b; };
+const u16be = (n: number): Buffer => { const b = Buffer.alloc(2); b.writeUInt16BE(n); return b; };
+const ascii = (s: string): Buffer => Buffer.from(s, "latin1");
+const b64 = (...parts: Buffer[]): string => Buffer.concat(parts).toString("base64");
 
-const PNG = signed([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const WOFF = signed([0x77, 0x4f, 0x46, 0x46]);
-const WOFF2 = signed([0x77, 0x4f, 0x46, 0x32]);
-const TTF = signed([0x00, 0x01, 0x00, 0x00]);
+/** A PNG chunk; the CRC is not checked by the exemption. */
+const chunk = (type: string, data: Buffer): Buffer =>
+  Buffer.concat([u32be(data.length), ascii(type), data, Buffer.alloc(4)]);
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_BYTES = Buffer.concat([PNG_SIG, chunk("IHDR", Buffer.alloc(13)), chunk("IDAT", BODY), chunk("IEND", Buffer.alloc(0))]);
+const PNG = PNG_BYTES.toString("base64");
+
+/** WOFF and WOFF2 declare their total length at offset 8. */
+const woff = (magic: string): string => {
+  const head = Buffer.concat([ascii(magic), ascii("true"), u32be(0)]);
+  const whole = Buffer.concat([head, BODY]);
+  whole.writeUInt32BE(whole.length, 8);
+  return whole.toString("base64");
+};
+const WOFF = woff("wOFF");
+const WOFF2 = woff("wOF2");
+
+/** One table whose record reaches the end of the file. */
+const TTF = b64(
+  Buffer.from([0x00, 0x01, 0x00, 0x00]), u16be(1), Buffer.alloc(6),
+  ascii("glyf"), u32be(0), u32be(28), u32be(BODY.length), BODY,
+);
+
+const JPEG = b64(Buffer.from([0xff, 0xd8, 0xff, 0xe0]), BODY, Buffer.from([0xff, 0xd9]));
+
+/** JPEG XL container: signature box, ftyp box, codestream box. */
+const box = (type: string, data: Buffer): Buffer => Buffer.concat([u32be(8 + data.length), ascii(type), data]);
+const JXL = b64(
+  Buffer.from([0, 0, 0, 0x0c]), ascii("JXL "), Buffer.from([0x0d, 0x0a, 0x87, 0x0a]),
+  box("ftyp", Buffer.concat([ascii("jxl "), u32be(0), ascii("jxl ")])),
+  box("jxlc", BODY),
+);
+
+const WEBP = b64(ascii("RIFF"), u32le(4 + 8 + BODY.length), ascii("WEBP"), ascii("VP8L"), u32le(BODY.length), BODY);
 const rules = (content: string, file = "src/logo.ts") =>
   analyzeEntropy(content, file).map((finding) => finding.rule);
 
@@ -36,6 +66,9 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
     ["font/woff2", `@font-face { src: url(data:font/woff2;base64,${WOFF2}); }\n`],
     ["application/font-woff (legacy)", `@font-face { src: url(data:application/font-woff;base64,${WOFF}); }\n`],
     ["application/x-font-ttf (legacy)", `@font-face { src: url(data:application/x-font-ttf;base64,${TTF}); }\n`],
+    ["image/jpeg", `export const PHOTO = "data:image/jpeg;base64,${JPEG}";\n`],
+    ["image/webp", `export const PHOTO = "data:image/webp;base64,${WEBP}";\n`],
+    ["image/jxl (container)", `export const PHOTO = "data:image/jxl;base64,${JXL}";\n`],
   ])("an inlined %s data URI produces no entropy finding at any severity", (_type, content) => {
     expect(rules(content)).toEqual([]);
   });
@@ -43,6 +76,24 @@ describe("HIGH_ENTROPY_STRING data URI exemption", () => {
   it("still reports a payload that merely sits on the same line as an image data URI", () => {
     const content =
       `const a = "data:image/png;base64,${PNG}"; const b = "${uniformBase64(200)}";\n`;
+    expect(rules(content)).toContain("HIGH_ENTROPY_STRING");
+  });
+
+  // A real header is 8 bytes anyone can prepend: the container has to account
+  // for every byte, so a payload after a header or after the end stays visible.
+  it.each([
+    ["a PNG signature followed by the payload", b64(PNG_SIG, BODY)],
+    ["a complete PNG with the payload appended after IEND", b64(PNG_BYTES, BODY)],
+    ["a JPEG start marker without the end marker", b64(Buffer.from([0xff, 0xd8, 0xff, 0xe0]), BODY)],
+    ["a WOFF2 header whose declared length is short", b64(ascii("wOF2"), ascii("true"), u32be(64), BODY)],
+    ["a JPEG XL container with bytes after its last box", b64(Buffer.from(JXL, "base64"), BODY)],
+    ["a font whose tables end well before the file does", b64(
+      Buffer.from([0x00, 0x01, 0x00, 0x00]), u16be(1), Buffer.alloc(6),
+      ascii("glyf"), u32be(0), u32be(28), u32be(64), BODY,
+    )],
+    ["a WEBP whose RIFF size is short", b64(ascii("RIFF"), u32le(64), ascii("WEBP"), ascii("VP8L"), u32le(BODY.length), BODY)],
+  ])("reports %s", (_label, payload) => {
+    const content = `const s = "data:image/png;base64,${payload}";\n`;
     expect(rules(content)).toContain("HIGH_ENTROPY_STRING");
   });
 

@@ -747,6 +747,8 @@ interface ContentMemo {
   content: string;
   lineStarts?: number[];
   dnsDecodeAndSink?: boolean;
+  /** hasDnsC2Signal's query-side verdict per hit line */
+  dnsEncodedLine?: Map<number, boolean>;
   regexConstants?: Map<string, { kind: string; body: string; flags: string }[]>;
   guardedImportEvaluations: number;
 }
@@ -779,36 +781,72 @@ function lineBounds(content: string, line: number): [number, number] | undefined
 }
 
 /**
- * An encoder call on the query line or just above it (the encoded name is
- * often built in a variable first): the name carries encoded data out.
+ * An encoder call whose result reaches the query line: on that line itself,
+ * or assigned to a variable in the lines just above that the query line uses
+ * (directly or through further assignments). The name carries encoded data
+ * out.
  */
 const DNS_ENCODED_NAME =
   /\b(?:base32|base64|b32encode|b64encode|btoa|hexlify|toHex|encodeBase32|encodeBase64|encodeHex)(?:\w{0,24}|\.\w{1,24})[^\S\n]*\(|\.toString[^\S\n]*\([^\S\n]*["'](?:hex|base64|base64url)["']/i;
 /** Lines above a DNS hit that are searched for the encoder call. */
 const DNS_ENCODER_WINDOW = 5;
 
+/** Characters of each line above the hit read for assignments. */
+const DNS_WINDOW_LINE_CHARS = 4096;
+
+/** `[const|let|var] name =` or `name +=` at the start of a statement. */
+const ASSIGNMENT_RE = /^[^\S\n]*(?:(?:const|let|var)[^\S\n]+)?([A-Za-z_$][\w$]*)[^\S\n]*\+?=(?!=)([^]*)$/;
+
+function mentionsAny(text: string, names: Set<string>): boolean {
+  if (names.size === 0) return false;
+  const alternatives = [...names].map((name) => name.replace(/\$/g, "\\$")).join("|");
+  return new RegExp(`(?<![\\w$])(?:${alternatives})(?![\\w$])`).test(text);
+}
+
+/** Does an encoder call's result reach this (1-based) line? */
+function encodedNameReachesLine(content: string, line: number): boolean {
+  const hit = lineBounds(content, line);
+  if (!hit) return false;
+  const hitText = content.slice(hit[0], hit[1]);
+  if (DNS_ENCODED_NAME.test(hitText)) return true;
+  const tainted = new Set<string>();
+  for (let k = Math.max(1, line - DNS_ENCODER_WINDOW); k < line; k++) {
+    const bounds = lineBounds(content, k);
+    if (!bounds) continue;
+    const text = content.slice(bounds[0], Math.min(bounds[1], bounds[0] + DNS_WINDOW_LINE_CHARS));
+    for (const statement of text.split(";")) {
+      const m = ASSIGNMENT_RE.exec(statement);
+      if (m && (DNS_ENCODED_NAME.test(m[2]!) || mentionsAny(m[2]!, tainted))) tainted.add(m[1]!);
+    }
+  }
+  return mentionsAny(hitText, tainted);
+}
+
 /** A decode of fetched data ... */
 const DNS_ANSWER_DECODE =
   /\batob[^\S\n]*\(|\bBuffer\.from[^\S\n]*\([^)\n]{0,200}["'](?:base64|base64url|hex)["']|\b(?:b64decode|b32decode|unhexlify|a2b_base64)[^\S\n]*\(|\bbytes\.fromhex[^\S\n]*\(/;
 /** ... and an execution sink in the same file. `.exec(` is RegExp, not a sink. */
 const DNS_ANSWER_SINK =
-  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|=[^\S\n]*(?:eval|Function)\b(?![^\S\n]*[.(\w])|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
+  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|(?<![=!<>])=(?!=)[^\S\n]*(?:(?:globalThis|window|self|global)[^\S\n]*\.[^\S\n]*)?(?:eval|Function)\b(?![^\S\n]*[.(\w])|[\w$\])][^\S\n]*\[[^\S\n]*['"](?:eval|Function)['"][^\S\n]*\]|\{[^}\n]{0,200}?\b(?:eval|Function)[^\S\n]*:[^}\n]{0,200}\}[^\S\n]*=(?!=)|\([^\S\n]*0[^\S\n]*,[^\S\n]*(?:eval|Function)[^\S\n]*\)|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
 
 /**
  * C2 corroboration for C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT. A DoH endpoint or
  * a TXT lookup is ordinary DNS tooling (DNSSEC checks, SPF/DMARC reads); what
  * makes it a channel is data going OUT in the query name (an encoder call on
- * the hit's line or the DNS_ENCODER_WINDOW lines above it) or an answer coming
- * IN and being executed (a decode plus eval, Function, an alias of either, vm,
- * exec or child_process anywhere in the file).
+ * the hit's line, or assigned above it and used on it: encodedNameReachesLine)
+ * or an answer coming IN and being executed (a decode plus eval, Function, an
+ * alias or indirect call of either, vm, exec or child_process anywhere in the
+ * file).
  */
 export function hasDnsC2Signal(content: string, line: number): boolean {
-  const first = lineBounds(content, Math.max(1, line - DNS_ENCODER_WINDOW));
-  const last = lineBounds(content, line);
-  if (first && last && DNS_ENCODED_NAME.test(content.slice(first[0], last[1]))) {
-    return true;
-  }
   const memo = memoFor(content);
+  memo.dnsEncodedLine ??= new Map();
+  let encoded = memo.dnsEncodedLine.get(line);
+  if (encoded === undefined) {
+    encoded = encodedNameReachesLine(content, line);
+    memo.dnsEncodedLine.set(line, encoded);
+  }
+  if (encoded) return true;
   if (memo.dnsDecodeAndSink === undefined) {
     memo.dnsDecodeAndSink =
       DNS_ANSWER_DECODE.test(content) && DNS_ANSWER_SINK.test(content);

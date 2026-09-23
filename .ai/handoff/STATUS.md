@@ -1,3 +1,47 @@
+## Second review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+The owner asked for another round. Three reviewers took the first round's fixes.
+Three of their findings were defects that the first round's own fixes introduced.
+All findings are fixed. The proof is 26 mutation cuts, all red, with baseline and
+post-restore green; it ran on the Linux runner.
+
+### Introduced by the first round, fixed
+
+- **A crafted workflow line could hang the scan.** The `scp`/`rsync` remote-path regex
+  backtracked polynomially. One 5 MiB line took 17 minutes. Arguments are now split
+  into shell words and each word is matched with an anchored pattern. Every
+  adversarial 5 MiB shape tried finishes in under 0.6 s, and the linear-time suite
+  pins two of them.
+- **pub stopped reporting a malicious pin whose flow map closes on its own line.** A
+  bare `}` line is not a `key: value` line, so it looks exactly like a map that never
+  closes. Both are read again, which fails towards a report; `},` also closes.
+- **Every file write carried the secret to every later step.** `cat > .npmrc`
+  followed by a health-check curl was reported. A file write now reaches only later
+  steps that upload an artifact or read a file. `$GITHUB_ENV`, `$GITHUB_OUTPUT` and
+  github-script's `core.exportVariable`/`core.setOutput` still reach every later step.
+
+### Gaps in the first round's fixes, closed
+
+- **Data URIs:** 8 real header bytes followed by any payload was still exempt. The
+  container now has to account for every byte (see the CHANGELOG). JPEG XL containers
+  are covered, so they keep their exemption.
+- **DNS:** an unrelated digest encoded within five lines of an ordinary lookup raised
+  it to medium. The encoder result now has to reach the query line, directly or
+  through assignments. Each hit line is evaluated once, so many hits on one huge line
+  no longer rescan it.
+- **Sinks:** `=== eval` and `== Function` comparisons are no longer sinks. Property,
+  destructured, bracket and `(0, eval)` forms are.
+- **Egress:** github-script persistence, lowercase PowerShell cmdlets, Windows drive
+  paths and `./scripts/irm.sh` are handled, and a tool called by its full path
+  (`/usr/bin/sftp`) still counts.
+
+### Process
+
+- A mutation cut that makes a regex catastrophic blocks the event loop, so vitest's
+  per-test timeout never fires. One local run hung for 40 minutes. The harness now
+  bounds every run by wall clock and reports a hang as its own result.
+- The proof ran on the Linux runner (about 7 minutes for all cuts) instead of locally.
+
 ## Final pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
 
 Five independent review agents each took one area of PR 326, plus PR 327 and how the
@@ -34,9 +78,9 @@ baseline and post-restore green.
   in the decoded bytes.
 - **d7 checked the encoder only on the hit's own line.** An encoded name built one line
   above dropped to low. The check now covers the hit line plus the five lines above.
-  The sink also counts `const F = Function; F(...)`.
-- **pub:** a multi-line flow map that never closes was still read. It is now skipped,
-  as the code comment said.
+- **d7's sink missed an alias:** `const F = Function; F(...)` now counts.
+- **pub:** a multi-line flow map that never closes was still read. It was skipped here,
+  and the second round reverted that (see above).
 
 ### Left for later
 

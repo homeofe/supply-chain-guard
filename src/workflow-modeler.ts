@@ -32,21 +32,68 @@ const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
  * Other ways a step sends data out, counted as egress without looking for a
  * loopback target: HTTP clients in Python and PowerShell, and file transfer
  * tools that always reach another host. `scp`/`rsync` count only with a
- * `host:path` argument (see REMOTE_COPY_RE). `gh api` is left out on purpose:
+ * `host:path` argument (see isRemoteCopy). `gh api` is left out on purpose:
  * a token sent to GitHub's own API is that token's intended audience.
  */
 const OTHER_EGRESS_RE =
-  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b/i;
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w.-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b/i;
 
-/** `scp`/`rsync` followed somewhere by a `[user@]host:path` word (not `C:\`). */
-const REMOTE_COPY_RE = /(?<![\w.-])(?:scp|rsync)(?![\w-])[^\n]*?\s(?:[\w.-]+@)?[\w-]+(?:\.[\w-]+)*:(?![\\/]{2})/;
+/** The `scp`/`rsync` command word; its arguments are read by isRemoteCopy. */
+const REMOTE_COPY_CMD_RE = /(?<![\w.-])(?:scp|rsync)(?![\w.-])/;
 
 /**
- * A step that writes what it holds somewhere a later step of the same job can
- * read: `$GITHUB_ENV`/`$GITHUB_OUTPUT`, a file redirection, or `tee`.
- * `2>&1` and `> /dev/null` do not count.
+ * One whole shell word naming a remote path, `[user@]host:path`. Anchored and
+ * tested word by word, so its cost is linear in the segment.
  */
-const PERSISTS_RE = /GITHUB_(?:ENV|OUTPUT)\b|(?<![0-9&>=-])>>?(?![>&]|\s*\/dev\/null)|(?<![\w.-])tee(?![\w-])|Out-File|Set-Content|Add-Content/;
+const REMOTE_PATH_WORD_RE = /^([\w.-]+@)?([\w-]+(?:\.[\w-]+)*):(?!\/\/)/;
+
+/** Longest word read as a possible remote path. */
+const MAX_REMOTE_WORD = 1024;
+
+/**
+ * `scp`/`rsync` with a remote argument. A bare one-letter host is a Windows
+ * drive (`C:\out`), and options are skipped (`--exclude=a:b`).
+ */
+function isRemoteCopy(segment: string): boolean {
+  const cmd = REMOTE_COPY_CMD_RE.exec(segment);
+  if (!cmd) return false;
+  for (const word of shellWords(segment.slice(cmd.index + cmd[0].length))) {
+    if (word.length > MAX_REMOTE_WORD || word.startsWith("-")) continue;
+    const m = REMOTE_PATH_WORD_RE.exec(word);
+    if (m && (m[1] !== undefined || m[2]!.length > 1)) return true;
+  }
+  return false;
+}
+
+/**
+ * A step that hands what it holds to the later steps of its job through their
+ * environment: `$GITHUB_ENV`/`$GITHUB_OUTPUT`, or github-script's
+ * `core.exportVariable` / `core.setOutput`.
+ */
+const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(/;
+
+/**
+ * A step that writes to a file: a redirection (not `2>&1`, not `> /dev/null`),
+ * `tee`, a PowerShell file cmdlet, or a Node fs write. A later step reaches
+ * such a file only by reading one, see execReadsFile.
+ */
+const PERSISTS_FILE_RE =
+  /(?<![0-9&>=-])>>?(?![>&]|\s*\/dev\/null)|(?<![\w.-])tee(?![\w.-])|\b(?:Out-File|Set-Content|Add-Content)\b|\b(?:writeFileSync|appendFileSync|writeFile|appendFile)\s*\(/i;
+
+/**
+ * Forms that read a local file: curl/wget/PowerShell file arguments (`@file`,
+ * `-T`, `--post-file`, `-InFile`), `source`/`.`, `$(cat ...)`/`$(< ...)`, an
+ * input redirection, a `cat ... |` pipe, `Get-Content`, `readFileSync(`.
+ */
+const READS_FILE_RE =
+  /(?:^|[\s'"=])@[\w./~$-]|(?:^|\s)(?:-T|--upload-file|--post-file|--body-file|-InFile)(?=[\s=])|(?:^|[\s;&|(])(?:source|\.)[^\S\n]+[\w./~$"'-]|\$\([^\S\n]*(?:cat\b|<)|\bcat[^\S\n]+[^|;&\n]{0,512}\||(?<![<\d])<(?![<(&])[^\S\n]*[\w./~$"'-]|\b(?:Get-Content|readFileSync)\b/i;
+
+/** Does executed text read a local file, or send one out? */
+function execReadsFile(text: string): boolean {
+  const joined = text.replace(/\\\n/g, " ");
+  if (READS_FILE_RE.test(joined) || /(?<![\w.-])s?ftp(?![\w.-])/i.test(joined)) return true;
+  return joined.split(/&&|\|\||[;&|\n]/).some(isRemoteCopy);
+}
 
 /**
  * Options whose next argument is a payload, header or local file rather than
@@ -142,7 +189,7 @@ function segmentHasEgress(segment: string): boolean {
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
-  if (OTHER_EGRESS_RE.test(segment) || REMOTE_COPY_RE.test(segment)) return true;
+  if (OTHER_EGRESS_RE.test(segment) || isRemoteCopy(segment)) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
   return !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
@@ -354,8 +401,9 @@ export function workflowScopes(content: string): WorkflowScopes {
  * scope for a step when it is referenced in that step's `run:`/`script:` or
  * `env:`, in the job's `env:` (or its container's) or matrix, or in the
  * workflow `env:`. It stays in scope for every later step of the job once a
- * step holding it writes to `$GITHUB_ENV`, `$GITHUB_OUTPUT` or a file, since
- * a later step can read it from there.
+ * step holding it writes to `$GITHUB_ENV` or `$GITHUB_OUTPUT` (or exports it
+ * from github-script), and for later steps that upload an artifact or read a
+ * file once a step holding it writes to a file.
  * The step must itself make an outbound call or upload an artifact. `with:`
  * inputs are ignored except where the step's own code can read them: a local
  * composite action, or a `script:` body. A reusable workflow from another repository that is
@@ -396,7 +444,8 @@ function checkSecretToEgress(
   const findings: Finding[] = [];
   for (const { job, env, reusableSecrets, strategy, steps } of jobs) {
     const jobSecret = workflowSecret || textHasStoredSecret(env) || textHasStoredSecret(strategy);
-    let carried = false;
+    let carriedEnv = false;
+    let carriedFile = false;
 
     if (job.uses && !job.uses.startsWith("./")) {
       if (/^[ \t]*secrets[ \t]*:[ \t]*inherit[ \t]*$/m.test(reusableSecrets) || textHasStoredSecret(reusableSecrets)) {
@@ -407,21 +456,30 @@ function checkSecretToEgress(
     for (const { step, s, e } of steps) {
       const uses = step.uses ?? "";
       let egress: string | null = null;
+      const exec = linesText(stripped, regions, s, e, ["exec"]);
       let stepSecret = textHasStoredSecret(linesText(stripped, regions, s, e, ["env", "exec"]));
+      // A script: body (actions/github-script) can read its own with: inputs.
+      if (/^actions\/github-script(?:@|$)/i.test(uses)) {
+        stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
+      }
       if (UPLOAD_ACTION_RE.test(uses)) {
         egress = "uploads an artifact";
       } else if (uses.startsWith("./") && localActionHasEgress(root, uses, actionCache)) {
         egress = "calls a local action that makes an outbound call";
         stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
-      } else if (execTextHasEgress(linesText(stripped, regions, s, e, ["exec"]))) {
+      } else if (execTextHasEgress(exec)) {
         egress = "makes an outbound call";
-        // A script: body (actions/github-script) can read its own with: inputs.
         stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
       }
-      if (egress && (stepSecret || jobSecret || carried)) {
+      // An upload sends files, and a local action's steps are not read here.
+      const readsFile = egress !== null && (egress !== "makes an outbound call" || execReadsFile(exec));
+      if (egress && (stepSecret || jobSecret || carriedEnv || (carriedFile && readsFile))) {
         findings.push(finding(step.line, `a stored secret is in scope for a step in job "${job.id}" that ${egress}`));
       }
-      if ((stepSecret || jobSecret) && PERSISTS_RE.test(linesText(stripped, regions, s, e, ["exec"]))) carried = true;
+      if (stepSecret || jobSecret) {
+        if (PERSISTS_ENV_RE.test(exec)) carriedEnv = true;
+        if (PERSISTS_FILE_RE.test(exec)) carriedFile = true;
+      }
     }
   }
   return findings;
