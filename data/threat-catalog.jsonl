@@ -81882,3 +81882,167 @@
 {"type":"package","value":"stillm4ddpocs-demo-gadget@999.9.12","severity":"critical","confidence":1,"source":"GHSA-452p-xh57-7mqp, MAL-2026-14361","firstSeen":"2026-08-22"}
 {"type":"package","value":"internallib_v902","severity":"critical","confidence":1,"source":"GHSA-3p65-4jqj-5j69, MAL-2026-14359","firstSeen":"2026-08-22"}
 {"type":"package","value":"pypi:scrambleeeer@0.1.0","severity":"critical","confidence":1,"source":"GHSA-xw2j-24j3-3282, MAL-2026-14358","firstSeen":"2026-08-22"}
+{"type":"package","value":"subapp-pkg-util","severity":"critical","confidence":1,"source":"GHSA-f946-r32q-xrp6, MAL-2026-11045 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-07-24"}
+{"type":"package","value":"uolcs-host-uol-anuncios-fe","severity":"critical","confidence":1,"source":"GHSA-p4vr-mx6g-r574, MAL-2026-4185 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-20"}
+{"type":"package","value":"dbconnectify","severity":"critical","confidence":1,"source":"GHSA-p5xv-vqcx-vm42, MAL-2026-10669 (amazon-inspector+ghsa-malware)","firstSeen":"2026-07-15"}
+{"type":"package","value":"chai-tracker","severity":"critical","confidence":1,"source":"GHSA-xvr2-rmx5-mrv3, MAL-2026-13704 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-10"}
+{"type":"package","value":"prettier-lint-lenz","severity":"critical","confidence":1,"source":"GHSA-8558-w8j5-67wq, MAL-2026-3769 (amazon-inspector+ghsa-malware)","firstSeen":"2026-05-14"}
+{"type":"package","value":"bnpl-blocks-mobile-bnpl-floating-button","severity":"critical","confidence":1,"source":"GHSA-vrh4-rf6w-3256, MAL-2026-12989 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"bigops-products-timeline","severity":"critical","confidence":1,"source":"GHSA-9f9c-qwvh-f45q, MAL-2026-13245 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"bigops-auth-interceptor","severity":"critical","confidence":1,"source":"GHSA-7pp9-3qqc-vc84, MAL-2026-12151 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"bnpl-blocks-atom-bnpl-search-input","severity":"critical","confidence":1,"source":"GHSA-pvq7-rm52-m5g7, MAL-2026-12892 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"devplatform-sdk","severity":"critical","confidence":1,"source":"GHSA-24m2-6frm-vxj3, MAL-2026-12750 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-05"}
+{"type":"package","value":"agora402-payment-utils","severity":"critical","confidence":1,"source":"GHSA-pvr5-m9hx-xxfr, MAL-2026-14136 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-18"}
+{"type":"package","value":"@wizloft/harness","severity":"critical","confidence":1,"source":"GHSA-hv3x-6r5c-g4cp, MAL-2026-14285 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"@wizloft/harness-plugin-repository-files","severity":"critical","confidence":1,"source":"GHSA-p4gf-f4rj-hfh8, MAL-2026-14288 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"@wizloft/harness-validation","severity":"critical","confidence":1,"source":"GHSA-7g98-grc6-6xjh, MAL-2026-14289 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"@wizloft/harness-kernel","severity":"critical","confidence":1,"source":"GHSA-9f63-qfxp-2726, MAL-2026-14287 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"anhn-cli","severity":"critical","confidence":1,"source":"GHSA-7fvf-fgwq-85q6, MAL-2026-14290 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"@wizloft/harness-context","severity":"critical","confidence":1,"source":"GHSA-wjhv-xmmw-qqf9, MAL-2026-14286 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"@httttt/mcp-demo","severity":"critical","confidence":1,"source":"GHSA-phcp-xhhf-xcvq, MAL-2026-14315 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-20"}
+{"type":"package","value":"evm-validation","severity":"critical","confidence":1,"source":"GHSA-gvxq-2rq2-f7x6, MAL-2026-14301 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"hardhat-hold","severity":"critical","confidence":1,"source":"GHSA-f33v-qqxm-m6m9, MAL-2026-14246 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"faceplate-docs@99.9.9","severity":"critical","confidence":1,"source":"GHSA-vh6g-h723-5f2r, MAL-2024-2355 (amazon-inspector+reversing-labs)","firstSeen":"2024-06-25"}
+{"type":"package","value":"faceplate-docs@99.9.10","severity":"critical","confidence":1,"source":"GHSA-vh6g-h723-5f2r, MAL-2024-2355 (amazon-inspector+reversing-labs)","firstSeen":"2024-06-25"}
+{"type":"package","value":"epic-comment-rating-frontend@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-hm52-5frx-6q8r, MAL-2025-49122 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-comment-rating-frontend@1.0.0","severity":"critical","confidence":1,"source":"GHSA-hm52-5frx-6q8r, MAL-2025-49122 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-comment-rating-service@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-hjwx-wfq6-wq47, MAL-2025-49123 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-comment-rating-service@1.0.0","severity":"critical","confidence":1,"source":"GHSA-hjwx-wfq6-wq47, MAL-2025-49123 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-consent-dialog@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-xvfq-r5rv-562v, MAL-2025-49127 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-consent-dialog@1.0.0","severity":"critical","confidence":1,"source":"GHSA-xvfq-r5rv-562v, MAL-2025-49127 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-comment-rating@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-2526-vwc7-vgrq, MAL-2025-49121 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-comment-rating@1.0.0","severity":"critical","confidence":1,"source":"GHSA-2526-vwc7-vgrq, MAL-2025-49121 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-code-redemption@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-h83p-64gj-98jc, MAL-2025-49120 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-code-redemption@1.0.0","severity":"critical","confidence":1,"source":"GHSA-h83p-64gj-98jc, MAL-2025-49120 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-angular-ui-codemirror@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-fvx9-w4w8-743r, MAL-2025-49117 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-angular-ui-codemirror@1.0.0","severity":"critical","confidence":1,"source":"GHSA-fvx9-w4w8-743r, MAL-2025-49117 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-blog-frontend@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-947c-x9jw-qqj7, MAL-2025-49119 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-blog-frontend@1.0.0","severity":"critical","confidence":1,"source":"GHSA-947c-x9jw-qqj7, MAL-2025-49119 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2100.4.2","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@10.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@9.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@8.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@7.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@6.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@5.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@4.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@3.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@2.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.4.15","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@1.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.9.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.8.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.7.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.6.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.5.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.4.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.3.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.2.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.1.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-alt-utils@0.0.0","severity":"critical","confidence":1,"source":"GHSA-29cv-4hq8-v929, MAL-2025-49115 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-asset-uploader-ui@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-4h4p-xw4r-3wj8, MAL-2025-49118 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-asset-uploader-ui@1.0.0","severity":"critical","confidence":1,"source":"GHSA-4h4p-xw4r-3wj8, MAL-2025-49118 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-analytics-worker@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-c257-hqfc-27h6, MAL-2025-49116 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-analytics-worker@1.0.0","severity":"critical","confidence":1,"source":"GHSA-c257-hqfc-27h6, MAL-2025-49116 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-store@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49139 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-store@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49139 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-form@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49135 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-form@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49135 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-affiliate@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49130 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-affiliate@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49130 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-feed@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49134 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-feed@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49134 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-common@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49132 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-common@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49132 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-library@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49136 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-library@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49136 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-services@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49138 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-services@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49138 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-products@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49137 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-products@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49137 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-components@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49133 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-diesel-components@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49133 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"my-auto-follow@1.0.6","severity":"critical","confidence":0.9,"source":"MAL-2026-13932 (amazon-inspector)","firstSeen":"2026-08-10"}
+{"type":"package","value":"my-auto-follow@1.0.7","severity":"critical","confidence":0.9,"source":"MAL-2026-13932 (amazon-inspector)","firstSeen":"2026-08-10"}
