@@ -1,3 +1,33 @@
+## Offline dependency-confusion tests (2026-09-23) (claude-opus-5-5)
+
+Test-only change, no behaviour change. Trigger: CI run 35853043970 (compat
+Node 24) failed on "should skip version pins and comments in requirements.txt"
+with a 5000 ms timeout while the same commit was green on Node 22, because the
+test resolved `requests`/`flask`/`pytest` against live PyPI.
+
+- `src/__tests__/dependency-confusion.test.ts` now mocks `node:https` (the
+  scanner uses `https.get`, not `fetch`) with a fixture registry for npm, the
+  npm downloads API and PyPI. Every URL is recorded; a URL with no fixture is
+  recorded as unexpected and fails the test in `afterEach`.
+- The npm side had the same pattern: 7 tests hit the live npm registry behind
+  30 s per-test timeouts. Those timeouts are removed, not raised.
+- **The live tests were partly vacuous, measured:** with the network refused
+  (socket connect patched to fail), `main` failed only 4 tests; the
+  well-known-package, version-pin, extras and minSeverity tests passed without
+  evaluating anything, because the scanner treats a network error as "skip".
+  Those tests now assert which registry lookups happened (exact name list for
+  the PyPI pin/extras cases, a surviving high finding for minSeverity).
+- Proof, this file only, with a scratch harness patching
+  `net.Socket.prototype.connect`: after the fix 89/89 green with 0 socket
+  attempts in both blackhole (never connects) and reject mode. Cuts, each
+  restored: removing the mock gives 11 timeouts (blackhole) / 10 failures
+  (reject, 4 on `main`); dropping one fixture trips the `afterEach` guard;
+  making the scanner's lookups error in `src/` fails 10. Full suite: CI.
+- Trade-off, stated so nobody re-derives it: these tests no longer exercise
+  the real registry response shape. The fixtures mirror the fields the scanner
+  reads (`readme`, `time`, `versions`, `maintainers`, `repository`,
+  `downloads`; PyPI `info.summary`, `project_url`, `releases`, `urls`).
+
 ## v6.2.5 release preparation (2026-09-23) (claude-opus-5-5)
 
 Patch release carrying the 2026-09-23 threat intelligence update (PR 324:

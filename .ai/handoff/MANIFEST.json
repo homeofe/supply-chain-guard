@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790148628",
-    "timestamp": "2026-09-23T07:30:29Z",
-    "commit": "0c96823",
+    "session_id": "cli-1790163158",
+    "timestamp": "2026-09-23T11:32:39Z",
+    "commit": "89e7260",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:bf90b46f8a15b4020700d1a608b0368ab37cf1da6d6a0b98c3b7a8c4022745b3",
-      "updated": "2026-09-23T07:30:23Z",
-      "lines": 10719,
-      "summary": "Patch release carrying the 2026-09-23 threat intelligence update (PR 324:"
+      "checksum": "sha256:e9afd0f360f421e7e749f9fd1036aa6852489da0fa9b927133e95e71ac02f77a",
+      "updated": "2026-09-23T11:32:30Z",
+      "lines": 10749,
+      "summary": "Test-only change, no behaviour change. Trigger: CI run 35853043970 (compat"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:e9300ae8c78d5c3230bc39bf797836dc66601c84bb2fb0e3071834d5e00324b3",
-      "updated": "2026-09-23T07:30:11Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 231,
       "summary": "Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T07:30:28Z",
+      "updated": "2026-09-23T11:32:38Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:780b8e47bd8106af3d82df51b780360315820a1c5a7219886dc38c10d15a6d53",
-      "updated": "2026-09-23T07:30:28Z",
+      "updated": "2026-09-23T11:32:38Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:0bf76566eb015dcdd5a467b9312f5593d21f53bd0d8e60e0364d527bd2e4c9cd",
-      "updated": "2026-09-23T07:30:28Z",
+      "updated": "2026-09-23T11:32:38Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-23T07:28:48Z",
+      "updated": "2026-09-23T11:21:51Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Patch release carrying the 2026-09-23 threat intelligence update (PR 324: Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
+  "quick_context": "Test-only change, no behaviour change. Trigger: CI run 35853043970 (compat Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 125326,
-    "full_read": 138338
+    "manifest_plus_core": 125693,
+    "full_read": 138705
   }
 }
