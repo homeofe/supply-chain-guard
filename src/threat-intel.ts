@@ -10364,6 +10364,13 @@ const FEED_CHUNK_21: FeedIOC[] = [
   // Homebrew: the aquasecurity/trivy tap shipped the TeamPCP-compromised trivy 0.69.4 (Aqua
   // GHSA-69fq-xp46-6x23; tap archived). homebrew-core builds trivy from source and is NOT listed.
   { type: "package", value: "homebrew:aquasecurity/trivy/trivy@0.69.4", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  // Coder registry compromise (2026-08-31, 07:35-21:45 UTC): an unauthorized origin behind
+  // Coder's own module registry served tampered Terraform modules that sent credentials to
+  // this lookalike host (GHSA-vx42-ghc9-gw65 in coder/coder, verified 2026-09-23 via the
+  // GitHub API; Coder's incident post of 2026-09-04). No module name or version was published,
+  // so the host is the only matchable indicator; subdomains (www.) match through it. A
+  // single-source IP from a secondary write-up is deliberately NOT included.
+  { type: "domain", value: "coder-infra.com", severity: "critical", confidence: 0.95, family: "CoderRegistryStealer", campaign: "Coder registry compromise", source: "GHSA-vx42-ghc9-gw65, Coder incident post", firstSeen: "2026-09-01" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

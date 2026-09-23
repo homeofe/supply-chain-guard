@@ -143,15 +143,15 @@
     },
     {
       "id": "ecosystem count",
-      "canonical": "24",
-      "advertised": 24,
+      "canonical": "16",
+      "advertised": 16,
       "phrase": "(\\d+)\\s+ecosystems\\b",
       "flags": "gi",
       "floorCmd": "scripts/count-ecosystems.mjs",
       "surfaces": [
         {
           "file": "README.md",
-          "note": "intro + ecosystem coverage section"
+          "note": "intro, generated ecosystem list, comparison table"
         },
         {
           "file": "package.json",

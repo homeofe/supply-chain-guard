@@ -28,6 +28,7 @@ import {
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
   CHAINDROP_PERSISTENCE_ARTEFACT_REGEX,
+  ASSET_EXEC_PATTERN,
 } from "./patterns.js";
 import {
   listDiscoveredDirectory,
@@ -365,6 +366,10 @@ export function scanSkillContent(content: string, relativePath: string): Finding
 /**
  * Scan a .claude/settings.json / settings.local.json for dangerous hook
  * commands. Malformed JSON is ignored (no crash, no findings).
+ *
+ * Parsed leniently (comments, trailing commas, BOM), like the editor files: a
+ * lenient parse only ever ADDS what a strict one would see, while a strict one
+ * turned a single trailing comma into "no hooks at all".
  */
 export function scanAgentSettingsContent(
   content: string,
@@ -372,12 +377,7 @@ export function scanAgentSettingsContent(
 ): Finding[] {
   const findings: Finding[] = [];
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return findings;
-  }
+  const parsed = parseJsoncObject(content);
   if (parsed === null || typeof parsed !== "object") return findings;
 
   const hooks = (parsed as Record<string, unknown>).hooks;
@@ -796,16 +796,107 @@ function collectTaskCommandLines(
   return out;
 }
 
+/** See ASSET_EXEC_PATTERN (patterns.ts): the one definition every carrier uses. */
+const ASSET_EXEC_REGEX = new RegExp(ASSET_EXEC_PATTERN, "i");
+
+/** The two auto-run command carriers judged here, and how each is worded. */
+interface CommandCarrier {
+  /** Rule prefix: EDITOR_TASK or DEVCONTAINER. */
+  prefix: "EDITOR_TASK" | "DEVCONTAINER";
+  /** Subject of every description sentence. */
+  subject: string;
+  /** Appended when the command runs with no developer action. */
+  autoNote: string;
+  /** Appended when it runs only when invoked. */
+  manualNote: string;
+  recommendation: string;
+}
+
+const EDITOR_TASK_CARRIER: CommandCarrier = {
+  prefix: "EDITOR_TASK",
+  subject: "Editor task",
+  autoNote:
+    " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action.",
+  manualNote: " The task runs when invoked.",
+  recommendation:
+    "Remove the task or its command. Editor tasks execute with the developer's full privileges.",
+};
+
+const DEVCONTAINER_CARRIER: CommandCarrier = {
+  prefix: "DEVCONTAINER",
+  subject: "Dev container lifecycle command",
+  autoNote:
+    " Lifecycle commands run automatically when the container is created, started or attached; initializeCommand runs on the HOST before the container exists.",
+  manualNote: "",
+  recommendation:
+    "Do not open this repository in a dev container until the command is removed. Lifecycle commands run without a prompt, and initializeCommand runs on the host.",
+};
+
 /**
- * An interpreter executing a file whose extension says it is a font, image or
- * media asset. That is the Contagious Interview "Fake Font" loader
- * (`node ./public/fonts/fa-solid-400.woff2`, the woff2 being obfuscated
- * JavaScript), and no legitimate task runs a font. Only flag-shaped tokens may
- * sit between the interpreter and the file, so `node build.js images/a.png`
- * (a real script taking an asset ARGUMENT) never matches.
+ * Judge one effective command line from an auto-run carrier. Deliberately the
+ * command vocabulary that already guards agent hooks, plus the asset-exec
+ * disguise, so a tasks.json and a devcontainer.json are held to one standard.
+ * `autoRun` only ESCALATES a command already judged dangerous.
  */
-const TASK_ASSET_EXEC_REGEX =
-  /(?:^|[\s;&|(])(?:node|nodejs|deno(?:\s+run)?|bun(?:\s+run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\.exe)?\s+(?:-[-\w=.:]*\s+)*["']?[^\s"'|&;]*\.(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)(?=["'\s|&;)]|$)/i;
+function commandLineFinding(
+  line: string,
+  autoRun: boolean,
+  relativePath: string,
+  carrier: CommandCarrier,
+): Finding | null {
+  const note = autoRun ? carrier.autoNote : carrier.manualNote;
+  const severity = autoRun ? "critical" : "high";
+
+  if (ASSET_EXEC_REGEX.test(line)) {
+    return {
+      rule: `${carrier.prefix}_EXECUTES_ASSET`,
+      description:
+        `${carrier.subject} runs an interpreter on a file named as a font, image or media asset, the disguise used by the Contagious Interview "Fake Font" loader.` +
+        note,
+      severity,
+      file: relativePath,
+      match: truncate(line),
+      confidence: 0.95,
+      category: "malware",
+      recommendation:
+        `${carrier.recommendation} Inspect the referenced file: an asset that an interpreter executes is code.`,
+    };
+  }
+
+  const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
+  const dangerous =
+    downloadExec ||
+    HOOK_EVAL_REGEX.test(line) ||
+    HOOK_BASE64_REGEX.test(line) ||
+    HOOK_SHELL_RC_WRITE_REGEX.test(line);
+  if (!dangerous) return null;
+
+  return {
+    rule: downloadExec
+      ? `${carrier.prefix}_DOWNLOAD_EXEC`
+      : `${carrier.prefix}_DANGEROUS_COMMAND`,
+    description:
+      (downloadExec
+        ? `${carrier.subject} downloads and executes remote code.`
+        : `${carrier.subject} contains a dangerous command (eval, base64 decode, download-exec pipe, or shell rc file modification).`) +
+      note,
+    severity,
+    file: relativePath,
+    match: truncate(line),
+    confidence: 0.9,
+    category: "malware",
+    recommendation: carrier.recommendation,
+  };
+}
+
+/** Parse a VS Code-family file the way VS Code does: JSONC, optional BOM. */
+function parseJsoncObject(content: string): unknown {
+  try {
+    return JSON.parse(stripJsonc(content.replace(/^\uFEFF/, "")));
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Scan a .vscode/tasks.json for dangerous task commands.
@@ -829,68 +920,72 @@ export function scanEditorTasksContent(
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripJsonc(content.replace(/^\uFEFF/, "")));
-  } catch {
-    return findings;
+  for (const { line, autoRun } of collectTaskCommandLines(parseJsoncObject(content))) {
+    const finding = commandLineFinding(line, autoRun, relativePath, EDITOR_TASK_CARRIER);
+    if (finding) findings.push(finding);
   }
+  return findings;
+}
 
-  for (const { line, autoRun } of collectTaskCommandLines(parsed)) {
-    if (TASK_ASSET_EXEC_REGEX.test(line)) {
-      findings.push({
-        rule: "EDITOR_TASK_EXECUTES_ASSET",
-        description:
-          "Editor task runs an interpreter on a file named as a font, image or media asset, the disguise used by the Contagious Interview \"Fake Font\" loader." +
-          (autoRun
-            ? " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action."
-            : " The task runs when invoked."),
-        severity: autoRun ? "critical" : "high",
-        file: relativePath,
-        match: truncate(line),
-        confidence: 0.95,
-        category: "malware",
-        recommendation:
-          "Do not open this folder in an editor that runs tasks. Remove the task and inspect the referenced file: an asset that an interpreter executes is code.",
-      });
-      continue;
+/** devcontainer.json lifecycle keys; every one runs without a prompt. */
+const DEVCONTAINER_LIFECYCLE_KEYS = [
+  "initializeCommand",
+  "onCreateCommand",
+  "updateContentCommand",
+  "postCreateCommand",
+  "postStartCommand",
+  "postAttachCommand",
+] as const;
+
+/**
+ * The effective command lines of a devcontainer.json. A lifecycle command is a
+ * string (shell form), an array (exec form, joined back into the line that
+ * runs) or an object of named commands run in parallel, each itself a string
+ * or an array.
+ */
+function collectDevcontainerCommandLines(parsed: unknown): string[] {
+  if (parsed === null || typeof parsed !== "object") return [];
+  const doc = parsed as Record<string, unknown>;
+  const lines: string[] = [];
+  const render = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (value.trim()) lines.push(value.trim());
+    } else if (Array.isArray(value)) {
+      const line = value.filter((a): a is string => typeof a === "string").join(" ").trim();
+      if (line) lines.push(line);
     }
-    const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
-    const dangerous =
-      downloadExec ||
-      HOOK_EVAL_REGEX.test(line) ||
-      HOOK_BASE64_REGEX.test(line) ||
-      HOOK_SHELL_RC_WRITE_REGEX.test(line);
-    if (!dangerous) continue;
-
-    // A task normally runs only when a developer invokes it. runOn folderOpen
-    // removes that step, which is the difference between a bad build step and
-    // an autostart mechanism, so it is the only thing that reaches critical.
-    const severity = autoRun ? "critical" : "high";
-    const autoNote = autoRun
-      ? " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action."
-      : " The task runs when invoked.";
-
-    findings.push({
-      rule: downloadExec
-        ? "EDITOR_TASK_DOWNLOAD_EXEC"
-        : "EDITOR_TASK_DANGEROUS_COMMAND",
-      description:
-        (downloadExec
-          ? "Editor task downloads and executes remote code."
-          : "Editor task contains a dangerous command (eval, base64 decode, download-exec pipe, or shell rc file modification).") +
-        autoNote,
-      severity,
-      file: relativePath,
-      match: truncate(line),
-      confidence: 0.9,
-      category: "malware",
-      recommendation:
-        "Remove the task or its command. Editor tasks execute with the developer's full privileges.",
-    });
+  };
+  for (const key of DEVCONTAINER_LIFECYCLE_KEYS) {
+    const value = doc[key];
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      for (const named of Object.values(value as Record<string, unknown>)) render(named);
+    } else {
+      render(value);
+    }
   }
+  return lines;
+}
 
+/** True for a dev container definition, at any depth. */
+export function isDevcontainerFile(relativePath: string): boolean {
+  const base = relativePath.split("/").pop() ?? "";
+  return base === "devcontainer.json" || base === ".devcontainer.json";
+}
+
+/**
+ * Scan a devcontainer.json's lifecycle commands with the editor-task battery.
+ * They are the same capability as a folderOpen task, reached through "Reopen
+ * in Container" or a Codespace instead, so every one is treated as auto-run.
+ */
+export function scanDevcontainerCommandsContent(
+  content: string,
+  relativePath: string,
+): Finding[] {
+  const findings: Finding[] = [];
+  for (const line of collectDevcontainerCommandLines(parseJsoncObject(content))) {
+    const finding = commandLineFinding(line, true, relativePath, DEVCONTAINER_CARRIER);
+    if (finding) findings.push(finding);
+  }
   return findings;
 }
 

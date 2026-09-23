@@ -149,16 +149,40 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   JavaScript), which no existing rule detected: a real infected module from
   the Go proxy scanned clean. Only option flags may sit between the
   interpreter and the file, so a script that takes an asset as an argument is
-  not flagged.
+  not flagged. `.vscode/tasks.json` is now read at any depth (opening a
+  subfolder runs its own tasks), not only at the scan root.
+- The same loader through the other auto-run carriers: `SCRIPT_EXECUTES_ASSET`
+  for npm lifecycle hooks (`preinstall`, `postinstall`, `prepare` and the rest
+  of the auto-run list), and `DEVCONTAINER_EXECUTES_ASSET` for dev container
+  lifecycle commands (`initializeCommand`, which runs on the host,
+  `onCreateCommand`, `postCreateCommand` and the rest, in string, array and
+  named-object form, at any depth). Dev container commands also get the
+  editor-task download-exec and dangerous-command checks
+  (`DEVCONTAINER_DOWNLOAD_EXEC`, `DEVCONTAINER_DANGEROUS_COMMAND`).
+- `ASSET_DISGUISED_SCRIPT`: a `.woff`, `.woff2`, `.ttf`, `.otf` or `.eot` file
+  that carries no font signature and is plain-text JavaScript, the Fake Font
+  payload itself. Real fonts, Git LFS pointers, empty files and binary data
+  are not flagged, and the file name is never a signature.
+- The Coder registry compromise exfiltration host (`coder-infra[.]com`,
+  GHSA-vx42-ghc9-gw65), which matches its subdomains too. The advisory names
+  no module or version, so the host is the only matchable indicator.
 
 ### Changed
 
 - README, npm description, GitHub Action description and repository About
   rewritten around the ecosystem coverage, with the generated table replacing
   the hand-kept "Supported Ecosystems" list.
+- The advertised ecosystem count is 16: only ecosystems whose indicators
+  actually ship are counted. The eight with a tested matcher and no publicly
+  known malicious package (Swift, CocoaPods, Hex, CRAN, Conan, Terraform
+  modules, Helm, Ansible Galaxy) are named separately. Both lists are generated
+  from the shipped data and checked by `check:coverage`, and the count script
+  behind the claims gate uses the same split.
 
 ### Fixed
 
+- `.claude/settings.json` hooks are parsed leniently too (comments, trailing
+  commas), so one stray comma no longer hides every hook from the scan.
 - **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
   file as JSONC, and the scanner parsed it as strict JSON, so a single comment
   or trailing comma made the whole file read as empty. The real Fake Font

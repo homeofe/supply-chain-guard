@@ -1,5 +1,5 @@
 name: "Supply Chain Guard"
-description: "Scan a repository for supply-chain malware and known-malicious dependencies across 24 ecosystems."
+description: "Scan a repository for supply-chain malware and known-malicious dependencies in 16 ecosystems."
 author: "Elvatis <emre.kohler@elvatis.com>"
 
 branding:

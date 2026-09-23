@@ -1,3 +1,51 @@
+## Every open item closed before going further (2026-09-23) (claude-opus-5-5)
+
+Same branch (PR 326), unreleased. The owner asked for everything still open to be fixed before
+anything else. This section closes the "Not covered, deliberately" list below and the open claim
+decision.
+
+### Closed
+
+- **Loader carriers:**
+  - `.vscode/tasks.json` at any depth (root via `scanAgentSkillFiles`, nested via the walk, no
+    double report);
+  - npm auto-run hooks (`SCRIPT_EXECUTES_ASSET`, one shared `ASSET_EXEC_PATTERN` in `patterns.ts`);
+  - devcontainer lifecycle commands (`DEVCONTAINER_*`, all six keys, string/array/object forms,
+    same battery as editor tasks).
+- **The payload itself:** `ASSET_DISGUISED_SCRIPT` (`disguised-asset.ts`). A font extension with no
+  font signature, plain text, and JavaScript syntax. It reuses the bytes already read for the digest
+  check.
+- **JSONC:** `.claude/settings.json` is parsed leniently as well. `package.json` stays strict because
+  npm parses it strictly.
+- **Coder registry exfiltration host:** verified in GHSA-vx42-ghc9-gw65 via the GitHub API. The
+  single-source IP is not included.
+- **The claim is now 16 ecosystems, meaning those with shipped data:**
+  - `count-ecosystems.mjs` and the generated README list share `ecosystemsWithData()`;
+  - `coverage-claim.test.ts` ties the script, the README sentence and the advertised claim together.
+
+### Proof
+
+- The ReDoS guard (`validatePatternSet`) refused the first asset-exec pattern in
+  SUSPICIOUS_SCRIPTS. Every repetition is now bounded; I did not add a correlatedMatcher to get
+  around it.
+- Coder test: feed domains report as `THREAT_INTEL_MATCH`, not `IOC_KNOWN_C2_DOMAIN`, which is the
+  hardcoded list. This was checked against a real scan before the test was written that way.
+- Mutation proof: 21 cuts, all red, with baseline and post-restore green. The cuts cover:
+  - each font signature;
+  - the text-share and syntax conditions;
+  - the extension filter;
+  - every dispatch (fonts, nested tasks, devcontainer);
+  - the no-double-report guard;
+  - each devcontainer form, initializeCommand and the auto-run severity;
+  - strict-JSON regressions for devcontainer and settings;
+  - the npm hook entry;
+  - the flag-token guard;
+  - the Coder entry;
+  - both halves of the claim count.
+- Two conditions were deleted rather than kept, because no cut could reach them: a Git LFS
+  special case and an empty-file check, both already implied by the text/syntax conditions.
+  The binary-noise fixture embeds script-like bytes so the text-share guard is load-bearing.
+
 ## Go victim entries and the Fake Font loader (2026-09-23) (claude-opus-5-5)
 
 Settles the open item the section below carried forward. Same branch (PR 326), unreleased.

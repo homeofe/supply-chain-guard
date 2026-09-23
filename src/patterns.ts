@@ -2024,8 +2024,33 @@ export type AutoRunLifecycleHook = (typeof AUTO_RUN_LIFECYCLE_HOOKS)[number];
 // Suspicious npm scripts
 // ---------------------------------------------------------------------------
 
+/**
+ * An interpreter executing a file whose extension says it is a font, image or
+ * media asset. That is the Contagious Interview "Fake Font" loader
+ * (`node ./public/fonts/fa-solid-400.woff2`, the woff2 being obfuscated
+ * JavaScript), and nothing legitimate runs a font. Only option-shaped tokens
+ * may sit between the interpreter and the file, so `node build.js images/a.png`
+ * (a real script taking an asset ARGUMENT) never matches. Shared by every
+ * auto-run command carrier: editor tasks, devcontainer lifecycle commands and
+ * npm lifecycle hooks.
+ *
+ * Every repetition is bounded (8 option flags of up to 64 characters, 512 for
+ * the path): the line is attacker-controlled, and validatePatternSet refuses
+ * an unbounded gap in SUSPICIOUS_SCRIPTS for exactly that reason.
+ */
+export const ASSET_EXEC_PATTERN =
+  "(?:^|[\\s;&|(])(?:node|nodejs|deno(?:\\s{1,8}run)?|bun(?:\\s{1,8}run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\\.exe)?\\s{1,8}(?:-[-\\w=.:]{0,64}\\s{1,8}){0,8}[\"']?[^\\s\"'|&;]{0,512}\\.(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)(?=[\"'\\s|&;)]|$)";
+
 /** Package.json script patterns that are suspicious */
 export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
+  {
+    name: "lifecycle-exec-asset",
+    pattern: ASSET_EXEC_PATTERN,
+    description: "install hook runs an interpreter on a file named as a font, image or media asset (the Contagious Interview \"Fake Font\" loader disguise)",
+    severity: "critical",
+    rule: "SCRIPT_EXECUTES_ASSET",
+    notTestFile: true,
+  },
   {
     name: "postinstall-curl",
     pattern: "curl\\s+.*\\|\\s*(?:bash|sh|node)",

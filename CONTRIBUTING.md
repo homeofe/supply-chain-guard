@@ -247,6 +247,7 @@ src/
   entropy.ts              # Shannon entropy analysis
   lockfile-checker.ts     # Lockfile integrity (npm, yarn, pnpm, bun; root and nested)
   lockfile-feed.ts        # Lockfile dependencies (incl. transitive) matched against the threat feed
+  disguised-asset.ts      # Script code named as a font (Fake Font payload)
   ecosystem-coverage.json # Declared ecosystem x file-format coverage (README table, claims gate, coverage-matrix test)
   config-scanner.ts       # Package manager configs
   git-scanner.ts          # Git hooks/submodules

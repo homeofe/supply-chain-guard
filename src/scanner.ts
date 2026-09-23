@@ -131,7 +131,13 @@ import { evaluateTwoTierVerdict } from "./two-tier-scoring.js";
 import { gatherExternalIntel } from "./external-threat-intel.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
-import { scanAgentSkillFiles } from "./skills-scanner.js";
+import {
+  scanAgentSkillFiles,
+  isDevcontainerFile,
+  scanDevcontainerCommandsContent,
+  scanEditorTasksContent,
+} from "./skills-scanner.js";
+import { checkDisguisedAsset } from "./disguised-asset.js";
 import {
   isSelfScanInertFile,
   isVerifiedSelfScanFile,
@@ -351,6 +357,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       if (fs.statSync(filePath).size <= MAX_FILE_SIZE) {
         fileBytes = fs.readFileSync(filePath);
         findings.push(...checkFileDigest(fileBytes, relativePath));
+        // Script code named as a font (Fake Font payload). Reuses the bytes
+        // just read, so fonts cost no extra I/O.
+        findings.push(...checkDisguisedAsset(fileBytes, relativePath));
       }
     } catch {
       // Leave fileBytes undefined and stay silent here: the oversized and
@@ -653,6 +662,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // vscode: and openvsx: feed entries.
     if (isExtensionReferenceFile(relativePath)) {
       findings.push(...scanExtensionReferences(content, relativePath, threatFeed));
+    }
+
+    // Dev container lifecycle commands run without a prompt (initializeCommand
+    // on the host), so they get the editor-task battery, at any depth.
+    if (isDevcontainerFile(relativePath)) {
+      findings.push(...scanDevcontainerCommandsContent(content, relativePath));
+    }
+
+    // .vscode/tasks.json below the root: opening that subfolder runs its tasks.
+    // The root file is read by scanAgentSkillFiles and is not repeated here.
+    if (relativePath !== ".vscode/tasks.json" && relativePath.endsWith("/.vscode/tasks.json")) {
+      findings.push(...scanEditorTasksContent(content, relativePath));
     }
 
     // Container images referenced from YAML (compose, Kubernetes manifests,
