@@ -89,6 +89,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Checkmarx KICS images (9 digests and the two tags that were never
   restored). The MCP `ioc_lookup` tool accepts `docker`.
 
+- Terraform registry **modules** (`tfmodule:<namespace>/<name>/<system>`, rule
+  `TERRAFORM_MALICIOUS_MODULE`), from `module` blocks and from the installed
+  module manifest `.terraform/modules/modules.json`, which records the exact
+  version `terraform init` fetched. Public-registry sources only.
+- Maven / Gradle: Groovy map and Kotlin named-argument declarations, Gradle
+  `plugins {}` ids as their marker artifacts (`id:id.gradle.plugin`), SBT
+  build files (`%`, and `%%` expanded to the Scala binary versions 2.12, 2.13
+  and 3, since the file does not state one), and Bazel `maven_install.json`
+  in both lockfile formats.
+- GitHub Actions: `uses:` steps in composite and Docker action metadata
+  (`action.yml` / `action.yaml` anywhere outside `.github/workflows`) are
+  checked against the compromised-commit list; they run with the calling
+  workflow's secrets.
+- Docker: `FROM ${ARG}` resolves through global `ARG` defaults and
+  `${NAME:-fallback}`, with Docker's scoping (an `ARG` inside a stage is not
+  visible to a later `FROM`).
+
 ### Fixed
 
 - **Malicious npm packages pulled in transitively were reported by nothing.**

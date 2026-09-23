@@ -13,6 +13,14 @@
  *   - `gradle.lockfile`: `group:artifact:version=configurations`, exact.
  *   - `*.gradle` / `*.gradle.kts`: quoted `group:artifact:version` strings.
  *   - `gradle/libs.versions.toml`: the `[libraries]` table of a version catalog.
+ *   - Gradle named arguments (`group: 'g', name: 'a', version: 'v'` and the
+ *     Kotlin `group = "g", name = "a", version = "v"` form).
+ *   - Gradle `plugins { id("x") version "v" }`, as the plugin marker artifact
+ *     `x:x.gradle.plugin` that the id resolves through.
+ *   - SBT (`*.sbt`): `"g" % "a" % "v"`, and `"g" %% "a" % "v"`, whose artifact
+ *     carries the Scala binary version the file does not state, so each
+ *     binary version in use (2.12, 2.13, 3) is a candidate.
+ *   - Bazel `maven_install.json` (rules_jvm_external), both lockfile formats.
  *
  * An unresolved version is passed as unknown, so only a whole-artifact entry
  * can fire on it; a version pin needs the exact version, which the lockfile
@@ -45,7 +53,8 @@ const DEFAULT_PLUGIN_GROUP = "org.apache.maven.plugins";
 export function isMavenFile(relativePath: string): boolean {
   const parts = relativePath.replace(/\\/g, "/").split("/");
   const basename = parts[parts.length - 1] ?? "";
-  if (basename === "pom.xml" || basename === "gradle.lockfile") return true;
+  if (basename === "pom.xml" || basename === "gradle.lockfile" || basename === "maven_install.json") return true;
+  if (basename.endsWith(".sbt")) return true;
   if (basename.endsWith(".gradle") || basename.endsWith(".gradle.kts")) return true;
   return basename.endsWith(".versions.toml") && parts[parts.length - 2] === "gradle";
 }
@@ -145,7 +154,86 @@ function extractGradleScript(content: string): MavenCoordinate[] {
     for (const m of line.matchAll(re)) {
       out.push({ group: m[2]!, artifact: m[3]!, version: m[4], line: i + 1 });
     }
+    const named = namedCoordinate(line);
+    if (named) out.push({ ...named, line: i + 1 });
+    const plugin = new RegExp(`\\bid\\s*\\(?\\s*['"](${ID})['"]\\s*\\)?\\s+version\\s*\\(?\\s*['"](${VERSION})['"]`).exec(line);
+    if (plugin) {
+      out.push({ group: plugin[1]!, artifact: `${plugin[1]}.gradle.plugin`, version: plugin[2], line: i + 1 });
+    }
   });
+  return out;
+}
+
+/** `group: 'g', name: 'a', version: 'v'` (Groovy) or `group = "g", name = "a", version = "v"` (Kotlin). */
+function namedCoordinate(line: string): Omit<MavenCoordinate, "line"> | null {
+  const field = (key: string) =>
+    new RegExp(`\\b${key}\\s*[:=]\\s*['"]([^'"]+)['"]`).exec(line)?.[1];
+  const group = field("group");
+  const artifact = field("name");
+  if (!group || !artifact) return null;
+  const idRe = new RegExp(`^${ID}$`);
+  if (!idRe.test(group) || !idRe.test(artifact)) return null;
+  const version = field("version");
+  return { group, artifact, version: version && new RegExp(`^${VERSION}$`).test(version) ? version : undefined };
+}
+
+/** Scala binary versions an SBT `%%` dependency may resolve to. */
+const SCALA_BINARY_VERSIONS = ["2.12", "2.13", "3"];
+
+function extractSbt(content: string): MavenCoordinate[] {
+  const out: MavenCoordinate[] = [];
+  const re = new RegExp(`"(${ID})"\\s*(%%?)\\s*"(${ID})"\\s*%\\s*"(${VERSION})"`, "g");
+  content.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.replace(/\/\/.*$/, "");
+    for (const m of line.matchAll(re)) {
+      const [, group, op, artifact, version] = m;
+      const artifacts = op === "%%" ? [artifact!, ...SCALA_BINARY_VERSIONS.map((v) => `${artifact}_${v}`)] : [artifact!];
+      for (const a of artifacts) out.push({ group: group!, artifact: a, version, line: i + 1 });
+    }
+  });
+  return out;
+}
+
+/** Bazel rules_jvm_external lockfile: v2 `artifacts` map, or v1 `dependency_tree`. */
+function extractMavenInstall(content: string): MavenCoordinate[] {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(content);
+  } catch {
+    return [];
+  }
+  if (!doc || typeof doc !== "object") return [];
+  const out: MavenCoordinate[] = [];
+  const idRe = new RegExp(`^${ID}$`);
+  const verRe = new RegExp(`^${VERSION}$`);
+  // v1 lists one entry per classifier (jar, sources, javadoc) of the same artifact.
+  const seen = new Set<string>();
+  const push = (group: string | undefined, artifact: string | undefined, version: string | undefined) => {
+    if (!group || !artifact || !idRe.test(group) || !idRe.test(artifact)) return;
+    const v = version && verRe.test(version) ? version : undefined;
+    const key = `${group}:${artifact}@${v ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ group, artifact, version: v, line: 1 });
+  };
+  const artifacts = (doc as { artifacts?: unknown }).artifacts;
+  if (artifacts && typeof artifacts === "object") {
+    for (const [key, value] of Object.entries(artifacts as Record<string, unknown>)) {
+      const [group, artifact] = key.split(":");
+      const version = (value as { version?: unknown })?.version;
+      push(group, artifact, typeof version === "string" ? version : undefined);
+    }
+  }
+  const deps = (doc as { dependency_tree?: { dependencies?: unknown } }).dependency_tree?.dependencies;
+  if (Array.isArray(deps)) {
+    for (const dep of deps) {
+      const coord = (dep as { coord?: unknown })?.coord;
+      if (typeof coord !== "string") continue;
+      // group:artifact[:packaging[:classifier]]:version
+      const parts = coord.split(":");
+      if (parts.length >= 3) push(parts[0], parts[1], parts[parts.length - 1]);
+    }
+  }
   return out;
 }
 
@@ -207,6 +295,8 @@ export function extractMavenCoordinates(content: string, relativePath: string): 
   const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
   if (basename === "pom.xml") return extractPom(content);
   if (basename === "gradle.lockfile") return extractGradleLockfile(content);
+  if (basename === "maven_install.json") return extractMavenInstall(content);
+  if (basename.endsWith(".sbt")) return extractSbt(content);
   if (basename.endsWith(".versions.toml")) return extractVersionCatalog(content);
   if (basename.endsWith(".gradle") || basename.endsWith(".gradle.kts")) return extractGradleScript(content);
   return [];

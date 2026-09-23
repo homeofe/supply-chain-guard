@@ -1015,6 +1015,29 @@ function stripYamlComment(line: string): string {
 }
 
 /**
+ * True for composite / Docker action metadata (action.yml, action.yaml)
+ * outside .github/workflows, which the workflow walker already owns.
+ */
+export function isActionMetadataFile(relativePath: string): boolean {
+  const posix = relativePath.replace(/\\/g, "/");
+  const basename = posix.split("/").pop() ?? "";
+  if (basename !== "action.yml" && basename !== "action.yaml") return false;
+  return !posix.startsWith(".github/workflows/") && !posix.includes("/.github/workflows/");
+}
+
+/**
+ * Known-malicious commit SHAs in the `uses:` steps of action metadata. A
+ * composite action's steps run with the calling workflow's secrets, so a
+ * compromised action pinned there is as dangerous as one in a workflow. Only
+ * the SHA check runs here: the other workflow rules are about workflow files.
+ */
+export function scanActionMetadataReferences(content: string, relativePath: string): Finding[] {
+  const findings: Finding[] = [];
+  checkActionReferences(content.split(/\r?\n/), relativePath, findings);
+  return findings.filter((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA");
+}
+
+/**
  * Check action references for compromised or unpinned actions.
  */
 function checkActionReferences(

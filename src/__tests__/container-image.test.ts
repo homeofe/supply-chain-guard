@@ -65,9 +65,28 @@ describe("extractImageReferences", () => {
       "# FROM evilns/commented:1",
       "FROM scratch",
     ].join("\n");
+    // FROM ${BASE} resolves through the global ARG default (see the next test).
     expect(extractImageReferences(dockerfile, "Dockerfile").map((r) => r.raw)).toEqual([
       "evilns/tool:6.6.6",
+      "node:22",
       `evilns/tool@sha256:${DIGEST}`,
+    ]);
+  });
+
+  // Only global ARGs (before the first FROM) are visible to FROM, as in Docker.
+  it("resolves FROM ${ARG} from global ARG defaults, and ${X:-default}", () => {
+    const dockerfile = [
+      "ARG BASE=evilns/tool",
+      "ARG TAG=6.6.6",
+      "FROM ${BASE}:${TAG} AS one",
+      "FROM ${OTHER:-evilns/tool:6.6.6} AS two",
+      "ARG STAGE_ONLY=evilns/tool:6.6.6",
+      "FROM ${STAGE_ONLY}",
+      "FROM ${UNDEFINED}",
+    ].join("\n");
+    expect(extractImageReferences(dockerfile, "Dockerfile").map((r) => `${r.raw}:${r.line}`)).toEqual([
+      "evilns/tool:6.6.6:3",
+      "evilns/tool:6.6.6:4",
     ]);
   });
 

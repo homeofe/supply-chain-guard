@@ -11053,7 +11053,7 @@ function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "pypi") return name.toLowerCase().replace(/[-_.]+/g, "-");
   if (ecosystem === "nuget") return name.toLowerCase();
   // Registry provider addresses are case-insensitive (terraform-scanner.ts).
-  if (ecosystem === "terraform") return name.toLowerCase();
+  if (ecosystem === "terraform" || ecosystem === "tfmodule") return name.toLowerCase();
   // Marketplace and Open VSX extension IDs are case-insensitive (extension-identity.ts).
   if (ecosystem === "vscode" || ecosystem === "openvsx") return name.toLowerCase();
   // GitHub owner/repo names are case-insensitive (github-actions-scanner.ts).

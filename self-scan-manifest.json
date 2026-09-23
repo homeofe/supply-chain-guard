@@ -15,7 +15,7 @@
     "src/__tests__/mcp-server.test.ts": "d69bd98680c086baa63cc2f6a2e5f0d038d0b86ef5d2894db36f082e1e361ac0",
     "src/__tests__/policy-engine.test.ts": "da4ac6ecf3d3a92412ccbf093e798a02e1c9029ac6cb67224ebd5746671ab27f",
     "src/__tests__/self-scan-recognition.test.ts": "5f60abe80f6141228f24b5155955f4b93c4281829ba9e83ab2a9249d938d4e07",
-    "src/__tests__/threat-intel.test.ts": "5dedd87f286c97eebf48a01931f33e8de6d572154cebee7df874f76a60b6e355",
+    "src/__tests__/threat-intel.test.ts": "ec86bba77445ca2b4bd013da41d7f62bae352b47e7d0416100deb042f392adb2",
     "src/active-validation.ts": "648f60ff6092943cab38936477b8f68aeb904daad0baf3a020581601a21bd250",
     "src/attack-graph.ts": "0e4499d8731df9470bf4e2e094272470b438e35ae760bbdc12f61eed3d92af06",
     "src/broad-gap-pattern-matchers.ts": "dbf54d00a5bcc030318d9204b31e1df17b2b9deb34609eba37a503efa14b144f",
@@ -29,9 +29,9 @@
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
     "src/reporter.ts": "25543634a052869790b12643a16ec2c757287d68828da10978be63439c5a9aa5",
-    "src/scanner.ts": "de9f713323091532688d7184093bc03d916e683fbeac92e201817dc1edd04ea1",
+    "src/scanner.ts": "aa627728c620bfd833af573ed2a16ef4fa2cd7e3200ad9c83c753107617cb132",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "671d9dcdedac384b8c12e213882287a22c8777a69730dc79ff0d9380d8255dbe",
+    "src/threat-intel.ts": "397dcb3bb5777b8a0d5cfc14b95955a26b5a4b70d2c6e98b91cbc916b3731d41",
     "src/workflow-modeler.ts": "1ff70d4b2066a233b08a56e4d12c4b6736dc80e237dc19492aa1ed8568d90b9a"
   }
 }

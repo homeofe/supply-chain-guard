@@ -123,6 +123,68 @@ describe("extractTerraformProviders", () => {
   });
 });
 
+describe("Terraform registry modules (tfmodule:)", () => {
+  const MOD_FEED: FeedIOC[] = [
+    { type: "package", value: "tfmodule:evil-ns/vpc/aws", severity: "critical", confidence: 1.0 },
+    { type: "package", value: "tfmodule:hijacked/eks/aws@5.1.0", severity: "critical", confidence: 1.0 },
+  ];
+  const modHits = (content: string, file: string) =>
+    scanTerraformContent(content, file, MOD_FEED).filter((f) => f.rule === "TERRAFORM_MALICIOUS_MODULE").map((f) => f.match);
+
+  it("reads module blocks: public registry sources and exact versions", () => {
+    const tf = [
+      'module "vpc" {',
+      '  source  = "evil-ns/vpc/aws"',
+      '  version = "~> 5.0"',
+      "}",
+      'module "eks" {',
+      '  source  = "registry.terraform.io/Hijacked/EKS/aws"',
+      '  version = "5.1.0"',
+      '  cluster_name = "x"',
+      "}",
+    ].join("\n");
+    expect(modHits(tf, "main.tf")).toEqual(["evil-ns/vpc/aws", "hijacked/eks/aws@5.1.0"]);
+  });
+
+  // git, local and private-registry module sources name no public module.
+  it("ignores non-registry and private module sources", () => {
+    const tf = [
+      'module "a" { source = "git::https://example.com/evil-ns/vpc/aws.git" }',
+      'module "b" { source = "./evil-ns/vpc/aws" }',
+      'module "c" { source = "tf.internal.example/evil-ns/vpc/aws" }',
+      'module "d" { source = "github.com/evil-ns/vpc" }',
+    ].join("\n");
+    expect(modHits(tf, "main.tf")).toEqual([]);
+  });
+
+  it("does not read a provider source as a module, nor a module as a provider", () => {
+    const tf = 'terraform { required_providers { aws = { source = "evil-ns/vpc" } } }';
+    expect(modHits(tf, "main.tf")).toEqual([]);
+  });
+
+  it("reads the installed module manifest with exact versions", () => {
+    const manifest = JSON.stringify({ Modules: [
+      { Key: "", Source: "", Dir: "." },
+      { Key: "eks", Source: "registry.terraform.io/hijacked/eks/aws", Version: "5.1.0", Dir: ".terraform/modules/eks" },
+      { Key: "local", Source: "./modules/x", Dir: "modules/x" },
+    ] });
+    expect(modHits(manifest, ".terraform/modules/modules.json")).toEqual(["hijacked/eks/aws@5.1.0"]);
+    expect(modHits(manifest.replace("5.1.0", "5.1.1"), ".terraform/modules/modules.json")).toEqual([]);
+  });
+
+  // The feed side too: a hand-curated module entry is not guaranteed lowercase.
+  it("matches a module feed entry written in mixed case", () => {
+    const feed: FeedIOC[] = [{ type: "package", value: "tfmodule:Evil-NS/VPC/aws", severity: "critical", confidence: 1.0 }];
+    const found = scanTerraformContent('module "v" {\n  source = "evil-ns/vpc/aws"\n}', "main.tf", feed);
+    expect(found.map((f) => f.rule)).toEqual(["TERRAFORM_MALICIOUS_MODULE"]);
+  });
+
+  it("recognises the module manifest file", () => {
+    expect(isTerraformProviderFile(".terraform/modules/modules.json")).toBe(true);
+    expect(isTerraformProviderFile("modules.json")).toBe(false);
+  });
+});
+
 describe("scanTerraformContent", () => {
   it("flags a bare-name provider IOC from a .tf source", () => {
     const hits = rules('    docker = { source = "evil-ns/docker" }', "infra/main.tf");

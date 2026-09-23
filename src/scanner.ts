@@ -56,7 +56,11 @@ import {
   collectExtractedFiles,
   DEFAULT_EXTRACTED_WALK_MAX_ENTRIES,
 } from "./extracted-file-walker.js";
-import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
+import {
+  isActionMetadataFile,
+  scanActionMetadataReferences,
+  scanGitHubActionsWorkflows,
+} from "./github-actions-scanner.js";
 import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
 import { isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
 import { isConfigFile, scanConfigFile } from "./config-scanner.js";
@@ -618,7 +622,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
     // matched against terraform: feed entries.
-    if (isTerraformProviderFile(basename)) {
+    if (isTerraformProviderFile(relativePath)) {
       findings.push(...scanTerraformContent(content, relativePath, threatFeed));
     }
 
@@ -633,6 +637,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // workflow container:/services: and docker:// steps).
     if (/\.ya?ml$/i.test(basename)) {
       findings.push(...scanImageReferences(content, relativePath, threatFeed));
+    }
+
+    // Composite / Docker action metadata anywhere outside .github/workflows:
+    // its uses: steps run with the caller's secrets.
+    if (isActionMetadataFile(relativePath)) {
+      findings.push(...scanActionMetadataReferences(content, relativePath));
     }
   }
 

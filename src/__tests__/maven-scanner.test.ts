@@ -126,13 +126,68 @@ describe("extractMavenCoordinates", () => {
     ]);
   });
 
+  // The plugin id resolves through its marker artifact (asserted as such); what
+  // must never happen is the bare version string, a URL or a numeric triple
+  // being read as a coordinate of its own.
   it("does not read a Gradle version string or a URL as a coordinate", () => {
     const groovy = [
       "plugins { id 'org.springframework.boot' version '3.2.0' }",
       "repositories { maven { url 'https://repo.example.com:8443/releases' } }",
       "def v = '1:2:3'",
     ].join("\n");
-    expect(coords(groovy, "build.gradle")).toEqual([]);
+    expect(coords(groovy, "build.gradle")).toEqual([
+      "org.springframework.boot:org.springframework.boot.gradle.plugin@3.2.0",
+    ]);
+  });
+});
+
+describe("extractMavenCoordinates: remaining build formats", () => {
+  it("accepts SBT and Bazel lockfiles", () => {
+    expect(isMavenFile("build.sbt")).toBe(true);
+    expect(isMavenFile("project/plugins.sbt")).toBe(true);
+    expect(isMavenFile("maven_install.json")).toBe(true);
+    expect(isMavenFile("third_party/maven_install.json")).toBe(true);
+  });
+
+  it("reads Groovy map and Kotlin named-argument declarations", () => {
+    const groovy = "dependencies {\n  implementation group: 'com.evil', name: 'stealer', version: '1.0.0'\n}";
+    const kts = 'dependencies {\n  implementation(group = "com.evil", name = "stealer", version = "1.0.0")\n}';
+    expect(coords(groovy, "build.gradle")).toEqual(["com.evil:stealer@1.0.0"]);
+    expect(coords(kts, "build.gradle.kts")).toEqual(["com.evil:stealer@1.0.0"]);
+  });
+
+  // A plugins {} id resolves through its marker artifact, id:id.gradle.plugin.
+  it("reads plugins {} ids as their marker artifacts", () => {
+    const kts = 'plugins {\n  id("com.evil.plugin") version "2.0"\n  kotlin("jvm") version "2.0.0"\n}';
+    const groovy = "plugins {\n  id 'com.evil.plugin' version '2.0'\n  id 'java'\n}";
+    expect(coords(kts, "build.gradle.kts")).toEqual(["com.evil.plugin:com.evil.plugin.gradle.plugin@2.0"]);
+    expect(coords(groovy, "settings.gradle")).toEqual(["com.evil.plugin:com.evil.plugin.gradle.plugin@2.0"]);
+  });
+
+  // %% appends the Scala binary version, which the build file does not state,
+  // so each binary version in use is a candidate.
+  it("reads SBT % and %% dependencies", () => {
+    const sbt = [
+      'libraryDependencies += "com.evil" % "stealer" % "1.0.0"',
+      'libraryDependencies ++= Seq(',
+      '  "com.evil" %% "scala-lib" % "2.0.0" % Test,',
+      ')',
+      '// libraryDependencies += "com.evil" % "commented" % "1.0"',
+    ].join("\n");
+    expect(coords(sbt, "build.sbt")).toEqual([
+      "com.evil:stealer@1.0.0",
+      "com.evil:scala-lib@2.0.0",
+      "com.evil:scala-lib_2.12@2.0.0",
+      "com.evil:scala-lib_2.13@2.0.0",
+      "com.evil:scala-lib_3@2.0.0",
+    ]);
+  });
+
+  it("reads both maven_install.json formats", () => {
+    const v2 = JSON.stringify({ version: "2", artifacts: { "com.evil:stealer": { shasums: {}, version: "1.0.0" }, "org.slf4j:slf4j-api": { version: "2.0.9" } } });
+    const v1 = JSON.stringify({ dependency_tree: { dependencies: [{ coord: "com.evil:stealer:1.0.0" }, { coord: "com.evil:stealer:jar:sources:1.0.0" }] } });
+    expect(coords(v2, "maven_install.json")).toEqual(["com.evil:stealer@1.0.0", "org.slf4j:slf4j-api@2.0.9"]);
+    expect(coords(v1, "maven_install.json")).toEqual(["com.evil:stealer@1.0.0"]);
   });
 });
 

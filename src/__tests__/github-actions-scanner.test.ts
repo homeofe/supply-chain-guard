@@ -620,6 +620,28 @@ jobs:
     expect(scanGitHubActionsWorkflows(tempDir).some((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toBe(true);
   });
 
+  // A composite action's own `uses:` steps run with the caller's secrets, and
+  // the workflow walker never reads action.yml, so it is checked on its own.
+  it("checks uses: in composite action metadata anywhere in the repo", async () => {
+    const { scanActionMetadataReferences, isActionMetadataFile } = await import("../github-actions-scanner.js");
+    const yml = [
+      "name: setup",
+      "runs:",
+      "  using: composite",
+      "  steps:",
+      "    - uses: aquasecurity/trivy-action@7550f14b64c1c724035a075b36e71423719a1f30",
+      "    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+    ].join("\n");
+    const found = scanActionMetadataReferences(yml, ".github/actions/setup/action.yml");
+    expect(found.map((f) => f.rule)).toEqual(["GHA_KNOWN_MALICIOUS_SHA"]);
+    expect(found[0]?.line).toBe(5);
+    expect(isActionMetadataFile(".github/actions/setup/action.yml")).toBe(true);
+    expect(isActionMetadataFile("action.yaml")).toBe(true);
+    // Workflows are the workflow walker's; never dispatched twice.
+    expect(isActionMetadataFile(".github/workflows/action.yml")).toBe(false);
+    expect(isActionMetadataFile("docs/action.yml.md")).toBe(false);
+  });
+
   // Data contract the SHA index relies on: every bundled actions: entry is a
   // lowercase owner/repo pinned to a lowercase 40-hex commit SHA.
   it("keeps every bundled actions: entry a lowercase repo@sha pin", () => {

@@ -13,6 +13,12 @@
  *   - `.terraform.lock.hcl`: `provider "host/ns/type" { version = "x" }`,
  *     which also carries the exact resolved version
  *
+ * Registry MODULES are matched too, against `tfmodule:<namespace>/<name>/<system>`
+ * entries: from `module` blocks (source + version) and from the installed
+ * module manifest `.terraform/modules/modules.json`, which records the exact
+ * version `terraform init` fetched. A module address is a different registry
+ * object from a provider address, hence its own prefix.
+ *
  * Only public-registry addresses are resolved: no host (Terraform's default of
  * registry.terraform.io), registry.terraform.io, or registry.opentofu.org. A
  * private registry host names a different provider that merely shares the
@@ -42,8 +48,77 @@ export interface TerraformProviderRef {
 /**
  * Check if a file declares or locks Terraform providers.
  */
-export function isTerraformProviderFile(basename: string): boolean {
+export function isTerraformProviderFile(relativePath: string): boolean {
+  const parts = relativePath.replace(/\\/g, "/").split("/");
+  const basename = parts[parts.length - 1] ?? "";
+  if (basename === MODULE_MANIFEST) return parts[parts.length - 2] === "modules" && parts[parts.length - 3] === ".terraform";
   return basename === LOCK_FILE || basename.endsWith(".tf") || basename.endsWith(".tf.json");
+}
+
+const MODULE_MANIFEST = "modules.json";
+
+export interface TerraformModuleRef {
+  /** Lowercased `namespace/name/system` on a public registry. */
+  address: string;
+  /** Exact version: a `version = "1.2.3"` attribute or the installed manifest. */
+  version: string | undefined;
+  line: number;
+}
+
+/** Module source: [public-host/]namespace/name/system, nothing else. */
+function parseModuleAddress(raw: string): string | null {
+  const parts = raw.trim().split("/");
+  if (parts.length === 4) {
+    if (!PUBLIC_REGISTRY_HOSTS.has((parts[0] ?? "").toLowerCase())) return null;
+    parts.shift();
+  }
+  if (parts.length !== 3 || !parts.every((p) => LABEL.test(p))) return null;
+  return parts.join("/").toLowerCase();
+}
+
+const EXACT_MODULE_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+
+/**
+ * Extract public-registry modules from `module` blocks or the installed
+ * module manifest. A version constraint is not a version; only an exact
+ * `version = "1.2.3"` is kept.
+ */
+export function extractTerraformModules(content: string, relativePath: string): TerraformModuleRef[] {
+  const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
+  if (basename === MODULE_MANIFEST) {
+    let doc: unknown;
+    try { doc = JSON.parse(content); } catch { return []; }
+    const modules = (doc as { Modules?: unknown })?.Modules;
+    if (!Array.isArray(modules)) return [];
+    const out: TerraformModuleRef[] = [];
+    for (const m of modules) {
+      const source = (m as { Source?: unknown })?.Source;
+      const version = (m as { Version?: unknown })?.Version;
+      const address = typeof source === "string" ? parseModuleAddress(source) : null;
+      if (address) out.push({ address, version: typeof version === "string" && EXACT_MODULE_VERSION.test(version) ? version : undefined, line: 1 });
+    }
+    return out;
+  }
+  if (!basename.endsWith(".tf")) return [];
+  const out: TerraformModuleRef[] = [];
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^\s*module\s+"[^"]*"\s*\{/.test(lines[i] ?? "")) continue;
+    // Collect the block body by brace depth (a one-line block included).
+    let depth = 0;
+    let body = "";
+    for (let j = i; j < lines.length; j++) {
+      const line = lines[j] ?? "";
+      body += line + "\n";
+      depth += (line.match(/\{/g) ?? []).length - (line.match(/\}/g) ?? []).length;
+      if (depth <= 0) break;
+    }
+    const source = /\bsource\s*=\s*"([^"]*)"/.exec(body)?.[1];
+    const version = /\bversion\s*=\s*"([^"]*)"/.exec(body)?.[1];
+    const address = source ? parseModuleAddress(source) : null;
+    if (address) out.push({ address, version: version && EXACT_MODULE_VERSION.test(version.trim()) ? version.trim() : undefined, line: i + 1 });
+  }
+  return out;
 }
 
 /**
@@ -85,6 +160,8 @@ export function extractTerraformProviders(
   const lines = content.split(/\r?\n/);
   const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
   const refs: TerraformProviderRef[] = [];
+
+  if (basename === MODULE_MANIFEST) return refs;
 
   if (basename === LOCK_FILE) {
     for (let i = 0; i < lines.length; i++) {
@@ -147,6 +224,26 @@ export function scanTerraformContent(
       recommendation: `Remove the ${ref.address} provider, delete the cached plugin under .terraform/providers, `
         + "rotate every credential available to the runs that initialised it, and audit the state it touched. "
         + "This provider is listed in threat intelligence feeds.",
+    });
+  }
+
+  for (const ref of extractTerraformModules(content, relativePath)) {
+    const key = `module:${ref.address}@${ref.version ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const ioc = matchPackageIOC("tfmodule", ref.address, ref.version, iocFeed);
+    if (!ioc) continue;
+    findings.push({
+      rule: "TERRAFORM_MALICIOUS_MODULE",
+      description: `Known malicious Terraform module: ${ref.address}${ioc.family ? ` (${ioc.family})` : ""}${ioc.campaign ? ` - ${ioc.campaign}` : ""}`,
+      severity: ioc.severity,
+      file: relativePath,
+      line: ref.line,
+      match: ref.version ? `${ref.address}@${ref.version}` : ref.address,
+      confidence: ioc.confidence,
+      category: "malware",
+      recommendation: `Remove the ${ref.address} module, delete .terraform/modules, rotate every credential available `
+        + "to the runs that applied it, and review the resources it created. This module is listed in threat intelligence feeds.",
     });
   }
 

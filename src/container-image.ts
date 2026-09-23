@@ -117,13 +117,27 @@ export function extractImageReferences(content: string, relativePath: string): L
   const lines = content.split(/\r?\n/);
   if (isDockerfileSyntax(relativePath)) {
     const stages = new Set<string>();
+    // Global ARG defaults: only ARGs declared before the first FROM are in
+    // scope for FROM lines, exactly as Docker resolves them.
+    const globalArgs = new Map<string, string>();
+    let seenFrom = false;
+    const expand = (value: string): string =>
+      value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+        (whole, braced: string | undefined, fallback: string | undefined, bare: string | undefined) => {
+          const name = braced ?? bare!;
+          return globalArgs.get(name) ?? fallback ?? whole;
+        });
     lines.forEach((raw, i) => {
       // Both instructions are anchored at the line start, so a "# FROM ..."
       // comment never matches.
       const line = raw.trim();
+      const arg = /^ARG\s+([A-Za-z_][A-Za-z0-9_]*)=(\S+)/i.exec(line);
+      if (arg && !seenFrom) globalArgs.set(arg[1]!, arg[2]!.replace(/^(["'])(.*)\1$/, "$2"));
       const from = /^FROM\s+(?:--platform=\S+\s+)?(\S+)(?:\s+AS\s+(\S+))?/i.exec(line);
+      if (from) seenFrom = true;
       if (from) {
-        const image = from[1]!;
+        // An unresolved variable stays in place and fails the reference grammar.
+        const image = expand(from[1]!);
         if (!stages.has(image.toLowerCase()) && parseImageReference(image)) out.push({ raw: image, line: i + 1 });
         if (from[2]) stages.add(from[2].toLowerCase());
         return;
