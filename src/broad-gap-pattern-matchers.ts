@@ -794,13 +794,23 @@ const DNS_ENCODER_WINDOW = 5;
 /** Characters of each line above the hit read for assignments. */
 const DNS_WINDOW_LINE_CHARS = 4096;
 
-/** `[const|let|var] name =` or `name +=` at the start of a statement. */
-const ASSIGNMENT_RE = /^[^\S\n]*(?:(?:const|let|var)[^\S\n]+)?([A-Za-z_$][\w$]*)[^\S\n]*\+?=(?!=)([^]*)$/;
+/**
+ * `[const|let|var] name =`, `name +=`, or a destructuring target
+ * (`const [a] =`, `const {a: b} =`) at the start of a statement.
+ */
+const ASSIGNMENT_RE =
+  /^[^\S\n]*(?:(?:const|let|var)[^\S\n]+)?([A-Za-z_$][\w$]*|\[[^\]\n]{0,200}\]|\{[^}\n]{0,200}\})[^\S\n]*\+?=(?!=)([^]*)$/;
 
+/** `function name(` or `async function name(`, declaring a helper. */
+const FUNCTION_DECL_RE = /\bfunction[^\S\n]*\*?[^\S\n]+([A-Za-z_$][\w$]*)[^\S\n]*\(/;
+
+const IDENTIFIER_RE = /[A-Za-z_$][\w$]*/g;
+
+/** Is one of `names` used as an identifier in `text`? A set lookup per token, linear. */
 function mentionsAny(text: string, names: Set<string>): boolean {
   if (names.size === 0) return false;
-  const alternatives = [...names].map((name) => name.replace(/\$/g, "\\$")).join("|");
-  return new RegExp(`(?<![\\w$])(?:${alternatives})(?![\\w$])`).test(text);
+  for (const m of text.matchAll(IDENTIFIER_RE)) if (names.has(m[0])) return true;
+  return false;
 }
 
 /** Does an encoder call's result reach this (1-based) line? */
@@ -810,13 +820,18 @@ function encodedNameReachesLine(content: string, line: number): boolean {
   const hitText = content.slice(hit[0], hit[1]);
   if (DNS_ENCODED_NAME.test(hitText)) return true;
   const tainted = new Set<string>();
+  // A helper declared in the window whose body encodes: calling it is using it.
+  let helper: string | undefined;
   for (let k = Math.max(1, line - DNS_ENCODER_WINDOW); k < line; k++) {
     const bounds = lineBounds(content, k);
     if (!bounds) continue;
     const text = content.slice(bounds[0], Math.min(bounds[1], bounds[0] + DNS_WINDOW_LINE_CHARS));
+    helper = FUNCTION_DECL_RE.exec(text)?.[1] ?? helper;
+    if (helper !== undefined && DNS_ENCODED_NAME.test(text)) tainted.add(helper);
     for (const statement of text.split(";")) {
       const m = ASSIGNMENT_RE.exec(statement);
-      if (m && (DNS_ENCODED_NAME.test(m[2]!) || mentionsAny(m[2]!, tainted))) tainted.add(m[1]!);
+      if (!m || !(DNS_ENCODED_NAME.test(m[2]!) || mentionsAny(m[2]!, tainted))) continue;
+      for (const name of m[1]!.matchAll(IDENTIFIER_RE)) tainted.add(name[0]);
     }
   }
   return mentionsAny(hitText, tainted);
@@ -827,7 +842,7 @@ const DNS_ANSWER_DECODE =
   /\batob[^\S\n]*\(|\bBuffer\.from[^\S\n]*\([^)\n]{0,200}["'](?:base64|base64url|hex)["']|\b(?:b64decode|b32decode|unhexlify|a2b_base64)[^\S\n]*\(|\bbytes\.fromhex[^\S\n]*\(/;
 /** ... and an execution sink in the same file. `.exec(` is RegExp, not a sink. */
 const DNS_ANSWER_SINK =
-  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|(?<![=!<>])=(?!=)[^\S\n]*(?:(?:globalThis|window|self|global)[^\S\n]*\.[^\S\n]*)?(?:eval|Function)\b(?![^\S\n]*[.(\w])|[\w$\])][^\S\n]*\[[^\S\n]*['"](?:eval|Function)['"][^\S\n]*\]|\{[^}\n]{0,200}?\b(?:eval|Function)[^\S\n]*:[^}\n]{0,200}\}[^\S\n]*=(?!=)|\([^\S\n]*0[^\S\n]*,[^\S\n]*(?:eval|Function)[^\S\n]*\)|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
+  /\beval[^\S\n]*\(|\bFunction[^\S\n]*\(|(?<![=!<>])=(?!=)[^\S\n]*(?:(?:globalThis|window|self|global)[^\S\n]*\.[^\S\n]*)?(?:eval|Function)\b(?![^\S\n]*[.(\w])|[\w$\])][^\S\n]*\[[^\S\n]*['"](?:eval|Function)['"][^\S\n]*\]|\b(?:eval|Function)[^\S\n]*:[^\S\n]*[A-Za-z_$][\w$]*[^}\n]{0,80}\}[^\S\n]*=(?!=)|\([^\S\n]*0[^\S\n]*,[^\S\n]*(?:eval|Function)[^\S\n]*\)|\bvm[^\S\n]*\.[^\S\n]*(?:runIn\w{0,24}|Script|compileFunction)\b|\bchild_process\b|\bsubprocess\b|\bos\.(?:system|popen)[^\S\n]*\(|(?<![.\w$])exec[^\S\n]*\(/;
 
 /**
  * C2 corroboration for C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT. A DoH endpoint or

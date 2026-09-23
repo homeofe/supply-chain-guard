@@ -1,3 +1,46 @@
+## Third review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Three reviewers again: workflow egress, entropy and DNS, and a real-data comparison.
+Each had to time 5 MiB adversarial inputs and compare against `main`. The real-data
+reviewer ran both builds over 13 local checkouts and a large `node_modules` corpus and
+traced every difference to its source line. It found no false negative and no false
+positive introduced by the PR. Every difference removed a known false-positive class
+or replaced a file-level finding with one on the exact step. The other two found
+defects, all in the second round's own code, and all are fixed. The proof is 45
+mutation cuts, all red (one by hanging past the harness limit), with baseline and
+post-restore green, run on the Linux runner.
+
+### Fixed
+
+- **File carry, redesigned instead of patched.** The second round listed the ways a
+  later step reads a file. Python `open()` and `$(base64 file)` walked past the list,
+  and a `1 < 2` comparison counted as a read. The rule now records the names of the
+  files a secret-holding step writes (redirects, `tee`, PowerShell cmdlets, Node and
+  Python writes) and follows them by name. A later step reaches the secret when it
+  names such a file, however it reads it, or when it uploads an artifact. A step that
+  reads a tainted file passes the taint on to the files it names (an archive, an
+  encrypted copy). The list of read forms is only a fallback for a write whose target
+  has no stated name.
+- **Precision of "holds the secret".** A step holds a secret when its code names the
+  secret or a variable carrying it, or dumps the whole environment (`printenv`, `env`,
+  a bare `set`, `process.env` taken whole). An artifact upload sends files, not the
+  environment. So a workflow-level cache token no longer makes every upload in the
+  workflow a finding, which was the one borderline case the real-data run found.
+- **DNS, two quadratic paths:**
+  - the destructuring-sink alternative restarted at every `{`: 17 s on a 5 MiB line,
+    now 0.2 s;
+  - the taint tracker rebuilt a regex per statement: 500 hits took more than 60 s, now
+    0.4 s.
+
+  Both now anchor on a rare token or use set lookups. The taint also follows array
+  destructuring and a helper function declared in the window.
+- **Node `http(s).request`/`get` and `axios`** count as egress.
+
+### Left out on purpose
+
+- `aws s3 cp`, `gh release upload` and `docker push` are the normal way a release ships
+  with credentials in scope. Reporting them would bury real findings.
+
 ## Second review round of PR 326 (2026-09-23) (claude-opus-5-5)
 
 The owner asked for another round. Three reviewers took the first round's fixes.

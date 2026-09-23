@@ -30,13 +30,13 @@ const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
 
 /**
  * Other ways a step sends data out, counted as egress without looking for a
- * loopback target: HTTP clients in Python and PowerShell, and file transfer
+ * loopback target: HTTP clients in Node, Python and PowerShell, and file transfer
  * tools that always reach another host. `scp`/`rsync` count only with a
  * `host:path` argument (see isRemoteCopy). `gh api` is left out on purpose:
  * a token sent to GitHub's own API is that token's intended audience.
  */
 const OTHER_EGRESS_RE =
-  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w.-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b/i;
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w.-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(/i;
 
 /** The `scp`/`rsync` command word; its arguments are read by isRemoteCopy. */
 const REMOTE_COPY_CMD_RE = /(?<![\w.-])(?:scp|rsync)(?![\w.-])/;
@@ -73,20 +73,151 @@ function isRemoteCopy(segment: string): boolean {
 const PERSISTS_ENV_RE = /GITHUB_(?:ENV|OUTPUT)\b|\bcore\s*\.\s*(?:exportVariable|setOutput)\s*\(/;
 
 /**
- * A step that writes to a file: a redirection (not `2>&1`, not `> /dev/null`),
- * `tee`, a PowerShell file cmdlet, or a Node fs write. A later step reaches
- * such a file only by reading one, see execReadsFile.
+ * Where a redirection in one shell word writes to: `>f`, `x>f`, `1>>f`, or
+ * `>` with the file as the next word (`""`). `2>`, `>&2`, `=>` and `->` are
+ * not file writes of the step's output. `undefined` when the word has none.
  */
-const PERSISTS_FILE_RE =
-  /(?<![0-9&>=-])>>?(?![>&]|\s*\/dev\/null)|(?<![\w.-])tee(?![\w.-])|\b(?:Out-File|Set-Content|Add-Content)\b|\b(?:writeFileSync|appendFileSync|writeFile|appendFile)\s*\(/i;
+function redirectTarget(word: string): string | undefined {
+  const at = word.indexOf(">");
+  if (at < 0) return undefined;
+  const before = word.slice(0, at);
+  if (/[=<>-]$/.test(before)) return undefined;
+  const fd = /\d*$/.exec(before)![0];
+  if (fd !== "" && fd !== "1") return undefined;
+  const rest = word.slice(at + (word[at + 1] === ">" ? 2 : 1));
+  if (rest.startsWith("&") || rest.startsWith(">")) return undefined;
+  return rest;
+}
 
 /**
- * Forms that read a local file: curl/wget/PowerShell file arguments (`@file`,
- * `-T`, `--post-file`, `-InFile`), `source`/`.`, `$(cat ...)`/`$(< ...)`, an
- * input redirection, a `cat ... |` pipe, `Get-Content`, `readFileSync(`.
+ * Files a step writes: redirection targets, `tee` arguments, PowerShell
+ * `Out-File`/`Set-Content`/`Add-Content`, Node `writeFile`/`appendFile` and
+ * Python `open(..., "w"|"a"|"x"|"+")`. A target this reader cannot name (a
+ * variable, a glob, a computed path) is `null`. The runner's own files and
+ * devices are left out: `$GITHUB_ENV`/`$GITHUB_OUTPUT` are PERSISTS_ENV_RE's,
+ * and the step summary is not readable by later steps.
+ */
+function fileTargets(exec: string): Array<string | null> {
+  const out: Array<string | null> = [];
+  const joined = exec.replace(/\\\n/g, " ");
+  for (const segment of joined.split(/&&|\|\||[;|\n]/)) {
+    const words = shellWords(segment);
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i]!;
+      const target = redirectTarget(word);
+      if (target !== undefined) {
+        const file = target !== "" ? target : words[++i];
+        if (file !== undefined) out.push(file);
+        continue;
+      }
+      const tool = word.slice(Math.max(word.lastIndexOf("/"), word.lastIndexOf("\\")) + 1);
+      if (tool === "tee") {
+        for (let j = i + 1; j < words.length; j++) if (!words[j]!.startsWith("-")) out.push(words[j]!);
+        break;
+      }
+      if (/^(?:Out-File|Set-Content|Add-Content)$/i.test(tool)) {
+        for (let j = i + 1; j < words.length; j++) {
+          const arg = words[j]!;
+          if (/^-(?:FilePath|Path|LiteralPath)$/i.test(arg)) {
+            if (words[j + 1] !== undefined) out.push(words[j + 1]!);
+            break;
+          }
+          if (!arg.startsWith("-")) {
+            out.push(arg);
+            break;
+          }
+        }
+      }
+    }
+  }
+  for (const m of joined.matchAll(/\b(?:writeFile|appendFile)(?:Sync)?[^\S\n]*\([^\S\n]*(?:(['"`])([^'"`\n]{0,512})\1)?/g)) {
+    out.push(m[2] ?? null);
+  }
+  for (const m of joined.matchAll(/\bopen[^\S\n]*\([^\S\n]*(?:(['"])([^'"\n]{0,512})\1|[\w.[\]]{1,128})[^\S\n]*,[^\S\n]*(?:mode[^\S\n]*=[^\S\n]*)?['"]([^'"\n]{0,8})['"]/g)) {
+    if (/[wax+]/.test(m[3]!)) out.push(m[2] ?? null);
+  }
+  return out
+    .filter((t) => t === null || !/GITHUB_(?:ENV|OUTPUT|PATH|STEP_SUMMARY)|^\/dev\//.test(t))
+    .map((t) => (t === null || /[$`*?{}]/.test(t) || t.trim() === "" ? null : t));
+}
+
+/** Most file names followed per job; past this, any later file read counts. */
+const MAX_TAINTED_FILES = 256;
+
+/** The path components a later step could name a written file by. */
+function fileNameParts(target: string): string[] {
+  return target.split(/[\\/]/).filter((part) => part !== "" && part !== "." && part !== ".." && part !== "~");
+}
+
+/** Tokens a file name can appear as; `/`, `@`, quotes and brackets separate them. */
+const FILE_TOKEN_RE = /[\w.+~-]+/g;
+
+/**
+ * Path-like words of a step (`bundle.tgz`, `out/`), for a step that reads a
+ * tainted file: whatever it produces (an archive, an encrypted copy, a `cp`)
+ * is named among its words, without enumerating each tool's output flag.
+ * Options, URLs and variables are left out.
+ */
+function pathLikeWords(exec: string): string[] {
+  const out: string[] = [];
+  for (const segment of exec.replace(/\\\n/g, " ").split(/&&|\|\||[;|\n]/)) {
+    for (const word of shellWords(segment)) {
+      if (word.startsWith("-") || word.includes("://") || /[$`*?{}]/.test(word)) continue;
+      if (/[./\\]/.test(word) && /[A-Za-z]/.test(word)) out.push(word);
+    }
+  }
+  return out;
+}
+
+/**
+ * `NAME: value` pairs of env text, block or flow form. An unquoted value keeps
+ * a whole `${{ ... }}` expression, and a value never starts at the `{` of a
+ * flow map, so `env: { T: ... }` yields the pair inside it.
+ */
+const ENV_PAIR_RE =
+  /([A-Za-z_][\w-]*)[ \t]*:[ \t]*("[^"\n]*"|'[^'\n]*'|(?:\$\{\{[^}\n]{0,512}\}\}|\$(?!\{\{)|[^$,{}[\n])*)/g;
+
+/**
+ * Commands that write out the whole environment without naming a variable:
+ * `printenv`, `env`, a bare `set` (not `set -e`), `export -p`, PowerShell's
+ * `env:` drive, `process.env` or `os.environ` taken whole.
+ */
+const ENV_DUMP_RE =
+  /(?<![\w.$-])(?:printenv|env)(?![\w.:=-])|(?<![\w.$-])set(?![\w.=-])(?![^\S\n]+[-+])|\bexport[^\S\n]+-p\b|\b(?:Get-ChildItem|gci|dir|ls)[^\S\n]+env:|\bprocess\.env\b(?![^\S\n]*[.[])|\bos\.environ\b(?![^\S\n]*[.[])/i;
+
+/** Names of the env variables whose value is a stored secret. */
+function secretEnvNames(envText: string): string[] {
+  const out: string[] = [];
+  for (const m of envText.matchAll(ENV_PAIR_RE)) if (textHasStoredSecret(m[2]!)) out.push(m[1]!);
+  return out;
+}
+
+const IDENTIFIER_RE = /[A-Za-z_]\w*/g;
+
+/** Is one of these variables named in text (`$T`, `${T}`, `$env:T`, `process.env.T`)? */
+function mentionsVariable(text: string, names: Set<string>): boolean {
+  if (names.size === 0) return false;
+  for (const m of text.matchAll(IDENTIFIER_RE)) if (names.has(m[0])) return true;
+  return false;
+}
+
+/** Does text name one of these files as a whole token (`key.txt`, not `key.txt2`)? */
+function mentionsFile(text: string, names: Set<string>): boolean {
+  if (names.size === 0) return false;
+  for (const m of text.matchAll(FILE_TOKEN_RE)) if (names.has(m[0])) return true;
+  return false;
+}
+
+/**
+ * Forms that read some local file, used only when a secret went to a file
+ * whose name the step did not state (fileTargets returned null): curl/wget/
+ * PowerShell file arguments (`@file`, `-T`, `--post-file`, `-InFile`),
+ * `source`/`.`, any command substitution, a `cat ... |` pipe, an input
+ * redirection from a path-like word (not a `1 < 2` comparison), `Get-Content`,
+ * Node `readFile`, Python `open(`.
  */
 const READS_FILE_RE =
-  /(?:^|[\s'"=])@[\w./~$-]|(?:^|\s)(?:-T|--upload-file|--post-file|--body-file|-InFile)(?=[\s=])|(?:^|[\s;&|(])(?:source|\.)[^\S\n]+[\w./~$"'-]|\$\([^\S\n]*(?:cat\b|<)|\bcat[^\S\n]+[^|;&\n]{0,512}\||(?<![<\d])<(?![<(&])[^\S\n]*[\w./~$"'-]|\b(?:Get-Content|readFileSync)\b/i;
+  /(?:^|[\s'"=])@["']?[\w./~$-]|(?:^|\s)(?:-T|--upload-file|--post-file|--body-file|-InFile)(?=[\s=])|(?:^|[\s;&|(])(?:source|\.)[^\S\n]+[\w./~$"'-]|\$\([^\S\n]*[<\w]|\bcat[^\S\n]+[^|;&\n]{0,512}\||(?<![<\d])<(?![<(&=])[^\S\n]*[\w~"'-]{0,256}[./$]|\bGet-Content\b|\b(?:readFile(?:Sync)?|open)[^\S\n]*\(/i;
 
 /** Does executed text read a local file, or send one out? */
 function execReadsFile(text: string): boolean {
@@ -402,8 +533,14 @@ export function workflowScopes(content: string): WorkflowScopes {
  * `env:`, in the job's `env:` (or its container's) or matrix, or in the
  * workflow `env:`. It stays in scope for every later step of the job once a
  * step holding it writes to `$GITHUB_ENV` or `$GITHUB_OUTPUT` (or exports it
- * from github-script), and for later steps that upload an artifact or read a
- * file once a step holding it writes to a file.
+ * from github-script). A step holds it when its code names the secret or a
+ * variable carrying it; once such a step writes a file, the secret reaches
+ * later steps that upload an artifact or name that file, and a step that
+ * reads such a file and writes another passes it on. A file whose name the
+ * step does not state reaches any later step that reads a file. An artifact
+ * upload sends files, not the environment: a secret that is only in the
+ * job's or workflow's env reaches it through a file, or through the upload
+ * step's own env.
  * The step must itself make an outbound call or upload an artifact. `with:`
  * inputs are ignored except where the step's own code can read them: a local
  * composite action, or a `script:` body. A reusable workflow from another repository that is
@@ -440,12 +577,16 @@ function checkSecretToEgress(
   }
 
   const workflowSecret = textHasStoredSecret(workflowEnv);
+  const workflowSecretNames = secretEnvNames(workflowEnv);
 
   const findings: Finding[] = [];
   for (const { job, env, reusableSecrets, strategy, steps } of jobs) {
-    const jobSecret = workflowSecret || textHasStoredSecret(env) || textHasStoredSecret(strategy);
+    const matrixSecret = textHasStoredSecret(strategy);
+    const jobSecret = workflowSecret || textHasStoredSecret(env) || matrixSecret;
+    const jobSecretNames = [...workflowSecretNames, ...secretEnvNames(env)];
     let carriedEnv = false;
-    let carriedFile = false;
+    const taintedFiles = new Set<string>();
+    let unnamedFile = false;
 
     if (job.uses && !job.uses.startsWith("./")) {
       if (/^[ \t]*secrets[ \t]*:[ \t]*inherit[ \t]*$/m.test(reusableSecrets) || textHasStoredSecret(reusableSecrets)) {
@@ -471,14 +612,35 @@ function checkSecretToEgress(
         egress = "makes an outbound call";
         stepSecret = stepSecret || textHasStoredSecret(stripped.slice(s, e).join("\n"));
       }
+      const readsTainted = mentionsFile(exec, taintedFiles) || (unnamedFile && execReadsFile(exec));
       // An upload sends files, and a local action's steps are not read here.
-      const readsFile = egress !== null && (egress !== "makes an outbound call" || execReadsFile(exec));
-      if (egress && (stepSecret || jobSecret || carriedEnv || (carriedFile && readsFile))) {
+      const fileReaches =
+        (taintedFiles.size > 0 || unnamedFile) && egress !== null && (egress !== "makes an outbound call" || readsTainted);
+      const envReaches = egress !== "uploads an artifact" && (jobSecret || carriedEnv);
+      if (egress && (stepSecret || envReaches || fileReaches)) {
         findings.push(finding(step.line, `a stored secret is in scope for a step in job "${job.id}" that ${egress}`));
       }
-      if (stepSecret || jobSecret) {
+      const secretNames = new Set([...jobSecretNames, ...secretEnvNames(linesText(stripped, regions, s, e, ["env"]))]);
+      const holdsSecret =
+        textHasStoredSecret(exec) ||
+        mentionsVariable(exec, secretNames) ||
+        (secretNames.size > 0 && ENV_DUMP_RE.test(exec)) ||
+        (matrixSecret && /\bmatrix\s*\./.test(exec)) ||
+        (/^actions\/github-script(?:@|$)/i.test(uses) && stepSecret) ||
+        carriedEnv ||
+        readsTainted;
+      if (holdsSecret) {
         if (PERSISTS_ENV_RE.test(exec)) carriedEnv = true;
-        if (PERSISTS_FILE_RE.test(exec)) carriedFile = true;
+        const written: Array<string | null> = fileTargets(exec);
+        if (readsTainted) written.push(...pathLikeWords(exec));
+        for (const target of written) {
+          if (target === null) unnamedFile = true;
+          else for (const part of fileNameParts(target)) taintedFiles.add(part);
+        }
+        if (taintedFiles.size > MAX_TAINTED_FILES) {
+          taintedFiles.clear();
+          unnamedFile = true;
+        }
       }
     }
   }

@@ -278,7 +278,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     for minified and prose files.
   - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal (an
     encoder result that reaches the query: on its line, or assigned in the
-    five lines above and used by it; or a decoded TXT answer reaching eval,
+    five lines above (also through destructuring or a helper function declared
+    there) and used by it; or a decoded TXT answer reaching eval,
     Function, an alias or indirect call of either, vm or a process sink); an
     ordinary DNSSEC, SPF or DMARC lookup reports at low, including when an
     unrelated digest is encoded nearby.
@@ -298,12 +299,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     `secrets: inherit` or a stored secret, and a local composite action that
     makes an outbound call, are reported too. A secret stays in scope for the
     later steps of its job once a step holding it writes to `$GITHUB_ENV` or
-    `$GITHUB_OUTPUT` (or exports it from github-script); once it is written to
-    a file, it stays in scope for later steps that upload an artifact or read
-    a file. A secret in `strategy.matrix` counts for the job, and Python
-    `requests`/`httpx`/`urllib`, PowerShell web cmdlets and `Net.WebClient`,
-    `Send-MailMessage`, `sftp`/`ftp`/`socat`/`telnet` and `scp`/`rsync` to a
-    remote host count as egress.
+    `$GITHUB_OUTPUT` (or exports it from github-script). A step holds a secret
+    when its code names it or a variable carrying it, or dumps the whole
+    environment; a file such a step writes is followed by name, so it reaches
+    a later step that names it (whatever reads it) or uploads an artifact, and
+    a step that reads it passes it on to the files it names. An artifact
+    upload sends files, not the environment, so a secret that is only in the
+    job's or workflow's env reaches it through a file or the upload step's own
+    env. A secret in `strategy.matrix` counts for the job, and Node
+    `http(s).request`/`get` and `axios`, Python `requests`/`httpx`/`urllib`,
+    PowerShell web cmdlets and `Net.WebClient`, `Send-MailMessage`,
+    `sftp`/`ftp`/`socat`/`telnet` and `scp`/`rsync` to a remote host count as
+    egress.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a
