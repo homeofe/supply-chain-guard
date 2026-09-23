@@ -6902,4 +6902,72 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // Nx Console nrwl.angular-console 18.95.0 extension identity (May 2026)
+  // =================================================================
+
+  describe("Nx Console 18.95.0 extension identity", () => {
+    it("flags a devcontainer that installs the hijacked 18.95.0 release", async () => {
+      fs.mkdirSync(path.join(tempDir, ".devcontainer"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".devcontainer", "devcontainer.json"),
+        [
+          "{",
+          "  // JSONC, as VS Code writes it",
+          '  "customizations": { "vscode": { "extensions": ["nrwl.angular-console@18.95.0",] } }',
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("nrwl.angular-console@18.95.0");
+    });
+
+    it("flags an installed copy of the hijacked release", async () => {
+      const installed = path.join(tempDir, "nrwl.angular-console-18.95.0");
+      fs.mkdirSync(installed, { recursive: true });
+      fs.writeFileSync(
+        path.join(installed, "package.json"),
+        JSON.stringify({ name: "angular-console", publisher: "nrwl", version: "18.95.0", engines: { vscode: "^1.90.0" } })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toBe(true);
+    });
+
+    // The control: Nx Console is a legitimate extension with millions of
+    // installs. A recommendation (no version) and any other release are clean.
+    it("leaves a recommendation and a clean release of Nx Console alone", async () => {
+      fs.mkdirSync(path.join(tempDir, ".vscode"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".vscode", "extensions.json"),
+        JSON.stringify({ recommendations: ["nrwl.angular-console"] })
+      );
+      fs.writeFileSync(
+        path.join(tempDir, ".devcontainer.json"),
+        JSON.stringify({ customizations: { vscode: { extensions: ["nrwl.angular-console@18.96.0"] } } })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter(
+        (f) => f.rule === "VSCODE_MALICIOUS_EXTENSION" || f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(hits, "only the 18.95.0 release of Nx Console is malicious").toEqual([]);
+    });
+
+    it("keeps both registry pins in the bundle", () => {
+      const values = getBundledFeed()
+        .filter((i) => i.campaign === "Nx Console 18.95.0" && i.type === "package")
+        .map((i) => i.value)
+        .sort();
+      expect(values).toEqual([
+        "openvsx:nrwl.angular-console@18.95.0",
+        "vscode:nrwl.angular-console@18.95.0",
+      ]);
+    });
+  });
 });

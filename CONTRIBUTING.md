@@ -230,6 +230,7 @@ src/
   cargo-scanner.ts        # Rust/Cargo analysis (Cargo.toml/Cargo.lock/build.rs)
   go-scanner.ts           # Go module analysis (go.mod/go.sum)
   terraform-scanner.ts    # Terraform/OpenTofu providers (.tf/.tf.json/.terraform.lock.hcl)
+  extension-identity.ts   # VS Code / Open VSX extension IDs (recommendations, devcontainer, manifests)
   python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis

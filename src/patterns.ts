@@ -2160,10 +2160,6 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(chalk-tempalte|axois-utils|color-style-utils)$",
   "^@deadcode09284814\\/axios-util$",
 
-  // Nx Console nrwl.angular-console v18.95.0 - compromised VS Code extension (May 18, 2026)
-  // Listed for direct name match in extensions.json / dependency manifests.
-  "^nrwl\\.angular-console$",
-
   // TrapDoor cross-ecosystem credential stealer - npm packages (May 25, 2026)
   // 21 malicious npm packages from actor ddjidd564 targeting AI/DeFi/Web3 devs.
   // Reported by The Hacker News May 25, 2026; sibling PyPI/Crates.io waves.

@@ -119,6 +119,8 @@ ecosystem with no matcher would be data no scan could ever use.
 | `rubygems` | `ruby:` | `rubygems-scanner` |
 | `rust` | `cargo:` | `cargo-scanner` |
 | `nuget` | `nuget:` | `nuget-scanner` |
+| OSV `VSCode` | `vscode:` | `extension-identity` (recommendations, devcontainer, manifests), `vscode-scanner` |
+| OSV `VSCode:https://open-vsx.org` | `openvsx:` | same as `vscode:` |
 
 Everything else (Maven, GitHub Actions, Pub, Swift, Hex, `other`) is counted in
 the run report under `unsupported-ecosystem` and skipped.
@@ -128,6 +130,20 @@ publishes those ecosystems: `jenkins:` (offline MCP lookup only) and
 `terraform:` (`terraform-scanner`, matching `namespace/type` on the public
 Terraform and OpenTofu registries from `.tf`, `.tf.json` and
 `.terraform.lock.hcl`).
+
+Extension records are the one place the importer departs from the OpenSSF
+range reading. A hijacked legitimate extension is published as an
+"introduced: 0" range plus the exact trojanized versions; for `vscode:` and
+`openvsx:` the listed versions win, so only those releases are pinned. A
+record with no version list is still a whole-extension block.
+
+### Version skew
+
+A scanner older than the release that introduced a prefix still receives
+those entries through `feed refresh`. Every older matcher is safe with them:
+`matchBareNpmIOC` skips any value containing `:`, and `matchPackageIOC` is
+only ever called with the ecosystems the old code knows. A prefixed entry is
+therefore inert on an old scanner, never misread as an npm name.
 
 ### Version ranges
 

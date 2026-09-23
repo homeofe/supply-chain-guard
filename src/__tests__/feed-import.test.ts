@@ -331,6 +331,62 @@ describe("mapOsvMalwareRecord", () => {
     ]);
   });
 
+  // GlassWorm-class records name a hijacked LEGITIMATE extension with an
+  // "introduced: 0" range plus the exact trojanized versions. Measured
+  // 2026-09-23: 13 of 13 such Open VSX IDs were live with a real version
+  // history, so the whole-package reading would block every clean release.
+  it("pins the listed versions of an extension instead of the whole-package range", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "VSCode:https://open-vsx.org", name: "scgpub.scg-theme" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+            versions: ["1.8.3", "1.8.4"],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual([
+      "openvsx:scgpub.scg-theme@1.8.3",
+      "openvsx:scgpub.scg-theme@1.8.4",
+    ]);
+  });
+
+  it("keeps a whole-package extension verdict when no versions are listed", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "VSCode", name: "scgpub.scg-stealer" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["vscode:scgpub.scg-stealer"]);
+  });
+
+  // The control: npm keeps the established whole-package reading even with a
+  // versions list, which is the normal OpenSSF shape for a typosquat.
+  it("leaves the npm whole-package reading unchanged when versions are listed", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-typosquat" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+            versions: ["1.0.0"],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["scg-fixture-typosquat"]);
+  });
+
   it("rejects an unexpanded bounded range instead of broadening it", async () => {
     const { mapOsvMalwareRecord } = await load();
     const result = mapOsvMalwareRecord(

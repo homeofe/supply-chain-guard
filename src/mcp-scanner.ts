@@ -422,7 +422,7 @@ function truncate(value: string): string {
  * preserved. MCP configs are frequently hand-edited and comment-annotated
  * (VS Code parses them as JSONC).
  */
-function stripJsonc(text: string): string {
+export function stripJsonc(text: string): string {
   // Pass 1: remove // line comments and /* */ block comments
   let noComments = "";
   let inString = false;

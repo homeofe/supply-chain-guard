@@ -24,6 +24,35 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   `kreuzwenker/docker` typosquat of `kreuzwerker/docker`, as bundled
   `terraform:` entries. They were previously covered only through
   `github.com/<account>` references.
+- VS Code / Open VSX extension identity as threat intelligence
+  (`src/extension-identity.ts`, rule `VSCODE_MALICIOUS_EXTENSION`), with two
+  feed ecosystems, `vscode:` (Marketplace) and `openvsx:` (Open VSX), because
+  the same `publisher.name` can belong to different people on each registry.
+  A directory scan now matches the extensions a workspace recommends
+  (`.vscode/extensions.json`), a dev container installs (`devcontainer.json`,
+  including `id@version` pins) and an installed or packaged extension
+  manifest declares; `scg vscode` matches the scanned extension's own
+  identity against the registry it was resolved from. The importer pulls the
+  OSV `VSCode` export, including Open VSX records, and 51 extension entries
+  were imported (1 to the bundle, 50 to the catalog). The MCP `ioc_lookup`
+  tool accepts `vscode` and `openvsx`.
+
+### Fixed
+
+- The importer no longer name-blocks hijacked legitimate extensions. OpenSSF
+  records for GlassWorm-class incidents pair an "introduced: 0" range with the
+  exact trojanized versions; read as a whole-package verdict, that would have
+  blocked every release of 13 live Open VSX extensions (measured against the
+  registry: every one live, with up to 57 versions and a clean history). For
+  extension ecosystems a listed version set now wins; npm keeps the
+  whole-package reading, where the same shape encodes a typosquat.
+- `nrwl.angular-console` was carried as an npm package-name pattern. Nx Console
+  is a hijack victim (only 18.95.0 was malicious), and no npm package of that
+  name exists, so the rule never fired. It is replaced by `vscode:` and
+  `openvsx:` pins of 18.95.0 in the Nx Console campaign block.
+- A `.vsix` whose `package.json` starts with a UTF-8 byte-order mark skipped
+  every manifest check, because the parse threw and the manifest was treated
+  as absent. The BOM is now stripped first.
 
 ## [6.2.5] - 2026-09-23
 

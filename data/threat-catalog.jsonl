@@ -82091,3 +82091,53 @@
 {"type":"package","value":"@opap/player-kyc-widget","severity":"critical","confidence":1,"source":"GHSA-356g-cp7r-g5f5, MAL-2026-14387 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-08-23"}
 {"type":"package","value":"chai-as-testkit","severity":"critical","confidence":1,"source":"GHSA-wg38-qj68-8g87, MAL-2026-14371 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-23"}
 {"type":"package","value":"@usaa-grp-personal-profile/personal-profile-common","severity":"critical","confidence":1,"source":"GHSA-hhfp-ggmv-qx2x, MAL-2026-14370 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-23"}
+{"type":"package","value":"openvsx:srcery-colors.srcery-colors@0.3.9","severity":"critical","confidence":0.9,"source":"MAL-2025-191169 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:TretinV3.forts-api-extention@0.3.1","severity":"critical","confidence":0.9,"source":"MAL-2025-191170 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:SIRILMP.dark-theme-sm@3.11.4","severity":"critical","confidence":0.9,"source":"MAL-2025-191167 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:sissel.shopify-liquid@4.0.1","severity":"critical","confidence":0.9,"source":"MAL-2025-191168 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:l-igh-t.vscode-theme-seti-folder@1.2.3","severity":"critical","confidence":0.9,"source":"MAL-2025-191166 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:JScearcy.rust-doc-viewer@4.2.1","severity":"critical","confidence":0.9,"source":"MAL-2025-191164 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:kleinesfilmroellchen.serenity-dsl-syntaxhighlight@0.3.2","severity":"critical","confidence":0.9,"source":"MAL-2025-191165 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:jeronimoekerdt.color-picker-universal@2.8.91","severity":"critical","confidence":0.9,"source":"MAL-2025-191163 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:grrrck.positron-plus-1-e@0.0.71","severity":"critical","confidence":0.9,"source":"MAL-2025-191162 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:ginfuru.better-nunjucks@0.3.2","severity":"critical","confidence":0.9,"source":"MAL-2025-191161 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:ellacrity.recoil@0.7.4","severity":"critical","confidence":0.9,"source":"MAL-2025-191160 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:codejoy.codejoy-vscode-extension@1.8.3","severity":"critical","confidence":0.9,"source":"MAL-2025-191159 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:codejoy.codejoy-vscode-extension@1.8.4","severity":"critical","confidence":0.9,"source":"MAL-2025-191159 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"vscode:cline-ai-main.cline-ai-agent@3.1.3","severity":"critical","confidence":0.9,"source":"MAL-2025-191157 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:CodeInKlingon.git-worktree-menu@1.0.9","severity":"critical","confidence":0.9,"source":"MAL-2025-191158 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"openvsx:CodeInKlingon.git-worktree-menu@1.0.91","severity":"critical","confidence":0.9,"source":"MAL-2025-191158 (google-open-source-security)","firstSeen":"2025-11-19"}
+{"type":"package","value":"vscode:EffetMer.darkgpt","severity":"critical","confidence":0.9,"source":"MAL-2025-192568","firstSeen":"2025-12-10"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.56.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.53.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.52.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.51.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.50.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.49.1772192163","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.49.1772191521","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.49.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.48.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.47.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.46.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.45.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.44.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.43.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.42.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.40.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.39.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.38.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.37.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.36.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.ast-results@2.35.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2231 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.10.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.7.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.6.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.5.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.4.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.3.1772192178","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.3.1772191535","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.3.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.2.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:checkmarx.cx-dev-assist@1.1.0","severity":"critical","confidence":0.9,"source":"MAL-2026-2232 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:aquasecurityofficial.trivy-vulnerability-scanner@1.8.12","severity":"critical","confidence":0.9,"source":"MAL-2026-2230 (google-open-source-security)","firstSeen":"2026-03-26"}
+{"type":"package","value":"openvsx:aquasecurityofficial.trivy-vulnerability-scanner@1.8.13","severity":"critical","confidence":0.9,"source":"MAL-2026-2230 (google-open-source-security)","firstSeen":"2026-03-26"}

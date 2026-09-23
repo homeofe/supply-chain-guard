@@ -24,6 +24,13 @@ import {
 } from "./patterns.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import {
+  extensionFinding,
+  extractExtensionReferences,
+  matchExtensionIOC,
+  type ExtensionRegistry,
+} from "./extension-identity.js";
+import { loadThreatIntel } from "./threat-intel.js";
+import {
   collectExtractedFiles,
   readContainedExtractedUtf8File,
 } from "./extracted-file-walker.js";
@@ -498,8 +505,12 @@ export async function scanVscodeExtension(
       // retain their established ordering in the report.
       const allFiles = collectExtractedFiles(extractDir, findings);
 
-      // Scan package.json for suspicious metadata
-      scanExtensionManifest(extractDir, allFiles, findings);
+      // Scan package.json for suspicious metadata and known-malicious identity.
+      // An ID target was resolved against one registry; a local .vsix could
+      // have come from either, so both are checked.
+      const identityRegistries: ExtensionRegistry[] =
+        options.target.endsWith(".vsix") ? ["marketplace", "openvsx"] : [registry];
+      scanExtensionManifest(extractDir, allFiles, findings, identityRegistries);
 
       fileCounts = scanExtractedVscodeFiles(
         extractDir,
@@ -682,6 +693,7 @@ function scanExtensionManifest(
   extractDir: string,
   collectedFiles: readonly string[],
   findings: Finding[],
+  identityRegistries: readonly ExtensionRegistry[],
 ): void {
   const filesByPublicPath = new Map(
     collectedFiles.map((filePath) => [
@@ -707,8 +719,14 @@ function scanExtensionManifest(
     );
     if (content === null) continue;
     try {
-      manifest = JSON.parse(content) as Record<string, unknown>;
+      // A leading BOM made JSON.parse throw, which silently skipped every
+      // manifest check below: a publisher-controlled way to opt out.
+      manifest = JSON.parse(content.replace(/^\uFEFF/, "")) as Record<string, unknown>;
       relativePath = candidate;
+      for (const ref of extractExtensionReferences(content, "package.json")) {
+        const match = matchExtensionIOC(ref.publisher, ref.name, ref.version, identityRegistries, loadThreatIntel());
+        if (match) findings.push(extensionFinding(ref, match, candidate));
+      }
       break;
     } catch {
       // Invalid JSON is not an I/O coverage failure.

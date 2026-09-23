@@ -248,6 +248,13 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "hash", value: "1a4afce34918bdc74ae3f31edaffffaa0ee074d83618f53edfd88137927340b8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "b0cefb66b953e5184b6adb3035e9e267335ac5eabfe1848e07834777b9397b74", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "e7347d90653efc565f03733a95e9209d78f9cfa81e31ff2b2dd9d48d75a4b8b1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+  // The extension identity itself, version-pinned on both registries (OSV MAL-2026-5161 /
+  // MAL-2026-5162). Nx Console is a legitimate, live extension and a HIJACK VICTIM: only the
+  // 18.95.0 release is malicious, and it is no longer served (Open VSX 404, verified
+  // 2026-09-23). Replaces the npm name pattern for nrwl.angular-console in patterns.ts, which
+  // name-blocked the victim and matched no real npm package (registry 404), so it never fired.
+  { type: "package", value: "vscode:nrwl.angular-console@18.95.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", source: "MAL-2026-5161", firstSeen: "2026-05-18" },
+  { type: "package", value: "openvsx:nrwl.angular-console@18.95.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", source: "MAL-2026-5162", firstSeen: "2026-05-18" },
   { type: "hash", value: "43f2b001846c4966073ebffa5be8f15e491a1e7d32bbd805d57406ff540e0dd8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
 
   // Megalodon GitHub Actions workflow injection campaign (May 22, 2026)
@@ -9791,6 +9798,9 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "domain", value: "mediumstar.slack.com", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "hash", value: "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "hash", value: "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+
+  // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
+  { type: "package", value: "vscode:AzureCdnInfo.edrtester@1.0.4", severity: "critical", confidence: 0.9, source: "MAL-2026-16010", firstSeen: "2026-09-03" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
@@ -10842,6 +10852,8 @@ function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "nuget") return name.toLowerCase();
   // Registry provider addresses are case-insensitive (terraform-scanner.ts).
   if (ecosystem === "terraform") return name.toLowerCase();
+  // Marketplace and Open VSX extension IDs are case-insensitive (extension-identity.ts).
+  if (ecosystem === "vscode" || ecosystem === "openvsx") return name.toLowerCase();
   return name;
 }
 

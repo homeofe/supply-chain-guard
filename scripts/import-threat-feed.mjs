@@ -98,6 +98,10 @@ export const ECOSYSTEM_PREFIX = {
   rubygems: "ruby:",
   rust: "cargo:",
   nuget: "nuget:",
+  // OSV/OpenSSF only (GitHub publishes no VS Code ecosystem). Marketplace
+  // records; Open VSX records share the OSV directory and get their own prefix
+  // through OSV_ECOSYSTEM_ALIASES below.
+  vscode: "vscode:",
 };
 
 /** Feed ecosystem prefix -> OSV ecosystem name (for the corroboration query). */
@@ -109,6 +113,8 @@ export const OSV_ECOSYSTEM = {
   "ruby:": "RubyGems",
   "cargo:": "crates.io",
   "nuget:": "NuGet",
+  "vscode:": "VSCode",
+  "openvsx:": "VSCode:https://open-vsx.org",
 };
 
 /** Import ecosystem -> directory in OSV's public vulnerability export. */
@@ -120,15 +126,35 @@ export const OSV_ECOSYSTEM_DIRECTORY = {
   rubygems: "RubyGems",
   rust: "crates.io",
   nuget: "NuGet",
+  vscode: "VSCode",
 };
 
+/**
+ * OSV ecosystem strings that live inside another ecosystem's export directory
+ * but name a different registry. The same `publisher.name` can belong to
+ * different people on the Marketplace and on Open VSX, so these must never
+ * collapse onto the directory's own prefix.
+ */
+export const OSV_ECOSYSTEM_ALIASES = {
+  "VSCode:https://open-vsx.org": { ecosystem: "vscode", prefix: "openvsx:" },
+};
+
+/**
+ * Import ecosystems where a record's explicit `versions` list wins over an
+ * "introduced: 0" range (see mapOsvMalwareRecord).
+ */
+export const PIN_LISTED_VERSIONS_ECOSYSTEMS = new Set(["vscode"]);
+
 /** OSV ecosystem -> import ecosystem and feed prefix. */
-export const OSV_IMPORT_ECOSYSTEM = Object.fromEntries(
-  Object.entries(OSV_ECOSYSTEM_DIRECTORY).map(([ecosystem, directory]) => [
-    directory,
-    { ecosystem, prefix: ECOSYSTEM_PREFIX[ecosystem] },
-  ]),
-);
+export const OSV_IMPORT_ECOSYSTEM = {
+  ...Object.fromEntries(
+    Object.entries(OSV_ECOSYSTEM_DIRECTORY).map(([ecosystem, directory]) => [
+      directory,
+      { ecosystem, prefix: ECOSYSTEM_PREFIX[ecosystem] },
+    ]),
+  ),
+  ...OSV_ECOSYSTEM_ALIASES,
+};
 
 /**
  * Upstream severity -> feed severity. FeedIOC only has critical/high/medium,
@@ -429,10 +455,18 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
     }
 
     const ranges = Array.isArray(item.ranges) ? item.ranges : [];
-    const wholePackage = ranges.some(isWholePackageOsvRange);
     const versions = Array.isArray(item.versions)
       ? [...new Set(item.versions.filter((version) => typeof version === "string"))]
       : [];
+    // An extension ID belongs to a publisher account, and the common incident
+    // is a hijacked LEGITIMATE extension: the record then pairs an
+    // "introduced: 0" range with the exact trojanized versions. Measured
+    // 2026-09-23, 13 of 13 such Open VSX IDs were live with a clean history,
+    // so the whole-package reading would block every legitimate release.
+    // npm keeps the whole-package reading: there the same shape is the normal
+    // OpenSSF encoding of a typosquat.
+    const pinListedVersions = PIN_LISTED_VERSIONS_ECOSYSTEMS.has(mappedEcosystem.ecosystem) && versions.length > 0;
+    const wholePackage = ranges.some(isWholePackageOsvRange) && !pinListedVersions;
     const mappedVersions = wholePackage ? [undefined] : versions;
     if (mappedVersions.length === 0) {
       skipped.push({ reason: "unmappable-version-range", detail: `${id} ${osvEcosystem}/${name}` });

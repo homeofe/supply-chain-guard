@@ -63,6 +63,7 @@ import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
 import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scanner.js";
+import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
@@ -566,6 +567,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // matched against terraform: feed entries.
     if (isTerraformProviderFile(basename)) {
       findings.push(...scanTerraformContent(content, relativePath, threatFeed));
+    }
+
+    // VS Code / Open VSX extensions a workspace recommends, a devcontainer
+    // installs, or an extension manifest declares, matched against
+    // vscode: and openvsx: feed entries.
+    if (isExtensionReferenceFile(relativePath)) {
+      findings.push(...scanExtensionReferences(content, relativePath, threatFeed));
     }
   }
 
