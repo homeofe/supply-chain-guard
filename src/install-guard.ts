@@ -278,7 +278,7 @@ export interface InstallCommandAnalysis {
 
 /**
  * npm package IOCs in the feed carry no ecosystem prefix (only ruby:/composer:/
- * nuget:/go:/jenkins: entries do - see matchPackageIOC). Same companion
+ * nuget:/go:/jenkins:/terraform: entries do - see matchPackageIOC). Same companion
  * matcher as mcp-server.ts matchBarePackageIOC.
  */
 export function matchBareNpmIOC(

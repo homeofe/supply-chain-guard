@@ -62,6 +62,7 @@ import { scanGitSecurity } from "./git-scanner.js";
 import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
+import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scanner.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
@@ -559,6 +560,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Check package-lock.json for known-bad versions (v4.1)
     if (basename === "package-lock.json") {
       checkLockfileBadVersions(content, relativePath, findings, threatFeed);
+    }
+
+    // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
+    // matched against terraform: feed entries.
+    if (isTerraformProviderFile(basename)) {
+      findings.push(...scanTerraformContent(content, relativePath, threatFeed));
     }
   }
 

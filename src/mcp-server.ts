@@ -110,10 +110,10 @@ interface ToolDefinition {
 const SEVERITY_VALUES = ["critical", "high", "medium", "low", "info"] as const;
 // Every ecosystem prefix that appears in the bundled feed must be listed here
 // or reachable from a file scanner, otherwise an indicator ships as detection
-// that can never fire. "go" is also scanned from go.mod; "jenkins" has no
-// lockfile the scanner reads, so this offline lookup is its only reachable
-// path. src/__tests__/collection-reachability.test.ts asserts the invariant.
-const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget", "go", "jenkins"] as const;
+// that can never fire. "go" is also scanned from go.mod and "terraform" from
+// .tf / .terraform.lock.hcl; "jenkins" has no lockfile the scanner reads, so
+// this offline lookup is its only reachable path. src/__tests__/collection-reachability.test.ts asserts the invariant.
+const ECOSYSTEM_VALUES = ["npm", "pypi", "ruby", "composer", "nuget", "go", "jenkins", "terraform"] as const;
 
 const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -216,10 +216,10 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
 
 /**
  * Feed entries for npm/PyPI packages carry no ecosystem prefix (only
- * ruby:/composer:/nuget:/go:/jenkins: entries do - see matchPackageIOC).
+ * ruby:/composer:/nuget:/go:/jenkins:/terraform: entries do - see matchPackageIOC).
  * This matcher resolves those bare entries for the npm and pypi ecosystems.
  */
-const PREFIXED_ECOSYSTEMS = ["ruby:", "composer:", "nuget:", "go:", "jenkins:"];
+const PREFIXED_ECOSYSTEMS = ["ruby:", "composer:", "nuget:", "go:", "jenkins:", "terraform:"];
 
 function matchBarePackageIOC(
   name: string,

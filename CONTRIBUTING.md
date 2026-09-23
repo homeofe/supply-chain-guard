@@ -229,6 +229,7 @@ src/
   pypi-scanner.ts         # PyPI package analysis
   cargo-scanner.ts        # Rust/Cargo analysis (Cargo.toml/Cargo.lock/build.rs)
   go-scanner.ts           # Go module analysis (go.mod/go.sum)
+  terraform-scanner.ts    # Terraform/OpenTofu providers (.tf/.tf.json/.terraform.lock.hcl)
   python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis

@@ -1,3 +1,45 @@
+## Terraform provider matcher (2026-09-23) (claude-opus-5-5)
+
+Closes the open item from the 2026-09-23 threat-intel note: the Graphalgo
+Terraform providers had no matcher. Unreleased; lands under `[Unreleased]`.
+
+- New `src/terraform-scanner.ts`, rule `TERRAFORM_MALICIOUS_PROVIDER`, called
+  per file from `scan()` for `.tf`, `.tf.json` and `.terraform.lock.hcl` (all
+  three already pass the SCANNABLE_EXTENSIONS gate; the walker does not skip
+  dotfiles). Feed ecosystem `terraform:<namespace>/<type>`, looked up through
+  the existing `matchPackageIOC` index, with `terraform` added to
+  `normalizePackageIOCName` (lowercase: registry addresses are
+  case-insensitive).
+- **Identity rule:** only public-registry addresses resolve: no host,
+  `registry.terraform.io` or `registry.opentofu.org`. A private host names a
+  different plugin that shares the namespace/type. Module sources share the
+  `source` attribute name and are rejected by shape: part count, host
+  allow-list, and the label rule (`.`, `~`, `:` are never label characters).
+- A `.tf` source carries a constraint, not a version, so a version-pinned
+  `terraform:` entry fires only from the lock file. Both Graphalgo entries are
+  name-level, so both files catch them.
+- Wiring: `terraform` added to the MCP `ioc_lookup` enum, to
+  `PREFIXED_ECOSYSTEMS` (so the bare-npm matcher skips those entries), to the
+  ecosystem unions in `ioc-blocklist.ts`, and to the REACHABLE literal in
+  `collection-reachability.test.ts`.
+- **Mutation proof, baseline and post-restore both green.** Eight cuts, all
+  red: scanner dispatch removed; label check removed; label widened to admit a
+  leading `.`; label widened to admit a leading `~`; private host accepted;
+  feed-side lowercase removed; lock-file version not captured; `terraform`
+  dropped from the reachability allow-list.
+- **Two guards were deleted rather than kept, because cutting them changed
+  nothing:** a `parts[0].includes(".")` host test (the allow-list already
+  rejects a module's first segment) and a path/URL pre-filter (the label rule
+  already rejects every form it caught). The label rule only became necessary
+  once two-part module paths (`./docker`, `../docker`, `~/docker`) were added
+  to the test: every earlier path case had three parts and died on the host
+  check first, so the real guard had no test that needed it.
+- Harness trap worth keeping: a Python `subprocess` call through `npx` (even
+  `npx.cmd` with `shell=False`) runs via cmd.exe, which split the vitest `-t`
+  filter at `|` and tried to execute the rest. The baseline check caught it
+  (no test summary, harness refused to measure). Call
+  `node node_modules/vitest/vitest.mjs` directly.
+
 ## v6.2.5 release preparation (2026-09-23) (claude-opus-5-5)
 
 Patch release carrying the 2026-09-23 threat intelligence update (PR 324:

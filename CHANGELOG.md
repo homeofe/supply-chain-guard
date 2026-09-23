@@ -7,6 +7,24 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Terraform / OpenTofu provider matching (`src/terraform-scanner.ts`, rule
+  `TERRAFORM_MALICIOUS_PROVIDER`). A directory scan now resolves the providers
+  a configuration pulls in, from `required_providers` sources in `.tf` and
+  `.tf.json` files and from the `provider` blocks of `.terraform.lock.hcl`
+  (which also carry the exact locked version), and matches them against a new
+  `terraform:<namespace>/<type>` feed ecosystem. Only public-registry addresses
+  resolve (no host, `registry[.]terraform[.]io` or `registry[.]opentofu[.]org`),
+  case-insensitively as the registry does; a private registry host and every
+  module source form (paths, URLs, getters, `ns/name/system` addresses) are
+  never read as a provider. The MCP `ioc_lookup` tool accepts `terraform` as
+  an ecosystem.
+- The two Graphalgo Terraform providers, `gocommunity-io/dockerd` and the
+  `kreuzwenker/docker` typosquat of `kreuzwerker/docker`, as bundled
+  `terraform:` entries. They were previously covered only through
+  `github.com/<account>` references.
+
 ## [6.2.5] - 2026-09-23
 
 ### Added

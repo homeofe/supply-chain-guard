@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8668,
+  "entryCount": 8670,
   "generatedAt": "2026-09-23T00:00:00.000Z",
   "entries": [
     {
@@ -70889,6 +70889,26 @@
     {
       "type": "package",
       "value": "go:gogets.dev/btreex",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Graphalgo",
+      "campaign": "Graphalgo Terraform providers and Go modules",
+      "source": "Aikido Graphalgo Terraform/Go write-up (single-source)",
+      "firstSeen": "2026-09-22"
+    },
+    {
+      "type": "package",
+      "value": "terraform:gocommunity-io/dockerd",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Graphalgo",
+      "campaign": "Graphalgo Terraform providers and Go modules",
+      "source": "Aikido Graphalgo Terraform/Go write-up (single-source)",
+      "firstSeen": "2026-09-22"
+    },
+    {
+      "type": "package",
+      "value": "terraform:kreuzwenker/docker",
       "severity": "critical",
       "confidence": 0.85,
       "family": "Graphalgo",

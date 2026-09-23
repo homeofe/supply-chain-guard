@@ -123,6 +123,12 @@ ecosystem with no matcher would be data no scan could ever use.
 Everything else (Maven, GitHub Actions, Pub, Swift, Hex, `other`) is counted in
 the run report under `unsupported-ecosystem` and skipped.
 
+Two prefixes exist only for hand-curated entries, because no advisory database
+publishes those ecosystems: `jenkins:` (offline MCP lookup only) and
+`terraform:` (`terraform-scanner`, matching `namespace/type` on the public
+Terraform and OpenTofu registries from `.tf`, `.tf.json` and
+`.terraform.lock.hcl`).
+
 ### Version ranges
 
 Only two upstream shapes are mapped, and the reason is false positives:

@@ -79,7 +79,7 @@ function referenceMatch(
   const prefix = `${eco}:`;
   const normalizeName = (value: string): string => {
     if (eco === "pypi") return value.toLowerCase().replace(/[-_.]+/g, "-");
-    return eco === "nuget" ? value.toLowerCase() : value;
+    return eco === "nuget" || eco === "terraform" ? value.toLowerCase() : value;
   };
   const wantName = normalizeName(name);
 

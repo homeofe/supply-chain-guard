@@ -9777,11 +9777,13 @@ const FEED_CHUNK_21: FeedIOC[] = [
   // Graphalgo campaign spreads to Terraform providers and Go modules (Aikido,
   // September 2026). Curated enrichment, not an advisory-database import: these
   // carry campaign and family so the partition policy keeps them in the bundle.
-  // Single-source, hence confidence 0.85. The two Terraform providers
-  // (gocommunity-io/dockerd, kreuzwenker/docker) have no scanner ecosystem and
-  // are covered only through the operator GitHub accounts in ioc-blocklist.ts.
+  // Single-source, hence confidence 0.85. The two Terraform providers are
+  // matched by terraform-scanner.ts in .tf, .tf.json and .terraform.lock.hcl;
+  // no versions were published, so they are name-level.
   { type: "package", value: "go:gocommunity.io/orderedbtree", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "package", value: "go:gogets.dev/btreex", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+  { type: "package", value: "terraform:gocommunity-io/dockerd", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+  { type: "package", value: "terraform:kreuzwenker/docker", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "gocommunity.io", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "gogets.dev", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "portfolio-devs.slack.com", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
@@ -10838,6 +10840,8 @@ const packageIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedIOC[]>>();
 function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "pypi") return name.toLowerCase().replace(/[-_.]+/g, "-");
   if (ecosystem === "nuget") return name.toLowerCase();
+  // Registry provider addresses are case-insensitive (terraform-scanner.ts).
+  if (ecosystem === "terraform") return name.toLowerCase();
   return name;
 }
 

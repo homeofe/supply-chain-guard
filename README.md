@@ -76,7 +76,7 @@ For a deep dive into how GlassWorm infiltrates the software supply chain and the
 - Dockerfile / Containerfile: curl pipe, base images on a moving channel tag or without a digest,
   hardcoded secrets, SUID bits. Compose `image:` values are out of scope for every Docker rule
   (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#base-image-pinning-decision-record))
-- Terraform/IaC: inline scripts, external modules, hardcoded secrets
+- Terraform/IaC: inline scripts, external modules, hardcoded secrets, known-malicious providers (`.tf`, `.tf.json`, `.terraform.lock.hcl`)
 - Package manager configs (.npmrc, .yarnrc, pip.conf): HTTP registries, exposed tokens
 - Git hooks and submodule security
 
@@ -671,7 +671,7 @@ supply-chain-guard scan ./project --baseline .scg-baseline.json
 | Composer/PHP | `scan` | composer.json, composer.lock (malicious-package IOCs, http repos) |
 | NuGet/.NET | `scan` | packages.lock.json, *.csproj, nuget.config (malicious-package IOCs, http feeds) |
 | Docker | `scan` | Dockerfile, Dockerfile.*, Containerfile. `docker-compose.yml` is read, but every Docker rule is anchored on a Dockerfile instruction keyword, so Compose `image:` values are not covered |
-| Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets) |
+| Terraform | `scan` | .tf, .hcl files (provisioners, modules, secrets, known-malicious providers in required_providers and .terraform.lock.hcl) |
 | VS Code | `vscode` | .vsix files, activation events, dangerous APIs |
 | GitHub Actions | `scan` | .github/workflows/*.yml |
 | GitHub Repos | `repo` | Trust signals, releases, README lures |

@@ -6830,12 +6830,73 @@ describe("Campaign Signatures", () => {
       expect(hits, "kreuzwerker and hooks.slack.com are legitimate").toEqual([]);
     });
 
+    it("should flag the kreuzwenker/docker typosquat provider in a .tf file", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "versions.tf"),
+        [
+          "terraform {",
+          "  required_providers {",
+          "    docker = {",
+          '      source  = "kreuzwenker/docker"',
+          '      version = "~> 3.0"',
+          "    }",
+          "  }",
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.line).toBe(4);
+    });
+
+    it("should flag the gocommunity-io/dockerd provider in the lock file", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, ".terraform.lock.hcl"),
+        [
+          'provider "registry.terraform.io/gocommunity-io/dockerd" {',
+          '  version = "1.0.0"',
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.match).toBe("gocommunity-io/dockerd@1.0.0");
+    });
+
+    // The control: the typosquat only works because kreuzwerker/docker is one
+    // of the most-used providers there is, so flagging it would be fatal.
+    it("leaves the legitimate kreuzwerker/docker provider alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "versions.tf"),
+        'terraform { required_providers { docker = { source = "kreuzwerker/docker" } } }'
+      );
+      fs.writeFileSync(
+        path.join(tempDir, ".terraform.lock.hcl"),
+        'provider "registry.terraform.io/kreuzwerker/docker" {\n  version = "3.0.2"\n}'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(hits, "kreuzwerker/docker is the legitimate provider").toEqual([]);
+    });
+
     it("keeps every Graphalgo indicator in the bundle", () => {
       const feed = getBundledFeed();
       const set = feed.filter(
         (i) => i.campaign === "Graphalgo Terraform providers and Go modules",
       );
-      expect(set.length, "all 9 Graphalgo feed indicators must be bundled").toBe(9);
+      expect(set.length, "all 11 Graphalgo feed indicators must be bundled").toBe(11);
       for (const ioc of set) {
         expect(ioc.family, `${ioc.value} must carry a family`).toBe("Graphalgo");
       }
