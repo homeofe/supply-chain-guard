@@ -43,6 +43,14 @@ extended their work, and ran an independent mutation spot-check.
   green. That covers one per draft, the scanner severity wiring, and the ambient-token
   flag in both directions.
 
+- The full suite on the remote Linux runner caught what no targeted run could.
+  - A new JSDoc comment on the wallet-pattern constants listed example paths. TypeScript
+    copies JSDoc into `dist/*.d.ts`, so the published declaration file matched
+    VIDAR_WALLET_THEFT at high, and `self-scan-recognition.test.ts` went red.
+  - The source file is covered by the self-scan manifest; the generated `.d.ts` is not.
+  - Fixed by using a line comment, which TypeScript does not copy, and checked with a
+    self-scan: 0 high or critical findings, none in `dist/*.d.ts`.
+
 ### Deliberate trade-offs (recorded, not hidden)
 
 - d3: a map keyed by host names with plain string values (`"db.internal": "primary"`) now

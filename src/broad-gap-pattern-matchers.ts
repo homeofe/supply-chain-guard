@@ -69,13 +69,11 @@ const WS1 = String.raw`[^\S\n]+`;
  * call shape keep `fetchNotifications` and `forgotPassword` out, while member
  * calls such as `axios.post(` and `got.get(` still count.
  */
-/**
- * VIDAR_WALLET_THEFT operands, shared with the pattern string. A wallet name
- * must not sit inside a longer word (`phantomjs`, `Atomicity`) and the target
- * must not run on into one (`seeding`, `vaulted`). A plural or a following
- * `_`, `.`, `/` or capital still counts: `.electrum/wallets`,
- * `Exodus_wallet_path`, `exodus.wallet`.
- */
+// VIDAR_WALLET_THEFT operands, shared with the pattern string. A wallet name
+// must not sit inside a longer word and the target must not run on into one;
+// a plural or a following `_`, `.`, `/` or capital still counts. (A line
+// comment, not JSDoc: JSDoc is copied into dist/*.d.ts, and example paths
+// here would make the published declaration file match this very rule.)
 export const WALLET_NAME_SOURCE =
   String.raw`(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi)`;
 export const WALLET_TARGET_SOURCE =

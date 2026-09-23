@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790174925",
-    "timestamp": "2026-09-23T14:48:46Z",
-    "commit": "15445c3",
+    "session_id": "cli-1790175261",
+    "timestamp": "2026-09-23T14:54:22Z",
+    "commit": "2437cfc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:2618b4c3c2207cb597c3707b553d0fcfc4b2cab78afdfa4e506b7878e44368ae",
-      "updated": "2026-09-23T14:48:39Z",
-      "lines": 11141,
+      "checksum": "sha256:a8cc2fa18452e1abe506d685c3abaf04f14fd4514514d70f776e4eba1f1e1201",
+      "updated": "2026-09-23T14:54:19Z",
+      "lines": 11149,
       "summary": "The owner asked for every queued rule fix to land immediately rather than one PR per"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T14:48:45Z",
+      "updated": "2026-09-23T14:54:21Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:e31151bb5b7c01f0501c6268e901bd6ad615b67bb4dcbf7b30e43a1ef2fe8279",
-      "updated": "2026-09-23T14:48:45Z",
+      "updated": "2026-09-23T14:54:21Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:d0fb7e18c62e61e219f12b58c151dabc0a0cd5698e6c36febd9b4261a3689365",
-      "updated": "2026-09-23T14:48:45Z",
+      "updated": "2026-09-23T14:54:21Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "The owner asked for every queued rule fix to land immediately rather than one PR per Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 130079,
-    "full_read": 143104
+    "manifest_plus_core": 130190,
+    "full_read": 143215
   }
 }
