@@ -42,6 +42,24 @@ export function lineOfNeedle(text: string, needle: string): number {
 }
 
 /**
+ * Blank every closed XML comment, keeping newlines so offsets and line numbers
+ * survive. `/<!--[\s\S]*?-->/g` rescans to the end of the text from every
+ * "<!--" that has no "-->", which took 30 s on 313 KB of them; this walks the
+ * text once. An unclosed "<!--" is left as it is, as the regex left it.
+ */
+export function blankXmlComments(text: string): string {
+  let out = "";
+  let from = 0;
+  for (let open = text.indexOf("<!--"); open >= 0; open = text.indexOf("<!--", from)) {
+    const close = text.indexOf("-->", open + 4);
+    if (close < 0) break;
+    out += text.slice(from, open) + text.slice(open, close + 3).replace(/[^\n]/g, " ");
+    from = close + 3;
+  }
+  return out + text.slice(from);
+}
+
+/**
  * Remove a trailing "  # comment" (a "#" preceded by whitespace) and the
  * whitespace before it. Same result as `line.replace(/\s+#.*$/, "")` on real
  * input, in linear time.

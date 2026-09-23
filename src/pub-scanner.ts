@@ -169,10 +169,22 @@ function extractPubspec(lines: Line[]): PubPackage[] {
     body.forEach((dep, k) => {
       if (dep.indent !== depIndent || !PUB_NAME.test(dep.key)) return;
       if (dep.value.startsWith("{")) {
-        // Flow form: `name: {path: ../x}`. One that does not close on its
-        // line is not read, rather than guessed at as a pub.dev package.
-        if (!dep.value.endsWith("}")) return;
-        const pkg = pubDependency(dep.key, flowPairs(dep.value), dep.line);
+        // Flow form: `name: {path: ../x}`, or the same map continued on the
+        // following, deeper-indented lines (`name: {` / `path: ../x` / `}`),
+        // which are joined back into one map. Only lines up to the next
+        // dependency are read, so an unclosed map costs one pass.
+        let flow = dep.value;
+        if (!flow.endsWith("}")) {
+          const parts = [flow.slice(1)];
+          for (let j = k + 1; j < body.length && body[j]!.indent > depIndent!; j++) {
+            const value = body[j]!.value;
+            const closes = value.endsWith("}") && !value.startsWith("{");
+            parts.push(`${body[j]!.key}: ${closes ? value.slice(0, -1) : value}`);
+            if (closes) break;
+          }
+          flow = `{${parts.map((p) => p.trim().replace(/,$/, "")).filter(Boolean).join(", ")}}`;
+        }
+        const pkg = pubDependency(dep.key, flowPairs(flow), dep.line);
         if (pkg) out.push(pkg);
         return;
       }

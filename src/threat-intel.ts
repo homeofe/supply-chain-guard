@@ -9806,7 +9806,11 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "hash", value: "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
 
   // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
-  { type: "package", value: "vscode:AzureCdnInfo.edrtester@1.0.4", severity: "critical", confidence: 0.9, source: "MAL-2026-16010", firstSeen: "2026-09-03" },
+  // Whole-extension since 2026-09-23 (was pinned to 1.0.4, the only version the advisory
+  // lists): every version the Marketplace still serves (1.0.0, 1.0.1, 1.0.2, 1.0.4) ships the
+  // same edrdrill.js beacon to the fronted azure-cdn[.]info host, verified by opening each
+  // VSIX, and the publisher name matches that host. No clean release exists to protect.
+  { type: "package", value: "vscode:AzureCdnInfo.edrtester", severity: "critical", confidence: 0.9, source: "MAL-2026-16010", firstSeen: "2026-09-03" },
 
   // Shai-Hulud 2.0 reached Maven Central through mvnpm, which republishes npm packages as
   // Maven artifacts: the trojanized posthog-node 4.18.1 was mirrored as

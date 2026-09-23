@@ -214,7 +214,19 @@ export function extractImageReferences(content: string, relativePath: string): L
         const content = trimmed.slice(1).trimStart();
         services.contentIndent = content ? indent + trimmed.length - content.length : undefined;
         services.named = false;
-        if (content) serviceEntry(content, i + 1);
+        if (content.startsWith("{") && !content.endsWith("}")) {
+          // A flow-map item continued on the next lines (`- {name: x,` then
+          // `alias: y}`): joined back into one map, at most 16 lines ahead.
+          // The continuation lines are then part of an item already read.
+          let entry = content;
+          for (let j = i + 1; j < lines.length && j <= i + 16; j++) {
+            const next = stripHashComment(lines[j] ?? "").trim();
+            entry += ` ${next}`;
+            if (next.endsWith("}")) break;
+          }
+          if (entry.endsWith("}")) serviceEntry(entry, i + 1);
+          services.named = true;
+        } else if (content) serviceEntry(content, i + 1);
       } else if (services && indent > services.itemIndent!) {
         // `- alias: x` then `name: y`: a key at the item's own content column.
         services.contentIndent ??= indent;

@@ -270,6 +270,19 @@ describe("scanImageReferences: map, values and BuildKit forms", () => {
     // One-line flow list.
     expect(extractImageReferences("job:\n  services: [evilns/tool:6.6.6, redis]\n", ".gitlab-ci.yml").map((r) => r.raw))
       .toEqual(["evilns/tool:6.6.6", "redis"]);
+    // A flow-map item continued on the next lines, read once; the next item too.
+    const multi = "job:\n  services:\n    - {name: evilns/tool:6.6.6,\n       alias: tool}\n    - {alias: db,\n       name: postgres:16}\n    - redis:7\n";
+    expect(extractImageReferences(multi, ".gitlab-ci.yml").map((r) => `${r.raw}:${r.line}`))
+      .toEqual(["evilns/tool:6.6.6:3", "postgres:16:5", "redis:7:7"]);
+  });
+
+  // Every unclosed item looks ahead a bounded number of lines; unbounded, each
+  // of 50k such items would rescan the rest of the file.
+  it("stays linear on many unclosed flow-map service items", () => {
+    const ci = ["job:", "  services:", ...Array.from({ length: 50_000 }, () => "    - {name: x,")].join("\n");
+    const t0 = Date.now();
+    extractImageReferences(ci, ".gitlab-ci.yml");
+    expect(Date.now() - t0).toBeLessThan(2000);
   });
 
   // Compose and GitHub Actions services are MAPS of name -> {image: ...}: the

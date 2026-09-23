@@ -203,6 +203,29 @@ describe("extractMavenCoordinates: remaining build formats", () => {
     ]);
   });
 
+  // `cross CrossVersion.full` appends the full Scala version the build states;
+  // `CrossVersion.binary` behaves like %%.
+  it("expands cross CrossVersion.full from the build's Scala versions, and binary like %%", () => {
+    const sbt = [
+      'ThisBuild / scalaVersion := "2.13.12"',
+      'crossScalaVersions := Seq("2.12.18", "2.13.12")',
+      'addCompilerPlugin("org.evil" % "plugin" % "1.0.0" cross CrossVersion.full)',
+      'libraryDependencies += ("org.evil" % "macro" % "2.0.0").cross(CrossVersion.binary)',
+    ].join("\n");
+    expect(coords(sbt, "build.sbt")).toEqual([
+      "org.evil:plugin_2.13.12@1.0.0",
+      "org.evil:plugin_2.12.18@1.0.0",
+      "org.evil:macro_2.11@2.0.0",
+      "org.evil:macro_2.12@2.0.0",
+      "org.evil:macro_2.13@2.0.0",
+      "org.evil:macro_3@2.0.0",
+    ]);
+  });
+
+  it("reports nothing for CrossVersion.full when the build states no Scala version", () => {
+    expect(coords('addCompilerPlugin("org.evil" % "plugin" % "1.0.0" cross CrossVersion.full)', "build.sbt")).toEqual([]);
+  });
+
   // A non-literal version is unknown: a whole-name entry fires, a pin cannot.
   it("reads SBT dependencies whose version is a val", () => {
     const sbt = [
@@ -224,6 +247,30 @@ describe("extractMavenCoordinates: remaining build formats", () => {
 
   // Gradle coordinates whose version is a variable, a catalog accessor or
   // absent (platform/BOM-managed): the artifact is still resolved.
+  // A configuration the script declares itself counts like a built-in one; an
+  // undeclared call such as println(...) still never does.
+  it("reads non-literal versions on configurations the script declares", () => {
+    const kts = [
+      'val shadowed by configurations.creating',
+      'configurations.register("agent")',
+      'shadowed("com.evil:stealer:$ver")',
+      'agent("org.evil:javaagent")',
+      'println("com.evil:not-a-dep:$ver")',
+    ].join("\n");
+    expect(coords(kts, "build.gradle.kts")).toEqual(["com.evil:stealer@-", "org.evil:javaagent@-"]);
+    const groovy = [
+      "configurations {",
+      "    bundled",
+      "    tooling {",
+      "        canBeResolved = true",
+      "    }",
+      "}",
+      'bundled "com.evil:stealer:${libVersion}"',
+      'tooling "org.evil:tool"',
+    ].join("\n");
+    expect(coords(groovy, "build.gradle")).toEqual(["com.evil:stealer@-", "org.evil:tool@-"]);
+  });
+
   it("reads Gradle declarations with a non-literal or managed version", () => {
     const groovy = [
       "dependencies {",
@@ -336,6 +383,31 @@ describe("extractMavenCoordinates: remaining build formats", () => {
     extractMavenCoordinates(sbt, "build.sbt");
     extractMavenCoordinates(toml, "gradle/libs.versions.toml");
     expect(Date.now() - t0).toBeLessThan(3000);
+  });
+
+  // pom.xml: a comment regex and a tag regex that rescanned to the end of the
+  // file from every unclosed "<!--" / "<a" (30 s and 4.6 s at a few hundred KB).
+  it("stays linear on a hostile pom.xml", () => {
+    const comments = "<project>" + "<!--".repeat(100_000) + "</project>";
+    // No ">" anywhere: a closing tag at the end lets the regex match once and skip ahead.
+    const tags = "<a ".repeat(100_000);
+    const t0 = Date.now();
+    extractMavenCoordinates(comments, "pom.xml");
+    extractMavenCoordinates(tags, "pom.xml");
+    expect(Date.now() - t0).toBeLessThan(1500);
+  });
+
+  it("still reads a pom whose comments and attributes are ordinary", () => {
+    const pom = [
+      "<project>",
+      "  <!-- a comment with <dependency> inside -->",
+      '  <dependencies><dependency scope="x">',
+      "    <groupId>com.evil</groupId><artifactId>stealer</artifactId><version>1.0.0</version>",
+      "  </dependency></dependencies>",
+      "</project>",
+    ].join("\n");
+    expect(extractMavenCoordinates(pom, "pom.xml").map((c) => `${c.group}:${c.artifact}@${c.version}:${c.line}`))
+      .toEqual(["com.evil:stealer@1.0.0:3"]);
   });
 
   it("reads both maven_install.json formats", () => {

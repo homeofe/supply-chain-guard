@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790168211",
-    "timestamp": "2026-09-23T12:56:52Z",
-    "commit": "dd6b289",
+    "session_id": "cli-1790172133",
+    "timestamp": "2026-09-23T14:02:14Z",
+    "commit": "b65aa16",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:ffb6f674d5b8dc24360074fb5ffae01e88c0553e7e31c9053a4778275ec6d1bd",
-      "updated": "2026-09-23T12:54:48Z",
-      "lines": 11177,
+      "checksum": "sha256:0cf4d717f670e6a9ca7d42d513725ebf6185edc98e2f5e379b01944936a68a56",
+      "updated": "2026-09-23T14:02:06Z",
+      "lines": 11075,
       "summary": "The owner asked for a review before merge. Four reviewers ran one pass each over separate areas:"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T12:56:50Z",
+      "updated": "2026-09-23T14:02:13Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:33cff0cf5773e10aef87587f53ef6dbedcca645b7445ea83bf89f7e263d0a517",
-      "updated": "2026-09-23T12:56:50Z",
+      "updated": "2026-09-23T14:02:13Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:56d2c6b913085d749fbb43220dfe856d87d4d599e688915519c1d8965fcdfe8d",
-      "updated": "2026-09-23T12:56:50Z",
+      "updated": "2026-09-23T14:02:13Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-23T12:10:07Z",
+      "updated": "2026-09-23T13:50:05Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "The owner asked for a review before merge. Four reviewers ran one pass each over separate areas: Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 130424,
-    "full_read": 143449
+    "manifest_plus_core": 129397,
+    "full_read": 142422
   }
 }

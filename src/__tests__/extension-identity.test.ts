@@ -5,7 +5,7 @@ import {
   matchExtensionIOC,
   scanExtensionReferences,
 } from "../extension-identity.js";
-import type { FeedIOC } from "../threat-intel.js";
+import { getBundledFeed, type FeedIOC } from "../threat-intel.js";
 
 // Synthetic feed: pins the matcher's semantics independently of the bundle.
 const FEED: FeedIOC[] = [
@@ -148,5 +148,13 @@ describe("scanExtensionReferences", () => {
     const found = hits(JSON.stringify({ recommendations: ["ms-python.python", "evilpub.stealer"] }), ".vscode/extensions.json", feed);
     expect(found.map((f) => `${f.match}:${f.severity}`)).toEqual(["ms-python.python:medium", "evilpub.stealer:critical"]);
     expect(found[0]?.description).toContain("Open VSX only");
+  });
+
+  // AzureCdnInfo.edrtester has no clean release (every served version carries
+  // the beacon), so the bundled entry blocks the id and a versionless
+  // recommendation is caught.
+  it("flags a recommendation of an extension with no clean release, from the bundle", () => {
+    const found = hits(JSON.stringify({ recommendations: ["AzureCdnInfo.edrtester"] }), ".vscode/extensions.json", getBundledFeed());
+    expect(found.map((f) => `${f.match}:${f.severity}`)).toEqual(["AzureCdnInfo.edrtester:critical"]);
   });
 });

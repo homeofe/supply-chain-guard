@@ -234,6 +234,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   backtracks on long whitespace) are linear now.
 - Python manifests under `vendor/` and `target/` are skipped like every other
   nested manifest.
+- `vscode:AzureCdnInfo.edrtester` is a whole-extension block instead of a pin
+  on 1.0.4: every version the Marketplace still serves carries the same
+  beacon, so no clean release exists (checked by opening each package).
+- SBT `cross CrossVersion.full` is expanded with the Scala versions the build
+  states (`scalaVersion`, `crossScalaVersions`), `CrossVersion.binary` like
+  `%%`; Gradle dependencies with a variable version are read on configurations
+  the script declares itself, not only on the built-in ones; pubspec and
+  GitLab CI `services:` flow maps written over several lines are read.
+- `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
+  regex rescanning to the end of the file from every unclosed `<!--` or tag:
+  30 s and 4.6 s at a few hundred KB); both are linear now.
 - **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
   file as JSONC, and the scanner parsed it as strict JSON, so a single comment
   or trailing comma made the whole file read as empty. The real Fake Font

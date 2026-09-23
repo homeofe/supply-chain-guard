@@ -95,138 +95,36 @@ the workers independently with the mutation proof below.
     guard and matcher shared the reverted code.
   - Both now state the value grammar independently, and the cut is red (3 tests).
 
-### Left open, deliberately
+### Open topics closed (same day, owner request)
 
-- **Test-fixture lockfiles still raise lockfile findings.**
-  - Version-pinned ones did on main already.
-  - A path-based test exemption is target-controlled: the scanned package decides which of its
-    paths look like tests, so widening one hands it a way to hide.
-- **SBT `cross CrossVersion.full`** (full Scala version suffix) is not expanded; the build file
-  does not state the version.
-- **Some multi-line forms are skipped rather than guessed:**
-  - pub flow maps spread over several lines;
-  - GitLab services items written as multi-line flow maps.
-- **Gradle custom configurations:** a non-literal version under a custom configuration name is
-  not read, a trade against false positives. Literal versions under any configuration are read.
-- **Two imported extensions look attacker-made but are still live on their registry, so they keep
-  their pins:** `vscode:AzureCdnInfo.edrtester`, `openvsx:TretinV3.forts-api-extention`. A
-  whole-id block needs a human decision (owner).
-
-## Every open item closed before going further (2026-09-23) (claude-opus-5-5)
-
-Same branch (PR 326), unreleased. The owner asked for everything still open to be fixed before
-anything else. This section closes the "Not covered, deliberately" list below and the open claim
-decision.
-
-### Closed
-
-- **Loader carriers:**
-  - `.vscode/tasks.json` at any depth (root via `scanAgentSkillFiles`, nested via the walk, no
-    double report);
-  - npm auto-run hooks (`SCRIPT_EXECUTES_ASSET`, one shared `ASSET_EXEC_PATTERN` in `patterns.ts`);
-  - devcontainer lifecycle commands (`DEVCONTAINER_*`, all six keys, string/array/object forms,
-    same battery as editor tasks).
-- **The payload itself:** `ASSET_DISGUISED_SCRIPT` (`disguised-asset.ts`). A font extension with no
-  font signature, plain text, and JavaScript syntax. It reuses the bytes already read for the digest
-  check.
-- **JSONC:** `.claude/settings.json` is parsed leniently as well. `package.json` stays strict because
-  npm parses it strictly.
-- **Coder registry exfiltration host:** verified in GHSA-vx42-ghc9-gw65 via the GitHub API. The
-  single-source IP is not included.
-- **The claim is now 16 ecosystems, meaning those with shipped data:**
-  - `count-ecosystems.mjs` and the generated README list share `ecosystemsWithData()`;
-  - `coverage-claim.test.ts` ties the script, the README sentence and the advertised claim together.
-
-### Proof
-
-- The ReDoS guard (`validatePatternSet`) refused the first asset-exec pattern in
-  SUSPICIOUS_SCRIPTS. Every repetition is now bounded; I did not add a correlatedMatcher to get
-  around it.
-- Coder test: feed domains report as `THREAT_INTEL_MATCH`, not `IOC_KNOWN_C2_DOMAIN`, which is the
-  hardcoded list. This was checked against a real scan before the test was written that way.
-- Mutation proof: 21 cuts, all red, with baseline and post-restore green. The cuts cover:
-  - each font signature;
-  - the text-share and syntax conditions;
-  - the extension filter;
-  - every dispatch (fonts, nested tasks, devcontainer);
-  - the no-double-report guard;
-  - each devcontainer form, initializeCommand and the auto-run severity;
-  - strict-JSON regressions for devcontainer and settings;
-  - the npm hook entry;
-  - the flag-token guard;
-  - the Coder entry;
-  - both halves of the claim count.
-- Two conditions were deleted rather than kept, because no cut could reach them: a Git LFS
-  special case and an empty-file check, both already implied by the text/syntax conditions.
-  The binary-noise fixture embeds script-like bytes so the text-share guard is load-bearing.
-
-## Go victim entries and the Fake Font loader (2026-09-23) (claude-opus-5-5)
-
-Settles the open item the section below carried forward. Same branch (PR 326), unreleased.
-
-### Measured
-
-- 16 Go paths (15 from the Contagious Interview "Fake Font" wave, plus git2md from PolinRider)
-  were whole-name blocks in the feed. 15 of them were also in a `patterns.ts` name regex, and
-  `Xpos587` was an account entry.
-- Every path was checked against the Go module proxy, which keeps module zips, by opening each
-  served version and looking for the loader:
-  - the 799-byte `eslint-check` `.vscode/tasks.json`;
-  - a `.woff2` without the `wOF2` magic.
-- `lambda-platform/lambda`:
-  - 449 versions listed, 137 retrievable, released 2021 to 2026;
-  - all 137 clean, including all 16 published in 2026;
-  - the other 312 were never cached, and the origin is GitHub-blocked, so nobody can fetch them.
-- Five pseudo-versions carry the loader:
-  - `glacialspring/go-winsparkle`, `glacialspring/static`, `zainirfan13/graphql-client`,
-    `dexbotsdev/uniswap-v2-v3-arbitrage` and `Xpos587/git2md`;
-  - their dates run from 2018 to 2025 because the injecting commits are backdated.
-- Ten modules have no retrievable version at all: proxy 404 on `@latest` three times each, and
-  on the direct zip where a pseudo-version was known.
-- A real infected module, scanned on the remote Linux runner (NOT locally: Defender locks the extracted
-  `tasks.json`, which makes a local scan look clean for the wrong reason):
-  - `glacialspring/static` scanned completely clean;
-  - `git2md` was caught only through the `Xpos587` account string in `setup.py`.
-  - So the loader had no behavioural detection at all.
-
-### Changed
-
-- The five infected pseudo-versions are pinned. The ten unfetchable modules and
-  `lambda-platform/lambda` are no longer listed. The Go paths left the name-regex table, and
-  `Xpos587` left the account list.
-- New rule `EDITOR_TASK_EXECUTES_ASSET`: an interpreter running a font, image or media file from
-  a VS Code task. It is critical on folderOpen and high otherwise.
-- Mutation proof: 11 cuts (see below for the 11th), all red, with baseline and post-restore green. The cuts cover:
-  - the rule;
-  - its flag-only token guard;
-  - the interpreter word boundary;
-  - the severity escalation;
-  - each pin shape;
-  - lambda as a name block;
-  - the regex table;
-  - the account entry.
-- One cut first SURVIVED: the account negative test wrote only `go.mod`, which the account
-  check does not read. The test now imports the module from a `.go` file.
-
-### What only the real environment caught
-
-- The rule first passed every fixture test and all 10 cuts, pushed as `949a388`. The first run
-  against the REAL infected zips on the remote Linux runner found nothing in any of them.
-- Cause: the real `tasks.json` ends in a trailing comma. VS Code reads JSONC; the scanner used
-  strict `JSON.parse`, threw, and returned no findings. That was true for EVERY editor-task rule,
-  including the older download-exec one, so one comma evaded all of them. The fixtures were all
-  built with `JSON.stringify` and could never carry the comma: the fixtures shared the code's
-  false assumption.
-- Fix: `stripJsonc` (already exported from `mcp-scanner.ts`) before parsing. A test copies the
-  real file's closing lines and asserts that strict `JSON.parse` throws on it. The strict-parse
-  cut goes red (11/11 cuts now).
-
-### Not covered, deliberately
-
-- The rule reads `.vscode/tasks.json` at the scan root only, as the existing task rules do. A
-  loader inside a vendored module is not reached.
-- A bare fake font without the task is inert and is not flagged. Git LFS pointer files in font
-  directories would make a magic-byte rule noisy.
+- **edrtester:** now a whole-extension block. Every version the Marketplace serves
+  (1.0.0, 1.0.1, 1.0.2, 1.0.4) ships edrdrill.js and beacons to the fronted azure-cdn[.]info
+  host, checked by opening each VSIX on the remote Linux runner, never executed. The
+  publisher name matches that host.
+- **TretinV3.forts-api-extention stays pinned (0.3.1):** Open VSX serves only 0.3.0, a real
+  2023 project with a public repository, and the malicious release was removed. It is a
+  hijack victim.
+- **SBT:** `cross CrossVersion.full` is expanded from the build's literal `scalaVersion` and
+  `crossScalaVersions`; with none stated, nothing is reported. `CrossVersion.binary`
+  behaves like `%%`.
+- **Gradle:** non-literal versions are read on configurations the script declares
+  (`by configurations.creating`, `create/register("x")`, a `configurations { x }` block).
+  Names declared in another file (convention plugins) are still unknown.
+- **Multi-line flow maps:** pubspec and GitLab `services:` flow maps written over several
+  lines are joined and read with the same rules.
+- **Test-fixture lockfiles: re-examined, deliberately unchanged.** A lockfile under a test
+  path is often a REAL install target: an e2e suite in tests/e2e runs `npm ci` in CI with CI
+  secrets. Exempting test paths would hide exactly that. A repository that keeps malicious
+  fixtures uses an `ignore:` glob, which now works for lockfiles (see the lockfile excuse
+  fix).
+- **Found on the way:** two pom.xml regexes were quadratic on crafted input (30 s and 4.6 s
+  at a few hundred KB) and are linear now.
+- **Proof:** 10 mutation cuts, all red.
+  - One first survivor was a test that let the quadratic regex match once and skip ahead;
+    the test was fixed.
+  - One bound was redundant (the pub join only reads up to the next dependency) and was
+    deleted.
+  - The GitLab lookahead bound turned out load-bearing and got its own test.
 
 ## Remaining coverage, coverage gate and README rewrite (2026-09-23) (claude-opus-5-5)
 

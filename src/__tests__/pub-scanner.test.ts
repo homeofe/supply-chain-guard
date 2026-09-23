@@ -156,6 +156,31 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(hits(yaml, "pubspec.yaml")).toEqual([]);
   });
 
+  // The same flow maps continued over several lines.
+  it("reads flow maps that span lines, with the same rules", () => {
+    const yaml = [
+      "dependencies:",
+      "  evil_pkg: {",
+      "    path: ../evil_pkg",
+      "  }",
+      "  hijacked_pkg: {hosted: https://pub.dev,",
+      "    version: 0.1.5}",
+      "  private_pkg: {",
+      "    hosted: https://pub.internal.example,",
+      "    version: 1.0.0,",
+      "  }",
+      "  http: ^1.2.0",
+    ].join("\n");
+    expect(names(yaml, "pubspec.yaml")).toEqual(["hijacked_pkg@0.1.5", "http@-"]);
+  });
+
+  it("stays cheap on an unclosed multi-line flow map", () => {
+    const yaml = "dependencies:\n" + "  a: {\n" + "    x: y\n".repeat(200_000);
+    const t0 = Date.now();
+    names(yaml, "pubspec.yaml");
+    expect(Date.now() - t0).toBeLessThan(2000);
+  });
+
   it("applies the hosted rules to a flow map", () => {
     const yaml = [
       "dependencies:",

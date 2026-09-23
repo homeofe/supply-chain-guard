@@ -32,7 +32,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { stripHashComment, lineAtOffset } from "./text-lines.js";
+import { stripHashComment, lineAtOffset, blankXmlComments } from "./text-lines.js";
 
 export interface MavenCoordinate {
   group: string;
@@ -64,13 +64,8 @@ export function isMavenFile(relativePath: string): boolean {
 }
 
 
-/** Blank out a region, keeping newlines so offsets and line numbers survive. */
-function blank(text: string): string {
-  return text.replace(/[^\n]/g, " ");
-}
-
 function extractPom(content: string): MavenCoordinate[] {
-  const source = content.replace(/<!--[\s\S]*?-->/g, blank);
+  const source = blankXmlComments(content);
 
   // Model properties live in the project's <properties> and in each
   // profile's; a <properties> under a plugin <configuration> is plugin input,
@@ -88,7 +83,10 @@ function extractPom(content: string): MavenCoordinate[] {
   interface Frame { name: string; offset: number; fields: Record<string, string> }
   const stack: Frame[] = [];
   const pending: { group: string; artifact: string; version: string | undefined; line: number }[] = [];
-  const tag = /<(\/?)([A-Za-z][\w.:-]*)\b[^>]*?(\/?)>/g;
+  // `[^<>]`, not `[^>]`: a tag never contains a raw "<" (XML escapes it), and
+  // without that stop every unclosed "<a" rescanned to the end of the file
+  // (4.6 s on 234 KB of them).
+  const tag = /<(\/?)([A-Za-z][\w.:-]*)\b[^<>]*?(\/?)>/g;
   let textStart = 0;
   for (let m = tag.exec(source); m; m = tag.exec(source)) {
     const [, closing, name, selfClosing] = m;
@@ -137,8 +135,41 @@ function extractGradleLockfile(content: string): MavenCoordinate[] {
   return out;
 }
 
+/**
+ * Configuration names a build script declares itself (`val x by
+ * configurations.creating`, `configurations.create("x")` / `register("x")`,
+ * or a Groovy `configurations { x }` block), so a dependency declared on one
+ * is read like one on a built-in configuration. Names declared in another
+ * file (a convention plugin) stay unknown.
+ */
+function declaredGradleConfigurations(content: string): Set<string> {
+  const names = new Set<string>();
+  for (const m of content.matchAll(/\bval[ \t]+([A-Za-z_]\w*)[ \t]+by[ \t]+configurations\.(?:creating|registering)\b/g)) names.add(m[1]!);
+  for (const m of content.matchAll(/\bconfigurations\.(?:create|register|maybeCreate)[ \t]*\([ \t]*["']([A-Za-z_]\w*)["']/g)) names.add(m[1]!);
+  // Groovy/Kotlin block: `configurations {` then one name (optionally opening
+  // its own block) per line, up to the block's closing brace.
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^\s*configurations\s*\{\s*$/.test(lines[i] ?? "")) continue;
+    let depth = 1;
+    let j = i + 1;
+    for (; j < lines.length && depth > 0; j++) {
+      const line = lines[j] ?? "";
+      const decl = depth === 1 ? /^\s*(?:create\(\s*["'])?([A-Za-z_]\w*)["']?\)?\s*(\{)?\s*$/.exec(line) : null;
+      if (decl) names.add(decl[1]!);
+      for (const ch of line) {
+        if (ch === "{") depth++;
+        else if (ch === "}") depth--;
+      }
+    }
+    i = j - 1;
+  }
+  return names;
+}
+
 function extractGradleScript(content: string): MavenCoordinate[] {
   const out: MavenCoordinate[] = [];
+  const declared = declaredGradleConfigurations(content);
   // Whole quoted string only: group:artifact:version, optional :classifier and @ext.
   const re = new RegExp(`(['"])(${ID}):(${ID}):(${VERSION})(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9]+)?\\1`, "g");
   let inBlockComment = false;
@@ -163,7 +194,7 @@ function extractGradleScript(content: string): MavenCoordinate[] {
     // (platform/BOM-managed): the version is unknown, the artifact is not.
     for (const m of line.matchAll(DECLARATION)) {
       const [, configuration, , group, artifact, rest] = m;
-      if (!isGradleConfiguration(configuration!)) continue;
+      if (!isGradleConfiguration(configuration!) && !declared.has(configuration!)) continue;
       if (rest !== undefined && LITERAL_TAIL.test(rest)) continue; // read above, with its version
       out.push({ group: group!, artifact: artifact!, version: undefined, line: i + 1 });
     }
@@ -235,14 +266,27 @@ function extractSbt(content: string): MavenCoordinate[] {
   // The version is a string literal or a val (`% libVersion`, `% V.lib`),
   // which stays unknown.
   const re = new RegExp(`"(${ID})"[ \\t]*(%{1,3})[ \\t]*"(${ID})"[ \\t]*%[ \\t]*(?:"(${VERSION})"|[A-Za-z_][A-Za-z0-9_.]*)`, "g");
+  // `cross CrossVersion.full` appends the FULL Scala version (`_2.13.12`),
+  // which only the build states: every literal scalaVersion / crossScalaVersions
+  // in the file. None stated means the artifact is unknown, and nothing is
+  // reported rather than the plain name, which is a different artifact.
+  const fullScala = new Set<string>();
+  for (const m of content.matchAll(/\bscalaVersion[ \t]*:=[ \t]*"(\d+\.\d+\.\d+[\w.-]*)"/g)) fullScala.add(m[1]!);
+  for (const m of content.matchAll(/\bcrossScalaVersions[ \t]*:=[ \t]*(?:Seq|List)\(([^)\n]{0,512})\)/g)) {
+    for (const v of m[1]!.matchAll(/"(\d+\.\d+\.\d+[\w.-]*)"/g)) fullScala.add(v[1]!);
+  }
   content.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.replace(/\/\/.*$/, "");
     for (const m of line.matchAll(re)) {
       const [, group, op, artifact, version] = m;
-      // %% resolves only the _<scala binary> artifact and %%% the Scala.js
-      // one; the plain name is a different artifact the build never fetches.
-      const artifacts = op === "%" ? [artifact!]
-        : SCALA_BINARY_VERSIONS.map((v) => `${artifact}_${op === "%%%" ? "sjs1_" : ""}${v}`);
+      // `... % "v" cross CrossVersion.full` or `("g" % "a" % "v").cross(CrossVersion.binary)`.
+      const cross = /^[ \t]*\)?[ \t]*(?:cross[ \t]*\(?|\.cross\()[ \t]*CrossVersion\.(full|binary)\b/.exec(line.slice(m.index + m[0].length))?.[1];
+      // %% (and `cross CrossVersion.binary`) resolves only the _<scala binary>
+      // artifact and %%% the Scala.js one; the plain name is a different
+      // artifact the build never fetches.
+      const artifacts = op === "%" && cross === "full" ? [...fullScala].map((v) => `${artifact}_${v}`)
+        : op === "%" && cross !== "binary" ? [artifact!]
+          : SCALA_BINARY_VERSIONS.map((v) => `${artifact}_${op === "%%%" ? "sjs1_" : ""}${v}`);
       for (const a of artifacts) out.push({ group: group!, artifact: a, version, line: i + 1 });
     }
   });
