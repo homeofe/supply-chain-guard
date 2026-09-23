@@ -37,6 +37,7 @@ import {
   readOptionalUtf8File,
   recordUnreadablePath,
 } from "./pattern-scanner.js";
+import { stripJsonc } from "./mcp-scanner.js";
 
 // ---------------------------------------------------------------------------
 // Target file discovery
@@ -818,6 +819,10 @@ const TASK_ASSET_EXEC_REGEX =
  * `runOn: folderOpen` only ESCALATES a command already judged dangerous. On its
  * own it is an ordinary and widely used VS Code feature, so it never produces a
  * finding here. Malformed JSON is ignored (no crash, no findings).
+ *
+ * VS Code reads tasks.json as JSONC, so comments and trailing commas are
+ * stripped first. Strict JSON.parse threw on the one trailing comma the real
+ * Fake Font loader carries, and every task rule then saw nothing.
  */
 export function scanEditorTasksContent(
   content: string,
@@ -827,7 +832,7 @@ export function scanEditorTasksContent(
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(content);
+    parsed = JSON.parse(stripJsonc(content.replace(/^\uFEFF/, "")));
   } catch {
     return findings;
   }

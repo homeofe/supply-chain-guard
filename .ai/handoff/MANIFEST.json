@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790161464",
-    "timestamp": "2026-09-23T11:04:25Z",
-    "commit": "2c1c5c7",
+    "session_id": "cli-1790161789",
+    "timestamp": "2026-09-23T11:09:49Z",
+    "commit": "949a388",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:53528add2702669c1fe7a26ec66f6445f667c41619e1b6cb153d200a080b36cf",
-      "updated": "2026-09-23T11:04:19Z",
-      "lines": 11002,
+      "checksum": "sha256:af11e6b3b6e599e8c73590fed3b2d7cdf4c071b21a26cf85ac3618ef13bf39d7",
+      "updated": "2026-09-23T11:09:46Z",
+      "lines": 11015,
       "summary": "Settles the open item the section below carried forward. Same branch (PR 326), unreleased."
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-23T11:04:24Z",
+      "updated": "2026-09-23T11:09:48Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:625f61be8c76ec5cbc7e3b2587478d00f30545177100264d2e6bbe4347654648",
-      "updated": "2026-09-23T11:04:24Z",
+      "updated": "2026-09-23T11:09:48Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:dc44f4e767f506ce28ec3961bfc4ba3f9e686f77d5d7a8fc50339c0aca4b2c4c",
-      "updated": "2026-09-23T11:04:24Z",
+      "updated": "2026-09-23T11:09:48Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Settles the open item the section below carried forward. Same branch (PR 326), unreleased. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 128369,
-    "full_read": 141391
+    "manifest_plus_core": 128549,
+    "full_read": 141571
   }
 }

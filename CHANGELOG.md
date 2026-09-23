@@ -159,6 +159,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
+  file as JSONC, and the scanner parsed it as strict JSON, so a single comment
+  or trailing comma made the whole file read as empty. The real Fake Font
+  loader ends in exactly such a trailing comma: the new rule passed every
+  fixture test and then found nothing in the real infected modules, whose
+  files only a real run exercised. Comments and trailing commas are now
+  stripped first, for all editor-task rules.
 - **Fifteen Go modules of the Contagious Interview "Fake Font" wave and
   `github.com/Xpos587/git2md` were blocked by name in every version**, both in
   the feed and as a name pattern, and the `Xpos587` account was a

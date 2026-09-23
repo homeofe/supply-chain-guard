@@ -34,7 +34,7 @@ Settles the open item the section below carried forward. Same branch (PR 326), u
   `Xpos587` left the account list.
 - New rule `EDITOR_TASK_EXECUTES_ASSET`: an interpreter running a font, image or media file from
   a VS Code task. It is critical on folderOpen and high otherwise.
-- Mutation proof: 10 cuts, all red, with baseline and post-restore green. The cuts cover:
+- Mutation proof: 11 cuts (see below for the 11th), all red, with baseline and post-restore green. The cuts cover:
   - the rule;
   - its flag-only token guard;
   - the interpreter word boundary;
@@ -45,6 +45,19 @@ Settles the open item the section below carried forward. Same branch (PR 326), u
   - the account entry.
 - One cut first SURVIVED: the account negative test wrote only `go.mod`, which the account
   check does not read. The test now imports the module from a `.go` file.
+
+### What only the real environment caught
+
+- The rule first passed every fixture test and all 10 cuts, pushed as `949a388`. The first run
+  against the REAL infected zips on openclaw found nothing in any of them.
+- Cause: the real `tasks.json` ends in a trailing comma. VS Code reads JSONC; the scanner used
+  strict `JSON.parse`, threw, and returned no findings. That was true for EVERY editor-task rule,
+  including the older download-exec one, so one comma evaded all of them. The fixtures were all
+  built with `JSON.stringify` and could never carry the comma: the fixtures shared the code's
+  false assumption.
+- Fix: `stripJsonc` (already exported from `mcp-scanner.ts`) before parsing. A test copies the
+  real file's closing lines and asserts that strict `JSON.parse` throws on it. The strict-parse
+  cut goes red (11/11 cuts now).
 
 ### Not covered, deliberately
 
