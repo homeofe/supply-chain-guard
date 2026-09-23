@@ -3,10 +3,10 @@
   "algorithm": "sha256",
   "files": {
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
-    "src/__tests__/campaigns.test.ts": "f98f95b9bdbc4d5d0c2378fe1e97b1acdf2ce42ebd470973ecbb2da6a6bbb13c",
+    "src/__tests__/campaigns.test.ts": "1abd8d1aa917baec6787f8a50aa25e10fd40bdfb4095318497db7b258ab5493f",
     "src/__tests__/core-broad-gap-matchers.test.ts": "d495a2ac7f95fc36870b6b32607d1ce38d9db2390353d20373d2818e4470dcd7",
     "src/__tests__/file-digest.test.ts": "d243581d251ad76b89a66605a31af39276f16aabc15db005f5963ce7ac2a8ccc",
-    "src/__tests__/go-scanner.test.ts": "09c4c8ec0d663861ded5850e62cb63f67279d474c5386c45c31aa72de58dd316",
+    "src/__tests__/go-scanner.test.ts": "fa3781dcf57eeead730989072862d25299a891cfe5a5bb8f9ece7318a4d4b577",
     "src/__tests__/infostealer-patterns.test.ts": "b857995e71192fc7603ec2070223617e960d010daa602c724d2731a4cb28858f",
     "src/__tests__/ioc-blocklist.test.ts": "df40ba87108022cffb499a9037cd7cd523a18e264b1ef87567daa98913aca578",
     "src/__tests__/issue-24-ioc-evasion.test.ts": "ee8b4add5d229f4d04db7fb3575507984fc2933372d0140ad62a06baa1b080bd",

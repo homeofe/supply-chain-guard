@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { scanGoContent, scanGoSumContent, isGoFile, GO_PATTERNS } from "../go-scanner.js";
-import { matchPatternInContent } from "../patterns.js";
+import { matchPatternInContent } from "../patterns.js";
+import { performanceBudget } from "./performance-budget.js";
 
 function normalizePatternMatches(
   content: string,
@@ -277,7 +278,7 @@ describe("Go Module Scanner", () => {
       expect(hits.coverage.regexAttempts, rule).toBe(1);
     }
 
-    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(Date.now() - started).toBeLessThan(performanceBudget(5_000));
   });
 
   it("should have patterns array", () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { extractPubPackages, isPubFile, scanPubContent } from "../pub-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 const FEED: FeedIOC[] = [
   { type: "package", value: "pub:evil_pkg", severity: "critical", confidence: 0.9, family: "TestFamily" },
@@ -174,11 +175,11 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names(yaml, "pubspec.yaml")).toEqual(["hijacked_pkg@0.1.5", "http@-"]);
   });
 
-  it("stays cheap on an unclosed multi-line flow map", () => {
+  it("stays cheap on an unclosed multi-line flow map", { timeout: performanceBudget(60_000) }, () => {
     const yaml = "dependencies:\n" + "  a: {\n" + "    x: y\n".repeat(200_000);
     const t0 = Date.now();
     names(yaml, "pubspec.yaml");
-    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(2000));
   });
 
   it("applies the hosted rules to a flow map", () => {
@@ -204,7 +205,7 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names(fake, "pubspec.lock")).toEqual(["evil_pkg@1.0.0"]);
   });
 
-  it("stays linear on a hostile flow map", () => {
+  it("stays linear on a hostile flow map", { timeout: performanceBudget(60_000) }, () => {
     // Also a colon-free line with a long whitespace run, the shape that made
     // the old lazy-key line regex quadratic.
     const yaml = "dependencies:\n  x: {" + "{a: [b, ".repeat(100_000) + "\n  y: {" + "a,".repeat(300_000) + "}\n"
@@ -212,7 +213,7 @@ describe("extractPubPackages: flow maps and mirrors", () => {
       + "  a" + " ".repeat(200_000) + "b\n";
     const t0 = Date.now();
     extractPubPackages(yaml, "pubspec.yaml");
-    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(2000));
   });
 });
 

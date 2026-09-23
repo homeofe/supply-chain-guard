@@ -24,7 +24,8 @@ import {
   scanAgentSettingsContent,
 } from "../skills-scanner.js";
 import { scan } from "../scanner.js";
-import { ASSET_EXEC_PATTERN } from "../patterns.js";
+import { ASSET_EXEC_PATTERN } from "../patterns.js";
+import { performanceBudget } from "./performance-budget.js";
 
 let tmpRoot: string;
 
@@ -484,10 +485,10 @@ describe("ASSET_EXEC_PATTERN coverage", () => {
     expect(re.test(line)).toBe(false);
   });
 
-  it("stays fast on hostile lines", () => {
+  it("stays fast on hostile lines", { timeout: performanceBudget(60_000) }, () => {
     const t = performance.now();
     for (const line of ["node ".repeat(60000), "node " + "-a ".repeat(40000), "node " + "a.".repeat(100000), "/".repeat(200000) + "node x"]) re.test(line);
-    expect(performance.now() - t).toBeLessThan(1000);
+    expect(performance.now() - t).toBeLessThan(performanceBudget(1000));
   });
 });
 

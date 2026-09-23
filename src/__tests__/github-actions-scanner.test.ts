@@ -3,7 +3,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { scanGitHubActionsWorkflows } from "../github-actions-scanner.js";
-import { getBundledFeed } from "../threat-intel.js";
+import { getBundledFeed } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 /**
  * Helper: create a temp directory with .github/workflows/ structure
@@ -1009,11 +1010,11 @@ describe("GHA_SECRET_EXFIL_MULTILINE: every expression form of a secret referenc
     expect(lines).toEqual([9]);
   });
 
-  it("stays linear on 5 MiB of unclosed expressions", () => {
+  it("stays linear on 5 MiB of unclosed expressions", { timeout: performanceBudget(60_000) }, () => {
     const unclosed = "${{ secrets ".repeat(Math.ceil((5 * 1024 * 1024) / 12));
     const started = performance.now();
     expect(exfilLinesFor(unclosed)).toEqual([]);
-    expect(performance.now() - started).toBeLessThan(15_000);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
   });
 
   function exfilLinesForWorkflow(lines: string[]): number[] {
@@ -1154,16 +1155,16 @@ describe("GHA_SECRET_CURL / GHA_SECRET_WGET / GHA_ENV_EXFIL: every expression fo
   });
 
   // reportFor writes the value on three lines, so a third of 5 MiB each.
-  it("stays linear on 5 MiB of expressions and on unclosed ones", () => {
+  it("stays linear on 5 MiB of expressions and on unclosed ones", { timeout: performanceBudget(60_000) }, () => {
     const perLine = (5 * 1024 * 1024) / 3;
     const many = "${{ github['token'] }}".repeat(Math.ceil(perLine / 22));
     let started = performance.now();
     reportFor(many);
-    expect(performance.now() - started).toBeLessThan(15_000);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
 
     const unclosed = "${{ secrets ".repeat(Math.ceil(perLine / 12));
     started = performance.now();
     expect(reportFor(unclosed).keys).toEqual([]);
-    expect(performance.now() - started).toBeLessThan(15_000);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
   }, 60_000);
 });

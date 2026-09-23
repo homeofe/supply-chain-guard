@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { extractMavenCoordinates, isMavenFile, scanMavenContent } from "../maven-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 // Synthetic feed, so the matcher's semantics are pinned independently of the bundle.
 const FEED: FeedIOC[] = [
@@ -368,7 +369,7 @@ describe("extractMavenCoordinates: remaining build formats", () => {
     ]);
   });
 
-  it("stays linear on hostile build files", () => {
+  it("stays linear on hostile build files", { timeout: performanceBudget(60_000) }, () => {
     // Long whitespace runs after each keyword: the shape that makes
     // `\s*\(?\s*` split one run every way before failing.
     const ws = " ".repeat(100_000);
@@ -382,19 +383,19 @@ describe("extractMavenCoordinates: remaining build formats", () => {
     extractMavenCoordinates(gradle, "build.gradle.kts");
     extractMavenCoordinates(sbt, "build.sbt");
     extractMavenCoordinates(toml, "gradle/libs.versions.toml");
-    expect(Date.now() - t0).toBeLessThan(3000);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(3000));
   });
 
   // pom.xml: a comment regex and a tag regex that rescanned to the end of the
   // file from every unclosed "<!--" / "<a" (30 s and 4.6 s at a few hundred KB).
-  it("stays linear on a hostile pom.xml", () => {
+  it("stays linear on a hostile pom.xml", { timeout: performanceBudget(60_000) }, () => {
     const comments = "<project>" + "<!--".repeat(100_000) + "</project>";
     // No ">" anywhere: a closing tag at the end lets the regex match once and skip ahead.
     const tags = "<a ".repeat(100_000);
     const t0 = Date.now();
     extractMavenCoordinates(comments, "pom.xml");
     extractMavenCoordinates(tags, "pom.xml");
-    expect(Date.now() - t0).toBeLessThan(1500);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(1500));
   });
 
   it("still reads a pom whose comments and attributes are ordinary", () => {

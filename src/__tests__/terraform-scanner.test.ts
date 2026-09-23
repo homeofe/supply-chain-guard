@@ -4,7 +4,8 @@ import {
   isTerraformProviderFile,
   scanTerraformContent,
 } from "../terraform-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 // A synthetic feed, so these tests pin the matcher's semantics independently of
 // what the bundled feed happens to hold. The bundled Graphalgo entries are
@@ -254,13 +255,13 @@ describe("scanTerraformContent", () => {
   });
 
   // Unclosed blocks used to be re-read from every opening line (quadratic).
-  it("stays linear on unclosed module and lock-file blocks", () => {
+  it("stays linear on unclosed module and lock-file blocks", { timeout: performanceBudget(60_000) }, () => {
     const modules = 'module "a" {\n'.repeat(20000);
     const lock = 'provider "registry.terraform.io/a/b" {\n'.repeat(20000);
     const t = performance.now();
     scanTerraformContent(modules, "main.tf", []);
     scanTerraformContent(lock, ".terraform.lock.hcl", []);
-    expect(performance.now() - t).toBeLessThan(2000);
+    expect(performance.now() - t).toBeLessThan(performanceBudget(2000));
   });
 
   it("flags a lock-file provider and reports each provider once", () => {

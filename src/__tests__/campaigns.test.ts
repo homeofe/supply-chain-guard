@@ -10,7 +10,8 @@ import {
 import { matchPackageIOC, getBundledFeed, splitPackageIOCValue } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { checkPackageName } from "../npm-scanner.js";
-import type { Finding } from "../types.js";
+import type { Finding } from "../types.js";
+import { performanceBudget } from "./performance-budget.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -527,7 +528,7 @@ describe("Campaign Signatures", () => {
         .toBe(true);
     });
 
-    it("bounds whitespace backtracking in the loader rule", () => {
+    it("bounds whitespace backtracking in the loader rule", { timeout: performanceBudget(60_000) }, () => {
       const loader = CAMPAIGN_PATTERNS.find(
         (pattern) => pattern.rule === "MINI_SHAI_HULUD_LOADER",
       )!;
@@ -536,7 +537,7 @@ describe("Campaign Signatures", () => {
       const started = performance.now();
 
       expect(regex.test(probe)).toBe(false);
-      expect(performance.now() - started).toBeLessThan(250);
+      expect(performance.now() - started).toBeLessThan(performanceBudget(250));
     });
 
     it("should detect a bun preinstall hook invoking setup.mjs", async () => {

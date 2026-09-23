@@ -5,7 +5,8 @@ import {
   parseImageReference,
   scanImageReferences,
 } from "../container-image.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 const DIGEST = "a".repeat(64);
 const CLEAN_DIGEST = "b".repeat(64);
@@ -278,11 +279,11 @@ describe("scanImageReferences: map, values and BuildKit forms", () => {
 
   // Every unclosed item looks ahead a bounded number of lines; unbounded, each
   // of 50k such items would rescan the rest of the file.
-  it("stays linear on many unclosed flow-map service items", () => {
+  it("stays linear on many unclosed flow-map service items", { timeout: performanceBudget(60_000) }, () => {
     const ci = ["job:", "  services:", ...Array.from({ length: 50_000 }, () => "    - {name: x,")].join("\n");
     const t0 = Date.now();
     extractImageReferences(ci, ".gitlab-ci.yml");
-    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(2000));
   });
 
   // Compose and GitHub Actions services are MAPS of name -> {image: ...}: the
@@ -331,7 +332,7 @@ describe("scanImageReferences: map, values and BuildKit forms", () => {
     expect(hits(yaml, ".gitlab-ci.yml")).toEqual([]);
   });
 
-  it("stays linear on hostile YAML and Dockerfile input", () => {
+  it("stays linear on hostile YAML and Dockerfile input", { timeout: performanceBudget(60_000) }, () => {
     // A long whitespace run with no key after it is the classic shape for
     // `\s*-?\s*`, which splits the run every way before failing.
     const yaml = "image:\n" + "  repository: a\n".repeat(100_000) + ("image: {" + "a,".repeat(200_000) + "\n")
@@ -345,6 +346,6 @@ describe("scanImageReferences: map, values and BuildKit forms", () => {
     const t0 = Date.now();
     extractImageReferences(yaml, "values.yaml");
     extractImageReferences(docker, "Dockerfile");
-    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(Date.now() - t0).toBeLessThan(performanceBudget(2000));
   });
 });

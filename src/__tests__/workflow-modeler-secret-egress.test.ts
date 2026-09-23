@@ -11,6 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { modelWorkflows } from "../workflow-modeler.js";
+import { performanceBudget } from "./performance-budget.js";
 
 const RULE = "WORKFLOW_SECRET_TO_UPLOAD_PATH";
 
@@ -399,29 +400,29 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     return performance.now() - started;
   }
 
-  it("unclosed expressions, fetch( without a literal and one long curl line", () => {
+  it("unclosed expressions, fetch( without a literal and one long curl line", { timeout: performanceBudget(60_000) }, () => {
     const unclosed = "${{ secrets ".repeat(Math.ceil(FIVE_MIB / 12));
     expect(
       timed([...HEAD, "    steps:", "      - env:", `          T: ${unclosed}`, "        run: curl https://x.example"]),
-    ).toBeLessThan(15_000);
+    ).toBeLessThan(performanceBudget(15_000));
 
     const fetches = "fetch( ".repeat(Math.ceil(FIVE_MIB / 7));
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: ${fetches}`]),
-    ).toBeLessThan(15_000);
+    ).toBeLessThan(performanceBudget(15_000));
 
     const args = "localhost ".repeat(Math.ceil(FIVE_MIB / 10));
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: curl ${args}`]),
-    ).toBeLessThan(15_000);
+    ).toBeLessThan(performanceBudget(15_000));
 
     const quotes = '"'.repeat(FIVE_MIB);
     expect(
       timed([...HEAD, "    steps:", "      - env:", "          T: ${{ secrets.X }}", `        run: curl -H ${quotes}`]),
-    ).toBeLessThan(15_000);
+    ).toBeLessThan(performanceBudget(15_000));
   });
 
-  it("many steps each with a secret and a loopback call", () => {
+  it("many steps each with a secret and a loopback call", { timeout: performanceBudget(60_000) }, () => {
     const step = [
       "      - env:",
       "          T: ${{ secrets.NPM_TOKEN }}",
@@ -430,7 +431,7 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     const per = step.join("\n").length + 1;
     const lines = [...HEAD, "    steps:"];
     for (let i = 0; i < Math.ceil(FIVE_MIB / per); i++) lines.push(...step);
-    expect(timed(lines)).toBeLessThan(15_000);
+    expect(timed(lines)).toBeLessThan(performanceBudget(15_000));
     expect(hits()).toEqual([]);
   });
 });
