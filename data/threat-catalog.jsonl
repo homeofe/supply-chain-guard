@@ -82091,3 +82091,169 @@
 {"type":"package","value":"@opap/player-kyc-widget","severity":"critical","confidence":1,"source":"GHSA-356g-cp7r-g5f5, MAL-2026-14387 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-08-23"}
 {"type":"package","value":"chai-as-testkit","severity":"critical","confidence":1,"source":"GHSA-wg38-qj68-8g87, MAL-2026-14371 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-23"}
 {"type":"package","value":"@usaa-grp-personal-profile/personal-profile-common","severity":"critical","confidence":1,"source":"GHSA-hhfp-ggmv-qx2x, MAL-2026-14370 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-23"}
+{"type":"package","value":"epic-minimalist-blog@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-qm69-2mrj-34p4, MAL-2025-49164 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-minimalist-blog@1.0.0","severity":"critical","confidence":1,"source":"GHSA-qm69-2mrj-34p4, MAL-2025-49164 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-node-cms@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-jh62-38fp-f3j5, MAL-2025-49168 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-node-cms@1.0.0","severity":"critical","confidence":1,"source":"GHSA-jh62-38fp-f3j5, MAL-2025-49168 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-native-client-utils@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-wr85-r6rw-5x3q, MAL-2025-49165 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-native-client-utils@1.0.0","severity":"critical","confidence":1,"source":"GHSA-wr85-r6rw-5x3q, MAL-2025-49165 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-node-blog@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-77cx-mh8q-h6xf, MAL-2025-49166 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-node-blog@1.0.0","severity":"critical","confidence":1,"source":"GHSA-77cx-mh8q-h6xf, MAL-2025-49166 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-js-error-reporting@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-wrm6-7896-4vvc, MAL-2025-49160 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-js-error-reporting@1.0.0","severity":"critical","confidence":1,"source":"GHSA-wrm6-7896-4vvc, MAL-2025-49160 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-messages-common@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-hf62-4hm5-8jxw, MAL-2025-49163 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-messages-common@1.0.0","severity":"critical","confidence":1,"source":"GHSA-hf62-4hm5-8jxw, MAL-2025-49163 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-localization@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-qq4j-2mg4-f8hq, MAL-2025-49162 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-localization@1.0.0","severity":"critical","confidence":1,"source":"GHSA-qq4j-2mg4-f8hq, MAL-2025-49162 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-launcher-integration@0.0.1-security.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2100.4.2","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@11.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@9.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@8.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@7.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@6.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@5.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@4.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@3.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@2.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@1.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.9.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.8.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.7.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.6.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.5.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.4.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.3.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.2.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.1.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.0.1","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-launcher-integration@0.0.0","severity":"critical","confidence":1,"source":"GHSA-g3vx-92jc-8wwg, MAL-2025-19703","firstSeen":"2025-08-14"}
+{"type":"package","value":"epic-node-cluster@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-4mhj-59pw-jpmm, MAL-2025-49167 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-node-cluster@1.0.0","severity":"critical","confidence":1,"source":"GHSA-4mhj-59pw-jpmm, MAL-2025-49167 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-gtm-url-checker@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-79xp-fx49-7rxv, MAL-2025-49155 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-gtm-url-checker@1.0.0","severity":"critical","confidence":1,"source":"GHSA-79xp-fx49-7rxv, MAL-2025-49155 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-hooks@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-ph26-hcg2-g7jr, MAL-2025-49157 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-hooks@1.0.0","severity":"critical","confidence":1,"source":"GHSA-ph26-hcg2-g7jr, MAL-2025-49157 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-react@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-f6cm-hp22-hc9h, MAL-2025-49146 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-react@1.0.0","severity":"critical","confidence":1,"source":"GHSA-f6cm-hp22-hc9h, MAL-2025-49146 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-env-utils@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-5mpr-p637-pm99, MAL-2025-49141 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-env-utils@1.0.0","severity":"critical","confidence":1,"source":"GHSA-5mpr-p637-pm99, MAL-2025-49141 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-http-proxy@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-q47h-gmch-rh99, MAL-2025-49158 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-http-proxy@1.0.0","severity":"critical","confidence":1,"source":"GHSA-q47h-gmch-rh99, MAL-2025-49158 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-freight@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-jv75-35r4-59vg, MAL-2025-49149 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-freight@1.0.0","severity":"critical","confidence":1,"source":"GHSA-jv75-35r4-59vg, MAL-2025-49149 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-styles@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-xrh8-q849-mq63, MAL-2025-49148 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-styles@1.0.0","severity":"critical","confidence":1,"source":"GHSA-xrh8-q849-mq63, MAL-2025-49148 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-gulp-utils@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-h7h8-c87m-x2mf, MAL-2025-49156 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-gulp-utils@1.0.0","severity":"critical","confidence":1,"source":"GHSA-h7h8-c87m-x2mf, MAL-2025-49156 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-eula-service@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-fx4r-2ww9-q7cj, MAL-2025-49143 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-eula-service@1.0.0","severity":"critical","confidence":1,"source":"GHSA-fx4r-2ww9-q7cj, MAL-2025-49143 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-graphql-schema@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-cr7r-64mh-9hrc, MAL-2025-49153 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-graphql-schema@1.0.0","severity":"critical","confidence":1,"source":"GHSA-cr7r-64mh-9hrc, MAL-2025-49153 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-google-maps-tools@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-pfq3-r89w-xh8x, MAL-2025-49152 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-google-maps-tools@1.0.0","severity":"critical","confidence":1,"source":"GHSA-pfq3-r89w-xh8x, MAL-2025-49152 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-games-nav@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-frmv-779x-pr56, MAL-2025-49151 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-games-nav@1.0.0","severity":"critical","confidence":1,"source":"GHSA-frmv-779x-pr56, MAL-2025-49151 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-games-footer@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-9r6c-pxqv-fm39, MAL-2025-49150 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-games-footer@1.0.0","severity":"critical","confidence":1,"source":"GHSA-9r6c-pxqv-fm39, MAL-2025-49150 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-graphql-types@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-mq97-jx8g-rrvc, MAL-2025-49154 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-graphql-types@1.0.0","severity":"critical","confidence":1,"source":"GHSA-mq97-jx8g-rrvc, MAL-2025-49154 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-file-upload@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-3gh3-g8ww-j898, MAL-2025-49144 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-file-upload@1.0.0","severity":"critical","confidence":1,"source":"GHSA-3gh3-g8ww-j898, MAL-2025-49144 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-build@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-chgx-55jg-mmx4, MAL-2025-49145 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-build@1.0.0","severity":"critical","confidence":1,"source":"GHSA-chgx-55jg-mmx4, MAL-2025-49145 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-server@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-7gwr-946q-qjwp, MAL-2025-49147 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-fortnite-server@1.0.0","severity":"critical","confidence":1,"source":"GHSA-7gwr-946q-qjwp, MAL-2025-49147 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-i18n@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-86fv-r432-x6f8, MAL-2025-49159 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-i18n@1.0.0","severity":"critical","confidence":1,"source":"GHSA-86fv-r432-x6f8, MAL-2025-49159 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-eula@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-x9rg-wfpf-4fqr, MAL-2025-49142 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-eula@1.0.0","severity":"critical","confidence":1,"source":"GHSA-x9rg-wfpf-4fqr, MAL-2025-49142 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-dynamo-utils@0.0.1-security","severity":"critical","confidence":1,"source":"GHSA-w5pw-2265-mx6w, MAL-2025-49140 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-dynamo-utils@1.0.0","severity":"critical","confidence":1,"source":"GHSA-w5pw-2265-mx6w, MAL-2025-49140 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-games-nav-shared@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2022-2767 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"epic-games-nav-shared@99.9.2","severity":"critical","confidence":0.9,"source":"MAL-2022-2767 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"epic-games-nav-shared@1.9.9","severity":"critical","confidence":0.9,"source":"MAL-2022-2767 (ghsa-malware)","firstSeen":"2022-06-20"}
+{"type":"package","value":"tailwind-contact-forms@0.5.1","severity":"critical","confidence":0.9,"source":"MAL-2026-15925 (amazon-inspector)","firstSeen":"2026-09-04"}
+{"type":"package","value":"golaaa@2.0.3","severity":"critical","confidence":0.9,"source":"MAL-2026-13392 (amazon-inspector)","firstSeen":"2026-08-06"}
