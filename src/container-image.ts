@@ -27,7 +27,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { stripHashComment } from "./text-lines.js";
+import { stripHashComment, trimTrailing } from "./text-lines.js";
 
 export interface ImageReference {
   name: string;
@@ -126,12 +126,24 @@ export function extractImageReferences(content: string, relativePath: string): L
     // scope for FROM lines, exactly as Docker resolves them.
     const globalArgs = new Map<string, string>();
     let seenFrom = false;
-    const expand = (value: string): string =>
-      value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+    // An image reference is far shorter than this. Expanding `$A$A$A...` with a
+    // long A could otherwise build a string V8 cannot hold and end the scan; a
+    // value that would grow past the cap stays unexpanded and fails the grammar.
+    const MAX_EXPANDED = 4096;
+    const expand = (value: string): string => {
+      if (value.length > MAX_EXPANDED) return value;
+      let total = value.length;
+      let over = false;
+      const expanded = value.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
         (whole, braced: string | undefined, fallback: string | undefined, bare: string | undefined) => {
           const name = braced ?? bare!;
-          return globalArgs.get(name) ?? fallback ?? whole;
+          const replacement = globalArgs.get(name) ?? fallback ?? whole;
+          total += replacement.length;
+          if (total > MAX_EXPANDED) over = true;
+          return over ? whole : replacement;
         });
+      return over ? value : expanded;
+    };
     lines.forEach((raw, i) => {
       // Both instructions are anchored at the line start, so a "# FROM ..."
       // comment never matches.
@@ -312,7 +324,7 @@ function pushImageMap(fields: ImageMap, out: LocatedImageReference[]): void {
   const registry = fields.get("registry")?.value;
   const tag = fields.get("tag")?.value;
   const digest = fields.get("digest")?.value;
-  const raw = `${registry ? `${registry.replace(/\/+$/, "")}/` : ""}${repository.value}`
+  const raw = `${registry ? `${trimTrailing(registry, "/")}/` : ""}${repository.value}`
     + `${tag ? `:${tag}` : ""}${digest ? `@${digest}` : ""}`;
   if (parseImageReference(raw)) out.push({ raw, line: repository.line });
 }

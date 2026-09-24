@@ -77,15 +77,15 @@ export function scanNuGetFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     if (content === null) continue;
 
     if (lower === NUGET_CONFIG) {
-      findings.push(...scanNuGetConfigContent(content, name));
+      for (const pushed of scanNuGetConfigContent(content, name)) findings.push(pushed);
     } else {
       iocFeed ??= loadThreatIntel();
       if (lower === PACKAGES_LOCK) {
-        findings.push(...scanPackagesLockContent(content, name, iocFeed));
+        for (const pushed of scanPackagesLockContent(content, name, iocFeed)) findings.push(pushed);
       } else if (lower === PACKAGES_CONFIG) {
-        findings.push(...scanPackagesConfigContent(content, name, iocFeed));
+        for (const pushed of scanPackagesConfigContent(content, name, iocFeed)) findings.push(pushed);
       } else {
-        findings.push(...scanCsprojContent(content, name, iocFeed));
+        for (const pushed of scanCsprojContent(content, name, iocFeed)) findings.push(pushed);
       }
     }
   }
@@ -222,8 +222,13 @@ export function scanNuGetConfigContent(
 
   const addTag = /<add\b[^>]*\bvalue\s*=\s*["'](http:\/\/[^"']+)["'][^>]*>/gi;
   let match: RegExpExecArray | null;
+  // Lines counted incrementally from the previous match, so many feeds stay linear.
+  let counted = 0;
+  let line = 1;
   while ((match = addTag.exec(scope)) !== null) {
-    const line = content.substring(0, baseOffset + match.index).split("\n").length;
+    const offset = baseOffset + match.index;
+    for (let k = content.indexOf("\n", counted); k !== -1 && k < offset; k = content.indexOf("\n", k + 1)) line++;
+    counted = offset;
     findings.push(httpFeedFinding(match[1] ?? "", relativePath, line));
   }
 

@@ -287,8 +287,8 @@ export function scanGoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (goMod !== null) {
-    findings.push(...scanGoContent(goMod, GO_MOD, "mod"));
-    findings.push(...scanGoModDependencies(goMod, GO_MOD, feed));
+    for (const pushed of scanGoContent(goMod, GO_MOD, "mod")) findings.push(pushed);
+    for (const pushed of scanGoModDependencies(goMod, GO_MOD, feed)) findings.push(pushed);
   }
 
   // Scan go.sum (resolved module inventory) for malicious modules
@@ -299,7 +299,7 @@ export function scanGoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (goSum !== null) {
-    findings.push(...scanGoSumContent(goSum, GO_SUM, feed));
+    for (const pushed of scanGoSumContent(goSum, GO_SUM, feed)) findings.push(pushed);
   }
 
   // Preserve the historical module gate: standalone Go source is handled by
@@ -495,7 +495,7 @@ function scanGoSourceDir(
       findings,
     );
     if (content === null) continue;
-    findings.push(...scanGoContent(content, relPath, "source"));
+    for (const pushed of scanGoContent(content, relPath, "source")) findings.push(pushed);
   }
 }
 

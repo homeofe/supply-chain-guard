@@ -242,20 +242,31 @@ export function extractTerraformProviders(
   // terraform { required_providers { ... } }. Everywhere else `source` is a
   // file, a module or an object key (provisioner "file", aws_s3_object,
   // local_file), and reading it as a provider reported someone's relative path.
+  // `inside` counts the open required_providers blocks on the stack, so the
+  // check per line is constant rather than a walk of the whole stack.
   const stack: string[] = [];
+  let inside = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    if (stack.includes("required_providers")) {
+    if (inside > 0) {
       for (const m of line.matchAll(/\bsource\s*=\s*"([^"]*)"/g)) {
         const address = parseProviderAddress(m[1] ?? "");
         if (address) refs.push({ address, version: undefined, line: i + 1 });
       }
     }
-    const label = /^\s*([A-Za-z_][\w-]*)\b[^{]*\{/.exec(line)?.[1] ?? "{";
+    // `(?![\w-])` instead of `\b`: the label cannot give back characters, so a
+    // long label with no brace after it is rejected in linear time.
+    const label = /^\s*([A-Za-z_][\w-]*)(?![\w-])[^{]*\{/.exec(line)?.[1] ?? "{";
     let first = true;
     for (const ch of line) {
-      if (ch === "{") { stack.push(first ? label : "{"); first = false; }
-      else if (ch === "}") stack.pop();
+      if (ch === "{") {
+        const opened = first ? label : "{";
+        stack.push(opened);
+        if (opened === "required_providers") inside++;
+        first = false;
+      } else if (ch === "}" && stack.pop() === "required_providers") {
+        inside--;
+      }
     }
   }
   return refs;

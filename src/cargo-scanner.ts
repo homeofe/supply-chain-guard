@@ -314,8 +314,8 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (cargoToml !== null) {
-    findings.push(...scanCargoContent(cargoToml, "Cargo.toml", "toml"));
-    findings.push(...scanCargoTomlDependencies(cargoToml, "Cargo.toml", feed));
+    for (const pushed of scanCargoContent(cargoToml, "Cargo.toml", "toml")) findings.push(pushed);
+    for (const pushed of scanCargoTomlDependencies(cargoToml, "Cargo.toml", feed)) findings.push(pushed);
   }
 
   // Scan build.rs
@@ -326,7 +326,7 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (buildRs !== null) {
-    findings.push(...scanCargoContent(buildRs, BUILD_RS, "build"));
+    for (const pushed of scanCargoContent(buildRs, BUILD_RS, "build")) findings.push(pushed);
   }
 
   // Scan Cargo.lock (resolved crate inventory) for malicious crates
@@ -337,7 +337,7 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (cargoLock !== null) {
-    findings.push(...scanCargoLockContent(cargoLock, CARGO_LOCK, feed));
+    for (const pushed of scanCargoLockContent(cargoLock, CARGO_LOCK, feed)) findings.push(pushed);
   }
 
   // Scan proc-macro crates (look in src/ for files with proc_macro attribute)
@@ -579,7 +579,7 @@ function scanProcMacros(
       findings,
     );
     if (content === null) continue;
-    findings.push(...scanCargoContent(content, relPath, "proc-macro"));
+    for (const pushed of scanCargoContent(content, relPath, "proc-macro")) findings.push(pushed);
   }
 }
 

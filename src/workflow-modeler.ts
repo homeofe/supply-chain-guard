@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
+import { trimLeading, trimTrailing } from "./text-lines.js";
 import {
   parseWorkflow,
   classifyWorkflowLines,
@@ -34,7 +35,14 @@ const FETCH_CALL_RE = /(?<![\w$])fetch\s*\(\s*(?:(['"`])([^'"`\n]*)\1)?/g;
  * a token sent to GitHub's own API is that token's intended audience.
  */
 const OTHER_EGRESS_RE =
-  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w./-])|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(|\brequests[^\S\n]*\.[^\S\n]*Session[^\S\n]*\(|\bhttp\.client\b|\burllib3\b|\b(?:github|octokit)[^\S\n]*\.[^\S\n]*request[^\S\n]*\([^\S\n]*['"`](?:[A-Z]+[^\S\n]+)?https?:\/\/(?!api\.github\.com)/i;
+  /(?<![\w.-])(?:sftp|ftp|socat|telnet|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Send-MailMessage)(?![\w./-])|\/dev\/(?:tcp|udp)\/|\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(|\burllib\.request\b|\bNet\.WebClient\b|\brequire[^\S\n]*\([^\S\n]*['"](?:node:)?https?['"][^\S\n]*\)[^\S\n]*\.[^\S\n]*(?:request|get)\b|\bhttps?[^\S\n]*\.[^\S\n]*(?:request|get)[^\S\n]*\(|\baxios[^\S\n]*\.[^\S\n]*(?:post|put|patch|get|request)[^\S\n]*\(|\brequests[^\S\n]*\.[^\S\n]*Session[^\S\n]*\(|\bhttp\.client\b|\burllib3\b|\b(?:github|octokit)[^\S\n]*\.[^\S\n]*request[^\S\n]*\([^\S\n]*['"`](?:[A-Z]+[^\S\n]+)?https?:\/\/(?!api\.github\.com)/i;
+
+/**
+ * A DNS lookup tool as a command (segment start or `$(`), which carries data out
+ * in the name it queries. Only in command position: `dig` and `drill` are also
+ * ordinary variable names in a github-script body.
+ */
+const DNS_TOOL_RE = /(?:^|\$\(|`|\brun:)[^\S\n]*(?:sudo[^\S\n]+)?(?:nslookup|dig|drill|kdig)(?![\w.-])(?![^\S\n]*[=:(.])/;
 
 /** The `ssh` command word (not `ssh-keygen`, `ssh-add`, `ssh-keyscan`, or a directory `ssh/`). */
 const SSH_CMD_RE = /(?<![\w.-])ssh(?![\w./-])/;
@@ -183,7 +191,7 @@ function argsAreLoopbackOnly(args: string): boolean {
   let skipNext = false;
   let destinations = 0;
   for (const raw of shellWords(args)) {
-    const word = raw.replace(/^[()]+|[()]+$/g, "");
+    const word = trimTrailing(trimLeading(raw, "()"), "()");
     if (skipNext) { skipNext = false; continue; }
     if (word === "") continue;
     if (/^\d*[<>]/.test(word)) {
@@ -225,19 +233,44 @@ function isPublicHost(host: string): boolean {
   return PUBLIC_HOSTS.has(h) || h.endsWith(".github.com") || h.endsWith(".githubusercontent.com");
 }
 
-/** One shell word that is a URL, or an option set to one; group 1 is its host. */
-const URL_WORD_RE = /^(?:-{1,2}[\w-]{1,64}=)?(?:[a-z][\w.-]{0,31}\+)?(?:https?|ftps?|wss?):\/\/(?:[^@\/\s]*@)?([^\/:?#\s]+)/i;
+/**
+ * A URL anywhere in executed text; group 1 is its host. Not only a whole shell
+ * word: an HTTP client in any language takes it inside a call
+ * (`URI("https://host")`, `url:'https://host'`), and no list of clients is
+ * complete. `s3://` and `gs://` name a bucket, which is a destination too.
+ */
+const URL_ANY_RE =
+  /(?<![\w.+-])(?:[a-z][\w.-]{0,31}\+)?(?:https?|ftps?|wss?|s3|gs):\/\/(?:[^\s\/@'"`()<>?#\\]{0,256}@)?([^\s\/:?#'"`()<>\\,;]+)/gi;
 
 /**
  * A URL handed to any program (`python send.py https://host ...`,
- * `npm publish --registry=https://host`, a secret in `https://u:TOKEN@host`):
- * the program is not known, so a destination other than loopback or a public
- * registry counts as egress.
+ * `ruby -e 'Net::HTTP.post(URI("https://host"), ...)'`, a secret in
+ * `https://u:TOKEN@host`): the program is not known, so a destination other
+ * than loopback or a public registry counts as egress.
  */
-function hasUrlArgument(segment: string): boolean {
-  for (const word of shellWords(segment.replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR"))) {
-    const m = URL_WORD_RE.exec(word);
-    if (m && !isLoopbackTarget(m[1]!) && !isPublicHost(m[1]!)) return true;
+function hasUrl(segment: string): boolean {
+  for (const m of segment.matchAll(URL_ANY_RE)) {
+    if (!isLoopbackTarget(m[1]!) && !isPublicHost(m[1]!)) return true;
+  }
+  return false;
+}
+
+/** Registries whose push is the audience of the credentials a release step holds. */
+const PUBLIC_IMAGE_REGISTRIES = new Set([
+  "docker.io", "index.docker.io", "registry-1.docker.io", "ghcr.io", "quay.io", "public.ecr.aws",
+]);
+
+/** `docker push` (or `podman`/`buildah push`) to a registry that is not a public one. */
+function isImagePushEgress(segment: string): boolean {
+  const m = /(?<![\w.-])(?:docker|podman|buildah)[^\S\n]+(?:image[^\S\n]+)?push\b/.exec(segment);
+  if (!m) return false;
+  for (const word of shellWords(segment.slice(m.index + m[0].length))) {
+    if (word.startsWith("-")) continue;
+    const first = word.split("/")[0]!;
+    // A first component with a dot, a port or `localhost` is a registry host.
+    if (!word.includes("/") || !/[.:]|^localhost$/.test(first)) return false;
+    const host = first.replace(/:\d+$/, "").toLowerCase();
+    return !isLoopbackTarget(host) && !PUBLIC_IMAGE_REGISTRIES.has(host);
   }
   return false;
 }
@@ -248,11 +281,11 @@ function hasUrlArgument(segment: string): boolean {
  */
 function segmentHasEgress(raw: string, proxied: boolean): boolean {
   const segment = unquoteWords(raw);
-  if (isGitPushEgress(segment) || hasUrlArgument(segment)) return true;
+  if (isGitPushEgress(segment) || hasUrl(segment) || isImagePushEgress(segment)) return true;
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (proxied || m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
-  if (OTHER_EGRESS_RE.test(segment) || isRemoteCopy(segment) || isSshEgress(segment)) return true;
+  if (OTHER_EGRESS_RE.test(segment) || DNS_TOOL_RE.test(segment) || isRemoteCopy(segment) || isSshEgress(segment)) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
   return proxied || !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
@@ -260,7 +293,9 @@ function segmentHasEgress(raw: string, proxied: boolean): boolean {
 
 /** Does executed text (a run: or script: body, comments removed) send data out? */
 function execTextHasEgress(text: string, proxied: boolean): boolean {
-  const joined = text.replace(/\\\n/g, " ");
+  // Expressions are masked before the split: `${{ a || 'https://x' }}` is one
+  // value, not two commands.
+  const joined = text.replace(/\\\n/g, " ").replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR");
   for (const segment of joined.split(/&&|\|\||[;&|\n]/)) {
     if (segmentHasEgress(segment, proxied)) return true;
   }
@@ -467,8 +502,9 @@ export function workflowScopes(content: string): WorkflowScopes {
 }
 
 /**
- * One line with its shell comment removed: `#` at the start of a word, outside
- * quotes, not escaped. Linear in the line.
+ * One line with its shell comment removed: `#` at the start of a word and
+ * followed by whitespace or the line end, outside quotes, not escaped. Linear
+ * in the line.
  */
 function stripShellComment(line: string): string {
   let quote = "";
@@ -480,7 +516,13 @@ function stripShellComment(line: string): string {
       if (ch === quote) quote = "";
     } else if (ch === "'" || ch === '"') {
       quote = ch;
-    } else if (ch === "#" && (i === 0 || line[i - 1] === " " || line[i - 1] === "\t")) {
+    } else if (
+      ch === "#" && (i === 0 || line[i - 1] === " " || line[i - 1] === "\t") &&
+      (i + 1 === line.length || line[i + 1] === " " || line[i + 1] === "\t")
+    ) {
+      // Only `# text` is taken as a comment: a JavaScript private field in a
+      // github-script body (`#p = fetch(...)`) is code. Leaving `#text` in
+      // place can only add text to the check, never hide a command.
       return line.slice(0, i);
     }
   }
@@ -488,10 +530,23 @@ function stripShellComment(line: string): string {
 }
 
 /**
- * WORKFLOW_SECRET_TO_UPLOAD_PATH, a whole-file check: a stored secret (not
+ * The rule's earlier condition, kept as a floor: a `secrets.` expression and a
+ * network word or URL anywhere in the file. Every narrowing of it tried so far
+ * missed a real exfiltration shape (a client in another language, a URL that
+ * fools a host parser, a push to a repository someone else owns, a custom
+ * `shell:`), so the finer check below only ever adds to it.
+ */
+function reportedBefore(content: string): boolean {
+  return /\$\{\{\s*secrets\.\w+/.test(content) && /curl|wget|fetch|https?:\/\/|actions\/upload-artifact/.test(content);
+}
+
+/**
+ * WORKFLOW_SECRET_TO_UPLOAD_PATH, a whole-file check: the earlier condition
+ * (see reportedBefore), or a stored secret (not
  * the run's own token, and not one only tested for presence) and, in the same
- * workflow, an outbound call in executed text (`run:`, `script:`; comments
- * removed, loopback calls left out) or an artifact upload. Which step holds
+ * workflow, an outbound call in executed text (`run:`, `script:`; shell
+ * comments removed, loopback calls left out; any URL to a host other than
+ * loopback, GitHub or a public registry counts) or an artifact upload. Which step holds
  * the secret is not modelled, so a secret in one step and a health check in
  * another are reported together; the finding asks for a review, not a verdict.
  * With `regions` false the whole text counts as executed: the fallback for a
@@ -503,8 +558,21 @@ function checkSecretToEgress(content: string, file: string, relPath: string, reg
   // Executed lines keep their shell text; only a shell comment is removed, with
   // quotes and backslash escapes honoured (`echo "a\" #"; curl ...` runs curl).
   const raw = text.split("\n");
-  const flowSteps = stripped.filter((l) => FLOW_STEP_RE.test(l));
-  const exec = [(regions ? linesText(raw, classifyWorkflowLines(text), 0, raw.length, ["exec"]) : text), ...flowSteps.map(flowStepRun)]
+  const flowSteps = raw.filter((l) => FLOW_STEP_RE.test(l));
+  // Text that runs although it is not under a `run:` key: the anchored values
+  // a `run: *alias` expands to, and the arguments of a `docker://` action,
+  // which the image's entrypoint executes.
+  const aliasRun = /^[ \t]*(?:-[ \t]+)?['"]?(?:run|script)['"]?[ \t]*:[ \t]*\*[\w-]/m.test(text);
+  const dockerAction = /^[ \t]*(?:-[ \t]+)?uses:[ \t]*['"]?docker:\/\//m.test(text);
+  const indirect = raw.filter(
+    (l) => (aliasRun && /(?:^|[\s:,[{-])&[\w-]+[ \t]+\S/.test(l)) ||
+      (dockerAction && /^[ \t]*['"]?(?:args|entrypoint)['"]?[ \t]*:/.test(l)),
+  );
+  const exec = [
+    (regions ? linesText(raw, classifyWorkflowLines(text), 0, raw.length, ["exec"]) : text),
+    ...flowSteps.map(flowStepRun),
+    ...indirect,
+  ]
     .join("\n")
     .split("\n")
     .map(stripShellComment)
@@ -512,8 +580,13 @@ function checkSecretToEgress(content: string, file: string, relPath: string, reg
   const uploads =
     stripped.some((l) => /^[ \t]*(?:-[ \t]+)?uses:[ \t]*['"]?actions\/upload-artifact(?:@|\/|['"\s]|$)/i.test(l)) ||
     flowSteps.some((l) => FLOW_UPLOAD_RE.test(l));
-  const all = stripped.join("\n");
-  if (!textHasStoredSecret(all) || !(uploads || execTextHasEgress(exec, hasOutboundProxy(all)))) return [];
+  // The secret and the proxy are looked for in the raw text: a YAML comment
+  // heuristic that disagrees with the shell's quoting could hide either one
+  // (`echo "a\" #"; curl -d "${{ secrets.K }}" ...`), and a secret written only
+  // in a comment costs no more than a review.
+  if (!reportedBefore(content) && (!textHasStoredSecret(text) || !(uploads || execTextHasEgress(exec, hasOutboundProxy(text))))) {
+    return [];
+  }
   return [{
     rule: "WORKFLOW_SECRET_TO_UPLOAD_PATH",
     description: `Workflow "${file}": a stored secret and an outbound call or artifact upload appear in the same workflow. Verify secrets are not sent to external endpoints.`,

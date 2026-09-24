@@ -174,7 +174,7 @@ export async function scanDependencyConfusion(
         checkDependency(name, depsToCheck[name] ?? "*"),
       ),
     );
-    results.push(...batchResults);
+    for (const pushed of batchResults) results.push(pushed);
   }
 
   // Generate findings from results
@@ -787,23 +787,42 @@ interface PypiPackageReference {
  * the line carries dependency intent that this scanner cannot evaluate safely.
  */
 function stripPerRequirementOptions(value: string): string {
-  let requirement = value.trim();
-  while (requirement !== "") {
-    const hash = /\s+--hash=\S+\s*$/.exec(requirement);
-    if (hash !== null) {
-      requirement = requirement.slice(0, hash.index).trimEnd();
+  // Trailing `--hash=...` and `--config-settings[= ]k=v` options, removed one
+  // token at a time from the end with an index. The regexes this replaces
+  // (`\s+--hash=\S+\s*$`) restarted at every whitespace run, so a long run in
+  // the middle of a line was quadratic.
+  const s = value.trim();
+  const isSpace = (ch: string | undefined) => ch !== undefined && /\s/.test(ch);
+  const tokenStart = (end: number) => {
+    let i = end;
+    while (i > 0 && !isSpace(s[i - 1])) i--;
+    return i;
+  };
+  const skipSpace = (end: number) => {
+    let i = end;
+    while (i > 0 && isSpace(s[i - 1])) i--;
+    return i;
+  };
+  let end = s.length;
+  while (end > 0) {
+    const start = tokenStart(end);
+    if (start === 0) break;
+    const token = s.slice(start, end);
+    if (/^--hash=\S+$/.test(token) || /^--config-settings=[^\s=]+=\S*$/.test(token)) {
+      end = skipSpace(start);
       continue;
     }
-
-    const configSetting =
-      /\s+--config-settings(?:=|\s+)([^\s=]+=[^\s]*)\s*$/.exec(requirement);
-    if (configSetting !== null) {
-      requirement = requirement.slice(0, configSetting.index).trimEnd();
-      continue;
+    if (/^[^\s=]+=\S*$/.test(token)) {
+      const before = skipSpace(start);
+      const previous = tokenStart(before);
+      if (previous > 0 && s.slice(previous, before) === "--config-settings") {
+        end = skipSpace(previous);
+        continue;
+      }
     }
     break;
   }
-  return requirement;
+  return s.slice(0, end);
 }
 
 function parseRequirementName(
@@ -1678,7 +1697,7 @@ function parseInlineProjectTable(value: string): InlineProjectResult {
       if (sawOptionalDependencies) complete = false;
       sawOptionalDependencies = true;
       const parsedTable = parseInlineDependencyTable(value.slice(index), "optional", true);
-      optionalGroups.push(...parsedTable.groups);
+      for (const pushed of parsedTable.groups) optionalGroups.push(pushed);
       complete = complete && parsedTable.complete;
       if (!parsedTable.complete) return result(false);
       index += parsedTable.endIndex;
@@ -2041,7 +2060,7 @@ function parsePyprojectToml(content: string): ParsedDependencyNames {
     }
     if (isPoetryDependencyPath(fullKey)) {
       const parsedPoetry = parseInlinePoetryDependencies(assignment.value);
-      names.push(...parsedPoetry.names);
+      for (const pushed of parsedPoetry.names) names.push(pushed);
       unresolvedToolDependencies = unresolvedToolDependencies || !parsedPoetry.complete;
       continue;
     }
@@ -2066,7 +2085,7 @@ function parsePyprojectToml(content: string): ParsedDependencyNames {
     if (sameTomlPath(fullKey, ["project"])) {
       const parsedInline = parseInlineProjectTable(assignment.value);
       complete = complete && parsedInline.complete;
-      names.push(...parsedInline.names);
+      for (const pushed of parsedInline.names) names.push(pushed);
       dynamicRequiredDependencies = dynamicRequiredDependencies ||
         parsedInline.dynamicRequiredDependencies;
       dynamicOptionalDependencies = dynamicOptionalDependencies ||

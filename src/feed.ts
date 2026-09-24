@@ -673,7 +673,7 @@ async function installCatalog(
           `${String(shard.sha256).slice(0, 12)} the index records`,
       );
     }
-    entries.push(...parseFeedPayload(body, "catalog"));
+    for (const pushed of parseFeedPayload(body, "catalog")) entries.push(pushed);
   }
 
   const entriesChecksum = sha256Hex(JSON.stringify(entries));

@@ -2482,7 +2482,7 @@ export function scanInternalDisclosure(
   let result = dedupeOverlaps(findings);
 
   if (runtime.enabled) {
-    result.push(...scanDenyList(lines, relativePath, runtime, truncationReasons));
+    for (const pushed of scanDenyList(lines, relativePath, runtime, truncationReasons)) result.push(pushed);
   }
 
   if (result.length > MAX_FINDINGS_PER_FILE) {

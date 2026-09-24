@@ -803,7 +803,7 @@ export function scanDockerFiles(dir: string): Finding[] {
       const fullPath = path.join(dir, entry.name);
       try {
         const content = fs.readFileSync(fullPath, "utf-8");
-        findings.push(...scanDockerFile(content, entry.name));
+        for (const pushed of scanDockerFile(content, entry.name)) findings.push(pushed);
       } catch {
         // skip unreadable files
       }

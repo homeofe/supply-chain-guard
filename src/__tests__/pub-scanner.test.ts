@@ -220,6 +220,44 @@ describe("extractPubPackages: flow maps and mirrors", () => {
     expect(names("dependencies:\n  port: {hosted: 'https://pub.dev:443/', version: 0.1.5}\n", "pubspec.yaml")).toEqual(["port@0.1.5"]);
   });
 
+  it.each([
+    "https://mirrors.tuna.tsinghua.edu.cn/dart-pub",
+    "https://mirror.sjtu.edu.cn/dart-pub/",
+    "https://mirrors.cnnic.cn/dart-pub",
+  ])("reads a package locked through the pub.dev mirror %s", (url) => {
+    const lock = `packages:\n  viewer:\n    dependency: direct main\n    description:\n      name: viewer\n      url: "${url}"\n    source: hosted\n    version: "0.1.5"\n`;
+    expect(names(lock, "pubspec.lock")).toEqual(["viewer@0.1.5"]);
+  });
+
+  it("does not take another path on a mirror host, another host with the mirror path, or another scheme as pub.dev", () => {
+    for (const url of ["https://mirrors.tuna.tsinghua.edu.cn/private-pub", "https://x.example/dart-pub", "ftp://pub.dev", "ssh://mirror.sjtu.edu.cn/dart-pub"]) {
+      const lock = `packages:\n  viewer:\n    description:\n      name: viewer\n      url: "${url}"\n    source: hosted\n    version: "0.1.5"\n`;
+      expect(names(lock, "pubspec.lock"), url).toEqual([]);
+    }
+  });
+
+  it("reads a lockfile description written as a flow map", () => {
+    const lock = 'packages:\n  label:\n    dependency: transitive\n    description: {name: viewer, url: "https://pub.dev"}\n    source: hosted\n    version: "0.1.5"\n';
+    expect(names(lock, "pubspec.lock")).toEqual(["viewer@0.1.5"]);
+  });
+
+  it("reads the other dependencies of a JSON pubspec that nests one value deeply", () => {
+    const deep = `${"[".repeat(20_000)}${"]".repeat(20_000)}`;
+    const json = `{ "dependencies": { "viewer": "0.1.5", "odd": { "hosted": ${deep} } } }`;
+    expect(names(json, "pubspec.yaml")).toEqual(["viewer@0.1.5", "odd@-"]);
+  });
+
+  it("reads a pubspec with a byte order mark", () => {
+    expect(names("\uFEFFdependencies:\n  viewer: 0.1.5\n", "pubspec.yaml")).toEqual(["viewer@0.1.5"]);
+  });
+
+  it("reads a pubspec written as JSON, and throws on a brace that is not JSON", () => {
+    const json = '{ "name": "app", "dependencies": { "viewer": "0.1.5", "other": { "hosted": "https://x.example", "version": "1.0.0" }, "pinned": { "version": "2.0.0" } } }';
+    expect(names(json, "pubspec.yaml")).toEqual(["viewer@0.1.5", "pinned@2.0.0"]);
+    // The scanner turns the throw into a partial-scan finding, never a clean result.
+    expect(() => extractPubPackages("{name: app, dependencies: {viewer: 0.1.5}}", "pubspec.yaml")).toThrow();
+  });
+
   it("reads pub.dev over http or with a trailing dot, and survives a huge nested flow map", () => {
     expect(names("dependencies:\n  plain: {hosted: http://pub.dev, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["plain@0.1.5"]);
     expect(names("dependencies:\n  dotted: {hosted: https://pub.dev./, version: 0.1.5}\n", "pubspec.yaml")).toEqual(["dotted@0.1.5"]);

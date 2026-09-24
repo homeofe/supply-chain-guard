@@ -253,8 +253,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       partial: intel.partial,
     };
     if (effectiveScorecard === undefined) effectiveScorecard = intel.scorecard;
-    effectiveVulnerabilities.push(...intel.vulnerabilities);
-    effectiveConfirmedMalware.push(...intel.confirmedMalware);
+    for (const pushed of intel.vulnerabilities) effectiveVulnerabilities.push(pushed);
+    for (const pushed of intel.confirmedMalware) effectiveConfirmedMalware.push(pushed);
   }
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
@@ -365,10 +365,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try {
       if (fs.statSync(filePath).size <= MAX_FILE_SIZE) {
         fileBytes = fs.readFileSync(filePath);
-        findings.push(...checkFileDigest(fileBytes, relativePath));
+        for (const pushed of checkFileDigest(fileBytes, relativePath)) findings.push(pushed);
         // Script code named as a font (Fake Font payload). Reuses the bytes
         // just read, so fonts cost no extra I/O.
-        findings.push(...checkDisguisedAsset(fileBytes, relativePath));
+        for (const pushed of checkDisguisedAsset(fileBytes, relativePath)) findings.push(pushed);
       }
     } catch {
       // Leave fileBytes undefined and stay silent here: the oversized and
@@ -445,18 +445,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
 
       if (isDockerFile(basename)) {
-        findings.push(...scanDockerFile(prefetchedContent, relativePath));
+        for (const pushed of scanDockerFile(prefetchedContent, relativePath)) findings.push(pushed);
       }
       // Known-malicious base images. Dockerfile syntax only: compose files are
       // YAML and are matched once, on the per-file path below.
       if (isDockerfileSyntax(relativePath)) {
-        findings.push(...scanImageReferences(prefetchedContent, relativePath, threatFeed));
+        for (const pushed of scanImageReferences(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (isConfigFile(basename)) {
-        findings.push(...scanConfigFile(prefetchedContent, relativePath));
+        for (const pushed of scanConfigFile(prefetchedContent, relativePath)) findings.push(pushed);
       }
       if (mavenBuildFile) {
-        findings.push(...scanMavenContent(prefetchedContent, relativePath, threatFeed));
+        for (const pushed of scanMavenContent(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (pubspecFile) {
         try {
@@ -475,19 +475,19 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         }
       }
       if (pythonManifest) {
-        findings.push(...scanPythonManifestContent(prefetchedContent, relativePath, threatFeed));
+        for (const pushed of scanPythonManifestContent(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (nestedManifest) {
-        findings.push(...scanNestedManifest(prefetchedContent, relativePath, threatFeed));
+        for (const pushed of scanNestedManifest(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (registryFile) {
-        findings.push(...scanRegistryFile(prefetchedContent, relativePath, threatFeed));
+        for (const pushed of scanRegistryFile(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (codeWorkspace) {
-        findings.push(...scanCodeWorkspaceContent(prefetchedContent, relativePath));
+        for (const pushed of scanCodeWorkspaceContent(prefetchedContent, relativePath)) findings.push(pushed);
       }
       if (nestedJsLockfile) {
-        findings.push(...checkJsLockfileContent(basename, prefetchedContent, relativePath, threatFeed));
+        for (const pushed of checkJsLockfileContent(basename, prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (nestedPythonLockfile) {
         findings.push(
@@ -598,16 +598,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Entropy analysis for obfuscated payloads (v4.0)
     const entropyFindings = analyzeEntropy(content, relativePath);
-    findings.push(...entropyFindings);
+    for (const pushed of entropyFindings) findings.push(pushed);
 
     // IOC blocklist + threat-intel checks skip only reviewed scanner
     // definition/fixture paths and exact TypeScript-compiled counterparts.
     if (!trustedOwnFile) {
       const iocFindings = checkIOCBlocklist(content, relativePath);
-      findings.push(...iocFindings);
+      for (const pushed of iocFindings) findings.push(pushed);
 
       const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
-      findings.push(...tiFindings);
+      for (const pushed of tiFindings) findings.push(pushed);
     }
 
     // README / doc-file lure pattern scanning (v4.1, scope expanded v5.2.20)
@@ -619,7 +619,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // the sole entry point so it now covers the full doc-file family.
     if (/^(?:readme|changelog|contributing|description|release[-_]notes)/i.test(basename)) {
       const lureFindings = scanReadmeLures(content, relativePath);
-      findings.push(...lureFindings);
+      for (const pushed of lureFindings) findings.push(pushed);
     }
 
     // Check package.json specifically (skip test fixture directories)
@@ -640,7 +640,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       const hookScripts = extractInstallScripts(content);
       if (hookScripts) {
         const hookFindings = analyzeInstallHooks(hookScripts, relativePath);
-        findings.push(...hookFindings);
+        for (const pushed of hookFindings) findings.push(pushed);
       }
 
       // Dependency risk analysis (v4.2)
@@ -654,7 +654,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         };
         if (Object.keys(allDeps).length > 0) {
           const depFindings = analyzeDependencyRisks(allDeps, relativePath);
-          findings.push(...depFindings);
+          for (const pushed of depFindings) findings.push(pushed);
         }
       } catch { /* not valid JSON */ }
     }
@@ -667,38 +667,38 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
     // matched against terraform: feed entries.
     if (isTerraformProviderFile(relativePath)) {
-      findings.push(...scanTerraformContent(content, relativePath, threatFeed));
+      for (const pushed of scanTerraformContent(content, relativePath, threatFeed)) findings.push(pushed);
     }
 
     // VS Code / Open VSX extensions a workspace recommends, a devcontainer
     // installs, or an extension manifest declares, matched against
     // vscode: and openvsx: feed entries.
     if (isExtensionReferenceFile(relativePath)) {
-      findings.push(...scanExtensionReferences(content, relativePath, threatFeed));
+      for (const pushed of scanExtensionReferences(content, relativePath, threatFeed)) findings.push(pushed);
     }
 
     // Dev container lifecycle commands run without a prompt (initializeCommand
     // on the host), so they get the editor-task battery, at any depth.
     if (isDevcontainerFile(relativePath)) {
-      findings.push(...scanDevcontainerCommandsContent(content, relativePath));
+      for (const pushed of scanDevcontainerCommandsContent(content, relativePath)) findings.push(pushed);
     }
 
     // .vscode/tasks.json below the root: opening that subfolder runs its tasks.
     // The root file is read by scanAgentSkillFiles and is not repeated here.
     if (relativePath !== ".vscode/tasks.json" && relativePath.endsWith("/.vscode/tasks.json")) {
-      findings.push(...scanEditorTasksContent(content, relativePath));
+      for (const pushed of scanEditorTasksContent(content, relativePath)) findings.push(pushed);
     }
 
     // Container images referenced from YAML (compose, Kubernetes manifests,
     // workflow container:/services: and docker:// steps).
     if (/\.ya?ml$/i.test(basename)) {
-      findings.push(...scanImageReferences(content, relativePath, threatFeed));
+      for (const pushed of scanImageReferences(content, relativePath, threatFeed)) findings.push(pushed);
     }
 
     // Composite / Docker action metadata anywhere outside .github/workflows:
     // its uses: steps run with the caller's secrets.
     if (isActionMetadataFile(relativePath)) {
-      findings.push(...scanActionMetadataReferences(content, relativePath));
+      for (const pushed of scanActionMetadataReferences(content, relativePath)) findings.push(pushed);
     }
   }
 
@@ -709,17 +709,17 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
   // Check lockfile integrity (T-006)
   const lockfileFindings = checkLockfile(scanDir, threatFeed);
-  findings.push(...lockfileFindings);
+  for (const pushed of lockfileFindings) findings.push(pushed);
 
   // Check GitHub Actions workflows (#9)
   const ghaFindings = scanGitHubActionsWorkflows(scanDir);
-  findings.push(...ghaFindings);
+  for (const pushed of ghaFindings) findings.push(pushed);
 
   // v5.10: GitHub Agentic Workflow (gh-aw) markdown files (.github/workflows/*.md)
-  findings.push(...scanAgenticWorkflows(scanDir));
+  for (const pushed of scanAgenticWorkflows(scanDir)) findings.push(pushed);
 
   // v4.9: SLSA provenance verification
-  findings.push(...verifySLSA(scanDir));
+  for (const pushed of verifySLSA(scanDir)) findings.push(pushed);
 
   // v4.9: PyPI dependency confusion (if requirements.txt / pyproject.toml present).
   // The PyPI metadata lookups send every dependency name to pypi.org, so they
@@ -729,14 +729,14 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const pypiConfusion = await scanPypiDependencyConfusion(scanDir, {
       network: options.checkRegistry === true,
     });
-    findings.push(...pypiConfusion);
+    for (const pushed of pypiConfusion) findings.push(pushed);
   } catch { /* skip if offline */ }
 
   // v5.9: opt-in registry version-drift (source package.json vs npm 'latest').
   // Network call, so off by default; --check-registry enables it. Offline-safe.
   if (options.checkRegistry) {
     try {
-      findings.push(...(await checkRegistryVersionDrift(scanDir)));
+      for (const pushed of (await checkRegistryVersionDrift(scanDir))) findings.push(pushed);
     } catch { /* offline / registry error: skip */ }
   }
 
@@ -745,7 +745,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const parsed = parseGitHubUrl(target);
     if (parsed) {
       const trustFindings = analyzeGitHubTrust(parsed.owner, parsed.repo);
-      findings.push(...trustFindings);
+      for (const pushed of trustFindings) findings.push(pushed);
     }
   }
 
@@ -756,48 +756,48 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Explicit specialized targets perform their own tri-state path probes.
   // Calling them without existsSync gates preserves the distinction between an
   // absent optional target and a target whose stat/read operation failed.
-  findings.push(...scanGitSecurity(scanDir));
-  findings.push(...scanCargoFiles(scanDir, threatFeed));
-  findings.push(...scanGoFiles(scanDir, threatFeed));
-  findings.push(...scanRubyGemsFiles(scanDir, threatFeed));
-  findings.push(...scanComposerFiles(scanDir, threatFeed));
+  for (const pushed of scanGitSecurity(scanDir)) findings.push(pushed);
+  for (const pushed of scanCargoFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanGoFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanRubyGemsFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanComposerFiles(scanDir, threatFeed)) findings.push(pushed);
 
   // NuGet discovery is a root-directory optimization that deliberately opens
   // the scanner on enumeration failure so scanNuGetFiles can report coverage.
   if (hasNuGetFiles(scanDir)) {
-    findings.push(...scanNuGetFiles(scanDir, threatFeed));
+    for (const pushed of scanNuGetFiles(scanDir, threatFeed)) findings.push(pushed);
   }
 
-  findings.push(...scanPythonLockfiles(scanDir, threatFeed));
+  for (const pushed of scanPythonLockfiles(scanDir, threatFeed)) findings.push(pushed);
 
   // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /
   // claude_desktop_config.json / .gemini/settings.json)
   if (hasMcpConfigFiles(scanDir)) {
     const mcpFindings = scanMcpConfigs(scanDir, threatFeed);
-    findings.push(...mcpFindings);
+    for (const pushed of mcpFindings) findings.push(pushed);
   }
   // Check AI agent skill / rules files (.claude, .cursorrules, CLAUDE.md, ...)
   // The main walk skips .claude/ - this scanner does its own targeted traversal.
   const skillFindings = scanAgentSkillFiles(scanDir);
-  findings.push(...skillFindings);
+  for (const pushed of skillFindings) findings.push(pushed);
 
   // v5.7: OpenClaw plugin manifest posture (only fires if openclaw.plugin.json present)
-  findings.push(...scanOpenClawPlugin(scanDir));
+  for (const pushed of scanOpenClawPlugin(scanDir)) findings.push(pushed);
 
   // v4.7: Workflow execution modeling
   const wfFindings = modelWorkflows(scanDir);
-  findings.push(...wfFindings);
+  for (const pushed of wfFindings) findings.push(pushed);
 
   // v5.7: Cross-workflow trust-boundary analysis (Cordyceps composition attacks).
   // Runs across ALL workflow files - catches the producer->consumer artifact
   // escalation that the single-file GHA scanner and modeler cannot see.
   const wfGraphFindings = scanWorkflowGraph(scanDir);
-  findings.push(...wfGraphFindings);
+  for (const pushed of wfGraphFindings) findings.push(pushed);
 
   // v4.4: Detect positive trust signals (only for GitHub repo scans)
   if (scanType === "github") {
     const trustSignals = detectTrustSignals(scanDir);
-    findings.push(...trustSignals);
+    for (const pushed of trustSignals) findings.push(pushed);
   }
 
   // Report the age of the rule set this scan actually matched against. Every
@@ -808,7 +808,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // refreshes the feed is reported current even on an old pin, and a consumer
   // on a frozen pin is told so instead of receiving another green check.
   // Carries no `file`, so the path-ignore filter below leaves it in place.
-  findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));
+  for (const pushed of feedStalenessFindings(feedFreshness(threatFeed))) findings.push(pushed);
 
   // The companion to the staleness finding: that one says the rule set is old,
   // this one says part of it was not consulted at all. catalogState is the
@@ -816,7 +816,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // cannot change what this scan reports. Carries no `file`, for the same
   // reason: the path-ignore filter below drops anything that looks like a
   // repo finding.
-  findings.push(...catalogFindings(catalogState, policy?.catalog ?? "optional"));
+  for (const pushed of catalogFindings(catalogState, policy?.catalog ?? "optional")) findings.push(pushed);
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own
@@ -945,7 +945,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const policyResult = applyPolicy(findings, policy);
     findings = policyResult.findings;
     suppressedCount += policyResult.suppressedCount;
-    policySuppressed.push(...policyResult.suppressedFindings);
+    for (const pushed of policyResult.suppressedFindings) policySuppressed.push(pushed);
   }
   // Policy validation findings are materialized by applyPolicy(), so refresh
   // the snapshot before later filters can hide a coverage-breaking warning.
@@ -979,9 +979,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (historyRead.status === "unreadable") partialScan = true;
 
   const trendFindings = analyzeRiskTrend(riskHistory, calculateScore(findings));
-  findings.push(...trendFindings);
+  for (const pushed of trendFindings) findings.push(pushed);
   const forecastFindings = forecastRisk(riskHistory, calculateScore(findings));
-  findings.push(...forecastFindings);
+  for (const pushed of forecastFindings) findings.push(pushed);
 
   // Pushed after the two analyzers, not before, so the current score they are
   // given is a score of the scanned project and never includes this finding
@@ -1004,13 +1004,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (triageRead.status === "unreadable") partialScan = true;
 
   const govFindings = checkTriageGovernance(findings, triageDecisions);
-  findings.push(...govFindings);
+  for (const pushed of govFindings) findings.push(pushed);
   // Issue 194: the SLA engine was exported and tested, and never called.
   // SLA_BREACH_CRITICAL and SLA_AT_RISK therefore could not reach a scan
   // report. Same decisions the governance check just read; same default SLA
   // calculateMetrics uses. A configuration surface, if one is added, must
   // reach both.
-  findings.push(...checkSlaCompliance(triageDecisions));
+  for (const pushed of checkSlaCompliance(triageDecisions)) findings.push(pushed);
 
   // Pushed after checkTriageGovernance for the same reason as the history
   // finding above: the governance rules read the findings list, so a finding
@@ -1027,7 +1027,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const latePass = applyPolicy(findings, policy);
     findings = latePass.findings;
     suppressedCount += latePass.suppressedCount;
-    policySuppressed.push(...latePass.suppressedFindings);
+    for (const pushed of latePass.suppressedFindings) policySuppressed.push(pushed);
   }
 
   // v4.4: Apply baseline (if configured)
@@ -1311,8 +1311,8 @@ function checkFilePatterns(
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
-        // Most rules have one severity; d7 (DNS C2) and d8 (guarded dynamic
-        // import) depend on corroboration in the same file (see patterns.ts).
+        // Most rules have one severity; a guarded dynamic import depends on
+        // the guard in the same file (see patterns.ts).
         severity: resolvePatternSeverity(pattern, content, hit),
         file: relativePath,
         line: hit.line,

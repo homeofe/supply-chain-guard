@@ -75,7 +75,9 @@ function extractPom(content: string): MavenCoordinate[] {
   const profileProperties = new Map<string, string>();
   const resolve = (value: string | undefined): string | undefined => {
     if (value === undefined) return undefined;
-    const v = value.trim().replace(/\$\{([^}]+)\}/g, (_, key: string) =>
+    // `[^${}]`: a property name never holds these, and without the `$` stop
+    // every unclosed `${` rescanned to the end of the value.
+    const v = value.trim().replace(/\$\{([^${}]+)\}/g, (_, key: string) =>
       topProperties.get(key) ?? profileProperties.get(key) ?? "\u0000");
     return new RegExp(`^${VERSION}$`).test(v) ? v : undefined;
   };
@@ -85,8 +87,12 @@ function extractPom(content: string): MavenCoordinate[] {
   const pending: { group: string; artifact: string; version: string | undefined; line: number }[] = [];
   // `[^<>]`, not `[^>]`: a tag never contains a raw "<" (XML escapes it), and
   // without that stop every unclosed "<a" rescanned to the end of the file
-  // (4.6 s on 234 KB of them).
-  const tag = /<(\/?)([A-Za-z][\w.:-]*)\b[^<>]*?(\/?)>/g;
+  // (4.6 s on 234 KB of them). `(?![\w.:-])` instead of `\b`: the name cannot
+  // give back characters, since in `a.a.a.` every split point is a boundary.
+  const tag = /<(\/?)([A-Za-z][\w.:-]*)(?![\w.:-])[^<>]*?(\/?)>/g;
+  // How many elements of each name are open, so a closing tag with no open
+  // match is skipped without walking the stack.
+  const open = new Map<string, number>();
   let textStart = 0;
   for (let m = tag.exec(source); m; m = tag.exec(source)) {
     const [, closing, name, selfClosing] = m;
@@ -95,12 +101,15 @@ function extractPom(content: string): MavenCoordinate[] {
     if (selfClosing) continue;
     if (!closing) {
       stack.push({ name: name!, offset: m.index, fields: {} });
+      open.set(name!, (open.get(name!) ?? 0) + 1);
       continue;
     }
-    // Pop to the matching open element; tolerate unbalanced input.
+    // Pop to the matching open element; tolerate unbalanced input. Each frame
+    // is popped once, so the walk below is linear over the whole file.
+    if (!open.get(name!)) continue;
     let idx = stack.length - 1;
-    while (idx >= 0 && stack[idx]!.name !== name) idx--;
-    if (idx < 0) continue;
+    while (stack[idx]!.name !== name) idx--;
+    for (let k = idx; k < stack.length; k++) open.set(stack[k]!.name, open.get(stack[k]!.name)! - 1);
     const frame = stack[idx]!;
     stack.length = idx;
     const parent = stack[stack.length - 1];
@@ -280,7 +289,9 @@ function extractSbt(content: string): MavenCoordinate[] {
     for (const m of line.matchAll(re)) {
       const [, group, op, artifact, version] = m;
       // `... % "v" cross CrossVersion.full` or `("g" % "a" % "v").cross(CrossVersion.binary)`.
-      const cross = /^[ \t]*\)?[ \t]*(?:cross[ \t]*\(?|\.cross\()[ \t]*CrossVersion\.(full|binary)\b/.exec(line.slice(m.index + m[0].length))?.[1];
+      // Each optional token carries its own trailing space run: two runs split
+      // only by an optional `)` or `(` are quadratic on a long run of spaces.
+      const cross = /^[ \t]*(?:\)[ \t]*)?(?:cross[ \t]*(?:\([ \t]*)?|\.cross\([ \t]*)CrossVersion\.(full|binary)\b/.exec(line.slice(m.index + m[0].length))?.[1];
       // %% (and `cross CrossVersion.binary`) resolves only the _<scala binary>
       // artifact and %%% the Scala.js one; the plain name is a different
       // artifact the build never fetches.

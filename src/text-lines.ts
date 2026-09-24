@@ -71,3 +71,23 @@ export function stripHashComment(line: string): string {
   }
   return line;
 }
+
+/**
+ * Remove a trailing run of the given characters. Same result as
+ * `text.replace(/[chars]+$/, "")`, in linear time: that regex restarts at every
+ * run that is not at the end, so a long run followed by one other character
+ * is quadratic.
+ */
+export function trimTrailing(text: string, chars: string | RegExp): string {
+  const trims = typeof chars === "string" ? (ch: string) => chars.includes(ch) : (ch: string) => chars.test(ch);
+  let end = text.length;
+  while (end > 0 && trims(text[end - 1]!)) end--;
+  return text.slice(0, end);
+}
+
+/** Remove a leading run of the given characters; see trimTrailing. */
+export function trimLeading(text: string, chars: string): string {
+  let start = 0;
+  while (start < text.length && chars.includes(text[start]!)) start++;
+  return text.slice(start);
+}

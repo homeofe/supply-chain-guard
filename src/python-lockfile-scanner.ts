@@ -99,13 +99,13 @@ export function scanPythonLockfiles(dir: string, feed?: FeedIOC[]): Finding[] {
 
   const iocFeed = feed ?? loadThreatIntel();
   if (poetry !== null) {
-    findings.push(...scanPoetryLockContent(poetry, POETRY_LOCK, iocFeed));
+    for (const pushed of scanPoetryLockContent(poetry, POETRY_LOCK, iocFeed)) findings.push(pushed);
   }
   if (uv !== null) {
-    findings.push(...scanUvLockContent(uv, UV_LOCK, iocFeed));
+    for (const pushed of scanUvLockContent(uv, UV_LOCK, iocFeed)) findings.push(pushed);
   }
   if (pipfile !== null) {
-    findings.push(...scanPipfileLockContent(pipfile, PIPFILE_LOCK, iocFeed));
+    for (const pushed of scanPipfileLockContent(pipfile, PIPFILE_LOCK, iocFeed)) findings.push(pushed);
   }
 
   return findings;

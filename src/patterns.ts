@@ -17,7 +17,6 @@ import {
   WALLET_NAME_SOURCE,
   WALLET_TARGET_SOURCE,
   createCoreBroadGapMatchers,
-  hasDnsC2Signal,
   isAllowlistGuardedImportLine,
   hasDropperPayloadPreparation,
   hasShaiHuludCorroboration,
@@ -81,6 +80,11 @@ export function isPatternMatchAccepted(
  * them; those keep the finding and lower only its severity, because core rule
  * ids are unique and a second entry cannot carry the lower level.
  *
+ * Only something PRESENT in the file may lower a severity (an allowlist guard
+ * in front of an import). The ABSENCE of a signal proves nothing: the encoder,
+ * decoder or loader can sit in another file, which this function never sees.
+ * DNS rules lowered on "no encoder in this file" were reverted for that reason.
+ *
  * Every loop that turns a PatternEntry hit into a Finding must call this, or
  * the corroboration below is silently skipped.
  */
@@ -90,9 +94,6 @@ export function resolvePatternSeverity(
   hit: { line: number },
 ): Severity {
   switch (pattern.rule) {
-    case "C2_DOH_RESOLVER":
-    case "DEAD_DROP_DNS_TXT":
-      return hasDnsC2Signal(content, hit.line) ? pattern.severity : "low";
     case "IMPORT_EXPRESSION":
       return isAllowlistGuardedImportLine(content, hit.line) ? "info" : pattern.severity;
     default:
@@ -3962,7 +3963,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
     pattern:
       "(?:nslookup|dig)\\s+.*\\bTXT\\b|dns\\.resolveTxt|resolver\\.query.*TXT",
     description:
-      "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels. Reported at medium only with a C2 signal: an encoder call (base32, base64, hex) building the query line, or a decoded answer reaching eval, Function, vm, exec or child_process in the same file. Otherwise low, since SPF, DMARC and verification lookups read TXT records legitimately.",
+      "DNS TXT record lookup detected. Malware uses DNS TXT records as covert C2 channels.",
     severity: "medium",
     rule: "DEAD_DROP_DNS_TXT",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.DEAD_DROP_DNS_TXT,
@@ -4294,7 +4295,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
     pattern:
       "(?:cloudflare-dns\\.com|dns\\.google|dns\\.quad9\\.net)/(?:dns-query|resolve)|application/dns-json|application/dns-message",
     description:
-      "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring. Reported at medium only with a C2 signal: an encoder call (base32, base64, hex) building the query line, or a decoded answer reaching eval, Function, vm, exec or child_process in the same file. Otherwise low, since DNSSEC and record checks use DoH legitimately.",
+      "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
     severity: "medium",
     rule: "C2_DOH_RESOLVER",
     notFilePattern: SCANNER_SRC_OR_DOCS,

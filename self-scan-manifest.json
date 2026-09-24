@@ -17,21 +17,21 @@
     "src/__tests__/self-scan-recognition.test.ts": "5f60abe80f6141228f24b5155955f4b93c4281829ba9e83ab2a9249d938d4e07",
     "src/__tests__/threat-intel.test.ts": "654b44a4f9334e599d943103be39e16917373c427fda98e8ad3a6712ecb075e4",
     "src/active-validation.ts": "648f60ff6092943cab38936477b8f68aeb904daad0baf3a020581601a21bd250",
-    "src/attack-graph.ts": "0e4499d8731df9470bf4e2e094272470b438e35ae760bbdc12f61eed3d92af06",
-    "src/broad-gap-pattern-matchers.ts": "4cd202f8ec2f20f7ca80fe20ea07ae6f28e9eac070f82c2c8a9c18f9dfafafe5",
-    "src/config-scanner.ts": "9b385f18047d136e6153df2b0d48d118e8e0922b4af7ba56e0776d3af26b9c71",
+    "src/attack-graph.ts": "1d441a7586495a1bf5a7a72a934c4fee7b82244f5fabcaf00f13e9915534dbd6",
+    "src/broad-gap-pattern-matchers.ts": "8155e66af1c6697b64210056acd76a24ac8ea2f41d40171e4dbbac573c697965",
+    "src/config-scanner.ts": "51065e3195fab8e2ec07b186528dc879f4b8292c320e8496971281e614c6ee52",
     "src/correlation-engine.ts": "53c44c32d3aa411ba11ad4ffbf5a8552de5f8c2e19d220b1b34d4c8357ccb097",
-    "src/dependency-confusion.ts": "64b6ce20c01704be0d62c39add90253bad84aefe9f3523098bb6bbdd6f75825b",
+    "src/dependency-confusion.ts": "f2debd13668a9adc965e9931bb458399e2729c641cda4afbecb5fb1425efa74f",
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "5ae5de2ad9f205ca2e7a1e03bc9349467c70f62a3741a84a6a63ecacb997cff9",
     "src/ioc-blocklist.ts": "77caa4f2c41ffb24691805f9e8ce7946f17bcebf4032877c8ea623871c72830f",
-    "src/patterns.ts": "4e10ae3cb18ec575f902d416caba05e0bac91056a9c7d3b4a50ad925cee70305",
+    "src/patterns.ts": "526273d9c35294c1f12977da97c1f4269a4f9174434203002c29ca9413398ff4",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "3eddeeee9c5c7d8dc673e1225bc65e56a658bb5b0072feca29d284054fd9cd73",
     "src/reporter.ts": "25543634a052869790b12643a16ec2c757287d68828da10978be63439c5a9aa5",
-    "src/scanner.ts": "df18c98af26b36dc499dafe71e4e1e95079e140da7b048a2685bbdfa45923f02",
+    "src/scanner.ts": "aea7664520205b903fe8063c4c2d9b4a1b6de9235cf62acf2ac89f567a991cde",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
     "src/threat-intel.ts": "9ef7175234b6887f217eadec42d2ae39e4b97b73f4a8daa34f396d75e48145a2",
-    "src/workflow-modeler.ts": "607eb22bda346537d9bc70cb6249ddb7f0d365dc8e3df05833f67768ae15b2e9"
+    "src/workflow-modeler.ts": "19cff1a4510f11808693871265dc7cdb3ba70d99758ed5d08cf8c4c64611bd9a"
   }
 }

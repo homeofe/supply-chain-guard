@@ -381,7 +381,7 @@ function transitiveNeeds(job: WfJob, jobs: WfJob[]): WfJob[] {
     const dependency = byId.get(id);
     if (!dependency) continue;
     found.push(dependency);
-    pending.push(...dependency.needs);
+    for (const pushed of dependency.needs) pending.push(pushed);
   }
   return found;
 }

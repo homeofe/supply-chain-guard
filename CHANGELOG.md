@@ -246,12 +246,44 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   never closes is still read, however many lines it spans); pubspec also
   reads a whole section written as a flow map, quoted keys, YAML anchors, a
   `hosted:` value that names no readable URL as pub.dev, and pub.dev however
-  its URL is spelled (case, default port, `http`, a trailing dot). A pubspec
-  that cannot be read is reported as a partial scan instead of ending the
-  scan.
+  its URL is spelled (case, default port, `http`, a trailing dot) or a mirror
+  that serves it unchanged (the university mirrors the Flutter documentation
+  lists); a pubspec written as JSON or starting with a byte order mark, and a
+  lockfile description written as a flow map, are read too. A pubspec that
+  cannot be read is reported as a partial scan instead of ending the scan.
+- **Inputs that made one crafted file stall or abort the whole scan** are
+  linear and return now:
+  - long runs of slashes or spaces in pub, Helm, SwiftPM, container-image and
+    pnpm/yarn lockfile values;
+  - deeply nested Terraform blocks and long Terraform lines without a brace;
+  - Dockerfile `ARG` expansion that built a string too long to hold;
+  - a manifest listing a known-malicious package on every line. Its findings
+    were spread into one call and overflowed the stack, and the attack graph
+    copied its finding list once per finding;
+  - `nuget.config` line numbers counted from the start for every feed.
+  - `build.sbt` dependencies followed by a long run of spaces, and trailing
+    `--hash`/`--config-settings` options on a requirements line with a long
+    whitespace run (now reached for `requirements-*.txt` and constraints files
+    too).
 - `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
   regex rescanning to the end of the file from every unclosed `<!--` or tag:
-  30 s and 4.6 s at a few hundred KB); both are linear now.
+  30 s and 4.6 s at a few hundred KB); both are linear now, and so are a
+  tag name of dotted segments, closing tags that match no open element, and
+  a version of unclosed `${` property references.
+- `WORKFLOW_SECRET_TO_UPLOAD_PATH` reports every workflow it reported
+  before, and also what that condition (a `secrets.` expression and a network
+  word anywhere in the file) missed: a stored secret in any expression form
+  (bracket access, the whole `secrets` context) together with an outbound call
+  in executed text (`run:`, `script:`, a one-line flow-map step, a `run:`
+  given as a YAML alias, the arguments of a `docker://` action) or an artifact
+  upload in any form (`upload-artifact/merge`, a flow-map step). An outbound
+  call is any URL in executed text other than loopback, GitHub or a public
+  package registry (an HTTP client in any language, `s3://` and `gs://`
+  buckets, a secret in a URL's credentials), a write to `/dev/tcp`, a DNS
+  lookup tool, an image push to a registry that is not a public one, `scp`/
+  `rsync`/`ssh` to a remote host, `git push` to a remote that is not GitHub,
+  or a loopback call when the workflow sets a proxy. A workflow file that
+  cannot be classified no longer ends the scan of the files after it.
 - **Rule precision (false positives that blocked `fail-on: medium` in real
   repositories, where suppressing them was not an option).** Each fix keeps
   every must-fire example of its draft firing at its severity.
@@ -271,60 +303,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     `Annex`) is a requirement number, not an address; a private or ULA literal
     in an explanatory comment of a file that implements private-range
     classification is reported at info instead of medium.
-  - `HIGH_ENTROPY_STRING` / `HIGH_ENTROPY_FILE`: an inlined image or font
-    (`image/*` but not `image/svg+xml`, which can carry script, `font/*` and
-    the legacy font types) whose decoded bytes are a complete container (its
-    signature, and a structure that accounts for every byte: PNG chunks to
-    `IEND`, JPEG end marker, declared RIFF/WOFF/EOT/BMP sizes, BMFF boxes,
-    font table directory, no data after inner padding) is left out of the
-    file-level pass and reported at low by the string pass, instead of high,
-    unless the file decodes base64 or runs code (it could unpack its own
-    "image"). Anything else, a payload labelled `image/png` or appended after
-    a real image header included, is reported at high as before. The file-level pass
-    used to exempt every media type.
   - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
     call with identifier boundaries (`setInterval(fetchNotifications, ...)`
     and `forgotPassword` no longer match). No file-name exclusion was added:
     the scanned package chooses its file names.
-  - `C2_DOH_RESOLVER` / `DEAD_DROP_DNS_TXT`: medium only with a C2 signal: an
-    encoder result that reaches the query (on the query, including the lines
-    a formatter wrapped it onto; through assignments, destructuring, comma
-    declarations or a member in the five lines above; or through a function
-    anywhere in the file whose body encodes), or an answer that is executed
-    (eval, Function, an alias or indirect call of either, vm, or a shell run
-    with `-c`, anywhere in the file; or a decode together with a process
-    sink). An ordinary DNSSEC, SPF or DMARC lookup reports at low, including
-    when an unrelated digest is encoded nearby. Where a scan limit stops the
-    search for helpers (very many or very long functions), the lookup is
-    reported at medium, as it was before this corroboration.
   - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
     extension whose only variable segment passed an anchored allowlist in the
     same function reports at info.
   - `VIDAR_WALLET_THEFT`: a wallet name inside a longer word (`phantomjs`,
     `Atomicity`) or a target word running on (`seeding`, `vaulted`) no longer
     matches.
-  - `WORKFLOW_SECRET_TO_UPLOAD_PATH` stays a whole-file check, with sharper
-    parts: a stored secret is recognised in every expression form (bracket
-    access, the whole `secrets` context) but not the run's own token, nor a
-    secret only tested for presence (`secrets.X != ''`); an outbound call
-    counts only in executed text (`run:`, `script:`, and the `run:` of a
-    one-line flow-map step), with shell comments removed (quotes and escapes
-    honoured) and loopback calls, `git fetch` and `fetch-depth:` left out;
-    with a proxy variable set in the workflow, a loopback call counts too.
-    A URL handed to any program counts unless it names loopback, GitHub or a
-    public package registry; that covers a secret in a URL's credentials and
-    a registry option set to another host. Egress includes
-    Node `http(s).request`/`get` and `axios`, Python `requests`/`httpx`/
-    `urllib`/`http.client`, github-script requests to a host other than
-    GitHub's API, PowerShell web cmdlets, `Net.WebClient`, `Send-MailMessage`,
-    `sftp`/`ftp`/`socat`/`telnet`, `scp`/`rsync` to a remote host, `ssh` to a
-    host that is not loopback and `git push` to a remote that is not GitHub,
-    also with the command name split by shell quoting. An artifact upload
-    counts in every form of the action (`upload-artifact/merge`, a flow-map
-    step). A workflow file that
-    cannot be classified no longer ends the scan of the files after it. A
-    secret in one step and an outbound call in another are still reported
-    together.
   - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
     job container's env.
   - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a
@@ -332,8 +320,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     does not perform.
   - `GHA_OIDC_WRITE_PERM`: the text says what the rule checks (the permission
     itself), not a correlation with third-party steps it never makes.
-  - The file-level and DNS/import severities are applied through the scanner,
-    so a rule's severity can depend on corroboration in the same file.
+  - The `IMPORT_EXPRESSION` severity is applied through the scanner, so it
+    can depend on the guard in the same file.
 - **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
   file as JSONC, and the scanner parsed it as strict JSON, so a single comment
   or trailing comma made the whole file read as empty. The real Fake Font

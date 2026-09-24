@@ -152,7 +152,7 @@ export function checkJsLockfileContent(
     return findings;
   }
   for (const dep of deps) checkParsedDependency(dep, relativePath, findings);
-  findings.push(...lockfileFeedFindings(deps, relativePath, feed));
+  for (const pushed of lockfileFeedFindings(deps, relativePath, feed)) findings.push(pushed);
   return findings;
 }
 
@@ -565,7 +565,7 @@ export function checkPnpmLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
-  findings.push(...feedFindingsFor(deps, lockfileName, feed));
+  for (const pushed of feedFindingsFor(deps, lockfileName, feed)) findings.push(pushed);
   return findings;
 }
 
@@ -591,7 +591,7 @@ function parsePnpmLock(content: string): ParsedLockDependency[] | null {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
 
@@ -694,7 +694,7 @@ export function checkYarnLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
-  findings.push(...feedFindingsFor(deps, lockfileName, feed));
+  for (const pushed of feedFindingsFor(deps, lockfileName, feed)) findings.push(pushed);
   return findings;
 }
 
@@ -730,7 +730,7 @@ function parseYarnClassic(content: string): ParsedLockDependency[] | null {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     if (line === "" || line.startsWith("#")) continue;
 
     // Entry headers sit at zero indentation and end with ":"
@@ -786,7 +786,7 @@ function parseYarnBerry(content: string): ParsedLockDependency[] {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     if (line === "" || line.startsWith("#")) continue;
 
     if (!line.startsWith(" ") && line.endsWith(":")) {
@@ -913,7 +913,7 @@ export function checkBunLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
       }
     }
   }
-  findings.push(...feedFindingsFor(deps, "bun.lock", feed));
+  for (const pushed of feedFindingsFor(deps, "bun.lock", feed)) findings.push(pushed);
   return findings;
 }
 

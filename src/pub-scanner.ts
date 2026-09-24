@@ -6,7 +6,8 @@
  *
  *   - `pubspec.lock`: every `source: hosted` package with its exact locked
  *     version, using `description.name` (the real registry name, which can
- *     differ from the map key) and only when `description.url` is pub.dev.
+ *     differ from the map key) and only when `description.url` is pub.dev
+ *     or a mirror that serves it unchanged.
  *   - `pubspec.yaml`: `dependencies`, `dev_dependencies` and
  *     `dependency_overrides`. Only an exact version pin counts as a version;
  *     a range (`^1.0.0`) leaves it unknown, so only a whole-package entry can
@@ -22,7 +23,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { stripHashComment } from "./text-lines.js";
+import { stripHashComment, trimTrailing } from "./text-lines.js";
 
 export interface PubPackage {
   name: string;
@@ -34,6 +35,8 @@ export interface PubPackage {
 // Flutter in China") name for PUB_HOSTED_URL; it serves pub.dev's packages
 // unchanged, so a package locked through it is the pub.dev package.
 const PUB_HOSTS = new Set(["https://pub.dev", "https://pub.dartlang.org", "https://pub.flutter-io.cn"]);
+// The same page lists university mirrors that serve pub.dev under a path.
+const PUB_PATH_MIRRORS = ["mirrors.tuna.tsinghua.edu.cn/dart-pub", "mirror.sjtu.edu.cn/dart-pub", "mirrors.cnnic.cn/dart-pub"];
 /** pub names are lowercase_with_underscores by rule. */
 const PUB_NAME = /^[a-z_][a-z0-9_]*$/;
 const EXACT_VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?$/;
@@ -83,7 +86,7 @@ function childrenOf(lines: Line[], i: number): Line[] {
   return out;
 }
 
-function extractLock(lines: Line[]): PubPackage[] {
+function extractLock(lines: Line[], rawLines: string[]): PubPackage[] {
   const out: PubPackage[] = [];
   const top = lines.findIndex((l) => l.indent === 0 && l.key === "packages");
   if (top < 0) return out;
@@ -98,7 +101,12 @@ function extractLock(lines: Line[]): PubPackage[] {
     // The description map's children are the only lines nested deeper than
     // the entry's own fields. Requiring a pub.dev url there is also what
     // excludes git (its url is the git host), path and sdk (no url) sources.
-    const desc = body.filter((l) => l.indent > fieldIndent);
+    const desc: Field[] = body.filter((l) => l.indent > fieldIndent);
+    // The same map written as a flow map: `description: {name: x, url: ...}`.
+    const flowDesc = body.find((l) => l.key === "description" && l.indent === fieldIndent && l.value.startsWith("{"));
+    if (flowDesc) {
+      for (const f of flowPairs(joinFlow(rawLines, flowDesc.line - 1, flowDesc.value, flowDesc.indent))) desc.push(f);
+    }
     const url = desc.find((l) => l.key === "url")?.value;
     // description.name is what pub downloads; the map key is only a label, and
     // a lockfile is target-controlled, so the key is never trusted over it.
@@ -200,17 +208,20 @@ function joinFlow(rawLines: string[], start: number, first: string, baseIndent: 
     else if (ch === "{") level++;
     else if (ch === "}" && --level === 0) return text.slice(0, i + 1);
   }
-  return text.replace(/[,\s]+$/, "") + "}".repeat(Math.max(level, 0));
+  return trimTrailing(text, /[,\s]/) + "}".repeat(Math.max(level, 0));
 }
 
 /** Is this the pub.dev registry (or a known mirror), however the URL is spelled? */
 function isPubHost(url: string): boolean {
   try {
     const u = new URL(url);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
     const host = u.host.replace(/\.(?=:|$)/, "");
-    return PUB_HOSTS.has(`https://${host}`) && (u.protocol === "https:" || u.protocol === "http:");
+    if (PUB_HOSTS.has(`https://${host}`)) return true;
+    const path = trimTrailing(u.pathname, "/");
+    return PUB_PATH_MIRRORS.includes(`${host}${path}`);
   } catch {
-    return PUB_HOSTS.has(url.replace(/\/+$/, "").toLowerCase());
+    return PUB_HOSTS.has(trimTrailing(url, "/").toLowerCase());
   }
 }
 
@@ -280,9 +291,55 @@ function extractPubspec(lines: Line[], rawLines: string[]): PubPackage[] {
  * Extract every pub.dev package a pubspec declares or locks.
  */
 export function extractPubPackages(content: string, relativePath: string): PubPackage[] {
-  const lines = readLines(content);
+  // A byte order mark would otherwise sit in front of the first key.
+  const text = content.startsWith("\uFEFF") ? content.slice(1) : content;
   const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
-  return basename === "pubspec.lock" ? extractLock(lines) : extractPubspec(lines, content.split(/\r?\n/));
+  // JSON is valid YAML, and pub reads a pubspec written as JSON. JSON.parse
+  // throws on anything else starting with a brace; the scanner then reports
+  // the manifest as unread rather than clean.
+  if (basename === "pubspec.yaml" && text.trimStart().startsWith("{")) return extractPubspecJson(JSON.parse(text));
+  const lines = readLines(text);
+  const rawLines = text.split(/\r?\n/);
+  return basename === "pubspec.lock" ? extractLock(lines, rawLines) : extractPubspec(lines, rawLines);
+}
+
+/**
+ * A JSON value as text when it is a scalar, else empty. String() of a deeply
+ * nested array recurses once per level and overflows the stack.
+ */
+function scalar(value: unknown): string {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : "";
+}
+
+/** Dependencies of a pubspec written as JSON; every entry reports line 1. */
+function extractPubspecJson(doc: unknown): PubPackage[] {
+  const out: PubPackage[] = [];
+  if (typeof doc !== "object" || doc === null) return out;
+  for (const section of DEPENDENCY_SECTIONS) {
+    const deps = (doc as Record<string, unknown>)[section];
+    if (typeof deps !== "object" || deps === null) continue;
+    for (const [name, spec] of Object.entries(deps as Record<string, unknown>)) {
+      if (!PUB_NAME.test(name)) continue;
+      if (typeof spec === "string") {
+        out.push({ name, version: EXACT_VERSION.test(spec) ? spec : undefined, line: 1 });
+      } else if (spec === null || spec === undefined) {
+        out.push({ name, version: undefined, line: 1 });
+      } else if (typeof spec === "object") {
+        const fields: Field[] = [];
+        for (const [key, value] of Object.entries(spec as Record<string, unknown>)) {
+          if (typeof value === "object" && value !== null) {
+            fields.push({ key, value: "" });
+            for (const [k, v] of Object.entries(value as Record<string, unknown>)) fields.push({ key: k, value: scalar(v) });
+          } else {
+            fields.push({ key, value: scalar(value) });
+          }
+        }
+        const pkg = pubDependency(name, fields, 1);
+        if (pkg) out.push(pkg);
+      }
+    }
+  }
+  return out;
 }
 
 /**

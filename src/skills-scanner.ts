@@ -181,7 +181,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
           options,
         );
     if (content === null) continue;
-    findings.push(...scanSkillContent(content, target.relativePath));
+    for (const pushed of scanSkillContent(content, target.relativePath)) findings.push(pushed);
   }
 
   for (const relPath of [".claude/settings.json", ".claude/settings.local.json"]) {
@@ -197,7 +197,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
       },
     );
     if (content === null) continue;
-    findings.push(...scanAgentSettingsContent(content, relPath));
+    for (const pushed of scanAgentSettingsContent(content, relPath)) findings.push(pushed);
   }
 
   // .vscode/tasks.json. Read here rather than in the core walk so it goes
@@ -217,7 +217,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
       },
     );
     if (content === null) continue;
-    findings.push(...scanEditorTasksContent(content, relPath));
+    for (const pushed of scanEditorTasksContent(content, relPath)) findings.push(pushed);
   }
 
   return findings;

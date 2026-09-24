@@ -1,3 +1,65 @@
+## Merge gate review of PR 326 (2026-09-24) (claude-opus-5-5)
+
+The owner held the merge until the PR is certain. Three rounds of independent
+reviewers on the lead's model looked for three things: false negatives against
+`main`, false positives on real data, and inputs that stall or abort a scan. Every
+finding was reproduced before anything changed.
+
+### Decisions by the owner
+
+- **`WORKFLOW_SECRET_TO_UPLOAD_PATH` keeps `main`'s condition as a floor.** Each
+  round found another exfiltration shape that the narrower check missed:
+  - a client in another language;
+  - a URL that fools a host parser;
+  - a push to someone else's GitHub repository;
+  - a custom `shell:`;
+  - an anchored block scalar;
+  - a URL in `env:`.
+
+  The finer check now only adds findings: bracket-form secrets, `/dev/tcp`, DNS
+  tools, buckets, image pushes, `docker://` args and YAML alias bodies. Real data:
+  305 workflow files, 61 flagged, identical to `main`. The repository's own
+  suppression of the rule is back as on `main`.
+- **`HIGH_ENTROPY_STRING` and `DEAD_DROP_DNS_TXT`/`C2_DOH_RESOLVER` keep `main`'s
+  severities.** Lowering them when THIS file shows no decoder or encoder is beaten by
+  moving that code to another file. For entropy, a reviewer found ten more decoder
+  spellings as well. `src/entropy.ts` is identical to `main`, and the DNS
+  corroboration code is removed. Only a signal PRESENT in the file may lower a
+  severity now (the `IMPORT_EXPRESSION` guard). The removed code is kept outside the
+  repository for a later change that looks across files.
+
+### Robustness, fixed
+
+These inputs made one crafted file stall or abort the whole scan, none of them on
+`main`:
+- trailing-run regexes in pub, Helm, SwiftPM, container images and pnpm/yarn;
+- the Terraform label regex and stack walk;
+- Dockerfile ARG expansion;
+- the `pom.xml` tag name, close-tag search and `${` resolution;
+- the `build.sbt` cross regex;
+- requirements `--hash`/`--config-settings` stripping, newly reached for
+  `requirements-*.txt`;
+- a NuGet manifest listing a malicious package on every line: the stack overflowed
+  through `push(...spread)`, and the attack graph copied each finding list. Every
+  one-line `push(...x)` in `src/` is now a loop.
+
+A final fuzz of about 114,000 inputs across every added manifest format found no
+rejection.
+
+### Proof
+
+- **Mutation cuts:** 55 on the code that ships, each red or hanging, with green
+  baseline and post-restore runs. That is 26 for the workflow rule, including the
+  floor, 8 for pub, 20 for the robustness fixes and 1 for the DNS floor. Cuts on code
+  that was later removed (the entropy and DNS corroboration) are not counted.
+- **Cuts that survived at first:**
+  - Two survivors showed that tests with a dotted secret never reach the finer check,
+    because the floor settles them first. That included every 5 MiB timing test. The
+    finer check is now tested with `secrets['X']`, and both cuts are red.
+  - One survivor showed a parenthesis fixture the old regex handled in linear time.
+    The fixture was corrected, and the cut hangs.
+- **Real data:** 305 workflow files flag the same 61 as `main`.
+
 ## Final check after the split (2026-09-23) (claude-opus-5-5)
 
 One more reviewer on the lead's model read the split branch. Its probes were then run

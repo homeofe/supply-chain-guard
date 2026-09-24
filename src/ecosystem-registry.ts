@@ -18,7 +18,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { stripHashComment, lineOfNeedle, lineAtOffset } from "./text-lines.js";
+import { stripHashComment, lineOfNeedle, lineAtOffset, trimTrailing } from "./text-lines.js";
 
 export interface PackageRef {
   name: string;
@@ -128,7 +128,7 @@ export function normalizeRepositoryUrl(raw: string): string | null {
   const scp = /^[\w.-]+@([\w.-]+):(.+)$/.exec(url);
   if (scp) url = `${scp[1]}/${scp[2]}`;
   url = url.replace(/^(?:https?|git|ssh):\/\//i, "").replace(/^[^@/]+@/, "");
-  url = url.replace(/\.git$/i, "").replace(/\/+$/, "");
+  url = trimTrailing(url.replace(/\.git$/i, ""), "/");
   const parts = url.split("/");
   // A real host name: dot-separated labels, no leading dot ("../x" is a path).
   if (parts.length < 3 || !/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(parts[0]!)) return null;
@@ -474,7 +474,7 @@ const conan: EcosystemMatcher = {
 function normalizeChartRepository(raw: string): string | null {
   // Only http(s) and oci repositories name a published chart; "@alias",
   // "alias:" and "file://" references fail this pattern and are skipped.
-  const m = /^(?:https?|oci):\/\/(.+?)\/*$/i.exec(raw.trim());
+  const m = /^(?:https?|oci):\/\/(.+)$/i.exec(trimTrailing(raw.trim(), "/"));
   if (!m) return null;
   return m[1]!.toLowerCase();
 }
