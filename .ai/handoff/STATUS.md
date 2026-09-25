@@ -1,3 +1,45 @@
+## Pre-release review, part 2: detection gaps (2026-09-26) (claude-opus-5-5)
+
+These findings came from the same five-reviewer pass as part 1. Each one was
+verified in the code before it was changed.
+
+- **GHA_KNOWN_MALICIOUS_SHA ignored the scan's feed.**
+  `checkActionReferences` called `loadThreatIntel()` without a cache
+  directory, and neither `scanGitHubActionsWorkflows` nor
+  `scanActionMetadataReferences` received `threatFeed`. Every other scanner
+  already did. As a result, `actions:` entries from a `feed refresh` in the
+  Action's isolated cache were never matched. The feed is now threaded
+  through. A quoted `uses:` value is also unquoted before the SHA check; the
+  trailing quote was what defeated it.
+- **Four PyPI indicators were in the npm namespace.** ZiChatBot's
+  `uuid32-utils`, `colorinal` and `termncolor`, and `parsimonius`, were
+  stored bare. OSV lists `colorinal`, `termncolor` and `parsimonius` as PyPI
+  malware, and the npm registry has none of the four. So a requirements.txt
+  with them raised no `PYTHON_MALICIOUS_PACKAGE`. What surfaced it: removing
+  the MCP `ioc_lookup` PyPI-to-bare fallback turned an existing test red, and
+  that test had been passing only through the inversion. A test now keeps
+  PyPI-campaign entries out of the bare namespace.
+- **MCP `ioc_lookup`** resolves names through the scanners' own code:
+  `parseImageReference` + `matchImageIOC` (shared with the Docker scanner
+  now), `parseProviderAddress` / `parseModuleAddress`,
+  `normalizeRepositoryUrl`, and `matchCompromisedActionSha` (shared with the
+  workflow check). The tool description says which forms it takes.
+- **MCP `scan_directory`** returns `catalog` (consulted, entryCount,
+  reason). Before, only an info finding said it, and a severity filter could
+  drop that.
+- **Files that were never read:** `Containerfile.<suffix>` (the
+  Dockerfile-name list lacked it), and the `extensions.recommendations` of a
+  `*.code-workspace` file. That file is read inline for its tasks, but the
+  extension check sat after the scannable-extension `continue`.
+- **One-line `required_providers { ... }` in `.tf`:** sources were checked
+  before the line's braces were counted, and only a line's first brace got a
+  label. The line is now walked in order.
+
+Checked and not changed: the Checkmarx Open VSX lists (21 and 10 versions,
+MAL-2026-2231/2232) flag only versions that Open VSX itself removed. Its
+current versions start at 2.58.0 and 1.12.0, matching the records' "fixed"
+bound, so no installable version is flagged.
+
 ## Pre-release review, part 1: the quadratic scans that were left (2026-09-26) (claude-opus-5-5)
 
 The owner asked for a full review of everything since v6.2.5 BEFORE the v6.3.0

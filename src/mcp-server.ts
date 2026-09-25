@@ -30,6 +30,10 @@ import {
 import { CATALOG_DIGEST } from "./catalog-digest.js";
 import type { DetectionSetCatalog } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import { matchImageIOC, parseImageReference } from "./container-image.js";
+import { parseModuleAddress, parseProviderAddress } from "./terraform-scanner.js";
+import { matchCompromisedActionSha } from "./github-actions-scanner.js";
+import { normalizeRepositoryUrl } from "./ecosystem-registry.js";
 import type { ScanReport, Severity } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -141,7 +145,10 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
       "it, or pass {indicator} to check a single domain/url/ip/hash observed in " +
       "code or logs. Returns a malicious/clean verdict with matched campaign and " +
       "malware family details, and checkedAgainst.catalog says whether the catalog " +
-      "was consulted.",
+      "was consulted. Names are read the way the scanners read them: docker takes an " +
+      "image reference (any registry host) with the tag or sha256: digest as version; " +
+      "terraform and tfmodule take a registry address; swift takes the repository URL; " +
+      "actions takes owner/repo with the commit SHA as version.",
     inputSchema: {
       type: "object",
       properties: {
@@ -232,9 +239,9 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * Feed entries for npm/PyPI packages carry no ecosystem prefix (only
- * ruby:/composer:/nuget:/go:/jenkins:/terraform: entries do - see matchPackageIOC).
- * This matcher resolves those bare entries for the npm and pypi ecosystems.
+ * A bare feed value (no ecosystem prefix) is an npm package; every other
+ * ecosystem, PyPI included, carries its prefix (see matchPackageIOC). This
+ * resolves those bare entries for npm lookups only.
  */
 const PREFIXED_ECOSYSTEMS = ["ruby:", "composer:", "nuget:", "go:", "jenkins:", "terraform:", "vscode:", "openvsx:", "maven:", "actions:", "pub:", "docker:", "tfmodule:", "swift:", "cocoapods:", "hex:", "cran:", "conan:", "helm:", "ansible:", "homebrew:", "chrome:", "edge:", "firefox:", "jetbrains:"];
 
@@ -321,6 +328,46 @@ export function catalogCoverageNote(
   );
 }
 
+/**
+ * The feed entry a lookup names, found the way the scanners find it.
+ *
+ * The raw name used to go straight to matchPackageIOC, so a lookup answered
+ * "clean" for inputs a scan flags: `docker.io/aquasec/trivy` (the scanner
+ * drops the Docker Hub host), a listed digest under another repository name
+ * (the scanner matches digests under any name), `registry.terraform.io/ns/type`,
+ * a Swift package given by its git URL, and a compromised Action commit under a
+ * fork's name or in upper case. PyPI also fell back to the bare-name matcher,
+ * whose entries are npm packages (6.3.0 pre-release review).
+ */
+export function lookupFeedIOC(
+  ecosystem: (typeof ECOSYSTEM_VALUES)[number],
+  name: string,
+  version: string | undefined,
+  feed: FeedIOC[],
+): FeedIOC | null {
+  switch (ecosystem) {
+    case "npm":
+      return matchPackageIOC("npm", name, version, feed) ?? matchBarePackageIOC(name, version, feed);
+    case "docker": {
+      const raw = version === undefined ? name
+        : version.toLowerCase().startsWith("sha256:") ? `${name}@${version}` : `${name}:${version}`;
+      const ref = parseImageReference(raw);
+      return ref ? matchImageIOC(ref, feed) : matchPackageIOC("docker", name, version, feed);
+    }
+    case "terraform":
+      return matchPackageIOC("terraform", parseProviderAddress(name) ?? name, version, feed);
+    case "tfmodule":
+      return matchPackageIOC("tfmodule", parseModuleAddress(name) ?? name, version, feed);
+    case "swift":
+      return matchPackageIOC("swift", normalizeRepositoryUrl(name) ?? name, version, feed);
+    case "actions":
+      return (version ? matchCompromisedActionSha(version, feed) : null)
+        ?? matchPackageIOC("actions", name, version, feed);
+    default:
+      return matchPackageIOC(ecosystem, name, version, feed);
+  }
+}
+
 function runIocLookup(
   ecosystem: (typeof ECOSYSTEM_VALUES)[number],
   name: string,
@@ -329,13 +376,9 @@ function runIocLookup(
   const feed = loadThreatIntel();
   const matches: IocMatch[] = [];
 
-  // 1. Threat-intel feed: ecosystem-prefixed entries (ruby/composer/nuget)
-  //    plus bare entries for npm/pypi.
-  const feedHit =
-    matchPackageIOC(ecosystem, name, version, feed) ??
-    (ecosystem === "npm" || ecosystem === "pypi"
-      ? matchBarePackageIOC(name, version, feed)
-      : null);
+  // 1. Threat-intel feed, matched the way the scanner for that ecosystem
+  //    matches it.
+  const feedHit = lookupFeedIOC(ecosystem, name, version, feed);
 
   if (feedHit) {
     matches.push({
@@ -485,6 +528,11 @@ function compactReport(report: ScanReport, maxFindings = 20): object {
     totalFindings: report.findings.length,
     topFindings,
     recommendations: report.recommendations.slice(0, 5),
+    // Whether the historical catalog was consulted. Without it a bundle-only
+    // scan read as complete to an agent: the only other signal was an
+    // info-level finding that a minSeverity filter, or 20 higher findings,
+    // drop from topFindings (6.3.0 pre-release review).
+    catalog: report.detectionSet?.catalog ?? null,
   };
 }
 

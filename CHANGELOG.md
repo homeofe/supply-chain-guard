@@ -536,6 +536,30 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   (`owner/github.com`) was dropped, because the check tested the whole string
   for `github.com`. The shorthand is now rejected only when the owner slot
   contains a dot, which is what makes it a host.
+- Detection gaps found by a review of this release before its tag:
+  - Compromised GitHub Action commits delivered by `feed refresh` were never
+    matched. The check read the default feed from the working directory, not
+    the scan's feed, so the Action's refreshed cache (and any `--cache-dir`)
+    never reached it. A quoted `uses: "owner/repo@<sha>"` also hid a listed
+    commit, because the quote stayed in the SHA.
+  - Four PyPI malware entries (the three ZiChatBot packages and
+    `parsimonius`) were stored without the `pypi:` prefix, which puts them in
+    the npm namespace: a PyPI project depending on them got no feed finding.
+    They carry the prefix now.
+  - `Containerfile.<suffix>` files were never read, so neither the Dockerfile
+    rules nor the known-malicious image check saw them.
+  - A `*.code-workspace` file's `extensions.recommendations` were not checked
+    against `vscode:` and `openvsx:` entries, though VS Code prompts for them
+    like `.vscode/extensions.json`.
+  - A one-line `required_providers { x = { source = "ns/type" } }` block in a
+    `.tf` file was never read as a provider.
+  - The MCP `ioc_lookup` tool answered "clean" for inputs a scan flags: a
+    Docker image with its registry host or a listed digest under another name,
+    a Terraform registry address, a Swift repository URL, and an Action commit
+    under a fork's name or in upper case. It now resolves names the way the
+    scanners do, and a PyPI lookup no longer falls back to npm entries. The
+    MCP `scan_directory` result now carries the catalog statement
+    (`catalog: { consulted, entryCount, reason }`).
 
 ### Security
 

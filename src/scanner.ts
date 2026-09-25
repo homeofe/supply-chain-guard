@@ -485,6 +485,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
       if (codeWorkspace) {
         for (const pushed of scanCodeWorkspaceContent(prefetchedContent, relativePath)) findings.push(pushed);
+        // Its extensions.recommendations prompt an install exactly like
+        // .vscode/extensions.json. The file type is not a scannable one, so the
+        // extension check further down never reached it.
+        for (const pushed of scanExtensionReferences(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (nestedJsLockfile) {
         for (const pushed of checkJsLockfileContent(basename, prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
@@ -698,7 +702,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Composite / Docker action metadata anywhere outside .github/workflows:
     // its uses: steps run with the caller's secrets.
     if (isActionMetadataFile(relativePath)) {
-      for (const pushed of scanActionMetadataReferences(content, relativePath)) findings.push(pushed);
+      for (const pushed of scanActionMetadataReferences(content, relativePath, threatFeed)) findings.push(pushed);
     }
   }
 
@@ -712,7 +716,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   for (const pushed of lockfileFindings) findings.push(pushed);
 
   // Check GitHub Actions workflows (#9)
-  const ghaFindings = scanGitHubActionsWorkflows(scanDir);
+  const ghaFindings = scanGitHubActionsWorkflows(scanDir, threatFeed);
   for (const pushed of ghaFindings) findings.push(pushed);
 
   // v5.10: GitHub Agentic Workflow (gh-aw) markdown files (.github/workflows/*.md)
