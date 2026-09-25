@@ -7,6 +7,7 @@ Open-source supply-chain security scanner that runs locally and offline. It matc
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-green?logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/homeofe/supply-chain-guard/ci.yml?branch=main&label=CI&logo=github)](https://github.com/homeofe/supply-chain-guard/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/homeofe/supply-chain-guard/badge)](https://scorecard.dev/viewer/?uri=github.com/homeofe/supply-chain-guard)
 [![AAHP Verify](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml/badge.svg)](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml)
 [![AAHP conformant](https://img.shields.io/badge/AAHP-conformant-5b47d6)](https://github.com/homeofe/AAHP)
 [![Last commit](https://img.shields.io/github/last-commit/homeofe/supply-chain-guard?logo=github)](https://github.com/homeofe/supply-chain-guard/commits/main)
@@ -14,6 +15,39 @@ Open-source supply-chain security scanner that runs locally and offline. It matc
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ![supply-chain-guard scanning a malicious npm package: risk gauges, GlassWorm incident correlation, and a remediation plan](assets/demo.gif)
+
+## Start in 30 seconds
+
+Scan a project. No account, no configuration, and the scan itself makes no
+network request:
+
+```bash
+npx supply-chain-guard scan .
+```
+
+It exits `1` on a high finding or a scan that could not examine everything, and
+`2` on a critical finding, so it can gate a script as it is. Run `npx supply-chain-guard feed refresh` once, with network access,
+to add the historical package catalog to later scans.
+
+Gate every pull request:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: homeofe/supply-chain-guard@v6.2.5
+```
+
+Let your AI coding agent check a package before it installs it (MCP):
+
+```bash
+npm install -g supply-chain-guard
+claude mcp add supply-chain-guard supply-chain-guard mcp
+```
+
+Every release is published to npm from this repository's CI with a signed
+[SLSA provenance attestation](https://www.npmjs.com/package/supply-chain-guard),
+and the Action installs that exact version. Everything else, from output
+formats to policies, is further down: [Quickstart](#quickstart),
+[GitHub Action](#github-action), [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp).
 
 ## Contents
 

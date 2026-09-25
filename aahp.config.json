@@ -164,6 +164,10 @@
         {
           "file": "action.yml",
           "note": "Marketplace description"
+        },
+        {
+          "file": "server.json",
+          "note": "MCP registry description (schema limit 100 characters)"
         }
       ]
     }

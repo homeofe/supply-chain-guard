@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790358924",
-    "timestamp": "2026-09-25T17:55:24Z",
-    "commit": "3585a34",
+    "session_id": "cli-1790360037",
+    "timestamp": "2026-09-25T18:13:57Z",
+    "commit": "27a3bde",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:81e5b4c242b2a9ee8fa00523f38483a068f08000ac461ba4d9ceac836a35c00f",
-      "updated": "2026-09-25T17:55:24Z",
-      "lines": 11832,
-      "summary": "The owner asked whether the offline and air-gapped promise still holds after the"
+      "checksum": "sha256:52d4aa0e0c874257b3dc6039333ead56e0175ec2f2e9aaa008921885a1c38260",
+      "updated": "2026-09-25T18:13:47Z",
+      "lines": 11878,
+      "summary": "The owner asked why downloads fall and how to make the project easier to find;"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-25T17:40:53Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-25T17:55:24Z",
+      "updated": "2026-09-25T18:13:57Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:cace6ca1b15c19c3761c10e9f56f655ea8f7b069e3582d6bd8d77d98b32810d7",
-      "updated": "2026-09-25T17:55:24Z",
+      "checksum": "sha256:0c8901f8f3b37db28922a2847f36f20b2cfda720a821c7047125d190fcf17949",
+      "updated": "2026-09-25T18:13:57Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:ac64588ea457eae4a9e6b815c1b8dd96a37a093d97dd3fa288fee85871831d38",
-      "updated": "2026-09-25T17:55:24Z",
+      "checksum": "sha256:7f94aa1e8a8ebf1f8f33765232a530957dc9f5f514ccc4597e368a3d18a628ad",
+      "updated": "2026-09-25T18:13:57Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-25T17:40:52Z",
+      "updated": "2026-09-25T18:13:43Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "The owner asked whether the offline and air-gapped promise still holds after the Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "The owner asked why downloads fall and how to make the project easier to find; Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 137917,
-    "full_read": 150942
+    "manifest_plus_core": 138360,
+    "full_read": 151385
   }
 }
