@@ -215,6 +215,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - CodeQL static analysis of the TypeScript source and of the GitHub Actions
   workflows on every pull request, on `main` and weekly, reported into code
   scanning. Not a required check.
+- Property-based tests (fast-check, an exact-pinned devDependency that is not
+  shipped) for the code that reads attacker-controlled text. Each linear-time
+  helper in `src/text-lines.ts` is checked against the regex it replaced on
+  generated input, the workflow parser against arbitrary text, and the feed
+  partition's date parser for round trips and rolled-over dates.
 
 ### Changed
 
@@ -240,6 +245,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- `stripHashComment` stopped scanning when a line's first `#` was in column
+  0, so `#a #b` kept its trailing comment where the regex it replaced gives
+  `#a`. Found by the new property test; only lines that are already
+  comments are affected, so no scan result changes.
 - `docker.yml` granted `packages: write` at the workflow level, so every job,
   including any added later, inherited it. The grant now sits on the two
   jobs that push to GHCR, and a test keeps every workflow's top level
