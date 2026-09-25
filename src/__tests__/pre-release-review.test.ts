@@ -8,6 +8,8 @@ import { getBundledFeed, FEED_CACHE_FILE, type FeedIOC } from "../threat-intel.j
 import { scanActionMetadataReferences } from "../github-actions-scanner.js";
 import { extractTerraformProviders } from "../terraform-scanner.js";
 import { handleMcpMessage, lookupFeedIOC } from "../mcp-server.js";
+import { planMigration } from "../../scripts/feed-migrate.mjs";
+import { loadPartitionConfig } from "../../scripts/feed-partition.mjs";
 
 // Detection gaps found by the review of 6.3.0 before its tag. Indicators come
 // from the bundled feed or are synthetic, so no real IOC is written here.
@@ -131,6 +133,45 @@ describe("Terraform required_providers on one line", () => {
     const dir = tmp();
     write(dir, "main.tf", `terraform { required_providers { x = { source = "${name}" } } }\n`);
     expect(await rulesOf(dir)).toContain("TERRAFORM_MALICIOUS_PROVIDER");
+  });
+});
+
+describe("the 2026-09-22 daily intelligence", () => {
+  // The catalog window for that day was set for one ReversingLabs batch
+  // (MAL-2026-16487 to 17152); a window covers the whole day, so it also moved
+  // that day's other, fresh records out of the offline bundle.
+  const malIn = (e: FeedIOC, lo: number, hi: number) =>
+    [...String(e.source ?? "").matchAll(/MAL-2026-(\d+)/g)].some((m) => Number(m[1]) >= lo && Number(m[1]) <= hi);
+  const batch = (e: FeedIOC) => malIn(e, 16487, 17152);
+  const day = () => getBundledFeed().filter((e) => e.type === "package" && e.firstSeen === "2026-09-22");
+
+  it("ships the records outside the bulk batch in the bundle", () => {
+    const fresh = day().filter((e) => malIn(e, 16374, 16466));
+    expect(fresh).toHaveLength(58);
+    expect(fresh.map((e) => e.value)).toContain("ubiquiti-agents-link-mcp");
+    // Control: the bulk batch itself stays out of the bundle.
+    expect(day().filter(batch)).toEqual([]);
+  });
+
+  it("stays in the bundle at the next release's migration", () => {
+    // check:feed-partition does not evaluate the curated-comment rule; only the
+    // migration does. So ask the migration: with the committed cutoff and
+    // windows, none of the 58 may be planned to move.
+    const root = path.resolve(__dirname, "..", "..");
+    const source = fs.readFileSync(path.join(root, "src", "threat-intel.ts"), "utf8");
+    const moves = new Set(
+      (planMigration(source, loadPartitionConfig(root)) as { move: Array<{ value: string }> }).move.map((m) => m.value),
+    );
+    const fresh = day().filter((e) => malIn(e, 16374, 16466)).map((e) => e.value);
+    expect(fresh).toHaveLength(58);
+    expect(fresh.filter((v) => moves.has(v))).toEqual([]);
+  });
+
+  it("is found by a default offline scan, without the catalog", async () => {
+    const dir = tmp();
+    write(dir, "package.json", JSON.stringify({ name: "x", version: "1.0.0", dependencies: { "ubiquiti-agents-link-mcp": "0.2.1" } }));
+    const findings = (await scan({ target: dir, format: "json", noHistory: true })).findings;
+    expect(findings.some((f) => f.severity === "critical" && f.description.includes("ubiquiti-agents-link-mcp"))).toBe(true);
   });
 });
 

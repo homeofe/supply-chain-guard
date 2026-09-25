@@ -1,3 +1,47 @@
+## Pre-release review, part 3: threat intelligence (2026-09-26) (claude-opus-5-5)
+
+**The 2026-09-22 catalog window moved fresh malware out of the offline
+bundle.** I added that window in PR 331 for the ReversingLabs RubyGems bulk
+(MAL-2026-16487 to 17152: 1,090 RubyGems, 57 npm, 5 NuGet). A window covers
+a whole day, and 58 records of that day come from other sources:
+MAL-2026-16374 to 16466 from amazon-inspector, OpenSSF, kam193 and
+ghsa-malware (47 npm, 8 PyPI, 3 RubyGems). One of them is
+`ubiquiti-agents-link-mcp`, a malicious MCP server. The window sent the one
+new record straight to the catalog, and the v6.3.0 migration moved the 57
+already bundled. A default offline scan, and the default Action
+(`refresh-catalog: false`), would not have seen three-day-old malware. The
+release notes counted those 57 as routine ("57 by the 2026-09-22 catalog
+window").
+
+Changed:
+- `restore-0922.mjs` (scratchpad, not committed) moved exactly those 58 from
+  `data/threat-catalog.jsonl` back into `FEED_CHUNK_21`, field for field,
+  under a curated comment block. Partition rule 3 keeps them bundled, and
+  `check:feed-partition` passes. The bundle goes from 8,746 to 8,804 entries,
+  the catalog from 86,887 to 86,829.
+- The window's `reason` and the `[6.3.0]` notes say what happened:
+  - 62 ReversingLabs probes, not "63 dependency-confusion probes";
+  - the cutoff moved 451, not 508;
+  - PR 331's import is 76 bundled and 4,068 catalog.
+- A test pins the 58 in the bundle and keeps the batch itself out (the
+  control), and an offline `scan()` flags the MCP server.
+- **The cut that removed only the curated comment stayed green on
+  `check:feed-partition`.** The gate does not evaluate the curated-comment
+  rule; only the migration does, by design
+  (docs/threat-feed-catalog-decoupling-design.md). So what actually keeps
+  the 58 bundled was unguarded. A test now asks `planMigration` with the
+  committed config and requires that none of the 58 would move; that cut
+  goes red on it. Cuts: 3 of 3 red, baseline and post-restore 17 passed.
+
+Also defanged: six raw IOCs in older STATUS entries and one in
+`docs/plans/2026-09-16-threat-feed-catalog-phase-1.md`, which the reviewer
+listed (all present at v6.2.5 already). Nothing checks this. The
+forbidden-patterns gate does not look for raw IOCs in docs, so the defang
+rule is still a convention, not a gate. That is an open item for a follow-up.
+
+Checked and left: the Go module paths `go:gocommunity[.]io/...` at STATUS.md
+are module identifiers, not hosts to click.
+
 ## Pre-release review, part 2: detection gaps (2026-09-26) (claude-opus-5-5)
 
 These findings came from the same five-reviewer pass as part 1. Each one was
@@ -2123,7 +2167,7 @@ Open for the owner:
   would be non-enforced bytes in the one place that can never be migrated out.
   The rule now lives under "What is not an indicator" in CONVENTIONS.md, since
   the same wall was hit on the Baileys campaign (see the comment at the
-  `fiora.nixel.my.id` entry) and re-derived from scratch both times. That Baileys
+  `fiora[.]nixel[.]my[.]id` entry) and re-derived from scratch both times. That Baileys
   comment now points at the convention rather than reading as a missing feature:
   a GitHub handle IS matchable, so the blocklist is its correct home, and the
   absence of an account type on FeedIOC is a decision rather than a gap.
@@ -4391,7 +4435,7 @@ No non-package indicators were added. The vendor sweep for the 2026-09-11 to
 2026-09-13 window surfaced no write-up carrying an atomic indicator that is not
 already in `src/ioc-blocklist.ts`. Every concrete lead chased back to covered
 ground: the `ddjidd564` GitHub Pages dead drop (TrapDoor, covered since
-2026-05-25), the `git.disroot.org/git-ecosystem` payload host (SleeperGem,
+2026-05-25), the `git[.]disroot[.]org/git-ecosystem` payload host (SleeperGem,
 covered since 2026-07-18), and the `proc-macro1` crates.io dropper hashes
 (covered since 2026-08-21).
 
@@ -4724,7 +4768,7 @@ file was added).
 CI gave the authoritative verdict on the batch before the merge: 141 test files
 and 3,419 tests passed on both Node 22 and Node 24. That includes the two tests
 that fail on the Windows box on unmodified `main`
-(`87e0bbc636999b.lhr.life Phantom Bot C2 domain` and the GlassWASM
+(`87e0bbc636999b[.]lhr[.]life Phantom Bot C2 domain` and the GlassWASM
 `flags the stage-2 delivery host`), which confirms the environment-gap reading
 rather than leaving it as an assumption. `Build and Test` reports in 4 seconds
 because it is the AGGREGATOR job that requires the compat matrix; the suite runs
@@ -7433,7 +7477,7 @@ Credential Manager uses it too.
 
 The sweep-11 note below lists `litterbox[.]catbox[.]moe` and `api[.]ipify[.]org` as
 needing a decision recorded. They already had one. `src/ioc-blocklist.ts` has carried
-it since the RedShell block landed in v6.0.3: the comment above `217.60.77.63` names
+it since the RedShell block landed in v6.0.3: the comment above `217[.]60[.]77[.]63` names
 both hosts, defanged, and states that blocking them would flag legitimate projects,
 alongside the same call on the `127[.]0[.]0[.]1:8792` loopback fallback. The sweep
 raised it as open without grepping for it first. No change was needed and none was
@@ -11147,7 +11191,7 @@ organisations, and carries no indicator we lack, `scan[.]aquasecurtiy[.]org`, te
 and the KICS action are all already ingested), and WEL1DROPPER / Flooding Dropper.
 The one WEL1DROPPER detail worth recording: the four DNS-fallback subdomains
 `sdk[.]`, `ext[.]`, `pkg[.]` and `net[.]dl[.]wel1[.]ru` are NOT separate blocklist
-entries, they are covered by the single `dl.wel1.ru` entry, and
+entries, they are covered by the single `dl[.]wel1[.]ru` entry, and
 `campaigns.test.ts:4029` exists specifically to prove that. Do not "fix" their
 apparent absence by adding four redundant entries.
 
@@ -11813,7 +11857,7 @@ same advisory, close it explicitly - it is already resolved here.
 
 **A SECOND Windows-only test gap exists, alongside the known `zip` one.** Two
 `IOC_KNOWN_C2_DOMAIN` tests fail on this box on unmodified `main` - the Phantom
-Bot `87e0bbc636999b.lhr.life` test and the GlassWASM `dodod[.]lat` stage-2
+Bot `87e0bbc636999b[.]lhr[.]life` test and the GlassWASM `dodod[.]lat` stage-2
 delivery host test. **CI settled it: both pass on Linux** (PR #126 run, 2,666
 passing), so this is the environment, not a defect in v5.25.7. Recorded here so
 the next run does not re-investigate it: calling `checkIOCBlocklist()` directly

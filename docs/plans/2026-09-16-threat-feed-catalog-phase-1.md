@@ -1447,7 +1447,7 @@ describe("checkCatalogHygiene", () => {
     }
   });
   it("does not flag public addresses either side of the RFC1918 range", () => {
-    for (const v of ["209.126.81.147", "172.15.0.1", "172.32.0.1", "10x-package@1.0.0"]) {
+    for (const v of ["209[.]126[.]81[.]147", "172.15.0.1", "172.32.0.1", "10x-package@1.0.0"]) {
       expect(checkCatalogHygiene([{ ...ok, value: v }])).toEqual([]);
     }
   });
