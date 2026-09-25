@@ -1,3 +1,22 @@
+## Dependency bumps 2026-09-25 (claude-opus-5-5)
+
+Carries the two Dependabot pull requests for the Docker workflow, PR 329
+(`docker/setup-buildx-action` 4.3.0 -> 4.4.1, both jobs) and PR 330
+(`docker/build-push-action` 7.3.0 -> 7.4.0), in one reviewed change. Neither
+can merge on its own: both are red on `aahp-verify` Layer 2 alone ("Missing:
+.ai/handoff/STATUS.md update", "Missing: regenerated .ai/handoff/MANIFEST.json")
+because Dependabot cannot add the handoff update, and the check is required
+with `enforce_admins`. Both are closed as superseded once this lands.
+
+- The diff is exactly the union of the two Dependabot diffs: three `uses:`
+  lines in `.github/workflows/docker.yml`, still pinned by full commit SHA.
+- Both SHAs were resolved against the upstream tags through the GitHub API
+  (annotated tags dereferenced) and match: `f87e5991a6d7` is
+  `docker/setup-buildx-action` v4.4.1 and `c3c9e263c25d` is
+  `docker/build-push-action` v7.4.0.
+- `Docker build and smoke` runs both actions and was green on both Dependabot
+  pull requests. It runs again on this one.
+
 ## Threat intel 2026-09-25 (claude-opus-5-5)
 
 Daily run, continued from the scheduled routine's handoff of the same day. No
