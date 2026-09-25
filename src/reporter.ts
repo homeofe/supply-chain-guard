@@ -7,6 +7,7 @@
 import { randomUUID } from "node:crypto";
 import * as path from "node:path";
 import type {
+  DetectionSetCatalog,
   Finding,
   IncidentCluster,
   PolicyEffect,
@@ -106,6 +107,42 @@ function coverageLine(report: ScanReport): string {
     return `Coverage: 0 of ${total} files were examined. This result describes nothing about the target and is not a clean verdict.`;
   }
   return `Coverage: ${scanned} of ${total} files were examined.`;
+}
+
+const CATALOG_REASON_LABEL: Record<NonNullable<DetectionSetCatalog["reason"]>, string> = {
+  absent: "the catalog has not been downloaded",
+  unreadable: "the cached catalog could not be read",
+  "version-mismatch": "the cached catalog was built for a different release",
+  "digest-mismatch": "the cached catalog does not match this release",
+  corrupt: "the cached catalog failed its checksum",
+};
+
+/**
+ * Which indicator stores this scan matched against (unreleased).
+ *
+ * THREAT_FEED_CATALOG_MISSING is `info` on purpose: it fires on every fresh
+ * install, and a finding that turns every first run yellow gets the tool
+ * switched off. But `info` is exactly what `--min-severity low` removes, and
+ * that is the GitHub Action's default, so a bundle-only scan used to read
+ * exactly like a complete one. This line is provenance, not a finding: every
+ * format renders it whatever the severity filter, and it moves neither the
+ * score, the risk level, the badge nor the exit code.
+ *
+ * Undefined when the report carries no catalog record, or when the release
+ * pins an empty catalog and there is nothing to miss.
+ */
+function catalogCoverageLine(report: ScanReport): string | undefined {
+  const catalog = report.detectionSet?.catalog;
+  if (!catalog || catalog.entryCount === 0) return undefined;
+  const count = catalog.entryCount.toLocaleString("en-US");
+  if (catalog.consulted) {
+    return `Historical catalog consulted: ${count} indicators beyond the bundled set were included.`;
+  }
+  return (
+    `Bundled indicators only: ${count} historical catalog indicators were not consulted, because ` +
+    `${CATALOG_REASON_LABEL[catalog.reason ?? "absent"]}. Run "supply-chain-guard feed refresh" ` +
+    `(in the GitHub Action, set refresh-catalog: true) to include them.`
+  );
 }
 
 /**
@@ -398,6 +435,8 @@ function formatText(
     const dsInfo = `v${ds.bundledVersion} (${ds.effectiveEntryCount} entries${ds.cacheMerged ? `, merged cache` : ""}${ds.generatedAt ? `, generated ${ds.generatedAt}` : ""})`;
     lines.push(metaRow("Detection Set", dsInfo));
   }
+  const catalogLineText = catalogCoverageLine(report);
+  if (catalogLineText) lines.push(metaRow("Catalog", catalogLineText));
   if (report.twoTierVerdict) {
     const ttv = report.twoTierVerdict;
     const ttvCol =
@@ -797,6 +836,14 @@ function formatMarkdown(report: ScanReport): string {
     const ds = report.detectionSet;
     lines.push(
       `| Detection Set | \`v${mdCell(ds.bundledVersion)} (${ds.effectiveEntryCount} entries${ds.cacheMerged ? ", merged cache" : ""}${ds.generatedAt ? `, generated ${ds.generatedAt}` : ""})\` |`,
+    );
+  }
+  const catalogLineMd = catalogCoverageLine(report);
+  if (catalogLineMd) {
+    lines.push(
+      report.detectionSet?.catalog?.consulted
+        ? `| Catalog | ${mdText(catalogLineMd)} |`
+        : `| **Catalog** | **${mdText(catalogLineMd)}** |`,
     );
   }
   lines.push(`| Duration | ${mdText(report.durationMs)}ms |`);
@@ -1238,6 +1285,18 @@ function formatSbom(report: ScanReport): string {
             name: "supply-chain-guard:detection-set:cache-merged",
             value: String(report.detectionSet.cacheMerged),
           },
+          ...(report.detectionSet.catalog
+            ? [
+                {
+                  name: "supply-chain-guard:detection-set:catalog-consulted",
+                  value: String(report.detectionSet.catalog.consulted),
+                },
+                {
+                  name: "supply-chain-guard:detection-set:catalog-entry-count",
+                  value: String(report.detectionSet.catalog.entryCount),
+                },
+              ]
+            : []),
         ]
       : []),
   ];
@@ -1593,6 +1652,9 @@ function formatGitlab(report: ScanReport): string {
               },
             ]
           : []),
+        ...(catalogCoverageLine(report)
+          ? [{ level: "info" as const, value: catalogCoverageLine(report)! }]
+          : []),
         ...(report.policyEffect
           ? [{ level: "warn" as const, value: policyEffectLine(report.policyEffect) }]
           : []),
@@ -1671,6 +1733,12 @@ function formatJunit(report: ScanReport): string {
     }
     lines.push(
       `    <property name="supply-chain-guard:detection-set:cache-merged" value="${xmlEscape(String(report.detectionSet.cacheMerged))}"/>`,
+    );
+  }
+  const catalogLineXml = catalogCoverageLine(report);
+  if (catalogLineXml) {
+    lines.push(
+      `    <property name="supply-chain-guard:detection-set:catalog" value="${xmlEscape(catalogLineXml)}"/>`,
     );
   }
   const coverage = coverageProperties(report);
@@ -1829,6 +1897,7 @@ footer{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
       <span>Time: ${report.timestamp}</span>
       <span>Commit: ${escapeHtml(report.commit ?? "none (not a git repository)")}</span>
       ${report.detectionSet ? `<span>Detection Set: v${escapeHtml(report.detectionSet.bundledVersion)} (${report.detectionSet.effectiveEntryCount} entries${report.detectionSet.cacheMerged ? ", merged cache" : ""}${report.detectionSet.generatedAt ? `, generated ${escapeHtml(report.detectionSet.generatedAt)}` : ""})</span>` : ""}
+      ${catalogCoverageLine(report) ? `<span>Catalog: ${escapeHtml(catalogCoverageLine(report)!)}</span>` : ""}
       <span>Duration: ${report.durationMs}ms</span>
     </div>
   </header>

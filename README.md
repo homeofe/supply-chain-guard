@@ -751,7 +751,7 @@ There is one axis where it goes somewhere the others do not go at all. Credentia
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
-| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, fully local/offline at scan time | No | 15 ecosystems of packages, extensions, plugins, providers, images and CI actions with shipped indicators, and tested matchers for more (see [Ecosystem Coverage](#ecosystem-coverage)), plus GitHub repos | Yes (Apache-2.0) | No |
+| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, local at scan time (recent and curated indicators offline, the historical package catalog after one `feed refresh`) | No | 15 ecosystems of packages, extensions, plugins, providers, images and CI actions with shipped indicators, and tested matchers for more (see [Ecosystem Coverage](#ecosystem-coverage)), plus GitHub repos | Yes (Apache-2.0) | No |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Known vulnerabilities in dependency inventories (OSV.dev database lookup) | Known-malicious versions via OSV MAL- entries only; no behavior or IOC analysis | Yes (offline mode available) | 11+ ecosystems, 19+ lockfile formats, container images, SBOM input | Yes (Apache-2.0) | No |
 | [Socket](https://socket.dev) | Proactive behavioral analysis of entire registries (SaaS) | Yes: 70+ risk types registry-wide, before advisories exist; engine is closed source and cloud-side | Yes | npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet, more; Actions workflows | CLI only (MIT); detection engine proprietary | Yes (except Firewall Free) |
 | [GuardDog](https://github.com/DataDog/guarddog) | Heuristic 0-10 risk scoring of individual packages (YARA + registry metadata) | Yes: heuristics only, no known-malware or campaign-IOC database; sandboxed scanning | No | npm, PyPI, Go, RubyGems, GitHub Actions, VS Code extensions | Yes (Apache-2.0) | No |
@@ -902,10 +902,18 @@ Apache-2.0, no account required, and no telemetry: the scanner reports only to
 its own output.
 
 **Offline by default:**
-`scan` on a local path runs fully offline against the bundled threat feed (unless
-the opt-in `--check-registry` flag is passed), as do `guard`, `feed stats`, and
-all report formatters. These commands make zero network requests and are suitable
-for air-gapped and data-egress-restricted environments.
+`scan` on a local path runs fully offline (unless the opt-in `--check-registry`
+flag is passed), as do `guard`, `feed stats`, and all report formatters. These
+commands make zero network requests and are suitable for air-gapped and
+data-egress-restricted environments.
+
+An offline scan matches against the bundled indicator set: every domain, URL, IP
+and hash, every curated campaign, and the recent package indicators. Older
+package indicators live in the historical catalog, which is much larger than the
+bundle and is downloaded by `supply-chain-guard feed refresh`. A machine that
+never reaches the network therefore scans against the bundled set only, and every
+report says so in its Catalog line (see
+[THREAT_FEED_CATALOG_MISSING](#threat_feed_catalog_missing)).
 
 **Networked commands and external disclosures:**
 The commands that reach the network do so deliberately for their specific functions:
@@ -1062,6 +1070,22 @@ The last two are not normal states. They say the scanner's own detection data is
 either corrupt or has been modified in place, which is a different problem from
 "not downloaded yet" and is worth looking at the machine for.
 
+"Not downloaded yet" is `info` so that it does not turn every first run yellow,
+and that also means `--min-severity low`, the Action's default, filters the
+finding out. The same state is therefore recorded as provenance, independent of
+any severity filter:
+
+- every report format carries a Catalog line, in bold in the Markdown report
+  (and so in the Action's pull request comment whenever one is posted) when the
+  catalog was not consulted;
+- JSON and SARIF carry `detectionSet.catalog` (`consulted`, `entryCount`,
+  `reason`), and the CycloneDX SBOM carries
+  `supply-chain-guard:detection-set:catalog-consulted`;
+- the MCP `ioc_lookup` result carries `checkedAgainst.catalog`, plus a
+  `coverageNote` on a clean package verdict reached without the catalog.
+
+None of these changes the score, the risk level, the badge or the exit code.
+
 The cache checksum is also compared with an entries digest compiled into the
 package. A cache with the right public header, recomputed checksum and entry
 count is still refused when its actual indicators differ from this release.
@@ -1158,7 +1182,9 @@ note that PowerShell swallows the bare `--` itself, so on Windows prefer the
 global-install form above.
 
 Exposes three tools over stdio: `ioc_lookup` (offline IOC + known-bad-version check
-for npm/PyPI/RubyGems/Composer/NuGet), `scan_directory`, and `scan_npm_package`.
+for every supported ecosystem; package verdicts include the historical catalog only
+after `feed refresh`, and the result says which), `scan_directory`, and
+`scan_npm_package`.
 Client config snippets for Claude Code, Claude Desktop, and Cursor: [docs/mcp.md](docs/mcp.md).
 
 ## Live Threat Feed

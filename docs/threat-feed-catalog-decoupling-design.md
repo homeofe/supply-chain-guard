@@ -623,6 +623,12 @@ The cost is bounded and it is already covered:
   on an old version as soon as they refresh. What is version-pinned is the
   HISTORICAL catalog, which by construction contains nothing newer than the
   cutoff.
+
+  > **As shipped (recorded 2026-09-25).** Since rule 5 (`catalogWindows`) the
+  > catalog can also hold package indicators newer than the cutoff, when their
+  > publication day is declared a bulk backfill (2026-09-17 and 2026-09-22 so
+  > far). Those reach users with the next release rather than with the next
+  > `feed refresh`, and an offline install does not carry them.
 - **Releases here are cheap and frequent.** Three shipped in the days before
   this design was written. A catalog update is a release, and a release is
   automated.
@@ -659,6 +665,17 @@ a CI pipeline.
 
 Under `catalog: "required"` every unavailable state becomes `critical` and fails
 the gate, for consumers who want the guarantee rather than the signal.
+
+> **As shipped (PR 309, recorded 2026-09-25).** `absent` ships as `info` and
+> `version mismatch` as `low`, not `medium`. With a non-empty catalog, `medium`
+> fired on every fresh install and turned the badge yellow, and a finding that
+> fires for everyone until they act gets the tool switched off. `info` is in
+> turn what `--min-severity low` filters out, and that is the Action's default,
+> so a bundle-only scan read like a complete one. The catalog state is therefore
+> also recorded as detection-set provenance (`detectionSet.catalog`) and every
+> report format renders it whatever the severity filter, without moving the
+> score, the risk level or the exit code. This keeps the rejection of a
+> "silently optional catalog" in section 3 true without reintroducing the nag.
 
 **There is no time-based escalation, and this is a decision rather than an
 omission.** A severity that rises because thirty days passed answers "how long

@@ -1,3 +1,96 @@
+## Catalog coverage made visible, PRs 326/327 landed (2026-09-25) (claude-opus-5-5)
+
+### Offline promise: what was checked and what changed
+
+The owner asked whether the offline and air-gapped promise still holds after the
+bundle/catalog split. Verified in code:
+
+- Kept: local `scan`, `guard`, `feed stats` and every formatter make no network
+  request, and the bundle carries every domain, URL, IP and hash (the catalog
+  holds package indicators only: 0 of 86,379 catalog lines are another type),
+  every curated campaign and the recent package indicators.
+- Not kept, and silent: the catalog (86,379 package indicators at this commit,
+  about nine times the bundle) is in neither the npm package, the Docker image
+  nor the Action; `feed refresh` downloads it. `THREAT_FEED_CATALOG_MISSING` is
+  `info` for `absent` (deliberately, PR 309: `medium` turned every fresh install
+  yellow), and `--min-severity low`, the Action's default, filters `info` out.
+  So a default Action run matched against the bundle alone and no part of the
+  report said so. README line "fully local/offline at scan time" and the MCP
+  `ioc_lookup` description over-claimed in the same direction.
+
+Fix in this change, severity unchanged on purpose:
+
+- `DetectionSetProvenance.catalog` (`consulted`, `entryCount`, `reason`), built
+  from the scanner's own catalog snapshot, rendered by every format whatever
+  the severity filter (text, Markdown in bold when not consulted, HTML, GitLab,
+  JUnit, CycloneDX properties; JSON and SARIF carry the object). Score, risk
+  level, badge and exit code do not move.
+- MCP `ioc_lookup`: `checkedAgainst.catalog` on every result, `coverageNote` on
+  a clean package verdict reached without the catalog, and the server
+  instructions tell agents to pass that caveat on.
+- README, `docs/mcp.md` and two dated "as shipped" notes in the design record
+  (severity table; catalog windows can hold indicators newer than the cutoff).
+
+Proof: 20 new tests in `catalog-coverage-visibility.test.ts`, red before the
+fix for the intended reason (15 of 20; the 5 green were the no-nag guard, the
+empty-catalog silence and three controls). Six cuts with a clean baseline and
+a green post-restore run: provenance record removed (5 red), shared line
+blanked (7), Markdown row dropped (3), MCP note silenced (2), and in the other
+direction the `absent` finding raised to `low` (2 red, including the no-nag
+guard). The sixth cut, dropping the scanner's snapshot argument, stays green:
+since v6.2.0 nested scanners reuse the scanner's feed instead of reloading, so
+the snapshot and `lastCatalogState()` cannot differ today. The argument is kept
+as defence in depth and is documented as such, not counted as tested.
+
+Not done here, open for the owner: a documented air-gapped route for the
+catalog (today only an undocumented internal HTTPS mirror via
+`feed refresh --url`, or copying a verified `.scg-cache/threat-catalog.json`
+from a connected machine on the same version, would work), and whether catalog
+windows should keep routing days-old intelligence out of the offline bundle.
+
+### PRs 326 and 327 merged
+
+- PR 327 (offline dependency-confusion tests): main merged in, the generated
+  MANIFEST regenerated, squash-merged as eadae5a after green CI.
+- PR 326 had committed eight files with CRLF line endings (the rest of the
+  repository is LF), which made whole files conflict with main. One commit
+  normalised them: with trailing carriage returns stripped from both sides the
+  diff is empty; one import line per file had a doubled CR, the trace of an
+  edit into an already converted file. The branch's diff against its base fell
+  from +27,610/-9,530 to +18,850/-770. The merge with main kept both sides of
+  every additive conflict (ioc-blocklist, threat-intel, campaigns tests,
+  catalog: 86,328 + 51 lines, no duplicates), placed main's CHANGELOG bullets
+  under the branch's Added section and regenerated every generated file. Full
+  suite on Linux 178 files / 4,601 tests, the same in CI; squash-merged as
+  f4665cb.
+- D-062: the drafts carried by PR 326 are on `main`, unreleased, and ship with
+  the next release. d5, d7 and d9 stay parked on `wip/cross-file-corroboration`
+  and `feat/workflow-dataflow-model`; neither branch may be deleted. Advisory
+  GHSA-pvhm-wc2r-q627 stays a draft until d9 ships.
+- A `.gitattributes` rule for `*.ts text eol=lf` would stop the CRLF commit
+  from recurring; not added here.
+
+### Visibility measurement (for the owner's question about falling downloads)
+
+Measured 2026-09-25 from public APIs; no change made anywhere.
+
+- npm reports 0 downloads for EVERY package on 2026-09-03, 09-07, 09-08,
+  09-15, 09-17, 09-22 and 09-24 (control: lodash, about 25 million a day, shows
+  the same zeros). On reporting days this package averaged 323 a day in
+  September, against 323 in July and 332 in August. The drop in the npm widget
+  and badge is the stats outage plus comparison with a release-heavy week in
+  late July.
+- Weekly downloads track the number of releases published that week
+  (correlation 0.89 over 27 weeks), and 62% of last week's downloads went to
+  versions under a week old: most volume is automated per-release fetching.
+- Adoption signal is small: 6 stars, 3 forks without later pushes, about 5
+  human views a day, and GitHub code search found no workflow outside the
+  maintainer's own organisations that uses the Action.
+- Discoverability gaps: npms.io does not index the package, no OpenSSF
+  Scorecard is published, the repository has no homepage URL set, and the
+  README's first runnable command is at line 129. The Marketplace listing is
+  current (v6.2.5).
+
 ## Merge gate review of PR 326 (2026-09-24) (claude-opus-5-5)
 
 The owner held the merge until the PR is certain. Three rounds of independent

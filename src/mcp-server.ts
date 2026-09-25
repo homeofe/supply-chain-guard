@@ -20,7 +20,15 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { scan } from "./scanner.js";
 import { scanNpmPackage } from "./npm-scanner.js";
-import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
+import {
+  loadThreatIntel,
+  lastCatalogState,
+  matchPackageIOC,
+  type CatalogState,
+  type FeedIOC,
+} from "./threat-intel.js";
+import { CATALOG_DIGEST } from "./catalog-digest.js";
+import type { DetectionSetCatalog } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import type { ScanReport, Severity } from "./types.js";
 
@@ -124,12 +132,16 @@ const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "ioc_lookup",
     description:
-      "Offline lookup against supply-chain-guard's bundled threat intelligence " +
-      "feed and known-bad version blocklist. No network access. Two modes: pass " +
+      "Offline lookup against supply-chain-guard's threat intelligence and known-bad " +
+      "version blocklist. No network access. It always consults the bundled indicators " +
+      "(recent and curated ones, including every domain, url, ip and hash); package " +
+      "indicators older than the bundle window are in a historical catalog that is only " +
+      "consulted once `supply-chain-guard feed refresh` has downloaded it. Two modes: pass " +
       "{ecosystem, name} to check a PACKAGE before installing/importing/recommending " +
       "it, or pass {indicator} to check a single domain/url/ip/hash observed in " +
       "code or logs. Returns a malicious/clean verdict with matched campaign and " +
-      "malware family details.",
+      "malware family details, and checkedAgainst.catalog says whether the catalog " +
+      "was consulted.",
     inputSchema: {
       type: "object",
       properties: {
@@ -260,13 +272,53 @@ interface IocMatch {
   firstSeen?: string;
 }
 
+interface CheckedAgainst {
+  feedEntries: number;
+  offline: true;
+  /** Whether the historical catalog was part of the indicators consulted. */
+  catalog: DetectionSetCatalog;
+}
+
 interface IocLookupResult {
   ecosystem: string;
   name: string;
   version: string | null;
   verdict: "malicious" | "clean";
   matches: IocMatch[];
-  checkedAgainst: { feedEntries: number; offline: true };
+  checkedAgainst: CheckedAgainst;
+  /** Present when a clean verdict was reached without the catalog. */
+  coverageNote?: string;
+}
+
+/**
+ * The catalog record for a lookup result (unreleased). `offline: true` alone
+ * used to be the whole answer, so an agent could not tell a clean verdict
+ * against every indicator from one against the bundled set only.
+ */
+export function catalogCoverageOf(state: CatalogState): DetectionSetCatalog {
+  const entryCount: number = CATALOG_DIGEST.entryCount;
+  return {
+    consulted: state.available,
+    entryCount,
+    ...(state.available ? {} : { reason: state.reason ?? "absent" }),
+  };
+}
+
+/**
+ * The caveat a clean PACKAGE verdict needs when the catalog was not consulted.
+ * Indicator lookups never need it: the catalog carries package entries only,
+ * so every domain, url, ip and hash is in the bundle.
+ */
+export function catalogCoverageNote(
+  verdict: "malicious" | "clean",
+  catalog: DetectionSetCatalog,
+): string | undefined {
+  if (verdict !== "clean" || catalog.consulted || catalog.entryCount === 0) return undefined;
+  return (
+    `Clean against the bundled indicators only: ${catalog.entryCount} historical catalog ` +
+    `indicators were not consulted (${catalog.reason ?? "absent"}). Run ` +
+    `"supply-chain-guard feed refresh" once, with network access, to include them.`
+  );
 }
 
 function runIocLookup(
@@ -314,13 +366,17 @@ function runIocLookup(
     }
   }
 
+  const verdict = matches.length > 0 ? "malicious" : "clean";
+  const catalog = catalogCoverageOf(lastCatalogState());
+  const coverageNote = catalogCoverageNote(verdict, catalog);
   return {
     ecosystem,
     name,
     version: version ?? null,
-    verdict: matches.length > 0 ? "malicious" : "clean",
+    verdict,
     matches,
-    checkedAgainst: { feedEntries: feed.length, offline: true },
+    checkedAgainst: { feedEntries: feed.length, offline: true, catalog },
+    ...(coverageNote ? { coverageNote } : {}),
   };
 }
 
@@ -339,7 +395,7 @@ interface IndicatorLookupResult {
   indicator: string;
   verdict: "malicious" | "clean";
   matches: IndicatorMatch[];
-  checkedAgainst: { feedEntries: number; offline: true };
+  checkedAgainst: CheckedAgainst;
 }
 
 /**
@@ -371,7 +427,11 @@ function runIndicatorLookup(indicator: string): IndicatorLookupResult {
     indicator,
     verdict: matches.length > 0 ? "malicious" : "clean",
     matches,
-    checkedAgainst: { feedEntries: feed.length, offline: true },
+    checkedAgainst: {
+      feedEntries: feed.length,
+      offline: true,
+      catalog: catalogCoverageOf(lastCatalogState()),
+    },
   };
 }
 
@@ -564,8 +624,10 @@ function buildInitializeResult(params: unknown): object {
     serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
     instructions:
       "Call ioc_lookup before installing or recommending any package (offline, " +
-      "instant). Use scan_directory to vet already-downloaded code and " +
-      "scan_npm_package to vet an npm package before adding it as a dependency.",
+      "instant). When a clean result carries coverageNote, tell the user the " +
+      "verdict covers the bundled indicators only. Use scan_directory to vet " +
+      "already-downloaded code and scan_npm_package to vet an npm package before " +
+      "adding it as a dependency.",
   };
 }
 
