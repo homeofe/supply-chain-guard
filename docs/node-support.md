@@ -239,7 +239,14 @@ installed by `scripts/install-publish-npm.sh` with `npm ci`. It used to be
 tarball against a known hash, in the job that holds the publish identity (OpenSSF
 Scorecard Pinned-Dependencies). The `publish-preflight` job runs the same script on
 the publish major for every pull request, so a broken pin fails a pull request
-instead of a tag.
+instead of a tag, and it runs `npm audit` over the pinned npm's bundled packages.
+
+The pin is **11.19.1**. Once the lockfile was committed, OSV (Scorecard
+Vulnerabilities) could see what 11.18.0 bundles: `brace-expansion`, `ip-address`,
+`tar` and `undici` versions with nine published advisories, four of them high.
+11.19.0, the npm Node 24 bundles, carries the same versions; 11.19.1 is the first
+release with all four fixed. 6.3.0 therefore moves two publish-lane variables, the
+Node major and the npm pin, as a deliberate exception to one per release.
 
 ## What is deliberately not governed here
 

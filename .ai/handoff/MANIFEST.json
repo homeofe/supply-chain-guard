@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790370619",
-    "timestamp": "2026-09-25T21:10:19Z",
-    "commit": "acd083c",
+    "session_id": "cli-1790371244",
+    "timestamp": "2026-09-25T21:20:44Z",
+    "commit": "a08cd65",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:64b0f41bc697b2ce6c2b38c16ebcdc1e2bbe331f998374025efb6ddbe34f5668",
-      "updated": "2026-09-25T21:09:57Z",
-      "lines": 12157,
-      "summary": "The owner noticed the README's \"scanned by supply-chain-guard\" badge while no"
+      "checksum": "sha256:80c7d57644416f262e79df7611cbc6cd63cf009143225edabb1c5623c3ac6b6d",
+      "updated": "2026-09-25T21:20:23Z",
+      "lines": 12189,
+      "summary": "The owner reported Scorecard Vulnerabilities at 9 right after PR 340. It had"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:79c64f52882c2d4f5fe91318c84a2fe92d30bd09e683212e90090e920fb5f29e",
-      "updated": "2026-09-25T21:10:19Z",
+      "updated": "2026-09-25T21:20:44Z",
       "lines": 90,
       "summary": "281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catal"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:db64b9119d97f8c29e7efe78458df7f6ff62d0eb4d62149193a3313308913132",
-      "updated": "2026-09-25T21:10:19Z",
+      "updated": "2026-09-25T21:20:44Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:bcf3350c6e3420809b960473ee59c7cc777cdb8e7ef26d405bd696cc5eef36f3",
-      "updated": "2026-09-25T21:10:19Z",
+      "updated": "2026-09-25T21:20:44Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-25T20:34:50Z",
+      "updated": "2026-09-25T21:18:33Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "The owner noticed the README's \\\"scanned by supply-chain-guard\\\" badge while no Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "The owner reported Scorecard Vulnerabilities at 9 right after PR 340. It had Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 141652,
-    "full_read": 151643
+    "manifest_plus_core": 142006,
+    "full_read": 151997
   }
 }
