@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790366366",
-    "timestamp": "2026-09-25T19:59:26Z",
-    "commit": "6ede5cf",
+    "session_id": "cli-1790367086",
+    "timestamp": "2026-09-25T20:11:26Z",
+    "commit": "2a7328e",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:850d1a797b4b85422654f2011ab1ad19356a9274bc39186182e2a6bcd808b0af",
-      "updated": "2026-09-25T19:59:02Z",
-      "lines": 12009,
+      "checksum": "sha256:384ca46fa5b653a831b46b3b3476432022b75c9867451d67ebd144cba8fb1a1b",
+      "updated": "2026-09-25T20:11:25Z",
+      "lines": 12022,
       "summary": "The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR)"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:79c64f52882c2d4f5fe91318c84a2fe92d30bd09e683212e90090e920fb5f29e",
-      "updated": "2026-09-25T19:59:26Z",
+      "updated": "2026-09-25T20:11:26Z",
       "lines": 90,
       "summary": "281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catal"
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:4da17d3268dda00b74a2c5b7fd3c6b4dcc73ef7505006fb739adac5d1f1e1522",
-      "updated": "2026-09-25T19:59:26Z",
+      "updated": "2026-09-25T20:11:26Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:db39d3abdfbd9d99c3b38fa7e175c168c6fc22bddf36ac206dfee90a96ee3a2d",
-      "updated": "2026-09-25T19:59:26Z",
+      "updated": "2026-09-25T20:11:26Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR) Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 139922,
-    "full_read": 149913
+    "manifest_plus_core": 140093,
+    "full_read": 150084
   }
 }

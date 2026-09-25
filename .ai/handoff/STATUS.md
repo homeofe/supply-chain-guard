@@ -28,11 +28,24 @@ Triage, measured rather than read:
 
 Mutation proof (cuts-cq, 15 cuts): baseline 47 passed, 14 cuts red on the
 intended test, post-restore 47 passed. The 15th, the SVG pattern's character
-classes, stays green on its own: the correlated matcher in
+classes, stayed green on its own, because the correlated matcher in
 `broad-gap-pattern-matchers.ts` is what decides `SVG_SCRIPT_INJECTION` in a
-`scan()`, and cutting its case-insensitive flag turns the upper-case test red.
-The pattern change is kept for consistency and to close alert 27; it is not
-the load-bearing half.
+`scan()`.
+
+**The SVG rule was far weaker than alert 27 said.** The PR's own CodeQL run
+raised a new alert (73, js/bad-tag-filter: `</script >` not matched) on the
+rewritten line. Probing eight SVG shapes through `scan()` showed the rule
+caught a script only when `<script>` and `</script>` were on ONE line: the
+core scan matches line by line and the matcher's gaps stop at LF, and a
+parity test even pinned the multi-line case as "no match". Multi-line and
+CDATA scripts (the normal shape), a self-closing `<script href=...>`,
+`</script >` and `<svg:script>` all raised nothing. The rule now reports the
+opening tag (optional namespace prefix, name lookahead), in the pattern and
+the matcher alike. Cuts (cuts-svg2, 5): restoring the exact previous rule
+turns 10 tests red (4 parity cases, all 6 new `scan()` shapes); dropping the
+prefix, the lookahead, the matcher-only lookahead (parity drift) or the
+case flag each go red on their own test. Baseline and post-restore 174
+passed.
 
 Open after merge: dismiss 35/36/37, then confirm on the next `main`
 analysis that the other 58 closed. If the 32 hostname alerts stay open,

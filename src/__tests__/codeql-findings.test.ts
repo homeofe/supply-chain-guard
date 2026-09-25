@@ -103,7 +103,7 @@ describe("C2 domains match only themselves", () => {
   });
 });
 
-describe("SVG script detection is case-insensitive", () => {
+describe("SVG script detection finds every script element", () => {
   const svgRules = async (body: string) => {
     const dir = tmp();
     fs.writeFileSync(path.join(dir, "logo.svg"), `<svg xmlns="http://www.w3.org/2000/svg">${body}</svg>\n`);
@@ -116,9 +116,23 @@ describe("SVG script detection is case-insensitive", () => {
     expect(await svgRules('<rect ONLOAD="alert(1)"/>')).toBeGreaterThan(0);
   });
 
+  // Each of these raised nothing while the rule needed <script> and </script>
+  // on one line (measured through scan() before the change).
+  it.each([
+    ["a multi-line script", "\n<script>\nalert(1)\n</script>\n"],
+    ["a CDATA script", '\n<script type="text/javascript"><![CDATA[\n  alert(1)\n]]></script>\n'],
+    ["an end tag with a space", "<script>alert(1)</script >"],
+    ["an end tag broken across lines", "<script>alert(1)</script\n>"],
+    ["a self-closing external script", '<script href="data:text/javascript,alert(1)"/>'],
+    ["a namespace-prefixed script", '<svg:script xmlns:svg="http://www.w3.org/2000/svg">alert(1)</svg:script>'],
+  ])("finds %s", async (_name, body) => {
+    expect(await svgRules(body)).toBeGreaterThan(0);
+  });
+
   it("still finds lower case, and stays quiet on a clean SVG", async () => {
     expect(await svgRules("<script>alert(1)</script>")).toBeGreaterThan(0);
     expect(await svgRules('<rect width="10" height="10"/>')).toBe(0);
+    expect(await svgRules("<text>&lt;script&gt; is escaped text</text>")).toBe(0);
   });
 });
 

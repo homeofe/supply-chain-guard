@@ -3845,13 +3845,20 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
   },
   {
     name: "svg-script-injection",
+    // The opening tag is the finding. In an .svg file a <script> element runs
+    // whether or not an end tag follows (<script href="..."/>), and the core
+    // scan applies this pattern one line at a time, so the old
+    // <script ...>...</script> form only ever saw a script written on a single
+    // line: a multi-line or CDATA script, the usual shape, raised nothing, and
+    // neither did "</script >" (CodeQL js/bad-tag-filter). An optional
+    // namespace prefix covers <svg:script>; the lookahead rejects longer
+    // element names (<scripts>, <script-x>).
     // Case-insensitive by character class, because the core scan runs without
     // the "i" flag. A standalone .svg is XML and only runs lowercase <script>,
-    // but the same file inlined into HTML is parsed case-insensitively, so
-    // <SCRIPT> and ONLOAD= evaded this rule (CodeQL js/bad-tag-filter). The
+    // but the same file inlined into HTML is parsed case-insensitively. The
     // correlated matcher below is built with caseInsensitive to stay identical.
     pattern:
-      "<[sS][cC][rR][iI][pP][tT][^>]*>[\\s\\S]*?</[sS][cC][rR][iI][pP][tT]>|\\b[oO][nN]\\w+\\s*=\\s*[\"']",
+      "<(?:[\\w.-]+:)?[sS][cC][rR][iI][pP][tT](?![\\w.:-])|\\b[oO][nN]\\w+\\s*=\\s*[\"']",
     description:
       "SVG file contains <script> tag or event handler. SVG files can execute JavaScript.",
     severity: "high",

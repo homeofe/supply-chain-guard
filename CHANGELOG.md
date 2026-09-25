@@ -523,8 +523,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     The part after the scope is now encoded as one path segment.
   - `IOC_KNOWN_C2_DOMAIN` built its regexes from the domain unescaped, so
     every `.` matched any character. Dots now match only a dot.
-  - SVG script injection missed upper case (`<SCRIPT>`, `ONLOAD=`). Both the
-    correlated matcher and the pattern are now case-insensitive.
+  - `SVG_SCRIPT_INJECTION` found a script only when `<script>` and
+    `</script>` sat on one line, because the core scan matches line by line.
+    A multi-line or CDATA script, the usual shape of a malicious SVG, raised
+    nothing, and neither did a self-closing `<script href=...>`, an end tag
+    with a space (`</script >`), a namespace prefix (`<svg:script>`) or upper
+    case. The rule now reports the opening tag, which in an SVG file runs
+    whether or not an end tag follows. CodeQL named the end-tag and case
+    gaps; the line-scope gap came out of measuring that fix through `scan()`.
   - Regular expressions that run over scanned file content could be driven
     into quadratic time by the scanned package itself, and at the 5 MB file
     limit that is minutes to hours per file (measured on Linux: 40 s for
