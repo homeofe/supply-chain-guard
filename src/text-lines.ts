@@ -60,12 +60,18 @@ export function blankXmlComments(text: string): string {
 }
 
 /**
- * Remove a trailing "  # comment" (a "#" preceded by whitespace) and the
- * whitespace before it. Same result as `line.replace(/\s+#.*$/, "")` on real
- * input, in linear time.
+ * Remove a trailing "  # comment" (a "#" preceded by a space or tab, the YAML
+ * and TOML rule) and the whitespace before it, in linear time. Same result as
+ * `line.replace(/[ \t]+#.*$/, "")` followed by `trimEnd()`, which
+ * property-parsers.test.ts checks on generated input.
+ *
+ * A "#" in column 0 is not a trailing comment, but it must not end the scan:
+ * the loop used to stop there (`i > 0` as its condition), so "#a #b" came back
+ * whole while the regex gives "#a". The property test found it.
  */
 export function stripHashComment(line: string): string {
-  for (let i = line.indexOf("#"); i > 0; i = line.indexOf("#", i + 1)) {
+  for (let i = line.indexOf("#"); i >= 0; i = line.indexOf("#", i + 1)) {
+    if (i === 0) continue;
     const prev = line.charCodeAt(i - 1);
     if (prev === 0x20 || prev === 0x09) return line.slice(0, i).trimEnd();
   }

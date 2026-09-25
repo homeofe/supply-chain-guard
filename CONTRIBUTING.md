@@ -198,6 +198,9 @@ nothing for `exclude` to remove.
 - All new features need tests
 - All new patterns need test cases (both positive and negative)
 - False-positive tests are valuable (ensure legitimate code isn't flagged)
+- Code that parses untrusted text (manifests, lockfiles, workflows) also gets a
+  property-based test in `src/__tests__/property-parsers.test.ts` (fast-check).
+  A counterexample it finds becomes a named regression case in the same file.
 - Run `npm test` before submitting
 
 ### Project Structure

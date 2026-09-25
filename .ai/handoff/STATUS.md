@@ -1,3 +1,26 @@
+## Property-based tests for the parsers (2026-09-25) (claude-opus-5-5)
+
+Owner-approved answer to Scorecard Fuzzing 0 and the bestpractices.dev dynamic
+analysis criterion.
+
+- `fast-check` 4.10.2 added as an exact-pinned devDependency (it pulls
+  `pure-rand` 8.4.2, no further dependencies; both carry npm provenance and
+  both scan clean with this tool's own `npm` command). 4.10.2 is six days old;
+  it is the version that was scanned, so it was preferred over 4.10.1.
+- `src/__tests__/property-parsers.test.ts`: the linear-time helpers in
+  `src/text-lines.ts` against the regexes they replaced, `parseWorkflow` and
+  `stripYamlComments` total on arbitrary input, and `isoToEpoch` round trips and
+  rejects rolled-over dates. Fixed seed (reproducible CI), 1,000 runs per
+  property; `SCG_FC_SEED` / `SCG_FC_RUNS` to explore.
+- **It found a real divergence on its first run.** `stripHashComment` stopped
+  scanning when the first `#` was in column 0 (loop condition `i > 0`), so
+  "#a #b" kept its trailing comment while the regex it replaced gives "#a"
+  (shrunk counterexample "#\t#"). Fixed, with named regression cases. Only
+  lines that already start with `#` are affected, so no scan result changes.
+- Also noticed, not changed: `supply-chain-guard npm <name>` scans only the
+  latest version and rejects `name@version` with "Package not found". A version
+  argument would make pre-adoption vetting of a pinned version possible.
+
 ## OpenSSF Scorecard hardening (2026-09-25) (claude-opus-5-5)
 
 The first published Scorecard (run after PR 334) was 6.2/10. The owner asked
