@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.2.5",
-  "entryCount": 8714,
-  "generatedAt": "2026-09-24T00:00:00.000Z",
+  "entryCount": 8789,
+  "generatedAt": "2026-09-25T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -71359,6 +71359,606 @@
       "campaign": "MemTensor sckit worm",
       "source": "SafeDep + Aikido MemTensor sckit write-ups",
       "firstSeen": "2026-09-23"
+    },
+    {
+      "type": "package",
+      "value": "shoplist-app@993.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9gqc-gwvw-4228, MAL-2026-17185 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "shoplist-app@99.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9gqc-gwvw-4228, MAL-2026-17185 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "@airbnb-extended/typescript-config@99.9.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jc5g-qvp3-6hrx, MAL-2026-17184 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:tego-managed-agents-test@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hph5-88qq-frqw, MAL-2026-17183 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "app-sca-info-banking@0.0.24",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wfg5-3jm7-5p8w, MAL-2026-17182 (amazon-inspector+ossf-package-analysis)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:reqparser@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3gf2-53hg-f395, MAL-2026-17181 (kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:reqparser@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-3gf2-53hg-f395, MAL-2026-17181 (kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "secure-env3@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w2g5-xcc6-p474, MAL-2026-17178 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "wallet-connect-adapter@1.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-39rm-rv2w-366r, MAL-2026-17179 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "n8n-nodes-moonlet-helpers@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hh4f-fhfw-7vgw, MAL-2026-17176 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "n8n-nodes-moonlet-helpers@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hh4f-fhfw-7vgw, MAL-2026-17176 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "chromatitle-js@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-93mr-5j8f-6p3w, MAL-2026-17174 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "n8n-nodes-moonlet-utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-f77h-w3rc-2c74, MAL-2026-17177 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:my-private-pkg@99.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v7x9-wx5x-qrpp, MAL-2026-17180 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:my-private-pkg@0.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v7x9-wx5x-qrpp, MAL-2026-17180 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:my-private-pkg@99.11.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v7x9-wx5x-qrpp, MAL-2026-17180 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "better-dotenv3@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qx8m-mvxg-49m3, MAL-2026-17172 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "n8n-nodes-flowstats@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-wm7h-qmp4-782c, MAL-2026-17175 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "agency-test-exercise@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qwj9-hfhg-j6vh, MAL-2026-17170 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "chromatitle@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7pgp-qm32-53rp, MAL-2026-17173 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "agency-testts@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-75mh-8gwp-9cvf, MAL-2026-17171 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "@alphaspace/core@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5qqj-qfpp-jfqw, MAL-2026-17169 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "@alphaspace/core@99.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5qqj-qfpp-jfqw, MAL-2026-17169 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "@alphaspace/core@99.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5qqj-qfpp-jfqw, MAL-2026-17169 (amazon-inspector)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "pypi:vercel-runtime-python@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvc2-927p-99h8, MAL-2026-17168 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:vercel-runtime-python@99.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvc2-927p-99h8, MAL-2026-17168 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:vercel-runtime-python@100.99.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvc2-927p-99h8, MAL-2026-17168 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:vercel-runtime-python@100.100.99",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fvc2-927p-99h8, MAL-2026-17168 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.13",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.14",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.15",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.16",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.17",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.18",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.19",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.20",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.21",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.22",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.23",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.25",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.26",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.27",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.32",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.28",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.29",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "pypi:prosocks@1.0.30",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6v7p-c53r-646f, MAL-2026-17167 (amazon-inspector+kam193)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-15@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fj2x-7537-68xm, MAL-2026-17161 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "eslint-config-compact-base@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-ghfm-6qx4-q8p4, MAL-2026-17157 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-14@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7r88-5m7v-8m5w, MAL-2026-17160 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "aliftech-ui@99.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-648v-rwj3-6j2f, MAL-2026-17156 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-11@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2v58-3f75-j4jv, MAL-2026-17158 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "@osl-design/react@9.9.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-qx4v-776h-xcpw, MAL-2026-17155 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-13@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-539g-4gx9-g555, MAL-2026-17159 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "@nf-addons/am-global-header@9.9.10",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hj7v-p563-fffq, MAL-2026-17154 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "@birbalo/aliftech-ui@99.9.9",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-383w-gxv7-cg2f, MAL-2026-17153 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "simple-date-formatter-new-16@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-j933-m42r-pjvp, MAL-2026-17162 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "building-build@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-v37c-88px-mm6h, MAL-2026-17164 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "c2-client@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h7qv-4h6m-4g2x, MAL-2026-17165 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "cache-swipper@3.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-55m7-mqpg-rv53, MAL-2026-17166 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "cache-swipper@3.5.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-55m7-mqpg-rv53, MAL-2026-17166 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "analytics-widget@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xpv4-prm5-w6gr, MAL-2026-17163 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "analytics-widget@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xpv4-prm5-w6gr, MAL-2026-17163 (amazon-inspector)",
+      "firstSeen": "2026-09-24"
+    },
+    {
+      "type": "package",
+      "value": "com.apple.unityplugin.storekit@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6r46-f382-x53p, MAL-2026-16477 (amazon-inspector)",
+      "firstSeen": "2026-09-23"
+    },
+    {
+      "type": "package",
+      "value": "feed-widget-helper@1.0.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fgrp-3g95-g56v, MAL-2026-16332 (amazon-inspector)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "feed-widget-helper@1.0.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fgrp-3g95-g56v, MAL-2026-16332 (amazon-inspector)",
+      "firstSeen": "2026-09-21"
     }
   ]
 }

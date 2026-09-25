@@ -33,6 +33,11 @@
       "since": "2026-09-17",
       "until": "2026-09-17",
       "reason": "One day of the GitHub Advisory Database bulk migration of the historical OpenSSF malicious-packages corpus. Historical by content (11393 of 11695 entries carry MAL-2025 ids) but recent by publication, so the date rule alone reads it as fresh. The neighbouring days carry 34 and 23 entries. See docs/threat-feed-bulk-backfill-strategy.md section 1."
+    },
+    {
+      "since": "2026-09-22",
+      "until": "2026-09-22",
+      "reason": "One day of the ReversingLabs RubyGems bulk publication into OpenSSF malicious-packages: 608 records (MAL-2026-16545 to MAL-2026-17152, RLMA-2026-06682 to RLMA-2026-08590) all published between 16:05:40Z and 16:31:51Z, mostly bundler typosquats with random 1.0.N versions, and 31 of 31 sampled gems already removed from rubygems.org. A backlog by content but recent by publication, so the date rule alone reads it as fresh. The same day also carries 63 npm and NuGet dependency-confusion probes, which this window sends to the catalog as well, where they are enforced after feed refresh. At the next migration it also moves the 57 entries already bundled with that firstSeen; on 2026-09-25 no test and no README line named any of them. See docs/threat-feed-bulk-backfill-strategy.md section 1."
     }
   ]
 }
