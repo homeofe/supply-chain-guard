@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- 199 package indicators from the GitHub Advisory Database malware feed and
+  the OpenSSF malicious-packages index: 33 in the bundle and 166 in the
+  catalog. The catalog-bound entries all carry a `firstSeen` before the bundle
+  cutoff: 164 are version pins across 30 `epic-*` names from 2022 and 2025
+  advisories that were updated this week, plus `tailwind-contact-forms@0.5.1`
+  and `golaaa@2.0.3`. The 8 bare npm names (five `@baanx/*`, two
+  `@insiderintelligence/*`, `internallib_v497`) were probed against the
+  registry first and every one resolves to an npm security holding package.
+- MemTensor sckit Go worm (September 2026): the legitimate
+  `@memtensor/memos-cloud-openclaw-plugin` (0.1.21, 0.1.23, 0.1.25) and PyPI
+  `memoryos` (2.0.34) were published from a compromised release pipeline with
+  a credential-stealing, self-propagating Go implant. Version pins in
+  `KNOWN_BAD_NPM_VERSIONS` / `KNOWN_BAD_PYPI_VERSIONS`, six per-victim C2
+  subdomains of `skyleen[.]fr`, the C2 IP `139[.]84[.]223[.]178`
+  (single-source) and the six platform implant SHA-256 digests, all bundled
+  under the `sckit` family. The clean 0.1.22 and 0.1.24 releases stay
+  unflagged, and the account that pushed the releases is not listed because
+  it is a long-standing member account of the victim organisation.
+- 4,144 package indicators from the GitHub Advisory Database malware feed and
+  the OpenSSF malicious-packages index: 75 in the bundle and 4,069 in the
+  catalog. 3,947 are RubyGems records that ReversingLabs published into
+  OpenSSF. 1,090 of those (608 names, mostly `bundler` typosquats, all removed
+  from rubygems.org in a sample of 31) come from one 26-minute bulk
+  publication on 2026-09-22, and a new `catalogWindows` entry for that day
+  routes them to the catalog. The window also routes that day's 63 npm and
+  NuGet dependency-confusion probes to the catalog. Catalog entries are
+  enforced after `feed refresh`. The one bare npm name,
+  `ubiquiti-agents-link-mcp`, was probed first and resolves to an npm security
+  holding package.
+
 ## [6.2.5] - 2026-09-23
 
 ### Added
