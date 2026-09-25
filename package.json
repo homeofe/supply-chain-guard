@@ -1,6 +1,6 @@
 {
   "name": "supply-chain-guard",
-  "version": "6.2.5",
+  "version": "6.3.0",
   "mcpName": "io.github.homeofe/supply-chain-guard",
   "description": "Open-source supply-chain security scanner, local and offline. Matches known-malicious packages, extensions, plugins, providers, container images and CI actions in 15 ecosystems, including transitive lockfile dependencies at any depth, and detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 350+ threat indicators. Generates CycloneDX 1.6 SBOMs, grades SLSA provenance (in-toto/DSSE structural validation), and correlates findings into attack-chain incidents.",
   "main": "dist/index.js",
@@ -97,7 +97,7 @@
   "devDependencies": {
     "@babel/parser": "^8.0.6",
     "@elvatis_com/aahp": "3.12.0",
-    "@types/node": "^26.6.1",
+    "@types/node": "^26.6.2",
     "@vitest/coverage-v8": "^5.0.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",

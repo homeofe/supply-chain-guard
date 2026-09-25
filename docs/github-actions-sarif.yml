@@ -39,7 +39,7 @@ jobs:
       # file by commit SHA and let Dependabot keep them current.
       - name: Run supply-chain-guard
         id: scg
-        uses: homeofe/supply-chain-guard@v6.2.5
+        uses: homeofe/supply-chain-guard@v6.3.0
         with:
           format: sarif
           comment-on-pr: false

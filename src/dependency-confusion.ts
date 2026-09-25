@@ -17,7 +17,7 @@ import { readOptionalUtf8File } from "./pattern-scanner.js";
 import { isJsonObject } from "./json-utils.js";
 import { encodeNpmPackageName } from "./publishing-anomaly-detector.js";
 
-const TOOL_VERSION = "6.2.5";
+const TOOL_VERSION = "6.3.0";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_DOWNLOADS_API = "https://api.npmjs.org/downloads/point/last-week";
 const PYPI_REGISTRY = "https://pypi.org/pypi";

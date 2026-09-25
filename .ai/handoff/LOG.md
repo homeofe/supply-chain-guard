@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-09-25] v6.3.0
+
+Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a configuration pulls in, from required_providers...
+
+Full notes: CHANGELOG.md, section [6.3.0].
+
+---
+
 ## [2026-09-23] v6.2.5
 
 281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catalog. The catalog-bound entries all carry a...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.1.2].
 Threat-intelligence batch for 2026-09-14: 1 new package IOC and 3 atomic indicators. pypi:chroma-client version 0.5.7 is the fifth package of the 2026-09-openaii PyPI typosquat campaign, reported...
 
 Full notes: CHANGELOG.md, section [6.1.1].
-
----
-
-## [2026-09-13] v6.1.0
-
-Two-tier gated verdict and composite risk score behind scan --two-tier. Tier 1 is a binary gate on confirmed malware signatures, a complete ingress + access + exfiltration attack chain tied to...
-
-Full notes: CHANGELOG.md, section [6.1.0].

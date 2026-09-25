@@ -8,6 +8,7 @@ Open-source supply-chain security scanner that runs locally and offline. It matc
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![CI](https://img.shields.io/github/actions/workflow/status/homeofe/supply-chain-guard/ci.yml?branch=main&label=CI&logo=github)](https://github.com/homeofe/supply-chain-guard/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/homeofe/supply-chain-guard/badge)](https://scorecard.dev/viewer/?uri=github.com/homeofe/supply-chain-guard)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14934/badge)](https://www.bestpractices.dev/projects/14934)
 [![AAHP Verify](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml/badge.svg)](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml)
 [![AAHP conformant](https://img.shields.io/badge/AAHP-conformant-5b47d6)](https://github.com/homeofe/AAHP)
 [![Last commit](https://img.shields.io/github/last-commit/homeofe/supply-chain-guard?logo=github)](https://github.com/homeofe/supply-chain-guard/commits/main)
@@ -33,7 +34,7 @@ Gate every pull request:
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: homeofe/supply-chain-guard@v6.2.5
+- uses: homeofe/supply-chain-guard@v6.3.0
 ```
 
 Let your AI coding agent check a package before it installs it (MCP):
@@ -204,7 +205,7 @@ Run the scanner as a [pre-commit](https://pre-commit.com) hook (Python-ecosystem
 ```yaml
 repos:
   - repo: https://github.com/homeofe/supply-chain-guard
-    rev: v6.2.5
+    rev: v6.3.0
     hooks:
       - id: supply-chain-guard
 ```
@@ -236,7 +237,7 @@ The hook scans the repository root on every commit and fails on high or critical
 Run the scanner without a Node toolchain via the official multi-arch image (linux/amd64, linux/arm64), published to GHCR on every release tag:
 
 ```bash
-docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.2.5 scan /scan
+docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.0 scan /scan
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
@@ -990,7 +991,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: homeofe/supply-chain-guard@v6.2.5
+      - uses: homeofe/supply-chain-guard@v6.3.0
         with:
           fail-on: critical
           comment-on-pr: true
@@ -1078,7 +1079,7 @@ two are never confused. If a deliberately frozen rule set is the intent, exclude
 the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.2.5
+- uses: homeofe/supply-chain-guard@v6.3.0
   with:
     exclude-rules: THREAT_FEED_STALE
 ```
@@ -1146,7 +1147,7 @@ preceding `feed refresh` in the workflow does not count. `catalog: required`
 on the Action therefore needs:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.2.5
+- uses: homeofe/supply-chain-guard@v6.3.0
   with:
     refresh-catalog: true
 ```
@@ -1157,7 +1158,7 @@ setting rather than firing on every scan. If scanning against the bundled set
 alone is the intent, exclude the rule by name:
 
 ```yaml
-- uses: homeofe/supply-chain-guard@v6.2.5
+- uses: homeofe/supply-chain-guard@v6.3.0
   with:
     exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```
