@@ -15,6 +15,7 @@ import type { Finding, ScanReport, ScanSummary, Severity } from "./types.js";
 import { SEVERITY_SCORES } from "./types.js";
 import { readOptionalUtf8File } from "./pattern-scanner.js";
 import { isJsonObject } from "./json-utils.js";
+import { encodeNpmPackageName } from "./publishing-anomaly-detector.js";
 
 const TOOL_VERSION = "6.2.5";
 const NPM_REGISTRY = "https://registry.npmjs.org";
@@ -539,10 +540,9 @@ function buildRecommendation(result: DependencyResult): string {
  * Fetch package metadata from the npm registry.
  */
 async function fetchRegistryInfo(packageName: string): Promise<NpmRegistryInfo> {
-  // npm registry expects scoped packages as @scope%2Fname
-  const encodedName = packageName.startsWith("@")
-    ? `@${packageName.slice(1).replace("/", "%2F")}`
-    : encodeURIComponent(packageName);
+  // npm registry expects scoped packages as @scope%2Fname; see
+  // encodeNpmPackageName for why every character after the "@" is encoded.
+  const encodedName = encodeNpmPackageName(packageName);
 
   const url = `${NPM_REGISTRY}/${encodedName}`;
 

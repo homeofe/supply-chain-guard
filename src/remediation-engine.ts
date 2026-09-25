@@ -188,6 +188,27 @@ export function generateRemediations(findings: Finding[]): Remediation[] {
 }
 
 /**
+ * The action and ref of an unpinned action reference.
+ *
+ * GHA_UNPINNED_ACTION findings carry `owner/repo[/path]@ref` in `match`
+ * (github-actions-scanner.ts), without the `uses:` key. The old expression
+ * `/uses:\s*([^@]+)@(\S+)/` required that key, so no real finding ever got a
+ * fix suggestion; only a hand-written test input did. It was also quadratic on
+ * a long run of spaces (CodeQL js/polynomial-redos). An optional leading
+ * `uses:` is still accepted. A match that truncateMatch cut short (it ends in
+ * "...") yields nothing rather than a suggestion built on a clipped ref.
+ */
+export function parseUsesRef(match: string): { action: string; ref: string } | null {
+  if (match.endsWith("...")) return null;
+  const text = match.replace(/^\s*(?:-\s*)?uses:\s*/, "");
+  const at = text.indexOf("@");
+  if (at <= 0) return null;
+  const action = text.slice(0, at).trim();
+  const ref = /^\S+/.exec(text.slice(at + 1))?.[0];
+  return action && ref ? { action, ref } : null;
+}
+
+/**
  * Generate fix suggestions for automatable remediations.
  */
 export function generateFixSuggestions(findings: Finding[]): FixSuggestion[] {
@@ -195,13 +216,13 @@ export function generateFixSuggestions(findings: Finding[]): FixSuggestion[] {
 
   for (const f of findings) {
     if (f.rule === "GHA_UNPINNED_ACTION" && f.match) {
-      const match = f.match.match(/uses:\s*([^@]+)@(\S+)/);
-      if (match) {
+      const parsed = parseUsesRef(f.match);
+      if (parsed) {
         fixes.push({
           targetFile: f.file ?? ".github/workflows/*.yml",
           changeType: "replace",
-          before: `uses: ${match[1]}@${match[2]}`,
-          after: `uses: ${match[1]}@<commit-sha> # ${match[2]}`,
+          before: `uses: ${parsed.action}@${parsed.ref}`,
+          after: `uses: ${parsed.action}@<commit-sha> # ${parsed.ref}`,
           explanation: "Pin action to commit SHA to prevent supply-chain attacks via mutable tags.",
         });
       }

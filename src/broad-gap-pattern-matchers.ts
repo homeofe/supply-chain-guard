@@ -2,6 +2,7 @@ import type {
   CorrelatedPatternMatch,
   CorrelatedPatternMatcher,
 } from "./types.js";
+import { escapeRegExp } from "./text-lines.js";
 
 const MAX_EVIDENCE_CHARS = 240;
 
@@ -41,14 +42,12 @@ interface GapSpec {
 }
 
 const GAP_DOT: GapSpec = { barrierMask: LF | DOT_TERMINATOR };
-const GAP_LINE: GapSpec = { barrierMask: LF };
 const GAP_SEMICOLON: GapSpec = { barrierMask: LF | SEMICOLON };
 const GAP_QUOTES: GapSpec = { barrierMask: LF | DOUBLE_QUOTE | SINGLE_QUOTE };
 const GAP_DOUBLE_QUOTE: GapSpec = { barrierMask: LF | DOUBLE_QUOTE };
 const GAP_RIGHT_PAREN: GapSpec = { barrierMask: LF | RIGHT_PAREN };
 const GAP_RIGHT_BRACE: GapSpec = { barrierMask: LF | RIGHT_BRACE };
 const GAP_BACKTICK: GapSpec = { barrierMask: LF | BACKTICK };
-const GAP_RIGHT_ANGLE: GapSpec = { barrierMask: LF | RIGHT_ANGLE };
 const GAP_QUOTES_ONE: GapSpec = {
   barrierMask: GAP_QUOTES.barrierMask,
   minChars: 1,
@@ -877,10 +876,6 @@ function regexConstants(content: string): Map<string, { kind: string; body: stri
   return memo.regexConstants;
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[$]/g, "\\$");
-}
-
 /**
  * Brace depth never drops below zero and no nested function starts. Braces in
  * strings, templates and comments are skipped, so a `"{"` cannot balance the
@@ -919,7 +914,9 @@ function staysInSameFunction(segment: string, minDepth: number): boolean {
 }
 
 function isReassigned(segment: string, id: string): boolean {
-  const name = escapeRegex(id);
+  // A JavaScript identifier, so "$" was the only metacharacter it could hold
+  // and escaping just that was correct; the shared helper removes the question.
+  const name = escapeRegExp(id);
   return new RegExp(
     String.raw`(?<![\w$.])${name}\s*(?:(?:[-+*/%&|^]|\*\*|<<|>>>?|\?\?|&&|\|\|)?=(?![=>])|\+\+|--)|(?:\+\+|--)\s*${name}(?![\w$])|\b(?:of|in)\s+${name}\b|(?:let|const|var)\s+${name}(?![\w$])`,
   ).test(segment);
@@ -1239,17 +1236,19 @@ export function createCoreBroadGapMatchers(
     }]),
     SVG_SCRIPT_INJECTION: makeOrderedEventMatcher([
       {
-        tokens: ["<script", ">", String.raw`</script>`],
-        gaps: [GAP_RIGHT_ANGLE, GAP_LINE],
+        // The opening tag alone: see the svg-script-injection entry in
+        // patterns.ts for why the end tag is no longer required.
+        tokens: [String.raw`<(?:[\w.-]+:)?script(?![\w.:-])`],
+        gaps: [],
         priority: 0,
-        finalMode: "first",
       },
       {
         tokens: [String.raw`\bon\w+${WS0}=${WS0}["']`],
         gaps: [],
         priority: 1,
       },
-    ]),
+    // Case-insensitive, matching the pattern's character classes.
+    ], true),
     IAC_HARDCODED_SECRET: (content) =>
       iacHardcodedSecretMatcher(content, isLikelyRealSecretValue),
     DEAD_DROP_DNS_TXT: mergeAlternativeMatchers([

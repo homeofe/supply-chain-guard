@@ -40,7 +40,22 @@ export function isPythonManifest(relativePath: string): boolean {
   if (basename === "pyproject.toml") return true;
   if (!basename.toLowerCase().endsWith(".txt")) return false;
   if (parts[parts.length - 2]?.toLowerCase() === "requirements") return true;
-  return /^(?:[\w.-]*[-_.])?(?:requirements|constraints)(?:[-_.][\w.-]*)?\.txt$/i.test(basename);
+  // Every character is in [\w.-] and the stem has "requirements" or
+  // "constraints" as one of its -/_/. separated parts: the linear form of
+  // /^(?:[\w.-]*[-_.])?(?:requirements|constraints)(?:[-_.][\w.-]*)?\.txt$/i,
+  // which backtracked quadratically (CodeQL js/polynomial-redos; a basename is
+  // at most 255 characters, so it was never slow in practice).
+  // property-parsers.test.ts keeps the old expression as the oracle.
+  // The character check runs on the original name: lowercasing first would let
+  // a non-ASCII letter such as the Kelvin sign become an ASCII "k" and pass.
+  if (!/^[\w.-]+\.txt$/i.test(basename)) return false;
+  return basename
+    .slice(0, -4)
+    .split(/[-_.]/)
+    .some((part) => {
+      const p = part.toLowerCase();
+      return p === "requirements" || p === "constraints";
+    });
 }
 
 /**

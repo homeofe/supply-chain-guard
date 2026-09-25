@@ -106,13 +106,17 @@ const INVISIBLE_ESCAPE_REGEX =
   /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF\u00AD\u034F\u061C\u180E]/g;
 
 /** Download-and-execute chains (shell, PowerShell, base64-decode pipe). */
-const DOWNLOAD_EXEC_REGEXES: RegExp[] = [
+export const DOWNLOAD_EXEC_REGEXES: RegExp[] = [
   // curl/wget piped into a shell
   /\b(?:curl|wget)\b[^\n|]*\|[^\n|]*\b(?:sudo\s+)?(?:bash|sh|zsh|dash)\b/i,
   // PowerShell: iwr/irm piped into iex
   /\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|]*\|[^\n|]*\b(?:iex|invoke-expression)\b/i,
-  // PowerShell: iex(iwr ...)
-  /\b(?:iex|invoke-expression)\s*\(\s*(?:\(?\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i,
+  // PowerShell: iex(iwr ...). `\s*(?:\(\s*)?` after the paren, not
+  // `\s*(?:\(?\s*)?`: the same strings, but in the old form a run of spaces
+  // could be split between two quantifiers in every possible way, which is
+  // quadratic (CodeQL js/polynomial-redos; property-parsers.test.ts checks the
+  // two agree).
+  /\b(?:iex|invoke-expression)\s*\(\s*(?:\(\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i,
   // base64 -d | sh
   /\bbase64\s+(?:-d|-D|--decode)\b[^\n|]*\|[^\n|]*\b(?:bash|sh|zsh|dash)\b/i,
 ];
@@ -137,8 +141,13 @@ const NEGATION_REGEX =
 const HOOK_EVAL_REGEX = /\beval\b/;
 const HOOK_BASE64_REGEX =
   /\bbase64\s+(?:-d|-D|--decode)\b|\batob\s*\(|frombase64string/i;
-const HOOK_SHELL_RC_WRITE_REGEX =
-  /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
+// The path class excludes ">" as well. That changes no result: a path holding
+// a ">" also matches from that ">" onward, since ">" is itself a start. But it
+// stops every ">" of a long ">>>..." run rescanning the same path to the end
+// of the line, which was quadratic (CodeQL js/polynomial-redos;
+// property-parsers.test.ts keeps the old expression as the oracle).
+export const HOOK_SHELL_RC_WRITE_REGEX =
+  /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&>]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
 
 // TODO(v2): skill impersonation heuristic - frontmatter/name containing
 // claude|anthropic|openai|copilot while the body downloads binaries. Left out

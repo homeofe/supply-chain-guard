@@ -14,6 +14,7 @@
 
 import { createHash } from "node:crypto";
 import type { FeedIOC } from "./threat-intel.js";
+import { trimLeading, trimTrailing } from "./text-lines.js";
 
 /** Ecosystem-prefix (feed) -> OSV ecosystem name. Unlisted prefixes are skipped. */
 const OSV_ECOSYSTEMS: Record<string, string> = {
@@ -79,11 +80,8 @@ export function parsePackageValue(
 /** Stable, collision-resistant OSV id for a package IOC. */
 function osvId(ecosystem: string, name: string, version?: string): string {
   const canonical = `${ecosystem}:${name}@${version ?? "*"}`;
-  const slug = `${ecosystem}-${name}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+  const dashed = `${ecosystem}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const slug = trimTrailing(trimLeading(dashed, "-"), "-").slice(0, 48);
   const hash = createHash("sha256").update(canonical).digest("hex").slice(0, 8);
   return `SCG-MAL-${slug}-${hash}`.toUpperCase();
 }

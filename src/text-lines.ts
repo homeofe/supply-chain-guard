@@ -97,3 +97,13 @@ export function trimLeading(text: string, chars: string): string {
   while (start < text.length && chars.includes(text[start]!)) start++;
   return text.slice(start);
 }
+
+/**
+ * Escape every regular-expression metacharacter, so `value` matches only
+ * itself inside `new RegExp(...)`. The one helper for this: hand-rolled
+ * partial escapes (only "." here, only "$" there) were correct for the values
+ * they happened to see and wrong for the next one, and CodeQL flagged each.
+ */
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

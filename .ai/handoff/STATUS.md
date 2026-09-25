@@ -1,3 +1,57 @@
+## CodeQL findings triaged and fixed (2026-09-25) (claude-opus-5-5)
+
+The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR)
+raised 61 open alerts. The owner chose "triage and fix first, then release",
+so v6.3.0 waits for this PR.
+
+Triage, measured rather than read:
+
+- **Real, detection-changing:** lockfile registry check by string prefix
+  (alerts 38/39), scoped package name encoded only at its first `/` (28, 31,
+  34), C2 domain regexes built unescaped (33 plus the 32
+  incomplete-hostname-regexp alerts, which all point at the domain strings
+  that flow into that one `new RegExp`), SVG script detection lower case only
+  (27).
+- **ReDoS (11 to 26):** measured on openclaw with CodeQL's own attack
+  strings; the benchmark classifies by the growth ratio per doubling. Each is
+  rewritten; the ones that keep behaviour have a differential fast-check
+  test against the old regex, and 13 timing tests run them on 5 MiB.
+- **Found along the way:** `generateFixSuggestions` never produced an
+  unpinned-action suggestion for a real finding (it required `uses:`, which
+  the finding's `match` never carries). `parseRepositoryField` dropped a
+  repository named like a host (`owner/github.com`).
+- **False positives, to dismiss after merge with a written reason:** 35
+  (`\\|` in a Markdown table cell renders as a literal pipe; checked with the
+  GitHub markdown API, no cell split), 36 and 37 (the `cmd.exe` line of
+  `scg install` on Windows: allowlisted command, every argument quoted and
+  double-escaped).
+
+Mutation proof (cuts-cq, 15 cuts): baseline 47 passed, 14 cuts red on the
+intended test, post-restore 47 passed. The 15th, the SVG pattern's character
+classes, stayed green on its own, because the correlated matcher in
+`broad-gap-pattern-matchers.ts` is what decides `SVG_SCRIPT_INJECTION` in a
+`scan()`.
+
+**The SVG rule was far weaker than alert 27 said.** The PR's own CodeQL run
+raised a new alert (73, js/bad-tag-filter: `</script >` not matched) on the
+rewritten line. Probing eight SVG shapes through `scan()` showed the rule
+caught a script only when `<script>` and `</script>` were on ONE line: the
+core scan matches line by line and the matcher's gaps stop at LF, and a
+parity test even pinned the multi-line case as "no match". Multi-line and
+CDATA scripts (the normal shape), a self-closing `<script href=...>`,
+`</script >` and `<svg:script>` all raised nothing. The rule now reports the
+opening tag (optional namespace prefix, name lookahead), in the pattern and
+the matcher alike. Cuts (cuts-svg2, 5): restoring the exact previous rule
+turns 10 tests red (4 parity cases, all 6 new `scan()` shapes); dropping the
+prefix, the lookahead, the matcher-only lookahead (parity drift) or the
+case flag each go red on their own test. Baseline and post-restore 174
+passed.
+
+Open after merge: dismiss 35/36/37, then confirm on the next `main`
+analysis that the other 58 closed. If the 32 hostname alerts stay open,
+CodeQL did not recognise `escapeRegExp` as a sanitizer, and they are
+dismissed as fixed-in-code with a pointer to `c2DomainRegexes()`.
+
 ## LOG.md back on the AAHP rule (2026-09-25) (claude-opus-5-5)
 
 The owner noticed `LOG.md` listed far more than the 10 entries the AAHP

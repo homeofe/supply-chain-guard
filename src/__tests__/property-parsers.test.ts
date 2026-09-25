@@ -8,9 +8,21 @@ import {
   stripHashComment,
   trimTrailing,
   trimLeading,
+  escapeRegExp,
 } from "../text-lines.js";
 import { parseWorkflow, stripYamlComments } from "../workflow-ast.js";
 import { isoToEpoch } from "../../scripts/feed-partition.mjs";
+import { stripBase64DataUris } from "../entropy.js";
+import { escapeCmdShellArg } from "../install-guard.js";
+import {
+  hasDownloadExecChain,
+  mentionsHostRuntime,
+  mentionsHostRuntimePath,
+} from "../install-hook-scanner.js";
+import { classifyFileSurface } from "../internal-disclosure.js";
+import { firstQuotedSlashRef } from "../policy-engine.js";
+import { isPythonManifest } from "../python-lockfile-scanner.js";
+import { DOWNLOAD_EXEC_REGEXES, HOOK_SHELL_RC_WRITE_REGEX } from "../skills-scanner.js";
 
 // Property-based tests for the code that reads attacker-controlled text.
 //
@@ -157,6 +169,144 @@ describe("feed partition dates", () => {
           expect(text).toMatch(/^\d{4}-\d{2}-\d{2}$/);
           expect(new Date(epoch).toISOString().slice(0, 10)).toBe(text);
         }
+      }),
+      params,
+    );
+  });
+});
+
+// CodeQL js/polynomial-redos rewrites (2026-09-25). Each function below
+// replaced a regular expression that was quadratic on the input shape CodeQL
+// named, measured at minutes for a crafted 5 MB file. The originals are kept
+// here verbatim as the oracle: the rewrite must give the same answer on every
+// generated input, built from the tokens the original branches on.
+
+/** Strings drawn from a token list: the characters an expression reacts to. */
+const tokens = (list: string[], maxLength = 30) =>
+  fc.array(fc.constantFrom(...list), { maxLength }).map((parts) => parts.join(""));
+
+describe("CodeQL ReDoS rewrites agree with the expressions they replaced", () => {
+  it("escapeRegExp makes any string match exactly itself", () => {
+    fc.assert(
+      fc.property(anyText, (text) => {
+        expect(new RegExp(`^${escapeRegExp(text)}$`).test(text)).toBe(true);
+      }),
+      params,
+    );
+  });
+
+  it("stripBase64DataUris equals the data-URI regex it replaced", () => {
+    const OLD = /data:[^;,\s"'`]+;base64,[A-Za-z0-9+/=]+/g;
+    const text = tokens(["data:", "image/png", ";base64,", ";", ",", "a", "Z", "9", "=", "+", "/", " ", "\n", '"', "`", "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(stripBase64DataUris(t)).toBe(t.replace(OLD, ""));
+      }),
+      params,
+    );
+  });
+
+  it("escapeCmdShellArg equals the two backslash regexes it replaced", () => {
+    const META = /([()\][%!^"`<>&|;, *?])/g;
+    const old = (arg: string) => {
+      let escaped = arg.replace(/(\\*)"/g, '$1$1\\"');
+      escaped = escaped.replace(/(\\*)$/, "$1$1");
+      return `"${escaped}"`.replace(META, "^$1").replace(META, "^$1");
+    };
+    fc.assert(
+      fc.property(tokens(["\\", '"', "a", " ", "&", "%", "b"]), (arg) => {
+        expect(escapeCmdShellArg(arg)).toBe(old(arg));
+      }),
+      params,
+    );
+  });
+
+  it("hasDownloadExecChain equals the two download/exec regexes it replaced", () => {
+    const OLD_A = /(?:curl|wget|fetch).*(?:chmod\s+\+x|exec|spawn|child_process|\.\/|bash|sh\s|node\s)/i;
+    const OLD_B = /(?:exec|spawn).*(?:curl|wget|fetch)/i;
+    const text = tokens(["curl", "WGET", "fetch", "exec", "Spawn", "chmod", "+x", "sh", "node", "./", "bash", "child_process", " ", "\n", "\r", String.fromCharCode(0x2028), "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(hasDownloadExecChain(t)).toBe(OLD_A.test(t) || OLD_B.test(t));
+      }),
+      params,
+    );
+  });
+
+  it("mentionsHostRuntime equals HOST_RUNTIME_RE", () => {
+    const OLD = /\b(?:openclaw|hermes|claude[-_ ]?code|claude[-_ ]?desktop|cursor|windsurf|cline|roo[-_ ]?code|aider|continue\.dev)\b|after[-_]tool[-_]call|before[-_]tool[-_]call|hook[-_ ]?event|tool[-_ ]?call[-_ ]?message|dispatch-[\w-]*\.(?:js|mjs|cjs)/i;
+    const text = tokens(["dispatch-", "DISPATCH-", "a", "-", "_", ".js", ".MJS", ".cjs", ".jsx", ".", " ", "openclaw", "claude code", "after_tool_call", "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(mentionsHostRuntime(t)).toBe(OLD.test(t));
+      }),
+      params,
+    );
+  });
+
+  it("mentionsHostRuntimePath equals HOST_RUNTIME_PATH_RE", () => {
+    const OLD = /node_modules[\\/][^\s'"]*(?:openclaw|hermes)|[~./][\w./-]*\.(?:openclaw|claude|cursor|windsurf|hermes)\b/i;
+    const text = tokens(["node_modules/", "node_modules\\", "openclaw", "HERMES", "~", ".", "/", "a", "-", "_", " ", "'", '"', ".claude", ".Cursor", "claudex", "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(mentionsHostRuntimePath(t)).toBe(OLD.test(t));
+      }),
+      params,
+    );
+  });
+
+  it("classifyFileSurface marks a basename as an example exactly when EXAMPLE_ARTIFACT did", () => {
+    const OLD = /(?:^|[./])(?:example|sample|template|tpl)(?:\.[^/]*)?$/i;
+    const base = tokens(["tpl", "example", "Sample", "template", ".", "-", "a", "yml", "x"], 12);
+    fc.assert(
+      fc.property(base, (b) => {
+        expect(classifyFileSurface(b) === "example").toBe(OLD.test(b));
+      }),
+      params,
+    );
+  });
+
+  it("firstQuotedSlashRef equals the quoted-ref regex it replaced", () => {
+    const OLD = /"([^"]+\/[^"]+)"/;
+    fc.assert(
+      fc.property(tokens(['"', "/", "a", "!", " ", "b"]), (t) => {
+        expect(firstQuotedSlashRef(t)).toBe(t.match(OLD)?.[1]);
+      }),
+      params,
+    );
+  });
+
+  it("isPythonManifest equals the requirements-basename regex it replaced", () => {
+    const OLD = /^(?:[\w.-]*[-_.])?(?:requirements|constraints)(?:[-_.][\w.-]*)?\.txt$/i;
+    const base = tokens(["requirements", "REQUIREMENTS", "constraints", "-", "_", ".", "txt", ".txt", ".TXT", "dev", "a", String.fromCharCode(0x212a), String.fromCharCode(0xe9)], 10);
+    fc.assert(
+      fc.property(base, (b) => {
+        const expected = b === "pyproject.toml" || (b.toLowerCase().endsWith(".txt") && OLD.test(b));
+        expect(isPythonManifest(b)).toBe(expected);
+      }),
+      params,
+    );
+  });
+
+  it("the iex(iwr) skills pattern matches the same strings as before", () => {
+    const OLD = /\b(?:iex|invoke-expression)\s*\(\s*(?:\(?\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i;
+    const NEW = DOWNLOAD_EXEC_REGEXES.find((re) => re.source.includes("invoke-expression)\\s*\\("));
+    expect(NEW).toBeDefined();
+    const text = tokens(["iex", "IEX", "invoke-expression", "(", " ", "\t", "iwr", "irm", "invoke-webrequest", "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(NEW!.test(t)).toBe(OLD.test(t));
+      }),
+      params,
+    );
+  });
+
+  it("HOOK_SHELL_RC_WRITE_REGEX matches the same strings as before", () => {
+    const OLD = /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
+    const text = tokens([">", ">>", "tee", " -a", " ", "~", "$HOME", "/", "a", "!", ".bashrc", ".ZSHRC", ".profile", "|", ";", "x"]);
+    fc.assert(
+      fc.property(text, (t) => {
+        expect(HOOK_SHELL_RC_WRITE_REGEX.test(t)).toBe(OLD.test(t));
       }),
       params,
     );
