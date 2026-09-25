@@ -8,8 +8,9 @@
 # was never checked against a known hash, in the one job that holds the npm
 # publish identity. `npm ci` checks it against the integrity recorded in
 # .github/publish-toolchain/package-lock.json, which matched the registry's own
-# dist.integrity for 11.18.0 when committed. The 143 packages npm bundles ship
-# inside that one verified tarball.
+# dist.integrity for the pinned version when committed. The 143 packages npm
+# bundles ship inside that one verified tarball; the publish-preflight job runs
+# npm audit over them.
 #
 # Usage:
 #   scripts/install-publish-npm.sh              install and verify (a rehearsal)

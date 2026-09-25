@@ -591,6 +591,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   - `npm-install-pinning.test.ts` applies Scorecard's rule to the Dockerfile,
     the workflows and the scripts, so a new unpinned install fails CI instead
     of waiting for the next Scorecard run.
+- The publish job's pinned npm moves from 11.18.0 to 11.19.1. Committing
+  its lockfile let OSV (Scorecard Vulnerabilities) see what npm 11.18.0
+  bundles: `brace-expansion`, `ip-address`, `tar` and `undici` versions with
+  nine published advisories, four of them high. 11.19.0, the npm Node 24
+  bundles, carries the same versions; 11.19.1 is the first release with all
+  four fixed. The vulnerable npm had published every release since v5.25.2,
+  invisible to any scan until its lockfile existed. The `publish-preflight`
+  job now runs `npm audit` over the pinned npm on every pull request.
 
 ## [6.2.5] - 2026-09-23
 

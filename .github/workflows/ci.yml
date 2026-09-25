@@ -479,6 +479,15 @@ jobs:
       - name: Install the pinned npm the way the publish job does
         run: bash scripts/install-publish-npm.sh
 
+      # The pinned npm's own dependencies. npm audit reads the packages npm
+      # bundles (measured: it reports 11.18.0's four high advisories and passes
+      # 11.19.1), so a new advisory in the tool that holds the publish identity
+      # turns every pull request red, including the release pull request, before
+      # a tag can reach the publish job. Same threshold as the compat job's audit
+      # of this package's own dependencies.
+      - name: Audit the pinned npm
+        run: npm audit --audit-level=high --prefix .github/publish-toolchain
+
   build:
     name: Build and Test
     needs: [compat, docker, publish-preflight]
@@ -617,7 +626,7 @@ jobs:
       # write is granted. Node 24 bundles 11.19.x today, but the version it bundles
       # moves with every Node patch release, and a publish lane that resolves a
       # floating version changes behaviour without a commit. So the npm stays an
-      # exact pin, 11.18.0, the version every release since v5.25.2 published with.
+      # exact pin: 11.19.1.
       #
       # The pin is a lockfile (.github/publish-toolchain/package-lock.json), so npm
       # ci checks the tarball against a recorded integrity hash. It used to be
@@ -627,10 +636,15 @@ jobs:
       #
       # This lane runs only on a tag push and authenticates by OIDC, which no dry
       # run exercises, and a failure burns a version because tags are immutable.
-      # So exactly one variable moves per release. In 6.3.0 it is the Node major
-      # (22 -> 24); the npm bytes are the same 11.18.0. Everything but the OIDC
-      # exchange is rehearsed on every pull request by the publish-preflight job,
-      # which runs the same script on the same Node major.
+      # So exactly one variable moves per release, with one exception made in
+      # 6.3.0: both the Node major (22 -> 24, owner request) and the npm pin
+      # (11.18.0 -> 11.19.1) move. Committing the lockfile let OSV see that 11.18.0
+      # bundles brace-expansion, ip-address, tar and undici versions with nine
+      # published advisories (four high), and so does 11.19.0, the npm Node 24
+      # bundles. 11.19.1 is the first release with all four fixed. Every release
+      # since v5.25.2 published with 11.18.0. Everything but the OIDC exchange is
+      # rehearsed on every pull request by the publish-preflight job, which runs
+      # the same script on the same Node major and audits the pin.
       - name: Install the pinned npm for OIDC trusted publishing
         run: bash scripts/install-publish-npm.sh --add-to-path
 

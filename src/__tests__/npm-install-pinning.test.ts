@@ -150,6 +150,17 @@ describe("the publish job's npm", () => {
     expect(check).toBeLessThan(step.indexOf("npm publish"));
   });
 
+  it("is audited on every pull request, at the compat job's threshold", () => {
+    // Committing the toolchain lockfile let OSV see nine advisories in the
+    // packages npm 11.18.0 bundles. npm audit reads those bundled packages, so
+    // the preflight catches the next one before Scorecard does.
+    const level = (text: string, prefix: string) =>
+      [...text.matchAll(new RegExp(`npm audit --audit-level=(\\w+)${prefix}`, "g"))].map((m) => m[1]);
+    const compatLevel = level(job("compat"), "\\s*\\n");
+    expect(compatLevel).toHaveLength(1);
+    expect(level(job("publish-preflight"), " --prefix \\.github/publish-toolchain")).toEqual(compatLevel);
+  });
+
   it("gates the required aggregator", () => {
     expect(job("build")).toMatch(/needs: \[[^\]]*publish-preflight[^\]]*\]/);
     expect(job("build")).toContain("PREFLIGHT_RESULT");

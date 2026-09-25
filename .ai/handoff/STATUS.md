@@ -1,3 +1,35 @@
+## Publish npm 11.18.0 -> 11.19.1: nine advisories made visible (2026-09-25) (claude-opus-5-5)
+
+The owner reported Scorecard Vulnerabilities at 9 right after PR 340. It had
+been 10/10 (zero known) at 20:20 the same day. The cause was that PR: it
+committed `.github/publish-toolchain/package-lock.json`, whose 143 `inBundle`
+entries list what npm 11.18.0 ships inside itself. OSV reads them:
+- `brace-expansion` 5.0.7: 2 high advisories;
+- `ip-address` 10.2.0: 1 high and 2 moderate;
+- `tar` 7.5.19: 1 high;
+- `undici` 6.27.0: 3 moderate.
+
+The main lockfile has none of the four. The same npm had published every
+release since v5.25.2; the lockfile only made it visible.
+
+Measured by generating a lockfile for each candidate:
+- 11.18.0 and 11.19.0 (the npm Node 24.21.0 bundles) carry the vulnerable versions.
+- 11.19.1 (2026-08-26, the npm Node 26.10 bundles), 11.20.0 and 12.1.0 carry fixed ones: brace-expansion 5.0.9, ip-address 10.5.0, tar 7.5.22, undici 6.28.0.
+- The pin moves to 11.19.1, the smallest step. The lockfile integrity matched the registry's `dist.integrity`.
+
+Relying on Node 24's bundled npm instead would have kept every advisory and
+hidden it again.
+
+`npm audit` does read npm's bundled packages. Measured: 11.18.0 exits 1 at
+`--audit-level=high` (5 packages, 4 high), and 11.19.1 exits 0. So the
+`publish-preflight` job now audits the pin at the compat job's threshold. A
+test holds the two levels equal. The audit is not in the publish job, because
+a fresh advisory must fail a pull request, not a tag.
+
+6.3.0 therefore moves two publish-lane variables: the Node major (owner
+request) and the npm pin (these advisories). That is a deliberate exception
+to one per release, recorded in the ci.yml comment and `docs/node-support.md`.
+
 ## The self-scan is visible, and the badge proves it (2026-09-25) (claude-opus-5-5)
 
 The owner noticed the README's "scanned by supply-chain-guard" badge while no
