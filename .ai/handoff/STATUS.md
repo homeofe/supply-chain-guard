@@ -1,3 +1,39 @@
+## OpenSSF Scorecard hardening (2026-09-25) (claude-opus-5-5)
+
+The first published Scorecard (run after PR 334) was 6.2/10. The owner asked
+for the details and approved fixing them before v6.3.0, so the release PR 335
+is held open and gets re-cut on top.
+
+| Check | Score | Cause | This change |
+|---|---|---|---|
+| Token-Permissions | 0 | `docker.yml` top-level `packages: write` | moved to the two jobs that push; test keeps all top levels read-only |
+| Signed-Releases | 0 | no signature asset on the last 5 releases | release job attaches the npm tarball and npm's own SLSA provenance bundle (`.tgz.sigstore.json`), checked by `scripts/release-provenance.mjs` |
+| SAST | 0 | no SAST on the last 30 commits | `codeql.yml`, javascript-typescript and actions |
+| Branch-Protection | -1 | GITHUB_TOKEN cannot read classic protection | `repo_token: secrets.SCORECARD_TOKEN \|\| github.token`; the PAT is an owner action |
+| Fuzzing | 0 | none | next PR: fast-check property tests (owner-approved) |
+| Pinned-Dependencies | 8 | 3 npm installs | 2 install our own freshly built tarball (Dockerfile, validate-package.sh) and cannot be hash-pinned; the third is `npm@11.18.0` in the publish job, left alone because that lane cannot be rehearsed |
+| Code-Review | 0 | 0 of 30 PRs approved by a second person | owner: needs a second human reviewer |
+| CII-Best-Practices | 0 | not registered | owner: bestpractices.dev |
+| Contributors | 6 | organisational diversity | nothing to fix in code |
+
+Why npm's bundle and not a second signature: `npm publish --provenance` already
+signs an SLSA v1 statement for the tarball through this repository's OIDC
+identity. The SLSA generator (which would give `.intoto.jsonl` and the full 10)
+must be referenced by tag, which this repository's SHA-pinning rule and the AAHP
+pinning gate forbid, and a hand-made `.intoto.jsonl` without its certificate
+would be unverifiable, so Signed-Releases is expected to reach 8, not 10, as
+releases carrying the bundle accumulate (it scores the last five).
+
+Run in the real environment, not only against fixtures: the script fetched the
+published v6.2.5 tarball and bundle, and `gh attestation verify --bundle ...
+--repo homeofe/supply-chain-guard --digest-alg sha512` verified an SLSA v1
+statement signed by `ci.yml@refs/tags/v6.2.5` (commit 89e7260) with a
+transparency-log entry; the same command failed on the tarball with one byte
+appended. The README now shows that command.
+
+Also corrected in `docs/ci-and-release.md`: `delete_branch_on_merge` is `true`
+(measured today; the section still said `false` from 2026-08-22).
+
 ## Findability: MCP Registry, OpenSSF Scorecard, 30-second start (2026-09-25) (claude-opus-5-5)
 
 The owner asked why downloads fall and how to make the project easier to find;

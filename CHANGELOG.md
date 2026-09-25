@@ -206,6 +206,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   It never runs on pull requests and is not a required check.
 - The README opens with a 30-second start: one command to scan, the Action
   snippet and the MCP setup, before the table of contents.
+- Every GitHub Release carries the npm tarball and the Sigstore-signed SLSA
+  provenance npm recorded for it (`supply-chain-guard-X.Y.Z.tgz.sigstore.json`).
+  The release job fetches both from the registry and fails closed unless the
+  tarball matches the registry integrity and is the provenance subject
+  (`scripts/release-provenance.mjs`). The signed provenance used to live only
+  on npm, so OpenSSF Scorecard's Signed-Releases check scored 0.
+- CodeQL static analysis of the TypeScript source and of the GitHub Actions
+  workflows on every pull request, on `main` and weekly, reported into code
+  scanning. Not a required check.
 
 ### Changed
 
@@ -231,6 +240,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- `docker.yml` granted `packages: write` at the workflow level, so every job,
+  including any added later, inherited it. The grant now sits on the two
+  jobs that push to GHCR, and a test keeps every workflow's top level
+  read-only (Scorecard Token-Permissions was 0).
 - **`server.json` could never have been published.** Its description was 288
   characters and the MCP Registry schema allows 100; the live registry rejects
   it with 422 "expected length <= 100". It is now 99 characters, a test holds
