@@ -27,6 +27,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   under the `sckit` family. The clean 0.1.22 and 0.1.24 releases stay
   unflagged, and the account that pushed the releases is not listed because
   it is a long-standing member account of the victim organisation.
+- 4,144 package indicators from the GitHub Advisory Database malware feed and
+  the OpenSSF malicious-packages index: 75 in the bundle and 4,069 in the
+  catalog. 3,947 are RubyGems records that ReversingLabs published into
+  OpenSSF. 1,090 of those (608 names, mostly `bundler` typosquats, all removed
+  from rubygems.org in a sample of 31) come from one 26-minute bulk
+  publication on 2026-09-22, and a new `catalogWindows` entry for that day
+  routes them to the catalog. The window also routes that day's 63 npm and
+  NuGet dependency-confusion probes to the catalog. Catalog entries are
+  enforced after `feed refresh`. The one bare npm name,
+  `ubiquiti-agents-link-mcp`, was probed first and resolves to an npm security
+  holding package.
 
 ## [6.2.5] - 2026-09-23
 

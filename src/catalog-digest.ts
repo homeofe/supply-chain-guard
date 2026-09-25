@@ -12,8 +12,8 @@
 // version refreshFeed() needs to build the catalog URL.
 export const CATALOG_DIGEST = {
   version: "6.2.5",
-  sha256: "ba228179ec05b017d255328ce1ae12d62cd7acc9ee9e88c6748cbfdc958c3744",
-  entriesSha256: "b666f70719fe1f1a76c087105744ca34abdfb7edcf397f1de7f769a55fa91dc6",
-  entryCount: 82259,
+  sha256: "e46214f9a46f2e20c37632d24a9a48b8aea52a08464e3edd30ee7e84b176ef7c",
+  entriesSha256: "55f07d869c1a105c1894306b845f814ba68f013805cbd5d8a88a47fd9f04d979",
+  entryCount: 86328,
   shardCount: 2,
 } as const;

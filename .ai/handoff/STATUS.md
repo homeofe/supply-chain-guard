@@ -1,3 +1,79 @@
+## Threat intel 2026-09-25 (claude-opus-5-5)
+
+Daily run, continued from the scheduled routine's handoff of the same day. No
+version bump, no release: the owner cuts that. The routine measured today's
+delta on top of the then-open PR 328 and stopped, because a branch cut from
+`main` would have re-imported all 199 of 328's entries. The owner approved
+merging 328 first; this branch is cut from that merge (87066dc).
+
+### Importer
+
+`npm run feed:import` (default window, published >= 2026-09-11, no `--limit`):
+31,032 advisories over 311 pages plus 4,065 OpenSSF MAL records, no page cap
+hit, nothing deferred or declined, 62 skipped as `unmappable-version-range`.
+**4,144 new: 75 to the bundle, 4,069 to the catalog**, identical between the
+dry run and the applied run. Without the new window the same run routed 1,228
+to the bundle. 4,068 of the 4,144 were found by OpenSSF alone.
+
+- **3,947 are `ruby:` entries, all ReversingLabs records via OpenSSF.**
+  - 1,090 on 608 names carry `firstSeen` 2026-09-22. Measured on all 608
+    records rather than sampled: every OSV record (MAL-2026-16545 to
+    MAL-2026-17152) was published 2026-09-22 between 16:05:40Z and 16:31:51Z
+    and modified 2026-09-24 between 09:30Z and 09:31Z, and their ReversingLabs
+    ids run RLMA-2026-06682 to RLMA-2026-08590. Mostly `bundler` typosquats
+    (`bunlrder`, `bunldor`, ...) with random 1.0.N versions. Every 20th name
+    (31 of 608) was probed against rubygems.org and all 31 return 404.
+  - The other 2,857 are older records that were only modified (2,486 dated
+    2026-07-07, 255 dated 2024-06-25, small counts on other days) and go to
+    the catalog on the ordinary cutoff rule.
+- **New `catalogWindows` entry for 2026-09-22 only, by owner decision.** It
+  routes the 1,090 ruby entries and that day's 63 npm/NuGet
+  dependency-confusion probes (`@client-web-next/*`, `@egencia/*`,
+  `@larocas-bbresearch/*`, `@ks-cqc/*`, `@yuva2210/*`, five `nuget:dip.*` at
+  99.0.0 and others) to the catalog, where they are enforced after
+  `feed refresh`. No rule in `src/patterns.ts` covers bundler typosquats, so
+  declining was not an option. The two alternatives the owner turned down were
+  an ecosystem-scoped window (a change to the shared routing rule in
+  `scripts/feed-partition.mjs`) and no window (1,228 bundle entries, within
+  budget but against the bulk-backfill policy).
+- The one bare npm name, `ubiquiti-agents-link-mcp`, was probed against the
+  registry: an npm security holding package (0.0.1-security, no maintainers).
+  The malicious 0.0.1, 0.0.2, 0.2.0 and 0.2.1 were published on 2026-09-22 and
+  have since been removed.
+- The 75 bundle additions are ordinary daily intel, for example `secure-env3`,
+  `better-dotenv3`, `wallet-connect-adapter`, `chromatitle(-js)`,
+  `n8n-nodes-moonlet-*`, `@alphaspace/core` 99.0.x,
+  `pypi:vercel-runtime-python` and 28 versions of `pypi:prosocks`.
+- No hand enrichment. The routine's search turned up no new vendor IOC set for
+  2026-09-24/25.
+
+### Carried to the next release: the window also moves 57 bundled entries
+
+`feed-migrate.mjs` reads the same window. At the next release migration it
+moves the **57 entries already bundled** with `firstSeen` 2026-09-22 (for
+example `envforge2/3`, `envparse2/3`, `sysverify`, the four
+`ubiquiti-agents-link-mcp` pins, `@mikudeveloper/baileys@1.0.0` and
+`ruby:wurl_show_data@3.1.42.99`), about four weeks before the regular cutoff
+advance would. Measured today with a planMigration diff against the config
+without the window: 57 moves with it, 0 without. None of the 57 names appears
+in `src/__tests__/` or `README.md` (control: `memos-cloud-openclaw-plugin` is
+found by the same lookup, a made-up name is not). Repeat that lookup before
+`--write` at the release, because a test added in between can name one.
+
+### Verification
+
+- The partition gate was proven by cutting it: without the new window
+  `check:feed-partition` reports exactly 1,153 violations (1,090 + 63), and
+  with the window restored it is green again.
+- `npm run build` is green with every prebuild gate passing, and
+  `aahp lint` passes.
+- Full suite on the Linux host (zip present): 156 files, 3,863 tests, all
+  passed. CI on the PR is the authoritative verdict.
+
+### D-062
+
+PR 326 is still open, so there is nothing to mark.
+
 ## Threat intel 2026-09-24 (claude-opus-5-5)
 
 Daily scheduled run. No version bump, no release: the owner cuts that.
