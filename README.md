@@ -45,7 +45,15 @@ claude mcp add supply-chain-guard supply-chain-guard mcp
 
 Every release is published to npm from this repository's CI with a signed
 [SLSA provenance attestation](https://www.npmjs.com/package/supply-chain-guard),
-and the Action installs that exact version. Everything else, from output
+and the Action installs that exact version. Each GitHub Release also carries
+the tarball with that provenance as a Sigstore bundle (`.sigstore.json`). To check
+one yourself:
+
+```bash
+gh attestation verify supply-chain-guard-X.Y.Z.tgz \
+  --bundle supply-chain-guard-X.Y.Z.tgz.sigstore.json \
+  --repo homeofe/supply-chain-guard --digest-alg sha512
+``` Everything else, from output
 formats to policies, is further down: [Quickstart](#quickstart),
 [GitHub Action](#github-action), [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp).
 

@@ -726,17 +726,33 @@ jobs:
           node scripts/generate-catalog.mjs
           ls -l catalog-index.json catalog-*.json.gz
 
+      # The signed provenance of the release, attached to the release. npm
+      # publish --provenance (the publish job) already signed an SLSA v1
+      # provenance statement for the tarball through this repository's OIDC
+      # identity, but it lived only on the registry, so OpenSSF Scorecard's
+      # Signed-Releases check, which reads the assets of the last five GitHub
+      # Releases, found nothing and scored 0. This fetches the tarball npm
+      # serves and that exact bundle, and fails closed unless the tarball
+      # matches the registry integrity and is the bundle's subject.
+      # scripts/release-provenance.mjs states what it checks and what it
+      # leaves to the consumer's signature verification.
+      - name: Fetch the published tarball and its npm provenance
+        run: node scripts/release-provenance.mjs "${GITHUB_REF_NAME#v}" release-assets
+
       - name: Create GitHub Release
         run: |
-          # The catalog assets are uploaded with the release itself rather than
-          # in a later step, so a release never exists in a state where the
-          # digest in the published package points at assets that are not there
-          # yet. Releases on this repository are immutable, so there is no
-          # second chance to attach them.
+          # The catalog assets and the provenance are uploaded with the release
+          # itself rather than in a later step, so a release never exists in a
+          # state where the digest in the published package points at assets
+          # that are not there yet. Releases on this repository are immutable,
+          # so there is no second chance to attach them.
+          VERSION="${GITHUB_REF_NAME#v}"
           gh release create "$GITHUB_REF_NAME" \
             --title "supply-chain-guard $GITHUB_REF_NAME" \
             --notes-file release_notes.md \
-            catalog-index.json catalog-*.json.gz
+            catalog-index.json catalog-*.json.gz \
+            "release-assets/supply-chain-guard-${VERSION}.tgz" \
+            "release-assets/supply-chain-guard-${VERSION}.tgz.sigstore.json"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

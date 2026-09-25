@@ -12,9 +12,11 @@ on:
         description: 'Version to tag the image with, without the leading v (e.g. 5.19.0). Blank pushes only :latest.'
         required: false
 
+# Read-only at the workflow level. packages: write is granted to the two jobs
+# that push to GHCR and to nothing else, so a job added here later starts
+# without it (OpenSSF Scorecard Token-Permissions scored 0 while it sat here).
 permissions:
   contents: read
-  packages: write
 
 # Both triggers end in `imagetools create` against :latest, and they check out
 # DIFFERENT refs: a tag run builds the tag, a manual dispatch builds the branch. Left
@@ -41,6 +43,9 @@ jobs:
   build:
     name: Build ${{ matrix.platform }}
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
     # A hang must fail fast and visibly. Without this the job inherits GitHub's
     # 360-minute default, which is how v5.18.0 burned six hours to produce nothing.
     # A healthy native build is well under five minutes.
@@ -108,6 +113,9 @@ jobs:
     name: Push multi-arch manifest
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     timeout-minutes: 10
     steps:
       # The same release-authority gate as ci.yml's publish job, because this workflow

@@ -49,12 +49,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # Branch-Protection needs a token that can read classic branch protection,
+      # which GITHUB_TOKEN cannot (the first run reported an internal error, -1).
+      # SCORECARD_TOKEN is a fine-grained PAT limited to this repository with
+      # Administration: read-only, created by the owner (ossf/scorecard-action,
+      # docs/authentication/fine-grained-auth-token.md). Until it exists the
+      # expression falls back to GITHUB_TOKEN, so every other check keeps running.
       - name: Run analysis
         uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
+          repo_token: ${{ secrets.SCORECARD_TOKEN || github.token }}
 
       - name: Upload the results as an artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
