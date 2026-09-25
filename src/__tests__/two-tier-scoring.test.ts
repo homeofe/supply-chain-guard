@@ -7,7 +7,7 @@
  * S_hyg with SLSA multipliers and Scorecard fallback, and CRS composite scoring).
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -709,8 +709,17 @@ describe("two-tier scoring engine", () => {
 });
 
 describe("two-tier is opt-in on the scan path", () => {
+  // Each fixture root is removed after the test that made it. Without this
+  // every run left two scg-two-tier-* directories behind in os.tmpdir().
+  const fixtureRoots: string[] = [];
+
+  afterEach(() => {
+    for (const root of fixtureRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+  });
+
   function cleanFixture(label: string): string {
     const wd = fs.mkdtempSync(path.join(os.tmpdir(), "scg-two-tier-"));
+    fixtureRoots.push(wd);
     const dir = path.join(wd, label);
     fs.cpSync(path.join(__dirname, "fixtures", "clean-npm-pkg"), dir, { recursive: true });
     return dir;

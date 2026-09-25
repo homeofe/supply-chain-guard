@@ -1,3 +1,27 @@
+## Two test files no longer leak temp directories (2026-09-26) (claude-opus-5-5)
+
+**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing
+they created in `os.tmpdir()`.** Every run left one `scg-issue54-empty-*` and
+two `scg-two-tier-*` directories behind; the Linux test host held 63 and 128
+of them on 2026-09-26, dating back to 2026-09-12. These are the leftovers the
+comment in `feed-partition.test.ts` refers to.
+
+- `issue-54-hardening.test.ts`: the bundled-feed self-check passed
+  `makeTempDir(...)` straight into `loadThreatIntel`, so no variable existed
+  to clean up. `makeTempDir` now registers every directory it creates and a
+  file-level `afterEach` removes them, so no caller can escape it again.
+- `two-tier-scoring.test.ts`: `cleanFixture` registers its fixture root and
+  the describe block's `afterEach` removes it.
+
+Measured by counting matching entries in node's own `os.tmpdir()` around a
+run of only these two files (73 tests, green in every run): unmodified
++1 and +2, fixed 0 and 0. Mutation proof, one cut per fix: dropping only the
+`tempDirs.push` line brought back exactly +1 `scg-issue54-empty-*`, dropping
+only the `fixtureRoots.push` line exactly +2 `scg-two-tier-*`; after restoring
+both, 0 and 0 again. Nothing in CI asserts this: a future leak stays green, so
+the count is the only check. The directories already on the test hosts are
+not removed by this change.
+
 ## Pre-release review, part 5: the tag-only release lane (2026-09-26) (claude-opus-5-5)
 
 **Three steps that run only on a tag could fail on a transient registry
