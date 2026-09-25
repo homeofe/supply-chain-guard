@@ -1,3 +1,50 @@
+## Threat intel 2026-09-24 (claude-opus-5-5)
+
+Daily scheduled run. No version bump, no release: the owner cuts that.
+
+### Importer
+
+`npm run feed:import` (default window, published >= 2026-09-10, no `--limit`):
+39,393 advisories over 394 pages, no page cap hit, no slicing needed, nothing
+deferred or declined. New entries: 199 (33 to the bundle, 166 to the catalog),
+identical between the dry run and the applied run. 81 skipped as
+`unmappable-version-range`.
+
+- Catalog routing checked, not assumed: 164 of the 166 are version pins on 30
+  `epic-*` names with `firstSeen` 2022-06-20, 2025-08-14 and 2025-10-30 (old
+  advisories updated this week), plus `tailwind-contact-forms@0.5.1`
+  (2026-09-04) and `golaaa@2.0.3` (2026-08-06). All are before the
+  2026-08-24 cutoff, so rule 4 routes them correctly. No `catalogWindows`
+  entry added.
+- All 8 bare npm names probed against the registry: every one is an npm
+  security holding package (`@baanx/{solana-lib,domain,blockchain-config,abis,common}`,
+  `@insiderintelligence/{componentlibrary,googleadmanager}`, `internallib_v497`).
+
+### Hand enrichment: MemTensor sckit Go worm
+
+Sources: SafeDep and Aikido write-ups (2026-09-23). The six implant SHA-256
+digests were extracted from both sources independently and agree byte for
+byte. Added: npm/PyPI version pins, six C2 subdomains of skyleen[.]fr, the C2
+IP 139[.]84[.]223[.]178 (Aikido only, confidence 0.85) and the six implant
+digests, all bundled with `family: "sckit"`, plus a `campaigns.test.ts` block
+with a clean-version negative (0.1.24).
+
+Deliberately NOT added:
+- The apex `skyleen[.]fr`. SafeDep writes "all subdomains", but only the
+  subdomains are published as observed C2 and the apex ownership was not
+  established. Candidate for a later run if a second source names the apex.
+- The GitHub account `Memtensor-AI`, which SafeDep lists as malicious. Checked
+  via the GitHub API: created 2026-03-30, forks of three MemTensor repos since
+  July, and pushes into MemTensor org repos. That is the profile of a
+  compromised member account (a victim), not an attacker-created one.
+- The five package tarball digests (SafeDep only; the version pins already
+  cover those artefacts).
+- The CI token-capture path under 10729e014d0e.skyleen[.]fr (single-source).
+
+### D-062
+
+PR 326 is still open, so the D-062 follow-up is waiting: nothing to mark.
+
 ## v6.2.5 release preparation (2026-09-23) (claude-opus-5-5)
 
 Patch release carrying the 2026-09-23 threat intelligence update (PR 324:
