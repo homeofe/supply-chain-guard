@@ -448,9 +448,32 @@ jobs:
   # `if: always()` matters. Without it this job is SKIPPED when a dependency
   # fails, and a skipped required check is not a failing one, so a red matrix
   # could report as a non-failure. It runs unconditionally and decides explicitly.
+  # Rehearses the publish job's toolchain on every pull request: the same Node
+  # major (src/__tests__/npm-install-pinning.test.ts holds the two node-version
+  # lines equal) and the same install script, so a broken lockfile pin or script
+  # fails here and never on a tag, where a failure burns the version. Only the
+  # OIDC exchange and the upload itself stay unrehearsed. No `publish --dry-run`:
+  # npm 11 refuses it for any version already on the registry, which is every
+  # pull request that is not a release.
+  publish-preflight:
+    name: Publish toolchain preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Install the pinned npm the way the publish job does
+        run: bash scripts/install-publish-npm.sh
+
   build:
     name: Build and Test
-    needs: [compat, docker]
+    needs: [compat, docker, publish-preflight]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -458,9 +481,11 @@ jobs:
         env:
           COMPAT_RESULT: ${{ needs.compat.result }}
           DOCKER_RESULT: ${{ needs.docker.result }}
+          PREFLIGHT_RESULT: ${{ needs.publish-preflight.result }}
         run: |
           echo "Node compatibility matrix: $COMPAT_RESULT"
           echo "Docker image build:          $DOCKER_RESULT"
+          echo "Publish toolchain preflight: $PREFLIGHT_RESULT"
           fail=0
           if [ "$COMPAT_RESULT" != "success" ]; then
             echo "::error title=Node compatibility::At least one Node major did not pass. Open the compat legs to see which."
@@ -470,8 +495,12 @@ jobs:
             echo "::error title=Docker image::The container distribution channel did not build or did not scan."
             fail=1
           fi
+          if [ "$PREFLIGHT_RESULT" != "success" ]; then
+            echo "::error title=Publish toolchain::The pinned npm the publish job uses did not install or verify."
+            fail=1
+          fi
           if [ "$fail" -ne 0 ]; then exit 1; fi
-          echo "Every Node major passed and the container image builds and scans."
+          echo "Every Node major passed, the container image builds and scans, and the publish toolchain installs."
 
 
   # WHICH REQUIRED CHECKS ACTUALLY RUN ON A TAG REF
@@ -565,7 +594,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
@@ -575,29 +604,38 @@ jobs:
       - name: Build
         run: npm run build
 
-      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1, and this step is
-      # STILL required on Node 22: Node 22.23.2 bundles npm 10.9.8, which silently
-      # falls back to classic token auth even when id-token: write is granted.
-      # Checked against nodejs.org/dist rather than assumed, because "the newer Node
-      # surely bundles a newer npm" is the kind of guess that burns a version number.
+      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1. Node 22 bundles npm
+      # 10.9.x, which silently falls back to classic token auth even when id-token:
+      # write is granted. Node 24 bundles 11.19.x today, but the version it bundles
+      # moves with every Node patch release, and a publish lane that resolves a
+      # floating version changes behaviour without a commit. So the npm stays an
+      # exact pin, 11.18.0, the version every release since v5.25.2 published with.
       #
-      # The pin stays at 11.18.0 across the move from Node 20 to Node 22. Its engine
-      # range is ^20.17.0 || >=22.9.0, so it runs on this runner unchanged. npm@latest
-      # is now 12.0.2 and would also run here, but this lane CANNOT BE REHEARSED: it
-      # executes only on a tag push, authenticates by OIDC which no dry run exercises,
-      # and a failure burns a version because tags are immutable. So exactly one
-      # variable moves per release, and this release the variable is the Node major.
-      # Re-review the engine range before changing either version.
-      - name: Upgrade npm for OIDC trusted publishing
-        run: |
-          npm install --global --ignore-scripts npm@11.18.0
-          test "$(npm --version)" = "11.18.0"
+      # The pin is a lockfile (.github/publish-toolchain/package-lock.json), so npm
+      # ci checks the tarball against a recorded integrity hash. It used to be
+      # `npm install --global npm@11.18.0`: the version was fixed but the bytes were
+      # never verified, in the one job that holds the publish identity (OpenSSF
+      # Scorecard Pinned-Dependencies, code-scanning alert 6).
+      #
+      # This lane runs only on a tag push and authenticates by OIDC, which no dry
+      # run exercises, and a failure burns a version because tags are immutable.
+      # So exactly one variable moves per release. In 6.3.0 it is the Node major
+      # (22 -> 24); the npm bytes are the same 11.18.0. Everything but the OIDC
+      # exchange is rehearsed on every pull request by the publish-preflight job,
+      # which runs the same script on the same Node major.
+      - name: Install the pinned npm for OIDC trusted publishing
+        run: bash scripts/install-publish-npm.sh --add-to-path
 
       # Auth happens via OIDC against the npmjs Trusted Publisher
       # configured for this package + this workflow. No NPM_TOKEN
-      # secret is used or needed.
+      # secret is used or needed. The version check runs in the same step as the
+      # publish, so a PATH that did not take effect fails here and not after an
+      # upload attempted with the bundled npm.
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        run: |
+          want=$(node -p "require('./.github/publish-toolchain/package-lock.json').packages['node_modules/npm'].version")
+          test "$(npm --version)" = "$want"
+          npm publish --access public --provenance
 
   # Lists the MCP server in the official registry
   # (https://registry.modelcontextprotocol.io), which MCP clients and directories
@@ -710,7 +748,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Build the catalog release assets
         run: |
