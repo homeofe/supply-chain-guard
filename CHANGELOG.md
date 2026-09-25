@@ -187,16 +187,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   unflagged, and the account that pushed the releases is not listed because
   it is a long-standing member account of the victim organisation.
 - 4,144 package indicators from the GitHub Advisory Database malware feed and
-  the OpenSSF malicious-packages index: 75 in the bundle and 4,069 in the
+  the OpenSSF malicious-packages index: 76 in the bundle and 4,068 in the
   catalog. 3,947 are RubyGems records that ReversingLabs published into
   OpenSSF. 1,090 of those (608 names, mostly `bundler` typosquats, all removed
   from rubygems.org in a sample of 31) come from one 26-minute bulk
   publication on 2026-09-22, and a new `catalogWindows` entry for that day
-  routes them to the catalog. The window also routes that day's 63 npm and
-  NuGet dependency-confusion probes to the catalog. Catalog entries are
-  enforced after `feed refresh`. The one bare npm name,
-  `ubiquiti-agents-link-mcp`, was probed first and resolves to an npm security
+  routes them, and the 62 npm and NuGet dependency-confusion probes of the
+  same ReversingLabs batch, to the catalog. Catalog entries are enforced after
+  `feed refresh`. The one bare npm name, `ubiquiti-agents-link-mcp`, a
+  malicious MCP server, was probed first and resolves to an npm security
   holding package.
+- The 58 records of 2026-09-22 that do not come from that ReversingLabs batch
+  (MAL-2026-16374 to 16466 from amazon-inspector, OpenSSF, kam193 and
+  ghsa-malware: 47 npm, 8 PyPI, 3 RubyGems, `ubiquiti-agents-link-mcp` among
+  them) are fresh malware and ship in the offline bundle, under a curated
+  block. A window covers a whole day, so it had sent them to the catalog as
+  well, where a default offline scan and the default Action never see them.
+  A review before this release caught it.
 - The MCP server is published to the official MCP Registry on every release,
   so MCP clients and directories can find it. A new `mcp-registry` job runs
   after npm publish, authenticates by GitHub OIDC (no stored token), installs
@@ -227,7 +234,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
-- The bundle cutoff advanced from 2026-08-24 to 2026-08-26, moving 508 package indicators from the bundle into the catalog: 451 by the cutoff and 57 by the 2026-09-22 catalog window. None of them is asserted by a test or named in the README or docs. They stay enforced after `feed refresh`.
+- The bundle cutoff advanced from 2026-08-24 to 2026-08-26, moving 451 package
+  indicators dated 2026-08-24 and 2026-08-25 from the bundle into the catalog.
+  None of them is asserted by a test or named in the README or docs. They stay
+  enforced after `feed refresh`.
 - README, npm description, GitHub Action description and repository About
   rewritten around the ecosystem coverage, with the generated table replacing
   the hand-kept "Supported Ecosystems" list.

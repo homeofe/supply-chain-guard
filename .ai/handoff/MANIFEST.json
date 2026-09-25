@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790375895",
-    "timestamp": "2026-09-25T22:38:15Z",
-    "commit": "9564073",
+    "session_id": "cli-1790376593",
+    "timestamp": "2026-09-25T22:49:53Z",
+    "commit": "69219c4",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:f4062125aeea45b9efca1c2304b999402cd27a3dbe410b795b9b7de7973dc983",
-      "updated": "2026-09-25T22:38:14Z",
-      "lines": 12349,
-      "summary": "These findings came from the same five-reviewer pass as part 1. Each one was"
+      "checksum": "sha256:358fed40c1d8ca782dfe597849dacaf8445dbc2909e8e76b3d56863b462ff1e4",
+      "updated": "2026-09-25T22:49:53Z",
+      "lines": 12393,
+      "summary": "**The 2026-09-22 catalog window moved fresh malware out of the offline"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:af115e2c5037b160ef33f75c30b1ae6d9289b1f1d7bcadb03662018c2243598d",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:6e556ede9db6dd56d4510a3b7c2c6bb1ea26b156facaf969e9e8cc352b1e9c3a",
-      "updated": "2026-09-25T22:38:15Z",
+      "updated": "2026-09-25T22:49:53Z",
       "lines": 90,
       "summary": "Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a co"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:79c48bf431c59c73ef15197036430af9dcdb486a700d541f7188913170bc4374",
-      "updated": "2026-09-25T22:38:15Z",
+      "updated": "2026-09-25T22:49:53Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:d2add1536e889044f0a05e3417d16e1783836da9ad386b483121f665287d3a50",
-      "updated": "2026-09-25T22:38:15Z",
+      "updated": "2026-09-25T22:49:53Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-25T22:28:07Z",
+      "updated": "2026-09-25T22:44:17Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "These findings came from the same five-reviewer pass as part 1. Each one was Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "**The 2026-09-22 catalog window moved fresh malware out of the offline Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 143901,
-    "full_read": 153879
+    "manifest_plus_core": 144398,
+    "full_read": 154376
   }
 }
