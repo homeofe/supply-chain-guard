@@ -246,8 +246,10 @@ installed by `scripts/install-publish-npm.sh` with `npm ci`. It used to be
 `npm install --global npm@11.18.0`, which fixed the version but never checked the
 tarball against a known hash, in the job that holds the publish identity (OpenSSF
 Scorecard Pinned-Dependencies). The `publish-preflight` job runs the same script on
-the publish major for every pull request, so a broken pin fails a pull request
-instead of a tag, and it runs `npm audit` over the pinned npm's bundled packages.
+the publish major for every pull request, with the publish job's registry setup,
+`--add-to-path` and the same check of which npm answers on PATH, so a broken pin
+fails a pull request instead of a tag. It also runs `npm audit` over the pinned
+npm's bundled packages.
 
 The pin is **11.19.1**. Once the lockfile was committed, OSV (Scorecard
 Vulnerabilities) could see what 11.18.0 bundles: `brace-expansion`, `ip-address`,

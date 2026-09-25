@@ -21,6 +21,43 @@ only the `fixtureRoots.push` line exactly +2 `scg-two-tier-*`; after restoring
 both, 0 and 0 again. Nothing in CI asserts this: a future leak stays green, so
 the count is the only check. The directories already on the test hosts are
 not removed by this change.
+## Pre-release review, part 5: the tag-only release lane (2026-09-26) (claude-opus-5-5)
+
+**Three steps that run only on a tag could fail on a transient registry
+state, where a failure is expensive** (tags are immutable, releases too).
+
+- `scripts/release-provenance.mjs` retried a 404 but not a request that
+  throws (a reset connection, a failed DNS lookup), and it failed at once when
+  the version document did not list attestations yet. Both are "not yet" and
+  now retry for about a minute. Anything present but wrong (integrity,
+  subject, predicate) still fails at once, and a test counts the attestation
+  reads to hold that.
+- The `mcp-registry` job published seconds after `npm publish`, while the MCP
+  Registry verifies ownership by reading `mcpName` from the package.json npm
+  serves for that version. `scripts/await-npm-version.mjs` waits for it,
+  bounded (20 x 15 s), and fails at once if npm serves another `mcpName`. It
+  checks what the runner sees; the registry reads npm from its own network,
+  so this narrows the window rather than closing it.
+- `publish-preflight`, the only rehearsal of the publish lane, installed the
+  pinned npm without `--add-to-path` or the registry setup and never asked
+  which npm answered. It now runs the publish job's setup-node block, install
+  command and version check, and `npm-install-pinning.test.ts` holds the two
+  jobs to the same text. This pull request's own preflight run is the first
+  proof that the audit still works under the registry setup.
+
+Open, owner decisions (not changed here):
+- `docker.yml` pushes the image on the tag in parallel with `ci.yml`. It has
+  its own ancestry gate but does not wait for the npm publish, so a tag whose
+  CI fails still gets an image.
+- The defang rule for IOCs in docs is a convention, not a gate (part 3).
+- No `npm-shrinkwrap.json`: consumers of the npm package and of the Action
+  resolve transitive dependencies at install time.
+- `.github/dependabot.yml` has no entry for `.github/publish-toolchain`, so
+  npm pin updates are manual; security alerts for it do arrive (nine did on
+  2026-09-25, and Dependabot could not fix them because npm bundles those
+  packages).
+- Node 26 becomes Active LTS on 2026-10-28; the runtime, publish and dev
+  baselines stay on 24 until then.
 
 ## Pre-release review, part 4: what the docs claim (2026-09-26) (claude-opus-5-5)
 

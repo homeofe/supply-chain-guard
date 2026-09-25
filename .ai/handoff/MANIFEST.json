@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790379374",
-    "timestamp": "2026-09-25T23:36:15Z",
-    "commit": "1883755",
+    "session_id": "cli-1790379489",
+    "timestamp": "2026-09-25T23:38:10Z",
+    "commit": "893632c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:8a4360d46364b63279b6862a96bbf110b6ea8c58aa3fd04d64867d23b75988bc",
-      "updated": "2026-09-25T23:34:12Z",
-      "lines": 12453,
+      "checksum": "sha256:16d55d8af00684546ca0282b18cba8306ce0cb3a14a94e7eed0ab7c08d8324bb",
+      "updated": "2026-09-25T23:37:56Z",
+      "lines": 12490,
       "summary": "**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6e556ede9db6dd56d4510a3b7c2c6bb1ea26b156facaf969e9e8cc352b1e9c3a",
-      "updated": "2026-09-25T23:36:13Z",
+      "updated": "2026-09-25T23:38:08Z",
       "lines": 90,
       "summary": "Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a co"
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:241e81bad93bd10815b579195be60cc5fae7cd13955c2f1484644d0d0b40ee56",
-      "updated": "2026-09-25T23:36:13Z",
+      "checksum": "sha256:3c6e443ed5ec857ffe22350dc34880332e435e8821ebdbb28cbf75fa6fea257b",
+      "updated": "2026-09-25T23:38:08Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:8bef33d893d2213d24d7bddda5a153d94ffbd4e3989decd43692d4c4461ddec4",
-      "updated": "2026-09-25T23:36:13Z",
+      "checksum": "sha256:b9ba4f2fb84736384290e129c1267b05a6955919767fbc49423f08e0bb3b6ff7",
+      "updated": "2026-09-25T23:38:08Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 145097,
-    "full_read": 155075
+    "manifest_plus_core": 145569,
+    "full_read": 155547
   }
 }

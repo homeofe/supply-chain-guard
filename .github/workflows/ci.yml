@@ -471,13 +471,25 @@ jobs:
         with:
           persist-credentials: false
 
+      # The same Node setup, install command and version check as the publish
+      # job, so the one lane that runs only on a tag is rehearsed step for step.
+      # The preflight used to install without --add-to-path and never asked
+      # which npm answered afterwards, so a PATH entry that did not take effect
+      # would first have shown on a tag, where a failure burns the version.
+      # npm-install-pinning.test.ts holds the two jobs to the same text.
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install the pinned npm the way the publish job does
-        run: bash scripts/install-publish-npm.sh
+        run: bash scripts/install-publish-npm.sh --add-to-path
+
+      - name: Check that the pinned npm is the one on PATH
+        run: |
+          want=$(node -p "require('./.github/publish-toolchain/package-lock.json').packages['node_modules/npm'].version")
+          test "$(npm --version)" = "$want"
 
       # The pinned npm's own dependencies. npm audit reads the packages npm
       # bundles (measured: it reports 11.18.0's four high advisories and passes
@@ -722,6 +734,13 @@ jobs:
 
       - name: Validate server.json
         run: '"$RUNNER_TEMP/mcp-publisher" validate'
+
+      # The registry reads mcpName from the package.json npm serves for this
+      # version, and this job starts seconds after npm publish, before npm may
+      # serve it. scripts/await-npm-version.mjs waits for it, bounded, and
+      # fails at once if npm serves the version with another mcpName.
+      - name: Wait until npm serves this version
+        run: node scripts/await-npm-version.mjs "${GITHUB_REF_NAME#v}"
 
       - name: Publish to the MCP Registry
         run: |

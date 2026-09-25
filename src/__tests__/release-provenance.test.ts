@@ -50,25 +50,42 @@ interface Fixture {
   tarball?: Buffer;
   attestations?: unknown[];
   failFirst?: number;
+  throwFirst?: number;
+  attestationsMissingFirst?: number;
 }
 
-/** A fake registry. `failFirst` answers 404 that many times before the real data. */
+/**
+ * A fake registry. `failFirst` answers 404 that many times before the real
+ * data, `throwFirst` rejects that many requests the way fetch does on a reset
+ * connection, and `attestationsMissingFirst` serves that many version
+ * documents without dist.attestations.
+ */
 function registry(f: Fixture = {}) {
   let failures = f.failFirst ?? 0;
+  let throws = f.throwFirst ?? 0;
+  let bare = f.attestationsMissingFirst ?? 0;
   const calls: string[] = [];
   const fetchImpl = async (url: string) => {
     calls.push(url);
+    if (throws > 0) {
+      throws--;
+      throw new TypeError("fetch failed");
+    }
     if (failures > 0) {
       failures--;
       return new Response("not yet", { status: 404 });
     }
     if (url === `https://registry.npmjs.org/supply-chain-guard/${VERSION}`) {
+      const withAttestations = bare === 0;
+      if (bare > 0) bare--;
       return Response.json({
         version: VERSION,
         dist: {
           integrity: f.integrity ?? INTEGRITY,
           tarball: `https://registry.npmjs.org/supply-chain-guard/-/supply-chain-guard-${VERSION}.tgz`,
-          attestations: { url: `https://registry.npmjs.org/-/npm/v1/attestations/supply-chain-guard@${VERSION}` },
+          ...(withAttestations
+            ? { attestations: { url: `https://registry.npmjs.org/-/npm/v1/attestations/supply-chain-guard@${VERSION}` } }
+            : {}),
         },
       });
     }
@@ -165,5 +182,30 @@ describe("release provenance", () => {
     const gives_up = run({ failFirst: 50 });
     await expect(gives_up.promise).rejects.toThrow(/404/);
     expect(gives_up.calls.length).toBeLessThan(50);
+  });
+
+  it("retries a request that throws the way it retries a 404, and names the error when it gives up", async () => {
+    await expect(run({ throwFirst: 2 }).promise).resolves.toBeDefined();
+    const down = run({ throwFirst: 50 });
+    await expect(down.promise).rejects.toThrow(/fetch failed/);
+    expect(down.calls.length).toBeLessThan(50);
+  });
+
+  it("waits for the attestations to appear on the version document, a bounded number of times", async () => {
+    await expect(run({ attestationsMissingFirst: 2 }).promise).resolves.toBeDefined();
+    const never = run({ attestationsMissingFirst: 50 });
+    await expect(never.promise).rejects.toThrow(/no attestations/);
+    expect(never.calls.length).toBeLessThan(50);
+  });
+
+  it("does not retry an attestation that is present but wrong", async () => {
+    // The control for the retry above: a wrong answer is not a delay. Retrying
+    // it would only hold a failing release open for a minute.
+    const other = statement({
+      subject: [{ name: `pkg:npm/supply-chain-guard@${VERSION}`, digest: { sha512: "00".repeat(64) } }],
+    });
+    const wrong = run({ attestations: [{ predicateType: SLSA_PROVENANCE_V1, bundle: bundleFor(other) }] });
+    await expect(wrong.promise).rejects.toThrow(/subject/);
+    expect(wrong.calls.filter((u) => u.includes("/attestations/"))).toHaveLength(1);
   });
 });
