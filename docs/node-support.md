@@ -16,9 +16,9 @@ Change the policy here and the gate names every file that has to follow.
   "transitionMajors": [],
   "activeLtsMajor": 24,
   "activeLtsReviewedIn": "6.3.0",
-  "publishMajor": 22,
-  "runtimeMajor": 22,
-  "devBaseline": 22
+  "publishMajor": 24,
+  "runtimeMajor": 24,
+  "devBaseline": 24
 }
 ```
 
@@ -209,14 +209,37 @@ All three are asserted, and all three were false before the assertion existed:
   and the only supported major was one that had been in Maintenance LTS since
   2025-10-21.
 
+## What runs on 24 and what stays at 22 (2026-09-25)
+
+Read against `schedule.json` in `nodejs/Release` on 2026-09-25: Node 22 is in
+Maintenance LTS until its end of life on **2027-04-30**, Node 24 is Active LTS
+(Maintenance from 2026-10-20, end of life 2028-04-30), and Node 26 becomes Active LTS
+on 2026-10-28. Everything this project runs itself moved to 24 in 6.3.0: the
+published container image and Action (`runtimeMajor`), the npm publish
+(`publishMajor`), the devcontainer (`devBaseline`) and the supporting workflows.
+
+The consumer floor stays at 22. A user on Node 22 is still on a maintained release
+for seven more months, and raising `engines.node` would break their install, which is
+a semver-major change. When Node 22 leaves `supportedMajors`, it does so through the
+transition-lane mechanism above and in a major release.
+
 ## The npm pin on the publish job
 
 The publish job used to pin `npm@11.18.0` explicitly, because npm 12 requires Node
 `>=22` and hard-failed EBADENGINE on the Node 20 runner, which broke the v5.11.0
-publish on 2026-07-09. That constraint is a consequence of Node 20 and disappears with
-it. See `.github/workflows/ci.yml` for what the pin is now and why; it is still an
-exact pinned version rather than `@latest`, because a publish lane that resolves a
-floating version is a publish lane whose behaviour changes without a commit.
+publish on 2026-07-09. That constraint is a consequence of Node 20 and disappeared
+with it. The pin stays an exact version rather than the npm bundled with Node,
+because a publish lane that resolves a floating version is a publish lane whose
+behaviour changes without a commit: every Node 24 patch release may bundle a
+different npm.
+
+Since 6.3.0 the pin is a lockfile, `.github/publish-toolchain/package-lock.json`,
+installed by `scripts/install-publish-npm.sh` with `npm ci`. It used to be
+`npm install --global npm@11.18.0`, which fixed the version but never checked the
+tarball against a known hash, in the job that holds the publish identity (OpenSSF
+Scorecard Pinned-Dependencies). The `publish-preflight` job runs the same script on
+the publish major for every pull request, so a broken pin fails a pull request
+instead of a tag.
 
 ## What is deliberately not governed here
 

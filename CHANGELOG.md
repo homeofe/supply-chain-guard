@@ -242,6 +242,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   package catalog needs one `feed refresh`. The comparison table no longer
   calls the package verdicts "fully local/offline", and the MCP `ioc_lookup`
   description no longer implies the bundled set is the whole corpus.
+- The container image, the GitHub Action, the npm publish, the devcontainer
+  and the supporting workflows run on Node 24 (Active LTS) instead of Node 22,
+  which has been in Maintenance LTS since 2025-10-21. The supported range is
+  unchanged: `engines.node` stays `>=22.0.0` and CI keeps testing Node 22 and
+  24, because Node 22 is maintained upstream until 2027-04-30 and raising the
+  floor would break installs on it.
 
 ### Fixed
 
@@ -546,6 +552,25 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Windows from the user's own arguments, where the command comes from a
   fixed four-manager allowlist and every argument is quoted and escaped
   twice, the technique `cross-spawn` uses.
+- **Every npm download in the build and release path is pinned by hash**
+  (OpenSSF Scorecard Pinned-Dependencies, code-scanning alerts 4, 5 and 6):
+  - The container image installed the tarball with `npm install -g`, which
+    resolved the runtime dependencies from the registry by semver range at
+    image build time: `commander@^14` meant whatever 14.x was newest that day,
+    never checked against the lockfile CI tested. The image now installs
+    with `npm ci` from a lockfile built out of `package-lock.json`
+    (`scripts/clean-room-lockfile.mjs`), so it carries exactly the tested
+    bytes or the build fails. The clean-room install in
+    `scripts/validate-package.sh` uses the same lockfile and now also asserts
+    each runtime dependency is at the lockfile's version.
+  - The publish job installed its npm as `npm install --global npm@11.18.0`:
+    a fixed version, but a tarball never checked against a known hash, in the
+    one job that holds the publish identity. It now comes from
+    `.github/publish-toolchain/package-lock.json` through `npm ci`, and a new
+    `publish-preflight` job runs the same install on every pull request.
+  - `npm-install-pinning.test.ts` applies Scorecard's rule to the Dockerfile,
+    the workflows and the scripts, so a new unpinned install fails CI instead
+    of waiting for the next Scorecard run.
 
 ## [6.2.5] - 2026-09-23
 

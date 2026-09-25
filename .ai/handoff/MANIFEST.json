@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790367247",
-    "timestamp": "2026-09-25T20:14:07Z",
-    "commit": "a50ebf1",
+    "session_id": "cli-1790369656",
+    "timestamp": "2026-09-25T20:54:16Z",
+    "commit": "f27d1ee",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:384ca46fa5b653a831b46b3b3476432022b75c9867451d67ebd144cba8fb1a1b",
-      "updated": "2026-09-25T20:13:57Z",
-      "lines": 12022,
-      "summary": "The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR)"
+      "checksum": "sha256:0e04f3bb26d250ecaed8577f1e68577ba151e7b834b7555a91d1f430c9b4cf7c",
+      "updated": "2026-09-25T20:54:16Z",
+      "lines": 12099,
+      "summary": "**Correction to the Scorecard table in the hardening entry below.** Its"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:79c64f52882c2d4f5fe91318c84a2fe92d30bd09e683212e90090e920fb5f29e",
-      "updated": "2026-09-25T20:14:07Z",
+      "updated": "2026-09-25T20:54:16Z",
       "lines": 90,
       "summary": "281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catal"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:4da17d3268dda00b74a2c5b7fd3c6b4dcc73ef7505006fb739adac5d1f1e1522",
-      "updated": "2026-09-25T20:14:07Z",
+      "checksum": "sha256:5e87d562b10f4ef2943ccdf2585a854d9f997280c7ca43947d26a030307601a7",
+      "updated": "2026-09-25T20:54:16Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:db39d3abdfbd9d99c3b38fa7e175c168c6fc22bddf36ac206dfee90a96ee3a2d",
-      "updated": "2026-09-25T20:14:07Z",
+      "checksum": "sha256:96f7d061771688ccff88d5d2017137800c69fd75da122518ae143001665222ab",
+      "updated": "2026-09-25T20:54:16Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-25T19:49:48Z",
+      "updated": "2026-09-25T20:34:50Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR) Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "**Correction to the Scorecard table in the hardening entry below.** Its Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 140093,
-    "full_read": 150084
+    "manifest_plus_core": 140946,
+    "full_read": 150937
   }
 }

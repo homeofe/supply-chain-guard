@@ -118,13 +118,19 @@ done
 
 # --- 4. install into a directory that shares nothing with this checkout -------
 CLEAN="$WORK/clean"
-mkdir -p "$CLEAN"
+# Pinned: npm ci against a lockfile that records the tarball's sha512 and copies
+# every runtime entry of this repository's package-lock.json with its integrity,
+# so the dependencies are the exact bytes the suite ran against. `npm install
+# <tarball>` resolved them from the registry by range instead (Scorecard
+# Pinned-Dependencies, code-scanning alert 5). What this section checks is the
+# ARTIFACT (files, bin, entry points), which a pinned install exercises fully;
+# a new dependency release reaches us as a Dependabot lockfile change.
+node "$REPO/scripts/clean-room-lockfile.mjs" "$TARBALL" "$CLEAN" | sed 's/^/  ---    /'
 cd "$CLEAN"
-npm init -y >/dev/null 2>&1
 # --ignore-scripts on purpose: a consumer install must work without running any
 # lifecycle script of ours, and this package declares none for install.
-if npm install --silent --no-audit --no-fund --ignore-scripts "$TARBALL" >"$WORK/install.log" 2>&1; then
-  ok "clean-room install succeeded from the tarball"
+if npm ci --silent --no-audit --no-fund --ignore-scripts >"$WORK/install.log" 2>&1; then
+  ok "clean-room install succeeded from the tarball (npm ci, lockfile-pinned)"
 else
   bad "clean-room install failed"; tail -20 "$WORK/install.log" | sed 's/^/         /'; cd "$REPO"; exit 1
 fi
@@ -140,6 +146,16 @@ I_VER=$(node -p "require('$INSTALLED/package.json').version")
 
 I_ENG=$(node -p "JSON.stringify(require('$INSTALLED/package.json').engines||null)")
 note "installed engines: $I_ENG"
+
+# The runtime dependencies are the lockfile's versions, not whatever their
+# range resolves to today. Read from package.json and package-lock.json, so a
+# new dependency is covered without editing this script.
+while IFS=' ' read -r dep want; do
+  [ -n "$dep" ] || continue
+  got=$(node -p "require('$CLEAN/node_modules/$dep/package.json').version" 2>/dev/null || echo missing)
+  if [ "$got" = "$want" ]; then ok "runtime dependency $dep installed at the lockfile's $want"
+  else bad "runtime dependency $dep is $got, package-lock.json pins $want"; fi
+done < <(node -p "const p=require('$REPO/package.json'),l=require('$REPO/package-lock.json');Object.keys(p.dependencies||{}).map((d)=>d+' '+l.packages['node_modules/'+d].version).join('\n')")
 
 # --- 6. the bin mapping actually resolves and runs ----------------------------
 while IFS= read -r binname; do

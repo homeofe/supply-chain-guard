@@ -1,3 +1,80 @@
+## npm installs pinned by hash, own runtime on Node 24 (2026-09-25) (claude-opus-5-5)
+
+**Correction to the Scorecard table in the hardening entry below.** Its
+Pinned-Dependencies row said the Dockerfile and `validate-package.sh` installs
+"install our own freshly built tarball ... and cannot be hash-pinned". That
+was wrong, and the owner challenged it. `npm install <tarball>` installs the
+tarball AND resolves its runtime dependencies from the registry by range. The
+image therefore got whatever `commander` 14.x was newest on build day, never
+checked against the lockfile. It is 14.0.3 today, the same as the lockfile, by
+coincidence, not by any control. Scorecard's rule, read from its source
+(`checks/raw/shell_download_validate.go`): only `npm ci`, or an install from a
+git URL with a full commit hash, is pinned.
+
+Changed (alerts 4, 5, 6):
+
+- `scripts/clean-room-lockfile.mjs` writes a lockfile for installing the
+  packed tarball: the tarball's sha512 plus every runtime entry of
+  `package-lock.json`. The Dockerfile runtime stage and the clean-room section
+  of `validate-package.sh` both install with `npm ci` from it.
+- Measured on npm 10.9.8 (the Node 22 runtime) and npm 12.0.2: a wrong
+  `commander` hash fails with EINTEGRITY, and so does a tarball altered after
+  its hash was recorded, when the cache is empty. With the cache warm, npm
+  serves the recorded bytes by hash instead, which is also safe. Without the
+  recorded hash, an altered tarball installs.
+- Publish job: `npm@11.18.0` now comes from
+  `.github/publish-toolchain/package-lock.json` (integrity matched against
+  the registry's `dist.integrity`), installed by
+  `scripts/install-publish-npm.sh`. The version check runs in the publish
+  step itself. The new `publish-preflight` job runs the same script on the
+  same Node major for every PR and feeds the required `Build and Test`
+  aggregator. It does not run `npm publish --dry-run`: npm 11 refuses a dry
+  run for a version already on the registry, which is every non-release PR
+  (measured).
+- `npm-install-pinning.test.ts` applies Scorecard's rule to the Dockerfile,
+  the workflows and `scripts/`. Its first run flagged an `echo` message
+  containing "npm ... install"; the rule now looks only at the command word,
+  as Scorecard does, and that line is kept as a control.
+
+Node (owner request "Node22 is EOL, we need Node24 or Node26"): per
+`nodejs/Release` `schedule.json`, read 2026-09-25, Node 22 is Maintenance LTS
+until its EOL on 2027-04-30, not EOL yet. `publishMajor`, `runtimeMajor` and
+`devBaseline` moved to 24: the container image (`node:24-alpine`, digest
+confirmed by the registry and Docker Hub), `action.yml`, the publish and
+release jobs, the devcontainer, `aahp-verify.yml` and `demo.yml`. The floor
+(`engines.node >=22.0.0`) and the compat matrix [22, 24] stay, because
+dropping 22 would break consumer installs and is semver-major. The publish npm
+stays an exact pin rather than Node 24's bundled npm (11.19.0 today): the
+bundled version moves with every Node patch release, and
+`docs/node-support.md` forbids a floating publish toolchain.
+
+Cuts (cuts-pin, 11): baseline 48 passed. Each cut is red on its own test:
+- the Dockerfile, the publish job and the clean-room each restored to `npm install`;
+- the preflight no longer runs the script;
+- the preflight on another Node major;
+- the version check moved after the publish;
+- the aggregator no longer needs the preflight;
+- the toolchain npm given as a range;
+- the generator copying dev entries;
+- the generator dropping the tarball hash;
+- `runtimeMajor` back to 22.
+
+Post-restore: 48 passed.
+
+Open, owner decisions:
+- **npm-shrinkwrap.json.** `action.yml` runs `npm install -g
+  supply-chain-guard@<exact>`, so every Action run and every global install
+  resolves `commander@^14` by range. Scorecard does not read `action.yml`, so
+  no alert shows it. Publishing an `npm-shrinkwrap.json` would pin it for
+  every consumer. npm recommends that for CLIs and discourages it for
+  libraries, and this package is both.
+- **Dependabot and the publish toolchain.** Nothing updates the toolchain
+  lockfile. It is bumped by hand, one publish-lane variable per release. A
+  Dependabot entry for `/.github/publish-toolchain` would open those PRs.
+- **Node 26** becomes Active LTS on 2026-10-28. The first release after that
+  date adds the Node 26 compat leg and moves `activeLtsMajor` to 26 (carried
+  item, unchanged).
+
 ## CodeQL findings triaged and fixed (2026-09-25) (claude-opus-5-5)
 
 The first CodeQL analysis of `main` (enabled by the Scorecard hardening PR)
