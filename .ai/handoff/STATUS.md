@@ -2,8 +2,8 @@
 
 **`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing
 they created in `os.tmpdir()`.** Every run left one `scg-issue54-empty-*` and
-two `scg-two-tier-*` directories behind; the Linux test host had collected
-about 90 and 150 of them since 2026-09-12. These are the leftovers the
+two `scg-two-tier-*` directories behind; the Linux test host held 63 and 128
+of them on 2026-09-26, dating back to 2026-09-12. These are the leftovers the
 comment in `feed-partition.test.ts` refers to.
 
 - `issue-54-hardening.test.ts`: the bundled-feed self-check passed
