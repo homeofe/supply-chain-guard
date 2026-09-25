@@ -1,3 +1,39 @@
+## Pre-release review, part 4: what the docs claim (2026-09-26) (claude-opus-5-5)
+
+**The README rendered as code from the quick start down.** PR 336 left the
+provenance example ending in "``` Everything else, from output", and a
+closing fence takes no text after it. On GitHub the 135 lines after it were
+one code block: the table of contents, Background, What It Detects and the
+Installation heading. npm still shows the README of v6.2.5, which never had
+it. Nothing checked this. `markdown-fences.test.ts` now reads every published
+Markdown file (README, CHANGELOG, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT and
+`docs/`) the way a renderer does, and requires every README Contents entry to
+land on a heading outside a code block.
+
+Claims corrected, each checked in the code first:
+- **"Run `feed refresh` once".** The catalog cache is `.scg-cache` in the
+  working directory (`CACHE_DIR` is relative), and a cache built for another
+  release is refused (`version-mismatch`). The README quick start, the catalog
+  section, the comparison table, `docs/mcp.md` and the MCP `coverageNote` now
+  say where to refresh and that an upgrade needs a new refresh.
+- **"Every report carries a Catalog line".** Only `scan` sets `detectionSet`
+  (`scanner.ts`); the `npm`, `pypi` and `vscode` reports carry none.
+- **The offline promise named only `--check-registry`.** `--external-intel`
+  reaches the network too: OSV gets each dependency's name, ecosystem and
+  version, EPSS the CVE ids, Scorecard the `owner/repo`, and the CISA KEV
+  catalog is downloaded. The README's network list names it now.
+- **Fork pull requests get no code-scanning check.** `self-scan.yml` skips the
+  upload for them; the [6.3.0] notes said every pull request gets one.
+- **`DEPENDENCY_UNTRUSTED_SOURCE` is library-only.** It lives in
+  `checkDependencyGovernance`, which `scan` never calls; the [6.3.0] Security
+  bullet read as if scans had been affected.
+- **"The other eleven steps"** in `docs/ci-and-release.md`: there are 13 other
+  checkout steps (14 in all, counted with comments excluded). It now says
+  "every other checkout step", which cannot go stale.
+- **"Fails the build"** in the coverage section: a format without a test fails
+  `coverage-matrix.test.ts`, the test suite. `check:coverage` only compares
+  the table with the JSON.
+
 ## Pre-release review, part 3: threat intelligence (2026-09-26) (claude-opus-5-5)
 
 **The 2026-09-22 catalog window moved fresh malware out of the offline

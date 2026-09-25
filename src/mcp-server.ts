@@ -324,7 +324,8 @@ export function catalogCoverageNote(
   return (
     `Clean against the bundled indicators only: ${catalog.entryCount} historical catalog ` +
     `indicators were not consulted (${catalog.reason ?? "absent"}). Run ` +
-    `"supply-chain-guard feed refresh" once, with network access, to include them.`
+    `"supply-chain-guard feed refresh" with network access, in this server's ` +
+    `working directory, to include them (again after each upgrade).`
   );
 }
 

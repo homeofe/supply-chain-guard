@@ -254,9 +254,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - The README's offline and air-gapped wording now states what an offline scan
   matches against: the bundled set, meaning every domain, URL, IP and hash,
   every curated campaign and the recent package indicators. The historical
-  package catalog needs one `feed refresh`. The comparison table no longer
+  package catalog needs a `feed refresh` in the directory the scan runs from,
+  repeated after an upgrade. The comparison table no longer
   calls the package verdicts "fully local/offline", and the MCP `ioc_lookup`
-  description no longer implies the bundled set is the whole corpus.
+  description no longer implies the bundled set is the whole corpus. The list
+  of commands that reach the network now names `scan --external-intel` and
+  what it sends: each dependency's name, ecosystem and version to OSV, CVE ids
+  to EPSS, and the GitHub `owner/repo` to the OpenSSF Scorecard API.
 - The container image, the GitHub Action, the npm publish, the devcontainer
   and the supporting workflows run on Node 24 (Active LTS) instead of Node 22,
   which has been in Maintenance LTS since 2025-10-21. The supported range is
@@ -265,8 +269,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   floor would break installs on it.
 - The README's "scanned by supply-chain-guard" badge is now the live status
   of a self-scan workflow (`.github/workflows/self-scan.yml`) instead of a
-  static image. Every pull request gets a `supply-chain-guard` code-scanning
-  check with its findings annotated, and a job summary with the report. The
+  static image. Every pull request gets the scan and a job summary with the
+  report, and one from a branch of this repository also gets a
+  `supply-chain-guard` code-scanning check with its findings annotated (a
+  fork's token cannot upload code-scanning results, so a fork's summary says
+  the upload was skipped). The
   scan had already gated every pull request since the self-scan gate landed,
   but only inside the compat job's log, where nothing on the pull request
   showed it. It runs this commit's own build at the gate's threshold
@@ -310,10 +317,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   out, and nothing else in the report said the historical catalog was not
   consulted. The detection-set provenance now records the catalog
   (`detectionSet.catalog`: `consulted`, `entryCount`, `reason`) from the same
-  snapshot the finding uses, and every report format renders it whatever the
-  severity filter: a Catalog line in text, Markdown (bold when the catalog was
-  not consulted), HTML, GitLab and JUnit, plus two CycloneDX properties. The
-  score, risk level, badge and exit code are unchanged.
+  snapshot the finding uses, and every `scan` report renders it in every
+  format, whatever the severity filter: a Catalog line in text, Markdown (bold
+  when the catalog was not consulted), HTML, GitLab and JUnit, plus two
+  CycloneDX properties. The score, risk level, badge and exit code are
+  unchanged. The `npm`, `pypi` and `vscode` commands, which vet one remote
+  package, carry no catalog statement.
 - The MCP `ioc_lookup` result carries `checkedAgainst.catalog`, and a clean
   package verdict reached without the catalog carries a `coverageNote`.
   Indicator lookups need none, because the catalog holds package indicators
@@ -321,8 +330,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - `.claude/settings.json` hooks are parsed leniently too (comments, trailing
   commas), so one stray comma no longer hides every hook from the scan.
 - **A local `scan` sent Python dependency names to pypi.org.** The README
-  promises that `scan` on a local path makes no network requests unless
-  `--check-registry` is passed, but the PyPI dependency-confusion lookup ran on
+  promises that `scan` on a local path makes no network requests unless an
+  opt-in network flag is passed, but the PyPI dependency-confusion lookup ran on
   every scan of a project with `requirements.txt` or `pyproject.toml`,
   including internal-looking package names (measured with every network API
   instrumented: the only outbound traffic of a scan over 21 manifest types was
@@ -574,13 +583,15 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 ### Security
 
 - **The findings of the first CodeQL analysis are fixed.** CodeQL raised 61
-  alerts on `main`. The ones that change what a scan reports:
-  - A lockfile could pass a foreign host off as the npm registry.
-    `DEPENDENCY_UNTRUSTED_SOURCE` trusted every `resolved` URL that started
-    with the registry's address, so a host name that merely began with
-    `registry[.]npmjs[.]org`, or a URL that put the registry's name before an
-    `@` and another host, raised no finding. A `resolved` URL is now trusted
-    only as `https:` on an exact registry host, with no port and no
+  alerts on `main`. The ones that change what a scan or the library API
+  reports:
+  - A lockfile could pass a foreign host off as the npm registry to
+    `checkDependencyGovernance`, a library export that the `scan` command does
+    not run. Its `DEPENDENCY_UNTRUSTED_SOURCE` trusted every `resolved` URL
+    that started with the registry's address, so a host name that merely
+    began with `registry[.]npmjs[.]org`, or a URL that put the registry's name
+    before an `@` and another host, raised no finding. A `resolved` URL is now
+    trusted only as `https:` on an exact registry host, with no port and no
     credentials; `file:` is unchanged.
   - A scanned package's name could steer the registry lookup of the
     publishing-anomaly and dependency-confusion checks. Only the first `/` of

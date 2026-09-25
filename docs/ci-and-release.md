@@ -111,7 +111,7 @@ decision. There is exactly one step that keeps the credential.
 | workflow | job | value | why |
 | --- | --- | --- | --- |
 | `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `vN` branch every Action consumer resolves |
-| the other eleven steps | | `false` | no step in those jobs talks to a remote |
+| every other checkout step | | `false` | no step in those jobs talks to a remote |
 
 `src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism. It walks each
 checkout step's own indented block in the raw file text and fails when a step declares
