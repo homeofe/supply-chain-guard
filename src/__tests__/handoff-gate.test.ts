@@ -192,8 +192,72 @@ describe("handoff staleness gate", () => {
   });
 
   it("uses release content rather than a changelog subsection as the LOG headline", () => {
-    expect(readLog()).toContain("| v1.0.0 | 2026-01-01 | initial |");
-    expect(readLog()).not.toContain("| v1.0.0 | 2026-01-01 | ### Added |");
+    expect(readLog()).toContain("## [2026-01-01] v1.0.0\n\ninitial\n");
+    expect(readLog()).not.toContain("### Added");
+  });
+
+  // The AAHP LOG rule is 10 newest entries under canonical "## [YYYY-MM-DD]"
+  // headings. The generator used to render every release as a table row, which
+  // gave `aahp archive --verify` zero entries to count, so the rule was broken
+  // while the check stayed green.
+  describe("the AAHP LOG rule", () => {
+    const writeReleases = (n: number) => {
+      const blocks = Array.from({ length: n }, (_, k) => {
+        const day = String(n - k).padStart(2, "0");
+        return `## [1.0.${n - k}] - 2026-02-${day}\n\n### Added\n\n- release ${n - k}\n`;
+      });
+      fs.writeFileSync(path.join(tmp, "CHANGELOG.md"), `# Changelog\n\n## [Unreleased]\n\n${blocks.join("\n")}`);
+      refresh();
+    };
+    const archiveVerify = (): { ok: boolean; out: string } => {
+      try {
+        const out = execFileSync(
+          "bash",
+          [path.join(tmp, "node_modules", "@elvatis_com", "aahp", "scripts", "aahp-archive.sh"), tmp, "--verify"],
+          { cwd: tmp, stdio: "pipe", encoding: "utf8" },
+        );
+        return { ok: true, out };
+      } catch (e) {
+        const err = e as { stdout?: string; stderr?: string };
+        return { ok: false, out: `${err.stdout ?? ""}${err.stderr ?? ""}` };
+      }
+    };
+
+    it("joins a wrapped bullet into one headline instead of stopping at the line break", () => {
+      fs.writeFileSync(
+        path.join(tmp, "CHANGELOG.md"),
+        "# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-01-01\n\n### Added\n\n- first line of the\n  bullet continues here\n- second bullet\n",
+      );
+      refresh();
+      expect(readLog()).toContain("## [2026-01-01] v1.0.0\n\nfirst line of the bullet continues here\n");
+      expect(readLog()).not.toContain("second bullet");
+    }, 20000);
+
+    it("keeps exactly the 10 newest releases, newest first, as canonical entries", () => {
+      writeReleases(12);
+      const headings = readLog().split("\n").filter((l) => /^## \[\d{4}-\d{2}-\d{2}\]/.test(l));
+      expect(headings).toHaveLength(10);
+      expect(headings[0]).toBe("## [2026-02-12] v1.0.12");
+      expect(headings[9]).toBe("## [2026-02-03] v1.0.3");
+      expect(readLog()).not.toContain("v1.0.2\n");
+      expect(check()).toBe(true);
+    }, 20000);
+
+    it("passes AAHP's own archive verification, which a table of every release gave nothing to count", () => {
+      writeReleases(12);
+      const result = archiveVerify();
+      expect(result.out).toContain("LOG.md entries=10");
+      expect(result.ok).toBe(true);
+    }, 20000);
+
+    it("the verification is not vacuous: an eleventh entry fails it", () => {
+      writeReleases(12);
+      const logPath = path.join(tmp, ".ai", "handoff", "LOG.md");
+      fs.appendFileSync(logPath, "\n---\n\n## [2026-01-01] v0.9.9\n\nextra\n");
+      const result = archiveVerify();
+      expect(result.ok).toBe(false);
+      expect(result.out).toContain("LOG.md has 11 entries");
+    }, 20000);
   });
 
   it(

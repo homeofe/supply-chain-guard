@@ -30,11 +30,12 @@
     "check:feed": "node scripts/generate-feed.mjs --check",
     "check:feed-partition": "node scripts/check-feed-partition.mjs",
     "check:feed-budget": "node scripts/check-feed-budget.mjs",
-    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:coverage && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
+    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:coverage && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:log-archive && npm run check:self-scan",
     "prepublishOnly": "npm run build",
     "prepare": "tsc",
     "coverage:generate": "node scripts/generate-coverage-table.mjs",
-    "check:coverage": "node scripts/generate-coverage-table.mjs --check"
+    "check:coverage": "node scripts/generate-coverage-table.mjs --check",
+    "check:log-archive": "npx --no-install aahp archive . --verify"
   },
   "keywords": [
     "security",

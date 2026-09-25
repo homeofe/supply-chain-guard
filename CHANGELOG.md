@@ -245,6 +245,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- `.ai/handoff/LOG.md` follows the AAHP rule again: the 10 newest releases as
+  canonical `## [YYYY-MM-DD]` entries instead of a table of all 170, the
+  archive index is back in the format `aahp archive --verify` reads, and a new
+  prebuild gate (`check:log-archive`) runs that verification. It failed before
+  and nothing ran it.
 - `stripHashComment` stopped scanning when a line's first `#` was in column
   0, so `#a #b` kept its trailing comment where the regex it replaced gives
   `#a`. Found by the new property test; only lines that are already
