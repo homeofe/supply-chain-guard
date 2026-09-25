@@ -1,3 +1,49 @@
+## Findability: MCP Registry, OpenSSF Scorecard, 30-second start (2026-09-25) (claude-opus-5-5)
+
+The owner asked why downloads fall and how to make the project easier to find;
+the measurement is in the note below this one. This change carries the three
+items the owner approved.
+
+### MCP Registry (release job, owner-approved)
+
+- `server.json` had never been published and could not have been: its
+  description was 288 characters and the registry schema allows 100. The live
+  registry answered `mcp-publisher validate` with 422 "expected length <= 100".
+  Searches for the server name and the owner return nothing, while a control
+  search returns other servers. `package.json` already carried the `mcpName`
+  the registry verifies.
+- The description is now 99 characters, `server.json` joined the surfaces of the
+  ecosystem-count claim, and `mcp-registry-manifest.test.ts` holds the limit,
+  the name match and the release job's safeguards.
+- New `ci.yml` job `mcp-registry`: after `publish`, only `contents: read` and
+  `id-token: write`, GitHub OIDC login (no secret), `mcp-publisher` 1.8.1 pinned
+  with SHA-256 `a06c9096...cf2cc` checked before extraction (computed from the
+  asset and matched against `registry_1.8.1_checksums.txt`), `validate` before
+  `publish`. `release` does not depend on it. The first real run is the next
+  tag; the registry is in preview and may reset data.
+
+### OpenSSF Scorecard
+
+- `scorecard.yml`, shaped by the Scorecard API's workflow restrictions (own
+  file, `permissions: read-all`, only the approved actions, all SHA-pinned),
+  on push to `main`, weekly and on branch-protection changes. Not a required
+  check. The README badge shows data after the first run on `main`.
+
+### README
+
+- A 30-second start above the table of contents: `npx supply-chain-guard scan .`,
+  the exit codes, the catalog refresh, the Action snippet, the MCP setup, and
+  the npm provenance attestation (verified present on 6.2.5).
+- `docs/ci-and-release.md`: the workflow table names both additions, and the
+  checkout-credentials count was already one short on `main` (8 non-exception
+  steps, documented as seven); it now reads ten.
+
+### Left for the owner
+
+- Setting the repository homepage URL (a repository setting).
+- An OpenSSF Best Practices badge needs a registration at bestpractices.dev.
+- Posting about incidents and submitting to curated lists.
+
 ## Catalog coverage made visible, PRs 326/327 landed (2026-09-25) (claude-opus-5-5)
 
 ### Offline promise: what was checked and what changed

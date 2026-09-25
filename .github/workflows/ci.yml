@@ -599,6 +599,75 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public --provenance
 
+  # Lists the MCP server in the official registry
+  # (https://registry.modelcontextprotocol.io), which MCP clients and directories
+  # read to discover servers. server.json was kept version-synced for months but
+  # never published, and could not have been: its description was 288 characters
+  # and the registry's schema allows 100 (the live registry answers 422
+  # "expected length <= 100"). mcp-registry-manifest.test.ts now holds that limit.
+  #
+  # Why it is shaped like this:
+  #   * needs: publish. The registry verifies npm ownership by reading `mcpName`
+  #     from the PUBLISHED package.json of this exact version, so it can only run
+  #     after npm has the release.
+  #   * A job of its own with only id-token: write and contents: read. The
+  #     registry authenticates the io.github.homeofe/* namespace by GitHub OIDC,
+  #     so there is no secret or PAT to store or leak. `release` does not depend
+  #     on this job, so a registry outage leaves the job red and visible without
+  #     holding back the GitHub Release.
+  #   * mcp-publisher is pinned to one version and its tarball SHA-256 is checked
+  #     before anything is extracted. The registry's own example pipes
+  #     `releases/latest` into tar, which in a job holding an OIDC token is the
+  #     exact pattern this scanner flags in other people's workflows. The digest
+  #     below was computed from the downloaded asset AND matched against
+  #     registry_1.8.1_checksums.txt from the same release on 2026-09-25.
+  #   * validate runs before publish, so a schema problem fails on the rule it
+  #     breaks instead of inside the publish call.
+  mcp-registry:
+    name: Publish to MCP Registry
+    needs: publish
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install mcp-publisher (pinned, checksum-verified)
+        env:
+          MCP_PUBLISHER_VERSION: "1.8.1"
+          MCP_PUBLISHER_SHA256: "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
+        run: |
+          set -euo pipefail
+          asset="mcp-publisher_linux_amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$asset" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/${asset}"
+          echo "${MCP_PUBLISHER_SHA256}  $RUNNER_TEMP/$asset" | sha256sum --check --strict -
+          tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP" mcp-publisher
+
+      - name: Check server.json against the tag
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const srv = require("./server.json");
+            const tag = process.env.GITHUB_REF_NAME;
+            const fail = (m) => { console.error("::error title=server.json::" + m); process.exit(1); };
+            if (tag !== `v${srv.version}`) fail(`version ${srv.version} does not match tag ${tag}`);
+            if (srv.packages[0].version !== srv.version) fail("packages[0].version differs from version");
+            if (srv.name !== pkg.mcpName) fail(`name ${srv.name} does not match package.json mcpName ${pkg.mcpName}`);
+          '
+
+      - name: Validate server.json
+        run: '"$RUNNER_TEMP/mcp-publisher" validate'
+
+      - name: Publish to the MCP Registry
+        run: |
+          "$RUNNER_TEMP/mcp-publisher" login github-oidc
+          "$RUNNER_TEMP/mcp-publisher" publish
+
   release:
     name: Create GitHub Release
     needs: publish

@@ -195,6 +195,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   enforced after `feed refresh`. The one bare npm name,
   `ubiquiti-agents-link-mcp`, was probed first and resolves to an npm security
   holding package.
+- The MCP server is published to the official MCP Registry on every release,
+  so MCP clients and directories can find it. A new `mcp-registry` job runs
+  after npm publish, authenticates by GitHub OIDC (no stored token), installs
+  `mcp-publisher` pinned to one version with its SHA-256 checked before
+  extraction, and validates `server.json` before publishing. The GitHub Release
+  does not wait for it.
+- OpenSSF Scorecard: a `scorecard.yml` workflow publishes the repository's
+  Scorecard on every push to `main` and weekly, and the README shows the badge.
+  It never runs on pull requests and is not a required check.
+- The README opens with a 30-second start: one command to scan, the Action
+  snippet and the MCP setup, before the table of contents.
 
 ### Changed
 
@@ -220,6 +231,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- **`server.json` could never have been published.** Its description was 288
+  characters and the MCP Registry schema allows 100; the live registry rejects
+  it with 422 "expected length <= 100". It is now 99 characters, a test holds
+  the limit and the `mcpName` match, and `server.json` joined the surfaces of
+  the build-gated ecosystem-count claim.
 - **A bundle-only scan no longer reads like a complete one.**
   `THREAT_FEED_CATALOG_MISSING` stays `info` so a fresh install is not flagged
   yellow, but `--min-severity low`, the GitHub Action's default, filtered it

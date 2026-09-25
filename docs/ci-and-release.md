@@ -80,7 +80,8 @@ request code has permission to change protection.
 
 | file | trigger | responsibility |
 | --- | --- | --- |
-| `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, GitHub Release, `vN` major-ref branch fast-forward |
+| `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, MCP Registry listing (`mcp-registry`, after npm, OIDC, pinned and checksum-verified `mcp-publisher`; the GitHub Release does not wait for it), GitHub Release, `vN` major-ref branch fast-forward |
+| `scorecard.yml` | push to `main`, weekly, branch protection changes | publishes the OpenSSF Scorecard behind the README badge. Not a required check and never runs on a PR. Its shape is fixed by the Scorecard API's workflow restrictions, which is why it is not a job in `ci.yml` |
 | `pr-metadata-policy.yml` | PR open/edit/reopen/sync | PR title and body attribution policy. No checkout, so it cannot execute PR code |
 | `aahp-verify.yml` | PR, push to `main` | the four-layer AAHP handoff gate, with no escape hatch at CI level |
 | `docker.yml` | semver tags | builds the image multi-arch on native runners and pushes it to ghcr |
@@ -109,7 +110,7 @@ decision. There is exactly one step that keeps the credential.
 | workflow | job | value | why |
 | --- | --- | --- | --- |
 | `ci.yml` | `update-major-branch` | `true` | it runs `git push origin`, the only push in this repository, and git reads that credential from `.git/config`. `false` here does not harden the step, it freezes the floating `vN` branch every Action consumer resolves |
-| the other seven steps | | `false` | no step in those jobs talks to a remote |
+| the other ten steps | | `false` | no step in those jobs talks to a remote |
 
 `src/__tests__/workflow-checkout-credentials.test.ts` is the mechanism. It walks each
 checkout step's own indented block in the raw file text and fails when a step declares
