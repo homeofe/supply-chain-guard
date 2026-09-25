@@ -80,6 +80,11 @@
       "file": "examples/github-action-basic.yml",
       "minOccurrences": 1,
       "note": "The pinned Action reference in the basic example workflow."
+    },
+    {
+      "file": "docs/github-actions-sarif.yml",
+      "minOccurrences": 1,
+      "note": "The pinned Action reference in the SARIF example workflow."
     }
   ],
   "claims": [

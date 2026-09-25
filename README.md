@@ -11,7 +11,7 @@ Open-source supply-chain security scanner that runs locally and offline. It matc
 [![AAHP Verify](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml/badge.svg)](https://github.com/homeofe/supply-chain-guard/actions/workflows/aahp-verify.yml)
 [![AAHP conformant](https://img.shields.io/badge/AAHP-conformant-5b47d6)](https://github.com/homeofe/AAHP)
 [![Last commit](https://img.shields.io/github/last-commit/homeofe/supply-chain-guard?logo=github)](https://github.com/homeofe/supply-chain-guard/commits/main)
-[![scanned by supply-chain-guard](https://img.shields.io/badge/scanned%20by-supply--chain--guard-2ea44f?logo=npm&logoColor=white)](https://github.com/homeofe/supply-chain-guard)
+[![scanned by supply-chain-guard](https://github.com/homeofe/supply-chain-guard/actions/workflows/self-scan.yml/badge.svg?branch=main)](https://github.com/homeofe/supply-chain-guard/actions/workflows/self-scan.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ![supply-chain-guard scanning a malicious npm package: risk gauges, GlassWorm incident correlation, and a remediation plan](assets/demo.gif)
@@ -1374,6 +1374,14 @@ If supply-chain-guard runs in your CI, add the badge to your README:
 
 ```markdown
 [![scanned by supply-chain-guard](https://img.shields.io/badge/scanned%20by-supply--chain--guard-2ea44f?logo=npm&logoColor=white)](https://github.com/homeofe/supply-chain-guard)
+```
+
+A static badge only claims the scan. To make it prove one, point it at the
+status of the workflow that runs the scan, the way this repository's own
+badge shows [its self-scan](.github/workflows/self-scan.yml):
+
+```markdown
+[![scanned by supply-chain-guard](https://github.com/OWNER/REPO/actions/workflows/supply-chain-guard.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/supply-chain-guard.yml)
 ```
 
 ## Contributing

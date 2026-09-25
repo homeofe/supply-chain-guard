@@ -1,3 +1,61 @@
+## The self-scan is visible, and the badge proves it (2026-09-25) (claude-opus-5-5)
+
+The owner noticed the README's "scanned by supply-chain-guard" badge while no
+scan appeared on any pull request. Measured: a scan did run on every PR, as the
+"Self-scan this repository" step inside both `compat` legs (the gate from issue
+173). It scanned the PR's own build at `--fail-on critical` and failed the job
+on a hit. But its output lived only in the job log: no check, no annotation, no
+code-scanning result. The badge was a static shields image that would have
+stayed green with the gate deleted.
+
+Changed:
+
+- `.github/workflows/self-scan.yml` (named "scanned by supply-chain-guard"):
+  on every PR and on main, it builds with tsc and scans once as JSON. It
+  applies the gate's file-count control, then renders the same report with
+  `formatReport` as SARIF (uploaded to code scanning, category
+  `supply-chain-guard`) and as Markdown (the job summary). Its verdict comes
+  after the upload, at the gate's threshold. PRs from forks skip the upload
+  (no security-events permission) and the summary says so; the fork check
+  compares env vars, so no PR field is interpolated into a script. The
+  blocking gate stays in ci.yml; this is the visible copy of it.
+- The README top badge is that workflow's status badge. The "Show that you
+  scan" section keeps the static snippet for users and adds the
+  workflow-status form.
+- `docs/github-actions-sarif.yml` used `npm install -g supply-chain-guard`
+  (floating) and `continue-on-error: true` on the scan, so no finding could
+  fail the job. It now uses the Action pinned to the exact release with
+  `format: sarif` and uploads `report-path` under `always()`. It is the 17th
+  versionSite in `aahp.config.json`, so release bumps update it.
+- `self-scan-visibility.test.ts` holds the threshold equal to ci.yml's gate,
+  the control before the SARIF render, the fork skip without interpolation,
+  the verdict after the upload, the badge URL, and the example's shape.
+
+**The scan was not clean below critical, and nobody could see it.** Made
+visible, it reported 18 findings: 14 internal-disclosure hits on example
+values quoted in a plan document, CHANGELOG.md and STATUS.md (RFC 1918
+test addresses, example host-name keys), a single-label placeholder URL in a
+code comment (plus its dist copy), and two info items. Each was read. The
+placeholder in `src/workflow-modeler.ts` is now `https://example.invalid`,
+which removes the finding at the source. The documentation examples got four
+path-scoped suppressions with reasons. The first version of those reasons
+quoted the values and flagged the policy file itself, so they are now worded
+without them. Result: zero at low and above, two info, 27 suppressed. The
+ci.yml gate comment still claimed zero at every severity; it now records
+this.
+
+**`.supply-chain-guard.yml` was not valid YAML.** Its two EVAL_ATOB entries
+sat two columns too deep, which PyYAML rejects. The repository's own policy
+parser accepted it and applied them anyway. They are dedented now, and
+suppression is unchanged: the old file suppresses 13 on the same tree, the
+new one 13 plus the 14 new. That the parser accepts what YAML rejects is a
+question for the review.
+
+Not verified before merge: the first real code-scanning upload from this
+workflow, and whether a Dependabot PR may upload (no Dependabot PR has run
+CodeQL here yet). A refused upload turns the check red; it does not pass
+silently.
+
 ## npm installs pinned by hash, own runtime on Node 24 (2026-09-25) (claude-opus-5-5)
 
 **Correction to the Scorecard table in the hardening entry below.** Its

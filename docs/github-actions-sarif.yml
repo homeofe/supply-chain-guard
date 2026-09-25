@@ -1,6 +1,10 @@
 # Example GitHub Actions workflow for supply-chain-guard with SARIF output.
 # Runs a scan on every push and pull request, then uploads the results
-# to GitHub Code Scanning so findings appear in the Security tab.
+# to GitHub Code Scanning so findings appear in the Security tab and as
+# annotations on the pull request.
+#
+# This repository runs the same shape on itself:
+# .github/workflows/self-scan.yml.
 
 name: Supply Chain Guard
 
@@ -10,31 +14,43 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   supply-chain-scan:
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
       contents: read
+      actions: read
+      # Upload the SARIF report to code scanning.
+      security-events: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v7
         with:
-          node-version: "22"
+          persist-credentials: false
 
-      - name: Install supply-chain-guard
-        run: npm install -g supply-chain-guard
+      # Pinned to an exact release on purpose: a security scanner should be a
+      # deterministic input, so you know which detection logic and IOC feed ran.
+      # The Action installs that exact version and sets up its own Node.
+      # For OpenSSF Scorecard's Pinned-Dependencies, pin both actions in this
+      # file by commit SHA and let Dependabot keep them current.
+      - name: Run supply-chain-guard
+        id: scg
+        uses: homeofe/supply-chain-guard@v6.2.5
+        with:
+          format: sarif
+          comment-on-pr: false
+          fail-on: critical
 
-      - name: Run supply-chain-guard scan
-        run: supply-chain-guard scan . --format sarif > results.sarif
-        continue-on-error: true
-
+      # always(): a failed gate still uploads, so its findings are annotated.
+      # The report-path check skips the upload when the Action stopped before
+      # writing a report (for example on an invalid input).
       - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.scg.outputs.report-path != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: results.sarif
+          sarif_file: ${{ steps.scg.outputs.report-path }}
           category: supply-chain-guard

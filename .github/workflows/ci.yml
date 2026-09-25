@@ -256,6 +256,14 @@ jobs:
       # not the strictest threshold this tree can hold today; `--fail-on info`
       # would also pass on this commit.
       #
+      # That sentence drifted without anyone seeing it: on 2026-09-25 the tree
+      # reported 18 findings below critical, because nothing showed this step's
+      # output outside the log. Re-measured once they were triaged: zero at low
+      # and above, two at info (a SHA-pinned third-party action, the catalog
+      # not refreshed here), 27 suppressed with reasons. The visible copy of
+      # this scan, .github/workflows/self-scan.yml, now uploads every finding
+      # at low and above to code scanning, so the next drift shows up there.
+      #
       # `critical` is still the deliberate choice. It is the severity at which a
       # finding is a regression rather than a backlog item, and it already covers
       # the only recurring finding source this repository has: threat-intelligence
