@@ -239,6 +239,7 @@ src/
   container-image.ts      # Known-malicious container images (Dockerfile incl. FROM ${ARG}, compose/k8s/workflow YAML)
   ecosystem-registry.ts   # Identity matchers for Swift, CocoaPods, Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser extensions, JetBrains plugins
   nested-manifests.ts     # Ruby/Composer/NuGet/Cargo/Go manifests below the scan root
+  text-lines.ts           # Linear-time line lookup and comment stripping for attacker-controlled manifests
   python-lockfile-scanner.ts # Python lockfiles (poetry.lock/uv.lock/Pipfile.lock)
   rubygems-scanner.ts     # RubyGems (Gemfile/Gemfile.lock) analysis
   composer-scanner.ts     # Composer/PHP (composer.json/composer.lock) analysis

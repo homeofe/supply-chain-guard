@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.3.0] - 2026-09-25
+
 ### Added
 
 - Terraform / OpenTofu provider matching (`src/terraform-scanner.ts`, rule
@@ -220,9 +222,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   helper in `src/text-lines.ts` is checked against the regex it replaced on
   generated input, the workflow parser against arbitrary text, and the feed
   partition's date parser for round trips and rolled-over dates.
+- The OpenSSF Best Practices badge (passing level, project 14934) in the
+  README, next to the Scorecard badge.
 
 ### Changed
 
+- The bundle cutoff advanced from 2026-08-24 to 2026-08-26, moving 508 package indicators from the bundle into the catalog: 451 by the cutoff and 57 by the 2026-09-22 catalog window. None of them is asserted by a test or named in the README or docs. They stay enforced after `feed refresh`.
 - README, npm description, GitHub Action description and repository About
   rewritten around the ecosystem coverage, with the generated table replacing
   the hand-kept "Supported Ecosystems" list.
@@ -6516,7 +6521,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.2.5...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.0...HEAD
+[6.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.0
 [6.2.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.5
 [6.2.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.4
 [6.2.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.3

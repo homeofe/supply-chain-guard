@@ -15,7 +15,7 @@ Change the policy here and the gate names every file that has to follow.
   "supportedMajors": [22, 24],
   "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "6.3.0",
+  "activeLtsReviewedIn": "6.4.0",
   "publishMajor": 24,
   "runtimeMajor": 24,
   "devBaseline": 24
@@ -72,6 +72,14 @@ Re-read against the same upstream schedule on **2026-09-17**: Node 24 remains
 Active LTS, while Node 26 is Current and is scheduled to enter Active LTS on
 2026-10-28. `activeLtsMajor` therefore remains 24, and the version-keyed review
 milestone moves to 6.3.0 so the next minor release must check the schedule again.
+
+Re-read for the 6.3.0 release on **2026-09-25**, against `schedule.json` in
+`nodejs/Release`: Node 24 is Active LTS until it enters Maintenance on
+2026-10-20, and Node 26 enters Active LTS on 2026-10-28. `activeLtsMajor`
+therefore still is 24 and the milestone moves to 6.4.0. **The first release
+cut after 2026-10-28 has to move `activeLtsMajor` to 26 and add a Node 26 leg
+to the `compat` matrix, whether it is a minor or a patch.** A patch does not
+trip this milestone, so that date is carried in `.ai/handoff/STATUS.md` too.
 
 **The invariant, asserted by the gate:** `max(supportedMajors)` is at or above
 `activeLtsMajor`, and at least one leg of the `compat` matrix is at or above it too.

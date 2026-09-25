@@ -1,3 +1,54 @@
+## v6.3.0 release preparation, rebuilt (2026-09-25) (claude-opus-5-5)
+
+The first preparation (PR 335, cut on c6cb6bd) was held by the owner until the
+Scorecard hardening, the property tests, the LOG.md fix, the CodeQL fixes, the
+npm pinning with the move to Node 24, the visible self-scan and the npm 11.19.1
+pin landed (PRs 336 to 340, 342 and 343). It was cut again on top of them. So beyond what PR 335 listed,
+this release carries:
+- signed releases and CodeQL (336);
+- fast-check property tests (337);
+- `LOG.md` back to 10 entries (338);
+- the CodeQL findings, including SVG script detection (339);
+- every npm install pinned by hash, with our own runtime on Node 24 (340);
+- the visible self-scan with a live badge (342);
+- the publish npm moved to 11.19.1, clearing nine advisories in the packages 11.18.0 bundles (343);
+- the OpenSSF Best Practices badge;
+- the Dependabot `@types/node` 26.6.1 -> 26.6.2 bump from PR 341. It is folded in here because Dependabot PRs cannot pass `aahp-verify` on their own. Its lockfile hash was checked against the registry. PR 341 is closed with a pointer.
+
+Every release step was redone on the new tree rather than rebased, because
+the migration, the catalog digest, `feed.json` and the handoff files are
+functions of the tree they are generated on:
+
+- `release:prepare` moved `bundleCutoffDate` 2026-08-24 -> 2026-08-26 again.
+  The migration plan was re-checked BEFORE `--write`: the same 508 package
+  indicators (259 dated 2026-08-24, 192 dated 2026-08-25, 57 by the
+  2026-09-22 catalog window), none named in `src/__tests__`, `docs/` or
+  `README.md`, with a control in both directions. Bundle 9,254 -> 8,746,
+  catalog 86,379 -> 86,887.
+- Version bumped with the same boundary-anchored script at all 17
+  `versionSites` (the SARIF example joined in 342). The README sentence naming
+  v6.2.5 as the last release with the PyPI lookup defect is kept as history.
+  `package-lock.json` comes from `npm install --package-lock-only`, and
+  `src/catalog-digest.ts` from `catalog:generate`.
+- Hand edits carried over from PR 335 unchanged: `CONTRIBUTING.md` lists
+  `text-lines.ts`, `docs/node-support.md` records the Node schedule re-read
+  and moves the review milestone to 6.4.0, and the `NEXT_ACTIONS.md` header
+  says v6.3.0.
+- **Carried: the first release after 2026-10-28, patch or minor, has to move
+  `activeLtsMajor` to 26 and add a Node 26 `compat` leg.** A patch does not
+  trip the milestone, so this line is the reminder.
+- Watch on the tag run. It is the first release:
+  - with the `mcp-registry` job;
+  - with signed release assets (`.sigstore.json`);
+  - published from Node 24 with npm 11.19.1, installed from the toolchain lockfile. Two publish-lane variables move (the Node major, by owner request, and the npm pin, for the advisories), a recorded exception to one per release. Both are rehearsed by `publish-preflight`; only the OIDC exchange is not.
+
+  A failure in `mcp-registry` does not block the GitHub Release, and rerunning that job alone is safe.
+- Scorecard Signed-Releases looks at the last five releases, so it rises one
+  release at a time from this one on. Backfilling v6.2.1 to v6.2.5 was approved
+  by the owner and is impossible: releases here are immutable, and GitHub refuses
+  new assets with HTTP 422 (measured; nothing changed). npm already holds a
+  verified SLSA provenance for each of those versions.
+
 ## Publish npm 11.18.0 -> 11.19.1: nine advisories made visible (2026-09-25) (claude-opus-5-5)
 
 The owner reported Scorecard Vulnerabilities at 9 right after PR 340. It had
