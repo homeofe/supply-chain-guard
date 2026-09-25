@@ -35,9 +35,21 @@ import { parseFeedPayload } from "../feed.js";
 import { MAX_FILE_SIZE } from "../patterns.js";
 import type { Finding } from "../types.js";
 
+// Every directory makeTempDir creates is removed after the test that made it,
+// so a caller that passes the path straight into a call, with no variable to
+// clean up by hand, cannot leak it. The bundled-feed self-check did exactly
+// that and left one scg-issue54-empty-* directory behind per run.
+const tempDirs: string[] = [];
+
 function makeTempDir(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
 }
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 /** Write a file one byte over the scan limit (content is never read). */
 function writeOversized(dir: string, name: string): string {
