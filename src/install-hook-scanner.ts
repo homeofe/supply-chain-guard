@@ -19,13 +19,118 @@ import {
 // combination of a runtime target AND a code-mutation action, so ordinary build
 // hooks (node scripts/build.js, npm run build, tsc, patch-package) never match.
 
-/** Names of agent host runtimes and their internal hook symbols. */
-const HOST_RUNTIME_RE =
-  /\b(?:openclaw|hermes|claude[-_ ]?code|claude[-_ ]?desktop|cursor|windsurf|cline|roo[-_ ]?code|aider|continue\.dev)\b|after[-_]tool[-_]call|before[-_]tool[-_]call|hook[-_ ]?event|tool[-_ ]?call[-_ ]?message|dispatch-[\w-]*\.(?:js|mjs|cjs)/i;
+// The three host-runtime checks below replace two regular expressions that were
+// quadratic on a crafted hook string (CodeQL js/polynomial-redos, measured at
+// minutes for a few hundred KB). Each is exact: property-parsers.test.ts runs
+// the original expression as the oracle. The shared idea is that every later
+// start inside the same run of path characters reaches the same run end as the
+// first, so a failed attempt can resume at the run end.
 
-/** A write into another agent runtime's installed code or config directory. */
-const HOST_RUNTIME_PATH_RE =
-  /node_modules[\\/][^\s'"]*(?:openclaw|hermes)|[~./][\w./-]*\.(?:openclaw|claude|cursor|windsurf|hermes)\b/i;
+/** Names of agent host runtimes and their internal hook symbols (the linear part). */
+const HOST_RUNTIME_WORDS_RE =
+  /\b(?:openclaw|hermes|claude[-_ ]?code|claude[-_ ]?desktop|cursor|windsurf|cline|roo[-_ ]?code|aider|continue\.dev)\b|after[-_]tool[-_]call|before[-_]tool[-_]call|hook[-_ ]?event|tool[-_ ]?call[-_ ]?message/i;
+
+const WORD_OR_DASH = /[\w-]/;
+const DISPATCH_RE = /dispatch-/gi;
+
+/**
+ * `HOST_RUNTIME_WORDS_RE` or `dispatch-[\w-]*\.(?:js|mjs|cjs)` (case-insensitive).
+ */
+export function mentionsHostRuntime(text: string): boolean {
+  if (HOST_RUNTIME_WORDS_RE.test(text)) return true;
+  DISPATCH_RE.lastIndex = 0;
+  for (let m = DISPATCH_RE.exec(text); m; m = DISPATCH_RE.exec(text)) {
+    let j = m.index + m[0].length;
+    while (j < text.length && WORD_OR_DASH.test(text[j]!)) j++;
+    if (/^\.(?:js|mjs|cjs)/i.test(text.slice(j, j + 4))) return true;
+    DISPATCH_RE.lastIndex = Math.max(j, m.index + 1);
+  }
+  return false;
+}
+
+const NODE_MODULES_RE = /node_modules[\\/]/gi;
+const PATH_STOP = /[\s'"]/;
+const PATH_RUN_RE = /[\w./-]+/g;
+const RUNTIME_DIR_RE = /\.(?:openclaw|claude|cursor|windsurf|hermes)\b/gi;
+
+/**
+ * A write into another agent runtime's installed code or config directory:
+ * `node_modules[\\/][^\s'"]*(?:openclaw|hermes)` or
+ * `[~./][\w./-]*\.(?:openclaw|claude|cursor|windsurf|hermes)\b` (case-insensitive).
+ */
+export function mentionsHostRuntimePath(text: string): boolean {
+  NODE_MODULES_RE.lastIndex = 0;
+  for (let m = NODE_MODULES_RE.exec(text); m; m = NODE_MODULES_RE.exec(text)) {
+    const start = m.index + m[0].length;
+    let j = start;
+    while (j < text.length && !PATH_STOP.test(text[j]!)) j++;
+    if (/openclaw|hermes/i.test(text.slice(start, j))) return true;
+    NODE_MODULES_RE.lastIndex = Math.max(j, m.index + 1);
+  }
+  // The second form needs a start character ("~", ".", "/") before the
+  // ".<runtime>" it ends in, inside one run of [\w./-]. "~" is not in that set,
+  // so it can only sit directly before a run.
+  PATH_RUN_RE.lastIndex = 0;
+  for (let run = PATH_RUN_RE.exec(text); run; run = PATH_RUN_RE.exec(text)) {
+    const r = run[0];
+    const tilde = run.index > 0 && text[run.index - 1] === "~";
+    const firstStart = r.search(/[./]/);
+    RUNTIME_DIR_RE.lastIndex = 0;
+    for (let n = RUNTIME_DIR_RE.exec(r); n; n = RUNTIME_DIR_RE.exec(r)) {
+      if (tilde || (firstStart >= 0 && firstStart < n.index)) return true;
+      RUNTIME_DIR_RE.lastIndex = n.index + 1;
+    }
+  }
+  return false;
+}
+
+const LINE_BREAK_RE = new RegExp("[\\n\\r" + String.fromCharCode(0x2028, 0x2029) + "]", "g");
+
+/**
+ * Whether `first` occurs with `then` starting later on the same line: the
+ * linear form of `/(?:first).*(?:then)/i`. "." stops at a line break, but the
+ * `then` match may run past one (`sh\s` matches "sh\n"), so the text is not
+ * split into lines: a `then` match only has to START before the line ends.
+ * The leftmost `first` on a line leaves the longest rest of the line, so a
+ * line whose leftmost `first` fails cannot succeed with a later one. Both
+ * expressions must carry the `g` flag.
+ */
+export function occursThenOnSameLine(text: string, first: RegExp, then: RegExp): boolean {
+  let pos = 0;
+  let nextThen = -1;
+  while (pos <= text.length) {
+    first.lastIndex = pos;
+    const m = first.exec(text);
+    if (!m) return false;
+    const start = m.index + m[0].length;
+    LINE_BREAK_RE.lastIndex = start;
+    const lineEnd = LINE_BREAK_RE.exec(text)?.index ?? text.length;
+    if (nextThen < start) {
+      then.lastIndex = start;
+      nextThen = then.exec(text)?.index ?? Number.POSITIVE_INFINITY;
+    }
+    if (nextThen <= lineEnd) return true;
+    pos = lineEnd + 1;
+  }
+  return false;
+}
+
+const DOWNLOAD_RE = /curl|wget|fetch/gi;
+const EXECUTE_AFTER_DOWNLOAD_RE = /chmod\s+\+x|exec|spawn|child_process|\.\/|bash|sh\s|node\s/gi;
+const EXECUTE_RE = /exec|spawn/gi;
+const DOWNLOAD_AFTER_EXECUTE_RE = /curl|wget|fetch/gi;
+
+/**
+ * A download followed by an execution on the same line, or the reverse: the
+ * linear form of `/(?:curl|wget|fetch).*(?:chmod\s+\+x|exec|spawn|child_process
+ * |\.\/|bash|sh\s|node\s)/i` or `/(?:exec|spawn).*(?:curl|wget|fetch)/i`.
+ */
+export function hasDownloadExecChain(script: string): boolean {
+  return (
+    occursThenOnSameLine(script, DOWNLOAD_RE, EXECUTE_AFTER_DOWNLOAD_RE) ||
+    occursThenOnSameLine(script, EXECUTE_RE, DOWNLOAD_AFTER_EXECUTE_RE)
+  );
+}
 
 /** A code MUTATION (not build-output generation): patch/inject/rewrite/sed -i. */
 const CODE_MUTATE_RE =
@@ -91,8 +196,7 @@ export function analyzeInstallHooks(
     }
 
     // Download + execute chain
-    if (/(?:curl|wget|fetch).*(?:chmod\s+\+x|exec|spawn|child_process|\.\/|bash|sh\s|node\s)/i.test(script) ||
-        /(?:exec|spawn).*(?:curl|wget|fetch)/i.test(script)) {
+    if (hasDownloadExecChain(script)) {
       findings.push({
         rule: "INSTALL_HOOK_DOWNLOAD_EXEC",
         description: `${hook} script downloads and executes code. This is the #1 supply-chain attack vector.`,
@@ -121,7 +225,7 @@ export function analyzeInstallHooks(
 
     // Host agent runtime patch/mutation (e.g. OpenClaw after-tool-call patching)
     if (
-      (HOST_RUNTIME_RE.test(script) || HOST_RUNTIME_PATH_RE.test(script)) &&
+      (mentionsHostRuntime(script) || mentionsHostRuntimePath(script)) &&
       CODE_MUTATE_RE.test(script)
     ) {
       findings.push({

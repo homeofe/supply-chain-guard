@@ -12,6 +12,46 @@
 
 import type { Finding } from "./types.js";
 
+const MIME_STOP = new Set([";", ",", '"', "'", "`"]);
+const isMimeChar = (ch: string): boolean => !MIME_STOP.has(ch) && !/\s/.test(ch);
+const isBase64Char = (ch: string): boolean => /[A-Za-z0-9+/=]/.test(ch);
+
+/**
+ * Remove every `data:<mime>;base64,<payload>` URI, in linear time. Same result
+ * as `content.replace(/data:[^;,\s"'`]+;base64,[A-Za-z0-9+/=]+/g, "")`, which
+ * property-parsers.test.ts checks. That regex is quadratic on a file of
+ * repeated "data:" with no ";base64," after it: every "data:" rescans the same
+ * run to its end (measured about 40 s for 500 KB, over an hour for 5 MB).
+ *
+ * Why skipping is exact: a failed attempt at "data:" fails because the MIME run
+ * after it ends somewhere other than ";base64,<payload>". Every later "data:"
+ * inside that same run ends at the same place and fails the same way, so the
+ * scan resumes at the run's end instead of one character later.
+ */
+export function stripBase64DataUris(content: string): string {
+  let out = "";
+  let from = 0;
+  let i = content.indexOf("data:");
+  while (i >= 0) {
+    let j = i + 5;
+    while (j < content.length && isMimeChar(content[j]!)) j++;
+    let end = -1;
+    if (j > i + 5 && content.startsWith(";base64,", j)) {
+      let k = j + 8;
+      while (k < content.length && isBase64Char(content[k]!)) k++;
+      if (k > j + 8) end = k;
+    }
+    if (end >= 0) {
+      out += content.slice(from, i);
+      from = end;
+      i = content.indexOf("data:", end);
+    } else {
+      i = content.indexOf("data:", Math.max(j, i + 1));
+    }
+  }
+  return out + content.slice(from);
+}
+
 /**
  * Shannon entropy over UTF-8 bytes. Returns 0 (uniform) to 8 (random).
  *
@@ -83,10 +123,7 @@ export function analyzeEntropy(
   // output and are high-entropy by construction. Measure the file WITHOUT them
   // so an inlined logo does not make a whole bundle look obfuscated; anything
   // genuinely hidden in the remaining code still counts.
-  const withoutDataUris = content.replace(
-    /data:[^;,\s"'`]+;base64,[A-Za-z0-9+/=]+/g,
-    "",
-  );
+  const withoutDataUris = stripBase64DataUris(content);
 
   // Check file-level entropy
   const fileEntropy = shannonEntropy(withoutDataUris);

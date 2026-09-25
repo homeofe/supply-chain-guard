@@ -436,8 +436,14 @@ export function parseRepositoryField(
   if (!url) return null;
 
   // Shorthand forms: "github:owner/repo", "owner/repo".
+  // "github.com/<owner>" also fits the shorthand shape, with the host in the
+  // owner slot. GitHub owner names cannot contain a dot, so a dotted owner is
+  // always a host and the string is parsed as a URL below. This replaces
+  // url.includes("github.com") (CodeQL js/incomplete-url-substring-sanitization),
+  // which also sent a repository legally named "github.com" ("owner/github.com")
+  // down the URL path, where it resolved to nothing.
   const shorthand = url.match(/^(?:github:)?([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
-  if (shorthand && !url.includes("://") && !url.includes("github.com")) {
+  if (shorthand && !shorthand[1].includes(".")) {
     const parsed = parseGitHubUrl(`github.com/${shorthand[1]}/${shorthand[2]}`);
     return parsed ? { ...parsed, directory } : null;
   }

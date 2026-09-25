@@ -73,6 +73,7 @@ import { isPatternMatchAccepted, validatePatternSet } from "./patterns.js";
 import { hasContainedExistingAncestor, isContainedPath } from "./pattern-scanner.js";
 import { hasNestedUnboundedQuantifier } from "./regex-complexity.js";
 import { buildTestFilePattern } from "./pattern-applicability.js";
+import { trimLeading, trimTrailing } from "./text-lines.js";
 
 // ---------------------------------------------------------------------------
 // Reserved documentation space (the value layer)
@@ -836,7 +837,9 @@ export function isNonPublicForgeHost(value: string): boolean {
 
 /** Value guard for INTERNAL_DEV_PATH (the captured account name). */
 export function isPersonalAccountName(value: string): boolean {
-  const name = value.trim().toLowerCase().replace(/[._-]+$/, "");
+  // trimTrailing, not .replace(/[._-]+$/, ""): that regex is quadratic on a
+  // long run of "-" followed by anything else (CodeQL js/polynomial-redos).
+  const name = trimTrailing(value.trim().toLowerCase(), "._-");
   if (name.length < 2 || name.length > 64) return false;
   if (GENERIC_ACCOUNT_NAMES.has(name)) return false;
   if (/^(?:your|my)[._-]?/.test(name)) return false;
@@ -1154,8 +1157,14 @@ const DOC_DIR = /(?:^|\/)(?:docs?|documentation|man|manual)\//i;
 /** Trees whose whole purpose is to show a shape rather than a system. */
 const EXAMPLE_DIR = /(?:^|\/)(?:examples?|samples?|fixtures?|testdata|test-data)\//i;
 
-/** Template artifacts: `config.example.yml`, `.env.example`, `values.sample.yaml`. */
-const EXAMPLE_ARTIFACT = /(?:^|[./])(?:example|sample|template|tpl)(?:\.[^/]*)?$/i;
+/**
+ * Template artifacts: `config.example.yml`, `.env.example`, `values.sample.yaml`.
+ * Applied to a BASENAME, which has no "/", so the old tail `(?:\.[^/]*)?$`
+ * reduces to "a dot or the end" right after the keyword. The old form rescanned
+ * the rest of the name from every keyword (CodeQL js/polynomial-redos);
+ * property-parsers.test.ts checks the two agree on basenames.
+ */
+const EXAMPLE_ARTIFACT_BASENAME = /(?:^|[./])(?:example|sample|template|tpl)(?:\.|$)/i;
 
 /** Markdown-family files, where fenced blocks exist. */
 const MARKDOWN_FILE = /\.(?:md|markdown|mdx)$/i;
@@ -1262,7 +1271,7 @@ export function classifyFileSurface(relativePath: string): FileSurface {
   const p = relativePath.replace(/\\/g, "/");
   const base = p.slice(p.lastIndexOf("/") + 1);
   // An example wins over prose: `docs/config.example.yml` is an example.
-  if (EXAMPLE_DIR.test(p) || EXAMPLE_ARTIFACT.test(base)) return "example";
+  if (EXAMPLE_DIR.test(p) || EXAMPLE_ARTIFACT_BASENAME.test(base)) return "example";
   if (DOC_FILE.test(base) || DOC_DIR.test(p)) return "prose";
   return "source";
 }
@@ -2177,7 +2186,7 @@ export function candidateTokens(line: string, meta?: { truncated: boolean }): st
   }
 
   const add = (value: string): void => {
-    const t = value.replace(/^[._-]+/, "").replace(/[._-]+$/, "").toLowerCase();
+    const t = trimTrailing(trimLeading(value, "._-"), "._-").toLowerCase();
     if (t.length >= 2 && t.length <= 200) tokens.add(t);
   };
 
@@ -2188,8 +2197,8 @@ export function candidateTokens(line: string, meta?: { truncated: boolean }): st
 
   for (let i = 0; i + 1 < found.length; i++) {
     if (line.slice(found[i].end, found[i + 1].start) !== "/") continue;
-    const left = found[i].text.replace(/^[._-]+/, "").replace(/[._-]+$/, "");
-    const right = found[i + 1].text.replace(/[._-]+$/, "");
+    const left = trimTrailing(trimLeading(found[i].text, "._-"), "._-");
+    const right = trimTrailing(found[i + 1].text, "._-");
     add(`${left}/${right}`);
     if (/\.git$/i.test(right)) add(`${left}/${right.slice(0, -4)}`);
   }

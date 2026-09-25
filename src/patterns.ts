@@ -3845,8 +3845,13 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
   },
   {
     name: "svg-script-injection",
+    // Case-insensitive by character class, because the core scan runs without
+    // the "i" flag. A standalone .svg is XML and only runs lowercase <script>,
+    // but the same file inlined into HTML is parsed case-insensitively, so
+    // <SCRIPT> and ONLOAD= evaded this rule (CodeQL js/bad-tag-filter). The
+    // correlated matcher below is built with caseInsensitive to stay identical.
     pattern:
-      "<script[^>]*>[\\s\\S]*?</script>|\\bon\\w+\\s*=\\s*[\"']",
+      "<[sS][cC][rR][iI][pP][tT][^>]*>[\\s\\S]*?</[sS][cC][rR][iI][pP][tT]>|\\b[oO][nN]\\w+\\s*=\\s*[\"']",
     description:
       "SVG file contains <script> tag or event handler. SVG files can execute JavaScript.",
     severity: "high",

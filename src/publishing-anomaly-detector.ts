@@ -11,6 +11,17 @@ import * as path from "node:path";
 import * as https from "node:https";
 import type { Finding } from "./types.js";
 
+/**
+ * A package name as one npm registry path segment: `@scope%2Fname` for a
+ * scoped name. Everything after the "@" is encoded, not only the first "/".
+ * Names come from scanned manifests, and "@a/../../x" used to reach the
+ * registry as "@a%2F../../x", which URL normalisation resolves to a lookup of
+ * "x" (CodeQL js/incomplete-sanitization). Shared with dependency-confusion.ts.
+ */
+export function encodeNpmPackageName(name: string): string {
+  return name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
+}
+
 interface NpmVersionMeta {
   version: string;
   publishedAt: string;
@@ -154,9 +165,7 @@ export function evaluateVersionDrift(
  * offline-safe. Exposed for injection in tests.
  */
 export function fetchNpmLatest(packageName: string): Promise<string | null> {
-  const encodedName = packageName.startsWith("@")
-    ? `@${packageName.slice(1).replace("/", "%2F")}`
-    : encodeURIComponent(packageName);
+  const encodedName = encodeNpmPackageName(packageName);
   const url = `${NPM_REGISTRY_URL}/${encodedName}`;
 
   return new Promise((resolve) => {

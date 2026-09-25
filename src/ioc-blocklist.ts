@@ -3065,6 +3065,28 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
 
 import { createHash } from "node:crypto";
 import type { Finding } from "./types.js";
+import { escapeRegExp } from "./text-lines.js";
+
+/**
+ * The C2 domains as compiled patterns: every character literal except a "*"
+ * wildcard label. This used to escape only "." per domain and recompile every
+ * pattern for every scanned file; CodeQL flagged the partial escape on the
+ * builder and each of the 32 domains flowing into it. Rebuilt only if the
+ * exported list changes length, so a caller that extends it is still honoured.
+ */
+let c2DomainRegexCache: { length: number; list: Array<{ domain: string; regex: RegExp }> } | null = null;
+function c2DomainRegexes(): Array<{ domain: string; regex: RegExp }> {
+  if (!c2DomainRegexCache || c2DomainRegexCache.length !== KNOWN_C2_DOMAINS.length) {
+    c2DomainRegexCache = {
+      length: KNOWN_C2_DOMAINS.length,
+      list: KNOWN_C2_DOMAINS.map((domain) => ({
+        domain,
+        regex: new RegExp(escapeRegExp(domain).replace(/\\\*/g, "\\w+"), "i"),
+      })),
+    };
+  }
+  return c2DomainRegexCache.list;
+}
 
 /**
  * Check content against known IOC blocklists.
@@ -3085,9 +3107,7 @@ export function checkIOCBlocklist(
   const contentLower = content.toLowerCase();
 
   // Check known C2 domains
-  for (const domain of KNOWN_C2_DOMAINS) {
-    const domainPattern = domain.replace(/\./g, "\\.").replace(/\*/g, "\\w+");
-    const regex = new RegExp(domainPattern, "i");
+  for (const { domain, regex } of c2DomainRegexes()) {
     if (regex.test(content)) {
       findings.push({
         rule: "IOC_KNOWN_C2_DOMAIN",

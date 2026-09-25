@@ -807,8 +807,29 @@ function extractFindingHost(finding: Finding): string | undefined {
  * Extract the GitHub owner from an action-reference finding. Both rules put the
  * full `owner/repo@ref` in `match`; the description is the fallback.
  */
+/**
+ * The first quoted span that holds a "/" with text on both sides: the linear
+ * form of `text.match(/"([^"]+\/[^"]+)"/)?.[1]`, which property-parsers.test.ts
+ * checks. `[^"]+` cannot cross a quote, so that expression only ever tests the
+ * span between two consecutive quotes, in order, and each closing quote can
+ * open the next span. The regex rescanned for every quote instead, which made
+ * a description of many `"!/` quadratic (CodeQL js/polynomial-redos).
+ */
+export function firstQuotedSlashRef(text: string): string | undefined {
+  let open = text.indexOf('"');
+  while (open >= 0) {
+    const close = text.indexOf('"', open + 1);
+    if (close < 0) return undefined;
+    const inner = text.slice(open + 1, close);
+    const slash = inner.indexOf("/", 1);
+    if (slash !== -1 && slash <= inner.length - 2) return inner;
+    open = close;
+  }
+  return undefined;
+}
+
 function extractFindingActionOwner(finding: Finding): string | undefined {
-  const ref = finding.match?.trim() ?? finding.description.match(/"([^"]+\/[^"]+)"/)?.[1];
+  const ref = finding.match?.trim() ?? firstQuotedSlashRef(finding.description);
   if (!ref) return undefined;
   const owner = ref.split("/")[0]?.trim();
   return owner && /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(owner) ? owner : undefined;

@@ -503,8 +503,21 @@ export function escapeCmdShellCommand(command: string): string {
  * re-parses the line. See escapeCmdShellCommand for why two passes.
  */
 export function escapeCmdShellArg(arg: string): string {
-  let escaped = arg.replace(/(\\*)"/g, '$1$1\\"');
-  escaped = escaped.replace(/(\\*)$/, "$1$1");
+  // One pass instead of arg.replace(/(\\*)"/g, '$1$1\\"') and
+  // .replace(/(\\*)$/, "$1$1"): same output (property-parsers.test.ts checks
+  // it against those two regexes), but those rescan every backslash run that
+  // is not followed by a quote, which is quadratic in the argument length.
+  let escaped = "";
+  let run = 0;
+  for (const ch of arg) {
+    if (ch === "\\") {
+      run++;
+      continue;
+    }
+    escaped += ch === '"' ? "\\".repeat(run * 2) + '\\"' : "\\".repeat(run) + ch;
+    run = 0;
+  }
+  escaped += "\\".repeat(run * 2);
   return `"${escaped}"`.replace(CMD_META_RE, "^$1").replace(CMD_META_RE, "^$1");
 }
 

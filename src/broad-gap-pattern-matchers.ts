@@ -2,6 +2,7 @@ import type {
   CorrelatedPatternMatch,
   CorrelatedPatternMatcher,
 } from "./types.js";
+import { escapeRegExp } from "./text-lines.js";
 
 const MAX_EVIDENCE_CHARS = 240;
 
@@ -877,10 +878,6 @@ function regexConstants(content: string): Map<string, { kind: string; body: stri
   return memo.regexConstants;
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[$]/g, "\\$");
-}
-
 /**
  * Brace depth never drops below zero and no nested function starts. Braces in
  * strings, templates and comments are skipped, so a `"{"` cannot balance the
@@ -919,7 +916,9 @@ function staysInSameFunction(segment: string, minDepth: number): boolean {
 }
 
 function isReassigned(segment: string, id: string): boolean {
-  const name = escapeRegex(id);
+  // A JavaScript identifier, so "$" was the only metacharacter it could hold
+  // and escaping just that was correct; the shared helper removes the question.
+  const name = escapeRegExp(id);
   return new RegExp(
     String.raw`(?<![\w$.])${name}\s*(?:(?:[-+*/%&|^]|\*\*|<<|>>>?|\?\?|&&|\|\|)?=(?![=>])|\+\+|--)|(?:\+\+|--)\s*${name}(?![\w$])|\b(?:of|in)\s+${name}\b|(?:let|const|var)\s+${name}(?![\w$])`,
   ).test(segment);
@@ -1249,7 +1248,9 @@ export function createCoreBroadGapMatchers(
         gaps: [],
         priority: 1,
       },
-    ]),
+    // Case-insensitive, matching the pattern's character classes: see the
+    // svg-script-injection entry in patterns.ts.
+    ], true),
     IAC_HARDCODED_SECRET: (content) =>
       iacHardcodedSecretMatcher(content, isLikelyRealSecretValue),
     DEAD_DROP_DNS_TXT: mergeAlternativeMatchers([

@@ -120,7 +120,7 @@ if (!asJson) {
 async function probe(name) {
   const url =
     "https://registry.npmjs.org/" +
-    (name.startsWith("@") ? name.replace("/", "%2f") : encodeURIComponent(name));
+    (name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name));
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url);

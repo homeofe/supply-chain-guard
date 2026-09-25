@@ -10,6 +10,36 @@ import type { Finding } from "./types.js";
 /** Minimum age in days for a package to be considered safe */
 const MIN_PACKAGE_AGE_DAYS = 7;
 
+/** Registries whose tarballs a lockfile may resolve to without a finding. */
+const TRUSTED_REGISTRY_HOSTS = new Set(["registry.npmjs.org", "registry.yarnpkg.com"]);
+
+/**
+ * Whether a lockfile `resolved` value points at a trusted registry.
+ *
+ * Decided on the parsed host, not on a string prefix: `startsWith(
+ * "https://registry.npmjs.org")` also accepted
+ * "https://registry.npmjs.org.attacker.example/pkg.tgz", so a lockfile could
+ * point a package at any host that begins with the registry's name and raise
+ * no finding (CodeQL js/incomplete-url-substring-sanitization). Credentials or
+ * a port in the URL make it untrusted too. `file:` stays trusted, as before.
+ */
+export function isTrustedResolved(resolved: string): boolean {
+  if (resolved.startsWith("file:")) return true;
+  let url: URL;
+  try {
+    url = new URL(resolved);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === "https:" &&
+    TRUSTED_REGISTRY_HOSTS.has(url.hostname) &&
+    url.port === "" &&
+    url.username === "" &&
+    url.password === ""
+  );
+}
+
 /**
  * Check dependencies against governance policies.
  */
@@ -39,21 +69,16 @@ export function checkDependencyGovernance(
     if (!name || name === "") continue;
 
     // Check for untrusted resolved sources
-    if (entry.resolved && !entry.resolved.startsWith("https://registry.npmjs.org")) {
-      if (
-        !entry.resolved.startsWith("https://registry.yarnpkg.com") &&
-        !entry.resolved.startsWith("file:")
-      ) {
-        findings.push({
-          rule: "DEPENDENCY_UNTRUSTED_SOURCE",
-          description: `Package "${name}" resolves from non-standard source: ${entry.resolved.substring(0, 80)}`,
-          severity: "high",
-          file: relativePath,
-          confidence: 0.7,
-          category: "supply-chain",
-          recommendation: "Verify this registry source is trusted. Use npm audit and supply-chain-guard to validate.",
-        });
-      }
+    if (entry.resolved && !isTrustedResolved(entry.resolved)) {
+      findings.push({
+        rule: "DEPENDENCY_UNTRUSTED_SOURCE",
+        description: `Package "${name}" resolves from non-standard source: ${entry.resolved.substring(0, 80)}`,
+        severity: "high",
+        file: relativePath,
+        confidence: 0.7,
+        category: "supply-chain",
+        recommendation: "Verify this registry source is trusted. Use npm audit and supply-chain-guard to validate.",
+      });
     }
   }
 

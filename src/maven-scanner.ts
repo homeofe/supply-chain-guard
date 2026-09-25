@@ -32,7 +32,7 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { stripHashComment, lineAtOffset, blankXmlComments } from "./text-lines.js";
+import { stripHashComment, lineAtOffset, blankXmlComments, escapeRegExp } from "./text-lines.js";
 
 export interface MavenCoordinate {
   group: string;
@@ -355,7 +355,7 @@ function extractVersionCatalog(content: string): MavenCoordinate[] {
   let section = "";
 
   const str = (body: string, key: string): string | undefined =>
-    new RegExp(`(?:^|[{,\\s])${key.replace(/\./g, "\\.")}\\s*=\\s*"([^"]*)"`).exec(body)?.[1];
+    new RegExp(`(?:^|[{,\\s])${escapeRegExp(key)}\\s*=\\s*"([^"]*)"`).exec(body)?.[1];
   // A rich version `{ strictly = "x" }` (or require / prefer): strictly is
   // what resolves; prefer is chosen over a require lower bound.
   const rich = (body: string): string | undefined =>

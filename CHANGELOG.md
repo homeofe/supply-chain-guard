@@ -496,6 +496,50 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   one real entry (tj-actions `0e58ed86`) was labelled September 2025; the
   incident was March 2025. All three were replaced by verified feed entries,
   including the actual malicious reviewdog commit.
+- The fix suggestion for an unpinned GitHub Action (`uses: owner/repo@<sha> #
+  ref`) was never produced for a real finding. The parser required `uses:` in
+  the finding's match, which carries only `owner/repo@ref`. Found while
+  rewriting the parser's regex for CodeQL; a test now builds the suggestion
+  from a real `scan()` finding.
+- A `repository` shorthand whose repository is named like a host
+  (`owner/github.com`) was dropped, because the check tested the whole string
+  for `github.com`. The shorthand is now rejected only when the owner slot
+  contains a dot, which is what makes it a host.
+
+### Security
+
+- **The findings of the first CodeQL analysis are fixed.** CodeQL raised 61
+  alerts on `main`. The ones that change what a scan reports:
+  - A lockfile could pass a foreign host off as the npm registry.
+    `DEPENDENCY_UNTRUSTED_SOURCE` trusted every `resolved` URL that started
+    with the registry's address, so a host name that merely began with
+    `registry[.]npmjs[.]org`, or a URL that put the registry's name before an
+    `@` and another host, raised no finding. A `resolved` URL is now trusted
+    only as `https:` on an exact registry host, with no port and no
+    credentials; `file:` is unchanged.
+  - A scanned package's name could steer the registry lookup of the
+    publishing-anomaly and dependency-confusion checks. Only the first `/` of
+    a scoped name was encoded, so `@a/../../x` fetched the metadata of `x`.
+    The part after the scope is now encoded as one path segment.
+  - `IOC_KNOWN_C2_DOMAIN` built its regexes from the domain unescaped, so
+    every `.` matched any character. Dots now match only a dot.
+  - SVG script injection missed upper case (`<SCRIPT>`, `ONLOAD=`). Both the
+    correlated matcher and the pattern are now case-insensitive.
+  - Regular expressions that run over scanned file content could be driven
+    into quadratic time by the scanned package itself, and at the 5 MB file
+    limit that is minutes to hours per file (measured on Linux: 40 s for
+    500 KB of `data:`, 8.7 s for 100 KB of `-` before a letter). Every one
+    CodeQL named (16 alerts) now runs in linear time. Each rewrite that keeps
+    the old behaviour is held equal to the expression it replaced by a
+    differential property test on random input, and a timing test runs the
+    rewritten code on 5 MB of CodeQL's attack input.
+
+  Three alerts are false positives, dismissed with the reason: a Markdown
+  table escape (`\\|` renders as a literal pipe on GitHub, verified against
+  its renderer) and the `cmd.exe` command line `scg install` builds on
+  Windows from the user's own arguments, where the command comes from a
+  fixed four-manager allowlist and every argument is quoted and escaped
+  twice, the technique `cross-spawn` uses.
 
 ## [6.2.5] - 2026-09-23
 
