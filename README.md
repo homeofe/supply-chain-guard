@@ -27,8 +27,10 @@ npx supply-chain-guard scan .
 ```
 
 It exits `1` on a high finding or a scan that could not examine everything, and
-`2` on a critical finding, so it can gate a script as it is. Run `npx supply-chain-guard feed refresh` once, with network access,
-to add the historical package catalog to later scans.
+`2` on a critical finding, so it can gate a script as it is. To add the historical
+package catalog, run `npx supply-chain-guard feed refresh` with network access in
+the directory you scan from. The catalog is cached there in `.scg-cache` and
+belongs to the installed version, so refresh again after an upgrade.
 
 Gate every pull request:
 
@@ -54,7 +56,9 @@ one yourself:
 gh attestation verify supply-chain-guard-X.Y.Z.tgz \
   --bundle supply-chain-guard-X.Y.Z.tgz.sigstore.json \
   --repo homeofe/supply-chain-guard --digest-alg sha512
-``` Everything else, from output
+```
+
+Everything else, from output
 formats to policies, is further down: [Quickstart](#quickstart),
 [GitHub Action](#github-action), [For AI Coding Agents (MCP)](#for-ai-coding-agents-mcp).
 
@@ -736,7 +740,7 @@ This table is generated from [`src/ecosystem-coverage.json`](src/ecosystem-cover
 the build (`check:coverage`); it is not written by hand. Every row is proven by
 [`coverage-matrix.test.ts`](src/__tests__/coverage-matrix.test.ts), which puts an indicator into each
 listed file format, at the scan root and one directory down, runs a real scan and requires the rule to
-report it exactly once. A format listed here without such a test fails the build. "Indicators shipped"
+report it exactly once. A format listed here without such a test fails the test suite. "Indicators shipped"
 says whether any indicator exists today; "none yet (matcher ready)" means the matcher is proven but no
 malicious package is known in that ecosystem yet, and the importer or a curated entry will fill it.
 
@@ -794,7 +798,7 @@ There is one axis where it goes somewhere the others do not go at all. Credentia
 
 | Tool | Focus | Malware / behavior detection | Known-CVE lookup | Ecosystems | Open source | Account needed |
 |---|---|---|---|---|---|---|
-| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, local at scan time (recent and curated indicators offline, the historical package catalog after one `feed refresh`) | No | 15 ecosystems of packages, extensions, plugins, providers, images and CI actions with shipped indicators, and tested matchers for more (see [Ecosystem Coverage](#ecosystem-coverage)), plus GitHub repos | Yes (Apache-2.0) | No |
+| **supply-chain-guard** | Malware campaigns, IOCs, behavior heuristics in installed artifacts; SBOM + SLSA provenance grading (in-toto/DSSE structural validation) | Yes: 350+ static heuristics plus multi-source GHSA/OpenSSF package verdicts and campaign-IOC matching, local at scan time (recent and curated indicators offline, the historical package catalog after a `feed refresh`) | No | 15 ecosystems of packages, extensions, plugins, providers, images and CI actions with shipped indicators, and tested matchers for more (see [Ecosystem Coverage](#ecosystem-coverage)), plus GitHub repos | Yes (Apache-2.0) | No |
 | [OSV-Scanner](https://github.com/google/osv-scanner) | Known vulnerabilities in dependency inventories (OSV.dev database lookup) | Known-malicious versions via OSV MAL- entries only; no behavior or IOC analysis | Yes (offline mode available) | 11+ ecosystems, 19+ lockfile formats, container images, SBOM input | Yes (Apache-2.0) | No |
 | [Socket](https://socket.dev) | Proactive behavioral analysis of entire registries (SaaS) | Yes: 70+ risk types registry-wide, before advisories exist; engine is closed source and cloud-side | Yes | npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet, more; Actions workflows | CLI only (MIT); detection engine proprietary | Yes (except Firewall Free) |
 | [GuardDog](https://github.com/DataDog/guarddog) | Heuristic 0-10 risk scoring of individual packages (YARA + registry metadata) | Yes: heuristics only, no known-malware or campaign-IOC database; sandboxed scanning | No | npm, PyPI, Go, RubyGems, GitHub Actions, VS Code extensions | Yes (Apache-2.0) | No |
@@ -945,17 +949,19 @@ Apache-2.0, no account required, and no telemetry: the scanner reports only to
 its own output.
 
 **Offline by default:**
-`scan` on a local path runs fully offline (unless the opt-in `--check-registry`
-flag is passed), as do `guard`, `feed stats`, and all report formatters. These
+`scan` on a local path runs fully offline (unless one of the opt-in flags
+`--check-registry` or `--external-intel` is passed), as do `guard`, `feed stats`,
+and all report formatters. These
 commands make zero network requests and are suitable for air-gapped and
 data-egress-restricted environments.
 
 An offline scan matches against the bundled indicator set: every domain, URL, IP
 and hash, every curated campaign, and the recent package indicators. Older
 package indicators live in the historical catalog, which is much larger than the
-bundle and is downloaded by `supply-chain-guard feed refresh`. A machine that
-never reaches the network therefore scans against the bundled set only, and every
-report says so in its Catalog line (see
+bundle and is downloaded by `supply-chain-guard feed refresh` into `.scg-cache`
+in the working directory (or `--cache-dir`). A scan without that cache, or with
+one left over from another release, runs against the bundled set only, and every
+`scan` report says so in its Catalog line (see
 [THREAT_FEED_CATALOG_MISSING](#threat_feed_catalog_missing)).
 
 **Networked commands and external disclosures:**
@@ -967,6 +973,7 @@ The commands that reach the network do so deliberately for their specific functi
 - `supply-chain-guard feed refresh`: downloads updated threat intelligence from the upstream repository into the local cache.
 - `supply-chain-guard scan <github-url>`: clones a remote repository via Git for analysis.
 - `supply-chain-guard scan . --check-registry`: opt-in flag that queries the public npm registry for the package's latest published version to detect version drift, and **transmits each Python dependency name** from `requirements.txt` / `pyproject.toml` to the public PyPI registry for dependency-confusion signals. Up to v6.2.5 the PyPI lookups ran on every scan of a Python project, contrary to the offline guarantee above; they now need this flag.
+- `supply-chain-guard scan . --external-intel`: opt-in flag for the two-tier score. It **sends each dependency's name, ecosystem and version to the OSV API**, the CVE ids found to FIRST's EPSS API, and the project's GitHub `owner/repo` to the OpenSSF Scorecard API, and downloads the public CISA KEV catalog.
 
 Offline runs use the feed bundled with the installed version, so pin the version
 you intend to audit against.
@@ -1098,12 +1105,14 @@ catalog is narrower than a scan with it, and without this rule it reports exactl
 the same success.
 
 `supply-chain-guard feed refresh` downloads the catalog and caches it for later
-scans. The finding names how many historical indicators were not consulted and
+scans, in `.scg-cache` under the working directory unless `--cache-dir` names
+another. The cache belongs to one release, so an upgrade needs a new refresh.
+The finding names how many historical indicators were not consulted and
 why, and the reason matters:
 
 | Reason | Severity | What it means |
 |--------|----------|---------------|
-| not downloaded yet | info | No catalog on this machine. Run a refresh. |
+| not downloaded yet | info | No catalog in the cache directory. Run a refresh there. |
 | unreadable | medium | The cache could not be parsed. |
 | built for a different release | low | Left over from an older version. |
 | does not match the pinned digest | high | Not the catalog this release expects. |
@@ -1118,9 +1127,10 @@ and that also means `--min-severity low`, the Action's default, filters the
 finding out. The same state is therefore recorded as provenance, independent of
 any severity filter:
 
-- every report format carries a Catalog line, in bold in the Markdown report
-  (and so in the Action's pull request comment whenever one is posted) when the
-  catalog was not consulted;
+- every `scan` report carries a Catalog line in every format, in bold in the
+  Markdown report (and so in the Action's pull request comment whenever one is
+  posted) when the catalog was not consulted. The `npm`, `pypi` and `vscode`
+  commands, which vet one remote package, carry no Catalog line;
 - JSON and SARIF carry `detectionSet.catalog` (`consulted`, `entryCount`,
   `reason`), and the CycloneDX SBOM carries
   `supply-chain-guard:detection-set:catalog-consulted`;

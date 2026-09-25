@@ -16,7 +16,7 @@ supply-chain-guard mcp
 | `scan_directory` | none (local FS) | Full static scan (350+ rules) of a local directory. Returns risk score, findings by severity, top 20 findings. |
 | `scan_npm_package` | downloads from the npm registry | Scans the latest published version of an npm package without installing it, plus the offline IOC lookup for the requested name/version. |
 
-Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline; run `supply-chain-guard feed refresh` once on the machine so package verdicts include the historical catalog), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
+Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline; to include the historical catalog in package verdicts, run `supply-chain-guard feed refresh` in the server's working directory, usually the project directory the MCP client starts it in, and again after an upgrade), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
 
 ## Version pinning guidance
 
