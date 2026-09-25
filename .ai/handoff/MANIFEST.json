@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790362261",
-    "timestamp": "2026-09-25T18:51:01Z",
-    "commit": "aac2864",
+    "session_id": "cli-1790362698",
+    "timestamp": "2026-09-25T18:58:18Z",
+    "commit": "fd4696c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:e3cbc3b4ea2727ffe0a4fbe02406c3697831f362260c7d26c212792b838a1d77",
-      "updated": "2026-09-25T18:51:01Z",
-      "lines": 11937,
-      "summary": "Owner-approved answer to Scorecard Fuzzing 0 and the bestpractices.dev dynamic"
+      "checksum": "sha256:56d32aa10540d1cd5c97c0f3bc2442302f26ebc20f6591de009499006455548f",
+      "updated": "2026-09-25T18:57:43Z",
+      "lines": 11968,
+      "summary": "The owner noticed `LOG.md` listed far more than the 10 entries the AAHP"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-25T18:51:01Z",
-      "lines": 187,
-      "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
+      "checksum": "sha256:79c64f52882c2d4f5fe91318c84a2fe92d30bd09e683212e90090e920fb5f29e",
+      "updated": "2026-09-25T18:58:18Z",
+      "lines": 90,
+      "summary": "281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catal"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
-      "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-25T18:49:23Z",
-      "lines": 11,
+      "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
+      "updated": "2026-09-25T18:57:43Z",
+      "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:2ee76c38a968ef881e25d8cca33ee8850c0398941285d58e685a5421a7c3a5db",
-      "updated": "2026-09-25T18:51:01Z",
+      "updated": "2026-09-25T18:58:18Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:d921858c2ff78b764683c51d890d6d6424e7016345e96ea7545359dadb93cf0e",
-      "updated": "2026-09-25T18:51:01Z",
+      "updated": "2026-09-25T18:58:18Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-25T18:49:23Z",
+      "updated": "2026-09-25T18:57:40Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "Owner-approved answer to Scorecard Fuzzing 0 and the bestpractices.dev dynamic Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "The owner noticed `LOG.md` listed far more than the 10 entries the AAHP Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 139147,
-    "full_read": 152178
+    "manifest_plus_core": 139476,
+    "full_read": 149467
   }
 }

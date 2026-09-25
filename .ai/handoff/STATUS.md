@@ -1,3 +1,34 @@
+## LOG.md back on the AAHP rule (2026-09-25) (claude-opus-5-5)
+
+The owner noticed `LOG.md` listed far more than the 10 entries the AAHP
+convention keeps. Measured before the change:
+
+- `scripts/scg-handoff-docs.mjs` rendered EVERY release as a table row (170 by
+  v6.2.5) since 2026-07-18, when `LOG.md` became generated.
+- It carried no canonical `## [YYYY-MM-DD]` heading, so `aahp archive --verify`
+  counted 0 entries: the 10-entry rule was broken with nothing able to see it.
+- `aahp archive --verify` failed anyway, on "LOG-ARCHIVE.md is missing indexed
+  archived entries": `LOG-ARCHIVE.index.json` still held the one-record note
+  from 2026-07-18 (`archivedOn`/`reason`/`coversThrough`), with no `sha256`,
+  which the current AAHP index format requires per archived entry.
+- Nothing ran that check: `aahp.config.json` skips the `handoff` gate in
+  `aahp check`, and no prebuild step called `aahp archive`.
+
+Changed:
+
+- The generator writes the 10 newest dated releases as canonical entries
+  (`## [date] vX.Y.Z`, headline, pointer to the CHANGELOG section). Every
+  release stays in CHANGELOG.md, which the file is derived from.
+- `LOG-ARCHIVE.index.json` rebuilt in the AAHP format: one `sha256` + `title`
+  per archived entry (5), computed with AAHP's own split and digest code. The
+  2026-07-18 rationale it used to hold is already in the archive's preamble.
+- New prebuild gate `check:log-archive` = `aahp archive . --verify`, after
+  `check:handoff`. `docs/ci-and-release.md` now lists all nine prebuild gates
+  (it still said "three groups").
+- `handoff-gate.test.ts`: exactly 10 newest entries from a 12-release
+  changelog, AAHP's archive verify passes on the generated file, and an
+  eleventh entry makes it fail (the control that the check is not vacuous).
+
 ## Property-based tests for the parsers (2026-09-25) (claude-opus-5-5)
 
 Owner-approved answer to Scorecard Fuzzing 0 and the bestpractices.dev dynamic

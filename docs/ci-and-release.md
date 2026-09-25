@@ -164,13 +164,19 @@ absent, so every other check keeps running. The PAT expires after at most a year
 
 ## Validation gates
 
-`npm run build` is not just `tsc`. Its `prebuild` runs three groups, and a red gate is
-the task, not an obstacle to route around:
+`npm run build` is not just `tsc`. Its `prebuild` runs these 9 gates in order (read
+from `package.json`), and a red gate is the task, not an obstacle to route around:
 
 ```
-npm run check:aahp     # pin preflight, then: npx --no-install aahp check .
-npm run check:feed     # node scripts/generate-feed.mjs --check
-npm run check:handoff  # node scripts/scg-handoff-docs.mjs --check
+npm run check:aahp            # node scripts/check-aahp-pin.mjs && node scripts/check-em-dash-scope.mjs && npx --no-install aahp check .
+npm run check:feed            # node scripts/generate-feed.mjs --check
+npm run check:coverage        # node scripts/generate-coverage-table.mjs --check
+npm run check:feed-partition  # node scripts/check-feed-partition.mjs
+npm run check:feed-budget     # node scripts/check-feed-budget.mjs
+npm run check:catalog         # node scripts/generate-catalog.mjs --check
+npm run check:handoff         # node scripts/scg-handoff-docs.mjs --check
+npm run check:log-archive     # npx --no-install aahp archive . --verify
+npm run check:self-scan       # node scripts/generate-self-scan-manifest.mjs --check
 ```
 
 `check:aahp` first runs `scripts/check-aahp-pin.mjs`, which asserts the governance
