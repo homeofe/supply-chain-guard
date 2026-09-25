@@ -12,11 +12,11 @@ supply-chain-guard mcp
 
 | Tool | Network | Purpose |
 | --- | --- | --- |
-| `ioc_lookup` | none (offline) | Check a package name (+ optional exact version) against the bundled threat-intel feed and known-bad version blocklist. Ecosystems: npm, pypi, ruby, composer, nuget, go, jenkins, terraform, vscode (Marketplace), openvsx (Open VSX), maven, actions (owner/repo + commit SHA), pub, docker (image name + tag or sha256 digest), tfmodule, swift, cocoapods, hex, cran, conan, helm, ansible, homebrew, chrome, edge, firefox, jetbrains. Returns verdict + matched campaign/family. |
+| `ioc_lookup` | none (offline) | Check a package name (+ optional exact version) against the bundled threat-intel feed and known-bad version blocklist. Ecosystems: npm, pypi, ruby, composer, nuget, go, jenkins, terraform, vscode (Marketplace), openvsx (Open VSX), maven, actions (owner/repo + commit SHA), pub, docker (image name + tag or sha256 digest), tfmodule, swift, cocoapods, hex, cran, conan, helm, ansible, homebrew, chrome, edge, firefox, jetbrains. Returns verdict + matched campaign/family. `checkedAgainst.catalog` says whether the historical package catalog was consulted: it is only once `supply-chain-guard feed refresh` has downloaded it, and a clean package verdict reached without it carries a `coverageNote`. Domain, URL, IP and hash lookups are always complete offline, because the catalog holds package indicators only. |
 | `scan_directory` | none (local FS) | Full static scan (350+ rules) of a local directory. Returns risk score, findings by severity, top 20 findings. |
 | `scan_npm_package` | downloads from the npm registry | Scans the latest published version of an npm package without installing it, plus the offline IOC lookup for the requested name/version. |
 
-Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
+Recommended agent workflow: call `ioc_lookup` before every `npm install` / `pip install` suggestion (it is instant and offline; run `supply-chain-guard feed refresh` once on the machine so package verdicts include the historical catalog), `scan_npm_package` before adding a new npm dependency, and `scan_directory` after cloning or downloading third-party code.
 
 ## Version pinning guidance
 

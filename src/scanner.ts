@@ -1078,7 +1078,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // a github scan's scanDir lives inside it, and an assessment taken afterwards
   // would silently grade an empty path as Level 0 / non-git.
   const gitProv = resolveGitProvenance(scanDir);
-  const detectionSet = getDetectionSetProvenance(options.cacheDir);
+  // The catalog half of the provenance comes from the same snapshot the
+  // THREAT_FEED_CATALOG_MISSING finding was computed from, so the two can never
+  // disagree about this scan.
+  const detectionSet = getDetectionSetProvenance(options.cacheDir, catalogState);
   const slsaAssessment = assessSLSA(scanDir);
   // Opt-in only. An unconditional verdict changed the default text and JSON output
   // for every existing consumer, and attached a composite risk score derived from a

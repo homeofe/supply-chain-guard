@@ -11636,8 +11636,15 @@ function mergeFeeds(base: FeedIOC[], additions: FeedIOC[]): FeedIOC[] {
 
 /**
  * Get provenance metadata for the active detection set / threat intelligence feed (v5.29, issue #208).
+ *
+ * `catalogState` is the snapshot the scanner took beside its own load. Pass it
+ * whenever one exists: nested scanners may load from another directory, and the
+ * provenance must describe the load that produced this scan's findings.
  */
-export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProvenance {
+export function getDetectionSetProvenance(
+  cacheDir?: string,
+  catalogState?: CatalogState,
+): DetectionSetProvenance {
   const cacheBase = cacheDir ?? CACHE_DIR;
   const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
 
@@ -11649,6 +11656,10 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
   // loadThreatIntel is memoized on the same inputs, so this is a map lookup on
   // the common path rather than a second read.
   const effectiveEntryCount = loadThreatIntel(cacheDir).length;
+  // Without a snapshot, the state is the one this load just produced. The memo
+  // holds a single entry, so a memo hit is always the load that set it.
+  const catalog = catalogState ?? lastCatalogState();
+  const catalogEntryCount: number = CATALOG_DIGEST.entryCount;
 
   let cacheMerged = false;
   let cacheRefreshedAt: string | undefined;
@@ -11674,5 +11685,10 @@ export function getDetectionSetProvenance(cacheDir?: string): DetectionSetProven
     cacheMerged,
     effectiveEntryCount,
     ...(cacheMerged ? { cachePath, cacheRefreshedAt } : {}),
+    catalog: {
+      consulted: catalog.available,
+      entryCount: catalogEntryCount,
+      ...(catalog.available ? {} : { reason: catalog.reason ?? "absent" }),
+    },
   };
 }

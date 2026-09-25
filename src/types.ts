@@ -175,6 +175,24 @@ export interface DetectionSetProvenance {
   cachePath?: string;
   /** Cache refresh timestamp if merged */
   cacheRefreshedAt?: string;
+  /**
+   * Whether the downloadable historical catalog was part of this scan's
+   * indicator set (unreleased). Recorded as provenance rather than only as the
+   * `info` THREAT_FEED_CATALOG_MISSING finding, because `--min-severity low`
+   * (the GitHub Action's default) filters that finding out, and a bundle-only
+   * scan then read exactly like a complete one.
+   */
+  catalog?: DetectionSetCatalog;
+}
+
+/** The catalog half of the detection set (unreleased). */
+export interface DetectionSetCatalog {
+  /** The catalog was accepted and merged into the indicators this scan used. */
+  consulted: boolean;
+  /** Indicators the installed release's catalog pins. */
+  entryCount: number;
+  /** Why it was not consulted. Absent when it was. */
+  reason?: "absent" | "unreadable" | "version-mismatch" | "digest-mismatch" | "corrupt";
 }
 
 // ---------------------------------------------------------------------------

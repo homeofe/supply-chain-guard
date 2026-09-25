@@ -211,9 +211,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   lists are generated from the shipped data and `src/ecosystem-coverage.json`,
   checked by `check:coverage`, and the count script behind the claims gate uses
   the same split.
+- The README's offline and air-gapped wording now states what an offline scan
+  matches against: the bundled set, meaning every domain, URL, IP and hash,
+  every curated campaign and the recent package indicators. The historical
+  package catalog needs one `feed refresh`. The comparison table no longer
+  calls the package verdicts "fully local/offline", and the MCP `ioc_lookup`
+  description no longer implies the bundled set is the whole corpus.
 
 ### Fixed
 
+- **A bundle-only scan no longer reads like a complete one.**
+  `THREAT_FEED_CATALOG_MISSING` stays `info` so a fresh install is not flagged
+  yellow, but `--min-severity low`, the GitHub Action's default, filtered it
+  out, and nothing else in the report said the historical catalog was not
+  consulted. The detection-set provenance now records the catalog
+  (`detectionSet.catalog`: `consulted`, `entryCount`, `reason`) from the same
+  snapshot the finding uses, and every report format renders it whatever the
+  severity filter: a Catalog line in text, Markdown (bold when the catalog was
+  not consulted), HTML, GitLab and JUnit, plus two CycloneDX properties. The
+  score, risk level, badge and exit code are unchanged.
+- The MCP `ioc_lookup` result carries `checkedAgainst.catalog`, and a clean
+  package verdict reached without the catalog carries a `coverageNote`.
+  Indicator lookups need none, because the catalog holds package indicators
+  only.
 - `.claude/settings.json` hooks are parsed leniently too (comments, trailing
   commas), so one stray comma no longer hides every hook from the scan.
 - **A local `scan` sent Python dependency names to pypi.org.** The README
