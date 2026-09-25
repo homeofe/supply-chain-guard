@@ -248,6 +248,13 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "hash", value: "1a4afce34918bdc74ae3f31edaffffaa0ee074d83618f53edfd88137927340b8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "b0cefb66b953e5184b6adb3035e9e267335ac5eabfe1848e07834777b9397b74", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
   { type: "hash", value: "e7347d90653efc565f03733a95e9209d78f9cfa81e31ff2b2dd9d48d75a4b8b1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
+  // The extension identity itself, version-pinned on both registries (OSV MAL-2026-5161 /
+  // MAL-2026-5162). Nx Console is a legitimate, live extension and a HIJACK VICTIM: only the
+  // 18.95.0 release is malicious, and it is no longer served (Open VSX 404, verified
+  // 2026-09-23). Replaces the npm name pattern for nrwl.angular-console in patterns.ts, which
+  // name-blocked the victim and matched no real npm package (registry 404), so it never fired.
+  { type: "package", value: "vscode:nrwl.angular-console@18.95.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", source: "MAL-2026-5161", firstSeen: "2026-05-18" },
+  { type: "package", value: "openvsx:nrwl.angular-console@18.95.0", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", source: "MAL-2026-5162", firstSeen: "2026-05-18" },
   { type: "hash", value: "43f2b001846c4966073ebffa5be8f15e491a1e7d32bbd805d57406ff540e0dd8", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Nx Console 18.95.0", firstSeen: "2026-05-18" },
 
   // Megalodon GitHub Actions workflow injection campaign (May 22, 2026)
@@ -276,10 +283,12 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "domain", value: "flipboxstudio.info", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
   { type: "hash", value: "f0d912c1a72e533417d5e158bb9755f848ec678b6448ae7c8fb6e87da78a3053", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
   { type: "hash", value: "23e779555c21beaed6ae8f1f298daf9b00d603f1a6716ce329332aadcb80fbe2", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/lang", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/http-statuses", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/attributes", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:laravel-lang/actions", severity: "critical", confidence: 1.0, family: "DebugElevator", campaign: "Laravel-Lang DebugElevator", firstSeen: "2026-05-23" },
+  // Corrected 2026-09-23: the four laravel-lang packages were carried here as WHOLE-NAME
+  // blocks. They are HIJACK VICTIMS, not attacker packages: Packagist lists 525 / 71 / 87 / 47
+  // versions going back to 2015-2023, laravel-lang/lang shipped a clean release on 2026-09-20,
+  // and it has 12.3M downloads. A whole-name block flagged every Laravel project using them as
+  // critical. What the incident actually shipped stays detected: the stealer's helpers.php by
+  // the two hashes above (file digest in vendor/) and its exfiltration host by domain.
 
   // Packagist 8-package GitHub-hosted Linux binary attack (May 23, 2026)
   // Coordinated supply-chain hit against 8 Composer packages on Packagist whose dev
@@ -287,14 +296,14 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // (gvfsd-network) from github.com/parikhpreyash4/systemd-network-helper-aa5c751f and
   // execute it from /tmp/.sshd. Attacker GitHub account removed after disclosure.
   // Attack mixed JS toolchain hooks into PHP projects to bypass Composer-side review.
-  { type: "package", value: "composer:moritz-sauer-13/silverstripe-cms-theme", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:crosiersource/crosierlib-base", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:devdojo/wave", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
+  // Corrected 2026-09-23: only the DEV BRANCHES of these packages carried the hook, so their
+  // tagged releases were never affected, and six of the eight are live with release histories
+  // (Packagist, 6 to 143 versions). Those six are no longer name-blocked; the hook itself stays
+  // detected through the parikhpreyash4 account in KNOWN_MALICIOUS_GITHUB_ACCOUNTS, which the
+  // payload URL names. devdojo/genesis and katanaui/katana are gone from Packagist and keep
+  // their name blocks, which can no longer match a clean install.
   { type: "package", value: "composer:devdojo/genesis", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
   { type: "package", value: "composer:katanaui/katana", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:elitedevsquad/sidecar-laravel", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:r2luna/brain", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
-  { type: "package", value: "composer:baskarcm/tzi-chat-ui", severity: "critical", confidence: 1.0, family: "PHPBinaryDropper", campaign: "Packagist parikhpreyash4 Binary Attack", firstSeen: "2026-05-23" },
 
   // TrapDoor cross-ecosystem credential stealer (npm/PyPI/Crates.io, May 25, 2026)
   // Reported by The Hacker News on May 25, 2026. Single actor (ddjidd564) published
@@ -572,21 +581,24 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // still holding 4.2.11 or 1.2.9 is exactly what must be caught - without touching clean ones.
   { type: "package", value: "html-to-gutenberg@4.2.11", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
   { type: "package", value: "fetch-page-assets@1.2.9", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "JFrog Security Research", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/lambda", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/ebarimt-rest-api", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/lambda-platform/dan", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/reauheau/goaubio", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/glacialspring/go-winsparkle", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/glacialspring/static", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/bm-197/chill", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/naol7/dist-task-scheduler", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/anatoli-derese/a2sv-excercise", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/zainirfan13/graphql-client", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/hngi/team-fierce-backend-golang", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/rickt/slack-weather-bot", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/Barsu5489/commerce", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
-  { type: "package", value: "go:github.com/Setsu548/Logistic", severity: "critical", confidence: 0.95, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", firstSeen: "2026-06-29" },
+  // Go modules of the same wave, CORRECTED 2026-09-23. These were 15 whole-name blocks. Every
+  // path is a developer repository the wave INFECTED (a backdated commit adding the 799-byte
+  // .vscode/tasks.json "eslint-check" loader plus JavaScript posing as
+  // public/fonts/fa-solid-400.woff2), not an attacker-created module, so a name block flags the
+  // owner's clean history. Measured against the Go module proxy, which keeps module zips:
+  // - lambda-platform/lambda is a framework released since 2021: 137 of its 449 versions are
+  //   retrievable and ALL are clean, including the 16 published in 2026. Dropped.
+  // - the four pinned below are the exact pseudo-versions whose proxy zip carries the loader
+  //   (their commit dates are forged, hence 2018-2025 timestamps). A clean restore gets a new
+  //   pseudo-version and is not matched.
+  // - the other ten have no retrievable version at all (proxy 404, repository deleted or
+  //   blocked), so no artifact exists to pin and nothing installable is protected by a name
+  //   block. Dropped. A checkout of any of them is still caught by what it contains:
+  //   EDITOR_TASK_EXECUTES_ASSET (skills-scanner.ts) flags the loader itself.
+  { type: "package", value: "go:github.com/glacialspring/go-winsparkle@v0.0.0-20250402002608-9d703488711b", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/glacialspring/static@v0.0.0-20181015024211-023dc73bc332", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/zainirfan13/graphql-client@v0.0.0-20220912215956-d304e79da123", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
+  { type: "package", value: "go:github.com/dexbotsdev/uniswap-v2-v3-arbitrage@v0.0.0-20231007040513-b492291579de", severity: "critical", confidence: 1.0, family: "InvisibleFerret", campaign: "Contagious Interview Fake Font", source: "The Hacker News; loader verified in the Go proxy module zip", firstSeen: "2026-06-29" },
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
   // Fresh DPRK "Contagious Interview" wave: 6 attacker-uploaded npm packages masquerade as
@@ -631,11 +643,12 @@ const FEED_CHUNK_0: FeedIOC[] = [
   // Chrome. Obfuscated JS loaders (hidden in config.js / fake .woff2 fonts, run via VS Code tasks on
   // folder-open) decrypt a second stage fetched over TRON / Aptos / BNB Smart Chain RPC with an
   // embedded XOR key and eval() it, dropping the DEV#POPPER RAT + OmniStealer (credential/browser/
-  // wallet theft). Only the concretely enumerated malicious Go module is pinned here: git2md from
-  // the compromised account Xpos587 at v0.0.0-20260503100027-79bdb26ca95d. The npm/Composer package
+  // wallet theft). Only the concretely enumerated malicious Go module is pinned here (it was a bare
+  // name until 2026-09-23, blocking the live project): git2md from the compromised account Xpos587 at
+  // v0.0.0-20260503100027-79bdb26ca95d, whose proxy zip carries the loader. The npm/Composer package
   // names and the Chrome extension ID were not publicly enumerated at feed time and are omitted to
   // avoid guessing; git-history rewriting/force-pushes make the accounts' clean history untrustworthy.
-  { type: "package", value: "go:github.com/Xpos587/git2md", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
+  { type: "package", value: "go:github.com/Xpos587/git2md@v0.0.0-20260503100027-79bdb26ca95d", severity: "critical", confidence: 0.95, family: "OmniStealer", campaign: "PolinRider", firstSeen: "2026-07-06" },
 
   // Fake Paysafe / Skrill / Neteller payment SDKs (Socket, July 8, 2026). 17
   // packages published ~July 7 across npm (13, versions 1.0.0-1.0.3) and PyPI
@@ -9777,11 +9790,13 @@ const FEED_CHUNK_21: FeedIOC[] = [
   // Graphalgo campaign spreads to Terraform providers and Go modules (Aikido,
   // September 2026). Curated enrichment, not an advisory-database import: these
   // carry campaign and family so the partition policy keeps them in the bundle.
-  // Single-source, hence confidence 0.85. The two Terraform providers
-  // (gocommunity-io/dockerd, kreuzwenker/docker) have no scanner ecosystem and
-  // are covered only through the operator GitHub accounts in ioc-blocklist.ts.
+  // Single-source, hence confidence 0.85. The two Terraform providers are
+  // matched by terraform-scanner.ts in .tf, .tf.json and .terraform.lock.hcl;
+  // no versions were published, so they are name-level.
   { type: "package", value: "go:gocommunity.io/orderedbtree", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "package", value: "go:gogets.dev/btreex", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+  { type: "package", value: "terraform:gocommunity-io/dockerd", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+  { type: "package", value: "terraform:kreuzwenker/docker", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "gocommunity.io", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "gogets.dev", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "domain", value: "portfolio-devs.slack.com", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
@@ -9789,6 +9804,577 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "domain", value: "mediumstar.slack.com", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "hash", value: "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "hash", value: "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
+
+  // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
+  // Whole-extension since 2026-09-23 (was pinned to 1.0.4, the only version the advisory
+  // lists): every version the Marketplace still serves (1.0.0, 1.0.1, 1.0.2, 1.0.4) ships the
+  // same edrdrill.js beacon to the fronted azure-cdn[.]info host, verified by opening each
+  // VSIX, and the publisher name matches that host. No clean release exists to protect.
+  { type: "package", value: "vscode:AzureCdnInfo.edrtester", severity: "critical", confidence: 0.9, source: "MAL-2026-16010", firstSeen: "2026-09-03" },
+
+  // Shai-Hulud 2.0 reached Maven Central through mvnpm, which republishes npm packages as
+  // Maven artifacts: the trojanized posthog-node 4.18.1 was mirrored as
+  // org.mvnpm:posthog-node 4.18.1 (GHSA-5f38-2pgv-jhg6, OSV MAL-2025-191470). Version-pinned:
+  // mvnpm and posthog-node are legitimate, only the mirrored worm release is malicious.
+  // Curated so the partition policy keeps it bundled, as the offline anchor of the maven:
+  // ecosystem.
+  { type: "package", value: "maven:org.mvnpm:posthog-node@4.18.1", severity: "critical", confidence: 1.0, family: "ShaiHuludWorm", campaign: "Shai-Hulud 2.0 mvnpm mirror", source: "GHSA-5f38-2pgv-jhg6, MAL-2025-191470", firstSeen: "2025-11-26" },
+
+  // tj-actions/changed-files compromise (March 14-15 2025, CVE-2025-30066). The malicious
+  // commit was pushed from a fork and every version tag was repointed to it; GitHub has since
+  // purged it, but a workflow pinned to it still names it. Tags were restored, so only the SHA
+  // is an indicator. Replaces the hardcoded map in github-actions-scanner.ts, whose label
+  // said September 2025.
+  { type: "package", value: "actions:tj-actions/changed-files@0e58ed8671d6b60d0890c21b07f8835ace038e67", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "tj-actions/changed-files compromise", source: "GHSA-mrrh-fwg8-r2c3, StepSecurity, Wiz", firstSeen: "2025-03-14" },
+
+  // reviewdog/action-setup compromise (March 11 2025, CVE-2025-30154), the upstream of the
+  // tj-actions incident. The v1 tag pointed at this commit for about two hours; it is off the
+  // default branch and its install.sh dumps runner memory. The previously hardcoded
+  // 3f401fe1...69b8cdfe4 did not exist: it was a corrupted copy of the CLEAN v1.3.0 commit the
+  // tag was reverted to, and is deliberately not listed.
+  { type: "package", value: "actions:reviewdog/action-setup@f0d342d24037bb11d26b9bd8496e0808ba32e9ec", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "reviewdog action-setup compromise", source: "CVE-2025-30154, Wiz, StepSecurity", firstSeen: "2025-03-11" },
+
+  // TeamPCP Trivy GitHub Actions compromise (March 19-20 2026, CVE-2026-33634). Every version
+  // tag of aquasecurity/trivy-action (0.0.1 to 0.34.2) and seven setup-trivy tags were
+  // repointed to imposter commits parented on the then-current clean release. Each SHA was
+  // verified 2026-09-23: it exists, has that clean parent, and is not on the default branch.
+  // Tags were deleted or re-created clean, so only the SHAs are indicators.
+  { type: "package", value: "actions:aquasecurity/setup-trivy@8afa9b9f9183b4e00c46e2b82d34047e3c177bd0", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@386c0f18ac3d7f2ed33e2d884761119f4024ff8a", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@384add36b52014a0f99c0ab3a3d58bd47e53d00f", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@7a4b6f31edb8db48cc22a1d41e298b38c4a6417e", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@6d8d730153d6151e03549f276faca0275ed9c7b2", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@99b93c070aac11b52dfc3e41a55cbb24a331ae75", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/setup-trivy@f4436225d8a5fd1715d3c2290d8a50643e726031", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@f77738448eec70113cf711656914b61905b3bd47", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@b9faa60f85f6f780a34b8d0faaf45b3e3966fdda", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@3c615ac0f29e743eda8863377f9776619fd2db76", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@c19401b2f58dc6d2632cb473d44be98dd8292a93", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@4209dcadeaea6a7df69262fef1beeda940881d4d", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@61fbe20b7589e6b61eedcd5fe1e958e1a95fbd13", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@0d49ceb356f7d4735c63bd0d5c7e67665ec7f80c", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@2e7964d59cd24d1fd2aa4d6a5f93b7f09ea96947", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@1d74e4cf63b7cf083cf92bf5923cf037f7011c6b", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@3201ddddd69a1419c6f1511a14c5945ba3217126", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ea56cd31d82b853932d50f1144e95b21817e52cf", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@f5c9fd927027beaa3760d2a84daa8b00e6e5ee21", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@9738180dd24427b8824445dbbc23c30ffc1cb0d8", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ef3a510e3f94df3ea9fcd01621155ca5f2c3bf5b", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@bb75a9059c2d5803db49e6ed6c6f7e0b367f96be", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@22e864e71155122e2834eb0c10d0e7e0b8f65aa3", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@6ec7aaf336b7d2593d980908be9bc4fed6d407c6", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@555e7ad4c895c558c7214496df1cd56d1390c516", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@794b6d99daefd5e27ecb33e12691c4026739bf98", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@506d7ff06abc509692c600b5b69b4dc6ceaa4b15", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@91d5e0a13afab54533a95f8019dd7530bd38a071", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@252554b0e1130467f4301ba65c55a9c373508e35", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@9e8968cb83234f0de0217aa8c934a68a317ee518", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@8aa8af3ea1de8e968a3e49a40afb063692ab8eae", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@e53b0483d08da44da9dfe8a84bf2837e5163699b", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@276ca9680f6df9016db12f7c48571e5c4639451d", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@8ae5a08aec3013ee8f6132b2a9012b45002f8eaa", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@820428afeb64484d311211658383ce7f79d31a0a", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@cf19d27c8a7fb7a8bbf1e1000e9318749bcd82cf", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@405e91f329294fb696f55793203abf1f6aba9b40", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@2297a1b967ecc05ba2285eb6af56ab4da554ecae", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@2b1dac84ff12ba56158b3a97e2941a587cb20da9", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@f4f1785be270ae13f36f6a8cfbf6faaae50e660a", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@3d1b5be1589a83fc98b82781c263708b2eb3b47b", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@985447b035c447c1ed45f38fad7ca7a4254cb668", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@85cb72f1e8ee5e6e44488cd6cbdbca94722f96ed", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@38623bf26706d51c45647909dcfb669825442804", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@7f6f0ce52a59bdfc5757c3982aac2353b58f4c73", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@0891663bc55073747be0eb864fbec3727840945d", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@3dffed04dc90cf1c548f40577d642c52241ec76c", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@cf1692a1fc7a47120e6508309765db7e33477946", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@848d665ed24dc1a41f6b4b7c7ffac7693d6b37be", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@fa4209b6182a4c1609ce34d40b67f5cfd7f00f53", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@9092287c0339a8102f91c5a257a7e27625d9d029", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@b7befdc106c600585d3eec87d7e98e1c136839ae", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@9ba3c3cd3b23d033cd91253a9e61a4bf59c8a670", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@fd090040b5f584f4fcbe466878cb204d0735dcf4", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@e0198fd2b6e1679e36d32933941182d9afa82f6f", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ddb94181dcbc723d96ffc07fddd14d97e4849016", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@b7252377a3d82c73d497bfafa3eabe84de1d02c4", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@66c90331c8b991e7895d37796ac712b5895dda3b", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@c5967f85626795f647d4bf6eb67227f9b79e02f5", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@9c000ba9d482773cbbc2c3544d61b109bc9eb832", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@8cfb9c31cc944da57458555aa398bb99336d5a1f", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ad623e14ebdfe82b9627811d57b9a39e283d6128", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@8519037888b189f13047371758f7aed2283c6b58", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@fd429cf86db999572f3d9ca7c54561fdf7d388a4", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@19851bef764b57ff95b35e66589f31949eeb229d", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@91e7c2c36dcad14149d8e455b960af62a2ffb275", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ab6606b76e5a054be08cab3d07da323e90e751e8", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@a9bc513ea7989e3234b395cafb8ed5ccc3755636", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ddb9da4475c1cef7d5389062bdfdfbdbd1394648", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@18f01febc4c3cd70ce6b94b70e69ab866fc033f5", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@7b955a5ece1e1b085c12dac7ac10e0eb1f5b0d4d", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@d488f4388ff4aa268906e25c2144f1433a4edec2", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@fa78e67c0df002c509bcdea88677fb5e2fe6a9b1", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@a5b4818debf2adbaba872aaffd6a0f64a26449fa", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@6fc874a1f9d65052d4c67a314da1dae914f1daff", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@2a51c5c5bb1fd1f0e134c9754f1702cfa359c3dd", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@ddb6697447a97198bdef9bae00215059eb5e8bc2", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@aa3c46a9643b18125abb8aefc13219014e9c4be8", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@4bdcc5d9ef3ddb42ccc9126e6c07faa3df2807e3", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@b745a35bad072d93a9b83080e9920ec52c6b5a27", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@da73ae0790e458e878b300b57ceb5f81ac573b46", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+  { type: "package", value: "actions:aquasecurity/trivy-action@7550f14b64c1c724035a075b36e71423719a1f30", severity: "critical", confidence: 1.0, family: "ActionTagHijack", campaign: "TeamPCP Trivy Actions compromise", source: "GHSA-69fq-xp46-6x23, StepSecurity, Wiz", firstSeen: "2026-03-19" },
+
+  // TeamPCP Checkmarx KICS GitHub Action compromise (March 23 2026). All tags repointed to
+  // imposter commits parented on the clean v2.1.20. The per-tag list comes from one vendor
+  // (Wiz); every SHA was verified 2026-09-23 against the API as above, hence 0.95.
+  { type: "package", value: "actions:checkmarx/kics-github-action@45f3749467a6017cb4fb749054b498d149dd5924", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@8e20c7a67bb95632e2040327a355fb97e6014d29", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@93de85c910d859b759cf9185aa78d5a23a4b7000", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@0e7343ba084735863db92b6f8ba2fa9dee604f7c", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@2dc0fa613f6f4c15f26ad98225ad253475681616", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@f00191dd3352c0cd83c6cce4e6bf04b628214dd0", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@e0359b1a253ee66c8018586c3225e6e9cd2d8a4f", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@dc6dbf358998c0c64da83edc8fcd581c12656b19", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@08b9ea97eb292d5e1f9ac2d8e21c0ba32f0fdff0", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@005fb0837553de722f8bf11d98e905dbdde19861", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@a5471d37c656ecd4560e8e0b3977910f27025618", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@121c38fb49c9fc82160245fb6e2a9119db636e4d", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@1e9eeaba37fe0032deba133f598e74dab0ceb3b7", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@c5c07508527fc6a125855eebfb533e64f675bd8e", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@c999dbb9cc904e23675f9929f7e0e51d132879cf", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@4ebf62dd8ff318412b38d19841fc3c8650e294bf", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@3ae9f0d6f8139964635d411149f9b3e0a6eb935e", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@96a0e8eb31c3cce6c495c9a49dd49c881cd17934", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@31fbf5831a2e52429738fdc0cbaa20e57872b6fc", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@fca3a20afcb8ec7f9932c060a236d2a9021fdd2b", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@0f81f132f9f09bb4976d403914a44a1a1eb6158d", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@c0e23718a5074f3b8ad286f37b532e02057af35f", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@d66f0657133bc42f8264458063999bf1910490db", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@e35c9d6a5faffc1c5b3450d0bf09006aa9b9e906", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@2eee333d70fb6e14ce1d4aa73f12058bc5d70193", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@f9641eb512f5c6530d13275903e8a97baf0925f1", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@e8754eebc822b5122e96a6142b28dbc0e179c91c", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@69b3f020390222a9fcb6029ba56533b2fb12f103", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@db942a0dd7e9d1aeac72bc675bdb67f39a688b63", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@208813bf5feca5df9a935363cd426bc914614d0b", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@3fdeadb81fbeddc1453163cc87bc173911fd47e2", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@310734c0ffd29438f6195a24e2cbbacfdc33c9ab", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+  { type: "package", value: "actions:checkmarx/kics-github-action@b974e53df1e3a2cd22ea90f0ec01882394feede4", severity: "critical", confidence: 0.95, family: "ActionTagHijack", campaign: "TeamPCP KICS Action compromise", source: "Wiz, StepSecurity", firstSeen: "2026-03-23" },
+
+  // universal_file_viewer XCSSET compromise on pub.dev (September 8 2026), the first compromised
+  // pub package on record. A legitimate package whose maintainer's machine was infected, so
+  // version-pinned: 0.1.5 and 0.1.6 are the two releases the maintainer retracted (pub.dev API,
+  // verified 2026-09-23); 0.1.7, the current release, is clean. The archive hashes are pub.dev's
+  // archive_sha256 values, which pubspec.lock records. The two C2 hosts are single-source.
+  { type: "package", value: "pub:universal_file_viewer@0.1.5", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido, pub.dev retraction", firstSeen: "2026-09-08" },
+  { type: "package", value: "pub:universal_file_viewer@0.1.6", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev retraction", firstSeen: "2026-09-08" },
+  { type: "hash", value: "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev archive_sha256", firstSeen: "2026-09-08" },
+  { type: "hash", value: "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d", severity: "critical", confidence: 1.0, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "pub.dev archive_sha256", firstSeen: "2026-09-08" },
+  { type: "domain", value: "5yotmxcc54l9xda.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
+  { type: "domain", value: "ejntin6hkjt7gj2.ru", severity: "critical", confidence: 0.85, family: "XCSSET", campaign: "universal_file_viewer XCSSET compromise", source: "Aikido (single-source)", firstSeen: "2026-09-08" },
+
+  // TeamPCP Trivy container images (March 19-23 2026). Tags 0.69.4, 0.69.5 and 0.69.6 only ever
+  // held the malicious builds and were deleted, so the TAGS are indicators as well as every
+  // index and per-platform digest. All digests appear verbatim in Aqua's advisory
+  // GHSA-69fq-xp46-6x23; all tags and digests return 404 on Docker Hub (verified 2026-09-23,
+  // with the clean 0.69.3 returning 200). The latest tag was malicious only during the window
+  // and is clean now, so it is not listed.
+  { type: "package", value: "docker:aquasec/trivy@0.69.4", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:27f446230c60bbf0b70e008db798bd4f33b7826f9f76f756606f5417100beef3", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:12c702212dee1cbec9471e9261501a3335963321fe76e60e5a715b5acd3c40a2", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:2d7cee41048988eec27615412e7c6e2e21046f2b5faa888c24e11ca6764058ed", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:ae3494bd6ae860d7727116681bd09fc7b20dc994ec7a8105738f0a623ea93427", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:43f46547efd488e56dcf862ed4d7cc342730a803f8d5bec5cac443028fefabef", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@0.69.5", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:5aaa1d7cfa9ca4649d6ffad165435c519dc836fa6e21b729a2174ad10b057d2b", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:95ff680103570179feb0c6667a9b9b2d98c53fa5a9a451265036810390bbe70a", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:4f7a06bb51714713ab308d2f8125f3b09ee1c3ffbba1a5ffd0cc80da95fbb6cc", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:edef8e5816eced552a909b878ff262c0c47776d3297bcc23796ad4cce1e85414", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@0.69.6", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:425cd3e1a2846ac73944e891250377d2b03653e6f028833e30fc00c1abbc6d33", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:dd8beb3b40df080b3fd7f9a0f5a1b02f3692f65c68980f46da8328ce8bb788ef", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:4b22cedea58780ff76735c3e08b9ee8cb5d06c908ffa868152f11d45349eb696", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:9efd59534d2b6b81b8b7a0eeb3ad0e74015f358650e24b9dab00c900d3118593", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  { type: "package", value: "docker:aquasec/trivy@sha256:5e5fb53cf4ce5555171ff5206302ba2f4f66f5381bbf673c354c87a925473f07", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+
+  // Checkmarx KICS container images (April 22 2026), same breach as the audit.checkmarx.cx C2
+  // entries above. Only v2.1.21 and v2.1.21-debian never held clean content; alpine, debian,
+  // v2.1.20, v2.1.20-debian and latest were restored, so for those only the digests are
+  // indicators. Two independent secondary sources and no vendor advisory, hence 0.95; every
+  // tag and digest returns 404 on Docker Hub (verified 2026-09-23, latest returning 200).
+  { type: "package", value: "docker:checkmarx/kics@v2.1.21", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@v2.1.21-debian", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:2588a44890263a8185bd5d9fadb6bc9220b60245dbcbc4da35e1b62a6f8c230d", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:d186161ae8e33cd7702dd2a6c0337deb14e2b178542d232129c0da64b1af06e4", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:415610a42c5b51347709e315f5efb6fffa588b6ebc1b95b24abf28088347791b", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:222e6bfed0f3bb1937bf5e719a2342871ccd683ff1c0cb967c8e31ea58beaf7b", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:a6871deb0480e1205c1daff10cedf4e60ad951605fd1a4efaca0a9c54d56d1cb", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:ff7b0f114f87c67402dfc2459bb3d8954dd88e537b0e459482c04cffa26c1f07", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:a0d9366f6f0166dcbf92fcdc98e1a03d2e6210e8d7e8573f74d50849130651a0", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:26e8e9c5e53c972997a278ca6e12708b8788b70575ca013fd30bfda34ab5f48f", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+  { type: "package", value: "docker:checkmarx/kics@sha256:7391b531a07fccbbeaf59a488e1376cfe5b27aef757430a36d6d3a087c610322", severity: "critical", confidence: 0.95, family: "CredStealer", campaign: "Checkmarx KICS Breach", source: "Socket, Docker", firstSeen: "2026-04-22" },
+
+  // Browser extensions, JetBrains plugins and a Homebrew tap (curated 2026-09-23). Every
+  // identity was checked against its store's CURRENT state; the rule decides the block type:
+  // a hijacked LEGITIMATE extension is pinned to its malicious version only, an extension its
+  // own publisher turned malicious is blocked by id. Curated with campaign/family so the
+  // partition policy keeps them bundled and offline.
+
+  // Cyberhaven wave (December 2024): hijacked extensions, malicious version only. Most are
+  // live again with clean releases (Chrome Web Store, verified 2026-09-23). Cyberhaven's own
+  // version has two sources; the rest come from the Secure Annex table and Sekoia.
+  { type: "package", value: "chrome:pajkjnmeojmbapicmbpliphjmcekeaac@24.10.4", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:nnpnnpemnckcfdebeekibpiijlicmpom@2.0.1", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:kkodiihpgodmdankclfibbiphjkfdenh@1.16.2", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:oaikpkmjciadfpddlpjjdapglcihgdle@1.0.12", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:dpggmcodlahmljkhlmpgpdcffdaoccni@1.1.1", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:acmfnomgphggonodopogfbmkneepfgnh@4.00", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:mnhffkhmpnefgklngfmlndmkimimbphc@4.40", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:cedgndijpacnfbdggppddacngjfdkaca@0.0.11", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:egmennebgadmncfjafcemlecimkepcle@2.2.7", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:befflofjcniongenjmbkgkoljhgliihe@2.13.0", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:llimhhconnjiflfimocjggfjdlmlhblm@1.5.7", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:oeiomhmbaapihbilkfkhmlajkeegnjhe@3.18.0", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:ekpkdmohpdnebfedjjfklhpefgpgaaji@1.3", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:eanofdhdfbcalhflpbdipkjjkoimeeod@1.4.9", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:igbodamhgjohafcenbcljfegbipdfjpk@2.3", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:mbindhfolmpijhodmgkloeeppmkhpmhc@1.44", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:hodiladlefdpcbemnbbcpclbmknkiaem@3.1.3", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:ndlbedplllcgconngcnfmkadhokfaaln@2.22.6", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:cplhlgabfijoiabgkigdafklbhhdkahj@1.0.161", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:jiofmdifioeejeilfkpegipdjiopiekl@1.1.61", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:hihblcmlaaademjlakdpicchbjnnnkbo@3.0.2", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:bbdnohkpnbkdkmnkddobeafboooinpla@1.0.1", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:bibjgkidgpfbblifamdlkdlhgihmfohh@0.1.3", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:pkgciiiancapdlpcbppfkmeaieppikkk@1.3.7", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:epikoohpebngmakjinphfiagogjcnddm@2.7.3", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:miglaibdlgminlepgeifekifakochlka@1.4.5", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:ogbhbgkiojdollpjbhbamafmedkeockb@1.8.1", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:bgejafhieobnfpjlpcjjggoboebonfcg@1.1.1", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:epdjhgbipjpbbhoccdeipghoihibnfja@1.4", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:lbneaaedflankmgmfbmaplggbmjjmbae@1.3.8", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:eaijffijbobmnonfhilihbejadplhddo@2.4", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+  { type: "package", value: "chrome:hmiaoahjllhfgebflooeeefeiafpkfde@1.0.0", severity: "critical", confidence: 0.9, family: "CyberhavenWave", campaign: "Cyberhaven extension compromise wave", source: "Secure Annex, Sekoia", firstSeen: "2024-12-24" },
+
+  // RedDirection (July 2025): the publisher turned 18 long-running extensions malicious by update.
+  // All removed from both stores (verified 2026-09-23). Koi, eSentire, itechguides.
+  { type: "package", value: "chrome:kgmeffmlnkfnjpgmdndccklfigfhajen", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:dpdibkjjgbaadnnjhkmmnenkmbnhpobj", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:gaiceihehajjahakcglkhmdbbdclbnlf", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:mlgbkfnjdmaoldgagamcnommbbnhfnhf", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:eckokfcjbjbgjifpcbdmengnabecdakp", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:mgbhdehiapbjamfgekfpebmhmnmcmemg", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:cbajickflblmpjodnjoldpiicfmecmif", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:pdbfcnhlobhoahcamoefbfodpmklgmjm", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:eokjikchkppnkdipbiggnmlkahcdkikp", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "chrome:ihbiedpeaicgipncdnnkikeehnjiddck", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:jjdajogomggcjifnjgkpghcijgkbcjdi", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:mmcnmppeeghenglmidpmjkaiamcacmgm", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:ojdkklpgpacpicaobnhankbalkkgaafp", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:lodeighbngipjjedfelnboplhgediclp", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:hkjagicdaogfgdifaklcgajmgefjllmd", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:gflkbgebojohihfnnplhbdakoipdbpdm", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:kpilmncnoafddjpnbhepaiilgkdcieaf", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+  { type: "package", value: "edge:caibdnkmpnjhjdfnomfhijhmebigcelo", severity: "critical", confidence: 1.0, family: "RedDirection", campaign: "RedDirection browser hijack", source: "Koi, eSentire", firstSeen: "2025-07-07" },
+
+  // ShadyPanda (December 2025): publisher-run extensions turned malicious later. Chrome: all 27
+  // removed; Edge: the 129 of 132 that Microsoft removed (the 3 still listed are disputed and
+  // deliberately NOT included). Single published list (Koi), confirmed by the store removals.
+  { type: "package", value: "chrome:eagiakjmjnblliacokhcalebgnhellfi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ibiejjpajlfljcgjndbonclhcbdcamai", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ogjneoecnllmjcegcfpaamfpbiaaiekh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:jbnopeoocgbmnochaadfnhiiimfpbpmf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:cdgonefipacceedbkflolomdegncceid", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:gipnpcencdgljnaecpekokmpgnhgpela", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:bpgaffohfacaamplbbojgbiicfgedmoi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ineempkjpmbdejmdgienaphomigjjiej", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:nnnklgkfdfbdijeeglhjfleaoagiagig", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:mljmfnkjmcdmongjnnnbbnajjdbojoci", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:llkncpcdceadgibhbedecmkencokjajg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:nmfbniajnpceakchicdhfofoejhgjefb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ijcpbhmpbaafndchbjdjchogaogelnjl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:olaahjgjlhoehkpemnfognpgmkbedodk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:gnhgdhlkojnlgljamagoigaabdmfhfeg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:cihbmmokhmieaidfgamioabhhkggnehm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:lehjnmndiohfaphecnjhopgookigekdk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:hlcjkaoneihodfmonjnlnnfpdcopgfjk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:hmhifpbclhgklaaepgbabgcpfgidkoei", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:lnlononncfdnhdfmgpkdfoibmfdehfoj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:nagbiboibhbjbclhcigklajjdefaiidc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ofkopmlicnffaiiabnmnaajaimmenkjn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ocffbdeldlbilgegmifiakciiicnoaeo", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:eaokmbopbenbmgegkmoiogmpejlaikea", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:lhiehjmkpbhhkfapacaiheolgejcifgd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:ondhgmkgppbdnogfiglikgpdkmkaiggk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "chrome:imdgpklnabbkghcbhmkbjbhcomnfdige", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:enkihkfondbngohnmlefmobdgkpmejha", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ipnidmjhnoipibbinllilgeohohehabl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fnnigcfbmghcefaboigkhfimeolhhbcp", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nlcebdoehkdiojeahkofcfnolkleembf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fhababnomjcnhmobbemagohkldaeicad", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nokknhlkpdfppefncfkdebhgfpfilieo", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ljmcneongnlaecabgneiippeacdoimaa", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:onifebiiejdjncjpjnojlebibonmnhog", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:dbagndmcddecodlmnlcmhheicgkaglpk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fmgfcpjmmapcjlknncjgmbolgaecngfo", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:kgmlodoegkmpfkbepkfhgeldidodgohd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hegpgapbnfiibpbkanjemgmdpmmlecbc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:gkanlgbbnncfafkhlchnadcopcgjkfli", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:oghgaghnofhhoolfneepjneedejcpiic", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fcidgbgogbfdcgijkcfdjcagmhcelpbc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nnceocbiolncfljcmajijmeakcdlffnh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:domfmjgbmkckapepjahpedlpdedmckbj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:cbkogccidanmoaicgphipbdofakomlak", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bmlifknbfonkgphkpmkeoahgbhbdhebh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ghaggkcfafofhcfppignflhlocmcfimd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hfeialplaojonefabmojhobdmghnjkmf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:boiciofdokedkpmopjnghpkgdakmcpmb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ibfpbjfnpcgmiggfildbcngccoomddmj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:idjhfmgaddmdojcfmhcjnnbhnhbmhipd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jhgfinhjcamijjoikplacnfknpchndgb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:cgjgmbppcoolfkbkjhoogdpkboohhgel", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:afooldonhjnhddgnfahlepchipjennab", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fkbcbgffcclobgbombinljckbelhnpif", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fpokgjmlcemklhmilomcljolhnbaaajk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hadkldcldaanpomhhllacdmglkoepaed", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:iedkeilnpbkeecjpmkelnglnjpnacnlh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hjfmkkelabjoojjmjljidocklbibphgl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:dhjmmcjnajkpnbnbpagglbbfpbacoffm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:cgehahdmoijenmnhinajnojmmlnipckl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fjigdpmfeomndepihcinokhcphdojepm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:chmcepembfffejphepoongapnlchjgil", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:googojfbnbhbbnpfpdnffnklipgifngn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fodcokjckpkfpegbekkiallamhedahjd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:igiakpjhacibmaichhgbagdkjmjbnanl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:omkjakddaeljdfgekdjebbbiboljnalk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:llilhpmmhicmiaoancaafdgganakopfg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nemkiffjklgaooligallbpmhdmmhepll", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:papedehkgfhnagdiempdbhlgcnioofnd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:glfddenhiaacfmhoiebfeljnfkkkmbjb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:pkjfghocapckmendmgdmppjccbplccbg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:gbcjipmcpedgndgdnfofbhgnkmghoamm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ncapkionddmdmfocnjfcfpnimepibggf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:klggeioacnkkpdcnapgcoicnblliidmf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:klgjbnheihgnmimajhohfcldhfpjnahe", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:acogeoajdpgplfhidldckbjkkpgeebod", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ekndlocgcngbpebppapnpalpjfnkoffh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:elckfehnjdbghpoheamjffpdbbogjhie", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:dmpceopfiajfdnoiebfankfoabfehdpn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:gpolcigkhldaighngmmmcjldkkiaonbg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:dfakjobhimnibdmkbgpkijoihplhcnil", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hbghbdhfibifdgnbpaogepnkekonkdgc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fppchnhginnfabgenhihpncnphhafmac", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ghhddclfklljabeodmcejjjlhoaaiban", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bppelgkcnhfkicolffhlkbdghdnjdkhi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ikgaleggljchgbihlaanjbkekmmgccam", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bdhjinjoglaijpffoamhhnhooeimgoap", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fjioinpkgmlcioajfnncgldldcnabffe", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:opncjjhgbllenobgbfjbblhghmdpmpbj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:cbijiaccpnkbdpgbmiiipedpepbhioel", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fbbmnieefocnacnecccgmedmcbhlkcpm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hmbacpfgehmmoloinfmkgkpjoagiogai", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:paghkadkhiladedijgodgghaajppmpcg", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bafbmfpfepdlgnfkgfbobplkkaoakjcl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:kcpkoopmfjhdpgjohcbgkbjpmbjmhgoi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jelgelidmodjpmohbapbghdgcpncahki", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:lfgakdlafdenmaikccbojgcofkkhmolj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hdfknlljfbdfjdjhfgoonpphpigjjjak", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:kpfbijpdidioaomoecdbfaodhajbcjfl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fckphkcbpgmappcgnfieaacjbknhkhin", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:lhfdakoonenpbggbeephofdlflloghhi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ljjngehkphcdnnapgciajcdbcpgmpknc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ejfocpkjndmkbloiobcdhkkoeekcpkik", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ccdimkoieijdbgdlkfjjfncmihmlpanj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:agdlpnhabjfcbeiempefhpgikapcapjb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:mddfnhdadbofiifdebeiegecchpkbgdb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:alknmfpopohfpdpafdmobclioihdkhjh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hlglicejgohbanllnmnjllajhmnhjjel", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:iaccapfapbjahnhcmkgjjonlccbhdpjl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ehmnkbambjnodfbjcebjffilahbfjdml", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ngbfciefgjgijkkmpalnmhikoojilkob", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:laholcgeblfbgdhkbiidbpiofdcbpeeo", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:njoedigapanaggiabjafnaklppphempm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:fomlombffdkflbliepgpgcnagolnegjn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jpoofbjomdefajdjcimmaoildecebkjc", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nhdiopbebcklbkpfnhipecgfhdhdbfhb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:gdnhikbabcflemolpeaaknnieodgpiie", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bbdioggpbhhodagchciaeaggdponnhpa", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ikajognfijokhbgjdhgpemljgcjclpmn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:lmnjiioclbjphkggicmldippjojgmldk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ffgihbmcfcihmpbegcfdkmafaplheknk", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:lgnjdldkappogbkljaiedgogobcgemch", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hiodlpcelfelhpinhgngoopbmclcaghd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:mnophppbmlnlfobakddidbcgcjakipin", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jbajdpebknffiaenkdhopebkolgdlfaf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ejdihbblcbdfobabjfebfjfopenohbjb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ikkoanocgpdmmiamnkogipbpdpckcahn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ileojfedpkdbkcchpnghhaebfoimamop", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:akialmafcdmkelghnomeneinkcllnoih", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:eholblediahnodlgigdkdhkkpmbiafoj", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ipokalojgdmhfpagmhnjokidnpjfnfik", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hdpmmcmblgbkllldbccfdejchjlpochf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:iphacjobmeoknlhenjfiilbkddgaljad", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jiiggekklbbojgfmdenimcdkmidnfofl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:gkhggnaplpjkghjjcmpmnmidjndojpcn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:opakkgodhhongnhbdkgjgdlcbknacpaa", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nkjomoafjgemogbdkhledkoeaflnmgfi", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ebileebbekdcpfjlekjapgmbgpfigled", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:oaacndacaoelmkhfilennooagoelpjop", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ljkgnegaajfacghepjiajibgdpfmcfip", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hgolomhkdcpmbgckhebdhdknaemlbbaa", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bboeoilakaofjkdmekpgeigieokkpgfn", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:dkkpollfhjoiapcenojlmgempmjekcla", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:emiocjgakibimbopobplmfldkldhhiad", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:nchdmembkfgkejljapneliogidkchiop", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:lljplndkobdgkjilfmfiefpldkhkhbbd", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hofaaigdagglolgiefkbencchnekjejl", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:hohobnhiiohgcipklpncfmjkjpmejjni", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:jocnjcakendmllafpmjailfnlndaaklf", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bjdclfjlhgcdcpjhmhfggkkfacipilai", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ahebpkbnckhgjmndfjejibjjahjdlhdb", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:enaigkcpmpohpbokbfllbkijmllmpafm", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:bpngofombcjloljkoafhmpcjclkekfbh", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:cacbflgkiidgcekflfgdnjdnaalfmkob", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+  { type: "package", value: "edge:ibmgdfenfldppaodbahpgcoebmmkdbac", severity: "critical", confidence: 0.9, family: "ShadyPanda", campaign: "ShadyPanda extension campaign", source: "Koi", firstSeen: "2025-12-01" },
+
+  // 108 Chrome extensions with a shared C2 (Socket, April 2026): the 66 removed from the Web Store.
+  // The 42 that are live again are deliberately NOT included.
+  { type: "package", value: "chrome:aecccajigpipkpioaidignbgbeekglkd", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:akifdnfipbeoonhoeabdicnlcdhghmpn", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:alllblhkgghelnejlggmmgjbkdabidie", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:amkkjdjjgiiamenbopfpdmjcleecjjgg", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:bdnanfggeppmkfhkgmpojkhanoplkacc", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:bfoofgelpmalhcmedaaeogahlmbkopfd", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:bnchgibgpgmlickioneccggfobljmhjc", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:cbfhnceafaenchbefokkngcbnejached", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:cljengcehefhflhoahaambmkknjekjib", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:clpgopiimdjcilllcjncdkoeikkkcfbi", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:cmlbghnlnbjkdgfjlegkbjmadpbmlgjb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:cnibdhllkgidlgmaoanhkemjeklneolk", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dbohcpohlgnhgjmfkakoniiplglpfhcb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dljlpildgknddpnahppkihgodokfjbnd", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dlpiookhionidajbiopmaajeckifeehn", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dmaibhbbpmdihedidicfeigilkbobcog", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dohenclhhdfljpjlnpjnephpccbdgmmb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:dpdemambcedffmnkfmkephnhhnclmcio", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:eljfpgehlncincemdmmnebmnlcmfamhm", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:enmmilgindjmffoljaojkcgloakmloen", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:eoklnfefipnjfeknpmigmogeeepddcch", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:fjfhejmbhpabkacpoddjbcfandjoacmb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:flkdjodmoefccepdihipjdlianmkmhgc", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:fmajpchoiahphjiligpmghnhmabolhoh", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:gaafhblhbnkekenogcjniofhbicchlke", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:gfhcdakcnpahfdealajmhcapnhhablbp", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:gipmochingljoikdjakkdolfcbphmlom", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:haochenfmhglpholokliifmlpafilfdc", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:hdmppejcahhppjhkncagagopecddokpi", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:heljkmdknlfhiecpknceodpbokeipigo", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:hiofkndodabpioiheinoiojjobadpgmj", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:hmlnefhgicedcmebmkjdcogieefbaagl", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ihbkmfoadnfjgkpdmgcboiehapkiflme", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ijpgccpmogehkjhdmomckpkfcpbjlmnj", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:imjmnghlhiimodfkdkgnfplhlobehnpm", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:jddinhnhplibccfmniaakhffpjpnaglp", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:jmopjanoebpdbopigcbpjhiigmjolikk", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:jnmmbmkmbkcccpihjgnhjmhhkokfdnfe", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:jodocbbdcdclkhjkibnlfhbmllcpfkfo", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:kahcolfecjbejjjadhjafmihdnifonjf", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:kjnakdbpijigdbfepipnbafnhbcfdkga", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:klglejfbdeipgklgaepnodpjcnhaihkd", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:lefndgfmmbdklidbkeifpgclmpnhcilg", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:lfkknbmaifjomagejflmjklcmpadmmdg", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ljbgkfbiifhpgpipepnfefijldolkhlm", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:lmcpbhamfpbonaenickjclacodolkbdl", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:lmgenhmehbcolpikplhkoelmagdhoojn", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:maeccdadgnadblfddcmanhpofobhgfme", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:mdcfennpfgkngnibjbpnpaafcjnhcjno", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:mheomooihiffmcgldolenemmplpgoahn", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:mmbbjakjlpmndjlbhihlddgcdppblpka", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:mmecpiobcdbjkaijljohghhpfgngpjmk", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:nbgligggjfgkpphhghhjdoiefbimgooc", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ncpdkpcgmdhhnmcjgiiifdhefmekdcnf", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:nkacmelgoeejhjgmmgflbcdhonpaplcg", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:nmegibgeklckejdlfhoadhhbgcdjnojb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:nodobilhjanebkafmpihkpoabiggnnfl", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:oanpifaoclmgmflmddlgkikfaggejobn", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:obifanppcpchlehkjipahhphbcbjekfa", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ocflhkadmmnlbieoiiekfcdcmjcfeahe", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:oejhnncfanbaogjlbknmlgjpleachclf", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ogbaedmbbmmipljceodeimlckohbnfan", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ogogpebnagniggbnkbpjioobomdbmdcj", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:ojkbafekojdcedacileemekjdfdpkbkf", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:phfkdailnomcbcknpdmokejhellbecjb", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+  { type: "package", value: "chrome:pkghgkfjhjghinikeanecbgjehojfhdg", severity: "critical", confidence: 0.9, family: "Shared-C2 Chrome extensions", campaign: "Socket 108 Chrome extensions", source: "Socket", firstSeen: "2026-04-01" },
+
+  // Firefox 'Offside' wallet-theft add-ons (March-August 2026): attacker-created, every version
+  // blocked by Mozilla (AMO blocklist, verified 2026-09-23). Ids compared exactly.
+  { type: "package", value: "firefox:bliss-heaven@webbrol.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:bold-page-vault@addonslab.example", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:bright-save-feed@tabtools.org", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:chiro-di-red@tools.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:chiro-redok@webtools.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:cool-block-gear@protools.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:fast-akap-safe@browsertools.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:fast-map-safe@linktools.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:flex-clock-dash@extrakits.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:free-note-bolt@webtools.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:green-fam-heav@browsertool.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:herman-rich@browsertools.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:live-football-scores@live-scores.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:park-static-small@devblogs.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:peters-schools@webtoolbrowser.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:safe-stat-pure@proaddons.net", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:sharp-stat-gear@netplugs.net", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:swift-clip-link@fasttools.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:vibe-timer-fast@extrakits.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{91ac3e4f-1874-409d-b01f-aeb2409a23b8}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{b1f3c8a9-4a2e-4b7c-9e1f-8a3d6c5b4e2f}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d8a5f7c3-9e4b-2f2a-b1d7-8c7e9f4a2b3c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d8a5f7c3-9e4b-4f2a-b1d6-8c7e9f3a2b2c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d8a5f7c3-9e9b-2f8a-b1d6-8c1e9f4a2b7c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d8a5f9c3-9e4b-4f2a-b1d7-8c7e9f4a2b3c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d9a5f9c3-9e4b-2f3a-b2d7-8c8e9f4a2b3c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{f746f950-bd73-43de-bfe1-add342147853}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:bolt-save-vault@devplugs.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:core-note-nova@webtools.net", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:deep-tip-sharp@browsify.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:fast-zip-true@smartext.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:flex-lab-save@foxplugin.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:gear-save-tip@extrakits.example", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:pure-net-snap@fasttools.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:silver-fox@browser-app.com", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:smart-lab-glow@webkits.co", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{64d210f4-9b7f-489f-8207-e042400041b7}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{842fa1ed-b948-4bf8-b796-21044d3419eb}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{b0043917-9d75-425b-977a-4bb553f2a8ee}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+  { type: "package", value: "firefox:{d8a5f7c3-9e4b-2f2a-b1d7-8c7e9f4a2b7c}", severity: "critical", confidence: 1.0, family: "OffsideWalletTheft", campaign: "Firefox Offside wallet theft", source: "Socket, Mozilla blocklist", firstSeen: "2026-03-01" },
+
+  // JetBrains Marketplace fake AI-assistant plugins (June 2026): removed by JetBrains, publishers
+  // blocked (Marketplace API 403, verified 2026-09-23). ord.cp.code.ai.kit really starts with "ord".
+  { type: "package", value: "jetbrains:org.sm.yms.toolkit", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.json.simple.kit", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:org.bug.find.tools", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:org.translate.ai.simple", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.yy.test.ai.simple", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.dev.ai.toolkit", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.json.view.simple", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.my.git.ai.kit", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:org.check.ai.ds", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.review.tool.code", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:org.code.assist.dev.tool", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.coder.ai.dpt", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.my.code.tools", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:ord.cp.code.ai.kit", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+  { type: "package", value: "jetbrains:com.dp.git.ai.tool", severity: "critical", confidence: 1.0, family: "AIKeyStealer", campaign: "JetBrains fake AI plugins", source: "JetBrains, StepSecurity", firstSeen: "2026-06-16" },
+
+  // Homebrew: the aquasecurity/trivy tap shipped the TeamPCP-compromised trivy 0.69.4 (Aqua
+  // GHSA-69fq-xp46-6x23; tap archived). homebrew-core builds trivy from source and is NOT listed.
+  { type: "package", value: "homebrew:aquasecurity/trivy/trivy@0.69.4", severity: "critical", confidence: 1.0, family: "TeamPCPBackdoor", campaign: "TeamPCP Trivy image compromise", source: "GHSA-69fq-xp46-6x23", firstSeen: "2026-03-19" },
+  // Coder registry compromise (2026-08-31, 07:35-21:45 UTC): an unauthorized origin behind
+  // Coder's own module registry served tampered Terraform modules that sent credentials to
+  // this lookalike host (GHSA-vx42-ghc9-gw65 in coder/coder, verified 2026-09-23 via the
+  // GitHub API; Coder's incident post of 2026-09-04). No module name or version was published,
+  // so the host is the only matchable indicator; subdomains (www.) match through it. A
+  // single-source IP from a secondary write-up is deliberately NOT included.
+  { type: "domain", value: "coder-infra.com", severity: "critical", confidence: 0.95, family: "CoderRegistryStealer", campaign: "Coder registry compromise", source: "GHSA-vx42-ghc9-gw65, Coder incident post", firstSeen: "2026-09-01" },
 
   // Imported from GitHub Advisory Database (2026-09-10) - see docs/threat-feed-sources.md
   { type: "package", value: "@baanx/solana-lib", severity: "critical", confidence: 1.0, source: "GHSA-5x34-3xqm-3r73, MAL-2026-16300 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-21" },
@@ -10926,9 +11512,7 @@ function matchPackageIOCLinear(
     if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
 
     const rest = ioc.value.substring(prefix.length);
-    const at = rest.lastIndexOf("@");
-    const iocName = at > 0 ? rest.substring(0, at) : rest;
-    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    const { name: iocName, version: iocVersion } = splitPackageIOCValue(eco, rest);
 
     const nameMatches = normalizePackageIOCName(eco, iocName) === wantName;
     if (!nameMatches) continue;
@@ -10960,9 +11544,45 @@ interface IndexedIOC {
  */
 const packageIndexCache = new WeakMap<FeedIOC[], Map<string, IndexedIOC[]>>();
 
+/**
+ * Ecosystems whose registry treats package identities case-insensitively, so
+ * a feed entry and a manifest may spell the same package differently. Every
+ * other ecosystem compares exactly: CRAN, Firefox add-on ids and JetBrains
+ * plugin ids are case-sensitive, and npm names are too.
+ */
+export const CASE_INSENSITIVE_PACKAGE_ECOSYSTEMS: ReadonlySet<string> = new Set([
+  "nuget",
+  "terraform", "tfmodule", // registry addresses (terraform-scanner.ts)
+  "vscode", "openvsx", // extension ids (extension-identity.ts)
+  "actions", // GitHub owner/repo (github-actions-scanner.ts)
+  "docker", // lowercase by the distribution spec (container-image.ts)
+  "swift", // repository URLs (ecosystem-registry.ts)
+  "cocoapods", "hex", "conan", "helm", "ansible", "homebrew",
+  "chrome", "edge", // Chromium extension ids are a-p, lowercase
+]);
+
+/**
+ * Split the part of a prefixed feed value after "<eco>:" into name and version,
+ * at the last "@". The one exception is Firefox: its add-on ids are either a
+ * {GUID} or email-shaped ("name@domain"), so the tail after the last "@" is a
+ * version only when it looks like one. Splitting blindly read
+ * "bliss-heaven@webbrol.com" as name "bliss-heaven", version "webbrol.com", and
+ * 28 of the 40 bundled Firefox indicators could never match.
+ */
+export function splitPackageIOCValue(
+  ecosystem: string,
+  rest: string,
+): { name: string; version: string | undefined } {
+  const at = rest.lastIndexOf("@");
+  if (at <= 0) return { name: rest, version: undefined };
+  const tail = rest.substring(at + 1);
+  if (ecosystem === "firefox" && !/^\d[\w.+-]*$/.test(tail)) return { name: rest, version: undefined };
+  return { name: rest.substring(0, at), version: tail };
+}
+
 function normalizePackageIOCName(ecosystem: string, name: string): string {
   if (ecosystem === "pypi") return name.toLowerCase().replace(/[-_.]+/g, "-");
-  if (ecosystem === "nuget") return name.toLowerCase();
+  if (CASE_INSENSITIVE_PACKAGE_ECOSYSTEMS.has(ecosystem)) return name.toLowerCase();
   return name;
 }
 
@@ -10982,11 +11602,9 @@ function getPackageIndex(entries: FeedIOC[]): Map<string, IndexedIOC[]> {
     const entryEco = ioc.value.substring(0, colon).toLowerCase();
 
     const rest = ioc.value.substring(colon + 1);
-    // Split "name@version" at the last "@". Ecosystem-prefixed names never
-    // start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
-    const at = rest.lastIndexOf("@");
-    const iocName = at > 0 ? rest.substring(0, at) : rest;
-    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    // Split "name@version" (see splitPackageIOCValue). Ecosystem-prefixed names
+    // never start with "@" (npm scopes stay unprefixed), so index 0 means bare name.
+    const { name: iocName, version: iocVersion } = splitPackageIOCValue(entryEco, rest);
 
     const keyName = normalizePackageIOCName(entryEco, iocName);
     const key = `${entryEco}:${keyName}`;

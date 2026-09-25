@@ -10,8 +10,10 @@ import {
 } from "../composer-scanner.js";
 import { matchPackageIOC } from "../threat-intel.js";
 
-// Real bundled IOC (Laravel-Lang DebugElevator campaign, bare-name entry)
-const MALICIOUS_PACKAGE = "laravel-lang/lang";
+// Real bundled IOC (Packagist iOS spyware themes campaign, bare-name entry): an
+// attacker-created package Packagist has removed. laravel-lang/lang used to be the
+// fixture here, but it is a live hijack VICTIM and is no longer name-blocked.
+const MALICIOUS_PACKAGE = "vsmov/theme-dy";
 
 describe("Composer Scanner", () => {
   let tmpDir: string;
@@ -181,6 +183,21 @@ describe("Composer Scanner", () => {
     it("should not match unknown packages", () => {
       expect(matchPackageIOC("composer", "monolog/monolog")).toBeNull();
       expect(matchPackageIOC("composer", "laravel-lang/other")).toBeNull();
+    });
+
+    // Hijack VICTIMS that are live on Packagist with a clean release history
+    // (measured 2026-09-23) must not be name-blocked; the two packages of the
+    // same incident that Packagist removed keep their blocks.
+    it("does not name-block live hijack victims", () => {
+      for (const victim of [
+        "laravel-lang/lang", "laravel-lang/http-statuses", "laravel-lang/attributes", "laravel-lang/actions",
+        "devdojo/wave", "crosiersource/crosierlib-base", "elitedevsquad/sidecar-laravel", "r2luna/brain",
+        "baskarcm/tzi-chat-ui", "moritz-sauer-13/silverstripe-cms-theme",
+      ]) {
+        expect(matchPackageIOC("composer", victim, "1.0.0"), victim).toBeNull();
+      }
+      expect(matchPackageIOC("composer", "devdojo/genesis")).not.toBeNull();
+      expect(matchPackageIOC("composer", "katanaui/katana")).not.toBeNull();
     });
   });
 });

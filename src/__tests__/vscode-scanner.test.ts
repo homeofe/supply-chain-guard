@@ -767,3 +767,63 @@ fetch('https://example.com');
     expect(skip?.file).toContain("bundle.js");
   });
 });
+
+describe("VS Code extension identity (vscode:/openvsx: feed entries)", () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-vscode-identity-"));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const manifest = (version: string, prefix = "") =>
+    prefix + JSON.stringify({
+      name: "edrtester",
+      publisher: "AzureCdnInfo",
+      version,
+      engines: { vscode: "^1.80.0" },
+      activationEvents: ["*"],
+    });
+
+  // Bundled entry vscode:AzureCdnInfo.edrtester (OSV MAL-2026-16010), a whole-extension block:
+  // every served version carries the backdoor.
+  it("flags a .vsix whose manifest is a known-malicious extension version", async () => {
+    const vsixPath = createVsix(tempDir, { "extension/package.json": manifest("1.0.4") });
+    const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+    const hit = report.findings.find((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION");
+    expect(hit).toBeDefined();
+    expect(hit?.severity).toBe("critical");
+    expect(hit?.match).toBe("AzureCdnInfo.edrtester@1.0.4");
+  });
+
+  it("flags every version of an extension with no clean release", async () => {
+    const vsixPath = createVsix(tempDir, { "extension/package.json": manifest("1.0.0") });
+    const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+    expect(report.findings.filter((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toHaveLength(1);
+  });
+
+  // The version-pin case: Nx Console is a hijack victim, only 18.95.0 was malicious.
+  it("flags only the pinned release of a hijacked extension", async () => {
+    const nx = (version: string) => JSON.stringify({
+      name: "angular-console", displayName: "Nx Console", publisher: "nrwl", version,
+      engines: { vscode: "^1.80.0" }, activationEvents: ["onStartupFinished"],
+    });
+    const bad = await scanVscodeExtension({ target: createVsix(tempDir, { "extension/package.json": nx("18.95.0") }), format: "json" });
+    expect(bad.findings.filter((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toHaveLength(1);
+    const clean = await scanVscodeExtension({ target: createVsix(tempDir, { "extension/package.json": nx("18.94.0") }), format: "json" });
+    expect(clean.findings.filter((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toEqual([]);
+  });
+
+  // A leading BOM used to make the manifest parse throw, which skipped every
+  // manifest check: a publisher-controlled opt-out.
+  it("still checks a manifest that starts with a UTF-8 BOM", async () => {
+    const vsixPath = createVsix(tempDir, { "extension/package.json": manifest("1.0.4", "\uFEFF") });
+    const report = await scanVscodeExtension({ target: vsixPath, format: "json" });
+    const rules = report.findings.map((f) => f.rule);
+    expect(rules).toContain("VSCODE_MALICIOUS_EXTENSION");
+    expect(rules).toContain("VSCODE_SUSPICIOUS_ACTIVATION");
+  });
+});

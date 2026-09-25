@@ -63,6 +63,25 @@ const GAP_DOT_PROTESTWARE: GapSpec = {
 const WS0 = String.raw`[^\S\n]*`;
 const WS1 = String.raw`[^\S\n]+`;
 
+/**
+ * Network transport for the beacon rules, shared with their pattern strings in
+ * patterns.ts so matcher and regex cannot drift. Identifier boundaries and a
+ * call shape keep `fetchNotifications` and `forgotPassword` out, while member
+ * calls such as `axios.post(` and `got.get(` still count.
+ */
+// VIDAR_WALLET_THEFT operands, shared with the pattern string. A wallet name
+// must not sit inside a longer word and the target must not run on into one;
+// a plural or a following `_`, `.`, `/` or capital still counts. (A line
+// comment, not JSDoc: JSDoc is copied into dist/*.d.ts, and example paths
+// here would make the published declaration file match this very rule.)
+export const WALLET_NAME_SOURCE =
+  String.raw`(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi)`;
+export const WALLET_TARGET_SOURCE =
+  String.raw`(?:wallet|keystore|vault|seed|mnemonic)s?(?![a-z])`;
+
+export const BEACON_TRANSPORT_SOURCE =
+  String.raw`(?:\bfetch${WS0}\(|\b(?:axios|got)(?:${WS0}\.${WS0}[A-Za-z]{1,16})?${WS0}\(|\bhttps?\.(?:get|request)${WS0}\(|\bnode-fetch\b|\bXMLHttpRequest\b)`;
+
 interface OrderedSequenceSpec {
   tokens: readonly string[];
   gaps: readonly GapSpec[];
@@ -719,6 +738,266 @@ export function hasDropperPayloadPreparation(content: string): boolean {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Per-hit severity signals. The scanner calls these once per reported hit on
+// the same content, so the per-file work is memoised on the last content seen.
+// ---------------------------------------------------------------------------
+
+interface ContentMemo {
+  content: string;
+  lineStarts?: number[];
+  regexConstants?: Map<string, { kind: string; body: string; flags: string }[]>;
+  guardedImportEvaluations: number;
+}
+
+let contentMemo: ContentMemo | undefined;
+
+function memoFor(content: string): ContentMemo {
+  if (contentMemo === undefined || contentMemo.content !== content) {
+    contentMemo = { content, guardedImportEvaluations: 0 };
+  }
+  return contentMemo;
+}
+
+/** Offsets [start, end) of a 1-based physical line, or undefined past the end. */
+function lineBounds(content: string, line: number): [number, number] | undefined {
+  const memo = memoFor(content);
+  if (memo.lineStarts === undefined) {
+    const starts = [0];
+    let at = content.indexOf("\n");
+    while (at !== -1) {
+      starts.push(at + 1);
+      at = content.indexOf("\n", at + 1);
+    }
+    memo.lineStarts = starts;
+  }
+  const start = memo.lineStarts[line - 1];
+  if (start === undefined) return undefined;
+  const next = memo.lineStarts[line];
+  return [start, next === undefined ? content.length : next - 1];
+}
+
+/**
+ * Beyond this many template imports per file every further hit keeps the
+ * rule's own severity. It bounds the guard search on hostile input, and it
+ * fails towards the pre-guard verdict rather than towards info.
+ */
+const MAX_GUARDED_IMPORT_EVALUATIONS = 256;
+/** How far before an import its guard may sit. Longer functions stay medium. */
+const IMPORT_GUARD_WINDOW_CHARS = 2000;
+
+const IMPORT_TEMPLATE_START = /import[^\S\n]*\([^\S\n]*`/g;
+/**
+ * A specifier with a static relative or alias prefix, exactly one bare
+ * identifier, and a static suffix ending in a file extension.
+ */
+const GUARDABLE_SPECIFIER =
+  /^((?:\.\.?\/|@[A-Za-z0-9_-]{1,64}\/)[A-Za-z0-9_@/.-]{0,200})\$\{[^\S\n]*([A-Za-z_$][\w$]{0,63})[^\S\n]*\}([A-Za-z0-9_/.-]{0,200}\.[A-Za-z0-9]{1,10})$/;
+const REGEX_LITERAL = String.raw`/((?:\\.|\[[^\]\n]{0,100}\]|[^/\\\[\n]){1,200})/([a-z]{0,6})`;
+const IMPORT_GUARD = new RegExp(
+  String.raw`if\s*\(\s*(!\s*)?(?:([A-Za-z_$][\w$]{0,63})|${REGEX_LITERAL})\.test\(\s*([A-Za-z_$][\w$]{0,63})\s*\)\s*\)`,
+  "g",
+);
+const REGEX_CONSTANT = new RegExp(
+  String.raw`(?<![\w$.])(const|let|var)\s+([A-Za-z_$][\w$]{0,63})\s*=\s*${REGEX_LITERAL}`,
+  "g",
+);
+
+function isAlnumRangeSafe(from: string, to: string): boolean {
+  const sameClass = (re: RegExp) => re.test(from) && re.test(to);
+  return from <= to && (sameClass(/^[a-z]$/) || sameClass(/^[A-Z]$/) || sameClass(/^[0-9]$/));
+}
+
+/**
+ * True when an anchored regex can only accept [A-Za-z0-9_-]. That excludes
+ * `/`, `\`, `.` and `%` (a percent-encoded dot segment still resolves), so an
+ * accepted value cannot leave the static prefix's directory. Anything outside
+ * this small grammar, including alternation, groups and negated classes, is
+ * refused rather than interpreted.
+ */
+export function isPathSafeAllowlistRegex(body: string, flags: string): boolean {
+  if (!/^[isu]*$/.test(flags)) return false;
+  if (body.length < 3 || body[0] !== "^" || body[body.length - 1] !== "$") return false;
+  let i = 1;
+  const end = body.length - 1;
+  let atoms = 0;
+  const isLiteral = (ch: string | undefined) => ch !== undefined && /^[A-Za-z0-9_-]$/.test(ch);
+  while (i < end) {
+    const ch = body[i]!;
+    if (ch === "[") {
+      if (body[i + 1] === "^") return false;
+      i++;
+      let members = 0;
+      while (i < end && body[i] !== "]") {
+        const c = body[i]!;
+        if (c === "\\") {
+          if (!/^[wd_-]$/.test(body[i + 1] ?? "")) return false;
+          i += 2;
+        } else if (body[i + 1] === "-" && body[i + 2] !== undefined && body[i + 2] !== "]") {
+          if (!isAlnumRangeSafe(c, body[i + 2]!)) return false;
+          i += 3;
+        } else if (isLiteral(c)) {
+          i++;
+        } else {
+          return false;
+        }
+        members++;
+      }
+      if (body[i] !== "]" || members === 0) return false;
+      i++;
+    } else if (ch === "\\") {
+      if (!/^[wd]$/.test(body[i + 1] ?? "")) return false;
+      i += 2;
+    } else if (isLiteral(ch)) {
+      i++;
+    } else {
+      return false;
+    }
+    atoms++;
+    const quantifier = /^(?:[*+?]|\{\d{1,4}(?:,\d{0,4})?\})/.exec(body.slice(i, end));
+    if (quantifier) i += quantifier[0].length;
+  }
+  return atoms > 0 && i === end;
+}
+
+function regexConstants(content: string): Map<string, { kind: string; body: string; flags: string }[]> {
+  const memo = memoFor(content);
+  if (memo.regexConstants === undefined) {
+    const found = new Map<string, { kind: string; body: string; flags: string }[]>();
+    REGEX_CONSTANT.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = REGEX_CONSTANT.exec(content)) !== null) {
+      const list = found.get(match[2]!) ?? [];
+      list.push({ kind: match[1]!, body: match[3]!, flags: match[4]! });
+      found.set(match[2]!, list);
+    }
+    REGEX_CONSTANT.lastIndex = 0;
+    memo.regexConstants = found;
+  }
+  return memo.regexConstants;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[$]/g, "\\$");
+}
+
+/**
+ * Brace depth never drops below zero and no nested function starts. Braces in
+ * strings, templates and comments are skipped, so a `"{"` cannot balance the
+ * `}` that closes the guard's function. Anything this small lexer cannot
+ * follow (an unterminated literal, a bare `/` that may open a regex literal
+ * holding a quote) refuses the downgrade instead of guessing.
+ */
+function staysInSameFunction(segment: string, minDepth: number): boolean {
+  if (/\bfunction\b|=>/.test(segment)) return false;
+  let depth = 0;
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i]!;
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i++;
+      while (i < segment.length && segment[i] !== ch) {
+        if (segment[i] === "\\") i++;
+        i++;
+      }
+      if (i >= segment.length) return false;
+    } else if (ch === "/" && segment[i + 1] === "/") {
+      const newline = segment.indexOf("\n", i);
+      i = newline === -1 ? segment.length : newline;
+    } else if (ch === "/" && segment[i + 1] === "*") {
+      const close = segment.indexOf("*/", i + 2);
+      if (close === -1) return false;
+      i = close + 1;
+    } else if (ch === "/") {
+      return false;
+    } else if (ch === "{") {
+      depth++;
+    } else if (ch === "}" && --depth < minDepth) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isReassigned(segment: string, id: string): boolean {
+  const name = escapeRegex(id);
+  return new RegExp(
+    String.raw`(?<![\w$.])${name}\s*(?:(?:[-+*/%&|^]|\*\*|<<|>>>?|\?\?|&&|\|\|)?=(?![=>])|\+\+|--)|(?:\+\+|--)\s*${name}(?![\w$])|\b(?:of|in)\s+${name}\b|(?:let|const|var)\s+${name}(?![\w$])`,
+  ).test(segment);
+}
+
+function isGuardedTemplateImport(content: string, importStart: number, specifierStart: number): boolean {
+  const close = content.indexOf("`", specifierStart);
+  if (close === -1 || close - specifierStart > 512) return false;
+  if (!/^[^\S\n]*\)/.test(content.slice(close + 1, close + 64))) return false;
+  const spec = GUARDABLE_SPECIFIER.exec(content.slice(specifierStart, close));
+  if (!spec) return false;
+  const id = spec[2]!;
+
+  const windowStart = Math.max(0, importStart - IMPORT_GUARD_WINDOW_CHARS);
+  const window = content.slice(windowStart, importStart);
+  IMPORT_GUARD.lastIndex = 0;
+  let guard: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+  while ((match = IMPORT_GUARD.exec(window)) !== null) {
+    if (match[5] === id) guard = match;
+  }
+  IMPORT_GUARD.lastIndex = 0;
+  if (!guard) return false;
+
+  let body = guard[3];
+  let flags = guard[4] ?? "";
+  if (guard[2] !== undefined) {
+    const defs = regexConstants(content).get(guard[2]);
+    if (!defs || defs.length !== 1 || defs[0]!.kind !== "const") return false;
+    body = defs[0]!.body;
+    flags = defs[0]!.flags;
+  }
+  if (body === undefined || !isPathSafeAllowlistRegex(body, flags)) return false;
+
+  const after = window.slice(guard.index + guard[0].length);
+  if (isReassigned(after, id)) return false;
+  if (guard[1] !== undefined) {
+    // `if (!RE.test(id)) throw|return` exits before the import is reached.
+    if (!/^\s*\{?\s*(?:throw|return)\b/.test(after)) return false;
+    return staysInSameFunction(after, 0);
+  }
+  // `if (RE.test(id)) return import(...)` or the import inside that block.
+  if (/^\s*return\s*$/.test(after)) return true;
+  const block = /^\s*\{/.exec(after);
+  if (!block) return false;
+  return staysInSameFunction(after.slice(block[0].length), 0);
+}
+
+/**
+ * True when every template import() on a hit line has a static prefix and
+ * extension, interpolates one bare identifier, and that identifier was tested
+ * earlier in the same function against an anchored allowlist that admits no
+ * path characters. IMPORT_EXPRESSION then reports at info.
+ */
+export function isAllowlistGuardedImportLine(content: string, line: number): boolean {
+  const bounds = lineBounds(content, line);
+  if (!bounds) return false;
+  const memo = memoFor(content);
+  const text = content.slice(bounds[0], bounds[1]);
+  IMPORT_TEMPLATE_START.lastIndex = 0;
+  let seen = 0;
+  let match: RegExpExecArray | null;
+  while ((match = IMPORT_TEMPLATE_START.exec(text)) !== null) {
+    if (++memo.guardedImportEvaluations > MAX_GUARDED_IMPORT_EVALUATIONS) {
+      IMPORT_TEMPLATE_START.lastIndex = 0;
+      return false;
+    }
+    seen++;
+    const importStart = bounds[0] + match.index;
+    if (!isGuardedTemplateImport(content, importStart, importStart + match[0].length)) {
+      IMPORT_TEMPLATE_START.lastIndex = 0;
+      return false;
+    }
+  }
+  IMPORT_TEMPLATE_START.lastIndex = 0;
+  return seen > 0;
+}
+
 export const CORE_BROAD_GAP_RULES = [
   "EVAL_HEX",
   "ENV_EXFILTRATION",
@@ -766,8 +1045,7 @@ export function createCoreBroadGapMatchers(
   const transport =
     String.raw`(?:fetch${WS0}\(|https?\.(?:get|request)|axios|\bgot${WS0}[.(]|node-fetch)`;
   const pythonTransport = String.raw`(?:urllib|requests|http\.client|socket)`;
-  const beaconTransport =
-    String.raw`(?:fetch|https?\.(?:get|request)|axios|got|node-fetch|XMLHttpRequest)`;
+  const beaconTransport = BEACON_TRANSPORT_SOURCE;
 
   return {
     EVAL_HEX: evalHexMatcher,
@@ -947,7 +1225,7 @@ export function createCoreBroadGapMatchers(
         priority: 0,
       },
       {
-        tokens: [String.raw`import${WS0}\(${WS0}(?:\+|process\.env|String\.fromCharCode)`],
+        tokens: [String.raw`import${WS0}\(${WS0}(?:\+|process\.env|String\.fromCharCode|(?:req|request)\.(?:query|params|body|headers)\b)`],
         gaps: [],
         priority: 1,
       },
@@ -1009,14 +1287,14 @@ export function createCoreBroadGapMatchers(
         matcher: makeOrderedEventMatcher([
           {
             tokens: [
-              String.raw`(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi)`,
-              String.raw`(?:wallet|keystore|vault|seed|mnemonic)`,
+              `(?<![A-Za-z])${WALLET_NAME_SOURCE}(?![a-z])`,
+              WALLET_TARGET_SOURCE,
             ],
             gaps: [GAP_DOT],
             priority: 0,
           },
           {
-            tokens: ["Trust", "Wallet", String.raw`(?:wallet|keystore|vault|seed|mnemonic)`],
+            tokens: [String.raw`(?<![A-Za-z])Trust(?![a-z])`, "Wallet", WALLET_TARGET_SOURCE],
             gaps: [GAP_DOT, GAP_DOT],
             priority: 0,
           },

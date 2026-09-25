@@ -11,6 +11,7 @@ import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { matchPatternInFile } from "./pattern-scanner.js";
 import { validatePatternSet } from "./patterns.js";
+import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import { WORKFLOW_BROAD_GAP_MATCHERS } from "./workflow-pattern-matchers.js";
 import {
   parseWorkflow,
@@ -18,6 +19,7 @@ import {
   type WfStep,
   type WfJob,
 } from "./workflow-ast.js";
+import { textHasSecretReference, workflowScopes, type WorkflowScopes } from "./workflow-modeler.js";
 
 /**
  * Patterns for detecting dangerous content in GitHub Actions workflow files.
@@ -139,12 +141,13 @@ export const WORKFLOW_PATTERNS: Array<
   // very attack), and PPE additionally depends on which trigger fires the
   // workflow.
   //
-  // OIDC token theft: id-token:write permission combined with outbound network call
+  // OIDC: a presence check on the permission. It does not look at which steps
+  // run with it, so the text must not claim a correlation it never made.
   {
     pattern: "id-token:\\s*write",
     description:
-      "Workflow requests OIDC id-token:write permission. If combined with unreviewed third-party actions or outbound curl, " +
-      "an attacker can steal the OIDC token to impersonate the workflow's cloud identity.",
+      "Workflow grants the OIDC id-token: write permission. Any step in a job that holds it can request a token for " +
+      "the workflow's cloud identity. This check reports the permission itself and does not inspect which steps run with it.",
     severity: "medium",
     rule: "GHA_OIDC_WRITE_PERM",
   },
@@ -172,18 +175,36 @@ export const WORKFLOW_PATTERNS: Array<
 validatePatternSet("WORKFLOW_PATTERNS", WORKFLOW_PATTERNS);
 
 /**
- * Known compromised action commit SHAs.
- * These SHAs are confirmed malicious and should never be used.
- * Sources: GitHub Security Advisories, supply chain incident reports.
+ * Known compromised action commits, from `actions:owner/repo@<sha>` feed
+ * entries (src/threat-intel.ts).
+ *
+ * Matched by SHA ALONE, whatever repository name the workflow uses: a commit
+ * SHA names one commit object, and a malicious commit pushed from a fork is
+ * reachable under every repository in the fork network. A tag is never an
+ * indicator here, because every incident so far ended with the tags deleted
+ * or restored to clean commits.
+ *
+ * This replaced a hardcoded three-entry map on 2026-09-23. Two of its three
+ * SHAs did not exist: one appears in no source, and one was a corrupted copy
+ * of the CLEAN reviewdog v1.3.0 commit. Only tj-actions 0e58ed86 was real.
  */
-const KNOWN_MALICIOUS_ACTION_SHAS = new Map<string, string>([
-  // tj-actions/changed-files - compromised September 2025 (GHSA-2025-tj-actions)
-  // Exfiltrated CI secrets to attacker-controlled server via public build logs
-  ["d8462b4fc879d893f8f3b49843bde065f3f07b82", "tj-actions/changed-files (Sep 2025 compromise)"],
-  ["0e58ed8671d6b60d0890c21b07f8835ace038e67", "tj-actions/changed-files (Sep 2025 compromise variant)"],
-  // reviewdog/action-setup - compromised as part of tj-actions attack chain
-  ["3f401fe1d58fe77e10d665ab713057369b8cdfe4", "reviewdog/action-setup (Sep 2025 attack chain)"],
-]);
+const actionShaIndexCache = new WeakMap<FeedIOC[], Map<string, FeedIOC>>();
+
+function knownMaliciousActionShas(feed: FeedIOC[]): Map<string, FeedIOC> {
+  const cached = actionShaIndexCache.get(feed);
+  if (cached) return cached;
+  const index = new Map<string, FeedIOC>();
+  for (const ioc of feed) {
+    if (ioc.type !== "package" || !ioc.value.toLowerCase().startsWith("actions:")) continue;
+    const at = ioc.value.lastIndexOf("@");
+    // Feed SHAs are lowercase by contract (asserted over the bundled feed in
+    // github-actions-scanner.test.ts); the workflow side is lowercased below.
+    const sha = at > 0 ? ioc.value.substring(at + 1) : "";
+    if (/^[0-9a-f]{40}$/.test(sha) && !index.has(sha)) index.set(sha, ioc);
+  }
+  actionShaIndexCache.set(feed, index);
+  return index;
+}
 
 /** Well-known official or trusted GitHub Action owners. */
 const TRUSTED_ACTION_OWNERS = new Set([
@@ -360,7 +381,7 @@ function transitiveNeeds(job: WfJob, jobs: WfJob[]): WfJob[] {
     const dependency = byId.get(id);
     if (!dependency) continue;
     found.push(dependency);
-    pending.push(...dependency.needs);
+    for (const pushed of dependency.needs) pending.push(pushed);
   }
   return found;
 }
@@ -948,11 +969,13 @@ function checkWorkflowPatterns(
   // physical line numbers; shortening a stripped comment cannot move any
   // surviving match to another line.
   const strippedContent = lines.map((line) => stripYamlComment(line)).join("\n");
+  const canonical = canonicalSecretExpressions(strippedContent);
 
   for (const pattern of WORKFLOW_PATTERNS) {
+    const secretRule = SECRET_LINE_RULES.has(pattern.rule);
     const matches = matchPatternInFile(
       pattern,
-      strippedContent,
+      secretRule ? canonical.text : strippedContent,
       relativePath,
       findings,
       pattern.flags ?? "i",
@@ -960,17 +983,61 @@ function checkWorkflowPatterns(
     if (!matches) continue;
 
     for (const match of matches) {
+      // On a rewritten line, show the workflow's own text, not the canonical form.
+      const shown = secretRule && canonical.lines.has(match.line)
+        ? (lines[match.line - 1] ?? "").trim()
+        : match.text;
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
         severity: pattern.severity,
         file: relativePath,
         line: match.line,
-        match: truncateMatch(match.text),
+        match: truncateMatch(shown),
         recommendation: getWorkflowRecommendation(pattern.rule),
       });
     }
   }
+}
+
+/** Line rules whose patterns name a secret as `${{ secrets.NAME }}`. */
+const SECRET_LINE_RULES = new Set(["GHA_SECRET_CURL", "GHA_SECRET_WGET", "GHA_ENV_EXFIL"]);
+
+/** The form the line patterns above are written against. */
+const DOT_SECRET_EXPR_RE = /^\s*secrets\./i;
+
+/**
+ * Rewrite every single-line `${{ ... }}` expression that references a secret
+ * in any expression form into the dot form the line patterns match, so those
+ * rules report every form exactly where they report the dot form. Line count
+ * and every other byte are preserved. Returns the 1-based lines rewritten.
+ */
+function canonicalSecretExpressions(text: string): { text: string; lines: Set<number> } {
+  const out: string[] = [];
+  const rewritten = new Set<number>();
+  let from = 0;
+  let line = 1;
+  for (;;) {
+    const open = text.indexOf("${{", from);
+    if (open < 0) break;
+    const close = text.indexOf("}}", open + 3);
+    if (close < 0) break;
+    const before = text.slice(from, open);
+    for (let k = before.indexOf("\n"); k >= 0; k = before.indexOf("\n", k + 1)) line++;
+    const expr = text.slice(open, close + 2);
+    const inner = expr.slice(3, -2);
+    out.push(before);
+    if (!inner.includes("\n") && !DOT_SECRET_EXPR_RE.test(inner) && hasSecretRef(expr)) {
+      out.push("${{ secrets.REFERENCE }}");
+      rewritten.add(line);
+    } else {
+      out.push(expr);
+      for (let k = inner.indexOf("\n"); k >= 0; k = inner.indexOf("\n", k + 1)) line++;
+    }
+    from = close + 2;
+  }
+  out.push(text.slice(from));
+  return { text: out.join(""), lines: rewritten };
 }
 
 /**
@@ -993,6 +1060,29 @@ function stripYamlComment(line: string): string {
     }
   }
   return line;
+}
+
+/**
+ * True for composite / Docker action metadata (action.yml, action.yaml)
+ * outside .github/workflows, which the workflow walker already owns.
+ */
+export function isActionMetadataFile(relativePath: string): boolean {
+  const posix = relativePath.replace(/\\/g, "/");
+  const basename = posix.split("/").pop() ?? "";
+  if (basename !== "action.yml" && basename !== "action.yaml") return false;
+  return !posix.startsWith(".github/workflows/") && !posix.includes("/.github/workflows/");
+}
+
+/**
+ * Known-malicious commit SHAs in the `uses:` steps of action metadata. A
+ * composite action's steps run with the calling workflow's secrets, so a
+ * compromised action pinned there is as dangerous as one in a workflow. Only
+ * the SHA check runs here: the other workflow rules are about workflow files.
+ */
+export function scanActionMetadataReferences(content: string, relativePath: string): Finding[] {
+  const findings: Finding[] = [];
+  checkActionReferences(content.split(/\r?\n/), relativePath, findings);
+  return findings.filter((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA");
 }
 
 /**
@@ -1026,10 +1116,14 @@ function checkActionReferences(
     const owner = actionPath.split("/")[0] ?? "";
 
     // Check against known malicious SHAs (highest priority - always critical)
-    if (SHA_PATTERN.test(ref) && KNOWN_MALICIOUS_ACTION_SHAS.has(ref)) {
+    const maliciousSha = SHA_PATTERN.test(ref)
+      ? knownMaliciousActionShas(loadThreatIntel()).get(ref.toLowerCase())
+      : undefined;
+    if (maliciousSha) {
+      const known = maliciousSha.value.substring("actions:".length);
       findings.push({
         rule: "GHA_KNOWN_MALICIOUS_SHA",
-        description: `Action "${actionRef}" references a KNOWN COMPROMISED commit SHA: ${KNOWN_MALICIOUS_ACTION_SHAS.get(ref)}. This SHA is confirmed malicious.`,
+        description: `Action "${actionRef}" references a KNOWN COMPROMISED commit SHA: ${known}${maliciousSha.campaign ? ` (${maliciousSha.campaign})` : ""}. This SHA is confirmed malicious.`,
         severity: "critical",
         file: relativePath,
         line: i + 1,
@@ -1091,8 +1185,12 @@ function checkActionReferences(
   }
 }
 
-/** A secret expression: `${{ secrets.NAME }}`. */
-const SECRET_EXPR_RE = /\$\{\{\s*secrets\.\w+\s*\}\}/;
+/**
+ * Every expression form of a secret reference, with the run's own
+ * GITHUB_TOKEN included: for an exfiltration rule, sending that token out is
+ * the danger, so it is not treated as ambient here.
+ */
+const hasSecretRef = (text: string): boolean => textHasSecretReference(text, true);
 
 /**
  * Commands that move data off the runner. `git fetch` is excluded: it pulls
@@ -1129,31 +1227,36 @@ function checkSecretsExfiltration(
 ): void {
   const lines = content.replace(/\r/g, "").split("\n");
 
-  let ast;
+  // Env scopes come from line regions as well as from the AST, whose env maps
+  // hold block maps only: an inline flow map (`env: { T: ... }`) is otherwise
+  // invisible at step, job and workflow level.
+  let scopes: WorkflowScopes | undefined;
   try {
-    ast = parseWorkflow(content);
+    scopes = workflowScopes(content);
   } catch {
-    ast = undefined;
+    scopes = undefined;
   }
 
   const envHasSecret = (env?: Record<string, string>): boolean =>
-    env !== undefined && Object.values(env).some((v) => SECRET_EXPR_RE.test(v));
+    env !== undefined && Object.values(env).some((v) => hasSecretRef(v));
 
   // Fail closed: a file this parser cannot break into steps still gets the old
   // coarse file-level check (reported at line 1), so nothing goes undetected.
-  const steps = ast?.jobs.flatMap((job) => job.steps.map((step) => ({ step, job })));
-  if (!steps || steps.length === 0) {
-    if (SECRET_EXPR_RE.test(content) && NETWORK_CMD_RE.test(content)) {
+  const steps = scopes?.jobs.flatMap((scope) =>
+    scope.steps.map((st) => ({ step: st.step, job: scope.job, stepEnv: st.env, jobEnv: scope.env })),
+  );
+  if (!scopes || !steps || steps.length === 0) {
+    if (hasSecretRef(content) && NETWORK_CMD_RE.test(content)) {
       pushExfilFinding(findings, relativePath, 1, true);
     }
     return;
   }
 
-  const workflowEnvSecret = envHasSecret(ast?.env);
+  const workflowEnvSecret = envHasSecret(scopes.ast.env) || hasSecretRef(scopes.workflowEnv);
   const stepStartLines = steps.map(({ step }) => step.line);
 
   for (let s = 0; s < steps.length; s++) {
-    const { step, job } = steps[s]!;
+    const { step, job, stepEnv, jobEnv } = steps[s]!;
     // Comment-stripped, so a commented-out example is not "runs a network
     // command" (and matches the line search below).
     const runCommands = (step.run ?? "")
@@ -1163,9 +1266,11 @@ function checkSecretsExfiltration(
     if (!step.run || !NETWORK_CMD_RE.test(runCommands)) continue;
 
     const secretInScope =
-      SECRET_EXPR_RE.test(step.run) ||
+      hasSecretRef(step.run) ||
       envHasSecret(step.env) ||
+      hasSecretRef(stepEnv) ||
       envHasSecret(job.env) ||
+      hasSecretRef(jobEnv) ||
       workflowEnvSecret;
     if (!secretInScope) continue;
 
@@ -1251,8 +1356,8 @@ function getWorkflowRecommendation(rule: string): string {
       "Never interpolate user-controlled GitHub context (issue body, PR title, commit message) directly into run: steps. " +
       "Store the value in an environment variable first: env: VALUE: ${{ github.event.issue.body }} then use $VALUE.",
     GHA_OIDC_WRITE_PERM:
-      "Audit all steps in this workflow when id-token:write is set. Ensure no third-party action or run step " +
-      "can exfiltrate the OIDC token. Scope permissions as narrowly as possible.",
+      "Grant id-token: write only on the job that needs it, and review that job's actions and run steps: " +
+      "any of them can request the OIDC token.",
     GHA_CACHE_POISONING:
       "Do not use github.head_ref in cache keys for workflows that can be triggered by untrusted PRs. " +
       "Use github.sha or a hash of locked dependency files instead.",

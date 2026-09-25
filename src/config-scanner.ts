@@ -143,7 +143,7 @@ export function scanConfigFiles(dir: string): Finding[] {
       const fullPath = path.join(dir, entry.name);
       try {
         const content = fs.readFileSync(fullPath, "utf-8");
-        findings.push(...scanConfigFile(content, entry.name));
+        for (const pushed of scanConfigFile(content, entry.name)) findings.push(pushed);
       } catch {
         // skip
       }

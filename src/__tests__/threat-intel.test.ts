@@ -1,6 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { loadThreatIntel, checkThreatIntel, matchPackageIOC } from "../threat-intel.js";
 import type { FeedIOC } from "../threat-intel.js";
+
+/**
+ * The feed value grammar, written out independently of the production
+ * splitter on purpose: a guard that imports the code it guards agrees with
+ * that code's bugs. name[@version], split at the last "@", except Firefox
+ * add-on ids, which may be email-shaped (name@domain): there the tail is a
+ * version only when it starts with a digit.
+ */
+function splitValue(eco: string, rest: string): { name: string; version: string | undefined } {
+  const at = rest.lastIndexOf("@");
+  if (at <= 0) return { name: rest, version: undefined };
+  const tail = rest.substring(at + 1);
+  if (eco === "firefox" && !/^[0-9]/.test(tail)) return { name: rest, version: undefined };
+  return { name: rest.substring(0, at), version: tail };
+}
 import { performanceBudget } from "./performance-budget.js";
 
 describe("Threat Intelligence", () => {
@@ -79,7 +94,8 @@ function referenceMatch(
   const prefix = `${eco}:`;
   const normalizeName = (value: string): string => {
     if (eco === "pypi") return value.toLowerCase().replace(/[-_.]+/g, "-");
-    return eco === "nuget" ? value.toLowerCase() : value;
+    return ["nuget", "terraform", "tfmodule", "vscode", "openvsx", "actions", "docker", "swift", "cocoapods", "hex",
+      "conan", "helm", "ansible", "homebrew", "chrome", "edge"].includes(eco) ? value.toLowerCase() : value;
   };
   const wantName = normalizeName(name);
 
@@ -87,9 +103,7 @@ function referenceMatch(
     if (ioc.type !== "package") continue;
     if (!ioc.value.toLowerCase().startsWith(prefix)) continue;
     const rest = ioc.value.substring(prefix.length);
-    const at = rest.lastIndexOf("@");
-    const iocName = at > 0 ? rest.substring(0, at) : rest;
-    const iocVersion = at > 0 ? rest.substring(at + 1) : undefined;
+    const { name: iocName, version: iocVersion } = splitValue(eco, rest);
     const nameMatches = normalizeName(iocName) === wantName;
     if (!nameMatches) continue;
     if (iocVersion === undefined) return ioc;
@@ -109,12 +123,7 @@ describe("matchPackageIOC index parity", () => {
       if (colon <= 0) return null;
       const eco = i.value.substring(0, colon);
       const rest = i.value.substring(colon + 1);
-      const at = rest.lastIndexOf("@");
-      return {
-        eco,
-        name: at > 0 ? rest.substring(0, at) : rest,
-        version: at > 0 ? rest.substring(at + 1) : undefined,
-      };
+      return { eco, ...splitValue(eco, rest) };
     })
     .filter((x): x is { eco: string; name: string; version: string | undefined } => x !== null);
 

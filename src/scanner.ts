@@ -30,11 +30,18 @@ import {
   OBFUSCATION_PATTERNS_V2,
   IAC_PATTERNS,
   truncateMatch,
+  resolvePatternSeverity,
 } from "./patterns.js";
 import {
   maskMixedCommentsPreservingStrings,
 } from "./correlated-pattern-matchers.js";
-import { matchBareNpmIOC, resolveNpmAlias } from "./install-guard.js";
+import { matchBareNpmIOC } from "./install-guard.js";
+import {
+  lockfileFeedFindings,
+  manifestDependencyCandidates,
+  excuseLockfileFindingsReportedByManifests,
+  type LockfileDependency,
+} from "./lockfile-feed.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
 import {
   hasPartialScanFinding,
@@ -44,13 +51,17 @@ import {
   recordUnreadablePath,
 } from "./pattern-scanner.js";
 import type { FeedIOC } from "./threat-intel.js";
-import { checkLockfile } from "./lockfile-checker.js";
+import { checkJsLockfileContent, checkLockfile, JS_LOCKFILE_NAMES } from "./lockfile-checker.js";
 import { isJsonObject, parseJsonObject } from "./json-utils.js";
 import {
   collectExtractedFiles,
   DEFAULT_EXTRACTED_WALK_MAX_ENTRIES,
 } from "./extracted-file-walker.js";
-import { scanGitHubActionsWorkflows } from "./github-actions-scanner.js";
+import {
+  isActionMetadataFile,
+  scanActionMetadataReferences,
+  scanGitHubActionsWorkflows,
+} from "./github-actions-scanner.js";
 import { scanAgenticWorkflows } from "./agentic-workflow-scanner.js";
 import { isDockerFile, scanDockerFile } from "./dockerfile-scanner.js";
 import { isConfigFile, scanConfigFile } from "./config-scanner.js";
@@ -62,12 +73,21 @@ import { scanGitSecurity } from "./git-scanner.js";
 import { analyzeEntropy } from "./entropy.js";
 import { scanCargoFiles, isCargoFile } from "./cargo-scanner.js";
 import { scanGoFiles } from "./go-scanner.js";
+import { isTerraformProviderFile, scanTerraformContent } from "./terraform-scanner.js";
+import { isExtensionReferenceFile, scanExtensionReferences } from "./extension-identity.js";
+import { isMavenFile, scanMavenContent } from "./maven-scanner.js";
+import { isPubFile, scanPubContent } from "./pub-scanner.js";
+import { isNestedManifest, scanNestedManifest } from "./nested-manifests.js";
+import { isRegistryFile, scanRegistryFile } from "./ecosystem-registry.js";
+import { isDockerfileSyntax, scanImageReferences } from "./container-image.js";
 import { scanRubyGemsFiles } from "./rubygems-scanner.js";
 import { scanComposerFiles } from "./composer-scanner.js";
 import { scanNuGetFiles, hasNuGetFiles } from "./nuget-scanner.js";
 import {
   isPythonLockfile,
+  isPythonManifest,
   scanPythonLockfileContent,
+  scanPythonManifestContent,
   scanPythonLockfiles,
 } from "./python-lockfile-scanner.js";
 import { checkIOCBlocklist, checkBadVersion, checkFileDigest } from "./ioc-blocklist.js";
@@ -112,7 +132,15 @@ import { evaluateTwoTierVerdict } from "./two-tier-scoring.js";
 import { gatherExternalIntel } from "./external-threat-intel.js";
 import { scanPypiDependencyConfusion } from "./dependency-confusion.js";
 import { scanMcpConfigs, hasMcpConfigFiles } from "./mcp-scanner.js";
-import { scanAgentSkillFiles } from "./skills-scanner.js";
+import {
+  scanAgentSkillFiles,
+  isDevcontainerFile,
+  scanDevcontainerCommandsContent,
+  scanEditorTasksContent,
+  isCodeWorkspaceFile,
+  scanCodeWorkspaceContent,
+} from "./skills-scanner.js";
+import { checkDisguisedAsset } from "./disguised-asset.js";
 import {
   isSelfScanInertFile,
   isVerifiedSelfScanFile,
@@ -225,8 +253,8 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       partial: intel.partial,
     };
     if (effectiveScorecard === undefined) effectiveScorecard = intel.scorecard;
-    effectiveVulnerabilities.push(...intel.vulnerabilities);
-    effectiveConfirmedMalware.push(...intel.confirmedMalware);
+    for (const pushed of intel.vulnerabilities) effectiveVulnerabilities.push(pushed);
+    for (const pushed of intel.confirmedMalware) effectiveConfirmedMalware.push(pushed);
   }
 
   // Load policy up front: its `ignore:` globs prune the scanner walk, and the
@@ -298,6 +326,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     ...internalDisclosure.loadFindings,
   ];
 
+  // Direct dependencies the package.json check reported, by INSTALLED name
+  // (aliases resolved); see the lockfile excuse pass after the path filters.
+  // Only manifests the walk actually checks record anything: ignored paths
+  // are never walked and test-fixture manifests are never checked.
+  const manifestReports = new Set<string>();
+
   // Scan each file
   let filesScanned = 0;
   for (const filePath of allFiles) {
@@ -331,7 +365,10 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     try {
       if (fs.statSync(filePath).size <= MAX_FILE_SIZE) {
         fileBytes = fs.readFileSync(filePath);
-        findings.push(...checkFileDigest(fileBytes, relativePath));
+        for (const pushed of checkFileDigest(fileBytes, relativePath)) findings.push(pushed);
+        // Script code named as a font (Fake Font payload). Reuses the bytes
+        // just read, so fonts cost no extra I/O.
+        for (const pushed of checkDisguisedAsset(fileBytes, relativePath)) findings.push(pushed);
       }
     } catch {
       // Leave fileBytes undefined and stay silent here: the oversized and
@@ -356,8 +393,35 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       relativePath.includes("/") &&
       isPythonLockfile(basename) &&
       !pathSegments.some((segment) => segment === "vendor" || segment === "target");
+    // Maven / Gradle build files (pom.xml, gradle.lockfile, *.gradle[.kts])
+    // carry no scannable extension, so this inline path is the only place a
+    // directory scan reaches them. libs.versions.toml does, and is matched
+    // here too so the maven: lookup has exactly one dispatch point.
+    const mavenBuildFile = isMavenFile(relativePath);
+    // Same reason for pub: pubspec.lock has no scannable extension.
+    const pubspecFile = isPubFile(relativePath);
+    // requirements*.txt has no scannable extension; pyproject.toml does, and is
+    // matched here too so the pypi: lookup has one dispatch point.
+    const pythonManifest =
+      isPythonManifest(relativePath) &&
+      !pathSegments.some((segment) => segment === "vendor" || segment === "target");
+    // Ruby, Composer, NuGet, Cargo and Go manifests below the scan root: their
+    // own scanners read only the root (see nested-manifests.ts).
+    const nestedManifest = isNestedManifest(relativePath);
+    // Swift, CocoaPods, Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser
+    // extensions and JetBrains plugins (ecosystem-registry.ts), at any depth.
+    const registryFile = isRegistryFile(relativePath);
+    // yarn / pnpm / bun lockfiles below the root: checkLockfile() reads only
+    // the scan root, so a monorepo package's own lockfile was never checked.
+    const nestedJsLockfile =
+      relativePath.includes("/") && JS_LOCKFILE_NAMES.has(basename) &&
+      !pathSegments.some((segment) => segment === "vendor");
+    // *.code-workspace: its tasks block auto-runs like .vscode/tasks.json, and
+    // the extension is not a scannable one.
+    const codeWorkspace = isCodeWorkspaceFile(relativePath);
     const inlineContentTarget =
-      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile;
+      isDockerFile(basename) || isConfigFile(basename) || nestedPythonLockfile || mavenBuildFile ||
+      pubspecFile || pythonManifest || nestedManifest || registryFile || nestedJsLockfile || codeWorkspace;
     if (inlineContentTarget) {
       let inlineStat: fs.Stats;
       try {
@@ -381,10 +445,49 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       }
 
       if (isDockerFile(basename)) {
-        findings.push(...scanDockerFile(prefetchedContent, relativePath));
+        for (const pushed of scanDockerFile(prefetchedContent, relativePath)) findings.push(pushed);
+      }
+      // Known-malicious base images. Dockerfile syntax only: compose files are
+      // YAML and are matched once, on the per-file path below.
+      if (isDockerfileSyntax(relativePath)) {
+        for (const pushed of scanImageReferences(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (isConfigFile(basename)) {
-        findings.push(...scanConfigFile(prefetchedContent, relativePath));
+        for (const pushed of scanConfigFile(prefetchedContent, relativePath)) findings.push(pushed);
+      }
+      if (mavenBuildFile) {
+        for (const pushed of scanMavenContent(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
+      }
+      if (pubspecFile) {
+        try {
+          for (const finding of scanPubContent(prefetchedContent, relativePath, threatFeed)) findings.push(finding);
+        } catch {
+          findings.push({
+            rule: "PATH_SCAN_INCOMPLETE",
+            description: `${relativePath} could not be read as a pub manifest, so its dependencies were not checked against the threat feed.`,
+            severity: "info",
+            confidence: 1,
+            category: "info",
+            file: relativePath,
+            match: "unreadable pub manifest",
+            recommendation: "Treat this result as partial, not clean. Inspect this manifest by hand.",
+          });
+        }
+      }
+      if (pythonManifest) {
+        for (const pushed of scanPythonManifestContent(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
+      }
+      if (nestedManifest) {
+        for (const pushed of scanNestedManifest(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
+      }
+      if (registryFile) {
+        for (const pushed of scanRegistryFile(prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
+      }
+      if (codeWorkspace) {
+        for (const pushed of scanCodeWorkspaceContent(prefetchedContent, relativePath)) findings.push(pushed);
+      }
+      if (nestedJsLockfile) {
+        for (const pushed of checkJsLockfileContent(basename, prefetchedContent, relativePath, threatFeed)) findings.push(pushed);
       }
       if (nestedPythonLockfile) {
         findings.push(
@@ -495,16 +598,16 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
 
     // Entropy analysis for obfuscated payloads (v4.0)
     const entropyFindings = analyzeEntropy(content, relativePath);
-    findings.push(...entropyFindings);
+    for (const pushed of entropyFindings) findings.push(pushed);
 
     // IOC blocklist + threat-intel checks skip only reviewed scanner
     // definition/fixture paths and exact TypeScript-compiled counterparts.
     if (!trustedOwnFile) {
       const iocFindings = checkIOCBlocklist(content, relativePath);
-      findings.push(...iocFindings);
+      for (const pushed of iocFindings) findings.push(pushed);
 
       const tiFindings = checkThreatIntel(content, relativePath, threatFeed);
-      findings.push(...tiFindings);
+      for (const pushed of tiFindings) findings.push(pushed);
     }
 
     // README / doc-file lure pattern scanning (v4.1, scope expanded v5.2.20)
@@ -516,7 +619,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // the sole entry point so it now covers the full doc-file family.
     if (/^(?:readme|changelog|contributing|description|release[-_]notes)/i.test(basename)) {
       const lureFindings = scanReadmeLures(content, relativePath);
-      findings.push(...lureFindings);
+      for (const pushed of lureFindings) findings.push(pushed);
     }
 
     // Check package.json specifically (skip test fixture directories)
@@ -531,13 +634,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       // Closes the gap where a directory scan of your own repo did not catch
       // a known-bad dependency (only the `npm <pkg>` path did). Patterns are
       // anchored, so only exact malicious names match.
-      checkMaliciousDependencyNames(content, relativePath, findings, threatFeed);
+      checkMaliciousDependencyNames(content, relativePath, findings, threatFeed, manifestReports);
 
       // Deep install hook analysis (v4.2)
       const hookScripts = extractInstallScripts(content);
       if (hookScripts) {
         const hookFindings = analyzeInstallHooks(hookScripts, relativePath);
-        findings.push(...hookFindings);
+        for (const pushed of hookFindings) findings.push(pushed);
       }
 
       // Dependency risk analysis (v4.2)
@@ -551,7 +654,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
         };
         if (Object.keys(allDeps).length > 0) {
           const depFindings = analyzeDependencyRisks(allDeps, relativePath);
-          findings.push(...depFindings);
+          for (const pushed of depFindings) findings.push(pushed);
         }
       } catch { /* not valid JSON */ }
     }
@@ -559,6 +662,43 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // Check package-lock.json for known-bad versions (v4.1)
     if (basename === "package-lock.json") {
       checkLockfileBadVersions(content, relativePath, findings, threatFeed);
+    }
+
+    // Terraform / OpenTofu providers (.tf, .tf.json, .terraform.lock.hcl)
+    // matched against terraform: feed entries.
+    if (isTerraformProviderFile(relativePath)) {
+      for (const pushed of scanTerraformContent(content, relativePath, threatFeed)) findings.push(pushed);
+    }
+
+    // VS Code / Open VSX extensions a workspace recommends, a devcontainer
+    // installs, or an extension manifest declares, matched against
+    // vscode: and openvsx: feed entries.
+    if (isExtensionReferenceFile(relativePath)) {
+      for (const pushed of scanExtensionReferences(content, relativePath, threatFeed)) findings.push(pushed);
+    }
+
+    // Dev container lifecycle commands run without a prompt (initializeCommand
+    // on the host), so they get the editor-task battery, at any depth.
+    if (isDevcontainerFile(relativePath)) {
+      for (const pushed of scanDevcontainerCommandsContent(content, relativePath)) findings.push(pushed);
+    }
+
+    // .vscode/tasks.json below the root: opening that subfolder runs its tasks.
+    // The root file is read by scanAgentSkillFiles and is not repeated here.
+    if (relativePath !== ".vscode/tasks.json" && relativePath.endsWith("/.vscode/tasks.json")) {
+      for (const pushed of scanEditorTasksContent(content, relativePath)) findings.push(pushed);
+    }
+
+    // Container images referenced from YAML (compose, Kubernetes manifests,
+    // workflow container:/services: and docker:// steps).
+    if (/\.ya?ml$/i.test(basename)) {
+      for (const pushed of scanImageReferences(content, relativePath, threatFeed)) findings.push(pushed);
+    }
+
+    // Composite / Docker action metadata anywhere outside .github/workflows:
+    // its uses: steps run with the caller's secrets.
+    if (isActionMetadataFile(relativePath)) {
+      for (const pushed of scanActionMetadataReferences(content, relativePath)) findings.push(pushed);
     }
   }
 
@@ -568,30 +708,35 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   }
 
   // Check lockfile integrity (T-006)
-  const lockfileFindings = checkLockfile(scanDir);
-  findings.push(...lockfileFindings);
+  const lockfileFindings = checkLockfile(scanDir, threatFeed);
+  for (const pushed of lockfileFindings) findings.push(pushed);
 
   // Check GitHub Actions workflows (#9)
   const ghaFindings = scanGitHubActionsWorkflows(scanDir);
-  findings.push(...ghaFindings);
+  for (const pushed of ghaFindings) findings.push(pushed);
 
   // v5.10: GitHub Agentic Workflow (gh-aw) markdown files (.github/workflows/*.md)
-  findings.push(...scanAgenticWorkflows(scanDir));
+  for (const pushed of scanAgenticWorkflows(scanDir)) findings.push(pushed);
 
   // v4.9: SLSA provenance verification
-  findings.push(...verifySLSA(scanDir));
+  for (const pushed of verifySLSA(scanDir)) findings.push(pushed);
 
-  // v4.9: PyPI dependency confusion (if requirements.txt / pyproject.toml present)
+  // v4.9: PyPI dependency confusion (if requirements.txt / pyproject.toml present).
+  // The PyPI metadata lookups send every dependency name to pypi.org, so they
+  // run only with --check-registry: a local scan documents zero network
+  // requests. The offline checks (hallucinated names, coverage) always run.
   try {
-    const pypiConfusion = await scanPypiDependencyConfusion(scanDir);
-    findings.push(...pypiConfusion);
+    const pypiConfusion = await scanPypiDependencyConfusion(scanDir, {
+      network: options.checkRegistry === true,
+    });
+    for (const pushed of pypiConfusion) findings.push(pushed);
   } catch { /* skip if offline */ }
 
   // v5.9: opt-in registry version-drift (source package.json vs npm 'latest').
   // Network call, so off by default; --check-registry enables it. Offline-safe.
   if (options.checkRegistry) {
     try {
-      findings.push(...(await checkRegistryVersionDrift(scanDir)));
+      for (const pushed of (await checkRegistryVersionDrift(scanDir))) findings.push(pushed);
     } catch { /* offline / registry error: skip */ }
   }
 
@@ -600,7 +745,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const parsed = parseGitHubUrl(target);
     if (parsed) {
       const trustFindings = analyzeGitHubTrust(parsed.owner, parsed.repo);
-      findings.push(...trustFindings);
+      for (const pushed of trustFindings) findings.push(pushed);
     }
   }
 
@@ -611,48 +756,48 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Explicit specialized targets perform their own tri-state path probes.
   // Calling them without existsSync gates preserves the distinction between an
   // absent optional target and a target whose stat/read operation failed.
-  findings.push(...scanGitSecurity(scanDir));
-  findings.push(...scanCargoFiles(scanDir, threatFeed));
-  findings.push(...scanGoFiles(scanDir, threatFeed));
-  findings.push(...scanRubyGemsFiles(scanDir, threatFeed));
-  findings.push(...scanComposerFiles(scanDir, threatFeed));
+  for (const pushed of scanGitSecurity(scanDir)) findings.push(pushed);
+  for (const pushed of scanCargoFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanGoFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanRubyGemsFiles(scanDir, threatFeed)) findings.push(pushed);
+  for (const pushed of scanComposerFiles(scanDir, threatFeed)) findings.push(pushed);
 
   // NuGet discovery is a root-directory optimization that deliberately opens
   // the scanner on enumeration failure so scanNuGetFiles can report coverage.
   if (hasNuGetFiles(scanDir)) {
-    findings.push(...scanNuGetFiles(scanDir, threatFeed));
+    for (const pushed of scanNuGetFiles(scanDir, threatFeed)) findings.push(pushed);
   }
 
-  findings.push(...scanPythonLockfiles(scanDir, threatFeed));
+  for (const pushed of scanPythonLockfiles(scanDir, threatFeed)) findings.push(pushed);
 
   // Check MCP server configs (.mcp.json / .cursor/mcp.json / .vscode/mcp.json /
   // claude_desktop_config.json / .gemini/settings.json)
   if (hasMcpConfigFiles(scanDir)) {
     const mcpFindings = scanMcpConfigs(scanDir, threatFeed);
-    findings.push(...mcpFindings);
+    for (const pushed of mcpFindings) findings.push(pushed);
   }
   // Check AI agent skill / rules files (.claude, .cursorrules, CLAUDE.md, ...)
   // The main walk skips .claude/ - this scanner does its own targeted traversal.
   const skillFindings = scanAgentSkillFiles(scanDir);
-  findings.push(...skillFindings);
+  for (const pushed of skillFindings) findings.push(pushed);
 
   // v5.7: OpenClaw plugin manifest posture (only fires if openclaw.plugin.json present)
-  findings.push(...scanOpenClawPlugin(scanDir));
+  for (const pushed of scanOpenClawPlugin(scanDir)) findings.push(pushed);
 
   // v4.7: Workflow execution modeling
   const wfFindings = modelWorkflows(scanDir);
-  findings.push(...wfFindings);
+  for (const pushed of wfFindings) findings.push(pushed);
 
   // v5.7: Cross-workflow trust-boundary analysis (Cordyceps composition attacks).
   // Runs across ALL workflow files - catches the producer->consumer artifact
   // escalation that the single-file GHA scanner and modeler cannot see.
   const wfGraphFindings = scanWorkflowGraph(scanDir);
-  findings.push(...wfGraphFindings);
+  for (const pushed of wfGraphFindings) findings.push(pushed);
 
   // v4.4: Detect positive trust signals (only for GitHub repo scans)
   if (scanType === "github") {
     const trustSignals = detectTrustSignals(scanDir);
-    findings.push(...trustSignals);
+    for (const pushed of trustSignals) findings.push(pushed);
   }
 
   // Report the age of the rule set this scan actually matched against. Every
@@ -663,7 +808,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // refreshes the feed is reported current even on an old pin, and a consumer
   // on a frozen pin is told so instead of receiving another green check.
   // Carries no `file`, so the path-ignore filter below leaves it in place.
-  findings.push(...feedStalenessFindings(feedFreshness(threatFeed)));
+  for (const pushed of feedStalenessFindings(feedFreshness(threatFeed))) findings.push(pushed);
 
   // The companion to the staleness finding: that one says the rule set is old,
   // this one says part of it was not consulted at all. catalogState is the
@@ -671,7 +816,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // cannot change what this scan reports. Carries no `file`, for the same
   // reason: the path-ignore filter below drops anything that looks like a
   // repo finding.
-  findings.push(...catalogFindings(catalogState, policy?.catalog ?? "optional"));
+  for (const pushed of catalogFindings(catalogState, policy?.catalog ?? "optional")) findings.push(pushed);
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own
@@ -690,6 +835,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       );
     });
   }
+
+  // A lockfile's whole-name hit is excused only where a package.json in THIS
+  // scan reported the same package as a direct dependency. Workspace members,
+  // ignored manifests and test-fixture manifests then all come out right,
+  // which re-reading the lockfile's sibling package.json could not do.
+  findings = excuseLockfileFindingsReportedByManifests(findings, manifestReports);
 
   // The primary walk and specialized scanners may report the same failed path.
   // Keep one public coverage signal per normalized relative path.
@@ -794,7 +945,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const policyResult = applyPolicy(findings, policy);
     findings = policyResult.findings;
     suppressedCount += policyResult.suppressedCount;
-    policySuppressed.push(...policyResult.suppressedFindings);
+    for (const pushed of policyResult.suppressedFindings) policySuppressed.push(pushed);
   }
   // Policy validation findings are materialized by applyPolicy(), so refresh
   // the snapshot before later filters can hide a coverage-breaking warning.
@@ -828,9 +979,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (historyRead.status === "unreadable") partialScan = true;
 
   const trendFindings = analyzeRiskTrend(riskHistory, calculateScore(findings));
-  findings.push(...trendFindings);
+  for (const pushed of trendFindings) findings.push(pushed);
   const forecastFindings = forecastRisk(riskHistory, calculateScore(findings));
-  findings.push(...forecastFindings);
+  for (const pushed of forecastFindings) findings.push(pushed);
 
   // Pushed after the two analyzers, not before, so the current score they are
   // given is a score of the scanned project and never includes this finding
@@ -853,13 +1004,13 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   if (triageRead.status === "unreadable") partialScan = true;
 
   const govFindings = checkTriageGovernance(findings, triageDecisions);
-  findings.push(...govFindings);
+  for (const pushed of govFindings) findings.push(pushed);
   // Issue 194: the SLA engine was exported and tested, and never called.
   // SLA_BREACH_CRITICAL and SLA_AT_RISK therefore could not reach a scan
   // report. Same decisions the governance check just read; same default SLA
   // calculateMetrics uses. A configuration surface, if one is added, must
   // reach both.
-  findings.push(...checkSlaCompliance(triageDecisions));
+  for (const pushed of checkSlaCompliance(triageDecisions)) findings.push(pushed);
 
   // Pushed after checkTriageGovernance for the same reason as the history
   // finding above: the governance rules read the findings list, so a finding
@@ -876,7 +1027,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     const latePass = applyPolicy(findings, policy);
     findings = latePass.findings;
     suppressedCount += latePass.suppressedCount;
-    policySuppressed.push(...latePass.suppressedFindings);
+    for (const pushed of latePass.suppressedFindings) policySuppressed.push(pushed);
   }
 
   // v4.4: Apply baseline (if configured)
@@ -1160,7 +1311,9 @@ function checkFilePatterns(
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
-        severity: pattern.severity,
+        // Most rules have one severity; a guarded dynamic import depends on
+        // the guard in the same file (see patterns.ts).
+        severity: resolvePatternSeverity(pattern, content, hit),
         file: relativePath,
         line: hit.line,
         match: truncateMatch(hit.text),
@@ -1795,70 +1948,44 @@ function checkLockfileBadVersions(
   const lock = parseJsonObject(content);
   if (!lock) return;
 
+  const resolved: LockfileDependency[] = [];
+
   // lockfile v2+ uses "packages" key
-  const packages = lock.packages as Record<string, { version?: string }> | undefined;
+  const packages = lock.packages as Record<string, { version?: string; name?: string }> | undefined;
   if (packages) {
     for (const [pkgPath, entry] of Object.entries(packages)) {
       if (!pkgPath || !entry?.version) continue;
-      // Extract package name from path (e.g., "node_modules/axios" → "axios")
-      const name = pkgPath.replace(/^node_modules\//, "").replace(/^.*node_modules\//, "");
+      // Installed packages only: "" is the root and "packages/a" a workspace
+      // member, neither of which is a dependency.
+      if (!pkgPath.includes("node_modules/")) continue;
+      // The path names the install location; an npm alias ("x": "npm:evil@1")
+      // installs `evil` at node_modules/x and records the real package in
+      // `name`, which is what the feed describes.
+      const name = entry.name ?? pkgPath.replace(/^.*node_modules\//, "");
       if (!name) continue;
-      const finding = checkBadVersion(name, entry.version, "npm");
-      if (finding) {
-        findings.push({ ...finding, file: relativePath });
-        continue; // one finding per dependency; the blocklist is the more specific source
-      }
-      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
+      resolved.push({ name, version: entry.version });
     }
   }
 
-  // lockfile v1 uses "dependencies" key
-  const deps = lock.dependencies as Record<string, { version?: string }> | undefined;
-  if (deps && !packages) {
-    for (const [name, entry] of Object.entries(deps)) {
-      if (!entry?.version) continue;
-      const finding = checkBadVersion(name, entry.version, "npm");
-      if (finding) {
-        findings.push({ ...finding, file: relativePath });
-        continue;
-      }
-      pushPinnedFeedFinding(name, entry.version, relativePath, findings, feed);
+  // lockfile v1 uses "dependencies" key, nested for non-hoisted versions
+  type V1Entry = { version?: string; dependencies?: Record<string, V1Entry> };
+  const walkV1 = (deps: Record<string, V1Entry> | undefined): void => {
+    for (const [name, entry] of Object.entries(deps ?? {})) {
+      if (entry?.version) resolved.push({ name, version: entry.version });
+      walkV1(entry?.dependencies);
     }
+  };
+  if (!packages) walkV1(lock.dependencies as Record<string, V1Entry> | undefined);
+
+  // The hand-kept blocklist is the more specific source: one finding per
+  // dependency, and the feed matcher below skips what it covers.
+  for (const { name, version } of resolved) {
+    const finding = version ? checkBadVersion(name, version, "npm") : null;
+    if (finding) findings.push({ ...finding, file: relativePath });
   }
-}
-
-/**
- * One feed finding for a resolved lockfile dependency, or nothing.
- *
- * Bare-name feed entries are deliberately NOT reported from here. They already
- * fire through checkMaliciousDependencyNames on the package.json path, and a
- * lockfile lists every transitive dependency, so emitting them again would
- * double-report each one and multiply it across the tree.
- */
-function pushPinnedFeedFinding(
-  name: string,
-  version: string,
-  relativePath: string,
-  findings: Finding[],
-  feed: FeedIOC[],
-): void {
-  const ioc = matchBareNpmIOC(name, version, feed);
-  if (!ioc) return;
-  // A bare-name entry matches ANY version, so it would have hit regardless of
-  // the lockfile. Only an entry pinned to this exact version is new information.
-  if (ioc.value.lastIndexOf("@") <= 0) return;
-
-  const attrib = ioc.campaign ? ` (campaign: ${ioc.campaign})` : "";
-  findings.push({
-    rule: "LOCKFILE_MALICIOUS_VERSION",
-    description: `Lockfile resolves "${name}" to ${version}, a version listed in the threat feed as malicious${attrib}.`,
-    severity: "critical",
-    confidence: ioc.confidence ?? 0.95,
-    category: "supply-chain",
-    file: relativePath,
-    match: `${name}@${version}`,
-    recommendation: `Remove ${name}@${version}. Update the lockfile to a clean version and rotate any credentials the install may have had access to.`,
-  });
+  findings.push(
+    ...lockfileFeedFindings(resolved, relativePath, feed),
+  );
 }
 
 /**
@@ -1909,34 +2036,16 @@ function checkMaliciousDependencyNames(
   file: string,
   findings: Finding[],
   feed: FeedIOC[],
+  reported?: Set<string>,
 ): void {
   const parsed = parseJsonObject(content);
   if (!parsed) return;
-  const pkg = parsed as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
-  };
   // Collect the package that is actually INSTALLED for each entry, not the key.
   // An npm alias ("utils": "npm:chalk-tempalte@1.0.0") installs the target while
   // the key is arbitrary attacker-chosen text, so keying off Object.keys() alone
-  // let a known-malicious package scan completely clean.
-  const candidates = new Map<string, { name: string; version?: string; alias?: string }>();
-  for (const group of [
-    pkg.dependencies,
-    pkg.devDependencies,
-    pkg.optionalDependencies,
-    pkg.peerDependencies,
-  ]) {
-    for (const [key, spec] of Object.entries(group ?? {})) {
-      const alias = resolveNpmAlias(spec);
-      const candidate = alias
-        ? { name: alias.name, version: alias.version, alias: key }
-        : { name: key, version: undefined as string | undefined };
-      candidates.set(`${candidate.name}@${candidate.version ?? ""}`, candidate);
-    }
-  }
+  // let a known-malicious package scan completely clean. Shared with the
+  // lockfile matcher (lockfile-feed.ts) so the two agree on what is reported.
+  const candidates = manifestDependencyCandidates(parsed);
 
   for (const { name, version, alias } of candidates.values()) {
     const ioc = matchBareNpmIOC(name, version, feed);
@@ -1953,6 +2062,7 @@ function checkMaliciousDependencyNames(
         match: alias ?? name,
         recommendation: `Remove "${alias ?? name}" immediately and rotate any secrets exposed while it was installed.`,
       });
+      reported?.add(name);
     }
   }
 }

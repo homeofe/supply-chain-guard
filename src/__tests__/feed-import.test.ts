@@ -234,7 +234,7 @@ describe("mapAdvisory", () => {
       advisory({
         vulnerabilities: [
           {
-            package: { ecosystem: "maven", name: "org.example:thing" },
+            package: { ecosystem: "actions", name: "example/action" },
             vulnerable_version_range: ">= 0",
           },
         ],
@@ -329,6 +329,174 @@ describe("mapOsvMalwareRecord", () => {
       "pypi:scg-fixture-python@1.0.0",
       "pypi:scg-fixture-python@1.1.0",
     ]);
+  });
+
+  // GlassWorm-class records name a hijacked LEGITIMATE extension with an
+  // "introduced: 0" range plus the exact trojanized versions. Measured
+  // 2026-09-23: 13 of 13 such Open VSX IDs were live with a real version
+  // history, so the whole-package reading would block every clean release.
+  it("pins the listed versions of an extension instead of the whole-package range", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "VSCode:https://open-vsx.org", name: "scgpub.scg-theme" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+            versions: ["1.8.3", "1.8.4"],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual([
+      "openvsx:scgpub.scg-theme@1.8.3",
+      "openvsx:scgpub.scg-theme@1.8.4",
+    ]);
+  });
+
+  // The same record shape also encodes an attacker-created extension, which a
+  // version pin cannot catch in a recommendation (no version there). The
+  // registry decides: removed -> one whole-extension block; live or no
+  // definitive answer -> the pins stay.
+  describe("resolveExtensionBlockShape", () => {
+    const pinnedRecord = (ecosystem: string, name: string) =>
+      osvMalwareRecord({
+        affected: [{ package: { ecosystem, name }, ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }], versions: ["1.0.0", "1.0.1"] }],
+      });
+    const fakeRegistry = (removed: Set<string>, mode: "ok" | "throw" | "500" = "ok") =>
+      (async (url: string, init?: { body?: string }) => {
+        if (mode === "throw") throw new Error("network down");
+        if (mode === "500") return new Response("", { status: 500 });
+        if (url.startsWith("https://open-vsx.org/api/")) {
+          const id = url.slice("https://open-vsx.org/api/".length).split("/").map(decodeURIComponent).join(".");
+          return new Response("{}", { status: removed.has(`openvsx:${id}`) ? 404 : 200 });
+        }
+        const id = JSON.parse(init?.body ?? "{}").filters[0].criteria[0].value as string;
+        const extensions = removed.has(`vscode:${id}`) ? [] : [{ extensionName: id }];
+        return new Response(JSON.stringify({ results: [{ extensions }] }), { status: 200 });
+      }) as unknown as typeof fetch;
+
+    it("collapses the pins of an extension the registry removed, on both registries", async () => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = [
+        ...mapOsvMalwareRecord(pinnedRecord("VSCode", "scgpub.gone")).entries,
+        ...mapOsvMalwareRecord(pinnedRecord("VSCode:https://open-vsx.org", "scgpub.gone-ovsx")).entries,
+      ];
+      const { entries, collapsed } = await resolveExtensionBlockShape(candidates, {
+        fetchImpl: fakeRegistry(new Set(["vscode:scgpub.gone", "openvsx:scgpub.gone-ovsx"])),
+      });
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["vscode:scgpub.gone", "openvsx:scgpub.gone-ovsx"]);
+      expect(collapsed).toBe(2);
+      expect(entries.every((e: Record<string, unknown>) => !("_pinnedFromWholeRange" in e))).toBe(true);
+    });
+
+    it("keeps the pins of a live extension (a hijacked legitimate one)", async () => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = mapOsvMalwareRecord(pinnedRecord("VSCode", "scgpub.live")).entries;
+      const { entries } = await resolveExtensionBlockShape(candidates, { fetchImpl: fakeRegistry(new Set()) });
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["vscode:scgpub.live@1.0.0", "vscode:scgpub.live@1.0.1"]);
+    });
+
+    it.each(["throw", "500"] as const)("keeps the pins when the registry gives no definitive answer (%s)", async (mode) => {
+      const { mapOsvMalwareRecord, resolveExtensionBlockShape } = await load();
+      const candidates = mapOsvMalwareRecord(pinnedRecord("VSCode:https://open-vsx.org", "scgpub.unknown")).entries;
+      const { entries, collapsed } = await resolveExtensionBlockShape(candidates, { fetchImpl: fakeRegistry(new Set(["openvsx:scgpub.unknown"]), mode) });
+      expect(collapsed).toBe(0);
+      expect(entries.map((e: FeedIOC) => e.value)).toEqual(["openvsx:scgpub.unknown@1.0.0", "openvsx:scgpub.unknown@1.0.1"]);
+    });
+
+    it("never touches entries it did not pin (npm, explicit ranges)", async () => {
+      const { resolveExtensionBlockShape } = await load();
+      const npm = { type: "package", value: "scg-fixture-x@1.0.0", severity: "critical", confidence: 1, _ecosystemPrefix: "", _name: "scg-fixture-x" };
+      let calls = 0;
+      const { entries } = await resolveExtensionBlockShape([npm], { fetchImpl: (async () => { calls++; return new Response("", { status: 404 }); }) as unknown as typeof fetch });
+      expect(entries).toEqual([npm]);
+      expect(calls).toBe(0);
+    });
+  });
+
+  it("keeps a whole-package extension verdict when no versions are listed", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "VSCode", name: "scgpub.scg-stealer" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["vscode:scgpub.scg-stealer"]);
+  });
+
+  // The control: npm keeps the established whole-package reading even with a
+  // versions list, which is the normal OpenSSF shape for a typosquat.
+  it("leaves the npm whole-package reading unchanged when versions are listed", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "npm", name: "scg-fixture-typosquat" },
+            ranges: [{ type: "ECOSYSTEM", events: [{ introduced: "0" }] }],
+            versions: ["1.0.0"],
+          },
+        ],
+      }),
+    );
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["scg-fixture-typosquat"]);
+  });
+
+  it("maps a Maven record to a maven:group:artifact entry that the feed accepts", async () => {
+    const { mapOsvMalwareRecord, publicEntry } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [
+          {
+            package: { ecosystem: "Maven", name: "org.scgfixture:scg-artifact" },
+            versions: ["4.18.1"],
+          },
+        ],
+      }),
+    );
+    expect(result.skipped).toEqual([]);
+    expect(result.entries.map((entry: FeedIOC) => entry.value)).toEqual(["maven:org.scgfixture:scg-artifact@4.18.1"]);
+    expect(isValidFeedIOC(publicEntry(result.entries[0]))).toBe(true);
+  });
+
+  it.each([
+    ["SwiftURL", "github.com/scg-fixture/evil-pkg", "swift:github.com/scg-fixture/evil-pkg@1.0.0"],
+    ["Hex", "scg_fixture", "hex:scg_fixture@1.0.0"],
+    ["CRAN", "scgFixture", "cran:scgFixture@1.0.0"],
+    ["Pub", "scg_fixture", "pub:scg_fixture@1.0.0"],
+  ])("maps an OSV %s record to its feed prefix", async (ecosystem, name, value) => {
+    const { mapOsvMalwareRecord, publicEntry } = await load();
+    const result = mapOsvMalwareRecord(osvMalwareRecord({ affected: [{ package: { ecosystem, name }, versions: ["1.0.0"] }] }));
+    expect(result.skipped).toEqual([]);
+    expect(result.entries.map((e: FeedIOC) => e.value)).toEqual([value]);
+    expect(isValidFeedIOC(publicEntry(result.entries[0]))).toBe(true);
+  });
+
+  it.each([
+    ["swift", "github.com/scg-fixture/evil-pkg", "swift:github.com/scg-fixture/evil-pkg"],
+    ["erlang", "scg_fixture", "hex:scg_fixture"],
+    ["pub", "scg_fixture", "pub:scg_fixture"],
+  ])("maps a GitHub %s malware advisory to its feed prefix", async (ecosystem, name, value) => {
+    const { mapAdvisory } = await load();
+    const result = mapAdvisory(advisory({ vulnerabilities: [{ package: { ecosystem, name }, vulnerable_version_range: ">= 0" }] }));
+    expect(result.entries.map((e: FeedIOC) => e.value)).toEqual([value]);
+  });
+
+  it("still refuses a Maven name that could break out of a string literal", async () => {
+    const { mapOsvMalwareRecord } = await load();
+    const result = mapOsvMalwareRecord(
+      osvMalwareRecord({
+        affected: [{ package: { ecosystem: "Maven", name: 'org.scg:a"b' }, versions: ["1.0"] }],
+      }),
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped[0].reason).toBe("unsafe-package-name");
   });
 
   it("rejects an unexpanded bounded range instead of broadening it", async () => {
@@ -2238,7 +2406,8 @@ describe("ecosystem filter", () => {
 
   it("names the valid ecosystems in the rejection", async () => {
     const { parseArgs } = await load();
-    expect(() => parseArgs(["--ecosystem", "maven"])).toThrow(/nuget/);
+    expect(() => parseArgs(["--ecosystem", "actions"])).toThrow(/nuget/);
+    expect(() => parseArgs(["--ecosystem", "actions"])).toThrow(/maven/);
   });
 });
 

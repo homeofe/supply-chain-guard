@@ -10,6 +10,7 @@ import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
+import { stripHashComment } from "./text-lines.js";
 import {
   listOptionalDirectory,
   matchPatternInFile,
@@ -313,7 +314,8 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (cargoToml !== null) {
-    findings.push(...scanCargoContent(cargoToml, "Cargo.toml", "toml"));
+    for (const pushed of scanCargoContent(cargoToml, "Cargo.toml", "toml")) findings.push(pushed);
+    for (const pushed of scanCargoTomlDependencies(cargoToml, "Cargo.toml", feed)) findings.push(pushed);
   }
 
   // Scan build.rs
@@ -324,7 +326,7 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (buildRs !== null) {
-    findings.push(...scanCargoContent(buildRs, BUILD_RS, "build"));
+    for (const pushed of scanCargoContent(buildRs, BUILD_RS, "build")) findings.push(pushed);
   }
 
   // Scan Cargo.lock (resolved crate inventory) for malicious crates
@@ -335,7 +337,7 @@ export function scanCargoFiles(dir: string, feed?: FeedIOC[]): Finding[] {
     findings,
   );
   if (cargoLock !== null) {
-    findings.push(...scanCargoLockContent(cargoLock, CARGO_LOCK, feed));
+    for (const pushed of scanCargoLockContent(cargoLock, CARGO_LOCK, feed)) findings.push(pushed);
   }
 
   // Scan proc-macro crates (look in src/ for files with proc_macro attribute)
@@ -448,6 +450,64 @@ function truncate(value: string): string {
   return value.length > 120 ? value.substring(0, 120) + "..." : value;
 }
 
+/** A dependency table header: [dependencies], [dev-dependencies], [build-dependencies],
+ * [workspace.dependencies] and [target.'cfg(...)'.dependencies], or the
+ * single-dependency form [dependencies.name]. */
+const CARGO_DEP_TABLE = /^\[(?:workspace\.|target\.(?:'[^']*'|"[^"]*"|[^\]]+)\.)?(?:dev-|build-)?dependencies(?:\.("?)([A-Za-z0-9_-]+)\1)?\]\s*$/;
+
+/**
+ * Scan Cargo.toml dependency tables for crates matching cargo: feed IOCs.
+ * Versions there are requirements ("1.2" means ^1.2), not resolved versions,
+ * so only whole-crate entries can match; a version pin needs Cargo.lock. A
+ * renamed dependency (`alias = { package = "real" }`) is looked up by the
+ * crate that is actually fetched.
+ */
+export function scanCargoTomlDependencies(
+  content: string,
+  relativePath: string,
+  feed?: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  const iocFeed = feed ?? loadThreatIntel();
+  const seen = new Set<string>();
+  const report = (crate: string, line: number) => {
+    if (seen.has(crate)) return;
+    seen.add(crate);
+    const ioc = matchPackageIOC("cargo", crate, undefined, iocFeed);
+    if (ioc) findings.push({ ...maliciousCrateFinding(crate, undefined, ioc, relativePath), line });
+  };
+
+  let inDeps = false;
+  let singleDep: { key: string; line: number; pkg?: string } | null = null;
+  const flushSingle = () => {
+    if (singleDep) report(singleDep.pkg ?? singleDep.key, singleDep.line);
+    singleDep = null;
+  };
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = stripHashComment((lines[i] ?? "")).trim();
+    if (line.startsWith("[")) {
+      flushSingle();
+      const header = CARGO_DEP_TABLE.exec(line);
+      inDeps = header !== null && !header[2];
+      if (header?.[2]) singleDep = { key: header[2], line: i + 1 };
+      continue;
+    }
+    if (singleDep) {
+      const pkg = /^package\s*=\s*"([A-Za-z0-9_-]+)"/.exec(line);
+      if (pkg) singleDep.pkg = pkg[1];
+      continue;
+    }
+    if (!inDeps) continue;
+    const entry = /^("?)([A-Za-z0-9_-]+)\1\s*=\s*(.+)$/.exec(line);
+    if (!entry) continue;
+    const renamed = /\bpackage\s*=\s*"([A-Za-z0-9_-]+)"/.exec(entry[3]!);
+    report(renamed?.[1] ?? entry[2]!, i + 1);
+  }
+  flushSingle();
+  return findings;
+}
+
 /**
  * Scan content of a Cargo-related file.
  */
@@ -519,7 +579,7 @@ function scanProcMacros(
       findings,
     );
     if (content === null) continue;
-    findings.push(...scanCargoContent(content, relPath, "proc-macro"));
+    for (const pushed of scanCargoContent(content, relPath, "proc-macro")) findings.push(pushed);
   }
 }
 

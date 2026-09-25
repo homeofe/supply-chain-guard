@@ -174,7 +174,7 @@ export async function scanDependencyConfusion(
         checkDependency(name, depsToCheck[name] ?? "*"),
       ),
     );
-    results.push(...batchResults);
+    for (const pushed of batchResults) results.push(pushed);
   }
 
   // Generate findings from results
@@ -787,23 +787,42 @@ interface PypiPackageReference {
  * the line carries dependency intent that this scanner cannot evaluate safely.
  */
 function stripPerRequirementOptions(value: string): string {
-  let requirement = value.trim();
-  while (requirement !== "") {
-    const hash = /\s+--hash=\S+\s*$/.exec(requirement);
-    if (hash !== null) {
-      requirement = requirement.slice(0, hash.index).trimEnd();
+  // Trailing `--hash=...` and `--config-settings[= ]k=v` options, removed one
+  // token at a time from the end with an index. The regexes this replaces
+  // (`\s+--hash=\S+\s*$`) restarted at every whitespace run, so a long run in
+  // the middle of a line was quadratic.
+  const s = value.trim();
+  const isSpace = (ch: string | undefined) => ch !== undefined && /\s/.test(ch);
+  const tokenStart = (end: number) => {
+    let i = end;
+    while (i > 0 && !isSpace(s[i - 1])) i--;
+    return i;
+  };
+  const skipSpace = (end: number) => {
+    let i = end;
+    while (i > 0 && isSpace(s[i - 1])) i--;
+    return i;
+  };
+  let end = s.length;
+  while (end > 0) {
+    const start = tokenStart(end);
+    if (start === 0) break;
+    const token = s.slice(start, end);
+    if (/^--hash=\S+$/.test(token) || /^--config-settings=[^\s=]+=\S*$/.test(token)) {
+      end = skipSpace(start);
       continue;
     }
-
-    const configSetting =
-      /\s+--config-settings(?:=|\s+)([^\s=]+=[^\s]*)\s*$/.exec(requirement);
-    if (configSetting !== null) {
-      requirement = requirement.slice(0, configSetting.index).trimEnd();
-      continue;
+    if (/^[^\s=]+=\S*$/.test(token)) {
+      const before = skipSpace(start);
+      const previous = tokenStart(before);
+      if (previous > 0 && s.slice(previous, before) === "--config-settings") {
+        end = skipSpace(previous);
+        continue;
+      }
     }
     break;
   }
-  return requirement;
+  return s.slice(0, end);
 }
 
 function parseRequirementName(
@@ -961,6 +980,43 @@ function looksLikeDependencySource(line: string): boolean {
   return /^(?:https?|git\+|hg\+|svn\+|bzr\+|file:)/i.test(line) ||
     /^(?:\.{1,2}[\\/]|[\\/]|[A-Za-z]:[\\/])/.test(line) ||
     /\.(?:whl|zip|tgz|tar\.gz|tar\.bz2)(?:$|[?#])/i.test(line);
+}
+
+/**
+ * Requirement names with the exact version where the line pins one (`==`),
+ * for threat-feed matching (python-lockfile-scanner.ts). Built on the same
+ * logical-line, comment, option and name helpers as parseRequirementsTxt, so
+ * both agree on which lines are dependencies. A range or a multi-clause
+ * specifier leaves the version unknown; includes and script sources are
+ * skipped because they name no package here.
+ */
+export function parseRequirementPins(content: string): { name: string; version: string | undefined }[] {
+  const out: { name: string; version: string | undefined }[] = [];
+  for (const rawLine of buildLogicalRequirementLines(content).lines) {
+    const line = stripRequirementComment(rawLine).trim();
+    if (line === "") continue;
+    if (optionArgument(line, "-r", "--requirement") !== null) continue;
+    if (optionArgument(line, "-c", "--constraint") !== null) continue;
+    if (line.startsWith("--requirements-from-script")) continue;
+    const editable = optionArgument(line, "-e", "--editable");
+    if (editable !== null) {
+      const name = parseRequirementName(editable, true) ?? parseLegacyEggName(editable);
+      if (name !== null) out.push({ name, version: undefined });
+      continue;
+    }
+    if (isRecognizedNonDependencyOption(line)) continue;
+    const name = parseRequirementName(line, true) ?? (looksLikeDependencySource(line) ? parseLegacyEggName(line) : null);
+    if (name === null) continue;
+    const spec = stripPerRequirementOptions(line).split(";")[0]!;
+    const exact = /^[^=<>!~@\s]+(?:\s*\[[^\]]*\])?\s*===?\s*([A-Za-z0-9][A-Za-z0-9.+!_-]*)\s*$/.exec(spec.trim());
+    out.push({ name, version: exact?.[1] });
+  }
+  return out;
+}
+
+/** Names declared by a pyproject.toml, from the same parser the confusion check uses. */
+export function pyprojectDependencyNames(content: string): string[] {
+  return parsePyprojectToml(content).names;
 }
 
 /**
@@ -1641,7 +1697,7 @@ function parseInlineProjectTable(value: string): InlineProjectResult {
       if (sawOptionalDependencies) complete = false;
       sawOptionalDependencies = true;
       const parsedTable = parseInlineDependencyTable(value.slice(index), "optional", true);
-      optionalGroups.push(...parsedTable.groups);
+      for (const pushed of parsedTable.groups) optionalGroups.push(pushed);
       complete = complete && parsedTable.complete;
       if (!parsedTable.complete) return result(false);
       index += parsedTable.endIndex;
@@ -2004,7 +2060,7 @@ function parsePyprojectToml(content: string): ParsedDependencyNames {
     }
     if (isPoetryDependencyPath(fullKey)) {
       const parsedPoetry = parseInlinePoetryDependencies(assignment.value);
-      names.push(...parsedPoetry.names);
+      for (const pushed of parsedPoetry.names) names.push(pushed);
       unresolvedToolDependencies = unresolvedToolDependencies || !parsedPoetry.complete;
       continue;
     }
@@ -2029,7 +2085,7 @@ function parsePyprojectToml(content: string): ParsedDependencyNames {
     if (sameTomlPath(fullKey, ["project"])) {
       const parsedInline = parseInlineProjectTable(assignment.value);
       complete = complete && parsedInline.complete;
-      names.push(...parsedInline.names);
+      for (const pushed of parsedInline.names) names.push(pushed);
       dynamicRequiredDependencies = dynamicRequiredDependencies ||
         parsedInline.dynamicRequiredDependencies;
       dynamicOptionalDependencies = dynamicOptionalDependencies ||
@@ -2276,8 +2332,18 @@ function recordMalformedManifest(
 /**
  * Scan a project directory for PyPI dependency confusion risks.
  * Reads requirements.txt and pyproject.toml.
+ *
+ * `network: false` keeps every offline check (AI-hallucinated names, manifest
+ * coverage records) and skips the PyPI metadata lookups, which send each
+ * dependency name to pypi.org. The directory `scan` passes false unless
+ * --check-registry is given, because it documents zero network requests; the
+ * `confusion` command, whose purpose is that lookup, keeps the default.
  */
-export async function scanPypiDependencyConfusion(projectDir: string): Promise<Finding[]> {
+export async function scanPypiDependencyConfusion(
+  projectDir: string,
+  options: { network?: boolean } = {},
+): Promise<Finding[]> {
+  const network = options.network !== false;
   const findings: Finding[] = [];
   const packageReferences: PypiPackageReference[] = [];
 
@@ -2345,6 +2411,9 @@ export async function scanPypiDependencyConfusion(projectDir: string): Promise<F
       });
       continue;
     }
+
+    // Everything below asks pypi.org about this name.
+    if (!network) continue;
 
     // Internal name pattern
     const looksInternal = INTERNAL_NAME_PATTERNS.some((p) => p.test(normalizedName));

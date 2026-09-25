@@ -753,7 +753,11 @@ export interface ScanOptions {
   sinceCommit?: string;
   /** Skip writing risk history to .scg-history/ (--no-history) */
   noHistory?: boolean;
-  /** Compare local package.json version against the npm registry 'latest' (network, opt-in) (v5.9) */
+  /**
+   * Opt in to public registry queries (network): npm 'latest' version drift
+   * (v5.9) and PyPI metadata lookups for Python dependency confusion. Off by
+   * default, so a local scan makes no network requests.
+   */
   checkRegistry?: boolean;
   /** Use bundled feed only without merging refreshed local cache (--hermetic) */
   hermetic?: boolean;

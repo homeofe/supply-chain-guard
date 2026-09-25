@@ -350,8 +350,8 @@ export function checkDependencies(
   const deps = pkg.dependencies;
   const devDeps = pkg.devDependencies;
 
-  if (deps) allDeps.push(...Object.keys(deps));
-  if (devDeps) allDeps.push(...Object.keys(devDeps));
+  if (deps) for (const name of Object.keys(deps)) allDeps.push(name);
+  if (devDeps) for (const name of Object.keys(devDeps)) allDeps.push(name);
 
   for (const dep of allDeps) {
     const depIoc = matchBareNpmIOC(dep, undefined, feed);

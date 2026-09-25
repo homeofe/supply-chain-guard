@@ -182,9 +182,20 @@ describe("a tree this scanner does not read is not a zero-coverage scan", () => 
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "scg-nonjs-"));
     fs.mkdirSync(path.join(dir, "src"), { recursive: true });
     fs.writeFileSync(path.join(dir, "src", "App.java"), "public class App {}");
-    fs.writeFileSync(path.join(dir, "pom.xml"), "<project></project>");
+    // An Ant build file: still a file this scanner does not read. The fixture
+    // used pom.xml until Maven matching made pom.xml a scanned file; see the
+    // Maven test below for that side.
+    fs.writeFileSync(path.join(dir, "build.xml"), "<project></project>");
   });
   afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("counts a Maven build file as scanned once the scanner reads it", async () => {
+    fs.writeFileSync(path.join(dir, "pom.xml"), "<project></project>");
+    const report = await scan({ target: dir, format: "json", noHistory: true });
+    expect(report.summary.filesScanned).toBe(1);
+    expect(report.findings.map((f) => f.rule)).not.toContain("SCAN_ZERO_COVERAGE");
+    expect(getReportExitCode(report)).toBe(0);
+  });
 
   it("does not report a coverage gap, and does not fail the run", async () => {
     const report = await scan({ target: dir, format: "json", noHistory: true });

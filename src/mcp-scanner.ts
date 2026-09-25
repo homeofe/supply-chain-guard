@@ -76,7 +76,7 @@ export function scanMcpConfigs(dir: string, feed?: FeedIOC[]): Finding[] {
     if (!fs.existsSync(fullPath)) continue;
     try {
       const content = fs.readFileSync(fullPath, "utf-8");
-      findings.push(...scanMcpConfigContent(content, rel, iocFeed));
+      for (const pushed of scanMcpConfigContent(content, rel, iocFeed)) findings.push(pushed);
     } catch { /* skip unreadable file */ }
   }
 
@@ -377,7 +377,7 @@ function collectInstructionStrings(
     if (typeof value === "string" && /^(description|instructions?|prompt|systemPrompt)$/i.test(key)) {
       out.push({ key, value });
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      out.push(...collectInstructionStrings(value as Record<string, unknown>, depth + 1));
+      for (const pushed of collectInstructionStrings(value as Record<string, unknown>, depth + 1)) out.push(pushed);
     }
   }
   return out;
@@ -422,7 +422,7 @@ function truncate(value: string): string {
  * preserved. MCP configs are frequently hand-edited and comment-annotated
  * (VS Code parses them as JSONC).
  */
-function stripJsonc(text: string): string {
+export function stripJsonc(text: string): string {
   // Pass 1: remove // line comments and /* */ block comments
   let noComments = "";
   let inString = false;

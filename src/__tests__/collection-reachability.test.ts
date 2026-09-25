@@ -51,6 +51,21 @@ import {
   KNOWN_BAD_PYPI_VERSIONS,
 } from "../ioc-blocklist.js";
 import { getBundledFeed, matchPackageIOC, checkThreatIntel } from "../threat-intel.js";
+
+/**
+ * The feed value grammar, written out independently of the production
+ * splitter on purpose: a guard that imports the code it guards agrees with
+ * that code's bugs. name[@version], split at the last "@", except Firefox
+ * add-on ids, which may be email-shaped (name@domain): there the tail is a
+ * version only when it starts with a digit.
+ */
+function splitValue(eco: string, rest: string): { name: string; version: string | undefined } {
+  const at = rest.lastIndexOf("@");
+  if (at <= 0) return { name: rest, version: undefined };
+  const tail = rest.substring(at + 1);
+  if (eco === "firefox" && !/^[0-9]/.test(tail)) return { name: rest, version: undefined };
+  return { name: rest.substring(0, at), version: tail };
+}
 import { matchBareNpmIOC } from "../install-guard.js";
 
 const SRC_DIR = fileURLToPath(new URL("..", import.meta.url));
@@ -129,7 +144,7 @@ describe("collection reachability", () => {
     // MCP ioc_lookup enum. Kept as a literal so that widening it is a conscious
     // act reviewed alongside the code that makes the ecosystem reachable.
     const REACHABLE = new Set([
-      "npm", "pypi", "ruby", "composer", "nuget", "cargo", "go", "jenkins",
+      "npm", "pypi", "ruby", "composer", "nuget", "cargo", "go", "jenkins", "terraform", "vscode", "openvsx", "maven", "actions", "pub", "docker", "tfmodule", "swift", "cocoapods", "hex", "cran", "conan", "helm", "ansible", "homebrew", "chrome", "edge", "firefox", "jetbrains",
     ]);
 
     const unreachable: string[] = [];
@@ -140,9 +155,11 @@ describe("collection reachability", () => {
       if (colon > 0) {
         const eco = ioc.value.substring(0, colon).toLowerCase();
         const rest = ioc.value.substring(colon + 1);
-        const at = rest.lastIndexOf("@");
-        const name = at > 0 ? rest.substring(0, at) : rest;
-        const version = at > 0 ? rest.substring(at + 1) : undefined;
+        // A plain split at the last "@" read email-shaped Firefox ids as
+        // name@version, agreed with the matcher's identical mistake, and so
+        // never reported the 28 entries that could not fire. splitValue is
+        // written out independently of the matcher for the same reason.
+        const { name, version } = splitValue(eco, rest);
         if (!REACHABLE.has(eco)) {
           unreachable.push(`${ioc.value} (no caller passes ecosystem "${eco}")`);
           continue;

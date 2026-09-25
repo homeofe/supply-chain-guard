@@ -28,6 +28,7 @@ import {
   MAX_FILE_SIZE,
   makeOversizedSkipFinding,
   CHAINDROP_PERSISTENCE_ARTEFACT_REGEX,
+  ASSET_EXEC_PATTERN,
 } from "./patterns.js";
 import {
   listDiscoveredDirectory,
@@ -37,6 +38,7 @@ import {
   readOptionalUtf8File,
   recordUnreadablePath,
 } from "./pattern-scanner.js";
+import { stripJsonc } from "./mcp-scanner.js";
 
 // ---------------------------------------------------------------------------
 // Target file discovery
@@ -179,7 +181,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
           options,
         );
     if (content === null) continue;
-    findings.push(...scanSkillContent(content, target.relativePath));
+    for (const pushed of scanSkillContent(content, target.relativePath)) findings.push(pushed);
   }
 
   for (const relPath of [".claude/settings.json", ".claude/settings.local.json"]) {
@@ -195,7 +197,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
       },
     );
     if (content === null) continue;
-    findings.push(...scanAgentSettingsContent(content, relPath));
+    for (const pushed of scanAgentSettingsContent(content, relPath)) findings.push(pushed);
   }
 
   // .vscode/tasks.json. Read here rather than in the core walk so it goes
@@ -215,7 +217,7 @@ export function scanAgentSkillFiles(dir: string): Finding[] {
       },
     );
     if (content === null) continue;
-    findings.push(...scanEditorTasksContent(content, relPath));
+    for (const pushed of scanEditorTasksContent(content, relPath)) findings.push(pushed);
   }
 
   return findings;
@@ -364,6 +366,10 @@ export function scanSkillContent(content: string, relativePath: string): Finding
 /**
  * Scan a .claude/settings.json / settings.local.json for dangerous hook
  * commands. Malformed JSON is ignored (no crash, no findings).
+ *
+ * Parsed leniently (comments, trailing commas, BOM), like the editor files: a
+ * lenient parse only ever ADDS what a strict one would see, while a strict one
+ * turned a single trailing comma into "no hooks at all".
  */
 export function scanAgentSettingsContent(
   content: string,
@@ -371,12 +377,7 @@ export function scanAgentSettingsContent(
 ): Finding[] {
   const findings: Finding[] = [];
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return findings;
-  }
+  const parsed = parseJsoncObject(content);
   if (parsed === null || typeof parsed !== "object") return findings;
 
   const hooks = (parsed as Record<string, unknown>).hooks;
@@ -777,22 +778,142 @@ function collectTaskCommandLines(
       typeof runOptions === "object" &&
       (runOptions as Record<string, unknown>).runOn === "folderOpen";
 
+    // A platform override is MERGED into the task by VS Code: its command or
+    // args replace the base ones, the rest is inherited. Judging the override
+    // on its own missed `command: "node"` in the base with the asset in
+    // `windows.args`.
     const shapes: Record<string, unknown>[] = [t];
     for (const platform of ["windows", "linux", "osx"]) {
       const override = t[platform];
       if (override !== null && typeof override === "object") {
-        shapes.push(override as Record<string, unknown>);
+        shapes.push({ ...t, ...(override as Record<string, unknown>) });
       }
     }
 
+    // `command` may also be an object: { value, quoting }.
+    const renderCommand = (command: unknown): string => {
+      if (typeof command === "string") return command;
+      if (command !== null && typeof command === "object") {
+        const v = (command as Record<string, unknown>).value;
+        if (typeof v === "string") return v;
+      }
+      return "";
+    };
+
+    const seen = new Set<string>();
     for (const shape of shapes) {
-      const command = typeof shape.command === "string" ? shape.command : "";
+      const command = renderCommand(shape.command);
       const args = renderArgs(shape.args);
       const line = [command, ...args].filter(Boolean).join(" ").trim();
-      if (line) out.push({ line, autoRun });
+      if (line && !seen.has(line)) {
+        seen.add(line);
+        out.push({ line, autoRun });
+      }
     }
   }
   return out;
+}
+
+/** See ASSET_EXEC_PATTERN (patterns.ts): the one definition every carrier uses. */
+const ASSET_EXEC_REGEX = new RegExp(ASSET_EXEC_PATTERN, "i");
+
+/** The two auto-run command carriers judged here, and how each is worded. */
+interface CommandCarrier {
+  /** Rule prefix: EDITOR_TASK or DEVCONTAINER. */
+  prefix: "EDITOR_TASK" | "DEVCONTAINER";
+  /** Subject of every description sentence. */
+  subject: string;
+  /** Appended when the command runs with no developer action. */
+  autoNote: string;
+  /** Appended when it runs only when invoked. */
+  manualNote: string;
+  recommendation: string;
+}
+
+const EDITOR_TASK_CARRIER: CommandCarrier = {
+  prefix: "EDITOR_TASK",
+  subject: "Editor task",
+  autoNote:
+    " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action.",
+  manualNote: " The task runs when invoked.",
+  recommendation:
+    "Remove the task or its command. Editor tasks execute with the developer's full privileges.",
+};
+
+const DEVCONTAINER_CARRIER: CommandCarrier = {
+  prefix: "DEVCONTAINER",
+  subject: "Dev container lifecycle command",
+  autoNote:
+    " Lifecycle commands run automatically when the container is created, started or attached; initializeCommand runs on the HOST before the container exists.",
+  manualNote: "",
+  recommendation:
+    "Do not open this repository in a dev container until the command is removed. Lifecycle commands run without a prompt, and initializeCommand runs on the host.",
+};
+
+/**
+ * Judge one effective command line from an auto-run carrier. Deliberately the
+ * command vocabulary that already guards agent hooks, plus the asset-exec
+ * disguise, so a tasks.json and a devcontainer.json are held to one standard.
+ * `autoRun` only ESCALATES a command already judged dangerous.
+ */
+function commandLineFinding(
+  line: string,
+  autoRun: boolean,
+  relativePath: string,
+  carrier: CommandCarrier,
+): Finding | null {
+  const note = autoRun ? carrier.autoNote : carrier.manualNote;
+  const severity = autoRun ? "critical" : "high";
+
+  if (ASSET_EXEC_REGEX.test(line)) {
+    return {
+      rule: `${carrier.prefix}_EXECUTES_ASSET`,
+      description:
+        `${carrier.subject} runs an interpreter on a file named as a font, image or media asset, the disguise used by the Contagious Interview "Fake Font" loader.` +
+        note,
+      severity,
+      file: relativePath,
+      match: truncate(line),
+      confidence: 0.95,
+      category: "malware",
+      recommendation:
+        `${carrier.recommendation} Inspect the referenced file: an asset that an interpreter executes is code.`,
+    };
+  }
+
+  const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
+  const dangerous =
+    downloadExec ||
+    HOOK_EVAL_REGEX.test(line) ||
+    HOOK_BASE64_REGEX.test(line) ||
+    HOOK_SHELL_RC_WRITE_REGEX.test(line);
+  if (!dangerous) return null;
+
+  return {
+    rule: downloadExec
+      ? `${carrier.prefix}_DOWNLOAD_EXEC`
+      : `${carrier.prefix}_DANGEROUS_COMMAND`,
+    description:
+      (downloadExec
+        ? `${carrier.subject} downloads and executes remote code.`
+        : `${carrier.subject} contains a dangerous command (eval, base64 decode, download-exec pipe, or shell rc file modification).`) +
+      note,
+    severity,
+    file: relativePath,
+    match: truncate(line),
+    confidence: 0.9,
+    category: "malware",
+    recommendation: carrier.recommendation,
+  };
+}
+
+/** Parse a VS Code-family file the way VS Code does: JSONC, optional BOM. */
+function parseJsoncObject(content: string): unknown {
+  try {
+    return JSON.parse(stripJsonc(content.replace(/^\uFEFF/, "")));
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -807,56 +928,106 @@ function collectTaskCommandLines(
  * `runOn: folderOpen` only ESCALATES a command already judged dangerous. On its
  * own it is an ordinary and widely used VS Code feature, so it never produces a
  * finding here. Malformed JSON is ignored (no crash, no findings).
+ *
+ * VS Code reads tasks.json as JSONC, so comments and trailing commas are
+ * stripped first. Strict JSON.parse threw on the one trailing comma the real
+ * Fake Font loader carries, and every task rule then saw nothing.
  */
 export function scanEditorTasksContent(
   content: string,
   relativePath: string,
 ): Finding[] {
   const findings: Finding[] = [];
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return findings;
+  for (const { line, autoRun } of collectTaskCommandLines(parseJsoncObject(content))) {
+    const finding = commandLineFinding(line, autoRun, relativePath, EDITOR_TASK_CARRIER);
+    if (finding) findings.push(finding);
   }
+  return findings;
+}
 
-  for (const { line, autoRun } of collectTaskCommandLines(parsed)) {
-    const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
-    const dangerous =
-      downloadExec ||
-      HOOK_EVAL_REGEX.test(line) ||
-      HOOK_BASE64_REGEX.test(line) ||
-      HOOK_SHELL_RC_WRITE_REGEX.test(line);
-    if (!dangerous) continue;
+/** True for a VS Code multi-root workspace file, at any depth. */
+export function isCodeWorkspaceFile(relativePath: string): boolean {
+  return relativePath.toLowerCase().endsWith(".code-workspace");
+}
 
-    // A task normally runs only when a developer invokes it. runOn folderOpen
-    // removes that step, which is the difference between a bad build step and
-    // an autostart mechanism, so it is the only thing that reaches critical.
-    const severity = autoRun ? "critical" : "high";
-    const autoNote = autoRun
-      ? " The task is configured with runOn folderOpen, so it executes automatically when the folder is opened, with no developer action."
-      : " The task runs when invoked.";
-
-    findings.push({
-      rule: downloadExec
-        ? "EDITOR_TASK_DOWNLOAD_EXEC"
-        : "EDITOR_TASK_DANGEROUS_COMMAND",
-      description:
-        (downloadExec
-          ? "Editor task downloads and executes remote code."
-          : "Editor task contains a dangerous command (eval, base64 decode, download-exec pipe, or shell rc file modification).") +
-        autoNote,
-      severity,
-      file: relativePath,
-      match: truncate(line),
-      confidence: 0.9,
-      category: "malware",
-      recommendation:
-        "Remove the task or its command. Editor tasks execute with the developer's full privileges.",
-    });
+/**
+ * Scan a *.code-workspace file. Its `tasks` block is a tasks.json document
+ * ({ version, tasks: [...] }) and auto-runs on folderOpen exactly like
+ * .vscode/tasks.json when the workspace is opened.
+ */
+export function scanCodeWorkspaceContent(
+  content: string,
+  relativePath: string,
+): Finding[] {
+  const doc = parseJsoncObject(content);
+  if (doc === null || typeof doc !== "object") return [];
+  const findings: Finding[] = [];
+  for (const { line, autoRun } of collectTaskCommandLines((doc as Record<string, unknown>).tasks)) {
+    const finding = commandLineFinding(line, autoRun, relativePath, EDITOR_TASK_CARRIER);
+    if (finding) findings.push(finding);
   }
+  return findings;
+}
 
+/** devcontainer.json lifecycle keys; every one runs without a prompt. */
+const DEVCONTAINER_LIFECYCLE_KEYS = [
+  "initializeCommand",
+  "onCreateCommand",
+  "updateContentCommand",
+  "postCreateCommand",
+  "postStartCommand",
+  "postAttachCommand",
+] as const;
+
+/**
+ * The effective command lines of a devcontainer.json. A lifecycle command is a
+ * string (shell form), an array (exec form, joined back into the line that
+ * runs) or an object of named commands run in parallel, each itself a string
+ * or an array.
+ */
+function collectDevcontainerCommandLines(parsed: unknown): string[] {
+  if (parsed === null || typeof parsed !== "object") return [];
+  const doc = parsed as Record<string, unknown>;
+  const lines: string[] = [];
+  const render = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (value.trim()) lines.push(value.trim());
+    } else if (Array.isArray(value)) {
+      const line = value.filter((a): a is string => typeof a === "string").join(" ").trim();
+      if (line) lines.push(line);
+    }
+  };
+  for (const key of DEVCONTAINER_LIFECYCLE_KEYS) {
+    const value = doc[key];
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      for (const named of Object.values(value as Record<string, unknown>)) render(named);
+    } else {
+      render(value);
+    }
+  }
+  return lines;
+}
+
+/** True for a dev container definition, at any depth. */
+export function isDevcontainerFile(relativePath: string): boolean {
+  const base = relativePath.split("/").pop() ?? "";
+  return base === "devcontainer.json" || base === ".devcontainer.json";
+}
+
+/**
+ * Scan a devcontainer.json's lifecycle commands with the editor-task battery.
+ * They are the same capability as a folderOpen task, reached through "Reopen
+ * in Container" or a Codespace instead, so every one is treated as auto-run.
+ */
+export function scanDevcontainerCommandsContent(
+  content: string,
+  relativePath: string,
+): Finding[] {
+  const findings: Finding[] = [];
+  for (const line of collectDevcontainerCommandLines(parseJsoncObject(content))) {
+    const finding = commandLineFinding(line, true, relativePath, DEVCONTAINER_CARRIER);
+    if (finding) findings.push(finding);
+  }
   return findings;
 }
 

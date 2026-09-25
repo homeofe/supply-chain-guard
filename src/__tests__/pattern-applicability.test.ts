@@ -379,3 +379,17 @@ describe("entry-point guard parity", () => {
     ).toBe(true);
   });
 });
+
+describe("test-path exemptions chosen by the scanned package", () => {
+  it("still reports eval(atob(...)) in a pytest-prefixed file name", async () => {
+    const reports: Record<string, string[]> = {};
+    for (const name of ["backdoor.py", "test_backdoor.py"]) {
+      const dir = makeTempDir("scg-pytest-prefix-");
+      fs.writeFileSync(path.join(dir, name), "payload = get()\neval(atob(payload))\n", "utf-8");
+      const report = await scan({ target: dir, format: "json", noHistory: true });
+      reports[name] = report.findings.filter((f) => f.rule === "EVAL_ATOB").map((f) => f.severity);
+    }
+    expect(reports["backdoor.py"]!.length).toBeGreaterThan(0);
+    expect(reports["test_backdoor.py"]).toEqual(reports["backdoor.py"]);
+  });
+});

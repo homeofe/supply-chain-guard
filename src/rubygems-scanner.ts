@@ -51,10 +51,10 @@ export function scanRubyGemsFiles(dir: string, feed?: FeedIOC[]): Finding[] {
 
   const iocFeed = feed ?? loadThreatIntel();
   if (gemfile !== null) {
-    findings.push(...scanGemfileContent(gemfile, GEMFILE, iocFeed));
+    for (const pushed of scanGemfileContent(gemfile, GEMFILE, iocFeed)) findings.push(pushed);
   }
   if (lockfile !== null) {
-    findings.push(...scanGemfileLockContent(lockfile, GEMFILE_LOCK, iocFeed));
+    for (const pushed of scanGemfileLockContent(lockfile, GEMFILE_LOCK, iocFeed)) findings.push(pushed);
   }
 
   return findings;

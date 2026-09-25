@@ -9,6 +9,163 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- Terraform / OpenTofu provider matching (`src/terraform-scanner.ts`, rule
+  `TERRAFORM_MALICIOUS_PROVIDER`). A directory scan now resolves the providers
+  a configuration pulls in, from `required_providers` sources in `.tf` and
+  `.tf.json` files and from the `provider` blocks of `.terraform.lock.hcl`
+  (which also carry the exact locked version), and matches them against a new
+  `terraform:<namespace>/<type>` feed ecosystem. Only public-registry addresses
+  resolve (no host, `registry[.]terraform[.]io` or `registry[.]opentofu[.]org`),
+  case-insensitively as the registry does; a private registry host and every
+  module source form (paths, URLs, getters, `ns/name/system` addresses) are
+  never read as a provider. The MCP `ioc_lookup` tool accepts `terraform` as
+  an ecosystem.
+- The two Graphalgo Terraform providers, `gocommunity-io/dockerd` and the
+  `kreuzwenker/docker` typosquat of `kreuzwerker/docker`, as bundled
+  `terraform:` entries. They were previously covered only through
+  `github.com/<account>` references.
+- VS Code / Open VSX extension identity as threat intelligence
+  (`src/extension-identity.ts`, rule `VSCODE_MALICIOUS_EXTENSION`), with two
+  feed ecosystems, `vscode:` (Marketplace) and `openvsx:` (Open VSX), because
+  the same `publisher.name` can belong to different people on each registry.
+  A directory scan now matches the extensions a workspace recommends
+  (`.vscode/extensions.json`), a dev container installs (`devcontainer.json`,
+  including `id@version` pins) and an installed or packaged extension
+  manifest declares; `scg vscode` matches the scanned extension's own
+  identity against the registry it was resolved from. The importer pulls the
+  OSV `VSCode` export, including Open VSX records, and 51 extension entries
+  were imported (1 to the bundle, 50 to the catalog). The MCP `ioc_lookup`
+  tool accepts `vscode` and `openvsx`.
+- Maven / Gradle artifact matching (`src/maven-scanner.ts`, rule
+  `MAVEN_MALICIOUS_PACKAGE`) against a new `maven:<groupId>:<artifactId>`
+  feed ecosystem. A directory scan reads `pom.xml` (dependencies, and build
+  plugins, extensions and the parent, since those execute during the build;
+  `${property}` versions resolve from the pom's own properties; exclusions are
+  never reported), `gradle.lockfile` with exact versions, Groovy and Kotlin
+  DSL build scripts, and `gradle/libs.versions.toml`. The importer now takes
+  Maven advisories from both the GitHub Advisory Database and OSV instead of
+  skipping them. The Shai-Hulud 2.0 worm release mirrored to Maven Central
+  through mvnpm (`org.mvnpm:posthog-node` 4.18.1) is bundled as a curated
+  pin; `io.github.leetcrunch:scribejava-core`, a removed look-alike of
+  `com.github.scribejava:scribejava-core`, is in the catalog. The MCP
+  `ioc_lookup` tool accepts `maven`.
+- Compromised GitHub Action commits are now threat-feed data (`actions:`
+  ecosystem, `owner/repo@<sha>`) instead of a hardcoded list, and the set is
+  real: 117 imposter commits from four incidents, each verified against the
+  GitHub API (the commit exists, is parented on the clean release of the day,
+  and is not on the default branch). They are the TeamPCP Trivy compromise of
+  March 2026 (75 `aquasecurity/trivy-action` and 7 `aquasecurity/setup-trivy`
+  commits), the TeamPCP KICS Action compromise (33
+  `Checkmarx/kics-github-action` commits), `reviewdog/action-setup` and
+  `tj-actions/changed-files` (March 2025). A workflow is matched by commit SHA
+  whatever repository name it uses, since a commit pushed from a fork is
+  reachable across the fork network; tags are never indicators, because each
+  incident ended with them deleted or restored. The MCP `ioc_lookup` tool
+  accepts `actions`.
+- Dart / Flutter (pub) package matching (`src/pub-scanner.ts`, rule
+  `PUB_MALICIOUS_PACKAGE`) against a new `pub:` feed ecosystem. `pubspec.lock`
+  is read for pub.dev-hosted packages with their exact versions, keyed by
+  `description.name` (what pub downloads) rather than the map key, which a
+  hostile lockfile controls; `pubspec.yaml` dependencies, dev dependencies and
+  overrides are read with only exact pins counted as versions. Git, path, sdk
+  and privately hosted packages are never looked up. The importer maps the
+  GitHub `pub` ecosystem and the OSV `Pub` export. First entries: the
+  `universal_file_viewer` XCSSET compromise of September 2026, the first
+  compromised pub.dev package on record, pinned to the two releases the
+  maintainer retracted (0.1.5, 0.1.6), with their archive hashes and two
+  single-source C2 hosts (`5yotmxcc54l9xda[.]ru`, `ejntin6hkjt7gj2[.]ru`).
+  The MCP `ioc_lookup` tool accepts `pub`.
+- Known-malicious container images (`src/container-image.ts`, rule
+  `DOCKER_MALICIOUS_IMAGE`) against a new `docker:` feed ecosystem
+  (`name@tag` or `name@sha256:<digest>`). Images are read from Dockerfile
+  `FROM` and `COPY --from=` (build-stage names skipped) and from YAML `image:`
+  values and `docker://` steps, so Compose files, Kubernetes manifests and
+  workflow containers are covered. A digest matches under any repository
+  name, since it names content; a tag matches only its own repository, and
+  the feed carries tags only where the tag never held clean content. Names
+  resolve as Docker does (`docker.io/` dropped, bare names under `library/`,
+  other registries kept distinct). First entries: the TeamPCP Trivy images
+  (tags 0.69.4 to 0.69.6 and all 14 digests from Aqua's advisory) and the
+  Checkmarx KICS images (9 digests and the two tags that were never
+  restored). The MCP `ioc_lookup` tool accepts `docker`.
+
+- Terraform registry **modules** (`tfmodule:<namespace>/<name>/<system>`, rule
+  `TERRAFORM_MALICIOUS_MODULE`), from `module` blocks and from the installed
+  module manifest `.terraform/modules/modules.json`, which records the exact
+  version `terraform init` fetched. Public-registry sources only.
+- Maven / Gradle: Groovy map and Kotlin named-argument declarations, Gradle
+  `plugins {}` ids as their marker artifacts (`id:id.gradle.plugin`), SBT
+  build files (`%`, and `%%` expanded to the Scala binary versions 2.12, 2.13
+  and 3, since the file does not state one), and Bazel `maven_install.json`
+  in both lockfile formats.
+- GitHub Actions: `uses:` steps in composite and Docker action metadata
+  (`action.yml` / `action.yaml` anywhere outside `.github/workflows`) are
+  checked against the compromised-commit list; they run with the calling
+  workflow's secrets.
+- Docker: `FROM ${ARG}` resolves through global `ARG` defaults and
+  `${NAME:-fallback}`, with Docker's scoping (an `ARG` inside a stage is not
+  visible to a later `FROM`).
+- Ten more ecosystems with identity matching (`src/ecosystem-registry.ts`),
+  each with its own feed prefix and rule: Swift Package Manager
+  (`Package.swift`, `Package.resolved`; `swift:host/owner/repo`), CocoaPods
+  (`Podfile`, `Podfile.lock`), Hex (`mix.exs`, `mix.lock`), CRAN
+  (`DESCRIPTION`, `renv.lock`), Conan (`conanfile.txt`, `conanfile.py`,
+  `conan.lock`), Helm (`Chart.yaml`, `Chart.lock`, keyed by repository URL
+  and chart), Ansible Galaxy (`requirements.yml`, `galaxy.yml`), Homebrew
+  (`Brewfile`, `Brewfile.lock.json`, `tap/formula`), browser extensions
+  (Chromium and Firefox enterprise policies and installed extension
+  directories; `chrome:`, `edge:` and `firefox:` stay separate because each
+  store assigns its own IDs) and JetBrains plugins
+  (`.idea/externalDependencies.xml`, `META-INF/plugin.xml`). Git, path and
+  private-registry sources are never looked up as public identities. The
+  importer maps the GitHub `swift` and `erlang` ecosystems and the OSV
+  `SwiftURL`, `Hex` and `CRAN` exports; the MCP `ioc_lookup` tool accepts
+  every new ecosystem.
+- Curated indicators for the new ecosystems where a verified source exists:
+  the Cyberhaven Chrome extension compromise wave (32 exact malicious
+  versions), RedDirection (10 Chrome, 8 Edge), ShadyPanda (27 Chrome, 129
+  Edge), 66 Chrome extensions from Socket's removed set of 108, the Firefox
+  wallet-theft set (40), 15 fake AI JetBrains plugins, and the TeamPCP
+  `aquasecurity/trivy/trivy` 0.69.4 Homebrew formula. A hijacked legitimate
+  extension is pinned to its malicious versions only; a whole-extension block
+  is used only where the publisher itself turned malicious and the store has
+  removed or blocklisted it (each checked against the store on 2026-09-23;
+  extensions that are live again are left out). Swift, CocoaPods, Hex,
+  CRAN, Conan, Terraform modules, Helm and Ansible ship with no indicators
+  yet: their matchers are proven, and the importer or a curated entry fills
+  them when a malicious package is published.
+- `src/ecosystem-coverage.json` declares every supported ecosystem and file
+  format. The README coverage table is generated from it
+  (`npm run coverage:generate`, gated by the new `check:coverage` prebuild
+  step), the advertised ecosystem count is a build-gated claim, and
+  `coverage-matrix.test.ts` runs a real scan for every declared ecosystem and
+  format, at the scan root and one directory down, requiring exactly one
+  finding each. A declared format without a proof, or a fixture for an
+  undeclared one, fails the suite.
+- `EDITOR_TASK_EXECUTES_ASSET`: a `.vscode/tasks.json` task that runs an
+  interpreter on a file named as a font, image or media asset (critical when
+  it runs on folder open). This is the Contagious Interview "Fake Font"
+  loader (`node ./public/fonts/fa-solid-400.woff2`, the font being obfuscated
+  JavaScript), which no existing rule detected: a real infected module from
+  the Go proxy scanned clean. Only option flags may sit between the
+  interpreter and the file, so a script that takes an asset as an argument is
+  not flagged. `.vscode/tasks.json` is now read at any depth (opening a
+  subfolder runs its own tasks), not only at the scan root.
+- The same loader through the other auto-run carriers: `SCRIPT_EXECUTES_ASSET`
+  for npm lifecycle hooks (`preinstall`, `postinstall`, `prepare` and the rest
+  of the auto-run list), and `DEVCONTAINER_EXECUTES_ASSET` for dev container
+  lifecycle commands (`initializeCommand`, which runs on the host,
+  `onCreateCommand`, `postCreateCommand` and the rest, in string, array and
+  named-object form, at any depth). Dev container commands also get the
+  editor-task download-exec and dangerous-command checks
+  (`DEVCONTAINER_DOWNLOAD_EXEC`, `DEVCONTAINER_DANGEROUS_COMMAND`).
+- `ASSET_DISGUISED_SCRIPT`: a `.woff`, `.woff2`, `.ttf`, `.otf` or `.eot` file
+  that carries no font signature and is plain-text JavaScript, the Fake Font
+  payload itself. Real fonts, Git LFS pointers, empty files and binary data
+  are not flagged, and the file name is never a signature.
+- The Coder registry compromise exfiltration host (`coder-infra[.]com`,
+  GHSA-vx42-ghc9-gw65), which matches its subdomains too. The advisory names
+  no module or version, so the host is the only matchable indicator.
 - 199 package indicators from the GitHub Advisory Database malware feed and
   the OpenSSF malicious-packages index: 33 in the bundle and 166 in the
   catalog. The catalog-bound entries all carry a `firstSeen` before the bundle
@@ -38,6 +195,244 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   enforced after `feed refresh`. The one bare npm name,
   `ubiquiti-agents-link-mcp`, was probed first and resolves to an npm security
   holding package.
+
+### Changed
+
+- README, npm description, GitHub Action description and repository About
+  rewritten around the ecosystem coverage, with the generated table replacing
+  the hand-kept "Supported Ecosystems" list.
+- The advertised ecosystem count is 15: only ecosystems whose indicators
+  actually ship AND can match a format current tools write are counted. The
+  eight with a tested matcher and no publicly known malicious package (Swift,
+  CocoaPods, Hex, CRAN, Conan, Terraform modules, Helm, Ansible Galaxy) are
+  named separately, and so is Homebrew: its one indicator (the compromised
+  Trivy tap release 0.69.4) needs a version, which only the legacy
+  `Brewfile.lock.json` records, and current Homebrew writes no lock file. All
+  lists are generated from the shipped data and `src/ecosystem-coverage.json`,
+  checked by `check:coverage`, and the count script behind the claims gate uses
+  the same split.
+
+### Fixed
+
+- `.claude/settings.json` hooks are parsed leniently too (comments, trailing
+  commas), so one stray comma no longer hides every hook from the scan.
+- **A local `scan` sent Python dependency names to pypi.org.** The README
+  promises that `scan` on a local path makes no network requests unless
+  `--check-registry` is passed, but the PyPI dependency-confusion lookup ran on
+  every scan of a project with `requirements.txt` or `pyproject.toml`,
+  including internal-looking package names (measured with every network API
+  instrumented: the only outbound traffic of a scan over 21 manifest types was
+  one pypi.org request per Python dependency). The lookups now need
+  `--check-registry`; the offline checks (known AI-hallucinated names,
+  manifest coverage) still run on every scan.
+- **28 of the 40 bundled Firefox add-on indicators could never match.** Feed
+  values were split at their last "@", so an email-shaped add-on id
+  (`name@domain`) was read as a name plus a version. Firefox ids now keep the
+  domain; only a version-shaped tail is a version.
+- The Fake Font loader checks were hardened after review: the command pattern
+  now catches a quoted or backticked interpreter (`bash -c "node x.woff2"`), an
+  absolute interpreter path, a quoted asset path with spaces and a redirect
+  glued to the path, and still ignores `sh -c '...'` command strings that
+  only mention an image; a platform override is merged into its task the way
+  VS Code does it, a `{ value }` command object is read, and the tasks block of
+  a `.code-workspace` file is checked. `ASSET_DISGUISED_SCRIPT` no longer
+  trusts a font's first bytes (`true;`, `OTTO=0;` and `wOF2=0;` are font magic
+  numbers AND valid JavaScript), measures text over UTF-8 so an accented
+  comment cannot hide the script, and ignores a saved HTML or SVG page.
+- Lockfile whole-name findings are excused only by what the scan itself
+  reported: a direct dependency declared in a workspace member's package.json
+  is no longer reported a second time (and called transitive) by the root
+  lockfile, while an ignored or test-fixture manifest no longer silences the
+  lockfile. npm aliases are matched in `package-lock.json` (the entry's
+  `name`) and `yarn.lock` (`x@npm:<package>`), and workspace member entries of
+  a package-lock are no longer read as dependencies.
+- The importer collapses the version pins of an extension the Marketplace or
+  Open VSX has removed into a whole-extension block (see
+  docs/threat-feed-sources.md); one catalog entry,
+  `vscode:cline-ai-main.cline-ai-agent`, was corrected this way.
+- A workspace recommendation matched only by an Open VSX entry is reported at
+  medium and says it applies to Open VSX editors (VSCodium, Cursor), since the
+  same id may be another publisher's extension on the Marketplace.
+- Terraform: `source` is read as a provider only inside
+  `terraform { required_providers }` (a provisioner `file` or `aws_s3_object`
+  source was read as one), `.tf.json` modules and `//subdir` registry
+  submodules are matched, and unclosed module or lock-file blocks no longer
+  make the scan quadratic.
+- Manifest parsers that a crafted file could stall for minutes (line numbers
+  counted from the start for every hit, and a `\s+#` comment-strip regex that
+  backtracks on long whitespace) are linear now.
+- Python manifests under `vendor/` and `target/` are skipped like every other
+  nested manifest.
+- `vscode:AzureCdnInfo.edrtester` is a whole-extension block instead of a pin
+  on 1.0.4: every version the Marketplace still serves carries the same
+  beacon, so no clean release exists (checked by opening each package).
+- SBT `cross CrossVersion.full` is expanded with the Scala versions the build
+  states (`scalaVersion`, `crossScalaVersions`), `CrossVersion.binary` like
+  `%%`; Gradle dependencies with a variable version are read on configurations
+  the script declares itself, not only on the built-in ones; pubspec and
+  GitLab CI `services:` flow maps written over several lines are read (from
+  the raw text, so a closing brace on its own line counts, and a map that
+  never closes is still read, however many lines it spans); pubspec also
+  reads a whole section written as a flow map, quoted keys, YAML anchors, a
+  `hosted:` value that names no readable URL as pub.dev, and pub.dev however
+  its URL is spelled (case, default port, `http`, a trailing dot) or a mirror
+  that serves it unchanged (the university mirrors the Flutter documentation
+  lists); a pubspec written as JSON or starting with a byte order mark, and a
+  lockfile description written as a flow map, are read too. A pubspec that
+  cannot be read is reported as a partial scan instead of ending the scan.
+- **Inputs that made one crafted file stall or abort the whole scan** are
+  linear and return now:
+  - long runs of slashes or spaces in pub, Helm, SwiftPM, container-image and
+    pnpm/yarn lockfile values;
+  - deeply nested Terraform blocks and long Terraform lines without a brace;
+  - Dockerfile `ARG` expansion that built a string too long to hold;
+  - a manifest listing a known-malicious package on every line. Its findings
+    were spread into one call and overflowed the stack, and the attack graph
+    copied its finding list once per finding;
+  - `nuget.config` line numbers counted from the start for every feed.
+  - `build.sbt` dependencies followed by a long run of spaces, and trailing
+    `--hash`/`--config-settings` options on a requirements line with a long
+    whitespace run (now reached for `requirements-*.txt` and constraints files
+    too).
+- `pom.xml` parsing was quadratic on crafted input (a comment regex and a tag
+  regex rescanning to the end of the file from every unclosed `<!--` or tag:
+  30 s and 4.6 s at a few hundred KB); both are linear now, and so are a
+  tag name of dotted segments, closing tags that match no open element, and
+  a version of unclosed `${` property references.
+- `WORKFLOW_SECRET_TO_UPLOAD_PATH` reports every workflow it reported
+  before, and also what that condition (a `secrets.` expression and a network
+  word anywhere in the file) missed: a stored secret in any expression form
+  (bracket access, the whole `secrets` context) together with an outbound call
+  in executed text (`run:`, `script:`, a one-line flow-map step, a `run:`
+  given as a YAML alias, the arguments of a `docker://` action) or an artifact
+  upload in any form (`upload-artifact/merge`, a flow-map step). An outbound
+  call is any URL in executed text other than loopback, GitHub or a public
+  package registry (an HTTP client in any language, `s3://` and `gs://`
+  buckets, a secret in a URL's credentials), a write to `/dev/tcp`, a DNS
+  lookup tool, an image push to a registry that is not a public one, `scp`/
+  `rsync`/`ssh` to a remote host, `git push` to a remote that is not GitHub,
+  or a loopback call when the workflow sets a proxy. A workflow file that
+  cannot be classified no longer ends the scan of the files after it.
+- **Rule precision (false positives that blocked `fail-on: medium` in real
+  repositories, where suppressing them was not an option).** Each fix keeps
+  every must-fire example of its draft firing at its severity.
+  - `INTERNAL_PRIVATE_IP`, `INTERNAL_PRIVATE_IPV6`, `INTERNAL_HOSTNAME`: pytest's
+    `test_*.py` files count as test files (exactly that basename form;
+    `testing.py`, `latest_net.py` and `contest.py` do not), from one shared
+    definition of the test-file forms. This form applies to these three rules
+    only: the scanned package names its own files, so the malware rules keep
+    reporting inside `test_*.py`.
+  - `INTERNAL_HOSTNAME`: `metadata.google.internal` is well-known
+    infrastructure, like the metadata address it names; a quoted dotted key
+    (`"status.internal": ...` in a translation catalogue or JSON) and attribute
+    access inside an f-string or template-literal field are not hosts, while a
+    value, a key with a scheme, and the literal part of a string still report.
+  - `INTERNAL_PRIVATE_IP`: a `10.x` number directly after a requirement marker
+    (`Req`, `Requirement`, `Section`, `Sec.`, `§`, `Control`, `Clause`,
+    `Annex`) is a requirement number, not an address; a private or ULA literal
+    in an explanatory comment of a file that implements private-range
+    classification is reported at info instead of medium.
+  - `BEACON_INTERVAL_FETCH` / `BEACON_TIMEOUT_FETCH`: the transport must be a
+    call with identifier boundaries (`setInterval(fetchNotifications, ...)`
+    and `forgotPassword` no longer match). No file-name exclusion was added:
+    the scanned package chooses its file names.
+  - `IMPORT_EXPRESSION`: a template `import()` with a static prefix and
+    extension whose only variable segment passed an anchored allowlist in the
+    same function reports at info.
+  - `VIDAR_WALLET_THEFT`: a wallet name inside a longer word (`phantomjs`,
+    `Atomicity`) or a target word running on (`seeding`, `vaulted`) no longer
+    matches.
+  - `GHA_SECRET_EXFIL_MULTILINE` also reads inline `env: { ... }` maps and a
+    job container's env.
+  - `GHA_CROSS_WORKFLOW_ARTIFACT_TRUST`: listing a run's artifacts is not a
+    download; the recommendation no longer names a provenance check the rule
+    does not perform.
+  - `GHA_OIDC_WRITE_PERM`: the text says what the rule checks (the permission
+    itself), not a correlation with third-party steps it never makes.
+  - The `IMPORT_EXPRESSION` severity is applied through the scanner, so it
+    can depend on the guard in the same file.
+- **Every `.vscode/tasks.json` rule was blind to JSONC.** VS Code reads the
+  file as JSONC, and the scanner parsed it as strict JSON, so a single comment
+  or trailing comma made the whole file read as empty. The real Fake Font
+  loader ends in exactly such a trailing comma: the new rule passed every
+  fixture test and then found nothing in the real infected modules, whose
+  files only a real run exercised. Comments and trailing commas are now
+  stripped first, for all editor-task rules.
+- **Fifteen Go modules of the Contagious Interview "Fake Font" wave and
+  `github.com/Xpos587/git2md` were blocked by name in every version**, both in
+  the feed and as a name pattern, and the `Xpos587` account was a
+  malicious-account entry. All of them are developer repositories the wave
+  infected, not attacker-created modules; `lambda-platform/lambda` is a
+  framework released since 2021 whose 137 retrievable versions on the Go
+  module proxy are all clean. Every module was checked against the proxy's
+  module zips: the five pseudo-versions whose zip carries the loader are now
+  version-pinned, the ten modules with no retrievable version at all are no
+  longer listed, and the account entry is removed. A checkout that carries the
+  loader is caught by `EDITOR_TASK_EXECUTES_ASSET` whatever its name.
+- `yarn.lock`, `pnpm-lock.yaml` and `bun.lock` below the scan root were not
+  checked at all; they are now matched like the root lockfiles, against the
+  `package.json` beside them.
+
+- **Malicious npm packages pulled in transitively were reported by nothing.**
+  A whole-name threat-feed entry (the package is malicious in every version,
+  which is most of the npm feed) fired only on `package.json`, i.e. on DIRECT
+  dependencies; and `yarn.lock`, `pnpm-lock.yaml` and `bun.lock` were matched
+  only against the small hand-kept known-bad-version list, never against the
+  feed. Measured with a real scan: of two feed-only indicators in four lockfile
+  formats, 1 of 8 was detected. All four lockfiles now match the feed
+  (`LOCKFILE_MALICIOUS_VERSION` for a pinned version, the new
+  `LOCKFILE_MALICIOUS_PACKAGE` for a whole-name entry), once per package per
+  lockfile, while a direct dependency the `package.json` check already reports
+  is not reported again. npm v1 lockfiles are now walked into nested
+  dependencies too. The test that pinned the old behaviour was named "does
+  NOT double-report a bare-name entry", but its own fixture had no direct
+  dependencies, so it asserted the false negative.
+- **Ruby, Composer, NuGet, Cargo and Go matched nothing outside the scan
+  root.** Their scanners read only the top directory, so a monorepo service,
+  a .NET project in `src/App/` or any project not at the repository root was
+  never checked against the feed; measured one directory down, all five
+  ecosystems detected nothing, in every format. Manifests below the root are
+  now matched with the same functions the root uses (`vendor/` and `target/`
+  excluded, as they hold copies of installed dependencies).
+- **Common manifests were not read at all:** `requirements.txt` (and
+  `requirements-*.txt`, `requirements/*.txt`, `constraints.txt`) and
+  `pyproject.toml` for PyPI, `packages.config` for NuGet, the dependency tables
+  of `Cargo.toml` (including renamed dependencies) and `go.mod` `require` and
+  `replace` targets for Go. A new coverage-matrix test puts a bundled
+  indicator into every ecosystem and file format, at the root and one
+  directory down, and requires a real scan to report it exactly once.
+- **Ten live, legitimate Composer packages were blocked by name in every
+  version** and reported as critical in every project using them, among them
+  `laravel-lang/lang` (12.3M downloads, a clean release on 2026-09-20) and
+  `devdojo/wave`. They were hijack victims of two May 2026 incidents, not
+  attacker packages, which is exactly the case the feed rules say must be
+  version-pinned. Found by probing every whole-name non-npm entry (75) and
+  every curated whole-name npm entry (153) against its live registry. What the
+  incidents actually shipped stays detected: the Laravel-Lang stealer file by
+  hash and its exfiltration host, and the Packagist hook through the attacker's
+  GitHub account. The two packages of those incidents that Packagist removed
+  keep their blocks.
+- The importer no longer name-blocks hijacked legitimate extensions. OpenSSF
+  records for GlassWorm-class incidents pair an "introduced: 0" range with the
+  exact trojanized versions; read as a whole-package verdict, that would have
+  blocked every release of 13 live Open VSX extensions (measured against the
+  registry: every one live, with up to 57 versions and a clean history). For
+  extension ecosystems a listed version set now wins; npm keeps the
+  whole-package reading, where the same shape encodes a typosquat.
+- `nrwl.angular-console` was carried as an npm package-name pattern. Nx Console
+  is a hijack victim (only 18.95.0 was malicious), and no npm package of that
+  name exists, so the rule never fired. It is replaced by `vscode:` and
+  `openvsx:` pins of 18.95.0 in the Nx Console campaign block.
+- A `.vsix` whose `package.json` starts with a UTF-8 byte-order mark skipped
+  every manifest check, because the parse threw and the manifest was treated
+  as absent. The BOM is now stripped first.
+- Two of the three "known compromised action SHAs" the GitHub Actions scanner
+  carried did not exist. One appears in no source; the other was a corrupted
+  copy of the CLEAN `reviewdog/action-setup` v1.3.0 commit, one step from
+  flagging every user of the repaired tag if anyone had "fixed" its typo. The
+  one real entry (tj-actions `0e58ed86`) was labelled September 2025; the
+  incident was March 2025. All three were replaced by verified feed entries,
+  including the actual malicious reviewdog commit.
 
 ## [6.2.5] - 2026-09-23
 

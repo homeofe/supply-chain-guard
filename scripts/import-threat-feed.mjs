@@ -98,6 +98,16 @@ export const ECOSYSTEM_PREFIX = {
   rubygems: "ruby:",
   rust: "cargo:",
   nuget: "nuget:",
+  // OSV/OpenSSF only (GitHub publishes no VS Code ecosystem). Marketplace
+  // records; Open VSX records share the OSV directory and get their own prefix
+  // through OSV_ECOSYSTEM_ALIASES below.
+  vscode: "vscode:",
+  maven: "maven:",
+  pub: "pub:",
+  // GitHub's names for these; the OSV directories are mapped below.
+  swift: "swift:",
+  erlang: "hex:",
+  cran: "cran:",
 };
 
 /** Feed ecosystem prefix -> OSV ecosystem name (for the corroboration query). */
@@ -109,6 +119,13 @@ export const OSV_ECOSYSTEM = {
   "ruby:": "RubyGems",
   "cargo:": "crates.io",
   "nuget:": "NuGet",
+  "vscode:": "VSCode",
+  "openvsx:": "VSCode:https://open-vsx.org",
+  "maven:": "Maven",
+  "pub:": "Pub",
+  "swift:": "SwiftURL",
+  "hex:": "Hex",
+  "cran:": "CRAN",
 };
 
 /** Import ecosystem -> directory in OSV's public vulnerability export. */
@@ -120,15 +137,40 @@ export const OSV_ECOSYSTEM_DIRECTORY = {
   rubygems: "RubyGems",
   rust: "crates.io",
   nuget: "NuGet",
+  vscode: "VSCode",
+  maven: "Maven",
+  pub: "Pub",
+  swift: "SwiftURL",
+  erlang: "Hex",
+  cran: "CRAN",
 };
 
+/**
+ * OSV ecosystem strings that live inside another ecosystem's export directory
+ * but name a different registry. The same `publisher.name` can belong to
+ * different people on the Marketplace and on Open VSX, so these must never
+ * collapse onto the directory's own prefix.
+ */
+export const OSV_ECOSYSTEM_ALIASES = {
+  "VSCode:https://open-vsx.org": { ecosystem: "vscode", prefix: "openvsx:" },
+};
+
+/**
+ * Import ecosystems where a record's explicit `versions` list wins over an
+ * "introduced: 0" range (see mapOsvMalwareRecord).
+ */
+export const PIN_LISTED_VERSIONS_ECOSYSTEMS = new Set(["vscode"]);
+
 /** OSV ecosystem -> import ecosystem and feed prefix. */
-export const OSV_IMPORT_ECOSYSTEM = Object.fromEntries(
-  Object.entries(OSV_ECOSYSTEM_DIRECTORY).map(([ecosystem, directory]) => [
-    directory,
-    { ecosystem, prefix: ECOSYSTEM_PREFIX[ecosystem] },
-  ]),
-);
+export const OSV_IMPORT_ECOSYSTEM = {
+  ...Object.fromEntries(
+    Object.entries(OSV_ECOSYSTEM_DIRECTORY).map(([ecosystem, directory]) => [
+      directory,
+      { ecosystem, prefix: ECOSYSTEM_PREFIX[ecosystem] },
+    ]),
+  ),
+  ...OSV_ECOSYSTEM_ALIASES,
+};
 
 /**
  * Upstream severity -> feed severity. FeedIOC only has critical/high/medium,
@@ -222,6 +264,8 @@ const SAFE_PACKAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._+~/-]*$/;
 const SAFE_SCOPED_NAME = /^@[A-Za-z0-9][A-Za-z0-9._+~-]*\/[A-Za-z0-9][A-Za-z0-9._+~-]*$/;
 /** Go module paths carry dots and slashes; still no quotes or spaces. */
 const SAFE_MODULE_PATH = /^[A-Za-z0-9][A-Za-z0-9._+~/-]*$/;
+/** Maven coordinates are groupId:artifactId; the colon is the only addition. */
+const SAFE_MAVEN_COORDINATE = /^[A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*$/;
 const SAFE_VERSION = /^[A-Za-z0-9][A-Za-z0-9.+~!-]*$/;
 /** Advisory ids are echoed into the `source` field. */
 const SAFE_ADVISORY_ID = /^[A-Za-z0-9-]{1,64}$/;
@@ -251,7 +295,12 @@ export function parseVersionRange(range) {
 /** True if a package name is safe to serialize into the TypeScript feed. */
 export function isSafePackageName(name) {
   if (typeof name !== "string" || name.length === 0 || name.length > 214) return false;
-  return SAFE_SCOPED_NAME.test(name) || SAFE_PACKAGE_NAME.test(name) || SAFE_MODULE_PATH.test(name);
+  return (
+    SAFE_SCOPED_NAME.test(name) ||
+    SAFE_PACKAGE_NAME.test(name) ||
+    SAFE_MODULE_PATH.test(name) ||
+    SAFE_MAVEN_COORDINATE.test(name)
+  );
 }
 
 /** Build the feed `value` for a package coordinate. */
@@ -429,10 +478,21 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
     }
 
     const ranges = Array.isArray(item.ranges) ? item.ranges : [];
-    const wholePackage = ranges.some(isWholePackageOsvRange);
     const versions = Array.isArray(item.versions)
       ? [...new Set(item.versions.filter((version) => typeof version === "string"))]
       : [];
+    // An extension ID belongs to a publisher account, and the common incident
+    // is a hijacked LEGITIMATE extension: the record then pairs an
+    // "introduced: 0" range with the exact trojanized versions. Measured
+    // 2026-09-23, 13 of 13 such Open VSX IDs were live with a clean history,
+    // so the whole-package reading would block every legitimate release.
+    // npm keeps the whole-package reading: there the same shape is the normal
+    // OpenSSF encoding of a typosquat.
+    const pinListedVersions = PIN_LISTED_VERSIONS_ECOSYSTEMS.has(mappedEcosystem.ecosystem) && versions.length > 0;
+    // Pinned ONLY because of the rule above: the range said "every version".
+    // resolveExtensionBlockShape settles these against the registry.
+    const pinnedFromWholeRange = pinListedVersions && ranges.some(isWholePackageOsvRange);
+    const wholePackage = ranges.some(isWholePackageOsvRange) && !pinListedVersions;
     const mappedVersions = wholePackage ? [undefined] : versions;
     if (mappedVersions.length === 0) {
       skipped.push({ reason: "unmappable-version-range", detail: `${id} ${osvEcosystem}/${name}` });
@@ -458,6 +518,7 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
       entry._name = name;
       entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
       entry._origins = origins;
+      if (pinnedFromWholeRange && version !== undefined) entry._pinnedFromWholeRange = true;
       if (typeof record._indexModified === "string") {
         entry._queueDate = record._indexModified.slice(0, 10);
       }
@@ -1052,6 +1113,104 @@ export function countUndrainable(added, { limit, days, now = new Date() } = {}) 
     if (runsAway > daysLeftInWindow) count++;
   }
   return count;
+}
+
+/**
+ * Settle the block shape of extension records that mapOsvMalwareRecord pinned
+ * to their listed versions (`_pinnedFromWholeRange`).
+ *
+ * OpenSSF encodes BOTH a hijacked legitimate extension and an attacker-created
+ * one as "introduced: 0" plus the listed versions. Pinning is right for the
+ * first (its clean releases stay installable) and wrong for the second: a
+ * workspace recommendation carries no version, so a pinned attacker extension
+ * never matches it. The registry tells them apart: an extension the registry
+ * has REMOVED has no clean release anyone can install, so its pins collapse
+ * into one whole-extension block. A live extension, or any answer that is not
+ * a definitive "removed" (network error, rate limit, odd status), keeps its
+ * pins: failing towards pins can miss, failing towards a name block would flag
+ * every clean release of a victim.
+ *
+ * Open VSX answers 404 for a removed extension; the Marketplace gallery query
+ * answers 200 with an empty extension list (both measured 2026-09-23 against a
+ * live control).
+ */
+export async function resolveExtensionBlockShape(
+  candidates,
+  { fetchImpl = globalThis.fetch, concurrency = 8, timeoutMs = 5000 } = {},
+) {
+  const groups = new Map();
+  for (const c of candidates) {
+    if (!c._pinnedFromWholeRange) continue;
+    const key = `${c._ecosystemPrefix}${c._name}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+  }
+
+  async function isRemoved(prefix, id) {
+    const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined;
+    try {
+      if (prefix === "openvsx:") {
+        const [ns, ...rest] = id.split(".");
+        const res = await fetchImpl(`https://open-vsx.org/api/${encodeURIComponent(ns)}/${encodeURIComponent(rest.join("."))}`, {
+          headers: { "User-Agent": "supply-chain-guard-feed-importer" },
+          signal,
+        });
+        return res.status === 404;
+      }
+      if (prefix === "vscode:") {
+        const res = await fetchImpl("https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json;api-version=7.2-preview.1",
+            "User-Agent": "supply-chain-guard-feed-importer",
+          },
+          body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: id }], pageSize: 1 }], flags: 0 }),
+          signal,
+        });
+        if (res.status !== 200) return false;
+        const data = await res.json();
+        const extensions = data?.results?.[0]?.extensions;
+        return Array.isArray(extensions) && extensions.length === 0;
+      }
+    } catch {
+      // Not a definitive answer: keep the pins.
+    }
+    return false;
+  }
+
+  const collapsedKeys = new Set();
+  const keys = [...groups.keys()];
+  for (let i = 0; i < keys.length; i += concurrency) {
+    const chunk = keys.slice(i, i + concurrency);
+    const answers = await Promise.all(chunk.map((k) => {
+      const first = groups.get(k)[0];
+      return isRemoved(first._ecosystemPrefix, first._name);
+    }));
+    chunk.forEach((k, j) => { if (answers[j]) collapsedKeys.add(k); });
+  }
+
+  const entries = [];
+  const emitted = new Set();
+  for (const c of candidates) {
+    const key = c._pinnedFromWholeRange ? `${c._ecosystemPrefix}${c._name}` : null;
+    if (key && collapsedKeys.has(key)) {
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      const whole = { ...c, value: feedValue(c._ecosystemPrefix, c._name, undefined) };
+      delete whole._pinnedFromWholeRange;
+      entries.push(whole);
+      continue;
+    }
+    if (c._pinnedFromWholeRange) {
+      const kept = { ...c };
+      delete kept._pinnedFromWholeRange;
+      entries.push(kept);
+    } else {
+      entries.push(c);
+    }
+  }
+  return { entries, collapsed: collapsedKeys.size, checked: groups.size };
 }
 
 /**
@@ -1872,7 +2031,14 @@ export async function importUpstreamFeed({
     };
   }
 
-  const { entries: normalizedCandidates, coalesced } = coalesceCandidates(mapped);
+  const { entries: coalescedCandidates, coalesced } = coalesceCandidates(mapped);
+
+  // 2b. Extension records pinned only because OpenSSF lists versions: collapse
+  // the ones whose registry has removed the extension into a whole-extension
+  // block (see resolveExtensionBlockShape). Before dedupe, so a collapsed
+  // block is deduplicated against the committed stores like any candidate.
+  const extensionShape = await resolveExtensionBlockShape(coalescedCandidates, { fetchImpl, timeoutMs });
+  const normalizedCandidates = extensionShape.entries;
 
   // 3. Dedupe against the feed that is actually committed, which is now BOTH
   //    stores. The bundle alone stopped being the committed feed when the
@@ -1989,6 +2155,8 @@ export async function importUpstreamFeed({
     // each one's reason, gap and recovery command without re-reading the file.
     deferralRanges: deferralList,
     holdingPackagesFiltered,
+    extensionsChecked: extensionShape.checked,
+    extensionsCollapsed: extensionShape.collapsed,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
     corroboratedByOsv: [...osv.ids.keys()].length,

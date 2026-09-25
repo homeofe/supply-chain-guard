@@ -119,9 +119,54 @@ ecosystem with no matcher would be data no scan could ever use.
 | `rubygems` | `ruby:` | `rubygems-scanner` |
 | `rust` | `cargo:` | `cargo-scanner` |
 | `nuget` | `nuget:` | `nuget-scanner` |
+| OSV `VSCode` | `vscode:` | `extension-identity` (recommendations, devcontainer, manifests), `vscode-scanner` |
+| OSV `VSCode:https://open-vsx.org` | `openvsx:` | same as `vscode:` |
+| `maven` | `maven:` (`groupId:artifactId`) | `maven-scanner` (pom.xml, gradle.lockfile, build scripts, version catalogs) |
+| *(hand-curated)* | `actions:` (`owner/repo@<40-hex sha>`) | `github-actions-scanner` (`uses:` pinned to a known imposter commit) |
+| `pub` / OSV `Pub` | `pub:` | `pub-scanner` (pubspec.lock, pubspec.yaml) |
+| *(hand-curated)* | `docker:` (`name@tag` or `name@sha256:<digest>`) | `container-image` (Dockerfile FROM / COPY --from, YAML image:, docker://) |
+| `swift` / OSV `SwiftURL` | `swift:` (`host/owner/repo`) | `ecosystem-registry` (Package.swift, Package.resolved) |
+| `erlang` / OSV `Hex` | `hex:` | `ecosystem-registry` (mix.exs, mix.lock) |
+| OSV `CRAN` | `cran:` | `ecosystem-registry` (DESCRIPTION, renv.lock) |
 
-Everything else (Maven, GitHub Actions, Pub, Swift, Hex, `other`) is counted in
-the run report under `unsupported-ecosystem` and skipped.
+Everything else (GitHub Actions advisories, `other`) is counted in the run
+report under `unsupported-ecosystem` and skipped.
+
+Several prefixes exist only for hand-curated entries, because no advisory
+database publishes those ecosystems: `jenkins:` (offline MCP lookup only),
+`terraform:` (`terraform-scanner`, matching `namespace/type` on the public
+Terraform and OpenTofu registries from `.tf`, `.tf.json` and
+`.terraform.lock.hcl`), `tfmodule:` (`namespace/name/system` registry modules,
+including `.terraform/modules/modules.json`), and the `ecosystem-registry`
+prefixes `cocoapods:`, `conan:`, `helm:` (`repository-url/chart`), `ansible:`,
+`homebrew:` (`tap/formula`), `chrome:`, `edge:`, `firefox:` and `jetbrains:`.
+Chrome and Edge extension IDs are separate prefixes because the two stores
+assign IDs independently; a Chromium profile directory is read as Chrome.
+The coverage per ecosystem and file format is declared in
+`src/ecosystem-coverage.json` and proven by `coverage-matrix.test.ts`.
+
+Extension records are the one place the importer departs from the OpenSSF
+range reading. A hijacked legitimate extension is published as an
+"introduced: 0" range plus the exact trojanized versions; for `vscode:` and
+`openvsx:` the listed versions win, so only those releases are pinned. A
+record with no version list is still a whole-extension block.
+
+The same record shape also encodes an attacker-created extension, and a pin
+cannot catch that in a workspace recommendation, which carries no version. So
+the importer asks the registry (`resolveExtensionBlockShape`): an extension the
+Marketplace or Open VSX has REMOVED has no clean release anyone can install,
+and its pins collapse into one whole-extension block. A live extension, or any
+answer that is not a definitive "removed" (network error, rate limit, other
+status), keeps its pins, so a failed check can never name-block a victim. The
+run report counts `extensionsChecked` and `extensionsCollapsed`.
+
+### Version skew
+
+A scanner older than the release that introduced a prefix still receives
+those entries through `feed refresh`. Every older matcher is safe with them:
+`matchBareNpmIOC` skips any value containing `:`, and `matchPackageIOC` is
+only ever called with the ecosystems the old code knows. A prefixed entry is
+therefore inert on an old scanner, never misread as an npm name.
 
 ### Version ranges
 

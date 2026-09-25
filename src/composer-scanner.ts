@@ -51,10 +51,10 @@ export function scanComposerFiles(dir: string, feed?: FeedIOC[]): Finding[] {
 
   const iocFeed = feed ?? loadThreatIntel();
   if (composerJson !== null) {
-    findings.push(...scanComposerJsonContent(composerJson, COMPOSER_JSON, iocFeed));
+    for (const pushed of scanComposerJsonContent(composerJson, COMPOSER_JSON, iocFeed)) findings.push(pushed);
   }
   if (composerLock !== null) {
-    findings.push(...scanComposerLockContent(composerLock, COMPOSER_LOCK, iocFeed));
+    for (const pushed of scanComposerLockContent(composerLock, COMPOSER_LOCK, iocFeed)) findings.push(pushed);
   }
 
   return findings;

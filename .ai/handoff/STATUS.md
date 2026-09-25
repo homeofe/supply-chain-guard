@@ -1,3 +1,852 @@
+## Merge gate review of PR 326 (2026-09-24) (claude-opus-5-5)
+
+The owner held the merge until the PR is certain. Three rounds of independent
+reviewers on the lead's model looked for three things: false negatives against
+`main`, false positives on real data, and inputs that stall or abort a scan. Every
+finding was reproduced before anything changed.
+
+### Decisions by the owner
+
+- **`WORKFLOW_SECRET_TO_UPLOAD_PATH` keeps `main`'s condition as a floor.** Each
+  round found another exfiltration shape that the narrower check missed:
+  - a client in another language;
+  - a URL that fools a host parser;
+  - a push to someone else's GitHub repository;
+  - a custom `shell:`;
+  - an anchored block scalar;
+  - a URL in `env:`.
+
+  The finer check now only adds findings: bracket-form secrets, `/dev/tcp`, DNS
+  tools, buckets, image pushes, `docker://` args and YAML alias bodies. Real data:
+  305 workflow files, 61 flagged, identical to `main`. The repository's own
+  suppression of the rule is back as on `main`.
+- **`HIGH_ENTROPY_STRING` and `DEAD_DROP_DNS_TXT`/`C2_DOH_RESOLVER` keep `main`'s
+  severities.** Lowering them when THIS file shows no decoder or encoder is beaten by
+  moving that code to another file. For entropy, a reviewer found ten more decoder
+  spellings as well. `src/entropy.ts` is identical to `main`, and the DNS
+  corroboration code is removed. Only a signal PRESENT in the file may lower a
+  severity now (the `IMPORT_EXPRESSION` guard). The removed code is kept outside the
+  repository for a later change that looks across files.
+
+### Robustness, fixed
+
+These inputs made one crafted file stall or abort the whole scan, none of them on
+`main`:
+- trailing-run regexes in pub, Helm, SwiftPM, container images and pnpm/yarn;
+- the Terraform label regex and stack walk;
+- Dockerfile ARG expansion;
+- the `pom.xml` tag name, close-tag search and `${` resolution;
+- the `build.sbt` cross regex;
+- requirements `--hash`/`--config-settings` stripping, newly reached for
+  `requirements-*.txt`;
+- a NuGet manifest listing a malicious package on every line: the stack overflowed
+  through `push(...spread)`, and the attack graph copied each finding list. Every
+  one-line `push(...x)` in `src/` is now a loop.
+
+A final fuzz of about 114,000 inputs across every added manifest format found no
+rejection.
+
+### Proof
+
+- **Mutation cuts:** 55 on the code that ships, each red or hanging, with green
+  baseline and post-restore runs. That is 26 for the workflow rule, including the
+  floor, 8 for pub, 20 for the robustness fixes and 1 for the DNS floor. Cuts on code
+  that was later removed (the entropy and DNS corroboration) are not counted.
+- **Cuts that survived at first:**
+  - Two survivors showed that tests with a dotted secret never reach the finer check,
+    because the floor settles them first. That included every 5 MiB timing test. The
+    finer check is now tested with `secrets['X']`, and both cuts are red.
+  - One survivor showed a parenthesis fixture the old regex handled in linear time.
+    The fixture was corrected, and the cut hangs.
+- **Real data:** 305 workflow files flag the same 61 as `main`.
+
+## Final check after the split (2026-09-23) (claude-opus-5-5)
+
+One more reviewer on the lead's model read the split branch. Its probes were then run
+again against the fixed build, and compared with `main`.
+
+### Blockers, fixed
+
+- **pub:** a deeply nested flow map overflowed the stack, and `scan()` rejected as a
+  whole. Nested pairs are now collected with a loop. A pub manifest that still cannot
+  be read is reported as a partial scan (`PATH_SCAN_INCOMPLETE`), and the other files
+  are still scanned.
+- **DNS:** assignment values that started inside the previous value made the window
+  quadratic. A value now ends where the next one starts: 4 MiB takes 8.8 s end to end
+  and stays linear.
+
+### Also fixed in this pass
+
+- **DNS:**
+  - A regex literal longer than the scan reads now counts as a scan limit, so the
+    verdict is medium.
+  - A `/` after `return`, `typeof` and similar keywords starts a regex.
+- **Workflow rule** (`WORKFLOW_SECRET_TO_UPLOAD_PATH`):
+  - Shell comments are removed quote- and escape-aware.
+  - A URL handed to any program counts as egress, unless it names loopback, GitHub or
+    a public registry. This includes `--opt=URL` and credentials in the URL.
+  - A proxy set in the workflow makes loopback calls count.
+  - One-line flow-map steps (`run:` and `upload-artifact`) are read.
+  - The upload and release regexes are linear.
+  - The fallback for an unclassifiable file is itself guarded.
+- **Entropy:** the decode and run signal also covers:
+  - `decodebytes`, `TextDecoder` and `import("data:`;
+  - `Reflect.construct`, `subprocess`, `base64_decode`, `instance_eval` and
+    `WebAssembly`;
+  - object URLs and `base64 -D`.
+- **pub:** pub.dev over `http` and with a trailing dot.
+
+### Proof
+
+- **Mutation cuts:** 34, all caught, with the unmutated baseline and the post-restore
+  run green. One cut (a DNS value read to the line end) hangs past the harness limit.
+  The first pass left three survivors. Each was a fixture that reached the verdict by
+  another path, not dead code:
+  - an `ssh://` push caught by the ssh rule;
+  - a flow-map run without a URL argument;
+  - a long-regex helper that also encoded.
+  The fixtures were narrowed, and all three cuts are red now.
+- **Test for the pub fallback:** the pub scanner is mocked to throw, and the scan still
+  finishes. Cutting the try/catch makes `scan()` reject.
+- **Comparison with main:** the reviewer's probes were rerun against main. Every
+  exfiltration shape that main reports and this branch does not is listed privately as
+  a known limit of the whole-file check. All of them are for the step-by-step follow-up.
+- **5 MiB timing:** every probe shape stays under about 1 s for the workflow rule and
+  the pub scanner.
+
+## Sixth review round and the split (2026-09-23) (claude-opus-5-5)
+
+Three reviewers on the same model as the lead. The real-data comparison found no new
+false positive. It found two false negatives in the step-by-step secret-egress model
+(a key path inside a quoted ssh option; SSH keys that ssh uses without naming them),
+and both were fixed. The review of that model found five new inputs that stop the
+whole scan (path variables, working-directory, URLs, glob pairs, exported names), plus
+new false negatives and false positives.
+
+Decision by the owner, after six rounds: the step-by-step data-flow model for
+`WORKFLOW_SECRET_TO_UPLOAD_PATH` leaves this PR. It moves to its own change with its
+own review cycle, from a saved copy that includes this round's fixes. Every other part
+of the model's review history converged; this model grew new defect classes with each
+round, among them inputs that stop the scan.
+
+What ships here for the rule is a whole-file check with sharper parts, and it is
+linear:
+- every expression form of a stored secret, excluding the run's own token and
+  presence tests;
+- egress only in executed text;
+- the wider egress vocabulary;
+- each workflow file analysed on its own.
+
+It is proven by 13 mutation cuts, all red. The shared secret and egress helpers,
+`workflowScopes` and the GHA exfiltration rules stay as reviewed.
+
+### The rest of the round, fixed
+
+- **Entropy:** a forged image in a file that also decodes and runs it had dropped to
+  low, where `main` failed the scan. In a file that decodes base64 or runs code, an
+  inlined image stays high.
+- **DNS:**
+  - An unclosed regex class made the helper scan quadratic: 52 s on 5 MiB, now 0.1 s.
+    There is a file-wide scan budget, and each regex literal is read for at most 256
+    characters.
+  - Every scan limit now fails towards medium, the verdict before corroboration.
+  - Lines above the query are read in full.
+- **pub:** flow maps are read however many lines they span. Anchors on a map and
+  pub.dev's URL spelled differently are read too.
+- **Proof:** 8 mutation cuts, all red. The first pass left three survivors: two
+  limits that other limits masked in the test, and one rule made redundant by reading
+  full lines, which was removed.
+
+### Consequences
+
+- D-062 d9 (the step-by-step rule) and its private advisory are not part of this
+  release. The routine's bookkeeping is told so; the advisory stays a draft without a
+  patched version until the follow-up ships.
+- A secret in one step and a health check in another are still reported together;
+  that was d9's false positive.
+
+## Fifth review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+From this round on, the reviewers ran on the same model as the lead, at the owner's
+request. Three reviewers:
+- the workflow rule end to end;
+- entropy, DNS, pub and test paths;
+- a real-data comparison against `main` over 110 checkouts and 318 `node_modules`
+  packages with workflows.
+
+The real-data run found no false positive from the PR. Its one false negative was
+the file-name exemption on `BEACON_TIMEOUT_FETCH` (below). The two code reviews
+found the most serious defects of the day. Several of them came from the earlier
+rounds' own fixes.
+
+### Fixed
+
+- **A workflow file that could not be modelled ended the scan of every later file.**
+  An unbounded spread threw inside a single try/catch around the whole loop, so a
+  decoy workflow could switch the rule off for a repository. Spreads over input-sized
+  arrays are loops now, in the modeler and the workflow parser. Each file is
+  analysed on its own; one that still fails falls back to the whole-file check.
+- **Exponential glob matching**, added in the fourth round: a 210-byte workflow hung
+  the scan. Globs are matched segment by segment without backtracking. Four more
+  inputs are linear now:
+  - a long env word;
+  - long fd digits before a redirection;
+  - a 400 KB deep path, which crashed V8 before;
+  - many secret names.
+
+  The per-job taint cap is enforced as paths are added.
+- **BEACON_TIMEOUT_FETCH exempted `*.min.js`**, a file name the scanned package
+  chooses. The timeout rule has no file-name exemption again, as on `main`.
+- **Entropy:** every container check can be forged. A well-formed inlined image is
+  therefore reported at low instead of being removed, and a payload after inner
+  base64 padding, or behind a zero-size first BMFF box, stays at high.
+- **DNS:**
+  - A TXT answer executed without a decode was low; a code sink now counts alone.
+  - Helpers are found anywhere in the file. Braces inside strings and regex literals
+    no longer close them early.
+  - Wrapped calls, comma declarations, member assignments and `toString(16)` count.
+- **pub:** a nested `hosted:` map over several lines, a flow-form section, quoted keys
+  and anchors now report. Flow maps are read from the raw text.
+- **The workflow rule, 18 flows `main` caught that the PR missed, and 17 false
+  positives.** Paths are placed in the workspace, outside it, or under an unknown
+  directory. Outputs are taken from write positions. Publishers, credential actions,
+  legacy exports, build-time inlining and local actions are followed. Presence checks,
+  `if:` lines, and `env`/`set` used as words are not uses. The CHANGELOG entry lists
+  the details.
+
+### Proof
+
+52 mutation cuts, all red for the right reason (every test file loaded and ran),
+with baseline and post-restore green, on the Linux runner. The first pass left eight
+that proved nothing:
+- four had no test that exercised them, and have one now;
+- one was an anchor spoiled by a shell heredoc;
+- one did not compile;
+- two showed dead code, a depth cap and a pub special case, which were removed.
+
+The same pass found a quadratic DNS value scan before any reviewer did, and it is
+linear now. The reviewers' fixtures are pinned as tests: 25 flows that must be
+followed, 20 shapes that must stay quiet, 18 DNS cases and the pub cases.
+
+### Left for later
+
+- Gaps that `main` does not catch either (more egress tools and actions) are listed
+  in the private maintainer handoff, not here.
+
+## Fourth review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Three reviewers again: the file model, DNS together with every public claim, and a
+real-data rerun of the workflow rules. The real-data rerun covered 189 workflow
+directories: every workspace checkout and every workflow shipped inside `node_modules`.
+Every workflow rule except this one was identical to `main`. `main` reported 72
+findings on this rule that the PR drops, and all 72 were `main` false positives. The
+public-text reviewer found no false claim.
+
+### Fixed
+
+- **Deploy keys over ssh.** Nine real deploy pipelines write an SSH key from a secret
+  and then run `ssh -i key user@host`. `main` caught them only by accident, and the PR
+  missed them, because `ssh` was not egress and the key lived under `$RUNNER_TEMP`.
+  `ssh` to a host that is not loopback now counts as egress (`ssh-keygen`,
+  `ssh-keyscan` and a directory named `ssh/` do not). A write whose directory is a
+  variable is followed by its file name.
+- **The file model, per command.** Taint was per step, so a step that only read a
+  tainted file tainted every path in the step. Commands are now read one by one:
+  - a command holds the secret when it names it, a variable assigned from it, dumps
+    the environment, or reads a tainted file;
+  - what that command writes or names is followed by full path, with its directories;
+  - a heredoc body stays with its command.
+
+  Opaque writes (`dd of=`, `openssl -out`, `pathlib`, `>|`) are covered without
+  listing them, and so are readers that never name the file (`tar czf a.tgz .`,
+  `zip -r`, a glob).
+- **Uploads.** An upload reaches a tainted file only when its `path:` covers it. A
+  secret in `logs/dist/x` no longer makes an upload of `dist/` a finding.
+- **DNS helper.** A helper declared above the query is followed by brace depth. An
+  encoder after the helper has closed no longer taints it.
+- **Globs, found by the lead's own timing probe before any reviewer.** A 5 MiB
+  flood of glob words against 250 tainted files took more than 60 s. Answers are now
+  cached per glob, and distinct globs are capped at 256 per job, past which a glob
+  counts as covering (fail closed). The worst shape now takes 1.9 s.
+- **Proof:** 59 mutation cuts, all red, run on the Linux runner. The first pass left
+  four survivors: the per-command model had made the tests for tee, the PowerShell
+  cmdlets, Python writes and  stop exercising their parsers. Each now has a
+  test in the one situation where that parser decides the outcome.
+
+### Process
+
+- From this round on the review agents run on the same model as the lead, at the
+  owner's request.
+- Two of the round's "false positives" were true positives: a secret written into
+  the uploaded `dist/` and into a `package.json` that was then sent. Every finding is
+  reproduced before anything changes.
+
+## Third review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Three reviewers again: workflow egress, entropy and DNS, and a real-data comparison.
+Each had to time 5 MiB adversarial inputs and compare against `main`. The real-data
+reviewer ran both builds over 13 local checkouts and a large `node_modules` corpus and
+traced every difference to its source line. It found no false negative and no false
+positive introduced by the PR. Every difference removed a known false-positive class
+or replaced a file-level finding with one on the exact step. The other two found
+defects, all in the second round's own code, and all are fixed. The proof is 45
+mutation cuts, all red (one by hanging past the harness limit), with baseline and
+post-restore green, run on the Linux runner.
+
+### Fixed
+
+- **File carry, redesigned instead of patched.** The second round listed the ways a
+  later step reads a file. Python `open()` and `$(base64 file)` walked past the list,
+  and a `1 < 2` comparison counted as a read. The rule now records the names of the
+  files a secret-holding step writes (redirects, `tee`, PowerShell cmdlets, Node and
+  Python writes) and follows them by name. A later step reaches the secret when it
+  names such a file, however it reads it, or when it uploads an artifact. A step that
+  reads a tainted file passes the taint on to the files it names (an archive, an
+  encrypted copy). The list of read forms is only a fallback for a write whose target
+  has no stated name.
+- **Precision of "holds the secret".** A step holds a secret when its code names the
+  secret or a variable carrying it, or dumps the whole environment (`printenv`, `env`,
+  a bare `set`, `process.env` taken whole). An artifact upload sends files, not the
+  environment. So a workflow-level cache token no longer makes every upload in the
+  workflow a finding, which was the one borderline case the real-data run found.
+- **DNS, two quadratic paths:**
+  - the destructuring-sink alternative restarted at every `{`: 17 s on a 5 MiB line,
+    now 0.2 s;
+  - the taint tracker rebuilt a regex per statement: 500 hits took more than 60 s, now
+    0.4 s.
+
+  Both now anchor on a rare token or use set lookups. The taint also follows array
+  destructuring and a helper function declared in the window.
+- **Node `http(s).request`/`get` and `axios`** count as egress.
+
+### Left out on purpose
+
+- `aws s3 cp`, `gh release upload` and `docker push` are the normal way a release ships
+  with credentials in scope. Reporting them would bury real findings.
+
+## Second review round of PR 326 (2026-09-23) (claude-opus-5-5)
+
+The owner asked for another round. Three reviewers took the first round's fixes.
+Three of their findings were defects that the first round's own fixes introduced.
+All findings are fixed. The proof is 26 mutation cuts, all red, with baseline and
+post-restore green; it ran on the Linux runner.
+
+### Introduced by the first round, fixed
+
+- **A crafted workflow line could hang the scan.** The `scp`/`rsync` remote-path regex
+  backtracked polynomially. One 5 MiB line took 17 minutes. Arguments are now split
+  into shell words and each word is matched with an anchored pattern. Every
+  adversarial 5 MiB shape tried finishes in under 0.6 s, and the linear-time suite
+  pins two of them.
+- **pub stopped reporting a malicious pin whose flow map closes on its own line.** A
+  bare `}` line is not a `key: value` line, so it looks exactly like a map that never
+  closes. Both are read again, which fails towards a report; `},` also closes.
+- **Every file write carried the secret to every later step.** `cat > .npmrc`
+  followed by a health-check curl was reported. A file write now reaches only later
+  steps that upload an artifact or read a file. `$GITHUB_ENV`, `$GITHUB_OUTPUT` and
+  github-script's `core.exportVariable`/`core.setOutput` still reach every later step.
+
+### Gaps in the first round's fixes, closed
+
+- **Data URIs:** 8 real header bytes followed by any payload was still exempt. The
+  container now has to account for every byte (see the CHANGELOG). JPEG XL containers
+  are covered, so they keep their exemption.
+- **DNS:** an unrelated digest encoded within five lines of an ordinary lookup raised
+  it to medium. The encoder result now has to reach the query line, directly or
+  through assignments. Each hit line is evaluated once, so many hits on one huge line
+  no longer rescan it.
+- **Sinks:** `=== eval` and `== Function` comparisons are no longer sinks. Property,
+  destructured, bracket and `(0, eval)` forms are.
+- **Egress:** github-script persistence, lowercase PowerShell cmdlets, Windows drive
+  paths and `./scripts/irm.sh` are handled, and a tool called by its full path
+  (`/usr/bin/sftp`) still counts.
+
+### Process
+
+- A mutation cut that makes a regex catastrophic blocks the event loop, so vitest's
+  per-test timeout never fires. One local run hung for 40 minutes. The harness now
+  bounds every run by wall clock and reports a hang as its own result.
+- The proof ran on the Linux runner (about 7 minutes for all cuts) instead of locally.
+
+## Final pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
+
+Five independent review agents each took one area of PR 326, plus PR 327 and how the
+two interact. They reproduced every finding against the built CLI. Six were real and
+are fixed in this PR. Each fix has tests and a mutation proof: 15 cuts, all red, with
+baseline and post-restore green.
+
+### Fixed
+
+- **d1, the pytest `test_*.py` form, silenced the malware rules.** It had been added to
+  the shared TEST_FILE_PATTERN, which gates every `notTestFile` PatternEntry (about 148
+  rules). `eval(atob(...))` in `test_backdoor.py` then scanned clean, while
+  `backdoor.py` was critical. This deviates from the draft's acceptance criterion
+  ("every notTestFile PatternEntry"): the form is now opt-in
+  (`buildTestFilePattern(dirs, { pytestPrefix })`), and only the three disclosure rules
+  use it. The scanned package names its own files, so a test-path exemption is never
+  widened for malware rules.
+- **d9 lost flows the old file-level rule caught.**
+  - A secret exported to `$GITHUB_ENV` or written to a file, then sent or uploaded by a
+    later step.
+  - A secret in `strategy.matrix`.
+  - Egress through Python `requests`, PowerShell `Invoke-WebRequest` or `scp`.
+
+  Now handled:
+  - a job carries the secret forward once a step holding it persists it (`>`, `>>`,
+    `tee`, `$GITHUB_ENV`/`$GITHUB_OUTPUT`; `2>&1` and `> /dev/null` do not count);
+  - the matrix counts as job scope;
+  - the egress tools listed in the CHANGELOG.
+
+  `gh api` stays out on purpose, because GitHub is that token's audience. A local
+  `rsync` stays out as well.
+- **d5 trusted the media-type label.** A random payload labelled `image/png` disappeared
+  from the per-string pass. The exemption now requires a real image or font signature
+  in the decoded bytes.
+- **d7 checked the encoder only on the hit's own line.** An encoded name built one line
+  above dropped to low. The check now covers the hit line plus the five lines above.
+- **d7's sink missed an alias:** `const F = Function; F(...)` now counts.
+- **pub:** a multi-line flow map that never closes was still read. It was skipped here,
+  and the second round reverted that (see above).
+
+### Left for later
+
+- Four further gaps were found. Three already existed on main, and GitHub's own
+  masking of secrets in job outputs mostly closes the fourth. They describe how to
+  avoid a rule, so they are recorded in the private maintainer handoff, not here.
+- PR 327 (offline dependency-confusion tests): no issues found. The only conflict is
+  `.ai/handoff/MANIFEST.json`, in either order. Merge 327 first, then this PR, then run
+  `npm run handoff:refresh` on the result.
+
+## D-062 rule fixes, all ten at once (2026-09-23) (claude-opus-5-5)
+
+The owner asked for every queued rule fix to land immediately rather than one PR per
+day, so all ten drafts (d1 to d10) and the three "worth reporting" items are in PR 326.
+Three workers took separate file groups; the lead wired the scanner, re-checked and
+extended their work, and ran an independent mutation spot-check.
+
+### Result
+
+- **The drafts:**
+  - d1: pytest `test_*.py`, one shared definition;
+  - d2: GCP metadata host;
+  - d3: dotted keys and replacement fields;
+  - d4: requirement numbers;
+  - d5: data-URI exemption, shared and narrowed;
+  - d6: beacon call shape and a shared exclusion;
+  - d7: DNS rules need a C2 signal for medium;
+  - d8: guarded dynamic import at info;
+  - d9: per-step secret-to-egress;
+  - d10: classifier comments at info.
+- **The "worth reporting" items:**
+  - VIDAR word boundaries;
+  - GHA_CROSS_WORKFLOW_ARTIFACT_TRUST: a listing is not a download;
+  - GHA_OIDC_WRITE_PERM text.
+- **Sibling rules brought to the same standard as d9:** GHA_SECRET_EXFIL_MULTILINE, GHA_SECRET_CURL,
+  GHA_SECRET_WGET and GHA_ENV_EXFIL. They recognise every expression form of a secret
+  reference, keep counting the run's own token (sending it out is the danger there), and
+  the multiline rule reads inline `env:` maps.
+- **Self-scan:** the repository's own suppression of WORKFLOW_SECRET_TO_UPLOAD_PATH was
+  removed. The rewritten rule reports 0 here, and a control workflow run through the same
+  CLI reports medium on the step line.
+- **Real data:** the workers compared old and new builds across the owner's local checkouts,
+  read-only. d9: 60 files before, 7 findings after. The four exfiltration rules: no
+  finding added or removed, with a control fixture proving the comparison sees a
+  difference.
+
+### Proof
+
+- Every draft's must-fire examples are tests. Every false-positive example is a test that
+  was red before the fix.
+- The workers ran 21 + 18 + 15 + 3 + 14 of their own mutation cuts, all red.
+- The lead's independent spot-check: 12 cuts, all red, with baseline and post-restore
+  green. That covers one per draft, the scanner severity wiring, and the ambient-token
+  flag in both directions.
+
+- The full suite on the remote Linux runner caught what no targeted run could.
+  - A new JSDoc comment on the wallet-pattern constants listed example paths. TypeScript
+    copies JSDoc into `dist/*.d.ts`, so the published declaration file matched
+    VIDAR_WALLET_THEFT at high, and `self-scan-recognition.test.ts` went red.
+  - The source file is covered by the self-scan manifest; the generated `.d.ts` is not.
+  - Fixed by using a line comment, which TypeScript does not copy, and checked with a
+    self-scan: 0 high or critical findings, none in `dist/*.d.ts`.
+
+### Deliberate trade-offs (recorded, not hidden)
+
+- d3: a map keyed by host names with plain string values (`"db.internal": "primary"`) now
+  goes quiet, since it has the same shape as a translation key. A nested-value inventory
+  still reports.
+- d4: only `10.x` is exempt after a marker, because it is the only private range that
+  collides with PCI numbering.
+- d10: info also needs an explanatory word in the same comment block, so an
+  infrastructure note in a classifier file still reports at medium.
+- VIDAR: whole-word "phantom ... seed" in code still reports at high. Narrowing "seed"
+  broke a real stealer shape (`grab(.../Atomic/..., "seed")`), so the change was reverted.
+- d5: `image/svg+xml` is not exempt, since an SVG can carry script.
+
+### Private advisory
+
+- GHSA-pvhm-wc2r-q627 is a DRAFT, private to repository admins. It holds the d9
+  sentence the draft marked, as the owner decided, and notes the sibling rule's
+  identical gap.
+- It has no patched version yet. When the release that carries PR 326 is out, set
+  the patched version and publish it (an owner action).
+
+## Pre-merge review of PR 326 (2026-09-23) (claude-opus-5-5)
+
+The owner asked for a review before merge. Four reviewers ran one pass each over separate areas:
+- registry ecosystems;
+- Maven, Terraform, pub, Docker and Actions;
+- lockfiles, nested manifests and parsers;
+- editor tasks, fonts, extensions and the importer.
+
+The lead reviewed the public text, the data and the scan-level integration. Every finding was
+reproduced before it counted. The fixes landed in the same PR. Two fix workers took the registry
+parsers and the Maven/Docker/pub parsers on separate files; the lead did the rest and verified
+the workers independently with the mutation proof below.
+
+### What the review found (all fixed unless listed under "Left open")
+
+- **Privacy, pre-existing since v4.9:** a local `scan` sent every Python dependency name to
+  pypi.org, which contradicts the README's "zero network requests".
+  - Measured with every network API instrumented, over 21 manifest types: those were the only
+    outbound calls.
+  - Now opt-in via `--check-registry`, with the README disclosure updated.
+  - `offline-scan.test.ts` mocks `node:https` and asserts zero requests.
+- **Data:** 28 of 40 Firefox indicators could never match. The index split `name@domain` at the
+  last "@". Fixed with `splitPackageIOCValue`, which the coverage-matrix helper now shares.
+- **Public artefact:** the internal machine name was back in this file 4 times, after an earlier
+  deliberate redaction. It is replaced with "the remote Linux runner"; the OpenClaw product
+  references are kept.
+- **Fake Font rules:**
+  - the command pattern missed quoted or backticked interpreters, absolute interpreter paths,
+    long whitespace, a glued redirect and quoted spaced paths;
+  - a platform override was judged separately instead of merged into the task;
+  - a `{ value }` command object was ignored;
+  - `.code-workspace` task blocks were not read;
+  - the font check trusted 4 magic bytes that are also valid JavaScript;
+  - the font check counted text over bytes, so an accented comment hid the script;
+  - saved HTML pages were flagged.
+- **Importer:** "listed versions win" pinned attacker-created extensions too.
+  - `resolveExtensionBlockShape` now collapses the pins of an extension its registry REMOVED;
+    live, error or unclear answers keep the pins.
+  - Applied to the committed data: 18 extensions checked, 1 collapsed
+    (`vscode:cline-ai-main.cline-ai-agent`).
+- **Extensions:** an Open VSX-only hit on a workspace recommendation is now reported at medium,
+  and says which editors it applies to.
+- **Lockfiles:**
+  - the excuse for a direct dependency is now decided by what the scan's own package.json
+    checks reported, not by re-reading the sibling package.json. That fixes workspace double
+    reports and ignored or test-fixture manifests silencing a lockfile;
+  - npm aliases are matched in package-lock (`name`) and yarn (`@npm:`);
+  - package-lock workspace entries are no longer dependencies;
+  - Python manifests under vendor/ and target/ are skipped.
+- **Terraform:**
+  - `source` is only a provider inside `required_providers`; provisioner and s3 sources were
+    false positives;
+  - `.tf.json` modules and `//subdir` submodules are read;
+  - unclosed blocks were quadratic.
+- **Registry parsers:** Helm import-values, multi-line Package.swift and conanfile.py, Ansible
+  name vs src, Podfile.lock external/private pods and quoted entries, Firefox
+  `Extensions.Locked`, an Octave DESCRIPTION read as CRAN, and mix.exs tuples outside `deps`.
+- **Maven/Docker/pub:**
+  - Gradle and SBT non-literal versions;
+  - SBT `%%` reported the plain artifact, a false positive against a different artifact;
+  - `%%%`, catalog rich versions and `[plugins]`, and `kotlin("jvm")` plugins;
+  - all pom properties blocks;
+  - the GitLab `image:` map form, Helm repository+tag, `COPY --from=${ARG}`, `RUN --mount from=`
+    and GitLab `services:` lists;
+  - pub flow-map path/git/sdk false positives, and the official China mirror.
+- **Hostile-input slowdowns, several pre-existing:** per-hit newline counting, `\s+#` comment
+  stripping, XML comment and plugin-tag regexes, and mix.exs, container YAML, Maven plugin-id and
+  pub key regexes. All are linear now (shared `src/text-lines.ts`), each with a timing test.
+  - Some went from 8 to 33 seconds at a few hundred KB, and extrapolated to minutes or hours at
+    the 5 MB cap.
+  - The hexTuples guard was first reported as untestable. Measured instead: 14 ms vs 1,542 ms
+    at 700 KB. The test was enlarged until it bites.
+- **Claim:** the count is 15, not 16. Homebrew's only indicator (the Trivy tap release 0.69.4)
+  needs a version, and only the legacy `Brewfile.lock.json` records one. Current Homebrew docs say
+  `brew bundle` "does not and will not" have a lock file. Homebrew is now listed as a third
+  category ("ships an indicator, not counted"), via a `limitation` field in
+  `ecosystem-coverage.json`.
+  - A name block for the tap would be wrong: the archived tap's final formula is the clean 0.69.3.
+
+### Proof
+
+- Mutation proof over all three sets of fixes (lead, registry worker, Maven/Docker/pub worker):
+  37 cuts, all red, with baseline and post-restore green.
+- The first run left four survivors, each resolved:
+  - a UTF-8 vs byte decoding cut: a high-byte binary test was added, since only UTF-8 decoding
+    keeps it clean;
+  - two cuts whose anchors were wrong (re-anchored, red);
+  - one redundant filter in the lockfile excuse pass: it can never change a result, because
+    ignored and test-fixture manifests never record a name. It was deleted, not kept.
+- The full suite on the remote Linux runner then caught what the targeted runs could not: the
+  reachability and index-parity tests carried their own split-at-last-"@". They had agreed
+  with the matcher's Firefox bug, which is why the 28 dead entries passed a test built to find
+  exactly that.
+  - Switching them to the production splitter was not enough: the cut then stayed GREEN, because
+    guard and matcher shared the reverted code.
+  - Both now state the value grammar independently, and the cut is red (3 tests).
+
+### Open topics closed (same day, owner request)
+
+- **edrtester:** now a whole-extension block. Every version the Marketplace serves
+  (1.0.0, 1.0.1, 1.0.2, 1.0.4) ships edrdrill.js and beacons to the fronted azure-cdn[.]info
+  host, checked by opening each VSIX on the remote Linux runner, never executed. The
+  publisher name matches that host.
+- **TretinV3.forts-api-extention stays pinned (0.3.1):** Open VSX serves only 0.3.0, a real
+  2023 project with a public repository, and the malicious release was removed. It is a
+  hijack victim.
+- **SBT:** `cross CrossVersion.full` is expanded from the build's literal `scalaVersion` and
+  `crossScalaVersions`; with none stated, nothing is reported. `CrossVersion.binary`
+  behaves like `%%`.
+- **Gradle:** non-literal versions are read on configurations the script declares
+  (`by configurations.creating`, `create/register("x")`, a `configurations { x }` block).
+  Names declared in another file (convention plugins) are still unknown.
+- **Multi-line flow maps:** pubspec and GitLab `services:` flow maps written over several
+  lines are joined and read with the same rules.
+- **Test-fixture lockfiles: re-examined, deliberately unchanged.** A lockfile under a test
+  path is often a REAL install target: an e2e suite in tests/e2e runs `npm ci` in CI with CI
+  secrets. Exempting test paths would hide exactly that. A repository that keeps malicious
+  fixtures uses an `ignore:` glob, which now works for lockfiles (see the lockfile excuse
+  fix).
+- **Found on the way:** two pom.xml regexes were quadratic on crafted input (30 s and 4.6 s
+  at a few hundred KB) and are linear now.
+- **Proof:** 10 mutation cuts, all red.
+  - One first survivor was a test that let the quadratic regex match once and skip ahead;
+    the test was fixed.
+  - One bound was redundant (the pub join only reads up to the next dependency) and was
+    deleted.
+  - The GitLab lookahead bound turned out load-bearing and got its own test.
+
+## Remaining coverage, coverage gate and README rewrite (2026-09-23) (claude-opus-5-5)
+
+Same branch (PR 326), still unreleased. The owner asked, before v6.3.0, for
+everything under "Still not covered" in the section below, and for the README
+and repository description to be rewritten, with nothing claimed that is not
+proven. That list is now closed; this section supersedes it.
+
+### What was added
+
+- Maven: Kotlin named args, Gradle `plugins {}` marker artifacts, SBT (`%%`
+  expanded to 2.12 / 2.13 / 3), Bazel `maven_install.json` (v1 and v2).
+- Terraform registry modules (`tfmodule:`), including
+  `.terraform/modules/modules.json`.
+- Actions `uses:` in composite / Docker `action.yml` anywhere in the tree.
+- Docker `FROM ${ARG}` via global ARGs and `${X:-fallback}`.
+- Ten registry ecosystems in `src/ecosystem-registry.ts`: Swift, CocoaPods,
+  Hex, CRAN, Conan, Helm, Ansible, Homebrew, browser extensions
+  (`chrome:` / `edge:` / `firefox:`), JetBrains.
+- Nested yarn / pnpm / bun lockfiles, which were never scanned below the root.
+
+### How "covered" is proven now
+
+- `src/ecosystem-coverage.json` is the single declaration: 24 ecosystems,
+  65 file formats.
+- `coverage-matrix.test.ts` runs a real `scan()` per declared format, at the
+  root and one directory down, and requires exactly one finding. That is 129
+  scan cases; workflows are root-only by definition.
+  Drift tests fail on a declared format with no fixture, a fixture for an
+  undeclared format, or a declared rule that is never emitted. Where the
+  bundle has no data, the indicator goes through the real feed cache file,
+  not a mocked matcher.
+- The README table is generated from that JSON (`coverage:generate`), and
+  `check:coverage` in prebuild fails on drift.
+- A new "ecosystem count" claim in `aahp.config.json` has the floor
+  `scripts/count-ecosystems.mjs` and covers README, package.json,
+  `.github/repo-about.txt` and action.yml.
+- Mutation proof for `ecosystem-registry.ts`, the registry and nested
+  lockfile dispatch, and the matrix drift tests: 18 distinct cuts, all red,
+  with baseline and post-restore green (182 and 161 tests). Three more cuts
+  target checks that were deleted as redundant after surviving an earlier
+  round, so there is nothing left for them to cut.
+
+### Data honesty
+
+- Eight ecosystems ship with NO indicators: Swift, CocoaPods, Hex, CRAN,
+  Conan, Terraform modules, Helm and Ansible. The README says "none yet
+  (matcher ready)" for them, generated from the shipped data rather than
+  written by hand.
+- Browser, JetBrains and Homebrew data is curated, and each identity was
+  checked against its store's current state on 2026-09-23:
+  - hijacked extensions are pinned to their malicious versions;
+  - whole-id blocks are used only for publisher-malicious extensions that
+    the store has removed or blocklisted;
+  - live-again extensions (42 of Socket's 108, and 3 ShadyPanda Edge
+    extensions) are deliberately excluded.
+
+### Open
+
+- (Settled the same day, see "Go victim entries" below.)
+- Before v6.3.0: add the SECURITY.md supported-versions row (minor bump).
+  The release decision stays with the owner.
+
+## Ecosystem coverage expansion (2026-09-23) (claude-opus-5-5)
+
+Follows the Terraform provider matcher on the same branch (PR 326). The owner
+asked what else is missing once Terraform exists as an ecosystem, and to fix
+and implement what can be. Unreleased; everything lands under `[Unreleased]`.
+
+### How the gaps were found (measured, not guessed)
+
+- OpenSSF malicious-packages corpus per ecosystem (shallow clone on the remote Linux runner):
+  npm 221,520, PyPI 11,743, RubyGems 3,630, NuGet 777, crates.io 20, Go 18,
+  **VS Code/Open VSX 21, Maven 2**, git 1, Packagist 1. Only the bold ones
+  had no matcher.
+- GitHub Advisory Database malware advisories per ecosystem: **actions 0,
+  maven 2, pub 0, swift 0, erlang 0, other 0** (control: pip 11,723). So the
+  remaining high-value gaps (Actions, Pub, container images) are the ones no
+  database carries; their indicators come from vendor write-ups.
+- Code survey: no scanner read Maven/Gradle, pubspec, extension IDs or image
+  references at all; Actions had three hardcoded SHAs.
+
+### Shipped (one commit each)
+
+1. `vscode:` / `openvsx:` extension identity (T-010, now DONE):
+   `extension-identity.ts`, rule `VSCODE_MALICIOUS_EXTENSION`. 51 importer
+   entries (1 bundle, 50 catalog) plus curated Nx Console pins.
+2. `maven:`: `maven-scanner.ts`, rule `MAVEN_MALICIOUS_PACKAGE`; importer maps
+   GitHub and OSV Maven. Curated `org.mvnpm:posthog-node@4.18.1` (Shai-Hulud
+   2.0 via mvnpm) in the bundle, `io.github.leetcrunch:scribejava-core` in the
+   catalog (Maven Central 404; a look-alike of `com.github.scribejava`, which
+   is a different groupId and untouched).
+3. `actions:`: 117 imposter commits, feed-driven, rule
+   `GHA_KNOWN_MALICIOUS_SHA` kept. Matched by SHA whatever repo name is used.
+4. `pub:`: `pub-scanner.ts`, rule `PUB_MALICIOUS_PACKAGE`; universal_file_viewer
+   XCSSET pins (0.1.5, 0.1.6: the two retracted releases), archive hashes,
+   two single-source C2 hosts.
+5. `docker:`: `container-image.ts`, rule `DOCKER_MALICIOUS_IMAGE`; Trivy
+   0.69.4-0.69.6 tags + 14 digests, KICS 9 digests + 2 never-restored tags.
+
+Every new matcher has a mutation proof (baseline and post-restore green):
+WP1 10/10, WP2 12/12, WP3 6/6, WP4 11/11, WP5 11/11 cuts red. Survivors
+during the work were resolved either by a test (real gap) or by deleting the
+redundant code (see below). Full suite on the remote Linux runner after WP1: 158/158 files.
+
+### Defects found and fixed on the way
+
+- **Importer would have name-blocked 13 live, legitimate Open VSX
+  extensions.** GlassWorm-class OSV records pair "introduced: 0" with the exact
+  trojanized versions; read as whole-package, every clean release of e.g.
+  `jeronimoekerdt.color-picker-universal` (57 versions) would have been
+  flagged. For `vscode` the listed versions now win; npm keeps the old reading
+  (control test), where that shape encodes a typosquat. All 19 pinned versions
+  were checked to be 404 on Open VSX (control `redhat.java` 200).
+- **Two of three hardcoded "compromised action" SHAs did not exist.**
+  `d8462b4...` appears in no source; `3f401fe1...369b8cdfe4` was a corrupted
+  copy of the CLEAN reviewdog v1.3.0 commit `3f401fe1...375e39b887` (exists,
+  2024-03-12). "Correcting the typo" would have flagged every user of the
+  repaired tag. The one real SHA (`0e58ed86`, named in GHSA-mrrh-fwg8-r2c3)
+  was dated September 2025; the incident was March 2025.
+- **`^nrwl\.angular-console$` was an npm name pattern** for a hijacked VS Code
+  extension. No npm package of that name exists (registry 404), so it never
+  fired; and as a name block of a victim it would have been wrong if it had.
+  Replaced by `vscode:`/`openvsx:` pins of 18.95.0.
+- **A `.vsix` manifest with a UTF-8 BOM skipped every manifest check**
+  (JSON.parse threw, manifest treated as absent). Same class as the recorded
+  BOM exemption on package.json.
+- Maven files, `pubspec.lock` and Dockerfiles carry no SCANNABLE extension, so
+  a per-file dispatch never reaches them; the first Maven scan() test proved
+  it (unit green, scan red). They are matched on the inline path the
+  Dockerfile handling already used, which is also each file's single dispatch
+  point (a `.toml` catalog, `pubspec.yaml` and compose YAML each report once,
+  asserted).
+- NEXT_ACTIONS said "Five tasks are ready" while its table said 4; the real
+  number, after T-010, is 3 (T-009, T-011, T-012).
+
+### What only the full run caught (targeted suites were green)
+
+- `issue-205-zero-coverage.test.ts` used `pom.xml` as its example of "a file
+  this scanner does not read". Once Maven matching read it, the premise was
+  false, not the guard. The fixture is now an Ant `build.xml`, and a new test
+  pins the other side: a Maven project counts as scanned, exit 0.
+- The CI self-scan failed on this repository: the pub unit-test fixture
+  carried the REAL trojanized archive hash, which the scanner then correctly
+  flagged. The fixture uses a synthetic hash now. `npm run build` does not run
+  the self-scan, only CI does, so this class is invisible locally unless
+  `node dist/cli.js scan . --fail-on critical` is run by hand. **Run it before
+  pushing any change that adds IOC values to a test fixture.**
+
+### Verification of third-party indicators
+
+A background research agent collected the Actions / pub / Docker candidates.
+Nothing was ingested on its word alone:
+- all 116 action SHAs re-verified via the GitHub API (exists, expected clean
+  parent, not on the default branch); `0e58ed86` via the advisory text;
+- all 14 Trivy digests found verbatim in Aqua's GHSA-69fq-xp46-6x23 (read with
+  `gh`, not a web fetch); the 15th digest there is the cosign signature, not
+  an image, and is not listed;
+- all image tags and digests 404 on Docker Hub, controls 200;
+- pub.dev API confirms 0.1.5/0.1.6 retracted and the archive hashes.
+Not independently verified: the two XCSSET C2 hosts (single vendor, plus the
+agent's decode of the upstream commit), hence confidence 0.85.
+
+### Still not covered (the honest remainder)
+
+- **No data, so not built**: Swift/SwiftPM, CocoaPods, Hex, CRAN, Conan, Helm,
+  Ansible Galaxy, Homebrew, browser extensions, JetBrains plugins. Zero malware
+  records in either database today; the ecosystem pattern (prefix, matcher,
+  importer map, MCP enum, reachability) is now repeatable when data appears.
+- Maven: Kotlin DSL named-argument form (`group = "...", name = "..."`), Gradle
+  `plugins { id(...) version ... }` marker artifacts, SBT/Ivy, Bazel
+  `maven_install.json` are not read.
+- Terraform: provider addresses only; registry MODULE sources
+  (`ns/name/system`) are not matched.
+- Actions: `uses:` in composite `action.yml` files outside `.github/workflows`
+  is not checked against the SHA list (the Actions scanner only walks the
+  workflows directory).
+- Docker: `ARG`-parameterised `FROM ${BASE}` is not resolved.
+
+### Open decisions for the owner
+
+- Release shape: this branch now adds six ecosystems and several detection
+  fixes. It reads as a minor (v6.3.0), which also needs a SECURITY.md
+  supported-versions row.
+- Whether the remaining Maven forms and Terraform module sources are worth a
+  follow-up now, or only once there is an incident that needs them.
+
+## Terraform provider matcher (2026-09-23) (claude-opus-5-5)
+
+Closes the open item from the 2026-09-23 threat-intel note: the Graphalgo
+Terraform providers had no matcher. Unreleased; lands under `[Unreleased]`.
+
+- New `src/terraform-scanner.ts`, rule `TERRAFORM_MALICIOUS_PROVIDER`, called
+  per file from `scan()` for `.tf`, `.tf.json` and `.terraform.lock.hcl` (all
+  three already pass the SCANNABLE_EXTENSIONS gate; the walker does not skip
+  dotfiles). Feed ecosystem `terraform:<namespace>/<type>`, looked up through
+  the existing `matchPackageIOC` index, with `terraform` added to
+  `normalizePackageIOCName` (lowercase: registry addresses are
+  case-insensitive).
+- **Identity rule:** only public-registry addresses resolve: no host,
+  `registry.terraform.io` or `registry.opentofu.org`. A private host names a
+  different plugin that shares the namespace/type. Module sources share the
+  `source` attribute name and are rejected by shape: part count, host
+  allow-list, and the label rule (`.`, `~`, `:` are never label characters).
+- A `.tf` source carries a constraint, not a version, so a version-pinned
+  `terraform:` entry fires only from the lock file. Both Graphalgo entries are
+  name-level, so both files catch them.
+- Wiring: `terraform` added to the MCP `ioc_lookup` enum, to
+  `PREFIXED_ECOSYSTEMS` (so the bare-npm matcher skips those entries), to the
+  ecosystem unions in `ioc-blocklist.ts`, and to the REACHABLE literal in
+  `collection-reachability.test.ts`.
+- **Mutation proof, baseline and post-restore both green.** Eight cuts, all
+  red: scanner dispatch removed; label check removed; label widened to admit a
+  leading `.`; label widened to admit a leading `~`; private host accepted;
+  feed-side lowercase removed; lock-file version not captured; `terraform`
+  dropped from the reachability allow-list.
+- **Two guards were deleted rather than kept, because cutting them changed
+  nothing:** a `parts[0].includes(".")` host test (the allow-list already
+  rejects a module's first segment) and a path/URL pre-filter (the label rule
+  already rejects every form it caught). The label rule only became necessary
+  once two-part module paths (`./docker`, `../docker`, `~/docker`) were added
+  to the test: every earlier path case had three parts and died on the host
+  check first, so the real guard had no test that needed it.
+- Harness trap worth keeping: a Python `subprocess` call through `npx` (even
+  `npx.cmd` with `shell=False`) runs via cmd.exe, which split the vitest `-t`
+  filter at `|` and tried to execute the rest. The baseline check caught it
+  (no test summary, harness refused to measure). Call
+  `node node_modules/vitest/vitest.mjs` directly.
+
 ## Offline dependency-confusion tests (2026-09-23) (claude-opus-5-5)
 
 Test-only change, no behaviour change. Trigger: CI run 35853043970 (compat
@@ -698,7 +1547,7 @@ Verification before the release pull request:
 
 - `npm run build` passed every AAHP, feed, partition, budget, catalog,
   handoff and self-scan gate plus TypeScript.
-- A fresh Openclaw Linux checkout passed all 156 test files and all 3,836
+- A fresh checkout on the remote Linux runner passed all 156 test files and all 3,836
   tests. The temporary `/tmp` checkout was removed.
 - Tag `v6.2.0` and npm version `6.2.0` were both absent.
 

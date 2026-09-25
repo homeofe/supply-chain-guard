@@ -13,7 +13,11 @@ import {
   matchCharacterCodeObfuscation,
 } from "./correlated-pattern-matchers.js";
 import {
+  BEACON_TRANSPORT_SOURCE,
+  WALLET_NAME_SOURCE,
+  WALLET_TARGET_SOURCE,
   createCoreBroadGapMatchers,
+  isAllowlistGuardedImportLine,
   hasDropperPayloadPreparation,
   hasShaiHuludCorroboration,
 } from "./broad-gap-pattern-matchers.js";
@@ -68,6 +72,33 @@ export function isPatternMatchAccepted(
 ): boolean {
   if (!pattern.valueFilter) return true;
   return pattern.valueFilter(match[pattern.valueGroup ?? 1] ?? "");
+}
+
+/**
+ * Severity of one reported hit. Most rules report their declared severity. A
+ * few rules match shapes that are ordinary until the same file corroborates
+ * them; those keep the finding and lower only its severity, because core rule
+ * ids are unique and a second entry cannot carry the lower level.
+ *
+ * Only something PRESENT in the file may lower a severity (an allowlist guard
+ * in front of an import). The ABSENCE of a signal proves nothing: the encoder,
+ * decoder or loader can sit in another file, which this function never sees.
+ * DNS rules lowered on "no encoder in this file" were reverted for that reason.
+ *
+ * Every loop that turns a PatternEntry hit into a Finding must call this, or
+ * the corroboration below is silently skipped.
+ */
+export function resolvePatternSeverity(
+  pattern: Pick<PatternEntry, "rule" | "severity">,
+  content: string,
+  hit: { line: number },
+): Severity {
+  switch (pattern.rule) {
+    case "IMPORT_EXPRESSION":
+      return isAllowlistGuardedImportLine(content, hit.line) ? "info" : pattern.severity;
+    default:
+      return pattern.severity;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2024,8 +2055,46 @@ export type AutoRunLifecycleHook = (typeof AUTO_RUN_LIFECYCLE_HOOKS)[number];
 // Suspicious npm scripts
 // ---------------------------------------------------------------------------
 
+/**
+ * An interpreter executing a file whose extension says it is a font, image or
+ * media asset. That is the Contagious Interview "Fake Font" loader
+ * (`node ./public/fonts/fa-solid-400.woff2`, the woff2 being obfuscated
+ * JavaScript), and nothing legitimate runs a font. Only option-shaped tokens
+ * may sit between the interpreter and the file, so `node build.js images/a.png`
+ * (a real script taking an asset ARGUMENT) never matches. Shared by every
+ * auto-run command carrier: editor tasks, devcontainer lifecycle commands and
+ * npm lifecycle hooks.
+ *
+ * The interpreter may be quoted or backticked (`bash -c "node x.woff2"`), carry
+ * a path (`/usr/bin/node`, `C:\node\node.exe`), and the asset may be quoted
+ * with spaces in it or have a redirect glued on (`x.woff2>/dev/null`).
+ *
+ * Every repetition is bounded (16 option flags of up to 128 characters,
+ * whitespace runs of 64, 512 for the path): the line is attacker-controlled,
+ * and validatePatternSet refuses an unbounded gap in SUSPICIOUS_SCRIPTS for
+ * exactly that reason. A run longer than a bound is not a realistic command.
+ */
+const ASSET_EXTENSIONS = "(?:woff2?|ttf|otf|eot|png|jpe?g|gif|bmp|ico|webp|mp3|mp4|wav|ogg|pdf)";
+export const ASSET_EXEC_PATTERN =
+  "(?:^|[\\s;&|(\"'`])" +
+  "(?:[^\\s\"'`|&;<>()]{0,256}[\\\\/])?" +
+  "(?:node|nodejs|deno(?:\\s{1,64}run)?|bun(?:\\s{1,64}run)?|python[23]?|py|ruby|perl|php|bash|sh|zsh|pwsh|powershell|cscript|wscript|mshta)(?:\\.exe)?" +
+  // A flag that introduces a command STRING (sh -c, bash -lc, node -e/-p,
+  // --eval, pwsh -Command) is not skipped: what follows is a command, not a
+  // file, and it is matched on its own from the quote that opens it.
+  "\\s{1,64}(?:-(?![a-z]{0,16}c\\s|[ep]\\s|-?(?:eval|print|command|encodedcommand)\\b)[-\\w=.:/@]{0,128}\\s{1,64}){0,16}" +
+  `(?:"[^"\\n]{0,512}\\.${ASSET_EXTENSIONS}"|'[^'\\n]{0,512}\\.${ASSET_EXTENSIONS}'|[^\\s"'\`|&;<>()]{0,512}\\.${ASSET_EXTENSIONS}(?=[\\s"'\`|&;<>)]|$))`;
+
 /** Package.json script patterns that are suspicious */
 export const SUSPICIOUS_SCRIPTS: PatternEntry[] = [
+  {
+    name: "lifecycle-exec-asset",
+    pattern: ASSET_EXEC_PATTERN,
+    description: "install hook runs an interpreter on a file named as a font, image or media asset (the Contagious Interview \"Fake Font\" loader disguise)",
+    severity: "critical",
+    rule: "SCRIPT_EXECUTES_ASSET",
+    notTestFile: true,
+  },
   {
     name: "postinstall-curl",
     pattern: "curl\\s+.*\\|\\s*(?:bash|sh|node)",
@@ -2160,10 +2229,6 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   "^(chalk-tempalte|axois-utils|color-style-utils)$",
   "^@deadcode09284814\\/axios-util$",
 
-  // Nx Console nrwl.angular-console v18.95.0 - compromised VS Code extension (May 18, 2026)
-  // Listed for direct name match in extensions.json / dependency manifests.
-  "^nrwl\\.angular-console$",
-
   // TrapDoor cross-ecosystem credential stealer - npm packages (May 25, 2026)
   // 21 malicious npm packages from actor ddjidd564 targeting AI/DeFi/Web3 devs.
   // Reported by The Hacker News May 25, 2026; sibling PyPI/Crates.io waves.
@@ -2255,14 +2320,12 @@ export const MALICIOUS_PACKAGE_PATTERNS: string[] = [
   // at all. It is a real person's public learning repository that this table was
   // calling DPRK malware.
   //
-  // The rest of the cluster verified as attacker-controlled and is kept:
-  // lambda-platform/lambda and hngi/team-fierce-backend-golang are BLOCKED BY GITHUB
-  // for a terms-of-service violation (HTTP 403, blocked 2026-07-03); nine paths are
-  // gone (404); glacialspring/go-winsparkle and glacialspring/static both carry the
-  // identical 799-byte .vscode/tasks.json plus the woff2 payload, and "static" is a
-  // fork of gin-contrib/static whose injecting commit is backdated to the upstream
-  // 2018 history. The rule matches only the fork path, never gin-contrib/static.
-  "^github\\.com/(lambda-platform/(lambda|ebarimt-rest-api|dan)|reauheau/goaubio|glacialspring/(go-winsparkle|static)|bm-197/chill|naol7/dist-task-scheduler|anatoli-derese/a2sv-excercise|dexbotsdev/uniswap-v2-v3-arbitrage|zainirfan13/graphql-client|hngi/team-fierce-backend-golang|rickt/slack-weather-bot|Barsu5489/commerce|Setsu548/Logistic)$",
+  // The Go module paths of this wave were REMOVED from this table on 2026-09-23. They are
+  // developer repositories the wave infected, and a regex here blocks every version by name:
+  // lambda-platform/lambda, for one, is a framework released since 2021 whose 137 retrievable
+  // versions on the Go module proxy are all clean. The four with a verified infected
+  // pseudo-version are version-pinned feed entries in threat-intel.ts; the loader itself is
+  // detected by EDITOR_TASK_EXECUTES_ASSET, whatever repository carries it.
 
   // Contagious Interview Rollup polyfill npm packages (Lazarus, DPRK) (The Hacker News / JFrog, July 3, 2026)
   // Six attacker-uploaded npm packages masquerading as Rollup polyfill tooling to facilitate
@@ -3294,24 +3357,30 @@ export const KNOWN_NATIVE_PACKAGES = new Set([
 // Network beacon and crypto miner detection (T-008)
 // ---------------------------------------------------------------------------
 
+/**
+ * The interval twin's file exclusion, as it has always been. The timeout twin
+ * has none: a file name is chosen by the scanned package, so `*.min.js` must
+ * not become a place where a setTimeout beacon goes unreported. Its false
+ * positives on bundles are handled by the call-shaped transport instead.
+ */
+export const BEACON_NOT_FILE_PATTERN = /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i;
+
 export const BEACON_MINER_PATTERNS: PatternEntry[] = [
   // Beacon patterns: periodic network calls
   {
     name: "beacon-setinterval-fetch",
-    pattern:
-      "setInterval\\s*\\(.*(?:fetch|https?\\.(?:get|request)|axios|got|node-fetch|XMLHttpRequest)",
+    pattern: `setInterval\\s*\\(.*${BEACON_TRANSPORT_SOURCE}`,
     description:
       "Periodic network request detected (setInterval + fetch). This is a common beacon pattern for C2 communication.",
     severity: "medium",
     rule: "BEACON_INTERVAL_FETCH",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.BEACON_INTERVAL_FETCH,
-    notFilePattern: /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i,
+    notFilePattern: BEACON_NOT_FILE_PATTERN,
     notTestFile: true,
   },
   {
     name: "beacon-settimeout-fetch",
-    pattern:
-      "setTimeout\\s*\\(.*(?:fetch|https?\\.(?:get|request)|axios|got|node-fetch)",
+    pattern: `setTimeout\\s*\\(.*${BEACON_TRANSPORT_SOURCE}`,
     description:
       "Delayed network request detected (setTimeout + fetch). May be a beacon with jitter.",
     severity: "medium",
@@ -3745,9 +3814,9 @@ export const OBFUSCATION_PATTERNS_V2: PatternEntry[] = [
   {
     name: "dynamic-import-expression",
     pattern:
-      "import\\s*\\(\\s*(?:`[^`]*\\$\\{|\\+|process\\.env|String\\.fromCharCode)",
+      "import\\s*\\(\\s*(?:`[^`]*\\$\\{|\\+|process\\.env|String\\.fromCharCode|(?:req|request)\\.(?:query|params|body|headers)\\b)",
     description:
-      "Dynamic import() with computed URL (template literal with expression, env variable, or string construction). Can load modules from attacker-controlled sources.",
+      "Dynamic import() with computed URL (template literal with expression, env variable, request input, or string construction). Can load modules from attacker-controlled sources. Reported at info when the template has a static prefix and extension and its one identifier was checked earlier in the same function against an anchored allowlist that admits no path characters.",
     severity: "medium",
     rule: "IMPORT_EXPRESSION",
     correlatedMatcher: CORE_BROAD_GAP_MATCHERS.IMPORT_EXPRESSION,
@@ -3920,7 +3989,7 @@ export const INFOSTEALER_PATTERNS: PatternEntry[] = [
   {
     name: "vidar-wallet-theft",
     pattern:
-      "(?:Exodus|exodus|MetaMask|metamask|Phantom|phantom|Atomic|Electrum|electrum|Coinomi|Trust.*Wallet).*(?:wallet|keystore|vault|seed|mnemonic)|wallet\\.dat",
+      `(?<![A-Za-z])(?:${WALLET_NAME_SOURCE}(?![a-z])|Trust(?![a-z]).*Wallet).*${WALLET_TARGET_SOURCE}|wallet\\.dat`,
     description:
       "Cryptocurrency wallet file/directory access. Infostealers target wallet files for fund theft.",
     severity: "high",
@@ -4224,7 +4293,7 @@ export const C2_EXTENDED_PATTERNS: PatternEntry[] = [
   {
     name: "c2-doh-resolver",
     pattern:
-      "(?:cloudflare-dns\\.com|dns\\.google|dns\\.quad9\\.net)/dns-query|application/dns-json|application/dns-message",
+      "(?:cloudflare-dns\\.com|dns\\.google|dns\\.quad9\\.net)/(?:dns-query|resolve)|application/dns-json|application/dns-message",
     description:
       "DNS-over-HTTPS (DoH) resolver in code. Malware uses DoH to resolve C2 domains while bypassing network monitoring.",
     severity: "medium",

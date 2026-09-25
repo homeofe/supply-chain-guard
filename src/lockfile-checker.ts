@@ -19,10 +19,13 @@
  * - Lockfile version downgrades
  */
 
+import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Finding } from "./types.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { parseJsonObject } from "./json-utils.js";
+import { lockfileFeedFindings } from "./lockfile-feed.js";
+import { loadThreatIntel, type FeedIOC } from "./threat-intel.js";
 import {
   optionalFileExists,
   readOptionalUtf8File,
@@ -98,13 +101,72 @@ interface ParsedLockDependency {
  * A repo can contain several lockfiles (e.g. after a package-manager
  * migration); all present ones are checked.
  */
-export function checkLockfile(dir: string): Finding[] {
+export function checkLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   return [
     ...checkNpmLockfile(dir),
-    ...checkPnpmLockfile(dir),
-    ...checkYarnLockfile(dir),
-    ...checkBunLockfile(dir),
+    ...checkPnpmLockfile(dir, feed),
+    ...checkYarnLockfile(dir, feed),
+    ...checkBunLockfile(dir, feed),
   ];
+}
+
+/** yarn / pnpm / bun lockfile names handled by checkJsLockfileContent. */
+export const JS_LOCKFILE_NAMES: ReadonlySet<string> = new Set(["yarn.lock", "pnpm-lock.yaml", "bun.lock"]);
+
+/**
+ * Every yarn / pnpm / bun lockfile check on already-read content, reported
+ * under the file's real relative path. checkLockfile() covers the scan root;
+ * this is what a lockfile BELOW the root (a monorepo package) goes through,
+ * where the root-only functions would never look.
+ */
+export function checkJsLockfileContent(
+  basename: string,
+  content: string,
+  relativePath: string,
+  feed: FeedIOC[],
+): Finding[] {
+  const findings: Finding[] = [];
+  let deps: ParsedLockDependency[] | null;
+  if (basename === "pnpm-lock.yaml") {
+    deps = parsePnpmLock(content);
+    if (deps === null) return [parseErrorFinding(relativePath, "pnpm install")];
+  } else if (basename === "yarn.lock") {
+    deps = parseYarnLock(content);
+    if (deps === null) return [parseErrorFinding(relativePath, "yarn install")];
+  } else if (basename === "bun.lock") {
+    let lock: unknown;
+    try {
+      lock = JSON.parse(stripJsonc(content)) as unknown;
+    } catch {
+      return [parseErrorFinding(relativePath, "bun install")];
+    }
+    deps = [];
+    const packages = (lock as { packages?: unknown }).packages;
+    if (packages && typeof packages === "object") {
+      for (const entry of Object.values(packages as Record<string, unknown>)) {
+        const dep = parseBunPackageEntry(entry);
+        if (dep) deps.push(dep);
+      }
+    }
+  } else {
+    return findings;
+  }
+  for (const dep of deps) checkParsedDependency(dep, relativePath, findings);
+  for (const pushed of lockfileFeedFindings(deps, relativePath, feed)) findings.push(pushed);
+  return findings;
+}
+
+/**
+ * Threat-feed findings for a non-npm lockfile. package-lock.json is matched on
+ * the per-file scan path in scanner.ts instead, which also covers nested
+ * package-lock.json files; this covers the root yarn/pnpm/bun lockfile.
+ */
+function feedFindingsFor(
+  deps: readonly ParsedLockDependency[],
+  lockfileName: string,
+  feed: FeedIOC[] | undefined,
+): Finding[] {
+  return lockfileFeedFindings(deps, lockfileName, feed ?? loadThreatIntel());
 }
 
 // ---------------------------------------------------------------------------
@@ -488,7 +550,7 @@ function checkOrphanedDependencies(
  * Check pnpm-lock.yaml for lockfile issues.
  * Supports v6 ("/name@1.2.3") and v9 ("name@1.2.3") package-key styles.
  */
-export function checkPnpmLockfile(dir: string): Finding[] {
+export function checkPnpmLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const lockfileName = "pnpm-lock.yaml";
   const lockfilePath = path.join(dir, lockfileName);
   const findings: Finding[] = [];
@@ -503,6 +565,7 @@ export function checkPnpmLockfile(dir: string): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
+  for (const pushed of feedFindingsFor(deps, lockfileName, feed)) findings.push(pushed);
   return findings;
 }
 
@@ -528,7 +591,7 @@ function parsePnpmLock(content: string): ParsedLockDependency[] | null {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
 
@@ -616,7 +679,7 @@ function parsePnpmPackageKey(rawKey: string): ParsedLockDependency | null {
  * like 'name@^1.0.0:') and Berry v2+ (YAML with __metadata, keys like
  * "name@npm:^1.0.0") automatically.
  */
-export function checkYarnLockfile(dir: string): Finding[] {
+export function checkYarnLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const lockfileName = "yarn.lock";
   const lockfilePath = path.join(dir, lockfileName);
   const findings: Finding[] = [];
@@ -631,6 +694,7 @@ export function checkYarnLockfile(dir: string): Finding[] {
   for (const dep of deps) {
     checkParsedDependency(dep, lockfileName, findings);
   }
+  for (const pushed of feedFindingsFor(deps, lockfileName, feed)) findings.push(pushed);
   return findings;
 }
 
@@ -666,7 +730,7 @@ function parseYarnClassic(content: string): ParsedLockDependency[] | null {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     if (line === "" || line.startsWith("#")) continue;
 
     // Entry headers sit at zero indentation and end with ":"
@@ -722,7 +786,7 @@ function parseYarnBerry(content: string): ParsedLockDependency[] {
   };
 
   for (const rawLine of lines) {
-    const line = rawLine.replace(/\s+$/, "");
+    const line = rawLine.trimEnd();
     if (line === "" || line.startsWith("#")) continue;
 
     if (!line.startsWith(" ") && line.endsWith(":")) {
@@ -788,7 +852,11 @@ function parseYarnHeaderSpec(header: string): ParsedLockDependency | null {
   const firstSpec = (header.split(",")[0] ?? "").trim().replace(/^"/, "").replace(/"$/, "");
   const at = firstSpec.lastIndexOf("@");
   if (at <= 0) return null;
-  const name = firstSpec.slice(0, at);
+  let name = firstSpec.slice(0, at);
+  // An npm alias ("x@npm:evil@1.0.0", berry "x@npm:evil@^1") installs `evil`:
+  // the key before "@npm:" is arbitrary text, the package is what follows.
+  const alias = name.indexOf("@npm:");
+  if (alias > 0) name = name.slice(alias + "@npm:".length);
   if (name === "") return null;
   return { name, expectsIntegrity: false, sriIntegrity: true };
 }
@@ -803,7 +871,7 @@ function parseYarnHeaderSpec(header: string): ParsedLockDependency | null {
  * with a low-severity finding instead. When both exist, bun uses the text
  * lockfile, so the binary one is not flagged.
  */
-export function checkBunLockfile(dir: string): Finding[] {
+export function checkBunLockfile(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const textPath = path.join(dir, "bun.lock");
   const binaryPath = path.join(dir, "bun.lockb");
@@ -835,12 +903,17 @@ export function checkBunLockfile(dir: string): Finding[] {
   }
 
   const packages = (lock as { packages?: unknown }).packages;
+  const deps: ParsedLockDependency[] = [];
   if (packages && typeof packages === "object") {
     for (const entry of Object.values(packages as Record<string, unknown>)) {
       const dep = parseBunPackageEntry(entry);
-      if (dep) checkParsedDependency(dep, "bun.lock", findings);
+      if (dep) {
+        checkParsedDependency(dep, "bun.lock", findings);
+        deps.push(dep);
+      }
     }
   }
+  for (const pushed of feedFindingsFor(deps, "bun.lock", feed)) findings.push(pushed);
   return findings;
 }
 

@@ -2,7 +2,7 @@
   "name": "supply-chain-guard",
   "version": "6.2.5",
   "mcpName": "io.github.homeofe/supply-chain-guard",
-  "description": "Open-source supply-chain security scanner for npm, PyPI, Cargo, Go, RubyGems, Composer, NuGet, Docker, VS Code extensions, GitHub Actions, IaC and Solana C2. Detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 350+ threat indicators across all major lockfile formats (npm, pnpm, yarn, bun). Generates CycloneDX 1.6 SBOMs, grades SLSA provenance (in-toto/DSSE structural validation), and correlates findings into attack-chain incidents.",
+  "description": "Open-source supply-chain security scanner, local and offline. Matches known-malicious packages, extensions, plugins, providers, container images and CI actions in 15 ecosystems, including transitive lockfile dependencies at any depth, and detects GlassWorm, Shai-Hulud, PPE attacks, dependency confusion and 350+ threat indicators. Generates CycloneDX 1.6 SBOMs, grades SLSA provenance (in-toto/DSSE structural validation), and correlates findings into attack-chain incidents.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -30,9 +30,11 @@
     "check:feed": "node scripts/generate-feed.mjs --check",
     "check:feed-partition": "node scripts/check-feed-partition.mjs",
     "check:feed-budget": "node scripts/check-feed-budget.mjs",
-    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
+    "prebuild": "npm run check:aahp && npm run check:feed && npm run check:coverage && npm run check:feed-partition && npm run check:feed-budget && npm run check:catalog && npm run check:handoff && npm run check:self-scan",
     "prepublishOnly": "npm run build",
-    "prepare": "tsc"
+    "prepare": "tsc",
+    "coverage:generate": "node scripts/generate-coverage-table.mjs",
+    "check:coverage": "node scripts/generate-coverage-table.mjs --check"
   },
   "keywords": [
     "security",
@@ -54,7 +56,17 @@
     "slsa",
     "cyclonedx",
     "devsecops",
-    "threat-intelligence"
+    "threat-intelligence",
+    "maven",
+    "gradle",
+    "nuget",
+    "rubygems",
+    "composer",
+    "vscode-extensions",
+    "browser-extensions",
+    "homebrew",
+    "helm",
+    "lockfile"
   ],
   "author": "Elvatis <emre.kohler@elvatis.com>",
   "license": "Apache-2.0",

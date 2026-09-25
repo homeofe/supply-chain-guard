@@ -7,11 +7,14 @@
  * - Pipfile.lock (JSON: { "default": {...}, "develop": {...} } with per-package
  *   { "version": "==x.y" } specifiers)
  *
+ * - requirements / constraints files and pyproject.toml (isPythonManifest),
+ *   parsed with the same helpers dependency-confusion.ts uses for them
+ *
  * Resolved name+version pairs are checked against known-compromised PyPI
  * versions (ioc-blocklist) and curated threat-intel IOCs (pypi: prefixed feed
  * entries). TOML is parsed with a hand-rolled line-state parser and Pipfile.lock
  * with JSON.parse - no TOML library is added (same approach as the JS lockfile
- * parsers and how requirements.txt / pyproject.toml are read elsewhere).
+ * parsers).
  */
 
 import * as path from "node:path";
@@ -19,11 +22,48 @@ import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
 import { checkBadVersion } from "./ioc-blocklist.js";
 import { readOptionalUtf8File } from "./pattern-scanner.js";
+import { parseRequirementPins, pyprojectDependencyNames } from "./dependency-confusion.js";
 
 /** Python lockfile names */
 const POETRY_LOCK = "poetry.lock";
 const UV_LOCK = "uv.lock";
 const PIPFILE_LOCK = "Pipfile.lock";
+
+/**
+ * Check if a file is a Python dependency manifest: a requirements or
+ * constraints file (requirements.txt, requirements-dev.txt, dev-requirements.txt,
+ * anything under a requirements/ directory) or pyproject.toml.
+ */
+export function isPythonManifest(relativePath: string): boolean {
+  const parts = relativePath.replace(/\\/g, "/").split("/");
+  const basename = parts[parts.length - 1] ?? "";
+  if (basename === "pyproject.toml") return true;
+  if (!basename.toLowerCase().endsWith(".txt")) return false;
+  if (parts[parts.length - 2]?.toLowerCase() === "requirements") return true;
+  return /^(?:[\w.-]*[-_.])?(?:requirements|constraints)(?:[-_.][\w.-]*)?\.txt$/i.test(basename);
+}
+
+/**
+ * Match a requirements file or pyproject.toml against pypi: feed entries.
+ * requirements pins (`==`) carry the version; pyproject declarations are
+ * ranges, so only whole-package entries can match there.
+ */
+export function scanPythonManifestContent(content: string, relativePath: string, feed?: FeedIOC[]): Finding[] {
+  const iocFeed = feed ?? loadThreatIntel();
+  const findings: Finding[] = [];
+  const basename = relativePath.replace(/\\/g, "/").split("/").pop() ?? "";
+  const deps = basename === "pyproject.toml"
+    ? pyprojectDependencyNames(content).map((name) => ({ name, version: undefined }))
+    : parseRequirementPins(content);
+  const seen = new Set<string>();
+  for (const { name, version } of deps) {
+    const key = `${name.toLowerCase()}@${version ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    checkPythonPackage(name, version, relativePath, iocFeed, findings);
+  }
+  return findings;
+}
 
 /**
  * Check if a file is a Python lockfile.
@@ -59,13 +99,13 @@ export function scanPythonLockfiles(dir: string, feed?: FeedIOC[]): Finding[] {
 
   const iocFeed = feed ?? loadThreatIntel();
   if (poetry !== null) {
-    findings.push(...scanPoetryLockContent(poetry, POETRY_LOCK, iocFeed));
+    for (const pushed of scanPoetryLockContent(poetry, POETRY_LOCK, iocFeed)) findings.push(pushed);
   }
   if (uv !== null) {
-    findings.push(...scanUvLockContent(uv, UV_LOCK, iocFeed));
+    for (const pushed of scanUvLockContent(uv, UV_LOCK, iocFeed)) findings.push(pushed);
   }
   if (pipfile !== null) {
-    findings.push(...scanPipfileLockContent(pipfile, PIPFILE_LOCK, iocFeed));
+    for (const pushed of scanPipfileLockContent(pipfile, PIPFILE_LOCK, iocFeed)) findings.push(pushed);
   }
 
   return findings;

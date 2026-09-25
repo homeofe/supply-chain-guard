@@ -502,6 +502,12 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "portfolio-devs.slack.com",
   "portfolio-testers.slack.com",
   "mediumstar.slack.com",
+  // universal_file_viewer XCSSET compromise on pub.dev (September 2026). The
+  // maintainer's machine was infected and the trojanized build hooks shipped in
+  // two releases; the hooks curl these hosts and pipe the response to sh.
+  // Single-source (Aikido), so the matching feed entries carry confidence 0.85.
+  "5yotmxcc54l9xda.ru",
+  "ejntin6hkjt7gj2.ru",
   // MemTensor sckit Go worm (September 2026). Per-victim C2 subdomains of
   // skyleen[.]fr (SafeDep + Aikido). Only the published subdomains are listed.
   "8a8acaf167b3.skyleen.fr",
@@ -1491,6 +1497,10 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // Graphalgo campaign spreads to Terraform providers and Go modules (September 2026)
   "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f": "Graphalgo Terraform provider payload archive disguised as examples/resources/docker_container/import-resource.sqlite3 (SHA256)",
   "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5": "Graphalgo Go module payload disguised as btreex.sql (SHA256)",
+  // universal_file_viewer XCSSET compromise (September 2026): the pub.dev archive_sha256 of the
+  // two retracted releases, which pubspec.lock records verbatim as each package's sha256.
+  "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04": "universal_file_viewer 0.1.5 pub archive, XCSSET-trojanized (SHA256)",
+  "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d": "universal_file_viewer 0.1.6 pub archive, XCSSET-trojanized (SHA256)",
   // MemTensor sckit Go worm (September 2026)
   "381ac6dc1715d9298fe81b2a53a11f7b7d78e361ee3a6619ad54f8c4b062cc18": "MemTensor sckit Go worm implant binary, linux-amd64 (SHA256)",
   "e077c387b223811064b7bbc5a55a0182fca9bf50894f949ff284d4be87d44b26": "MemTensor sckit Go worm implant binary, linux-arm64 (SHA256)",
@@ -1598,10 +1608,11 @@ export const KNOWN_MALICIOUS_GITHUB_ACCOUNTS: string[] = [
   // packages/extensions (162 release artifacts) across npm, Packagist, Go modules and Chrome
   // to deliver the DEV#POPPER RAT + OmniStealer via obfuscated JS loaders (fake .woff2 fonts
   // run from VS Code tasks; second stages fetched over TRON/Aptos/BNB RPC + XOR-decrypted eval).
-  // "Xpos587" is the compromised GitHub account behind the malicious Go module git2md; tracked
-  // here for source-reference matching. The broader "7span"/"sevenspan" and "Artiffusion-Inc"
-  // accounts are NOT blocked to avoid false positives on their legitimate, non-weaponized repos.
-  "Xpos587",
+  // "Xpos587" was listed here until 2026-09-23 and is REMOVED: it is the COMPROMISED account of
+  // the live project git2md, so an account entry flagged every reference to a real developer.
+  // The infected artifact is the one pinned git2md pseudo-version in threat-intel.ts, and the
+  // loader itself is EDITOR_TASK_EXECUTES_ASSET. The broader "7span"/"sevenspan" and
+  // "Artiffusion-Inc" accounts are likewise NOT blocked, for the same reason.
 
   // NeoShadow npm supply-chain attack (Aikido, 2026-01-05)
   // "cjh97123" is the npm publisher account that shipped all four typosquats (viem-js,
@@ -1893,7 +1904,7 @@ export function isKnownMaliciousAccount(owner: string): boolean {
  */
 function normalizePackageName(
   name: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions" | "pub" | "docker" | "tfmodule" | "swift" | "cocoapods" | "hex" | "cran" | "conan" | "helm" | "ansible" | "homebrew" | "chrome" | "edge" | "firefox" | "jetbrains",
 ): string {
   if (ecosystem === "pypi") {
     return name.trim().toLowerCase().replace(/[-_.]+/g, "-");
@@ -3170,7 +3181,7 @@ export function checkIOCBlocklist(
 export function checkBadVersion(
   name: string,
   version: string,
-  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins",
+  ecosystem: "npm" | "pypi" | "ruby" | "composer" | "nuget" | "cargo" | "go" | "jenkins" | "terraform" | "vscode" | "openvsx" | "maven" | "actions" | "pub" | "docker" | "tfmodule" | "swift" | "cocoapods" | "hex" | "cran" | "conan" | "helm" | "ansible" | "homebrew" | "chrome" | "edge" | "firefox" | "jetbrains",
 ): Finding | null {
   // ruby/composer/nuget/cargo have no pinned entries yet (their curated IOCs
   // live in threat-intel.ts as ecosystem-prefixed package entries); the union

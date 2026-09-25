@@ -156,11 +156,15 @@ function addNode(
   if (map.has(id)) {
     const existing = map.get(id)!;
     if (findingRules) {
-      existing.findings = [...(existing.findings ?? []), ...findingRules];
+      // Appended in place: copying the list for every finding is quadratic
+      // when one file carries many findings.
+      existing.findings ??= [];
+      for (const rule of findingRules) existing.findings.push(rule);
     }
     return;
   }
-  const node: GraphNode = { id, type, label, findings: findingRules };
+  // A copy: the list grows in place above and must not alias the caller's array.
+  const node: GraphNode = { id, type, label, findings: findingRules?.slice() };
   map.set(id, node);
   nodes.push(node);
 }

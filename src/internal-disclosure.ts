@@ -72,6 +72,7 @@ import type { Finding, PatternEntry, PolicyConfig, Severity } from "./types.js";
 import { isPatternMatchAccepted, validatePatternSet } from "./patterns.js";
 import { hasContainedExistingAncestor, isContainedPath } from "./pattern-scanner.js";
 import { hasNestedUnboundedQuantifier } from "./regex-complexity.js";
+import { buildTestFilePattern } from "./pattern-applicability.js";
 
 // ---------------------------------------------------------------------------
 // Reserved documentation space (the value layer)
@@ -155,7 +156,9 @@ const WELL_KNOWN_INFRA_CIDRS = new Set([
 /**
  * Hostnames in an internal-only TLD that every Docker Desktop installation
  * has. They resolve on the developer's machine, they are in the vendor's
- * documentation, and they name nothing that belongs to the project.
+ * documentation, and they name nothing that belongs to the project. The cloud
+ * metadata service's own hostname joins them for the reason given for its
+ * address in WELL_KNOWN_INFRA_ADDRESSES.
  */
 const WELL_KNOWN_INFRA_HOSTS = new Set([
   "host.docker.internal",
@@ -167,6 +170,11 @@ const WELL_KNOWN_INFRA_HOSTS = new Set([
   "docker.for.mac.localhost",
   "docker.for.win.host.internal",
   "docker.for.win.localhost",
+  // GCP instance metadata service by name: the hostname of the IMDS address
+  // above, identical in every GCP project; appears in every SSRF deny list and
+  // every credential-provider implementation. Exact name only, so other hosts
+  // in `.internal` keep reporting.
+  "metadata.google.internal",
 ]);
 
 /** True when a host sits in the reserved documentation namespace. */
@@ -588,7 +596,34 @@ function isPrivateAddressLexicalContextOkIndexed(
   const octets = parseIPv4(value);
   if (octets === null || octets[0] !== 10) return true;
 
+  if (followsRequirementMarker(content, matchStart)) return false;
+
   return v8Context.allows(matchStart);
+}
+
+/**
+ * A requirement marker written directly in front of the candidate, on the same
+ * line: `Req 10.4.1.1`, `Requirement 10.4.1.1`, `§ 10.4.1.1`. PCI DSS v4.0
+ * numbers its requirements in four dotted parts, and its chapter 10 collides
+ * with 10/8. Only these markers, and only adjacent: `Req host` followed by an
+ * address names a host. A fifth part (`10.4.1.1.2`) never reaches here, because the pattern
+ * rejects a candidate followed by `.`.
+ */
+const REQUIREMENT_MARKER_AT_END =
+  /(?:^|[^\w])(?:(?:req|requirement|section|control|clause|annex)[.:]?|sec\.|§)\s*$/i;
+
+/** Longest marker plus punctuation and a little spacing; bounds the lookback. */
+const REQUIREMENT_MARKER_WINDOW = 24;
+
+function followsRequirementMarker(content: string, matchStart: number): boolean {
+  const start = Math.max(0, matchStart - REQUIREMENT_MARKER_WINDOW);
+  let prefix = content.slice(start, matchStart);
+  const newline = prefix.lastIndexOf("\n");
+  if (newline >= 0) prefix = prefix.slice(newline + 1);
+  // A window cut mid-line is not a word boundary: without the sentinel, a
+  // cut landing inside `Prereq` would read as the marker `req`.
+  else if (start > 0) prefix = "x" + prefix;
+  return REQUIREMENT_MARKER_AT_END.test(prefix);
 }
 
 export function isPrivateAddressLexicalContextOk(
@@ -909,6 +944,53 @@ export interface InternalPatternEntry extends PatternEntry {
 }
 
 /**
+ * Classifier signals for INTERNAL_PRIVATE_IP / INTERNAL_PRIVATE_IPV6.
+ *
+ * An SSRF guard or address classifier is documented with the addresses it
+ * refuses, and its comments have to name a private literal because that is
+ * their subject. In a CODE file that matches any signal below, a private or
+ * ULA literal inside a COMMENT reports at `info` instead of `medium`, but only
+ * when its comment block also reads as an explanation (CLASSIFIER_COMMENT_CUE):
+ * `# primary database at <private address>` keeps `medium` in any file.
+ * A literal in string position, or in a file with no signal, keeps `medium`.
+ *
+ * Signals, any one of which is enough:
+ *   - a string prefix test on a private or ULA prefix: `startsWith("10.")`,
+ *     `startswith(("192.168.", ...))`, `HasPrefix(h, "fd")`, with `10.`,
+ *     `172.16` to `172.31`, `192.168`, `fc`, `fd`, `fe80`;
+ *   - an anchored regex on one of those prefixes: `^10\.`, `^172\.`,
+ *     `^192\.168`, `^f[cd]`, `^fc`, `^fd`, `^fe80`;
+ *   - a private-address predicate call: `is_private(`, `isPrivate(`,
+ *     `IsPrivate(`, `isPrivateAddress(`, or Python's `.is_private` property;
+ *   - an ipaddr.js range check: `.range() === "private"` (also `uniqueLocal`,
+ *     `linkLocal`, `loopback`, `carrierGradeNat`);
+ *   - a Python network literal on a private prefix: `ip_network("10.`.
+ *
+ * Every quantifier is bounded, so one pass over a 5 MB file stays linear.
+ */
+const PRIVATE_RANGE_CLASSIFIER = new RegExp(
+  [
+    String.raw`\b(?:startsWith|startswith|HasPrefix)\s*\(\s*(?:\(\s*)?(?:[\w.]{1,64}\s*,\s*)?["'](?:10\.|172\.(?:1[6-9]|2\d|3[01])|192\.168|f[cd]|fe80)`,
+    String.raw`\^(?:\(\?:|\()?(?:10\\\.|172\\\.|192\\\.168|f\[cd\]|fe80|f[cd](?=[/'"|)]))`,
+    String.raw`\bis_?private\w{0,32}\s*\(`,
+    String.raw`\.is_private\b`,
+    String.raw`\.range\(\s*\)\s*[!=]==?\s*["'](?:private|uniqueLocal|linkLocal|loopback|carrierGradeNat)["']`,
+    String.raw`\bip_network\(\s*["'](?:10\.|172\.|192\.168|f[cd]|fe80)`,
+  ].join("|"),
+  "i",
+);
+
+/**
+ * Words that make a comment block an explanation of what a classifier does
+ * rather than a note about where something lives.
+ */
+const CLASSIFIER_COMMENT_CUE =
+  /\b(?:such as|for example|for instance|refus\w*|reject\w*|block\w*|den(?:y|ies|ied)|rfc\s?(?:1918|4193|6598)|unique[- ]local|link[- ]local|ula|ssrf|prefix\w*|private ranges?)\b|\be\.g\./i;
+
+/** Comment lines searched above and below the literal for a cue. */
+const CLASSIFIER_COMMENT_BLOCK_RADIUS = 20;
+
+/**
  * The built-in rule family. Every entry is pure shape plus a value guard, so
  * it is useful on a repository whose owner has configured nothing at all.
  */
@@ -1088,6 +1170,15 @@ const CODE_FILE = /\.(?:[cm]?[jt]sx?|py|rb|rs|go|java|kt|php|cs|swift|scala|dart
 /** C-family sources, where `#` is not a comment. */
 const C_FAMILY_FILE = /\.(?:[cm]?[jt]sx?|java|kt|cs|swift|scala|dart|go|rs|c|h|cpp|hpp|php)$/i;
 
+/** JSON data files, where a quoted dotted key is an object key. */
+const JSON_FILE = /\.json[c5]?$/i;
+
+/** Languages whose template literals (backticks) interpolate `${...}`. */
+const JS_FAMILY_FILE = /\.[cm]?[jt]sx?$/i;
+
+/** Python, whose f-strings interpolate `{...}`. */
+const PYTHON_FILE = /\.py$/i;
+
 /**
  * Test / spec / fixture files.
  *
@@ -1101,10 +1192,17 @@ const C_FAMILY_FILE = /\.(?:[cm]?[jt]sx?|java|kt|cs|swift|scala|dart|go|rs|c|h|c
  * OpenAPI and AsyncAPI location as often as it is an RSpec one, and a
  * `servers[].url` in an API spec is exactly the endpoint-plus-port shape this
  * family exists to catch. RSpec files are still excluded by the `_spec.` suffix
- * alternative below, which is the part that actually identifies a test.
+ * file-name form, which is the part that actually identifies a test.
+ *
+ * Built from the same core as TEST_FILE_PATTERN, so a new file-name form lands
+ * in both at once. The only difference is the extra directory names the
+ * shared matcher adds (`spec/`, `snapshots/`, `test-fixtures/`, `mocks/`,
+ * `stubs/`, `fakes/`), which stay armed here for the reason above.
  */
-const TEST_FILE =
-  /(?:^|\/)(?:tests?|__tests__|__fixtures__|__mocks__|__snapshots__|e2e|integration-tests?|fixtures?|testdata|test-data)\/|[._-](?:test|spec|mock|fixture|stub|fake)\.|(?:^|\/)conftest\.py$/i;
+// The disclosure rules alone also treat pytest's `test_*.py` as a test: a test of an
+// address classifier must name private literals. The shared pattern that gates
+// the malware rules does not (see buildTestFilePattern).
+const TEST_FILE = buildTestFilePattern([], { pytestPrefix: true });
 
 /** What kind of surface a file is, which decides which rules stay armed. */
 export type FileSurface = "source" | "prose" | "example";
@@ -1314,6 +1412,132 @@ interface LineContext {
   commentAt: number;
   /** True when the line is a block-comment continuation (" * text"). */
   blockComment: boolean;
+  /** Replacement fields of interpolating strings, computed on first use. */
+  fields?: ReplacementFields;
+}
+
+/** Replacement fields of the interpolating string literals on one line. */
+interface ReplacementFields {
+  /** Column ranges of `${...}` / f-string `{...}` field bodies, ascending. */
+  fields: Array<[number, number]>;
+  /** Column ranges of string literals nested inside those fields, ascending. */
+  nested: Array<[number, number]>;
+}
+
+type InterpolationKind = "js" | "python" | null;
+
+/** True when the quote at `quoteAt` opens a Python f-string (`f"`, `rf'`, `Fr"`). */
+function isPythonFStringQuote(line: string, quoteAt: number): boolean {
+  let j = quoteAt;
+  while (j > 0 && quoteAt - j < 2 && /[rRbBfF]/.test(line[j - 1])) j--;
+  if (!/[fF]/.test(line.slice(j, quoteAt))) return false;
+  return j === 0 || !/[\w$]/.test(line[j - 1]);
+}
+
+/**
+ * Find the replacement fields inside the interpolating string literals of one
+ * line, and the string literals nested inside those fields. One forward walk
+ * per quoted range, so the whole line costs O(length) however many candidates
+ * it holds.
+ */
+function replacementFields(
+  line: string,
+  quoted: Array<[number, number]>,
+  kind: InterpolationKind,
+): ReplacementFields {
+  const fields: Array<[number, number]> = [];
+  const nested: Array<[number, number]> = [];
+  if (kind === null) return { fields, nested };
+
+  for (const [a, b] of quoted) {
+    const q = line[a];
+    if (kind === "js" ? q !== "`" : q === "`" || !isPythonFStringQuote(line, a)) continue;
+    const last = b - 1; // the closing quote
+    let i = a + 1;
+    while (i < last) {
+      let bodyStart = -1;
+      if (kind === "js" && line[i] === "$" && line[i + 1] === "{") bodyStart = i + 2;
+      else if (kind === "python" && line[i] === "{") {
+        // `{{` is a literal brace in an f-string, not a field.
+        if (line[i + 1] === "{") {
+          i += 2;
+          continue;
+        }
+        bodyStart = i + 1;
+      }
+      if (bodyStart < 0) {
+        i++;
+        continue;
+      }
+      let depth = 1;
+      let k = bodyStart;
+      while (k < last && depth > 0) {
+        const c = line[k];
+        if (c === '"' || c === "'" || c === "`") {
+          let e = k + 1;
+          while (e < last && (line[e] !== c || line[e - 1] === "\\")) e++;
+          nested.push([k, Math.min(e + 1, last)]);
+          k = e + 1;
+          continue;
+        }
+        if (c === "{") depth++;
+        else if (c === "}") depth--;
+        k++;
+      }
+      fields.push([bodyStart, depth === 0 ? k - 1 : last]);
+      i = k;
+    }
+  }
+  return { fields, nested };
+}
+
+/**
+ * True when a hostname candidate is attribute access inside a replacement
+ * field (`${stats.example.local}`, `f"{report.example.local}"`): code, not string content, so
+ * the property-access reading of isHostnameContextOk applies. A host written
+ * as a string nested in the field (`${env.HOST ?? "db.example.internal"}`) and one
+ * after `=` (a shell-style default) are still hosts.
+ */
+function isInReplacementFieldCode(line: string, column: number, fields: ReplacementFields): boolean {
+  if (!rangesContain(fields.fields, column)) return false;
+  if (rangesContain(fields.nested, column)) return false;
+  return line[column - 1] !== "=";
+}
+
+/** A dotted identifier path such as `status.example.internal`. */
+const DOTTED_IDENTIFIER_PATH = /^[A-Za-z_$][\w$-]*(?:\.[A-Za-z_$][\w$-]*)+$/;
+
+/**
+ * True when a hostname candidate is the whole of a quoted object KEY whose
+ * value is a scalar: `{ "status.example.internal": "Internal" }`, the layout of a
+ * translation catalogue keyed by dotted paths.
+ *
+ * Each condition closes a way a real host could be swallowed:
+ *   - the quotes must enclose exactly the candidate, so a key with a scheme,
+ *     a user or a port (`"http://git.example.lan/repo": 1`) is not a bare path;
+ *   - the key must follow `{`, `,` or the start of the line, so a ternary
+ *     (`c ? "db.example.internal" : x`) or a `case "db.example.internal":` is not a key;
+ *   - the value must not open an object or array on the same line, so a
+ *     host-keyed inventory (`{"db.example.internal": {"port": 5432}}`) still reports.
+ * A scalar-valued map keyed by host names is the residual this accepts.
+ */
+function isDottedKeyPosition(line: string, column: number, end: number): boolean {
+  const q = line[column - 1];
+  if ((q !== '"' && q !== "'") || line[end] !== q) return false;
+  if (!DOTTED_IDENTIFIER_PATH.test(line.slice(column, end))) return false;
+
+  let k = end + 1;
+  if (line[k] === "?") k++; // TypeScript optional property
+  while (line[k] === " " || line[k] === "\t") k++;
+  if (line[k] !== ":" || line[k + 1] === ":") return false;
+  k++;
+  while (line[k] === " " || line[k] === "\t") k++;
+  // A value on the next line is unknown, so the key keeps reporting.
+  if (k >= line.length || line[k] === "\r" || line[k] === "{" || line[k] === "[") return false;
+
+  let p = column - 2;
+  while (p >= 0 && (line[p] === " " || line[p] === "\t")) p--;
+  return p < 0 || line[p] === "{" || line[p] === ",";
 }
 
 /**
@@ -2077,6 +2301,12 @@ export function scanInternalDisclosure(
   const isMarkdown = MARKDOWN_FILE.test(normalizedPath);
   const isCodeFile = CODE_FILE.test(normalizedPath);
   const hashIsComment = !C_FAMILY_FILE.test(normalizedPath);
+  const isJsonFile = JSON_FILE.test(normalizedPath);
+  const interpolation: InterpolationKind = JS_FAMILY_FILE.test(normalizedPath)
+    ? "js"
+    : PYTHON_FILE.test(normalizedPath)
+      ? "python"
+      : null;
 
   const index = buildLineIndex(content);
   const { lines, starts } = index;
@@ -2096,6 +2326,45 @@ export function scanInternalDisclosure(
       contexts[lineNo] = ctx;
     }
     return ctx;
+  };
+  const fieldsFor = (lineNo: number): ReplacementFields => {
+    const ctx = contextFor(lineNo);
+    ctx.fields ??= replacementFields(lines[lineNo], ctx.quoted, interpolation);
+    return ctx.fields;
+  };
+
+  // Private-range classification is a property of the whole file: tested once,
+  // and only when a private literal in a comment needs the answer.
+  let classifierFile: boolean | undefined;
+  const isClassifierFile = (): boolean =>
+    (classifierFile ??= PRIVATE_RANGE_CLASSIFIER.test(content));
+
+  /** True when `column` on `lineNo` sits in a real comment, not a string. */
+  const inComment = (lineNo: number, column: number): boolean => {
+    const ctx = contextFor(lineNo);
+    if (ctx.commentAt >= 0 && column > ctx.commentAt && !rangesContain(ctx.quoted, ctx.commentAt)) {
+      return true;
+    }
+    return !hashIsComment && ctx.blockComment;
+  };
+  const isCommentOnlyLine = (lineNo: number): boolean => {
+    const t = lines[lineNo].trimStart();
+    return t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") ||
+      (hashIsComment && t.startsWith("#"));
+  };
+  /** True when the comment block around `lineNo` reads as an explanation. */
+  const commentBlockHasCue = (lineNo: number): boolean => {
+    const ctx = contextFor(lineNo);
+    const own = ctx.commentAt >= 0 ? lines[lineNo].slice(ctx.commentAt) : lines[lineNo];
+    if (CLASSIFIER_COMMENT_CUE.test(own)) return true;
+    for (const step of [-1, 1]) {
+      for (let d = 1; d <= CLASSIFIER_COMMENT_BLOCK_RADIUS; d++) {
+        const n = lineNo + step * d;
+        if (n < 0 || n >= lines.length || !isCommentOnlyLine(n)) break;
+        if (lines[n].length <= MAX_LINE_LENGTH && CLASSIFIER_COMMENT_CUE.test(lines[n])) return true;
+      }
+    }
+    return false;
   };
 
   const truncationReasons = new Set<string>();
@@ -2166,6 +2435,10 @@ export function scanInternalDisclosure(
       ) {
         continue;
       }
+      if (pattern.rule === "INTERNAL_HOSTNAME" && (isCodeFile || isJsonFile)) {
+        if (isDottedKeyPosition(line, column, column + match[0].length)) continue;
+        if (isCodeFile && isInReplacementFieldCode(line, column, fieldsFor(lineNo))) continue;
+      }
       if (codeMap && MARKDOWN_LITERAL_SILENT_RULES.has(pattern.rule)) {
         if (codeMap.illustrative[lineNo]) continue;
         const end = column + match[0].length;
@@ -2180,10 +2453,22 @@ export function scanInternalDisclosure(
       }
       kept++;
 
+      let severity = pattern.severityFor?.(match) ?? pattern.severity;
+      if (
+        (pattern.rule === "INTERNAL_PRIVATE_IP" || pattern.rule === "INTERNAL_PRIVATE_IPV6") &&
+        isCodeFile &&
+        inComment(lineNo, column) &&
+        isClassifierFile() &&
+        commentBlockHasCue(lineNo)
+      ) {
+        // Documentation of an address classifier: see PRIVATE_RANGE_CLASSIFIER.
+        severity = "info";
+      }
+
       findings.push({
         rule: pattern.rule,
         description: pattern.description,
-        severity: pattern.severityFor?.(match) ?? pattern.severity,
+        severity,
         file: relativePath,
         line: lineNo + 1,
         match: truncate(match[0]),
@@ -2197,7 +2482,7 @@ export function scanInternalDisclosure(
   let result = dedupeOverlaps(findings);
 
   if (runtime.enabled) {
-    result.push(...scanDenyList(lines, relativePath, runtime, truncationReasons));
+    for (const pushed of scanDenyList(lines, relativePath, runtime, truncationReasons)) result.push(pushed);
   }
 
   if (result.length > MAX_FINDINGS_PER_FILE) {

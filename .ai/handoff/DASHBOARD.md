@@ -15,8 +15,8 @@ Current package inventory and CI gate wiring are generated below.
 |-------|-------|
 | Version | 6.2.5 |
 | Node engines | >=22.0.0 |
-| Source modules | 80 under `src/` |
-| Test files | 156 under `src/__tests__/` |
+| Source modules | 90 under `src/` |
+| Test files | 178 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit gates | enforced in required CI - see below |
 
@@ -47,9 +47,9 @@ Overrides: none.
 
 ---
 
-## Source Modules (80)
+## Source Modules (90)
 
-`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `broad-gap-pattern-matchers.ts`, `cargo-scanner.ts`, `catalog-digest.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `continuous-monitor.ts`, `correlated-pattern-matchers.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `dockerfile-scanner.ts`, `entropy.ts`, `external-threat-intel.ts`, `extracted-file-walker.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `internal-disclosure.ts`, `ioc-blocklist.ts`, `json-utils.ts`, `lockfile-checker.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `osv-export.ts`, `pattern-applicability.ts`, `pattern-scanner.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `regex-complexity.ts`, `release-scanner.ts`, `remediation-engine.ts`, `remote-download.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `self-scan-trust.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `state-dir.ts`, `threat-intel.ts`, `triage-engine.ts`, `triage-scope.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `two-tier-scoring.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`, `workflow-pattern-matchers.ts`
+`active-validation.ts`, `agentic-workflow-scanner.ts`, `archive-extractor.ts`, `attack-graph.ts`, `broad-gap-pattern-matchers.ts`, `cargo-scanner.ts`, `catalog-digest.ts`, `cli.ts`, `composer-scanner.ts`, `config-scanner.ts`, `container-image.ts`, `continuous-monitor.ts`, `correlated-pattern-matchers.ts`, `correlation-engine.ts`, `dependency-confusion.ts`, `dependency-governance.ts`, `dependency-risk-analyzer.ts`, `diff-scanner.ts`, `disguised-asset.ts`, `dockerfile-scanner.ts`, `ecosystem-registry.ts`, `entropy.ts`, `extension-identity.ts`, `external-threat-intel.ts`, `extracted-file-walker.ts`, `feed.ts`, `git-scanner.ts`, `github-actions-scanner.ts`, `github-trust-scanner.ts`, `go-scanner.ts`, `index.ts`, `install-guard.ts`, `install-hook-scanner.ts`, `internal-disclosure.ts`, `ioc-blocklist.ts`, `json-utils.ts`, `lockfile-checker.ts`, `lockfile-feed.ts`, `maven-scanner.ts`, `mcp-scanner.ts`, `mcp-server.ts`, `metrics.ts`, `nested-manifests.ts`, `npm-scanner.ts`, `nuget-scanner.ts`, `openclaw-plugin-scanner.ts`, `org-scanner.ts`, `osv-export.ts`, `pattern-applicability.ts`, `pattern-scanner.ts`, `patterns.ts`, `playbooks.ts`, `policy-engine.ts`, `posture-engine.ts`, `pub-scanner.ts`, `publishing-anomaly-detector.ts`, `pypi-scanner.ts`, `python-lockfile-scanner.ts`, `regex-complexity.ts`, `release-scanner.ts`, `remediation-engine.ts`, `remote-download.ts`, `reporter.ts`, `risk-engine.ts`, `risk-forecast.ts`, `rubygems-scanner.ts`, `sbom-generator.ts`, `scanner.ts`, `secret-simulator.ts`, `self-scan-trust.ts`, `skills-scanner.ts`, `sla-engine.ts`, `slsa-verifier.ts`, `soc-exporter.ts`, `solana-monitor.ts`, `state-dir.ts`, `terraform-scanner.ts`, `text-lines.ts`, `threat-intel.ts`, `triage-engine.ts`, `triage-scope.ts`, `trust-breakdown.ts`, `trust-signals.ts`, `two-tier-scoring.ts`, `types.ts`, `vscode-scanner.ts`, `workflow-ast.ts`, `workflow-graph.ts`, `workflow-modeler.ts`, `workflow-pattern-matchers.ts`
 
 ---
 

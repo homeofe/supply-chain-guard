@@ -6,7 +6,7 @@
 > Before a task becomes done, each box must be checked, explicitly waived with
 > rationale, or moved to a linked open follow-up.
 
-Five tasks are ready, two are blocked on owner decisions, and T-008/T-015/T-016/T-017/T-018/T-019 are complete.
+Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.
 
 Current version: **v6.2.5**
 
@@ -15,11 +15,11 @@ Current version: **v6.2.5**
 ## Status Summary
 
 AAHP 3.9.1 adoption and the verified security hardening are complete. T-014 (in-process zip)
-and T-020 (feed parity) are complete. Four follow-ups remain ready.
+and T-020 (feed parity) are complete, and T-010 (extension-ID IOCs) is done. Three follow-ups remain ready.
 
 | Status | Count |
 |--------|-------|
-| Ready | 4 |
+| Ready | 3 |
 | Blocked | 0 |
 
 
@@ -39,7 +39,7 @@ proofs locally without a network dependency.
 
 ---
 
-## T-010: Add a first-class known-bad VS Code extension-ID IOC type
+## T-010: Add a first-class known-bad VS Code extension-ID IOC type (DONE)
 
 **Goal:** Represent malicious extension IDs as threat intelligence without
 conflating identity matches with behavioral rules.
@@ -48,9 +48,9 @@ conflating identity matches with behavioral rules.
 focused registry tests.
 
 **Acceptance criteria:**
-- [ ] The schema represents normalized `publisher.name` IOCs separately from behavioral findings.
-- [ ] Marketplace and Open VSX scans exact-match the normalized ID with positive, case, boundary, and malformed-ID tests.
-- [ ] Feed compatibility and version-skew behavior are documented and generated feed checks pass.
+- [x] The schema represents normalized `publisher.name` IOCs separately from behavioral findings (`vscode:` / `openvsx:` package entries, rule `VSCODE_MALICIOUS_EXTENSION`, `src/extension-identity.ts`).
+- [x] Marketplace and Open VSX scans exact-match the normalized ID with positive, case, boundary, and malformed-ID tests (`extension-identity.test.ts`, `vscode-scanner.test.ts`, `campaigns.test.ts`; ten mutation cuts all red).
+- [x] Feed compatibility and version-skew behavior are documented and generated feed checks pass (`docs/threat-feed-sources.md`, "Version skew").
 
 ---
 
