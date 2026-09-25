@@ -27,7 +27,6 @@
 
 import type { Finding } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { lineOfNeedle } from "./text-lines.js";
 
 const LOCK_FILE = ".terraform.lock.hcl";
 
@@ -111,6 +110,7 @@ export function extractTerraformModules(content: string, relativePath: string): 
     let doc: unknown;
     try { doc = JSON.parse(content); } catch { return []; }
     const out: TerraformModuleRef[] = [];
+    const lineOf = jsonStringLines(content);
     for (const block of jsonBlocks((doc as Record<string, unknown> | null)?.module)) {
       for (const body of jsonBlocks(Object.values(block))) {
         const source = body.source;
@@ -120,7 +120,7 @@ export function extractTerraformModules(content: string, relativePath: string): 
           out.push({
             address,
             version: typeof version === "string" && EXACT_MODULE_VERSION.test(version.trim()) ? version.trim() : undefined,
-            line: lineOfNeedle(content, `"${source}"`),
+            line: lineOf(source as string),
           });
         }
       }
@@ -151,6 +151,46 @@ export function extractTerraformModules(content: string, relativePath: string): 
     i = j;
   }
   return out;
+}
+
+/**
+ * Line lookup for decoded JSON string values: the line of the first string
+ * literal with that value, built in one pass over the text.
+ *
+ * It replaces lineOfNeedle(content, `"${source}"`) per module or provider,
+ * which searched the whole file once per entry: quadratic in the number of
+ * distinct sources, about 75 s for a 5 MB .tf.json (6.3.0 pre-release review).
+ * Matching the decoded value also finds a source written with JSON escapes
+ * (`\/`), which the raw search reported as line 1.
+ */
+export function jsonStringLines(content: string): (value: string) => number {
+  const first = new Map<string, number>();
+  let line = 1;
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (ch === "\n") { line++; continue; }
+    if (ch !== '"') continue;
+    const startLine = line;
+    let j = i + 1;
+    let escaped = false;
+    for (; j < content.length; j++) {
+      const c = content[j];
+      if (c === "\n") line++;
+      if (escaped) { escaped = false; continue; }
+      if (c === "\\") { escaped = true; continue; }
+      if (c === '"') break;
+    }
+    const raw = content.slice(i, j + 1);
+    let value: string;
+    try {
+      value = JSON.parse(raw) as string;
+    } catch {
+      value = raw.slice(1, -1);
+    }
+    if (!first.has(value)) first.set(value, startLine);
+    i = j;
+  }
+  return (value) => first.get(value) ?? 1;
 }
 
 /** HCL-JSON blocks: an object, or an array of objects. */
@@ -226,12 +266,13 @@ export function extractTerraformProviders(
     // object or an array of objects.
     let doc: unknown;
     try { doc = JSON.parse(content); } catch { return refs; }
+    const lineOf = jsonStringLines(content);
     for (const tf of jsonBlocks((doc as Record<string, unknown> | null)?.terraform)) {
       for (const rp of jsonBlocks(tf.required_providers)) {
         for (const provider of jsonBlocks(Object.values(rp))) {
           const source = provider.source;
           const address = typeof source === "string" ? parseProviderAddress(source) : null;
-          if (address) refs.push({ address, version: undefined, line: lineOfNeedle(content, `"${source}"`) });
+          if (address) refs.push({ address, version: undefined, line: lineOf(source as string) });
         }
       }
     }

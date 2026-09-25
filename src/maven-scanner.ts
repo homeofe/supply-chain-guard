@@ -164,7 +164,11 @@ function declaredGradleConfigurations(content: string): Set<string> {
     let j = i + 1;
     for (; j < lines.length && depth > 0; j++) {
       const line = lines[j] ?? "";
-      const decl = depth === 1 ? /^\s*(?:create\(\s*["'])?([A-Za-z_]\w*)["']?\)?\s*(\{)?\s*$/.exec(line) : null;
+      // `\s*(?:(\{)\s*)?$`, not `\s*(\{)?\s*$`: the same lines, but with the
+      // brace optional, a run of spaces could be split between the two `\s*`
+      // in every way before `$` failed, which is quadratic on `x<spaces>y`
+      // (1.1 s for 40,000 characters; 6.3.0 pre-release review).
+      const decl = depth === 1 ? /^\s*(?:create\(\s*["'])?([A-Za-z_]\w*)["']?\)?\s*(?:(\{)\s*)?$/.exec(line) : null;
       if (decl) names.add(decl[1]!);
       for (const ch of line) {
         if (ch === "{") depth++;

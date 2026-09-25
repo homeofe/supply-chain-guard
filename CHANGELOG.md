@@ -566,10 +566,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     into quadratic time by the scanned package itself, and at the 5 MB file
     limit that is minutes to hours per file (measured on Linux: 40 s for
     500 KB of `data:`, 8.7 s for 100 KB of `-` before a letter). Every one
-    CodeQL named (16 alerts) now runs in linear time. Each rewrite that keeps
-    the old behaviour is held equal to the expression it replaced by a
-    differential property test on random input, and a timing test runs the
-    rewritten code on 5 MB of CodeQL's attack input.
+    CodeQL named (16 alerts) now runs in linear time, and so do the ones a
+    review before this release found on inputs CodeQL did not name: the
+    shell-startup-file write check (still quadratic on `tee/tee/...` after
+    the first fix), three download-and-execute checks in the agent-skills
+    scanner (a `curl`, `iwr` or `base64 -d` line with no pipe), the GitHub
+    Action `uses:` parser, a Gradle `configurations` parser, and the
+    `.tf.json` line lookup (quadratic in the number of modules). Each rewrite
+    that keeps the old behaviour is held equal to the expression it replaced
+    by a differential property test on random input, and a timing test runs
+    each on 5 MB of the input that made it slow.
 
   Three alerts are false positives, dismissed with the reason: a Markdown
   table escape (`\\|` renders as a literal pipe on GitHub, verified against

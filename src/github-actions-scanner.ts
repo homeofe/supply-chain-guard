@@ -1093,7 +1093,11 @@ function checkActionReferences(
   relativePath: string,
   findings: Finding[],
 ): void {
-  const usesRegex = /^\s*-?\s*uses:\s*([^\s#]+)/;
+  // `\s*(?:-\s*)?`, not `\s*-?\s*`: the same lines, but with the dash
+  // optional, a whitespace-only line could be split between the two `\s*` in
+  // every way, which is quadratic (0.9 s for 40,000 spaces; 6.3.0 pre-release
+  // review). It reaches every action.yml in a scanned tree.
+  const usesRegex = /^\s*(?:-\s*)?uses:\s*([^\s#]+)/;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";

@@ -105,21 +105,99 @@ const BIDI_CONTROL_REGEX = /[\u202A-\u202E\u2066-\u2069]/;
 const INVISIBLE_ESCAPE_REGEX =
   /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF\u00AD\u034F\u061C\u180E]/g;
 
-/** Download-and-execute chains (shell, PowerShell, base64-decode pipe). */
-export const DOWNLOAD_EXEC_REGEXES: RegExp[] = [
+/** A download-and-execute match: where it starts and the text it covers. */
+export interface DownloadExecMatch {
+  index: number;
+  text: string;
+}
+
+type DownloadExecMatcher = (text: string) => DownloadExecMatch | null;
+
+/**
+ * Matches the pipe-chain expressions
+ *   first [^\n|]* \| [^\n|]* second
+ * (for example `\b(?:curl|wget)\b[^\n|]*\|[^\n|]*\b(?:sudo\s+)?(?:bash|sh)\b`)
+ * with the same result as the regex, including the matched text, in linear
+ * time. As a regex, `[^\n|]*` rescans to the end of the line from every
+ * `curl` of a line that never reaches a `|`: quadratic, 4.5 s for 40,000
+ * characters and hours at the 5 MB file cap, on content the scanned package
+ * controls (found in the 6.3.0 pre-release review).
+ *
+ * `first` must be global and `second` sticky. Each `first` match reaches at
+ * most one pipe (the first `|` after it, if no newline comes first), and each
+ * pipe is evaluated once, so the work is bounded by the text length.
+ */
+function pipeChainMatcher(first: RegExp, second: RegExp): DownloadExecMatcher {
+  return (text) => {
+    first.lastIndex = 0;
+    let breakAt = -1; // first "|" or "\n" at or after the last match end
+    let lastPipe = -1;
+    for (let m = first.exec(text); m !== null; m = first.exec(text)) {
+      const end = m.index + m[0].length;
+      if (end > breakAt) {
+        breakAt = end;
+        while (breakAt < text.length && text[breakAt] !== "|" && text[breakAt] !== "\n") breakAt++;
+      }
+      if (breakAt >= text.length || text[breakAt] !== "|" || breakAt === lastPipe) continue;
+      lastPipe = breakAt;
+      const tail = lastMatchEndInSegment(text, breakAt + 1, second);
+      if (tail >= 0) return { index: m.index, text: text.slice(m.index, tail) };
+    }
+    return null;
+  };
+}
+
+/**
+ * End of the match `[^\n|]*` + `second` makes from `start`: greedy, so the
+ * rightmost position in the segment where `second` matches. -1 if none.
+ */
+function lastMatchEndInSegment(text: string, start: number, second: RegExp): number {
+  let segEnd = start;
+  while (segEnd < text.length && text[segEnd] !== "|" && text[segEnd] !== "\n") segEnd++;
+  for (let i = segEnd; i >= start; i--) {
+    second.lastIndex = i;
+    const m = second.exec(text);
+    if (m) return i + m[0].length;
+  }
+  return -1;
+}
+
+function regexMatcher(re: RegExp): DownloadExecMatcher {
+  return (text) => {
+    const m = re.exec(text);
+    return m ? { index: m.index, text: m[0] } : null;
+  };
+}
+
+const SHELL_AFTER_PIPE = /\b(?:sudo\s+)?(?:bash|sh|zsh|dash)\b/iy;
+
+/**
+ * Download-and-execute chains (shell, PowerShell, base64-decode pipe), in the
+ * order a line is checked. Each returns what its reference expression would;
+ * property-parsers.test.ts holds them to those expressions.
+ */
+export const DOWNLOAD_EXEC_MATCHERS: readonly DownloadExecMatcher[] = [
   // curl/wget piped into a shell
-  /\b(?:curl|wget)\b[^\n|]*\|[^\n|]*\b(?:sudo\s+)?(?:bash|sh|zsh|dash)\b/i,
+  pipeChainMatcher(/\b(?:curl|wget)\b/gi, SHELL_AFTER_PIPE),
   // PowerShell: iwr/irm piped into iex
-  /\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|]*\|[^\n|]*\b(?:iex|invoke-expression)\b/i,
+  pipeChainMatcher(/\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/gi, /\b(?:iex|invoke-expression)\b/iy),
   // PowerShell: iex(iwr ...). `\s*(?:\(\s*)?` after the paren, not
   // `\s*(?:\(?\s*)?`: the same strings, but in the old form a run of spaces
   // could be split between two quantifiers in every possible way, which is
-  // quadratic (CodeQL js/polynomial-redos; property-parsers.test.ts checks the
-  // two agree).
-  /\b(?:iex|invoke-expression)\s*\(\s*(?:\(\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i,
+  // quadratic (CodeQL js/polynomial-redos). Linear as a regex.
+  regexMatcher(/\b(?:iex|invoke-expression)\s*\(\s*(?:\(\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i),
   // base64 -d | sh
-  /\bbase64\s+(?:-d|-D|--decode)\b[^\n|]*\|[^\n|]*\b(?:bash|sh|zsh|dash)\b/i,
+  pipeChainMatcher(/\bbase64\s+(?:-d|-D|--decode)\b/gi, SHELL_AFTER_PIPE),
 ];
+
+/** The first download-and-execute chain in `text`, in matcher order. */
+export function findDownloadExec(text: string): DownloadExecMatch | null {
+  for (const matcher of DOWNLOAD_EXEC_MATCHERS) {
+    const hit = matcher(text);
+    if (hit) return hit;
+  }
+  return null;
+}
 
 /** Credential file/path references. */
 const CREDENTIAL_PATH_REGEX =
@@ -141,13 +219,86 @@ const NEGATION_REGEX =
 const HOOK_EVAL_REGEX = /\beval\b/;
 const HOOK_BASE64_REGEX =
   /\bbase64\s+(?:-d|-D|--decode)\b|\batob\s*\(|frombase64string/i;
-// The path class excludes ">" as well. That changes no result: a path holding
-// a ">" also matches from that ">" onward, since ">" is itself a start. But it
-// stops every ">" of a long ">>>..." run rescanning the same path to the end
-// of the line, which was quadratic (CodeQL js/polynomial-redos;
-// property-parsers.test.ts keeps the old expression as the oracle).
-export const HOOK_SHELL_RC_WRITE_REGEX =
-  /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&>]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
+const RC_FILE_NAMES = ["bashrc", "zshrc", "bash_profile", "zprofile", "profile"] as const;
+const WHITESPACE = /\s/;
+
+const isWordCode = (c: number): boolean =>
+  (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+// ASCII-only case folding: what /i does without the u flag for ASCII literals.
+const lowerCode = (c: number): number => (c >= 65 && c <= 90 ? c + 32 : c);
+const isPathChar = (ch: string): boolean =>
+  ch !== "|" && ch !== ";" && ch !== "&" && ch !== ">" && !WHITESPACE.test(ch);
+
+/** `.bashrc`-style name at `dot`, ending on a word boundary. */
+function rcFileAt(text: string, dot: number): boolean {
+  for (const name of RC_FILE_NAMES) {
+    const end = dot + 1 + name.length;
+    if (end > text.length) continue;
+    let same = true;
+    for (let k = 0; k < name.length && same; k++) {
+      same = lowerCode(text.charCodeAt(dot + 1 + k)) === name.charCodeAt(k);
+    }
+    if (same && (end === text.length || !isWordCode(text.charCodeAt(end)))) return true;
+  }
+  return false;
+}
+
+/** A `tee` word ending just before `end`, with a word boundary on both sides. */
+function teeEndsAt(text: string, end: number): boolean {
+  if (end < 3) return false;
+  if (lowerCode(text.charCodeAt(end - 3)) !== 116 || lowerCode(text.charCodeAt(end - 2)) !== 101
+    || lowerCode(text.charCodeAt(end - 1)) !== 101) return false;
+  if (end > 3 && isWordCode(text.charCodeAt(end - 4))) return false;
+  return end === text.length || !isWordCode(text.charCodeAt(end));
+}
+
+/**
+ * Whether a command writes to a shell startup file: a redirect (`>`, `>>`)
+ * or `tee` / `tee -a` into a path ending in .bashrc, .zshrc, .bash_profile,
+ * .zprofile or .profile. Exactly the strings the reference expression
+ *   (?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&>]*
+ *   \.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b      (flag i)
+ * matches, in one pass. As a regex it restarted at every `tee` or `>` of a
+ * long path and rescanned the path to its end: quadratic on "tee/tee/..."
+ * (4.5 s for 40,000 characters, hours at the 5 MB file cap), which the
+ * 6.3.0 pre-release review found after the earlier fix only covered ">>>...".
+ * property-parsers.test.ts holds it to the reference expression.
+ */
+export function writesShellRc(text: string): boolean {
+  let pending = false; // an operator precedes, separated only by whitespace
+  let teeSpace = false; // that operator is `tee` + whitespace, so `-a` may follow
+  const n = text.length;
+  let i = 0;
+  while (i < n) {
+    const ch = text[i]!;
+    if (WHITESPACE.test(ch)) { i++; continue; }
+    if (ch === ">") { pending = true; teeSpace = false; i++; continue; }
+    if (ch === "|" || ch === ";" || ch === "&") { pending = false; teeSpace = false; i++; continue; }
+
+    // A run of path characters: the path can only lie inside one run.
+    const start = i;
+    let end = i;
+    while (end < n && isPathChar(text[end]!)) end++;
+    let armed = pending;
+    for (let k = start; k < end; k++) {
+      if (armed && text[k] === "." && rcFileAt(text, k)) return true;
+      // A `tee` inside the run (`x/tee/.bashrc`, `tee.bashrc`) starts a path
+      // right after it.
+      if (!armed && k + 1 < end && teeEndsAt(text, k + 1)) armed = true;
+    }
+    const nextIsSpace = end < n && WHITESPACE.test(text[end]!);
+    if (nextIsSpace && teeEndsAt(text, end)) {
+      pending = true; teeSpace = true;
+    } else if (nextIsSpace && teeSpace && end - start === 2 && text[start] === "-"
+      && lowerCode(text.charCodeAt(start + 1)) === 97) {
+      pending = true; teeSpace = false; // `tee -a <path>`
+    } else {
+      pending = false; teeSpace = false;
+    }
+    i = end;
+  }
+  return false;
+}
 
 // TODO(v2): skill impersonation heuristic - frontmatter/name containing
 // claude|anthropic|openai|copilot while the body downloads binaries. Left out
@@ -322,8 +473,8 @@ export function scanSkillContent(content: string, relativePath: string): Finding
     }
 
     // 3. Download-and-execute instructions in prose.
-    for (const regex of DOWNLOAD_EXEC_REGEXES) {
-      const match = regex.exec(line);
+    {
+      const match = findDownloadExec(line);
       if (match) {
         findings.push({
           rule: "SKILL_DOWNLOAD_EXEC",
@@ -334,13 +485,12 @@ export function scanSkillContent(content: string, relativePath: string): Finding
           severity: "high",
           file: relativePath,
           line: i + 1,
-          match: truncate(match[0]),
+          match: truncate(match.text),
           confidence: 0.8,
           category: "malware",
           recommendation:
             "Never pipe downloads into a shell from an agent instruction file. Pin and vendor the script instead.",
         });
-        break;
       }
     }
 
@@ -400,7 +550,7 @@ export function scanAgentSettingsContent(
   for (const command of commands) {
     // Download-and-execute inside an executable hook: critical (the hook
     // runs automatically, no prose ambiguity).
-    if (DOWNLOAD_EXEC_REGEXES.some((r) => r.test(command))) {
+    if (findDownloadExec(command)) {
       findings.push({
         rule: "SKILL_DOWNLOAD_EXEC",
         description:
@@ -441,8 +591,8 @@ export function scanAgentSettingsContent(
     const dangerous =
       HOOK_EVAL_REGEX.test(command) ||
       HOOK_BASE64_REGEX.test(command) ||
-      HOOK_SHELL_RC_WRITE_REGEX.test(command) ||
-      DOWNLOAD_EXEC_REGEXES.some((r) => r.test(command));
+      writesShellRc(command) ||
+      findDownloadExec(command) !== null;
     if (dangerous) {
       findings.push({
         rule: "AGENT_HOOK_DANGEROUS_COMMAND",
@@ -890,12 +1040,12 @@ function commandLineFinding(
     };
   }
 
-  const downloadExec = DOWNLOAD_EXEC_REGEXES.some((r) => r.test(line));
+  const downloadExec = findDownloadExec(line) !== null;
   const dangerous =
     downloadExec ||
     HOOK_EVAL_REGEX.test(line) ||
     HOOK_BASE64_REGEX.test(line) ||
-    HOOK_SHELL_RC_WRITE_REGEX.test(line);
+    writesShellRc(line);
   if (!dangerous) return null;
 
   return {

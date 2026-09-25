@@ -1,3 +1,70 @@
+## Pre-release review, part 1: the quadratic scans that were left (2026-09-26) (claude-opus-5-5)
+
+The owner asked for a full review of everything since v6.2.5 BEFORE the v6.3.0
+tag. Five read-only reviewers ran, one per area, over the exact release tree
+(61824c2 = main 1b612bd). Every finding was re-checked before acting. This
+entry covers the performance findings. They are the ones any scanned
+project can trigger.
+
+Measured with the literals copied from the release source; each grows x4.0 per
+doubling of input:
+
+| expression | input | 40,000 chars |
+|---|---|---|
+| skills shell-rc write (`HOOK_SHELL_RC_WRITE_REGEX`) | `tee/` repeated | 4.5 s |
+| download-exec `curl\|wget ... \| sh` | `curl ` repeated, no pipe | 4.5 s |
+| download-exec `iwr ... \| iex` | `iwr ` repeated | 4.5 s |
+| download-exec `base64 -d ... \| sh` | `base64 -d ` repeated | 10.9 s |
+| GitHub Action `uses:` parser | a whitespace-only line | 0.9 s |
+| Gradle `configurations` declaration | `x<spaces>y` | 1.1 s |
+
+That is hours per file at the 5 MB scan limit.
+
+**The shell-rc write expression was one of the 16 CodeQL alerts that PR 339
+declared linear.** Its fix excluded `>` from the path class, which only covered
+the `>>>...` input CodeQL named; `tee/tee/...` stayed quadratic. The release
+notes claimed "every one ... now runs in linear time". That claim was false
+until this change, and it would have shipped in the immutable release body.
+The reviewer found it by timing the regex on inputs of their own. The timing
+test used only CodeQL's string.
+
+Changed:
+- `writesShellRc()` is a one-pass scan that tracks whether a redirect or `tee`
+  (or `tee -a`) precedes the current path run.
+- `DOWNLOAD_EXEC_MATCHERS` / `findDownloadExec()`: the three pipe chains
+  evaluate each pipe once and return the same match index and text as the
+  regexes. The text is the finding's evidence, and the line loop keeps its
+  first-match-wins order.
+- The `uses:` and Gradle regexes become `\s*(?:-\s*)?` and
+  `\s*(?:(\{)\s*)?$`: the same language, without the ambiguity between two
+  `\s*` runs.
+- `.tf.json` module and provider lines come from `jsonStringLines()`, one
+  pass over the file's string literals. `lineOfNeedle` per entry was
+  quadratic in the number of modules (about 75 s at 5 MB). The decoded match
+  also gives the right line for a source written with JSON escapes, where the
+  old search reported line 1.
+
+Proof:
+- The property tests compare each new function with the expression it
+  replaced: index and text for the download-exec matchers, and both the
+  v6.2.5 and the intermediate shell-rc expression. The alphabets now include
+  U+2028, NBSP, the Kelvin sign, the long s and \r.
+- Timing tests run every input above at 5 MB through the real entry points
+  (`scanActionMetadataReferences`, `scanMavenContent`,
+  `extractTerraformModules`).
+- A differential fuzz outside the test suite made 1,000,000 comparisons with
+  0 differences. Its control shows that it does see a difference when one
+  exists.
+- Cuts (10):
+  - Putting back each of the five quadratic forms hangs the 5 MB test past
+    a 120 s limit (the synchronous regex blocks the vitest worker, which is
+    also what CI would see) or fails it.
+  - **The first run left three logic cuts green:** dropping `tee -a`, taking
+    the leftmost shell word, and ignoring a newline before the pipe. The
+    wide-alphabet properties never produced those interactions in 1,000
+    runs. Narrow-alphabet properties and named cases were added, and all ten
+    now go red. Baseline and post-restore: 63 passed.
+
 ## v6.3.0 release preparation, rebuilt (2026-09-25) (claude-opus-5-5)
 
 The first preparation (PR 335, cut on c6cb6bd) was held by the owner until the

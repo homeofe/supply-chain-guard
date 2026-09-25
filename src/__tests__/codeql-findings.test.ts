@@ -20,7 +20,10 @@ import {
 import { classifyFileSurface, isPersonalAccountName } from "../internal-disclosure.js";
 import { firstQuotedSlashRef } from "../policy-engine.js";
 import { isPythonManifest } from "../python-lockfile-scanner.js";
-import { DOWNLOAD_EXEC_REGEXES, HOOK_SHELL_RC_WRITE_REGEX } from "../skills-scanner.js";
+import { findDownloadExec, writesShellRc } from "../skills-scanner.js";
+import { scanActionMetadataReferences } from "../github-actions-scanner.js";
+import { scanMavenContent } from "../maven-scanner.js";
+import { extractTerraformModules } from "../terraform-scanner.js";
 
 // Regression tests for the findings of the first CodeQL analysis of main
 // (2026-09-25). The equivalence of each ReDoS rewrite with the expression it
@@ -183,6 +186,40 @@ const MiB5 = 5 * 1024 * 1024;
 const fill = (unit: string, prefix = "", suffix = "") =>
   prefix + unit.repeat(Math.floor((MiB5 - prefix.length - suffix.length) / unit.length)) + suffix;
 
+describe(".tf.json module lines come from one pass over the file", () => {
+  it("reports each module's source line, the first one for a repeated source, and escaped sources too", () => {
+    const content = [
+      "{",
+      '  "module": {',
+      '    "a": { "source": "ns1/name/aws" },',
+      '    "b": { "source": "ns2/name/aws" },',
+      '    "c": { "source": "ns1/name/aws" },',
+      '    "d": { "source": "ns3\\/name\\/aws" }',
+      "  }",
+      "}",
+    ].join("\n");
+    const lines = extractTerraformModules(content, "main.tf.json").map((m) => [m.address, m.line]);
+    expect(lines).toEqual([
+      ["ns1/name/aws", 3],
+      ["ns2/name/aws", 4],
+      ["ns1/name/aws", 3],
+      ["ns3/name/aws", 6],
+    ]);
+  });
+});
+
+/** A .tf.json of about `bytes` holding that many distinct registry modules. */
+function tfJsonModules(bytes: number): string {
+  const parts: string[] = [];
+  let size = 0;
+  for (let i = 0; size < bytes; i++) {
+    const entry = `"m${i}":{"source":"ns${i}/name/aws","version":"1.0.0"}`;
+    parts.push(entry);
+    size += entry.length + 1;
+  }
+  return `{"module":{${parts.join(",")}}}`;
+}
+
 describe("the rewrites stay linear on 5 MB of CodeQL's attack inputs", () => {
   const cases: Array<[string, () => unknown]> = [
     ["#11 data-URI strip", () => stripBase64DataUris(fill("data:"))],
@@ -196,8 +233,18 @@ describe("the rewrites stay linear on 5 MB of CodeQL's attack inputs", () => {
     ["#22 quoted action ref", () => firstQuotedSlashRef(fill("!/", '"'))],
     ["#23 requirements basename", () => isPythonManifest(fill("-constraints-", "constraints-"))],
     ["#24 uses: ref", () => parseUsesRef(fill(" ", "uses:"))],
-    ["#25 iex(iwr)", () => DOWNLOAD_EXEC_REGEXES.some((re) => re.test(fill(" ", "iex(")))],
-    ["#26 rc-file write", () => HOOK_SHELL_RC_WRITE_REGEX.test(fill(">!", ">"))],
+    ["#25 iex(iwr)", () => findDownloadExec(fill(" ", "iex("))],
+    ["#26 rc-file write", () => writesShellRc(fill(">!", ">"))],
+    // Found by the 6.3.0 pre-release review: inputs the CodeQL alerts did not
+    // name, on which the expressions were still quadratic.
+    ["review: rc-file write on tee/tee/...", () => writesShellRc(fill("tee/"))],
+    ["review: curl with no pipe", () => findDownloadExec(fill("curl "))],
+    ["review: iwr with no pipe", () => findDownloadExec(fill("iwr "))],
+    ["review: base64 -d with no pipe", () => findDownloadExec(fill("base64 -d "))],
+    ["review: uses: on a whitespace line", () => scanActionMetadataReferences(fill(" ", "", "x"), "action.yml")],
+    ["review: gradle configurations line", () =>
+      scanMavenContent(`configurations {\n${fill(" ", "x", "y")}\n}\n`, "build.gradle")],
+    ["review: .tf.json with many module sources", () => extractTerraformModules(tfJsonModules(MiB5), "main.tf.json")],
   ];
 
   for (const [name, run] of cases) {
