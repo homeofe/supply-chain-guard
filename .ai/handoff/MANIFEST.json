@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790378175",
-    "timestamp": "2026-09-25T23:16:15Z",
-    "commit": "e5932c3",
+    "session_id": "cli-1790378806",
+    "timestamp": "2026-09-25T23:26:46Z",
+    "commit": "00cdb29",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:bbb2bc000b73b74611e07db5dc4a7288bfdebe22b58727a93c20d6298a76d8e4",
-      "updated": "2026-09-25T23:15:08Z",
-      "lines": 12429,
-      "summary": "**The README rendered as code from the quick start down.** PR 336 left the"
+      "checksum": "sha256:ff613885c7a29b272825176aacdd306418b41afc04cffd44f41372af76157060",
+      "updated": "2026-09-25T23:26:26Z",
+      "lines": 12467,
+      "summary": "**Three steps that run only on a tag could fail on a transient registry"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:af115e2c5037b160ef33f75c30b1ae6d9289b1f1d7bcadb03662018c2243598d",
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6e556ede9db6dd56d4510a3b7c2c6bb1ea26b156facaf969e9e8cc352b1e9c3a",
-      "updated": "2026-09-25T23:16:15Z",
+      "updated": "2026-09-25T23:26:46Z",
       "lines": 90,
       "summary": "Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a co"
     },
@@ -41,14 +41,14 @@
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:241e81bad93bd10815b579195be60cc5fae7cd13955c2f1484644d0d0b40ee56",
-      "updated": "2026-09-25T23:16:15Z",
+      "checksum": "sha256:3c6e443ed5ec857ffe22350dc34880332e435e8821ebdbb28cbf75fa6fea257b",
+      "updated": "2026-09-25T23:26:46Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:8bef33d893d2213d24d7bddda5a153d94ffbd4e3989decd43692d4c4461ddec4",
-      "updated": "2026-09-25T23:16:15Z",
+      "checksum": "sha256:b9ba4f2fb84736384290e129c1267b05a6955919767fbc49423f08e0bb3b6ff7",
+      "updated": "2026-09-25T23:26:46Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "{"
     }
   },
-  "quick_context": "**The README rendered as code from the quick start down.** PR 336 left the Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "**Three steps that run only on a tag could fail on a transient registry Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 144841,
-    "full_read": 154819
+    "manifest_plus_core": 145313,
+    "full_read": 155291
   }
 }

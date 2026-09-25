@@ -42,21 +42,31 @@ export const PACKAGE = "supply-chain-guard";
 export const SLSA_PROVENANCE_V1 = "https://slsa.dev/provenance/v1";
 const REGISTRY = "https://registry.npmjs.org";
 
+const ATTEMPTS = 6;
+const sleep = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
+
 /**
  * GET with a bounded wait for registry propagation. The release job runs
  * seconds after `npm publish`, and the registry and its CDN can answer 404 for
- * a short while. Six tries is about a minute at the default delay; anything
- * longer is an outage, and the job should say so rather than hang.
+ * a short while. A request that throws (a reset connection, a failed DNS
+ * lookup) is the same transient state and is retried the same way; it used to
+ * fail the release job on the first try. Six tries is about a minute at the
+ * default delay; anything longer is an outage, and the job should say so
+ * rather than hang.
  */
-async function get(url, { fetchImpl, retryDelayMs, attempts = 6 }) {
+async function get(url, { fetchImpl, retryDelayMs, attempts = ATTEMPTS }) {
   let last = "";
   for (let i = 0; i < attempts; i++) {
-    const res = await fetchImpl(url);
-    if (res.ok) return res;
-    last = `${res.status}`;
-    if (i < attempts - 1 && retryDelayMs > 0) await new Promise((r) => setTimeout(r, retryDelayMs));
+    try {
+      const res = await fetchImpl(url);
+      if (res.ok) return res;
+      last = `status ${res.status}`;
+    } catch (err) {
+      last = `error: ${err instanceof Error ? err.message : err}`;
+    }
+    if (i < attempts - 1) await sleep(retryDelayMs);
   }
-  throw new Error(`GET ${url} failed after ${attempts} attempts (last status ${last})`);
+  throw new Error(`GET ${url} failed after ${attempts} attempts (last ${last})`);
 }
 
 const sha512 = (buf) => createHash("sha512").update(buf);
@@ -68,14 +78,30 @@ export async function fetchReleaseProvenance(
   if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) throw new Error(`not a release version: ${version}`);
   const opts = { fetchImpl, retryDelayMs };
 
-  const meta = await (await get(`${REGISTRY}/${PACKAGE}/${version}`, opts)).json();
+  // The version document and its attestations are read together, and their
+  // ABSENCE is retried like a 404: right after publish a cached copy of the
+  // document can lack dist.attestations, or the list can lack the SLSA entry.
+  // Nothing that is present is retried. A wrong integrity, digest, name or
+  // predicate is an answer, not a delay, and fails at once below.
+  let meta;
+  let slsa;
+  for (let i = 0; ; i++) {
+    meta = await (await get(`${REGISTRY}/${PACKAGE}/${version}`, opts)).json();
+    const attestationsUrl = meta?.dist?.attestations?.url;
+    let missing = `registry reports no attestations for ${PACKAGE}@${version}`;
+    if (typeof attestationsUrl === "string") {
+      const { attestations } = await (await get(attestationsUrl, opts)).json();
+      slsa = (attestations ?? []).find((a) => a?.predicateType === SLSA_PROVENANCE_V1);
+      if (slsa?.bundle?.dsseEnvelope?.payload) break;
+      missing = `npm recorded no SLSA provenance bundle for ${PACKAGE}@${version}`;
+    }
+    if (i >= ATTEMPTS - 1) throw new Error(`${missing} (${ATTEMPTS} reads)`);
+    await sleep(retryDelayMs);
+  }
+
   const integrity = meta?.dist?.integrity;
   if (typeof integrity !== "string" || !integrity.startsWith("sha512-")) {
     throw new Error(`registry reports no sha512 integrity for ${PACKAGE}@${version}: ${integrity}`);
-  }
-  const attestationsUrl = meta?.dist?.attestations?.url;
-  if (typeof attestationsUrl !== "string") {
-    throw new Error(`registry reports no attestations for ${PACKAGE}@${version}`);
   }
 
   const tarball = Buffer.from(await (await get(meta.dist.tarball, opts)).arrayBuffer());
@@ -83,12 +109,6 @@ export async function fetchReleaseProvenance(
     throw new Error(`downloaded tarball does not match the registry integrity ${integrity}`);
   }
   const digestHex = sha512(tarball).digest("hex");
-
-  const { attestations } = await (await get(attestationsUrl, opts)).json();
-  const slsa = (attestations ?? []).find((a) => a?.predicateType === SLSA_PROVENANCE_V1);
-  if (!slsa?.bundle?.dsseEnvelope?.payload) {
-    throw new Error(`npm recorded no SLSA provenance bundle for ${PACKAGE}@${version}`);
-  }
 
   const stmt = JSON.parse(Buffer.from(slsa.bundle.dsseEnvelope.payload, "base64").toString("utf8"));
   if (stmt.predicateType !== SLSA_PROVENANCE_V1) {

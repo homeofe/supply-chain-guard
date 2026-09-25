@@ -208,8 +208,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   so MCP clients and directories can find it. A new `mcp-registry` job runs
   after npm publish, authenticates by GitHub OIDC (no stored token), installs
   `mcp-publisher` pinned to one version with its SHA-256 checked before
-  extraction, and validates `server.json` before publishing. The GitHub Release
-  does not wait for it.
+  extraction, and validates `server.json` before publishing. It waits, bounded,
+  until npm serves the tagged version with the `mcpName` the registry checks
+  (`scripts/await-npm-version.mjs`), because it starts seconds after npm
+  publish. The GitHub Release does not wait for it.
 - OpenSSF Scorecard: a `scorecard.yml` workflow publishes the repository's
   Scorecard on every push to `main` and weekly, and the README shows the badge.
   It never runs on pull requests and is not a required check.
@@ -219,8 +221,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   provenance npm recorded for it (`supply-chain-guard-X.Y.Z.tgz.sigstore.json`).
   The release job fetches both from the registry and fails closed unless the
   tarball matches the registry integrity and is the provenance subject
-  (`scripts/release-provenance.mjs`). The signed provenance used to live only
-  on npm, so OpenSSF Scorecard's Signed-Releases check scored 0.
+  (`scripts/release-provenance.mjs`). A request that fails or throws, and
+  attestations npm does not serve yet, are retried for about a minute; a
+  mismatch is never retried. The signed provenance used to live only on npm,
+  so OpenSSF Scorecard's Signed-Releases check scored 0.
 - CodeQL static analysis of the TypeScript source and of the GitHub Actions
   workflows on every pull request, on `main` and weekly, reported into code
   scanning. Not a required check.
@@ -643,7 +647,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
     a fixed version, but a tarball never checked against a known hash, in the
     one job that holds the publish identity. It now comes from
     `.github/publish-toolchain/package-lock.json` through `npm ci`, and a new
-    `publish-preflight` job runs the same install on every pull request.
+    `publish-preflight` job rehearses it on every pull request with the
+    publish job's own Node setup, install command and version check.
   - `npm-install-pinning.test.ts` applies Scorecard's rule to the Dockerfile,
     the workflows and the scripts, so a new unpinned install fails CI instead
     of waiting for the next Scorecard run.

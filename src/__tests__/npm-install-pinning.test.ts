@@ -143,6 +143,31 @@ describe("the publish job's npm", () => {
     expect(nodeVersions(publish)).toHaveLength(1);
   });
 
+  it("is rehearsed by the preflight with the publish job's own setup, install and version check", () => {
+    // The preflight is the only run of this lane before a tag. It used to
+    // install without --add-to-path and without the registry setup, and never
+    // asked which npm answered, so the step that failed on a tag could not fail
+    // on a pull request.
+    // Comment lines dropped: a step turned into a comment must not pass.
+    const code = (text: string) => text.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+    const publish = code(job("publish"));
+    const preflight = code(job("publish-preflight"));
+    const registryUrls = (text: string) => [...text.matchAll(/registry-url:\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(registryUrls(publish)).toHaveLength(1);
+    expect(registryUrls(preflight)).toEqual(registryUrls(publish));
+
+    const install = "bash scripts/install-publish-npm.sh --add-to-path";
+    const want =
+      `want=$(node -p "require('./.github/publish-toolchain/package-lock.json').packages['node_modules/npm'].version")`;
+    const check = 'test "$(npm --version)" = "$want"';
+    for (const lane of [publish, preflight]) {
+      expect(lane).toContain(install);
+      expect(lane).toContain(want);
+      // The check reads the PATH the install step wrote, so it must come after it.
+      expect(lane.indexOf(check)).toBeGreaterThan(lane.indexOf(install));
+    }
+  });
+
   it("is checked against the lockfile in the same step that publishes", () => {
     const step = job("publish").split("- name: Publish to npm")[1] ?? "";
     const check = step.indexOf('test "$(npm --version)" = "$want"');
