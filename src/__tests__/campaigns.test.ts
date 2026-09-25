@@ -10,7 +10,7 @@ import {
 import { matchPackageIOC, getBundledFeed, splitPackageIOCValue } from "../threat-intel.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { checkPackageName } from "../npm-scanner.js";
-import type { Finding } from "../types.js";
+import type { Finding } from "../types.js";
 import { performanceBudget } from "./performance-budget.js";
 
 describe("Campaign Signatures", () => {

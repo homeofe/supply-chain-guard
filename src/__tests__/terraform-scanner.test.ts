@@ -4,7 +4,7 @@ import {
   isTerraformProviderFile,
   scanTerraformContent,
 } from "../terraform-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
 import { performanceBudget } from "./performance-budget.js";
 
 // A synthetic feed, so these tests pin the matcher's semantics independently of

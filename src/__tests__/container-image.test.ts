@@ -5,7 +5,7 @@ import {
   parseImageReference,
   scanImageReferences,
 } from "../container-image.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
 import { performanceBudget } from "./performance-budget.js";
 
 const DIGEST = "a".repeat(64);

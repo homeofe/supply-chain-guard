@@ -24,7 +24,7 @@ import {
   scanAgentSettingsContent,
 } from "../skills-scanner.js";
 import { scan } from "../scanner.js";
-import { ASSET_EXEC_PATTERN } from "../patterns.js";
+import { ASSET_EXEC_PATTERN } from "../patterns.js";
 import { performanceBudget } from "./performance-budget.js";
 
 let tmpRoot: string;

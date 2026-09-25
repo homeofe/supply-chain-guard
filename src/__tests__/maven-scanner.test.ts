@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { extractMavenCoordinates, isMavenFile, scanMavenContent } from "../maven-scanner.js";
-import type { FeedIOC } from "../threat-intel.js";
+import type { FeedIOC } from "../threat-intel.js";
 import { performanceBudget } from "./performance-budget.js";
 
 // Synthetic feed, so the matcher's semantics are pinned independently of the bundle.

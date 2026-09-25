@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { scanGitHubActionsWorkflows } from "../github-actions-scanner.js";
-import { getBundledFeed } from "../threat-intel.js";
+import { getBundledFeed } from "../threat-intel.js";
 import { performanceBudget } from "./performance-budget.js";
 
 /**

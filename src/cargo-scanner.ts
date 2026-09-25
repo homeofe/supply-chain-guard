@@ -9,7 +9,7 @@
 import * as path from "node:path";
 import type { Finding, PatternEntry } from "./types.js";
 import { loadThreatIntel, matchPackageIOC, type FeedIOC } from "./threat-intel.js";
-import { checkBadVersion } from "./ioc-blocklist.js";
+import { checkBadVersion } from "./ioc-blocklist.js";
 import { stripHashComment } from "./text-lines.js";
 import {
   listOptionalDirectory,
