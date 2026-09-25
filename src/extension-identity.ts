@@ -62,6 +62,7 @@ export function isExtensionReferenceFile(relativePath: string): boolean {
   const parts = relativePath.replace(/\\/g, "/").split("/");
   const basename = parts[parts.length - 1] ?? "";
   if (basename === "extensions.json") return parts[parts.length - 2] === ".vscode";
+  if (basename.toLowerCase().endsWith(".code-workspace")) return true;
   return basename === "devcontainer.json" || basename === ".devcontainer.json" || basename === "package.json";
 }
 
@@ -114,6 +115,12 @@ export function extractExtensionReferences(
 
   if (basename === "extensions.json") {
     for (const id of stringList(doc.recommendations)) refs.push(parseReference(id));
+  } else if (basename.toLowerCase().endsWith(".code-workspace")) {
+    // A multi-root workspace file carries the same recommendations list under
+    // "extensions", and VS Code prompts for it the same way (6.3.0 pre-release
+    // review).
+    const extensions = isJsonObject(doc.extensions) ? doc.extensions : {};
+    for (const id of stringList(extensions.recommendations)) refs.push(parseReference(id));
   } else if (basename === "devcontainer.json" || basename === ".devcontainer.json") {
     const customizations = isJsonObject(doc.customizations) ? doc.customizations : {};
     const vscode = isJsonObject(customizations.vscode) ? customizations.vscode : {};

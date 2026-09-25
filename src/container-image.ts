@@ -347,6 +347,16 @@ function digestIndex(feed: FeedIOC[]): Map<string, FeedIOC> {
 }
 
 /**
+ * The feed entry for a parsed image reference: by digest under any repository
+ * name, else by tag under its own repository. The scanner and the MCP
+ * ioc_lookup both use this, so they cannot disagree about an image.
+ */
+export function matchImageIOC(ref: ImageReference, feed: FeedIOC[]): FeedIOC | null {
+  return (ref.digest ? digestIndex(feed).get(ref.digest) : undefined)
+    ?? (ref.tag ? matchPackageIOC("docker", ref.name, ref.tag, feed) : null);
+}
+
+/**
  * Scan a Dockerfile or YAML file for images matching `docker:` feed IOCs.
  */
 export function scanImageReferences(content: string, relativePath: string, feed?: FeedIOC[]): Finding[] {
@@ -359,9 +369,7 @@ export function scanImageReferences(content: string, relativePath: string, feed?
     const key = `${ref.name}:${ref.tag ?? ""}@${ref.digest ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const ioc =
-      (ref.digest ? digestIndex(iocFeed).get(ref.digest) : undefined) ??
-      (ref.tag ? matchPackageIOC("docker", ref.name, ref.tag, iocFeed) : null);
+    const ioc = matchImageIOC(ref, iocFeed);
     if (!ioc) continue;
     findings.push({
       rule: "DOCKER_MALICIOUS_IMAGE",

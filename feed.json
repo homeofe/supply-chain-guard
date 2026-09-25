@@ -455,7 +455,7 @@
     },
     {
       "type": "package",
-      "value": "uuid32-utils",
+      "value": "pypi:uuid32-utils",
       "severity": "critical",
       "confidence": 0.95,
       "family": "ZiChatBot",
@@ -464,7 +464,7 @@
     },
     {
       "type": "package",
-      "value": "colorinal",
+      "value": "pypi:colorinal",
       "severity": "critical",
       "confidence": 0.95,
       "family": "ZiChatBot",
@@ -473,7 +473,7 @@
     },
     {
       "type": "package",
-      "value": "termncolor",
+      "value": "pypi:termncolor",
       "severity": "critical",
       "confidence": 0.95,
       "family": "ZiChatBot",
@@ -2014,7 +2014,7 @@
     },
     {
       "type": "package",
-      "value": "parsimonius",
+      "value": "pypi:parsimonius",
       "severity": "critical",
       "confidence": 0.9,
       "family": "TelegramBackdoor",

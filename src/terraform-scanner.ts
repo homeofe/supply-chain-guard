@@ -70,7 +70,7 @@ export interface TerraformModuleRef {
  * `//subdir` suffix selects a submodule of the same registry module
  * (`terraform-aws-modules/iam/aws//modules/iam-user`) and is dropped.
  */
-function parseModuleAddress(raw: string): string | null {
+export function parseModuleAddress(raw: string): string | null {
   const trimmed = raw.trim();
   if (trimmed.includes("://")) return null;
   const parts = trimmed.split("//")[0]!.split("/");
@@ -193,6 +193,21 @@ export function jsonStringLines(content: string): (value: string) => number {
   return (value) => first.get(value) ?? 1;
 }
 
+/**
+ * The block label a `{` opens: the identifier right before it, ignoring
+ * spaces, or "{" when there is none (`docker = {`, `"name" {`). Scans back
+ * only over the spaces and word next to this brace, so a line is read in
+ * linear time.
+ */
+function blockLabelBefore(line: string, brace: number): string {
+  let j = brace - 1;
+  while (j >= 0 && (line[j] === " " || line[j] === "\t")) j--;
+  const end = j + 1;
+  while (j >= 0 && /[\w-]/.test(line[j]!)) j--;
+  const word = line.slice(j + 1, end);
+  return /^[A-Za-z_][\w-]*$/.test(word) ? word : "{";
+}
+
 /** HCL-JSON blocks: an object, or an array of objects. */
 function jsonBlocks(value: unknown): Record<string, unknown>[] {
   const list = Array.isArray(value) ? value : [value];
@@ -207,7 +222,7 @@ function jsonBlocks(value: unknown): Record<string, unknown>[] {
  * address (ns/name/system) or a private host must all fall out here rather
  * than be reported as a provider.
  */
-function parseProviderAddress(raw: string): string | null {
+export function parseProviderAddress(raw: string): string | null {
   // Paths ("./x", "../x", "~/x") and URL or getter forms ("git::", "https://")
   // are rejected by the part count, the host allow-list or the label rule
   // below: ".", "~" and ":" are never valid in a namespace or type.
@@ -284,27 +299,31 @@ export function extractTerraformProviders(
   // file, a module or an object key (provisioner "file", aws_s3_object,
   // local_file), and reading it as a provider reported someone's relative path.
   // `inside` counts the open required_providers blocks on the stack, so the
-  // check per line is constant rather than a walk of the whole stack.
+  // check per source is constant rather than a walk of the whole stack.
+  //
+  // A line is read left to right: a `source` counts if a required_providers
+  // block is open AT ITS POSITION, and each `{` is labelled by the word right
+  // before it. Checking the line's sources before counting its braces, and
+  // labelling only a line's first brace, missed the valid one-line form
+  // `required_providers { docker = { source = "ns/type" } }` (6.3.0
+  // pre-release review).
   const stack: string[] = [];
   let inside = 0;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    if (inside > 0) {
-      for (const m of line.matchAll(/\bsource\s*=\s*"([^"]*)"/g)) {
-        const address = parseProviderAddress(m[1] ?? "");
+    const sources = [...line.matchAll(/\bsource\s*=\s*"([^"]*)"/g)];
+    let next = 0;
+    for (let k = 0; k < line.length; k++) {
+      for (; next < sources.length && sources[next]!.index! <= k; next++) {
+        if (inside === 0) continue;
+        const address = parseProviderAddress(sources[next]![1] ?? "");
         if (address) refs.push({ address, version: undefined, line: i + 1 });
       }
-    }
-    // `(?![\w-])` instead of `\b`: the label cannot give back characters, so a
-    // long label with no brace after it is rejected in linear time.
-    const label = /^\s*([A-Za-z_][\w-]*)(?![\w-])[^{]*\{/.exec(line)?.[1] ?? "{";
-    let first = true;
-    for (const ch of line) {
+      const ch = line[k];
       if (ch === "{") {
-        const opened = first ? label : "{";
+        const opened = blockLabelBefore(line, k);
         stack.push(opened);
         if (opened === "required_providers") inside++;
-        first = false;
       } else if (ch === "}" && stack.pop() === "required_providers") {
         inside--;
       }

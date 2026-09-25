@@ -126,9 +126,13 @@ const FEED_CHUNK_0: FeedIOC[] = [
 
   // ZiChatBot PyPI campaign (May 2026)
   // Three PyPI packages dropping terminate.dll (Windows) / terminate.so (Linux); abuses Zulip REST APIs as C2; suspected APT32/OceanLotus
-  { type: "package", value: "uuid32-utils", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
-  { type: "package", value: "colorinal", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
-  { type: "package", value: "termncolor", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
+  // `pypi:` added 2026-09-26. Stored bare, these sat in the npm namespace, so a
+  // PyPI project depending on them got no feed finding and an npm package of
+  // the same name would have been flagged (6.3.0 pre-release review; OSV lists
+  // colorinal and termncolor as PyPI malware, none of the three on npm).
+  { type: "package", value: "pypi:uuid32-utils", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
+  { type: "package", value: "pypi:colorinal", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
+  { type: "package", value: "pypi:termncolor", severity: "critical", confidence: 0.95, family: "ZiChatBot", campaign: "ZiChatBot PyPI", firstSeen: "2026-05-07" },
 
   // Beagle backdoor / fake Claude AI website (May 2026)
   // 505MB Claude-Pro-windows-x64.zip from claude-pro.com delivers DonutLoader -> Beagle via DLL sideloading (NOVupdate.exe + avk.dll)
@@ -469,7 +473,9 @@ const FEED_CHUNK_0: FeedIOC[] = [
   { type: "package", value: "turbo-axios", severity: "critical", confidence: 0.9, family: "EpsilonStealer", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
   { type: "package", value: "faster-axios", severity: "critical", confidence: 0.9, family: "EpsilonStealer", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
   { type: "package", value: "cms-store-ren", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm cluster", firstSeen: "2026-06-08" },
-  { type: "package", value: "parsimonius", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm/PyPI cluster", firstSeen: "2026-06-08" },
+  // parsimonius is the PyPI member of this cluster (OSV MAL-2026-5151, PyPI;
+  // no npm record): `pypi:` added 2026-09-26 for the same reason as ZiChatBot.
+  { type: "package", value: "pypi:parsimonius", severity: "critical", confidence: 0.9, family: "TelegramBackdoor", campaign: "THN Weekly Recap npm/PyPI cluster", firstSeen: "2026-06-08" },
 
   // ThreatsDay Bulletin npm cluster (The Hacker News, June 11, 2026)
   //   - tw-style-utils: poisoned npm package delivering the cross-platform SStar Agent

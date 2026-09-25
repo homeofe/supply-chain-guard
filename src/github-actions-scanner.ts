@@ -190,6 +190,15 @@ validatePatternSet("WORKFLOW_PATTERNS", WORKFLOW_PATTERNS);
  */
 const actionShaIndexCache = new WeakMap<FeedIOC[], Map<string, FeedIOC>>();
 
+/**
+ * The compromised-action entry for a commit SHA, under any repository name: a
+ * commit pushed from a fork is reachable through every repository of the fork
+ * network. The workflow check and the MCP ioc_lookup both use this.
+ */
+export function matchCompromisedActionSha(sha: string, feed: FeedIOC[]): FeedIOC | null {
+  return SHA_PATTERN.test(sha) ? knownMaliciousActionShas(feed).get(sha.toLowerCase()) ?? null : null;
+}
+
 function knownMaliciousActionShas(feed: FeedIOC[]): Map<string, FeedIOC> {
   const cached = actionShaIndexCache.get(feed);
   if (cached) return cached;
@@ -233,8 +242,12 @@ const SHA_PATTERN = /^[0-9a-fA-F]{40}$/;
 /**
  * Scan a directory for GitHub Actions workflow files and return findings.
  * Called from the main scanner during directory scans.
+ *
+ * `feed` is the scan's threat feed. Without it the compromised-commit check
+ * loads the default feed from the working directory, which is not the feed a
+ * scan with --cache-dir (the Action, after a feed refresh) is using.
  */
-export function scanGitHubActionsWorkflows(dir: string): Finding[] {
+export function scanGitHubActionsWorkflows(dir: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
   const workflowDir = path.join(dir, ".github", "workflows");
 
@@ -259,7 +272,7 @@ export function scanGitHubActionsWorkflows(dir: string): Finding[] {
 
     try {
       const content = fs.readFileSync(filePath, "utf-8");
-      scanWorkflowContent(content, relativePath, findings);
+      scanWorkflowContent(content, relativePath, findings, feed);
     } catch {
       // Skip unreadable files
     }
@@ -275,6 +288,7 @@ function scanWorkflowContent(
   content: string,
   relativePath: string,
   findings: Finding[],
+  feed?: FeedIOC[],
 ): void {
   const lines = content.split("\n");
 
@@ -282,7 +296,7 @@ function scanWorkflowContent(
   checkWorkflowPatterns(lines, relativePath, findings);
 
   // Check action references (uses: directives)
-  checkActionReferences(lines, relativePath, findings);
+  checkActionReferences(lines, relativePath, findings, feed);
 
   // Check for secrets sent to external URLs from within a single step
   checkSecretsExfiltration(content, relativePath, findings);
@@ -1079,9 +1093,9 @@ export function isActionMetadataFile(relativePath: string): boolean {
  * compromised action pinned there is as dangerous as one in a workflow. Only
  * the SHA check runs here: the other workflow rules are about workflow files.
  */
-export function scanActionMetadataReferences(content: string, relativePath: string): Finding[] {
+export function scanActionMetadataReferences(content: string, relativePath: string, feed?: FeedIOC[]): Finding[] {
   const findings: Finding[] = [];
-  checkActionReferences(content.split(/\r?\n/), relativePath, findings);
+  checkActionReferences(content.split(/\r?\n/), relativePath, findings, feed);
   return findings.filter((f) => f.rule === "GHA_KNOWN_MALICIOUS_SHA");
 }
 
@@ -1092,6 +1106,7 @@ function checkActionReferences(
   lines: string[],
   relativePath: string,
   findings: Finding[],
+  feed?: FeedIOC[],
 ): void {
   // `\s*(?:-\s*)?`, not `\s*-?\s*`: the same lines, but with the dash
   // optional, a whitespace-only line could be split between the two `\s*` in
@@ -1104,7 +1119,14 @@ function checkActionReferences(
     const match = usesRegex.exec(line);
     if (!match) continue;
 
-    const actionRef = match[1] ?? "";
+    // YAML allows the value quoted (`uses: "owner/repo@<sha>"`). The quotes
+    // stayed in the ref, the SHA check failed on them, and a quoted pin of a
+    // known-malicious commit raised nothing (6.3.0 pre-release review).
+    let actionRef = match[1] ?? "";
+    const quote = actionRef[0];
+    if ((quote === '"' || quote === "'") && actionRef.length > 1 && actionRef.endsWith(quote)) {
+      actionRef = actionRef.slice(1, -1);
+    }
 
     // Skip docker:// and local ./ references
     if (actionRef.startsWith("docker://") || actionRef.startsWith("./")) {
@@ -1121,8 +1143,8 @@ function checkActionReferences(
 
     // Check against known malicious SHAs (highest priority - always critical)
     const maliciousSha = SHA_PATTERN.test(ref)
-      ? knownMaliciousActionShas(loadThreatIntel()).get(ref.toLowerCase())
-      : undefined;
+      ? matchCompromisedActionSha(ref, feed ?? loadThreatIntel())
+      : null;
     if (maliciousSha) {
       const known = maliciousSha.value.substring("actions:".length);
       findings.push({

@@ -750,6 +750,11 @@ const DOCKER_FILE_PATTERNS = [
   /^docker-compose\.ya?ml$/i,
   /^\.dockerignore$/i,
   /^Containerfile$/i,
+  // Containerfile.<suffix> like Dockerfile.<suffix>. Without it a
+  // Containerfile.prod was never read, so neither these rules nor the
+  // known-malicious image check (container-image.ts, which already accepts
+  // the name) ever saw it (6.3.0 pre-release review).
+  /^Containerfile\..+$/i,
 ];
 
 /**
