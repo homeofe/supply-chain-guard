@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790379489",
-    "timestamp": "2026-09-25T23:38:10Z",
-    "commit": "893632c",
+    "session_id": "cli-1790379582",
+    "timestamp": "2026-09-25T23:39:43Z",
+    "commit": "d1c8ffc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:16d55d8af00684546ca0282b18cba8306ce0cb3a14a94e7eed0ab7c08d8324bb",
-      "updated": "2026-09-25T23:37:56Z",
-      "lines": 12490,
+      "checksum": "sha256:31d84547cb50ec895441c0bf8a869cb5ada0ecd01a54fb96612b416298160027",
+      "updated": "2026-09-25T23:39:34Z",
+      "lines": 12491,
       "summary": "**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing"
     },
     "NEXT_ACTIONS.md": {
@@ -24,7 +24,7 @@
     },
     "LOG.md": {
       "checksum": "sha256:6e556ede9db6dd56d4510a3b7c2c6bb1ea26b156facaf969e9e8cc352b1e9c3a",
-      "updated": "2026-09-25T23:38:08Z",
+      "updated": "2026-09-25T23:39:41Z",
       "lines": 90,
       "summary": "Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a co"
     },
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3c6e443ed5ec857ffe22350dc34880332e435e8821ebdbb28cbf75fa6fea257b",
-      "updated": "2026-09-25T23:38:08Z",
+      "updated": "2026-09-25T23:39:41Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:b9ba4f2fb84736384290e129c1267b05a6955919767fbc49423f08e0bb3b6ff7",
-      "updated": "2026-09-25T23:38:08Z",
+      "updated": "2026-09-25T23:39:41Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },

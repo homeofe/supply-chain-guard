@@ -14,13 +14,14 @@ comment in `feed-partition.test.ts` refers to.
   the describe block's `afterEach` removes it.
 
 Measured by counting matching entries in node's own `os.tmpdir()` around a
-run of only these two files (73 tests, green in every run): unmodified +1 and
-+2, fixed 0 and 0. Mutation proof, one cut per fix: dropping only the
+run of only these two files (73 tests, green in every run): unmodified
++1 and +2, fixed 0 and 0. Mutation proof, one cut per fix: dropping only the
 `tempDirs.push` line brought back exactly +1 `scg-issue54-empty-*`, dropping
 only the `fixtureRoots.push` line exactly +2 `scg-two-tier-*`; after restoring
 both, 0 and 0 again. Nothing in CI asserts this: a future leak stays green, so
 the count is the only check. The directories already on the test hosts are
 not removed by this change.
+
 ## Pre-release review, part 5: the tag-only release lane (2026-09-26) (claude-opus-5-5)
 
 **Three steps that run only on a tag could fail on a transient registry
