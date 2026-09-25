@@ -5,6 +5,112 @@ import * as os from "node:os";
 import { scanDependencyConfusion, scanPypiDependencyConfusion } from "../dependency-confusion.js";
 import pkg from "../../package.json";
 
+// Offline registry. The scanner reaches npm and PyPI through `https.get`, and
+// it treats a network error as "skip this package" - so against a live
+// registry these tests either time out on a slow runner or, with no network
+// at all, pass without evaluating anything. Every lookup is answered here
+// from a fixture, and every URL is recorded so a test can assert that the
+// lookup it depends on actually happened. A URL with no fixture is recorded
+// as unexpected and fails the test in afterEach instead of being swallowed.
+const registry = vi.hoisted(() => ({
+  requests: [] as string[],
+  unexpected: [] as string[],
+  responses: new Map<string, { status: number; body?: unknown }>(),
+}));
+
+vi.mock("node:https", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:https")>();
+  const { EventEmitter } = await import("node:events");
+  const get = (url: string, _options: unknown, onResponse: (res: unknown) => void) => {
+    registry.requests.push(url);
+    const request = new EventEmitter();
+    const fixture = registry.responses.get(url);
+    setImmediate(() => {
+      if (fixture === undefined) {
+        registry.unexpected.push(url);
+        request.emit("error", new Error(`offline test registry has no fixture for ${url}`));
+        return;
+      }
+      const response = Object.assign(new EventEmitter(), { statusCode: fixture.status });
+      onResponse(response);
+      if (fixture.body !== undefined) {
+        response.emit("data", Buffer.from(JSON.stringify(fixture.body)));
+      }
+      response.emit("end");
+    });
+    return request;
+  };
+  return { ...actual, default: { ...actual, get }, get };
+});
+
+const NPM_REGISTRY_URL = "https://registry.npmjs.org";
+const NPM_DOWNLOADS_URL = "https://api.npmjs.org/downloads/point/last-week";
+const PYPI_URL = "https://pypi.org/pypi";
+
+/** An established npm package: long history, readme, repository, many downloads. */
+function establishedNpmPackage(name: string, created: string, versions: string[]): void {
+  const time: Record<string, string> = { created, modified: "2025-01-01T00:00:00.000Z" };
+  for (const version of versions) time[version] = "2024-01-01T00:00:00.000Z";
+  registry.responses.set(`${NPM_REGISTRY_URL}/${encodeURIComponent(name)}`, {
+    status: 200,
+    body: {
+      name,
+      description: `${name} fixture`,
+      readme: `# ${name}\n\nFixture readme long enough to count as documentation for the scanner.`,
+      "dist-tags": { latest: versions[versions.length - 1] },
+      versions: Object.fromEntries(versions.map((version) => [version, {}])),
+      time,
+      maintainers: [{ name: "maintainer-a" }, { name: "maintainer-b" }],
+      repository: { type: "git", url: `git+https://github.com/example/${name}.git` },
+    },
+  });
+  registry.responses.set(`${NPM_DOWNLOADS_URL}/${encodeURIComponent(name)}`, {
+    status: 200,
+    body: { downloads: 25_000_000, package: name },
+  });
+}
+
+/** An established PyPI project: summary, project URL, long release history. */
+function establishedPypiProject(name: string): void {
+  registry.responses.set(`${PYPI_URL}/${encodeURIComponent(name)}/json`, {
+    status: 200,
+    body: {
+      info: { summary: `${name} fixture project summary`, home_page: null, project_url: `https://pypi.org/project/${name}/` },
+      releases: Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`1.${i}.0`, []])),
+      urls: [{ upload_time: "2024-05-29T15:37:47" }],
+    },
+  });
+}
+
+function installRegistryFixtures(): void {
+  establishedNpmPackage("express", "2010-12-29T19:38:25.450Z", ["4.17.0", "4.18.0", "4.21.2"]);
+  establishedNpmPackage("lodash", "2012-04-23T16:37:11.912Z", ["4.17.20", "4.17.21"]);
+  establishedNpmPackage("commander", "2011-08-15T02:38:42.462Z", ["12.1.0", "13.0.0", "13.1.0"]);
+  for (const absent of [
+    "internal-company-utils-xyz-nonexistent",
+    "internal-build-tools-xyz-nonexistent",
+    "my-internal-utils-xyz-nonexistent",
+  ]) {
+    registry.responses.set(`${NPM_REGISTRY_URL}/${absent}`, { status: 404 });
+  }
+  registry.responses.set(`${NPM_REGISTRY_URL}/@mycompany%2Ftotally-fake-internal-pkg-xyz`, { status: 404 });
+
+  for (const project of ["requests", "flask", "pytest", "celery"]) establishedPypiProject(project);
+  // Real PyPI answers 404 for this name (checked 2026-09-23).
+  registry.responses.set(`${PYPI_URL}/audit-hook/json`, { status: 404 });
+}
+
+beforeEach(() => {
+  registry.requests.length = 0;
+  registry.unexpected.length = 0;
+  registry.responses.clear();
+  installRegistryFixtures();
+});
+
+afterEach(() => {
+  expect(registry.unexpected, "registry lookups with no offline fixture").toEqual([]);
+});
+
 describe("Dependency Confusion Detector", () => {
   let tempDir: string;
 
@@ -47,7 +153,14 @@ describe("Dependency Confusion Detector", () => {
       (f) => f.severity === "critical" || f.severity === "high",
     );
     expect(criticalOrHigh).toHaveLength(0);
-  }, 30000);
+    // The verdict must come from evaluated metadata, not from a skipped lookup.
+    expect(registry.requests).toEqual(expect.arrayContaining([
+      `${NPM_REGISTRY_URL}/express`,
+      `${NPM_DOWNLOADS_URL}/express`,
+      `${NPM_REGISTRY_URL}/lodash`,
+      `${NPM_DOWNLOADS_URL}/lodash`,
+    ]));
+  });
 
   it("should flag packages not found on the public registry", async () => {
     fs.writeFileSync(
@@ -72,7 +185,7 @@ describe("Dependency Confusion Detector", () => {
     expect(finding).toBeDefined();
     expect(finding?.severity).toBe("high");
     expect(finding?.description).toContain("not found on the public npm registry");
-  }, 30000);
+  });
 
   it("should not flag scoped packages not on registry as high severity", async () => {
     fs.writeFileSync(
@@ -102,7 +215,7 @@ describe("Dependency Confusion Detector", () => {
     );
     expect(scopedFinding).toBeDefined();
     expect(scopedFinding?.severity).toBe("info");
-  }, 30000);
+  });
 
   it("should handle missing package.json", async () => {
     await expect(
@@ -154,7 +267,8 @@ describe("Dependency Confusion Detector", () => {
 
     // commander is a well-known package, should be clean or info only
     expect(report.findings.filter((f) => f.severity === "critical")).toHaveLength(0);
-  }, 30000);
+    expect(registry.requests).toContain(`${NPM_REGISTRY_URL}/commander`);
+  });
 
   it("should check devDependencies by default", async () => {
     fs.writeFileSync(
@@ -177,7 +291,7 @@ describe("Dependency Confusion Detector", () => {
       (f) => f.rule === "DEPCONF_NOT_ON_REGISTRY",
     );
     expect(finding).toBeDefined();
-  }, 30000);
+  });
 
   it("should exclude devDependencies when includeDevDeps is false", async () => {
     fs.writeFileSync(
@@ -199,6 +313,7 @@ describe("Dependency Confusion Detector", () => {
 
     // Should find nothing since only devDeps have the suspicious package
     expect(report.findings).toHaveLength(0);
+    expect(registry.requests).toEqual([]);
   });
 
   it("should generate recommendations for confusion risks", async () => {
@@ -224,7 +339,7 @@ describe("Dependency Confusion Detector", () => {
         (r) => r.includes("scoped") || r.includes(".npmrc") || r.includes("registry"),
       ),
     ).toBe(true);
-  }, 30000);
+  });
 
   it("should respect minSeverity filter", async () => {
     fs.writeFileSync(
@@ -245,13 +360,17 @@ describe("Dependency Confusion Detector", () => {
       minSeverity: "high",
     });
 
+    // The high finding survives the filter and commander was evaluated,
+    // so the every() below is not vacuously true on an empty list.
+    expect(report.findings.map((f) => f.rule)).toContain("DEPCONF_NOT_ON_REGISTRY");
+    expect(registry.requests).toContain(`${NPM_REGISTRY_URL}/commander`);
     // All findings should be high or above
     expect(
       report.findings.every(
         (f) => f.severity === "high" || f.severity === "critical",
       ),
     ).toBe(true);
-  }, 30000);
+  });
 });
 
 describe("Dependency Confusion Heuristics (unit)", () => {
@@ -322,6 +441,7 @@ describe("PyPI confusion detection - parseRequirementsTxt (v4.9)", () => {
     const findings = await scanPypiDependencyConfusion(tmpDir);
     // May have findings if packages are hallucinated, but no crash
     expect(Array.isArray(findings)).toBe(true);
+    expect(registry.requests).toEqual([]);
   });
 
   it("should skip version pins and comments in requirements.txt", async () => {
@@ -330,7 +450,13 @@ describe("PyPI confusion detection - parseRequirementsTxt (v4.9)", () => {
       "# production deps\nrequests==2.31.0\nflask>=3.0.0\n# dev\npytest\n",
     );
     const findings = await scanPypiDependencyConfusion(tmpDir);
-    expect(Array.isArray(findings)).toBe(true);
+    // Exactly the bare project names are looked up: pins and comments are gone.
+    expect(registry.requests).toEqual([
+      `${PYPI_URL}/requests/json`,
+      `${PYPI_URL}/flask/json`,
+      `${PYPI_URL}/pytest/json`,
+    ]);
+    expect(findings).toEqual([]);
   });
 
   it("should detect AI-hallucinated PyPI package name (offline)", async () => {
@@ -343,6 +469,7 @@ describe("PyPI confusion detection - parseRequirementsTxt (v4.9)", () => {
     // (works offline - no network call needed for hallucinated packages)
     const findings = await scanPypiDependencyConfusion(tmpDir);
     expect(findings.some((f) => f.rule === "DEP_HALLUCINATED_PACKAGE" && f.match === "python-utils-helper")).toBe(true);
+    expect(registry.requests).toEqual([`${PYPI_URL}/requests/json`]);
   });
 
   it("should detect hallucinated package with correct severity (high)", async () => {
@@ -932,6 +1059,11 @@ describe("PyPI confusion detection - parseRequirementsTxt (v4.9)", () => {
     const findings = await scanPypiDependencyConfusion(tmpDir);
     // Should not crash on extras notation
     expect(Array.isArray(findings)).toBe(true);
+    // Extras and the pin are stripped: the lookup is for the project itself.
+    expect(registry.requests).toEqual([
+      `${PYPI_URL}/celery/json`,
+      `${PYPI_URL}/audit-hook/json`,
+    ]);
   });
 });
 

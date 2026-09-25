@@ -704,7 +704,7 @@ malicious package is known in that ecosystem yet, and the importer or a curated 
 | PyPI | `requirements.txt`, `pyproject.toml`, `poetry.lock`, `uv.lock`, `Pipfile.lock` | `PYTHON_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
 | RubyGems | `Gemfile`, `Gemfile.lock` | `RUBY_MALICIOUS_GEM` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
 | Composer (PHP) | `composer.json`, `composer.lock` | `COMPOSER_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
-| NuGet (.NET) | `packages.lock.json`, `*.csproj`, `packages.config` | `NUGET_MALICIOUS_PACKAGE` | bundle | GitHub Advisory Database, OpenSSF / OSV |
+| NuGet (.NET) | `packages.lock.json`, `*.csproj`, `packages.config` | `NUGET_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
 | Cargo (Rust) | `Cargo.toml`, `Cargo.lock` | `CARGO_MALICIOUS_CRATE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |
 | Go modules | `go.mod`, `go.sum` | `GO_MALICIOUS_MODULE` | bundle | GitHub Advisory Database, OpenSSF / OSV |
 | Maven / Gradle / SBT / Bazel | `pom.xml`, `gradle.lockfile`, `build.gradle`, `build.gradle.kts`, `libs.versions.toml`, `build.sbt`, `maven_install.json` | `MAVEN_MALICIOUS_PACKAGE` | bundle + catalog | GitHub Advisory Database, OpenSSF / OSV |

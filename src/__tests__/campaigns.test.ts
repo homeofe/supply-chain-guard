@@ -7296,4 +7296,84 @@ describe("Campaign Signatures", () => {
       expect(core.findings.filter((f) => f.rule === "HOMEBREW_MALICIOUS_PACKAGE")).toEqual([]);
     });
   });
+
+  // =================================================================
+  // MemTensor sckit Go worm (September 2026)
+  // =================================================================
+
+  describe("MemTensor sckit Go worm (September 2026)", () => {
+    it("should flag @memtensor/memos-cloud-openclaw-plugin@0.1.23 as a known-bad version", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@memtensor/memos-cloud-openclaw-plugin": "0.1.23" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    // The package is legitimate and was published from a compromised release
+    // pipeline; 0.1.22 and 0.1.24 are clean, so the name must never be blocked.
+    it("must NOT flag the clean 0.1.24 release", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@memtensor/memos-cloud-openclaw-plugin": "0.1.24" },
+        })
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION"),
+        "only 0.1.21, 0.1.23 and 0.1.25 are malicious",
+      ).toBeUndefined();
+    });
+
+    it("should detect a published C2 subdomain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.js"),
+        'const c2 = "https://8a8acaf167b3.skyleen.fr/";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the sckit implant SHA256 as text", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "hash.js"),
+        'const sha = "381ac6dc1715d9298fe81b2a53a11f7b7d78e361ee3a6619ad54f8c4b062cc18";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_MALWARE_HASH"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps every sckit indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const set = feed.filter((i) => i.campaign === "MemTensor sckit worm");
+      expect(set.length, "all 13 sckit feed indicators must be bundled").toBe(13);
+      for (const ioc of set) {
+        expect(ioc.family, `${ioc.value} must carry a family`).toBe("sckit");
+      }
+    });
+  });
 });

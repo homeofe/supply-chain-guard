@@ -508,6 +508,14 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // Single-source (Aikido), so the matching feed entries carry confidence 0.85.
   "5yotmxcc54l9xda.ru",
   "ejntin6hkjt7gj2.ru",
+  // MemTensor sckit Go worm (September 2026). Per-victim C2 subdomains of
+  // skyleen[.]fr (SafeDep + Aikido). Only the published subdomains are listed.
+  "8a8acaf167b3.skyleen.fr",
+  "0b48fafd6fbe.skyleen.fr",
+  "266297c6df27.skyleen.fr",
+  "c747d139e7e9.skyleen.fr",
+  "73376a079d87.skyleen.fr",
+  "d4f77a3a8cb0.skyleen.fr",
 ];
 
 // ---------------------------------------------------------------------------
@@ -761,6 +769,8 @@ export const KNOWN_C2_IPS: string[] = [
   "45.11.59.140",
   "85.137.56.245",
   "85.137.56.10",
+  // MemTensor sckit Go worm (September 2026). Single-source (Aikido).
+  "139.84.223.178",
 ];
 
 // ---------------------------------------------------------------------------
@@ -1491,6 +1501,13 @@ export const KNOWN_MALICIOUS_HASHES: Record<string, string> = {
   // two retracted releases, which pubspec.lock records verbatim as each package's sha256.
   "5cea38548f03cf44ad03bba44a3c6012782f280bd543a3c555535081353feb04": "universal_file_viewer 0.1.5 pub archive, XCSSET-trojanized (SHA256)",
   "394220c2c0305231fd0f6fd09355634d51acdd87415404b57e7e422af6af3e8d": "universal_file_viewer 0.1.6 pub archive, XCSSET-trojanized (SHA256)",
+  // MemTensor sckit Go worm (September 2026)
+  "381ac6dc1715d9298fe81b2a53a11f7b7d78e361ee3a6619ad54f8c4b062cc18": "MemTensor sckit Go worm implant binary, linux-amd64 (SHA256)",
+  "e077c387b223811064b7bbc5a55a0182fca9bf50894f949ff284d4be87d44b26": "MemTensor sckit Go worm implant binary, linux-arm64 (SHA256)",
+  "65faf8ccbcf5b34eb4f72c71bf82815fa9c1e2f947b9c898491540e866132c31": "MemTensor sckit Go worm implant binary, darwin-amd64 (SHA256)",
+  "f8ccdd1da7dff1aef16377a2842bc7acf7c516e32122dd6e42dc4a4e57653fce": "MemTensor sckit Go worm implant binary, darwin-arm64 (SHA256)",
+  "56cd3416d2ec2aa7e7cec2a06010cf0b58eb09c0a5486809df52afeaca8f14be": "MemTensor sckit Go worm implant binary, windows-amd64 (SHA256)",
+  "d6b3e77c36ee8017c9bf30d1da7218ec0ea843768d313eb8e35845c8a9b38a26": "MemTensor sckit Go worm implant binary, windows-arm64 (SHA256)",
 };
 
 // ---------------------------------------------------------------------------
@@ -2797,6 +2814,12 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["1.1.37", "1.1.38"],
     description: "Baileys fork channel-farming campaign: runtime injection subscribes the authenticated WhatsApp session to attacker-controlled newsletter channels; single-source (Sep 2026)",
   },
+  // MemTensor sckit Go worm (September 2026). Legitimate package published
+  // with a stolen release-pipeline token; 0.1.22 and 0.1.24 are clean.
+  "@memtensor/memos-cloud-openclaw-plugin": {
+    versions: ["0.1.21", "0.1.23", "0.1.25"],
+    description: "MemTensor sckit Go worm: credential stealer with self-propagation, published from a compromised release pipeline (SafeDep + Aikido, September 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -3029,6 +3052,10 @@ export const KNOWN_BAD_PYPI_VERSIONS: Record<string, { versions: string[]; descr
   "uprobe": {
     versions: ["0.1.3", "0.1.4"],
     description: "Miasma 'Hades' PyPI wave: .pth startup hook drops a Bun-based credential stealer. Legitimate package - only 0.1.3 and 0.1.4 are malicious; 0.1.2 remains the clean latest (Socket + StepSecurity + Orca, August 2026)",
+  },
+  "memoryos": {
+    versions: ["2.0.34"],
+    description: "MemTensor sckit Go worm: same implant as the npm plugin, published with a stolen token (SafeDep + Aikido, September 2026)",
   },
 };
 

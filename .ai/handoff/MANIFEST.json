@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790231922",
-    "timestamp": "2026-09-24T06:38:43Z",
-    "commit": "9540696",
+    "session_id": "cli-1790357848",
+    "timestamp": "2026-09-25T17:37:28Z",
+    "commit": "7169255",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:836c7f1fe00783cac529da09dd51b13e895c9f7317c5b97bb34926a205af3704",
-      "updated": "2026-09-24T06:38:38Z",
-      "lines": 11568,
+      "checksum": "sha256:b60cc092448d706da06ffe3e18df85374f7b188fa47af60d02c5433cce5fdaf2",
+      "updated": "2026-09-25T17:37:28Z",
+      "lines": 11739,
       "summary": "The owner held the merge until the PR is certain. Three rounds of independent"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:aa14b8f40c043de566b5e65a7e189b7ec252484eb55e24ca8ddd74cfd53beebd",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:32:43Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:0a0a8f6fd7d658945e5e743c2f1ad3b32d4e7874ad0bb41d127fcd1b6af4394b",
-      "updated": "2026-09-24T06:38:41Z",
+      "updated": "2026-09-25T17:37:28Z",
       "lines": 187,
       "summary": "This generated journal lists every release derived from CHANGELOG.md, newest first."
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:94b2e7524ade23f11edc97075afc33bc9884288661336bb6ce279d6928d22c62",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 11,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:e31151bb5b7c01f0501c6268e901bd6ad615b67bb4dcbf7b30e43a1ef2fe8279",
-      "updated": "2026-09-24T06:38:41Z",
+      "updated": "2026-09-25T17:37:28Z",
       "lines": 75,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:d0fb7e18c62e61e219f12b58c151dabc0a0cd5698e6c36febd9b4261a3689365",
-      "updated": "2026-09-24T06:38:41Z",
+      "updated": "2026-09-25T17:37:28Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-23T16:00:27Z",
+      "updated": "2026-09-25T17:30:05Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "The owner held the merge until the PR is certain. Three rounds of independent Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 135018,
-    "full_read": 148043
+    "manifest_plus_core": 136802,
+    "full_read": 149827
   }
 }
