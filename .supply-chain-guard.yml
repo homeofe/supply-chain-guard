@@ -35,18 +35,40 @@ suppress:
   - rule: SHAI_HULUD_WORM
     reason: doc-generator template in scripts/scg-handoff-docs.mjs describes this repo's npm publish pipeline; detection stays active for scanned user projects
 
-    # Two prose files quote the literal base64-decode-then-eval construct while
-    # DESCRIBING the EVAL_ATOB rule and a measurement made against it. They are
-    # documentation of the detection, not the thing detected. Both are scoped by
-    # path: a real occurrence anywhere else in this tree, including src/, still
-    # fails the self-scan at critical. Detection is untouched for user projects.
-    - rule: EVAL_ATOB
-      path: CHANGELOG.md
-      reason: changelog entry quotes the base64-decode-then-eval construct while describing the EVAL_ATOB rule and the measured effect of rules.disable on it; prose about the detection, not a payload
+  # Two prose files quote the literal base64-decode-then-eval construct while
+  # DESCRIBING the EVAL_ATOB rule and a measurement made against it. They are
+  # documentation of the detection, not the thing detected. Both are scoped by
+  # path: a real occurrence anywhere else in this tree, including src/, still
+  # fails the self-scan at critical. Detection is untouched for user projects.
+  - rule: EVAL_ATOB
+    path: CHANGELOG.md
+    reason: changelog entry quotes the base64-decode-then-eval construct while describing the EVAL_ATOB rule and the measured effect of rules.disable on it; prose about the detection, not a payload
 
-    - rule: EVAL_ATOB
-      path: .ai/handoff/STATUS.md
-      reason: handoff note quotes the same construct while recording that measurement; prose about the detection, not a payload
+  - rule: EVAL_ATOB
+    path: .ai/handoff/STATUS.md
+    reason: handoff note quotes the same construct while recording that measurement; prose about the detection, not a payload
+
+  # Documentation that quotes the internal-disclosure rules' own test data.
+  # These surfaced when the self-scan became visible in code scanning
+  # (.github/workflows/self-scan.yml); below critical they had never been
+  # looked at. Each value was read: RFC 1918 and link-local example addresses
+  # and reserved-looking host suffixes, used to show what the rules reject.
+  # Path-scoped, so a real address or host anywhere else still reports.
+  - rule: INTERNAL_PRIVATE_IP
+    path: docs/plans/2026-09-16-threat-feed-catalog-phase-1.md
+    reason: plan document quotes the catalog-hygiene test's RFC 1918 and link-local example addresses, which the test asserts are rejected; test data about the detection, not infrastructure
+
+  - rule: INTERNAL_HOSTNAME
+    path: docs/plans/2026-09-16-threat-feed-catalog-phase-1.md
+    reason: the same test quotes example hosts under private-network suffixes, which must be rejected; test data, not hosts
+
+  - rule: INTERNAL_HOSTNAME
+    path: CHANGELOG.md
+    reason: changelog entries describe the internal-disclosure rules with example host-name keys; prose about the detection
+
+  - rule: INTERNAL_HOSTNAME
+    path: .ai/handoff/STATUS.md
+    reason: handoff notes record the same rule work with example host-name keys; prose about the detection
 
   # The DOCKER_NPM_GLOBAL suppression that used to sit here is gone: the rule
   # now inspects the package specs and no longer fires on our image's local

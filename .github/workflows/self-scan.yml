@@ -1,0 +1,128 @@
+# The README's "scanned by supply-chain-guard" badge is this workflow's status on
+# main, and every pull request gets a "supply-chain-guard" code-scanning check
+# that annotates what the scan found.
+#
+# Why it exists: ci.yml has self-scanned every pull request since the gate from
+# issue 173 ("Self-scan this repository", in the compat job), but only inside the
+# compat logs. Nothing on a pull request showed that a scan ran or what it found,
+# and the badge was a static image that would have stayed green with the gate
+# deleted.
+#
+# --min-severity low is the Action's default: info-level items (a SHA-pinned
+# third-party action, the catalog not refreshed in CI) are context, not alerts.
+#
+# One scan, three views. The JSON report feeds the same file-count control the
+# gate uses, then formatReport renders that SAME report as SARIF for code
+# scanning and as Markdown for the job summary. It scans this commit's own build,
+# not the last release, so a pull request is judged by the code it contains; the
+# published Action is exercised through examples and action tests instead.
+#
+# The blocking gate stays in ci.yml, inside the required "Build and Test". This
+# workflow applies the same threshold (--fail-on critical, held equal by
+# src/__tests__/self-scan-visibility.test.ts) so the badge and the gate cannot
+# disagree about the same commit.
+name: scanned by supply-chain-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: supply-chain-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      # Upload the SARIF report to code scanning.
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # tsc only: the prebuild gates already run in ci.yml, and this job needs
+      # dist/ and nothing else.
+      - name: Build
+        run: npx tsc
+
+      - name: Scan this commit
+        id: scan
+        env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          rc=0
+          node dist/cli.js scan . --fail-on critical --min-severity low --format json --no-history > "$RUNNER_TEMP/scg.json" || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+
+          # The gate's positive control: a green verdict from a scan rooted in the
+          # wrong directory looks exactly like a clean tree, so the report must
+          # show it inspected at least every TypeScript source tracked under src/.
+          floor=$(git ls-files -- src | grep -c '\.ts$' || true)
+
+          REPORT="$RUNNER_TEMP/scg.json" SARIF="$RUNNER_TEMP/scg.sarif" FLOOR="$floor" node -e '
+            const fs = require("fs");
+            const { formatReport } = require("./dist/index.js");
+            const r = JSON.parse(fs.readFileSync(process.env.REPORT, "utf8"));
+            const floor = Number(process.env.FLOOR);
+            const scanned = r.summary.filesScanned;
+            if (!(floor > 0) || !(scanned >= floor)) {
+              console.error("::error title=Self-scan target::The scan inspected " + scanned +
+                " files, but this checkout tracks " + floor + " TypeScript sources under src/.");
+              process.exit(1);
+            }
+            fs.writeFileSync(process.env.SARIF, formatReport(r, "sarif"));
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, formatReport(r, "markdown") + "\n");
+            console.log("self-scan: " + scanned + " files inspected, " + r.findings.length + " findings");
+          '
+          echo "sarif=written" >> "$GITHUB_OUTPUT"
+
+          # A pull request from a fork gets no security-events permission, so its
+          # upload would fail. Say so where the reader looks, instead of skipping
+          # the step in silence.
+          if [ "$EVENT" = "pull_request" ] && [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            echo "upload=skip" >> "$GITHUB_OUTPUT"
+            echo "> Code scanning upload skipped: pull requests from forks cannot write code-scanning results. The findings are in the report above." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "upload=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to code scanning
+        if: always() && steps.scan.outputs.sarif == 'written' && steps.scan.outputs.upload == 'yes'
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ runner.temp }}/scg.sarif
+          category: supply-chain-guard
+
+      # After the upload, so a red verdict still leaves its findings annotated.
+      - name: Verdict at the critical threshold
+        if: always() && steps.scan.outputs.sarif == 'written'
+        env:
+          RC: ${{ steps.scan.outputs.rc }}
+        run: |
+          if [ "$RC" != "0" ]; then
+            echo "::error title=supply-chain-guard::A finding at or above critical, or an incomplete scan (exit $RC). The report is in the job summary and in code scanning."
+            exit 1
+          fi
+          echo "No finding at or above critical, and the scan was complete."

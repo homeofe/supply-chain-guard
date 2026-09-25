@@ -293,7 +293,7 @@ function segmentHasEgress(raw: string, proxied: boolean): boolean {
 
 /** Does executed text (a run: or script: body, comments removed) send data out? */
 function execTextHasEgress(text: string, proxied: boolean): boolean {
-  // Expressions are masked before the split: `${{ a || 'https://x' }}` is one
+  // Expressions are masked before the split: `${{ a || 'https://example.invalid' }}` is one
   // value, not two commands.
   const joined = text.replace(/\\\n/g, " ").replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR");
   for (const segment of joined.split(/&&|\|\||[;&|\n]/)) {

@@ -248,6 +248,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   unchanged: `engines.node` stays `>=22.0.0` and CI keeps testing Node 22 and
   24, because Node 22 is maintained upstream until 2027-04-30 and raising the
   floor would break installs on it.
+- The README's "scanned by supply-chain-guard" badge is now the live status
+  of a self-scan workflow (`.github/workflows/self-scan.yml`) instead of a
+  static image. Every pull request gets a `supply-chain-guard` code-scanning
+  check with its findings annotated, and a job summary with the report. The
+  scan had already gated every pull request since the self-scan gate landed,
+  but only inside the compat job's log, where nothing on the pull request
+  showed it. It runs this commit's own build at the gate's threshold
+  (`--fail-on critical`), with the gate's file-count control, and reports
+  from the Action's default minimum severity (low). Made visible, the scan
+  showed 18 findings below critical that had drifted in unseen. All 18 were
+  example values in documentation and a code comment: one was fixed at the
+  source, and the rest are suppressed by path with written reasons.
+- `.supply-chain-guard.yml` is valid YAML again. Two entries were nested two
+  columns too deep; the scanner's own parser accepted them, standard YAML
+  parsers did not. The suppressions they carry are unchanged.
+- `docs/github-actions-sarif.yml`, the documented SARIF workflow, uses the
+  Action pinned to an exact release with `format: sarif` instead of
+  `npm install -g supply-chain-guard` (a floating version), and no longer
+  sets `continue-on-error` on the scan, which meant no finding could ever
+  fail the job. It is a version site now, so each release updates the pin.
 
 ### Fixed
 
