@@ -22,7 +22,7 @@ import {
 import { classifyFileSurface } from "../internal-disclosure.js";
 import { firstQuotedSlashRef } from "../policy-engine.js";
 import { isPythonManifest } from "../python-lockfile-scanner.js";
-import { DOWNLOAD_EXEC_REGEXES, HOOK_SHELL_RC_WRITE_REGEX } from "../skills-scanner.js";
+import { DOWNLOAD_EXEC_MATCHERS, findDownloadExec, writesShellRc } from "../skills-scanner.js";
 
 // Property-based tests for the code that reads attacker-controlled text.
 //
@@ -288,27 +288,115 @@ describe("CodeQL ReDoS rewrites agree with the expressions they replaced", () =>
     );
   });
 
-  it("the iex(iwr) skills pattern matches the same strings as before", () => {
-    const OLD = /\b(?:iex|invoke-expression)\s*\(\s*(?:\(?\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i;
-    const NEW = DOWNLOAD_EXEC_REGEXES.find((re) => re.source.includes("invoke-expression)\\s*\\("));
-    expect(NEW).toBeDefined();
-    const text = tokens(["iex", "IEX", "invoke-expression", "(", " ", "\t", "iwr", "irm", "invoke-webrequest", "x"]);
+  // The four download-and-execute matchers against the expressions they
+  // replace, including WHERE the match starts and WHAT it covers (the text is
+  // the finding's evidence). The pipe-chain ones were regexes of this exact
+  // form until the 6.3.0 pre-release review measured them quadratic.
+  const DOWNLOAD_EXEC_REFERENCE = [
+    /\b(?:curl|wget)\b[^\n|]*\|[^\n|]*\b(?:sudo\s+)?(?:bash|sh|zsh|dash)\b/i,
+    /\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|]*\|[^\n|]*\b(?:iex|invoke-expression)\b/i,
+    /\b(?:iex|invoke-expression)\s*\(\s*(?:\(?\s*)?(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b/i,
+    /\bbase64\s+(?:-d|-D|--decode)\b[^\n|]*\|[^\n|]*\b(?:bash|sh|zsh|dash)\b/i,
+  ];
+  const unusual = [String.fromCharCode(0x2028), String.fromCharCode(0xa0), String.fromCharCode(0x212a), String.fromCharCode(0x17f), "\r"];
+
+  it("each download-exec matcher returns what its reference expression returns", () => {
+    const text = tokens([
+      "curl", "wget", "CURL", "iwr", "IRM", "invoke-webrequest", "invoke-restmethod", "iex", "invoke-expression",
+      "base64", " -d", " -D", " --decode", "-d", "|", "||", "\n", " ", "  ", "\t", "sudo", "sudo ", "bash", "sh",
+      "zsh", "dash", "shx", "x", "_", "-", "(", "((", "1", ...unusual,
+    ], 40);
     fc.assert(
       fc.property(text, (t) => {
-        expect(NEW!.test(t)).toBe(OLD.test(t));
+        DOWNLOAD_EXEC_REFERENCE.forEach((ref, k) => {
+          const want = ref.exec(t);
+          const got = DOWNLOAD_EXEC_MATCHERS[k]!(t);
+          expect(got === null ? null : [got.index, got.text], `${k}: ${JSON.stringify(t)}`)
+            .toEqual(want === null ? null : [want.index, want[0]]);
+        });
       }),
       params,
     );
   });
 
-  it("HOOK_SHELL_RC_WRITE_REGEX matches the same strings as before", () => {
-    const OLD = /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
-    const text = tokens([">", ">>", "tee", " -a", " ", "~", "$HOME", "/", "a", "!", ".bashrc", ".ZSHRC", ".profile", "|", ";", "x"]);
+  // A narrow alphabet reaches the structural cases (a newline before the
+  // pipe, several shell words after it, sudo across lines) in almost every
+  // run; the wide alphabet above covers the character classes. The first
+  // mutation run showed the wide one alone let three logic cuts pass.
+  it("each download-exec matcher agrees with its reference on the pipe structure", () => {
+    const text = tokens(["curl", "iwr", "base64 -d", "iex", "sh", "bash", "sudo", " ", "|", "\n", "x"], 10);
     fc.assert(
       fc.property(text, (t) => {
-        expect(HOOK_SHELL_RC_WRITE_REGEX.test(t)).toBe(OLD.test(t));
+        DOWNLOAD_EXEC_REFERENCE.forEach((ref, k) => {
+          const want = ref.exec(t);
+          const got = DOWNLOAD_EXEC_MATCHERS[k]!(t);
+          expect(got === null ? null : [got.index, got.text], `${k}: ${JSON.stringify(t)}`)
+            .toEqual(want === null ? null : [want.index, want[0]]);
+        });
       }),
       params,
     );
+    // Named cases for the three the first mutation run missed.
+    for (const [t, want] of [
+      ["curl x\n| sh", null], // a newline before the pipe ends the chain
+      ["curl x | sh bash", "curl x | sh bash"], // greedy: the rightmost shell word
+      ["curl x | sudo\nbash", "curl x | sudo\nbash"], // sudo\s+ may cross a newline
+    ] as const) {
+      expect(DOWNLOAD_EXEC_MATCHERS[0]!(t)?.text ?? null, JSON.stringify(t)).toBe(want);
+      expect(DOWNLOAD_EXEC_REFERENCE[0]!.exec(t)?.[0] ?? null, JSON.stringify(t)).toBe(want);
+    }
+  });
+
+  it("findDownloadExec reports the first matcher that matches, as the line loop did", () => {
+    const text = tokens(["curl", "iwr", "iex(", "base64 -d", " | ", "sh", "iex", "\n", " ", "x"], 30);
+    fc.assert(
+      fc.property(text, (t) => {
+        const want = DOWNLOAD_EXEC_REFERENCE.map((re) => re.exec(t)).find((m) => m !== null) ?? null;
+        const got = findDownloadExec(t);
+        expect(got === null ? null : got.text).toEqual(want === null ? null : want[0]);
+      }),
+      params,
+    );
+  });
+
+  it("writesShellRc matches exactly the strings the shell-rc expression matched", () => {
+    // The expression as v6.2.5 shipped it ([^\s|;&], ">" allowed in the path),
+    // and the 6.3.0 intermediate that excluded ">": both must agree.
+    const REFERENCE = /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
+    const INTERMEDIATE = /(?:>>?|\btee\b(?:\s+-a)?)\s*(?:~|\$HOME|%USERPROFILE%)?[^\s|;&>]*\.(?:bashrc|zshrc|bash_profile|zprofile|profile)\b/i;
+    const text = tokens([
+      ">", ">>", "tee", "TEE", "Tee", "xtee", "tee-", " -a", " -A", "-a", " ", "\t", "\n", "~", "$HOME",
+      "%USERPROFILE%", "/", "a", "_", "1", "!", ".", ".bashrc", ".ZSHRC", ".bash_profile", ".zprofile",
+      ".profile", ".profilex", "bashrc", "|", ";", "&", "x", ...unusual,
+    ], 40);
+    fc.assert(
+      fc.property(text, (t) => {
+        const want = REFERENCE.test(t);
+        expect(INTERMEDIATE.test(t), JSON.stringify(t)).toBe(want);
+        expect(writesShellRc(t), JSON.stringify(t)).toBe(want);
+      }),
+      params,
+    );
+    // Narrow alphabet: the operator forms in almost every run.
+    const narrow = tokens(["tee", " ", "-a", "~/", ".bashrc", ">", "x", "e", "|", "\n"], 10);
+    fc.assert(
+      fc.property(narrow, (t) => {
+        expect(writesShellRc(t), JSON.stringify(t)).toBe(REFERENCE.test(t));
+      }),
+      params,
+    );
+    // Named cases, including the `tee -a` form the first mutation run missed.
+    for (const [t, want] of [
+      ["echo x | tee -a ~/.bashrc", true],
+      ["tee -A\t~/.zshrc", true],
+      ["tee -a -a ~/.bashrc", false],
+      ["echo x >> ~/.profile", true],
+      ["x/tee/.bashrc", true],
+      ["attee ~/.bashrc", false],
+      ["tee | ~/.bashrc", false],
+    ] as const) {
+      expect(writesShellRc(t), t).toBe(want);
+      expect(REFERENCE.test(t), t).toBe(want);
+    }
   });
 });
