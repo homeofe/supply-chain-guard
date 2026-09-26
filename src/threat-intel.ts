@@ -37,7 +37,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-25T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-26T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -10062,6 +10062,13 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "pypi:cloushaar-poc-exfil-91827@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-6wmc-3vvj-9j5f, MAL-2026-16377 (amazon-inspector+kam193)", firstSeen: "2026-09-22" },
   { type: "package", value: "ruby:wurl_show_data@3.1.42.99", severity: "critical", confidence: 1.0, source: "GHSA-345f-5r88-8j64, MAL-2026-16466 (ossf-package-analysis)", firstSeen: "2026-09-22" },
   { type: "package", value: "eslint-config-compact-utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-qh87-q3mj-33jx, MAL-2026-16417 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-22" },
+
+  // Imported from GitHub Advisory Database (2026-09-12) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:sherpy@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-74qh-6w69-w7vc, MAL-2026-17188 (kam193)", firstSeen: "2026-09-25" },
+  { type: "package", value: "pypi:sherpy@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-74qh-6w69-w7vc, MAL-2026-17188 (kam193)", firstSeen: "2026-09-25" },
+  { type: "package", value: "@digift/cli@99.99.100", severity: "critical", confidence: 1.0, source: "GHSA-2394-2grm-2336, MAL-2026-17187 (ossf-package-analysis)", firstSeen: "2026-09-25" },
+  { type: "package", value: "@digift/cli@99.99.99", severity: "critical", confidence: 0.9, source: "npm registry: published by the account behind GHSA-2394-2grm-2336 in the same minute as 99.99.100, since unpublished; the advisory lists 99.99.100 only", firstSeen: "2026-09-25" },
+  { type: "package", value: "@nubjs/types@0.9.4", severity: "critical", confidence: 0.9, source: "GHSA-7qx8-98q7-66p4, MAL-2026-17186 (ghsa-malware)", firstSeen: "2026-09-25" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
