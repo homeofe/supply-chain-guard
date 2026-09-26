@@ -10067,6 +10067,7 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "pypi:sherpy@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-74qh-6w69-w7vc, MAL-2026-17188 (kam193)", firstSeen: "2026-09-25" },
   { type: "package", value: "pypi:sherpy@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-74qh-6w69-w7vc, MAL-2026-17188 (kam193)", firstSeen: "2026-09-25" },
   { type: "package", value: "@digift/cli@99.99.100", severity: "critical", confidence: 1.0, source: "GHSA-2394-2grm-2336, MAL-2026-17187 (ossf-package-analysis)", firstSeen: "2026-09-25" },
+  { type: "package", value: "@digift/cli@99.99.99", severity: "critical", confidence: 0.9, source: "npm registry: published by the account behind GHSA-2394-2grm-2336 in the same minute as 99.99.100, since unpublished; the advisory lists 99.99.100 only", firstSeen: "2026-09-25" },
   { type: "package", value: "@nubjs/types@0.9.4", severity: "critical", confidence: 0.9, source: "GHSA-7qx8-98q7-66p4, MAL-2026-17186 (ghsa-malware)", firstSeen: "2026-09-25" },
 ];
 

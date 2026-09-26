@@ -11,6 +11,17 @@ indicators (MemTensor sckit stealer, the Checkmarx BTree packages, the
 actions-cool re-activation reusing t[.]m-kosche[.]com) were all already
 covered, so no hand-added indicators.
 
+Review before merge (interactive): each pin was checked against the npm
+registry's `time` map and the OSV record, since a GHSA range is often
+narrower than what was published. `@digift/cli` had a second version,
+99.99.99, published by the same account in the same minute as 99.99.100 and
+unpublished since; the advisory and OSV list 99.99.100 only. It is added as a
+pin (confidence 0.9, the registry as its source). `@nubjs/types` is a live
+package with a long release history: 0.9.4 is unpublished, and 0.9.3 and
+0.9.5 carry no install scripts and come from trusted publishing, so the single
+pin stays right and the name must never be blocked. Both PyPI `sherpy`
+versions are pinned and the project is gone from PyPI.
+
 D-062 rule fixes d1 to d4, d6, d8 and d10 (PR 326) are released in v6.3.0;
 d5, d7 and d9 follow in their own change.
 

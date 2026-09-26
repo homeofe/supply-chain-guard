@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.3.0",
-  "entryCount": 8808,
+  "entryCount": 8809,
   "generatedAt": "2026-09-26T00:00:00.000Z",
   "entries": [
     {
@@ -73055,6 +73055,14 @@
       "severity": "critical",
       "confidence": 1,
       "source": "GHSA-2394-2grm-2336, MAL-2026-17187 (ossf-package-analysis)",
+      "firstSeen": "2026-09-25"
+    },
+    {
+      "type": "package",
+      "value": "@digift/cli@99.99.99",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "npm registry: published by the account behind GHSA-2394-2grm-2336 in the same minute as 99.99.100, since unpublished; the advisory lists 99.99.100 only",
       "firstSeen": "2026-09-25"
     },
     {

@@ -9,10 +9,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
-- Threat intel (2026-09-26): four package IOCs from the GitHub Advisory
-  Database, corroborated by OpenSSF, all in the offline bundle:
+- Threat intel (2026-09-26): five package IOCs, all in the offline bundle.
+  Four come from the GitHub Advisory Database, corroborated by OpenSSF:
   `pypi:sherpy` 0.1.0 and 0.1.1, `@digift/cli` 99.99.100 and
-  `@nubjs/types` 0.9.4.
+  `@nubjs/types` 0.9.4. The fifth, `@digift/cli` 99.99.99, is not in the
+  advisory: the npm registry shows it published by the same account in the
+  same minute as 99.99.100 and unpublished since, so a lockfile written in
+  that window pins it.
 
 ## [6.3.0] - 2026-09-25
 
