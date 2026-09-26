@@ -8,7 +8,7 @@
 
 Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.
 
-Current version: **v6.3.0**
+Current version: **v6.3.1**
 
 ---
 

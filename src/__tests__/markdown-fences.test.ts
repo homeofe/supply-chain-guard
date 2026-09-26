@@ -10,7 +10,11 @@ import * as path from "node:path";
 // tests read the published Markdown the way a renderer does.
 
 const ROOT = path.resolve(__dirname, "..", "..");
-const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf8");
+// Line endings normalised: a Windows checkout (core.autocrlf) has CRLF, and
+// the Contents lookup below reads "\n## ". Without this the test failed on
+// every Windows checkout and passed on Linux, so a real failure there would
+// have looked like the known one.
+const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf8").replace(/\r\n/g, "\n");
 
 interface Walk {
   problems: string[];

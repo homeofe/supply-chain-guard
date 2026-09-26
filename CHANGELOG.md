@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.3.1] - 2026-09-26
+
 ### Added
 
 - Threat intel (2026-09-26): five package IOCs, all in the offline bundle.
@@ -16,6 +18,35 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   advisory: the npm registry shows it published by the same account in the
   same minute as 99.99.100 and unpublished since, so a lockfile written in
   that window pins it.
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-26 to 2026-08-27, moving 56 package
+  indicators dated 2026-08-26 from the bundle into the catalog. None of them is
+  asserted by a test or named in the README or docs. They stay enforced after
+  `feed refresh`.
+
+### Fixed
+
+- **A deploy key used to log in no longer reads as a secret leaving the
+  runner.** 6.3.0 began counting `ssh`, `scp` and `rsync` to a remote host as
+  outbound calls for `WORKFLOW_SECRET_TO_UPLOAD_PATH`, so every
+  push-to-deploy workflow whose only secret is its SSH key was reported at
+  medium, and a pipeline gating on medium went red on moving to 6.3.0. An
+  SSH key signs a challenge and never leaves the runner. Those connections no
+  longer count when every stored secret in the workflow is only SSH
+  authentication: written into a key file, `known_hosts` or `ssh-add`, or
+  given to webfactory/ssh-agent as `ssh-private-key`, and that file used only
+  on the runner or as the identity of the connection. The check stays strict.
+  The key file as a copy source, on ssh's stdin, in a pipe or in the remote
+  command, a copy of a directory that holds it (or of the workspace while it
+  sits there), a secret variable in the remote command, `SendEnv`, or any
+  other stored secret in the workflow, and the connection counts as before.
+  Measured on eight real deploy workflows: none reported by 6.2.4, each
+  reported by 6.3.0, none now, and no other finding changed.
+- `markdown-fences.test.ts` failed on every Windows checkout, whose line
+  endings are CRLF, and passed on Linux. It now normalises line endings, so a
+  real failure there no longer looks like the known one.
 
 ## [6.3.0] - 2026-09-25
 
@@ -6587,7 +6618,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.1...HEAD
+[6.3.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.1
 [6.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.0
 [6.2.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.5
 [6.2.4]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.4

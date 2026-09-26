@@ -1,3 +1,71 @@
+## v6.3.1: a deploy key used to log in is not egress (2026-09-26) (claude-opus-5-5)
+
+**6.3.0 reported every push-to-deploy workflow whose only secret is its SSH
+key.** It added `ssh`, `scp` and `rsync` to a remote host to the outbound
+calls of `WORKFLOW_SECRET_TO_UPLOAD_PATH`, and the key's own use, logging in,
+matched. Measured by the ideabase session on the owner's fleet and reproduced
+here with a neutral fixture: 0 findings at 6.2.4, 1 at 6.3.0, in eight deploy
+workflows, several of them in pipelines gating on medium. The pre-release
+review of 6.3.0 missed it, and so did the test suite, which asserted the
+report ("ssh with a deploy key" was a "reports" case).
+
+The fix, `secretsAreSshAuthOnly` in `src/workflow-modeler.ts`: ssh, scp and
+rsync stop counting only when EVERY stored secret in the workflow is SSH
+authentication and nothing else. Conservative by construction: any reference
+it does not recognise keeps the finding.
+- A secret counts when each reference is an `env:` entry whose variable is
+  only written into a key file (or tested for presence), inline in such a
+  write, or the `ssh-private-key` input of webfactory/ssh-agent. A second
+  secret anywhere, even one only in the environment, keeps the finding.
+- Each key file may appear only in its write, a local key tool (`chmod`,
+  `rm`, `ssh-keygen`, ...), an ssh_config `IdentityFile` line, or as the
+  identity of an ssh/scp/sftp/rsync call, and must be used as one. `cat`,
+  `<`, a pipe, a copy (`cp`, `install`), an scp source or the remote command
+  keeps the finding, and so does `SendEnv`/`SetEnv`.
+- A connection must not carry a key without naming it either: a copy of a
+  directory that holds a key file (`scp -r ~/.ssh host:`), of the workspace
+  while a key sits in it (`rsync ./ host:`, `scp *`), or such a directory
+  packed and piped into ssh (`tar c . | ssh`) keeps the finding. A pipe that
+  only feeds a script (`printf '%s' "$script" | ssh host 'bash -s'`, the
+  fleet's own shape) stays allowed; a first, blanket "no pipe into ssh" rule
+  re-reported all eight real workflows and was narrowed to this.
+- The file is recognised by its name: the real workflows write the key to
+  `"${key_dir}/deploy_key"` and use it in the next step as
+  `-i "${DEPLOY_KEY_DIR}/deploy_key"`, the directory handed over through
+  $GITHUB_ENV. The first version compared whole paths and cleared only three
+  of the eight; running it on the real files is what found that.
+
+Proof:
+- 21 "reports" cases (the key as a copy source, on stdin, in a pipe, in the
+  remote command, its directory or the workspace copied or piped, a second
+  secret, SendEnv, an action that is not an ssh agent, ...) and 14 "does not
+  report" cases, each in dotted and bracket form, plus scan() on a
+  push-to-deploy workflow with a curl control and a key-copy control, and a
+  packed-tarball run of the same three.
+- Mutation cuts, each turning its own test red, including both directions of
+  the whole exemption. One cut hung instead of failing: it showed a
+  quadratic loop (the write target recomputed per word), which a line of
+  `-i k -i k ...` would have hit. Fixed, and a 5 MiB test holds it, as does
+  one for a long pipe chain into ssh stages.
+- The fleet's current workflows, read-only over the REST API, run through
+  6.2.4, 6.3.0 and this build: the eight 6.3.0 reports are gone, the 6.2.4
+  findings are unchanged (they are the still-open step-level rule), and no
+  other finding moved.
+
+Also in this release: the PR 350 threat intel, and `markdown-fences.test.ts`
+now normalises CRLF (it failed on every Windows checkout, so the daily routine
+saw it red every day). The cutoff advanced to 2026-08-27 and moved 56 package
+indicators to the catalog.
+
+Open, not in this release (owner decisions):
+- `BEACON_TIMEOUT_FETCH` still fires on a committed minified third-party
+  library. 6.3.0 deliberately added no file-name exclusion (the scanned
+  package names its own files); a different signal would be needed.
+- The requirement-marker list of `INTERNAL_PRIVATE_IP` is English only; a
+  German catalogue writes "Anf." or "Anforderung".
+- The documentation-context exemption of `INTERNAL_PRIVATE_IP` applies in the
+  classifier file only, not to a comment elsewhere that narrates an address.
+
 ## Daily threat-intel import (2026-09-26) (claude-opus-5-5)
 
 The importer (window from 2026-09-12, 311 advisory pages, not page-capped)
