@@ -3,84 +3,84 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790379990",
-    "timestamp": "2026-09-25T23:46:31Z",
-    "commit": "bf5d045",
+    "session_id": "cli-1790400062",
+    "timestamp": "2026-09-26T05:21:03Z",
+    "commit": "772bbef",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a2f703aec1d89ba2052d9aacaa329460d463aaf83f71996a40a34e72b48fe14c",
-      "updated": "2026-09-25T23:46:27Z",
-      "lines": 12491,
-      "summary": "**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing"
+      "checksum": "sha256:431fb5bbcdb3c03c88064fa15acc7b30c449a49dd30e307cf2643ba1012ee2e6",
+      "updated": "2026-09-26T05:20:57Z",
+      "lines": 12507,
+      "summary": "The importer (window from 2026-09-12, 311 advisory pages, not page-capped)"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:af115e2c5037b160ef33f75c30b1ae6d9289b1f1d7bcadb03662018c2243598d",
-      "updated": "2026-09-25T23:30:13Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:6e556ede9db6dd56d4510a3b7c2c6bb1ea26b156facaf969e9e8cc352b1e9c3a",
-      "updated": "2026-09-25T23:46:29Z",
+      "updated": "2026-09-26T05:21:01Z",
       "lines": 90,
       "summary": "Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a co"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-23T11:21:51Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
-      "updated": "2026-09-25T23:30:13Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
       "checksum": "sha256:3c6e443ed5ec857ffe22350dc34880332e435e8821ebdbb28cbf75fa6fea257b",
-      "updated": "2026-09-25T23:46:29Z",
+      "updated": "2026-09-26T05:21:01Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:b9ba4f2fb84736384290e129c1267b05a6955919767fbc49423f08e0bb3b6ff7",
-      "updated": "2026-09-25T23:46:29Z",
+      "updated": "2026-09-26T05:21:01Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-23T11:21:51Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-23T11:21:51Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-23T11:21:51Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-23T11:21:51Z",
+      "updated": "2026-09-26T05:14:20Z",
       "lines": 4,
       "summary": "{"
     }
   },
-  "quick_context": "**`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
+  "quick_context": "The importer (window from 2026-09-12, 311 advisory pages, not page-capped) Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 145571,
-    "full_read": 155549
+    "manifest_plus_core": 145730,
+    "full_read": 155708
   }
 }

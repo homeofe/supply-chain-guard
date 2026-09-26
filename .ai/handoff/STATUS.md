@@ -1,3 +1,19 @@
+## Daily threat-intel import (2026-09-26) (claude-opus-5-5)
+
+The importer (window from 2026-09-12, 311 advisory pages, not page-capped)
+added 4 package IOCs, 4 to the bundle and 0 to the catalog:
+`pypi:sherpy` 0.1.0 and 0.1.1 (GHSA-74qh-6w69-w7vc), `@digift/cli` 99.99.100
+(GHSA-2394-2grm-2336) and `@nubjs/types` 0.9.4 (GHSA-7qx8-98q7-66p4). All are
+version pins, so no bare-name probe was needed. 62 advisories stayed
+unmappable (bounded version ranges), as on earlier runs. No `catalogWindows`
+entry and no decline entry were added. Vendor write-ups checked for atomic
+indicators (MemTensor sckit stealer, the Checkmarx BTree packages, the
+actions-cool re-activation reusing t[.]m-kosche[.]com) were all already
+covered, so no hand-added indicators.
+
+D-062 rule fixes d1 to d4, d6, d8 and d10 (PR 326) are released in v6.3.0;
+d5, d7 and d9 follow in their own change.
+
 ## Two test files no longer leak temp directories (2026-09-26) (claude-opus-5-5)
 
 **`issue-54-hardening.test.ts` and `two-tier-scoring.test.ts` removed nothing

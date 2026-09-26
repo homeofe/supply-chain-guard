@@ -7,6 +7,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-09-26): four package IOCs from the GitHub Advisory
+  Database, corroborated by OpenSSF, all in the offline bundle:
+  `pypi:sherpy` 0.1.0 and 0.1.1, `@digift/cli` 99.99.100 and
+  `@nubjs/types` 0.9.4.
+
 ## [6.3.0] - 2026-09-25
 
 ### Added
