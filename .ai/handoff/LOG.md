@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-09-26] v6.3.1
+
+Threat intel (2026-09-26): five package IOCs, all in the offline bundle. Four come from the GitHub Advisory Database, corroborated by OpenSSF: pypi:sherpy 0.1.0 and 0.1.1, @digift/cli 99.99.100...
+
+Full notes: CHANGELOG.md, section [6.3.1].
+
+---
+
 ## [2026-09-25] v6.3.0
 
 Terraform / OpenTofu provider matching (src/terraform-scanner.ts, rule TERRAFORM_MALICIOUS_PROVIDER). A directory scan now resolves the providers a configuration pulls in, from required_providers...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.1.3].
 Threat-intelligence batch for 2026-09-15: 54 new package IOCs from the advisory databases and 7 atomic indicators added by hand, covering five campaigns.
 
 Full notes: CHANGELOG.md, section [6.1.2].
-
----
-
-## [2026-09-14] v6.1.1
-
-Threat-intelligence batch for 2026-09-14: 1 new package IOC and 3 atomic indicators. pypi:chroma-client version 0.5.7 is the fifth package of the 2026-09-openaii PyPI typosquat campaign, reported...
-
-Full notes: CHANGELOG.md, section [6.1.1].

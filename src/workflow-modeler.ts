@@ -277,29 +277,378 @@ function isImagePushEgress(segment: string): boolean {
 
 /**
  * With a proxy set in the workflow (`HTTPS_PROXY: http://host`), a call to
- * loopback still leaves the runner through the proxy.
+ * loopback still leaves the runner through the proxy. With `sshAuthOnly`, an
+ * `ssh`, `scp` or `rsync` connection is not egress (see secretsAreSshAuthOnly).
  */
-function segmentHasEgress(raw: string, proxied: boolean): boolean {
+function segmentHasEgress(raw: string, proxied: boolean, sshAuthOnly: boolean): boolean {
   const segment = unquoteWords(raw);
   if (isGitPushEgress(segment) || hasUrl(segment) || isImagePushEgress(segment)) return true;
   for (const m of segment.matchAll(FETCH_CALL_RE)) {
     if (proxied || m[2] === undefined || !isLoopbackTarget(m[2])) return true;
   }
-  if (OTHER_EGRESS_RE.test(segment) || DNS_TOOL_RE.test(segment) || isRemoteCopy(segment) || isSshEgress(segment)) return true;
+  if (OTHER_EGRESS_RE.test(segment) || DNS_TOOL_RE.test(segment)) return true;
+  if (!sshAuthOnly && (isRemoteCopy(segment) || isSshEgress(segment))) return true;
   const cmd = NET_CMD_RE.exec(segment);
   if (!cmd) return false;
   return proxied || !argsAreLoopbackOnly(segment.slice(cmd.index + cmd[0].length));
 }
 
 /** Does executed text (a run: or script: body, comments removed) send data out? */
-function execTextHasEgress(text: string, proxied: boolean): boolean {
+function execTextHasEgress(text: string, proxied: boolean, sshAuthOnly = false): boolean {
   // Expressions are masked before the split: `${{ a || 'https://example.invalid' }}` is one
   // value, not two commands.
   const joined = text.replace(/\\\n/g, " ").replace(/\$\{\{[^}\n]{0,256}\}\}/g, "EXPR");
   for (const segment of joined.split(/&&|\|\||[;&|\n]/)) {
-    if (segmentHasEgress(segment, proxied)) return true;
+    if (segmentHasEgress(segment, proxied, sshAuthOnly)) return true;
   }
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// SSH authentication is not egress of the key
+// ---------------------------------------------------------------------------
+
+/** A reference to one stored secret by name: `secrets.X`, `secrets['X']`, `secrets["X"]`. */
+const NAMED_SECRET_SOURCE = String.raw`secrets\s*(?:\.\s*[\w-]+|\[\s*(?:'[\w-]+'|"[\w-]+")\s*\])`;
+/** An expression that is exactly one named secret and nothing else. */
+const PLAIN_SECRET_EXPR_RE = new RegExp(String.raw`^\s*${NAMED_SECRET_SOURCE}\s*$`);
+/**
+ * One `VAR: ${{ secrets.X }}` entry of an `env:` mapping, block or flow form.
+ * Group 1 is the variable. The value must be the expression alone.
+ */
+const ENV_SECRET_ENTRY_RE = new RegExp(
+  String.raw`(?<![\w-])['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?[ \t]*:[ \t]*(['"]?)\$\{\{\s*${NAMED_SECRET_SOURCE}\s*\}\}\2[ \t]*(?=[,}]|$)`,
+  "g",
+);
+/** The `ssh-private-key:` input of webfactory/ssh-agent, the value alone. */
+const AGENT_KEY_INPUT_RE = new RegExp(
+  String.raw`^[ \t]*['"]?ssh-private-key['"]?[ \t]*:[ \t]*(['"]?)\$\{\{\s*${NAMED_SECRET_SOURCE}\s*\}\}\1[ \t]*$`,
+);
+/** Stand-in for an inline `${{ secrets.X }}` in executed text, read as a variable. */
+const INLINE_SECRET_VAR = "__SCG_STORED_SECRET__";
+/** Words that can stand before a stage's command. */
+const LEADING_WORDS = new Set(["if", "then", "elif", "else", "do", "while", "until", "!", "{", "(", "time", "sudo", "command"]);
+/** Filters a key may pass through between its source and its file. */
+const KEY_FILTERS = new Set(["tr", "base64", "sed", "cat"]);
+/**
+ * Commands that only handle a key file on the runner. None of them copies its
+ * content anywhere (`install` and `cp` can, and are left out on purpose).
+ */
+const LOCAL_KEY_TOOLS = new Set([
+  "chmod", "chown", "rm", "shred", "test", "[", "[[", "ssh-keygen", "ssh-add", "touch", "stat", "ls", "wc",
+]);
+/** More key files or secret variables than this, and the answer is no. Keeps the check linear. */
+const MAX_SSH_AUTH_ITEMS = 8;
+/** The ssh-family commands whose identity options name a key file. */
+const SSH_FAMILY = new Set(["ssh", "scp", "sftp", "rsync"]);
+/** An ssh option or ssh_config directive that names an authentication file. */
+const AUTH_FILE_OPTION_RE = /^(?:-o[ \t]*)?(?:IdentityFile|UserKnownHostsFile|GlobalKnownHostsFile|CertificateFile)[ \t]*[= \t]/i;
+/** A key ssh loads without `-i`, and the file of trusted host keys. */
+const DEFAULT_AUTH_FILE_RE = /(?:^|\/)(?:id_(?:rsa|dsa|ecdsa|ed25519)(?:_sk)?|known_hosts)$/;
+
+/** Does `word` expand one of `vars` (`$V`, `${V}`, `${V:-}`)? */
+function expandsVar(word: string, vars: Set<string>): boolean {
+  for (const m of word.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)/g)) {
+    if (vars.has(m[1]!)) return true;
+  }
+  return false;
+}
+
+/** The command of a stage: its words after leading keywords and `VAR=value` prefixes. */
+function stageCommand(words: string[]): { cmd: string; at: number } {
+  let at = 0;
+  while (at < words.length && (LEADING_WORDS.has(words[at]!) || /^[A-Za-z_]\w*=/.test(words[at]!))) at++;
+  return { cmd: (words[at] ?? "").replace(/^.*\//, ""), at };
+}
+
+/** The file a stage writes with `tee`, `>` or `>>` (in that order), or undefined. */
+function stageWriteTarget(words: string[], cmd: string, at: number): string | undefined {
+  if (cmd === "tee") return words.slice(at + 1).find((w) => !w.startsWith("-") && !w.startsWith(">"));
+  for (let i = at; i < words.length; i++) {
+    const w = words[i]!;
+    if (w === ">" || w === ">>") return words[i + 1];
+    if (/^>>?[^>&]/.test(w)) return w.replace(/^>>?/, "");
+  }
+  return undefined;
+}
+
+/** Does `word` name the file whose last path component is `base`? */
+function namesFile(word: string, base: string): boolean {
+  let from = 0;
+  for (;;) {
+    const at = word.indexOf(base, from);
+    if (at < 0) return false;
+    const before = at === 0 ? "" : word[at - 1]!;
+    const after = word[at + base.length] ?? "";
+    if (!/[\w.-]/.test(before) && !/[\w.-]/.test(after)) return true;
+    from = at + 1;
+  }
+}
+
+/**
+ * An inline `run: cmd` line keeps its YAML key in the executed text; the
+ * command starts after it. A quoted scalar loses its outer quotes.
+ */
+function stripRunKey(line: string): string {
+  const m = /^[ \t]*(?:-[ \t]+)?['"]?(?:run|script)['"]?[ \t]*:[ \t]*/.exec(line);
+  if (!m) return line;
+  const value = line.slice(m[0].length).trimEnd();
+  const q = value[0];
+  return (q === "'" || q === '"') && value.length > 1 && value.endsWith(q) ? value.slice(1, -1) : value;
+}
+
+/** Normalize a path for comparison: `${V}` as `$V`, `~` as `$HOME`. */
+function normalizePath(p: string): string {
+  return p.replace(/\$\{([A-Za-z_]\w*)\}/g, "$$$1").replace(/^~(?=\/|$)/, "$HOME");
+}
+
+/**
+ * Is `word`, at `index` in a stage of `cmd`, the key file used as an
+ * authentication file: the value of `-i`, of an identity or known-hosts
+ * option, or of rsync's `-e`/`--rsh` ssh command?
+ *
+ * The file is recognised by its name, not its whole path: a key written to
+ * `"${key_dir}/deploy_key"` in one step is often used as
+ * `-i "${DEPLOY_KEY_DIR}/deploy_key"` in the next, the directory handed over
+ * through $GITHUB_ENV under another name. This opens nothing: every other
+ * appearance of that file name (a copy, `cat`, `<`, an scp source) is matched
+ * by name too, and still answers no.
+ */
+function isAuthFileUse(words: string[], index: number, cmd: string, key: string): boolean {
+  const word = words[index]!;
+  const prev = words[index - 1] ?? "";
+  const base = key.replace(/^.*\//, "");
+  const names = (value: string) => normalizePath(value).replace(/^.*\//, "") === base;
+  if (prev === "-i" && names(word)) return true;
+  if (/^-i[^ \t]/.test(word) && names(word.slice(2))) return true;
+  if (AUTH_FILE_OPTION_RE.test(word) && names(word.replace(AUTH_FILE_OPTION_RE, ""))) return true;
+  if (prev === "-o" && AUTH_FILE_OPTION_RE.test(word) && names(word.replace(AUTH_FILE_OPTION_RE, ""))) return true;
+  if (cmd === "rsync" && (prev === "-e" || prev === "--rsh" || /^(?:-e|--rsh=)/.test(word))) {
+    const inner = shellWords(word.replace(/^(?:-e|--rsh=)/, ""));
+    return inner[0] === "ssh" && inner.some((_, k) => k > 0 && isAuthFileUse(inner, k, "ssh", key));
+  }
+  return false;
+}
+
+/**
+ * Is every stored secret in this workflow used only as SSH authentication?
+ * Then an `ssh`, `scp` or `rsync` connection does not send it anywhere: the
+ * private key signs a challenge and stays on the runner, and a known_hosts
+ * line is only compared. 6.3.0 counted every such connection to a host as
+ * egress, so each push-to-deploy workflow whose only secret is its deploy key
+ * was reported.
+ *
+ * Deliberately narrow. A secret counts only when every reference to it is
+ *   - an `env:` entry `VAR: ${{ secrets.X }}` (block or flow form), and every
+ *     expansion of VAR is a presence test (`[ -z "$VAR" ]`) or the source of a
+ *     key write, or
+ *   - inline in a key write, or
+ *   - the `ssh-private-key:` input of webfactory/ssh-agent.
+ * A key write is one pipeline: `printf` or `echo` of the value, through `tr`,
+ * `base64`, `sed` or `cat` at most, into `> file`, `>> file`, `tee file` or
+ * `ssh-add -`. Each file written that way may then appear only in a key write,
+ * a local key tool (`chmod`, `rm`, `test`, `ssh-keygen`, ...), an ssh_config
+ * `IdentityFile` line, or as the identity or known-hosts option of an
+ * ssh/scp/sftp/rsync call, and it must be one that call authenticates with
+ * (such an option, a default `~/.ssh/id_*` key, known_hosts, or `ssh-add`).
+ * Anything else, such as `cat key`, `< key`, `scp key host:` or a variable in
+ * the remote command, answers false, and ssh/scp/rsync count as before. So
+ * does data piped into an ssh-family call, and a copy of a directory that
+ * holds a key file (or of the workspace while a key sits in it).
+ */
+function secretsAreSshAuthOnly(text: string, stripped: string[], regions: WfRegion[], exec: string): boolean {
+  const raw = text.split("\n");
+  const vars = new Set<string>();
+  let ast: WorkflowAst | undefined;
+  for (let i = 0; i < raw.length; i++) {
+    const region = regions[i];
+    // Executed lines keep their text (the shell decides what a comment is
+    // there); a YAML comment elsewhere is not a reference.
+    const line = region === "exec" ? raw[i]! : (stripped[i] ?? "");
+    if (!line.includes("${{") || !textHasStoredSecret(line)) continue;
+    if (region === "env") {
+      const secretExprs = [...line.matchAll(/\$\{\{([^}\n]{0,256})\}\}/g)].filter((m) => expressionUsesSecret(m[1]!, false));
+      const entries = [...line.matchAll(ENV_SECRET_ENTRY_RE)];
+      // Every secret expression on the line must be one whole `VAR: secret` entry.
+      if (entries.length === 0 || entries.length !== secretExprs.length) return false;
+      for (const e of entries) vars.add(e[1]!);
+      if (vars.size > MAX_SSH_AUTH_ITEMS) return false;
+    } else if (region === "exec") {
+      // Inline in executed text: judged by the pipeline it sits in, below.
+      for (const m of line.matchAll(/\$\{\{([^}\n]{0,256})\}\}/g)) {
+        if (expressionUsesSecret(m[1]!, false) && !PLAIN_SECRET_EXPR_RE.test(m[1]!)) return false;
+      }
+    } else {
+      if (!AGENT_KEY_INPUT_RE.test(line)) return false;
+      try {
+        ast ??= parseWorkflow(text);
+      } catch {
+        return false;
+      }
+      const steps = ast.jobs.flatMap((j) => j.steps).filter((s) => s.line <= i + 1);
+      const owner = steps.reduce<WfStep | undefined>((a, s) => (a === undefined || s.line > a.line ? s : a), undefined);
+      if (!owner?.uses || !/^webfactory\/ssh-agent@/i.test(owner.uses.trim())) return false;
+    }
+  }
+
+  // `SendEnv`/`SetEnv` hand environment variables to the server by name, with
+  // no `$VAR` in the text: a secret in the step's environment would leave.
+  if (/(?<![\w-])(?:SendEnv|SetEnv)(?![\w-])/i.test(exec)) return false;
+
+  const inline = exec
+    .split("\n")
+    .map(stripRunKey)
+    .join("\n")
+    .replace(/\$\{\{([^}\n]{0,256})\}\}/g, (_, e: string) =>
+      expressionUsesSecret(e, false) ? `$${INLINE_SECRET_VAR}` : "EXPR");
+  vars.add(INLINE_SECRET_VAR);
+  const pipelines = inline
+    .replace(/\\\n/g, " ")
+    .split(/&&|\|\||;|\n|(?<![<>])&(?!>)/)
+    .map((p) => p.split("|").map((stage) => shellWords(stage)));
+
+  // Pass 1: every expansion of a secret variable is a presence test or a key
+  // write, and every variable is written as a key at least once.
+  const keyFiles = new Set<string>();
+  const written = new Set<string>();
+  for (const stages of pipelines) {
+    const uses = stages.map((words) => words.some((w) => expandsVar(w, vars)));
+    if (!uses.includes(true)) continue;
+    const first = stageCommand(stages[0]!);
+    const presence =
+      stages.length === 1 && ["test", "[", "[["].includes(first.cmd) &&
+      stages[0]!.every((w, k) => !expandsVar(w, vars) || stages[0]![k - 1] === "-z" || stages[0]![k - 1] === "-n");
+    if (presence) continue;
+    const markWritten = (words: string[]) => {
+      for (const v of vars) if (words.some((w) => expandsVar(w, new Set([v])))) written.add(v);
+    };
+    if (!["printf", "echo"].includes(first.cmd) || uses.slice(1).includes(true)) {
+      // `ssh-add - <<< "$VAR"`: the value goes to the agent, not to a file.
+      const herestring = stages.length === 1 && first.cmd === "ssh-add" && stages[0]!.includes("-") &&
+        stages[0]!.every((w, k) => !expandsVar(w, vars) || stages[0]![k - 1] === "<<<");
+      if (!herestring) return false;
+      markWritten(stages[0]!);
+      continue;
+    }
+    for (let s = 1; s < stages.length; s++) {
+      const { cmd } = stageCommand(stages[s]!);
+      const last = s === stages.length - 1;
+      if (KEY_FILTERS.has(cmd) || (last && (cmd === "tee" || cmd === "ssh-add"))) continue;
+      return false;
+    }
+    const tail = stages[stages.length - 1]!;
+    const { cmd, at } = stageCommand(tail);
+    markWritten(stages[0]!);
+    if (cmd === "ssh-add" && tail.includes("-")) continue;
+    const target = stageWriteTarget(tail, cmd, at);
+    if (target === undefined || target === "" || target.startsWith("/dev/")) return false;
+    keyFiles.add(normalizePath(target));
+    if (keyFiles.size > MAX_SSH_AUTH_ITEMS) return false;
+  }
+  // A secret in the environment that is never written as a key (unused, or only
+  // tested for presence) can still be read by any process of its step: there
+  // is no evidence it is only a key.
+  for (const v of vars) if (v !== INLINE_SECRET_VAR && !written.has(v)) return false;
+
+  // Pass 2: each key file is only written, handled locally, or authenticated
+  // with, and at least one ssh-family call or ssh_config line uses it as such.
+  const authenticated = new Set<string>();
+  for (const key of keyFiles) {
+    const base = key.replace(/^.*\//, "");
+    if (DEFAULT_AUTH_FILE_RE.test(key)) authenticated.add(key);
+    for (const stages of pipelines) {
+      for (const words of stages) {
+        const { cmd, at } = stageCommand(words);
+        // Once per stage, not per word: a stage of many allowed uses stays linear.
+        let writesKey: boolean | undefined;
+        for (let k = 0; k < words.length; k++) {
+          const w = words[k]!;
+          if (!namesFile(w, base)) continue;
+          // The key write itself: this word is the stage's own target.
+          if (writesKey === undefined) {
+            const target = stageWriteTarget(words, cmd, at);
+            writesKey = target !== undefined && normalizePath(target) === key;
+          }
+          if (writesKey && normalizePath(w.replace(/^>>?/, "")) === key) continue;
+          if (LOCAL_KEY_TOOLS.has(cmd)) {
+            if (cmd === "ssh-add") authenticated.add(key);
+            continue;
+          }
+          if (SSH_FAMILY.has(cmd) && isAuthFileUse(words, k, cmd, key)) {
+            authenticated.add(key);
+            continue;
+          }
+          // An ssh_config line in a heredoc: `IdentityFile <key>` or `IdentityFile=<key>`.
+          const sameFile = (value: string) => normalizePath(value).replace(/^.*\//, "") === base;
+          const directive = words.length === 2 && k === 1 && AUTH_FILE_OPTION_RE.test(`${words[0]} `) && sameFile(w);
+          const joined = words.length === 1 && AUTH_FILE_OPTION_RE.test(w) && sameFile(w.replace(AUTH_FILE_OPTION_RE, ""));
+          if (directive || joined) {
+            authenticated.add(key);
+            continue;
+          }
+          return false;
+        }
+      }
+    }
+  }
+  for (const key of keyFiles) if (!authenticated.has(key)) return false;
+
+  // Pass 3: a connection must not carry a key without naming it. A copy of a
+  // directory that holds a key file (`rsync ./ host:`, `scp -r ~/.ssh host:`),
+  // or such a directory packed and piped into the connection
+  // (`tar c . | ssh host 'tar x'`), sends the key although its name never
+  // appears. A key file or secret variable named upstream is already refused
+  // by passes 1 and 2, so a pipe that feeds a script (`printf '%s' "$script"
+  // | ssh host 'bash -s'`) stays allowed.
+  const holdsKey = (w: string) => {
+    const source = normalizePath(w).replace(/\/+$/, "");
+    for (const key of keyFiles) if (copiesKey(source, key)) return true;
+    return false;
+  };
+  for (const stages of pipelines) {
+    // One pass: whether any stage before this one packed a key's directory.
+    let upstreamHoldsKey = false;
+    for (let s = 0; s < stages.length; s++) {
+      const words = stages[s]!;
+      const { cmd, at } = stageCommand(words);
+      const feedsKey = upstreamHoldsKey;
+      upstreamHoldsKey ||= words.some((w) => !w.startsWith("-") && holdsKey(w));
+      if (!SSH_FAMILY.has(cmd)) continue;
+      if (feedsKey) return false;
+      if (cmd === "ssh") continue;
+      for (let k = at + 1; k < words.length; k++) {
+        const w = words[k]!;
+        if ((cmd === "rsync" ? RSYNC_VALUE_FLAGS : SCP_VALUE_FLAGS).has(w)) {
+          k++;
+          continue;
+        }
+        if (w.startsWith("-") || REMOTE_PATH_WORD_RE.test(w)) continue;
+        if (holdsKey(w)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Options whose next word is a value, not a path to copy. Kept to the ones
+ * certain to take one: a value flag missing here only makes its value checked
+ * as a path (more findings), while a wrong entry would skip a real source.
+ */
+const SCP_VALUE_FLAGS = new Set(["-i", "-P", "-o", "-F", "-J", "-l", "-c", "-S"]);
+const RSYNC_VALUE_FLAGS = new Set(["-e", "--rsh"]);
+
+/**
+ * Would copying `source` (a local path, normalized, no trailing slash) carry
+ * the key file `key`? When it is a directory above the key, or the workspace
+ * (`.`, `*`, `$GITHUB_WORKSPACE`) while the key is a relative path in it.
+ */
+function copiesKey(source: string, key: string): boolean {
+  if (source === "" || source === key) return source === key;
+  if (key.startsWith(`${source}/`)) return true;
+  const relativeKey = !/^[/$~]/.test(key);
+  const workspace = source === "." || source === "*" || /^\$GITHUB_WORKSPACE(?:\/\.?)?$/.test(source);
+  return relativeKey && workspace;
 }
 
 /** A proxy variable set anywhere in the workflow, with its value in group 1. */
@@ -568,8 +917,9 @@ function checkSecretToEgress(content: string, file: string, relPath: string, reg
     (l) => (aliasRun && /(?:^|[\s:,[{-])&[\w-]+[ \t]+\S/.test(l)) ||
       (dockerAction && /^[ \t]*['"]?(?:args|entrypoint)['"]?[ \t]*:/.test(l)),
   );
+  const lineRegions = regions ? classifyWorkflowLines(text) : undefined;
   const exec = [
-    (regions ? linesText(raw, classifyWorkflowLines(text), 0, raw.length, ["exec"]) : text),
+    (lineRegions ? linesText(raw, lineRegions, 0, raw.length, ["exec"]) : text),
     ...flowSteps.map(flowStepRun),
     ...indirect,
   ]
@@ -584,7 +934,17 @@ function checkSecretToEgress(content: string, file: string, relPath: string, reg
   // heuristic that disagrees with the shell's quoting could hide either one
   // (`echo "a\" #"; curl -d "${{ secrets.K }}" ...`), and a secret written only
   // in a comment costs no more than a review.
-  if (!reportedBefore(content) && (!textHasStoredSecret(text) || !(uploads || execTextHasEgress(exec, hasOutboundProxy(text))))) {
+  // Outbound calls in executed text. An ssh, scp or rsync connection is left out
+  // when every stored secret is only its authentication (secretsAreSshAuthOnly);
+  // that is asked only when such a connection is what decides, and never for an
+  // unclassified file.
+  const egress = (): boolean => {
+    const proxied = hasOutboundProxy(text);
+    if (!execTextHasEgress(exec, proxied)) return false;
+    if (!lineRegions || execTextHasEgress(exec, proxied, true)) return true;
+    return !secretsAreSshAuthOnly(text, stripped, lineRegions, exec);
+  };
+  if (!reportedBefore(content) && (!textHasStoredSecret(text) || !(uploads || egress()))) {
     return [];
   }
   return [{
