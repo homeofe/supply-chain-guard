@@ -307,5 +307,14 @@
   },
   "verifyWorkflow": {
     "enforce": true
+  },
+  "handoffImpact": {
+    "npmDevDependencyUpdates": {
+      "reason": "Registry-pinned devDependency lockfile updates change no shipped file and no runtime dependency.",
+      "supplyChainScan": {
+        "workflow": ".github/workflows/ci.yml",
+        "job": "compat"
+      }
+    }
   }
 }
