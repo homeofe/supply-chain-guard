@@ -304,6 +304,59 @@ describe("INTERNAL_PRIVATE_IP: requirement numbers", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Four-part section numbers cited after a specification
+// ---------------------------------------------------------------------------
+
+describe("INTERNAL_PRIVATE_IP: specification section numbers", () => {
+  it("does not report a section number cited after its specification", () => {
+    // The shape that reached a consumer's required check: a code comment citing
+    // where a JSON Schema keyword is defined.
+    const comment = "// `patternProperties` entry claims it (JSON Schema 2020-12, 10.3.2.3).";
+    expect(ofRule(scanLines("src/schema.mjs", comment), "INTERNAL_PRIVATE_IP")).toHaveLength(0);
+    for (const text of [
+      "JSON Schema, 10.3.2.3",
+      "JSON Schema draft-07: 10.3.2.3",
+      "JSON Schema 2019-09, 10.3.2.3",
+      "ECMA-262, 10.4.2.1",
+      "ECMA-262 15th edition: 10.4.2.1",
+      "ISO/IEC 27001:2022, 10.1.2.3",
+      "ISO 8601-1, 10.2.3.4",
+      "RFC 9110, 10.2.1.1",
+      "RFC9110: 10.2.1.1",
+    ]) {
+      expect(ofRule(scanLines("src/schema.ts", `const t = "${text}";`), "INTERNAL_PRIVATE_IP"), text).toHaveLength(0);
+      expect(ofRule(scanLines("docs/spec.md", text), "INTERNAL_PRIVATE_IP"), text).toHaveLength(0);
+    }
+  });
+
+  it("still reports the address when the citation is not adjacent or defines address space", () => {
+    const cases: Array<[string, string]> = [
+      // A word between the specification and the literal names a host.
+      ["docs/net.md", "JSON Schema server, 10.3.2.3"],
+      ["docs/net.md", "RFC 9110 host 10.3.2.3"],
+      // No comma or colon: not a citation.
+      ["docs/net.md", "RFC 9110 10.3.2.3"],
+      // RFCs that define private or special-purpose space cite example addresses.
+      ["docs/net.md", "RFC 1918, 10.3.2.3"],
+      ["docs/net.md", "RFC 6598: 10.3.2.3"],
+      // A citation on the previous line does not reach this one.
+      ["docs/net.md", "JSON Schema 2020-12,\n10.3.2.3"],
+      // Only the 10/8 shape collides with section numbers; other ranges stay.
+      ["docs/net.md", "JSON Schema 2020-12, 192.168.4.1"],
+      ["docs/net.md", "ECMA-262, 172.20.4.1"],
+      // A lookalike prefix is not a specification name.
+      ["docs/net.md", "PRECMA-262, 10.4.2.1"],
+      ["src/client.ts", 'const cfg = { schema: "JSON Schema", host: "10.3.2.3" };'],
+    ];
+    for (const [file, text] of cases) {
+      const found = ofRule(scanLines(file, text), "INTERNAL_PRIVATE_IP");
+      expect(found, text).toHaveLength(1);
+      expect(found[0].severity).toBe("medium");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Private literals in the documentation of an address classifier
 // ---------------------------------------------------------------------------
 
