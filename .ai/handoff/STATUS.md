@@ -1,3 +1,38 @@
+## Release v6.3.2 (2026-09-28) (claude-opus-5-5)
+
+Release preparation on top of PRs 352 to 357. Version bumped at all 17
+configured version sites (35 occurrences) plus `package.json` and the
+lockfile; `bundledVersion` in `src/threat-intel.ts` bumped by hand, as it is
+not gated. The pinned AAHP CLI is 4.0.0 (PR 357).
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-08-27 to
+2026-08-29, and the migration plan then wanted to move 1497 package entries
+dated 2026-08-27 and 2026-08-28. Applied as a dry run first, it turned seven
+`campaigns.test.ts` assertions red (Douqiu `@hd-team`, the 2026-08-28 advisory
+batch, the 3layerdipstack sweep, Shai-Hulud Trinitite): the fourth release in
+a row where the cutoff advance would have taken test-asserted entries out of
+the offline bundle. Those 468 entries (8 `@hd-team`, 4 `pypi:flyteplugins-*`,
+35 `@fleetbo/svro` pins, 4 probed bare names, 407 `3layerdipstack` names, 10
+`@7nohe/openapi-react-query-codegen` pins) were moved verbatim under a curated
+comment block at the end of `FEED_CHUNK_12` BEFORE migrating; a multiset diff
+of the file against main shows only that comment and the `bundledVersion`
+line. The planner then moved 1029 and kept all 468. Of the 1029 migrated, none
+carries a campaign or family and none is named in the README or docs (the
+same search finds bundled names that the README does name, so the zero is not
+a broken query). All 45 test files that read the bundle, the catalog or
+`feed.json` pass locally apart from the two known Windows Defender fixture
+tests.
+
+Standing observation: every cutoff advance so far has needed this curation by
+hand, found only by running the tests. A gate that runs `planMigration` and
+fails when a moved value is asserted by `campaigns.test.ts` would turn it into
+a build failure instead of a review finding.
+
+Correction to the 2026-09-28 threat-intel note below: it says the branch
+carries the commit of the still-open PR 352. PR 352 was merged first, the
+branch was rebased and that commit dropped out, so PR 353 shipped only its own
+change.
+
 ## INTERNAL_PRIVATE_IP section numbers; handoff test independent of the aahp version (2026-09-28) (claude-opus-5.5)
 
 Two changes found while auditing AAHP, the handoff protocol this repository
