@@ -185,9 +185,7 @@ On a Linux runner (Node 24, npm 12), this branch on top of main:
   known-malicious package, marked `dev: true`, makes that same scan exit 1 with
   a critical `LOCKFILE_MALICIOUS_PACKAGE` on `package-lock.json`. A dev-only
   lockfile update is therefore not waved through unscanned.
-- Full suite: 4822 of 4823 on this branch alone (the one failure is the
-  handoff-gate summary test, see Merge order); 4825 of 4825 with the `src/`
-  changes of #354 on top.
+- Full suite: 4823 of 4823, 189 files.
 - A simulated dependabot update on top of this branch (`@types/node`,
   specifier and lock only, two files): `aahp verify --level ci` passes with the
   exemption, and `npm run build` passes. Negative control, the same for
@@ -197,13 +195,15 @@ On a Linux runner (Node 24, npm 12), this branch on top of main:
   signatures, 35 with verified attestations, `@elvatis_com/aahp` 4.0.0 among
   them with SLSA provenance v1.
 
-### Merge order
+### The one test change the upgrade needs
 
-#354 first. `src/__tests__/handoff-gate.test.ts` on main expects the manifest
-summary 3.12.0 produces (`| Field | Value |`); 4.0.0 builds the manifest in
-node and summarises the first prose sentence, so that one test fails on this
-branch alone. #354 accepts both forms. #355 and #356 are independent of this
-change: 4.0.0's new doctor gate `cli-source` reports the
+`src/__tests__/handoff-gate.test.ts` accepted only the manifest summary that
+3.12.0 produces (`| Field | Value |`). 4.0.0 skips tables and summarises the
+first prose sentence (its CHANGELOG, Fixed: file summaries skip tables), so
+that test failed on the bump alone. It now accepts both forms and still
+rejects header chrome. The hunk is the same as in #354, so whichever of the
+two merges second applies it without a conflict. #355 and #356 are
+independent of this change: 4.0.0's new doctor gate `cli-source` reports the
 `npx --no-install aahp` steps that #355 replaces as advisory, not as failures.
 
 ## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
