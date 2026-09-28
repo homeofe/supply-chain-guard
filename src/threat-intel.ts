@@ -37,7 +37,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-27T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-28T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -10023,11 +10023,40 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "@alphaspace/core@99.0.3", severity: "critical", confidence: 1.0, source: "GHSA-5qqj-qfpp-jfqw, MAL-2026-17169 (amazon-inspector)", firstSeen: "2026-09-25" },
 
   // Atomic indicators from the per-source analyses of the advisories above (OSV).
-  { type: "domain", value: "thisisafalsepositive.st", severity: "critical", confidence: 0.85, campaign: "donutautosellsrc PyPI infostealer", source: "MAL-2026-17192 (kam193, single-source)", firstSeen: "2026-09-27" },
+  { type: "domain", value: "thisisafalsepositive.st", severity: "critical", confidence: 0.95, campaign: "donutautosellsrc PyPI infostealer", source: "MAL-2026-17192 (kam193); MAL-2026-17195, MAL-2026-17197 (amazon-inspector)", firstSeen: "2026-09-27" },
   { type: "domain", value: "sltnnt.ru", severity: "critical", confidence: 0.85, campaign: "donutautosellsrc PyPI infostealer", source: "MAL-2026-17192 (kam193, single-source)", firstSeen: "2026-09-27" },
   { type: "ip", value: "104.234.65.75", severity: "critical", confidence: 0.85, campaign: "requests-cache-utils PyPI infostealer", source: "MAL-2026-17191 (kam193, single-source)", firstSeen: "2026-09-26" },
   { type: "domain", value: "49bl3t5yt786ymbtth24nnlbs2ytmka9.oastify.com", severity: "critical", confidence: 0.9, campaign: "cma-self-hosted-sandbox-cf install-time recon", source: "MAL-2026-17190 (amazon-inspector)", firstSeen: "2026-09-26" },
   { type: "domain", value: "f5778d1d81cc30c39dcdd0da5ca1d49a.m.pipedream.net", severity: "critical", confidence: 0.9, campaign: "@alphaspace/core install-time recon", source: "MAL-2026-17169 (amazon-inspector)", firstSeen: "2026-09-25" },
+
+  // Imported from GitHub Advisory Database (2026-09-14) - see docs/threat-feed-sources.md
+  { type: "package", value: "@consts/links", severity: "critical", confidence: 0.9, source: "GHSA-5rp9-7r4x-3fqp, MAL-2026-17202 (ghsa-malware)", firstSeen: "2026-09-28" },
+  { type: "package", value: "discord-players", severity: "critical", confidence: 1.0, source: "GHSA-mvg6-qj9g-3j3j, MAL-2026-16213 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-16" },
+  { type: "package", value: "discord-resolvers", severity: "critical", confidence: 1.0, source: "GHSA-whmq-ffxc-4jpc, MAL-2026-16214 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-16" },
+  { type: "package", value: "@digi-kernel/digi-kernel-constrains", severity: "critical", confidence: 0.9, source: "GHSA-h37m-2c3q-82j8, MAL-2026-17203 (ghsa-malware)", firstSeen: "2026-09-28" },
+  { type: "package", value: "pypi:aseity@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-pvh9-pfxq-jq5q, MAL-2026-17200 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:scrapetools2@1.2.1", severity: "critical", confidence: 1.0, source: "GHSA-frv4-982x-mv7m, MAL-2026-17199 (amazon-inspector)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:scrapetools2@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-frv4-982x-mv7m, MAL-2026-17199 (amazon-inspector)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:scrapetools2@0.2.0", severity: "critical", confidence: 1.0, source: "GHSA-frv4-982x-mv7m, MAL-2026-17199 (amazon-inspector)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:scrapetools2@0.2.1", severity: "critical", confidence: 1.0, source: "GHSA-frv4-982x-mv7m, MAL-2026-17199 (amazon-inspector)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:coinscan@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-78pg-cc9h-7rf3, MAL-2026-17197 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:caracas4check@1.1.1", severity: "critical", confidence: 1.0, source: "GHSA-8p46-j5h8-w78j, MAL-2026-17198 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:caracas4check@1.1.2", severity: "critical", confidence: 1.0, source: "GHSA-8p46-j5h8-w78j, MAL-2026-17198 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrio@999.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ww2h-pjh2-r85q, MAL-2026-17193 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrio@1000.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ww2h-pjh2-r85q, MAL-2026-17193 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrio@1001.0.0", severity: "critical", confidence: 1.0, source: "GHSA-ww2h-pjh2-r85q, MAL-2026-17193 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:claudedashbord@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-28f3-pmhh-qxcm, MAL-2026-17195 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:claudedashbord@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-28f3-pmhh-qxcm, MAL-2026-17195 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:claudedashbord@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-28f3-pmhh-qxcm, MAL-2026-17195 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:claudedashbord@0.1.3", severity: "critical", confidence: 1.0, source: "GHSA-28f3-pmhh-qxcm, MAL-2026-17195 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrics-sdk@999.0.0", severity: "critical", confidence: 1.0, source: "GHSA-vcmr-hgqh-xrh3, MAL-2026-17194 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrics-sdk@1000.0.0", severity: "critical", confidence: 1.0, source: "GHSA-vcmr-hgqh-xrh3, MAL-2026-17194 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:metrics-sdk@1001.0.0", severity: "critical", confidence: 1.0, source: "GHSA-vcmr-hgqh-xrh3, MAL-2026-17194 (amazon-inspector+kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:donutpromotion@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-c2rx-rjgw-p83h, MAL-2026-17196 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "@bb1ptest23/test-paket@1.0.3", severity: "critical", confidence: 0.9, source: "MAL-2026-17201 (ossf-package-analysis)", firstSeen: "2026-09-28" },
+
+  // Atomic indicators from the per-source analyses of the advisories above (OSV).
+  { type: "domain", value: "84avt3516s4q1obsv9q0mh4u2l8dw3ks.x9.to", severity: "critical", confidence: 0.9, campaign: "metrics-sdk PyPI dependency-confusion beacon", source: "MAL-2026-17194 (amazon-inspector)", firstSeen: "2026-09-27" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

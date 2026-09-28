@@ -19,6 +19,22 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   requests-cache-utils payload host `104[.]234[.]65[.]75`, and the two
   per-attacker install-time recon collectors on `oastify[.]com` and
   `m[.]pipedream[.]net` (only those subdomains, never the shared apex).
+- Threat intel (2026-09-28): 25 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 24 in the offline bundle and 1 in the catalog. Five
+  npm names are blocked outright, each already a security holding package on
+  the registry: `@consts/links`, `@digi-kernel/digi-kernel-constrains`,
+  `discord-players` and `discord-resolvers` (bundle), and
+  `spotify-url-resolvers` (catalog, first seen before the bundle cutoff). The
+  rest are version pins: `pypi:aseity` 0.1.0 and `pypi:donutpromotion` 0.1.0
+  (the donutautosellsrc campaign), `pypi:claudedashbord` 0.1.0 to 0.1.3,
+  `pypi:coinscan` 0.1.0, `pypi:caracas4check` 1.1.1 and 1.1.2,
+  `pypi:scrapetools2` 0.2.0, 0.2.1, 1.2.0 and 1.2.1, the dependency-confusion
+  probes `pypi:metrio` and `pypi:metrics-sdk` (999.0.0, 1000.0.0, 1001.0.0),
+  and `@bb1ptest23/test-paket` 1.0.3. One new atomic indicator, bundled: the
+  metrics-sdk beacon zone `84avt3516s4q1obsv9q0mh4u2l8dw3ks[.]x9[.]to` (only
+  that zone, never the apex). `thisisafalsepositive[.]st` now has a second
+  source (amazon-inspector, as the payload host of claudedashbord and
+  coinscan) and its confidence rises from 0.85 to 0.95.
 
 ## [6.3.1] - 2026-09-26
 

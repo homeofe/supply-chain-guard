@@ -518,7 +518,9 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "d4f77a3a8cb0.skyleen.fr",
   // donutautosellsrc PyPI infostealer (September 2026). Hosts of the
   // steganographic payload image and the exfiltration C2, from the kam193
-  // analysis in MAL-2026-17192. Single-source.
+  // analysis in MAL-2026-17192. thisisafalsepositive.st is also the
+  // payload manifest host in claudedashbord and coinscan (amazon-inspector,
+  // MAL-2026-17195 and MAL-2026-17197); sltnnt.ru is still single-source.
   "thisisafalsepositive.st",
   "sltnnt.ru",
   // Install-time recon collectors hardcoded in two npm packages (September
@@ -527,6 +529,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // shared OAST / webhook apex.
   "49bl3t5yt786ymbtth24nnlbs2ytmka9.oastify.com",
   "f5778d1d81cc30c39dcdd0da5ca1d49a.m.pipedream.net",
+  // metrics-sdk PyPI dependency-confusion beacon (September 2026). The
+  // installer hostname is hex-encoded into a label under this zone and sent
+  // over DNS and plain HTTP (amazon-inspector, MAL-2026-17194). Only the
+  // per-attacker zone is listed, never the x9[.]to apex.
+  "84avt3516s4q1obsv9q0mh4u2l8dw3ks.x9.to",
 ];
 
 // ---------------------------------------------------------------------------
