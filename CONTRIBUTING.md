@@ -210,6 +210,7 @@ src/
   scanner.ts              # Core orchestration
   pattern-scanner.ts      # Bounded per-file pattern scan orchestration
   pattern-applicability.ts # File-type and path applicability rules
+  script-language.ts      # Language of extensionless scripts (shebang, git hook name) and .bats
   broad-gap-pattern-matchers.ts # Structural matchers for broad-gap rules
   correlated-pattern-matchers.ts # Correlated multi-signal matchers
   workflow-pattern-matchers.ts # Structural GitHub Actions matchers
@@ -294,6 +295,7 @@ scripts/
   feed-partition.mjs      # Shared bundle/catalog placement policy
   generate-catalog.mjs    # Deterministic catalog index and shard generator
   release-prepare.mjs     # Release-bound 30-day cutoff advancement
+  verify-action-install.mjs # The Action's provenance check of the scanner it installs
 feed-partition.config.json # Committed partition policy and catalog windows
 ```
 

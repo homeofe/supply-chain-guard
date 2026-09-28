@@ -66,6 +66,77 @@ CONTRIBUTING said "Only dependabot is exempt" and the generated DASHBOARD row sa
 "dependabot exempt" for aahp-verify. Measured against `aahp-verify.yml`: its
 comments record that the dependabot `if:` was removed, and a dependabot PR is
 judged like any other. Both texts now say so.
+## Extensionless scripts are scanned; the Action verifies its scanner (2026-09-28) (claude-opus-5-5)
+
+Two coverage and trust gaps, one branch.
+
+Scan coverage. The content scan was gated on SCANNABLE_EXTENSIONS, so git
+hooks (`scripts/hooks/pre-commit`, `.husky/pre-push`), `bin/` launchers and
+`*.bats` suites were counted and never read. New `src/script-language.ts`
+returns the extension a file is READ as: `.bats` is `.bash`; an extensionless
+file is its shebang's language (sh, bash, dash, ksh, zsh, env <interp>, node,
+python, ruby, perl and a few more) or, with no shebang and a git hook name,
+`.sh`; anything else stays unread. The directory scan and the npm tarball scan
+use it, and the effective extension flows into `onlyExtensions`
+(`isPatternApplicableToFile`, `matchPatternInFile`) and into the lexical side
+of `scanInternalDisclosure`; test-file classification still reads the real
+path. `*.bats` became a test-file NAME in the shared matcher (like `.test.ts`),
+because the same Bats suites copied outside `tests/` raised 3 criticals of
+fixture secrets. The scan reuses the bytes the digest pass already holds; a
+file over MAX_FILE_SIZE has only its first 256 bytes read, and an oversized
+script reports FILE_TOO_LARGE_SKIPPED. The PyPI and VSIX extracted-file
+scanners were deliberately NOT changed (open, below). Integrator decision:
+`.pl` and `.pm` joined SCANNABLE_EXTENSIONS, so Perl reads the same with or
+without an extension.
+
+Measured, base build e30a70c vs patched, eight public repositories chosen for
+extensionless shell, hooks, Bats, build wrappers (gradlew/mvnw) and a
+generated autoconf `configure`: files scanned 889 -> 1655 of 12025, zero
+findings added or removed at any severity, no partial flag change (only 9
+Perl files in that sample). Supplementary, two Perl-heavy public
+repositories: files scanned 42 -> 458 of 1666, 0 high or critical added, 77
+medium added: 74 internal-disclosure findings, every one inside embedded POD
+(a real developer home directory in API examples; private addresses passed to
+a documented network-matching helper; the same text reports the same way in a
+fenced markdown code block) and 3 HEX_ARRAY on byte lookup tables (same
+verdict the rule gives the table in a .js file). No rule was changed for
+these. npm tarball scans of three packages with extensionless bins: +1, +6,
++1 files scanned, zero findings either side. Mutation proofs: 7 mutations of
+the new logic (gate, effective extension, .bats alias, .bats test name,
+hook-name fallback, shebang-wins, npm path), plus `.pl`/`.pm` removal, each
+proven landed and each red.
+
+Action install. `npm install -g supply-chain-guard@<v>` became: install into a
+throwaway project under RUNNER_TEMP (lockfile, `--ignore-scripts`, public
+registry explicitly), `npm audit signatures --json --include-attestations`,
+then new `scripts/verify-action-install.mjs`, and only then the `.bin` goes on
+GITHUB_PATH. npm verifies the registry signature and the Sigstore bundle but
+accepts a package with NO attestation and a valid one from ANY repository; the
+script requires the SLSA provenance to exist and reads the Fulcio certificate
+of the exact bundle npm verified (issuer GitHub Actions, source repository URI,
+numeric repository id 1185867580, ref `refs/tags/v<version>`, SAN
+`.github/workflows/ci.yml@refs/tags/v<version>`), then the statement's
+subject digest against the lockfile integrity and its workflow parameters.
+Proven with real npm on the Linux runner: 6.3.1 passes under npm 12.0.2 and
+11.19.0 (what Node 24.21 bundles); fails closed for 4.8.0 (published without
+provenance), a spoofed expected repository, a wrong repository id, npm 11.11.0
+(no `--include-attestations`), and a lockfile integrity changed after npm
+verified. 8 mutations (5 in the script, 3 in action.yml wiring) all red.
+Inputs and outputs unchanged. Integrator decisions: setup-node runs with
+`check-latest: true`, so a stale tool-cache Node 24 resolves the newest 24.x;
+if npm is still below 11.12.0 the install step fails closed as before
+(contract test plus a mutation that removes the input). The public registry
+stays forced. Full suite on the runner: 191 files, all green.
+
+Open follow-ups: (1) The scanner's own npm dependencies (commander ^14 today)
+float within their range at install and are verified by registry signature
+only; an `npm-shrinkwrap.json` in the published package would pin them. (2)
+The PyPI and VSIX extracted-file scanners still skip extensionless scripts
+(`scripts/` in an sdist, extension helpers); the same `scriptLanguageExtension`
+helper applies, with its own measurement. (3) The internal-disclosure family
+has no POD equivalent of its markdown exemptions (inline code spans, text
+fences); the 74 medium findings above are all POD documentation examples, so
+a POD-aware pass would be a precision gain, measured separately.
 
 ## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
 

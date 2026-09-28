@@ -30,10 +30,19 @@ const SHARED_TEST_DIRS = [
 
 /**
  * File-name forms of a test, shared by every test-path matcher: a `.test.` /
- * `_spec.` style suffix and pytest's `conftest.py`.
+ * `_spec.` style suffix, pytest's `conftest.py`, and a Bats suite (`*.bats`).
+ *
+ * `.bats` is here because the format is test-only: bats is the only thing that
+ * runs such a file, the same way a `.test.ts` name marks a suite. Measured when
+ * `.bats` files started being read: the Bats suites of a project that tests
+ * its own secret detection, copied out of their `tests/` directory, raised 3
+ * criticals (fixture AWS, GitHub and private-key strings) that the same files
+ * under `tests/` did not.
+ * Before that change `.bats` content was never read at all, so classifying it
+ * as a test costs no coverage the scan ever had.
  */
 const TEST_FILE_NAME_SOURCE =
-  "[._-](?:test|spec|mock|fixture|stub|fake)\\.|(?:^|\\/)conftest\\.py$";
+  "[._-](?:test|spec|mock|fixture|stub|fake)\\.|(?:^|\\/)conftest\\.py$|\\.bats$";
 
 /**
  * pytest's default prefix collection form `test_*.py` (basename only, so
@@ -114,14 +123,21 @@ export function satisfiesPatternContentRequirement(
  * `relativePath` is optional only for low-level/unit callers that have no file
  * context. Production scanners must pass it so every metadata guard is
  * enforceable.
+ *
+ * `fileExtension` is the language the file is READ as, when that is not its
+ * own extension: an extensionless `#!/usr/bin/env node` hook is `.js` and a
+ * `.bats` suite is `.bash` (see script-language.ts). It feeds `onlyExtensions`
+ * only. Every path guard, including the test-file one, still reads the real
+ * path, so a script is never reclassified by the extension it was given.
  */
 export function isPatternApplicableToFile(
   pattern: ApplicablePattern,
   content: string,
   relativePath = "",
+  fileExtension?: string,
 ): boolean {
   const normalizedPath = relativePath.replace(/\\/g, "/");
-  const extension = path.extname(normalizedPath).toLowerCase();
+  const extension = (fileExtension ?? path.extname(normalizedPath)).toLowerCase();
 
   if (
     pattern.onlyExtensions &&

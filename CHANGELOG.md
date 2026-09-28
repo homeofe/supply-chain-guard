@@ -47,6 +47,66 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   special-purpose address space (1918, 3927, 4193, 5735, 6598, 6890) are
   excluded, so `RFC 1918, 10.3.2.3` still reports, and only the 10/8 shape is
   affected: other private ranges keep reporting.
+- **Executable scripts without an extension, and Bats suites, are now read.**
+  The content scan was gated on the file extension, so a git hook such as
+  `scripts/hooks/pre-commit` or `.husky/pre-push`, a package's `bin/`
+  launcher and every `*.bats` file was counted and never opened: a payload
+  that scores high in `hook.sh` produced no finding at all in `hook`, in a
+  directory scan and in an npm tarball scan alike. An extensionless file is
+  now read in the language its shebang names (`sh`, `bash`, `dash`, `ksh`,
+  `zsh`, `env <interpreter>`, `node`, `python`, `ruby`, `perl` and a few
+  more), so rules scoped to a language apply to it; a file named like a git
+  hook with no shebang is read as shell, which is how git and husky run it.
+  `*.bats` reads as bash and, like `*.test.ts`, counts as a test file
+  wherever it lives, so the fixture secrets of a suite that tests secret
+  detection do not turn a consumer's CI red. Only the first line of a file is
+  read to decide, so an oversized binary is never loaded for it, and an
+  oversized script is reported as `FILE_TOO_LARGE_SKIPPED` like any other
+  scannable file. A file with no extension, no shebang and no hook name is
+  still not read. Measured against the released scanner on eight public
+  repositories (shell tools with extensionless commands and Bats suites, a
+  Java project with build wrapper scripts, a C project with a generated
+  configure script): files scanned rose from 889 to 1655 of 12025, with no
+  finding added or removed at any severity. The same Bats suites copied
+  outside their test directories raised 3 criticals before the test-file
+  classification and none after it.
+- **Perl source is read.** `.pl` and `.pm` join the scanned extensions, so a
+  Perl script is read whether or not it carries an extension; before, the
+  same payload was found in neither. Measured on two Perl-heavy public
+  repositories in addition to the eight above: files scanned rose from 42 to
+  458 of 1666, no high or critical finding was added, and 77 medium findings
+  were: 74 internal-disclosure findings, all inside embedded POD
+  documentation (a real developer home directory in API examples, and
+  private addresses passed to a documented network-matching helper, which is
+  what the same text reports inside a fenced markdown code block), and 3
+  `HEX_ARRAY` findings on byte lookup tables, which the rule reports the same
+  way in a `.js` file.
+
+### Security
+
+- **The GitHub Action verifies the scanner before it runs it.** It used to
+  run `npm install -g supply-chain-guard@<version>`, pinned by version and
+  not by content, so a registry or CDN response carrying other bytes under
+  that version would have run as the scanner beside the checkout and the
+  token. The Action now installs into a throwaway project with a lockfile
+  (still `--ignore-scripts`, never globally, from the public registry), has
+  `npm audit signatures --include-attestations` verify the registry
+  signature and the Sigstore provenance, and then refuses to continue unless
+  that provenance exists, its signing certificate was issued to this
+  repository (by name and numeric id) running its release workflow at the
+  version's tag, and its subject is the tarball the lockfile recorded. npm
+  alone accepts a package with no attestation, and a valid attestation from
+  any other repository. The inputs and outputs are unchanged. The runner
+  needs npm 11.12.0 or later (bundled with Node 24.15.0 or later) and access
+  to `registry.npmjs.org` and the Sigstore trust root; without them the
+  Action fails closed with a message saying which. `actions/setup-node` now
+  runs with `check-latest: true`, so a runner whose tool cache holds an older
+  Node 24 resolves the newest 24.x instead of failing on its npm. The public
+  registry is set explicitly whatever a runner's `.npmrc` says, because the
+  provenance check is only meaningful against the registry that recorded
+  it. The scanner's own npm dependencies are verified by registry signature
+  only: they carry no provenance from this repository and the package ships
+  no shrinkwrap.
 
 ## [6.3.1] - 2026-09-26
 

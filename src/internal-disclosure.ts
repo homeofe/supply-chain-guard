@@ -2334,23 +2334,31 @@ function truncatedFinding(relativePath: string, reasons: string[]): Finding {
  *
  * `runtime` carries the configured deny-list; pass
  * `emptyInternalDisclosureRuntime()` to run the built-in shape rules alone.
+ *
+ * `languageExtension` is the language a file is read as when its path does not
+ * say (an extensionless `#!/usr/bin/env node` hook reads as `.js`; see
+ * script-language.ts). It decides only the lexical questions: comment syntax,
+ * string interpolation and `onlyExtensions`. Test-file and surface
+ * classification keep reading the real path.
  */
 export function scanInternalDisclosure(
   content: string,
   relativePath: string,
   runtime: InternalDisclosureRuntime = emptyInternalDisclosureRuntime(),
+  languageExtension?: string,
 ): Finding[] {
   const findings: Finding[] = [];
   const normalizedPath = relativePath.replace(/\\/g, "/");
+  const languagePath = languageExtension ? `${normalizedPath}${languageExtension}` : normalizedPath;
   const isTestFile = TEST_FILE.test(normalizedPath);
   const surface = classifyFileSurface(normalizedPath);
-  const isMarkdown = MARKDOWN_FILE.test(normalizedPath);
-  const isCodeFile = CODE_FILE.test(normalizedPath);
-  const hashIsComment = !C_FAMILY_FILE.test(normalizedPath);
-  const isJsonFile = JSON_FILE.test(normalizedPath);
-  const interpolation: InterpolationKind = JS_FAMILY_FILE.test(normalizedPath)
+  const isMarkdown = MARKDOWN_FILE.test(languagePath);
+  const isCodeFile = CODE_FILE.test(languagePath);
+  const hashIsComment = !C_FAMILY_FILE.test(languagePath);
+  const isJsonFile = JSON_FILE.test(languagePath);
+  const interpolation: InterpolationKind = JS_FAMILY_FILE.test(languagePath)
     ? "js"
-    : PYTHON_FILE.test(normalizedPath)
+    : PYTHON_FILE.test(languagePath)
       ? "python"
       : null;
 
@@ -2419,7 +2427,9 @@ export function scanInternalDisclosure(
   // Dockerfile (lastIndexOf on the whole path would slice from a directory dot).
   const basename = normalizedPath.slice(normalizedPath.lastIndexOf("/") + 1);
   const dotAt = basename.lastIndexOf(".");
-  const fileExt = dotAt > 0 ? basename.slice(dotAt).toLowerCase() : "";
+  const fileExt = languageExtension
+    ? languageExtension.toLowerCase()
+    : dotAt > 0 ? basename.slice(dotAt).toLowerCase() : "";
 
   for (const pattern of INTERNAL_DISCLOSURE_PATTERNS) {
     // Mirrors checkFilePatterns() in scanner.ts, so a PatternEntry behaves the

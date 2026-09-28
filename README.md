@@ -126,6 +126,7 @@ is something to match:
 - Shannon entropy analysis for encoded payloads
 - Proxy handler traps, WebAssembly from external sources
 - Scan-coverage transparency: files above the 5 MB content-scan limit are surfaced as `FILE_TOO_LARGE_SKIPPED` (info severity, never affects exit codes) instead of being silently skipped - padding a payload past the limit no longer hides it from the report
+- Executable scripts without an extension are read in the language their shebang names (`#!/bin/sh`, `#!/usr/bin/env node`, `python3`, `ruby`, `perl` and others), and an extensionless file named like a git hook (`pre-commit`, `pre-push`, ...) is read as shell even without one, so hooks under `scripts/hooks/` or `.husky/` and `bin/` launchers in a directory scan or an npm tarball are content-scanned. `*.bats` suites are read as bash and, like `*.test.ts`, count as test files, and Perl source is read as `.pl`/`.pm` too. A file with no extension, no shebang and no hook name is still not read
 
 ### Supply Chain Attacks
 - Install hook deep analysis (secret harvesting, download-exec chains, binary blobs)
@@ -1172,6 +1173,44 @@ alone is the intent, exclude the rule by name:
   with:
     exclude-rules: THREAT_FEED_CATALOG_MISSING
 ```
+
+### How the Action installs the scanner it runs
+
+The Action does not trust the registry to hand it the right scanner. The npm
+version is pinned in `action.yml`, and that alone would let a registry or CDN
+response carrying other bytes under that version run as the scanner, next to
+your checkout and your token. So before anything is scanned:
+
+1. The pinned version is installed into a throwaway project under
+   `RUNNER_TEMP`, from `https://registry.npmjs.org/`, with `--ignore-scripts`,
+   never globally. Its lockfile records the integrity of the tarball on disk.
+2. `npm audit signatures --include-attestations` verifies the registry
+   signature and the Sigstore provenance of what was installed.
+3. `scripts/verify-action-install.mjs` then requires what npm does not: that
+   the provenance exists at all, that its signing certificate was issued to
+   this repository (by name and by numeric id) running
+   `.github/workflows/ci.yml` at the release tag, and that it describes the
+   tarball the lockfile recorded.
+
+Any failure stops the job with an error annotation naming the check, before the
+scan step runs and before the scanner reaches `PATH`. No input changes this and
+the inputs and outputs are unchanged.
+
+What this covers is the scanner package itself. Its npm dependencies (today one,
+`commander`, resolved within its declared range at install time) are checked by
+registry signature only: they carry no provenance from this repository, and the
+published package ships no shrinkwrap that would pin them.
+
+Two operational requirements follow. The runner needs npm 11.12.0 or later,
+which Node 24.15.0 and later bundle. The Action's `actions/setup-node` step uses
+`check-latest: true`, so a runner whose tool cache holds an older Node 24
+resolves the newest 24.x instead; if npm is still too old after that, the install
+step fails closed with a message saying so. And the step talks to
+`registry.npmjs.org` and to the Sigstore trust root CDN
+(`tuf-repo-cdn.sigstore.dev`). The public registry is set explicitly, whatever a
+runner's `.npmrc` says, because the provenance check is only meaningful against
+the registry that recorded the attestation; a runner that can reach only a
+registry mirror cannot verify the scanner and will not run it.
 
 ### Action Inputs
 

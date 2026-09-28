@@ -250,7 +250,9 @@ describe("Marketplace Action fail-closed contract", () => {
     expect(action).toContain("value: ${{ steps.scan.outputs['report-path'] }}");
     expect(action).toContain("value: ${{ steps.scan.outputs['report-truncated'] }}");
     // Pin must track package.json - hardcoding left this a release behind at v5.23.2.
-    expect(action).toContain(`npm install -g supply-chain-guard@${pkg.version}`);
+    // The install and its provenance check are pinned in
+    // action-install-verification.test.ts.
+    expect(action).toContain(`SCG_VERSION: "${pkg.version}"`);
     expect(scanScript).toContain('SCG_RUN_DIR=$(mktemp -d "$RUNNER_TEMP/scg-action.XXXXXX")');
     expect(scanScript).not.toContain('$RUNNER_TEMP/scg-report.json');
     expect(commentScript).toContain("fs.openSync(process.env.SCG_REPORT_PATH, 'r')");
