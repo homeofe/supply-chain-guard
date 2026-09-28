@@ -137,6 +137,74 @@ helper applies, with its own measurement. (3) The internal-disclosure family
 has no POD equivalent of its markdown exemptions (inline code spans, text
 fences); the 74 medium findings above are all POD documentation examples, so
 a POD-aware pass would be a precision gain, measured separately.
+## AAHP 4.0.0: dev-only lockfile updates pass the drift gate on content (2026-09-28) (claude-opus-5-5)
+
+`@elvatis_com/aahp` moves from 3.12.0 to 4.0.0, and devDependency lockfile updates now pass the drift gate on their content.
+Branch `chore/aahp-4.0.0`. No version bump: the version belongs to the release.
+
+4.0.0 was published on 2026-09-28 with npm provenance. This is the one reviewed
+upgrade that AAHP's README section 5.1 describes, and it cannot be split: 3.12.0
+rejects the new config key below, so the key and the bump land together.
+
+### What changes
+
+- `package.json` and `package-lock.json`: the exact pin, 3.12.0 to 4.0.0. The
+  lock entry's integrity is the one the registry publishes.
+- `aahp.config.json` gains `handoffImpact.npmDevDependencyUpdates`. A change set
+  whose only files outside `.ai/handoff/` are `package-lock.json` (optionally
+  with `package.json`) passes Layer 2 without a STATUS entry when every changed
+  lock entry is dev-only before and after, resolved from the npm registry, has
+  an integrity hash and no install script, and `package.json` differs only in
+  devDependency version specifiers. It is decided by the content of the change,
+  never by who pushed it, which is what the aahp-verify comments here asked for
+  after the 2026-09-01 bypass.
+- The opt-in names the supply-chain scan it relies on: job `compat` in
+  `.github/workflows/ci.yml`. It runs on `pull_request`, has no job-level `if:`
+  and no `continue-on-error`, its self-scan reads `package-lock.json`, and the
+  required `Build and Test` check needs it. The gate re-checks those properties
+  on every run; that the check stays required is a repository setting it cannot
+  see.
+- Runtime dependency updates, and any update that adds an install script,
+  still need a STATUS entry. `check:handoff` already ignores the Toolchain
+  version column, so the DASHBOARD does not stop a dependabot devDependency
+  update either.
+
+### Verified
+
+On a Linux runner (Node 24, npm 12), this branch on top of main:
+
+- `aahp lint` clean. `aahp verify --level ci` against main passes, with two
+  warnings: Layer 3 notes that the manifest was generated on the parent commit,
+  and Layer 4 that the five dated TRUST rows expired in August (TR-001 to
+  TR-005). `trustTtl.enforce` is not set here, so the second stays a warning.
+- `aahp doctor`: 7 of 8 gates pass and `cli-source` is advisory, for the three
+  `npx --no-install aahp` steps that #355 replaces.
+- `npm run build` (the prebuild governance gates and tsc) passes. The self-scan
+  exactly as `compat` runs it exits 0: 576 of 765 files, two info findings.
+- Mutation proof for the scan the opt-in names: a lock entry for a
+  known-malicious package, marked `dev: true`, makes that same scan exit 1 with
+  a critical `LOCKFILE_MALICIOUS_PACKAGE` on `package-lock.json`. A dev-only
+  lockfile update is therefore not waved through unscanned.
+- Full suite: 4823 of 4823, 189 files.
+- A simulated dependabot update on top of this branch (`@types/node`,
+  specifier and lock only, two files): `aahp verify --level ci` passes with the
+  exemption, and `npm run build` passes. Negative control, the same for
+  `commander`, a runtime dependency: Layer 2 fails with "Missing:
+  .ai/handoff/STATUS.md update".
+- `npm audit signatures` on a clean install: 68 packages with verified registry
+  signatures, 35 with verified attestations, `@elvatis_com/aahp` 4.0.0 among
+  them with SLSA provenance v1.
+
+### The one test change the upgrade needs
+
+`src/__tests__/handoff-gate.test.ts` accepted only the manifest summary that
+3.12.0 produces (`| Field | Value |`). 4.0.0 skips tables and summarises the
+first prose sentence (its CHANGELOG, Fixed: file summaries skip tables), so
+that test failed on the bump alone. It now accepts both forms and still
+rejects header chrome. The hunk is the same as in #354, so whichever of the
+two merges second applies it without a conflict. #355 and #356 are
+independent of this change: 4.0.0's new doctor gate `cli-source` reports the
+`npx --no-install aahp` steps that #355 replaces as advisory, not as failures.
 
 ## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
 
