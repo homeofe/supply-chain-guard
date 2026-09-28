@@ -36,6 +36,36 @@ shebang and `.bats` files (a consumer's git hooks ship in its npm tarball as
 executable shell and are counted but not read), which changes findings for
 every consumer and needs its own measurement; the Action installing
 `supply-chain-guard@<version>` by version rather than by integrity.
+## aahp CLI invoked by path in the workflows (2026-09-28) (claude-opus-5.5)
+
+The three workflow steps that ran `npx --no-install aahp ...` (verify and doctor in
+`aahp-verify.yml`, the AAHP conformance step in `ci.yml`) now run
+`node ./node_modules/@elvatis_com/aahp/bin/aahp.js ...`. The path can only be the
+copy `npm ci` placed from the committed lockfile; `npx --no-install` can still
+resolve a global `aahp` on PATH, which this repository measured on 2026-08-20
+(scripts/check-aahp-pin.mjs). It is also the form AAHP's adopter workflow uses:
+the upcoming AAHP 4.0.0 adds a doctor gate, `cli-source`, which reports the npx
+spelling as advisory. The stale comment that the workflow "matches the canonical
+AAHP verify workflow" is corrected. Works unchanged with the pinned 3.12.0.
+
+## Dependabot: 7-day cooldown and grouped lanes; the stale "dependabot exempt" claims (2026-09-28) (claude-opus-5.5)
+
+`.github/dependabot.yml` gains a 7-day `cooldown` on the npm and github-actions
+version-update lanes (security updates are not delayed; the docker lane is left
+without one, because its digest refreshes carry base-image security fixes) and
+groups: npm development and production dependencies in separate PRs, and all
+action pins in one. The split matters from @elvatis_com/aahp 4.0.0 on: its
+opt-in `handoffImpact.npmDevDependencyUpdates` exempts a PR that changes only
+integrity-pinned registry devDependencies from the handoff gate by content, while
+a runtime dependency change always needs a handoff entry; a mixed PR would hold
+the dev updates back. That opt-in cannot be configured before the upgrade: 3.12.0
+rejects the key, so the 3.12.0 to 4.0.0 upgrade itself lands as one reviewed PR
+with the opt-in, a STATUS entry and a regenerated MANIFEST.json.
+
+CONTRIBUTING said "Only dependabot is exempt" and the generated DASHBOARD row said
+"dependabot exempt" for aahp-verify. Measured against `aahp-verify.yml`: its
+comments record that the dependabot `if:` was removed, and a dependabot PR is
+judged like any other. Both texts now say so.
 
 ## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
 

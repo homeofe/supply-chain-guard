@@ -3,76 +3,76 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790576716",
-    "timestamp": "2026-09-28T06:25:16Z",
-    "commit": "e30a70c",
+    "session_id": "cli-1790591230",
+    "timestamp": "2026-09-28T10:27:12Z",
+    "commit": "7884126",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:a4aa5680359a1b3265c61db7fbf83163bf69328ab4d4151dc3a3ae25a2af9500",
-      "updated": "2026-09-28T06:25:16Z",
-      "lines": 12700,
+      "checksum": "sha256:e030aa1f9cf7a8c6d53d18e2c853282df91a284e6bc5d622b1e489dba4ac6646",
+      "updated": "2026-09-28T10:26:28Z",
+      "lines": 12730,
       "summary": "Two changes found while auditing AAHP, the handoff protocol this repository"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:6643bf4bd379dce40a02d3e24a560912bf89c1b24116d4ab58d252e91fbb00e2",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
       "checksum": "sha256:18f1e7633c82e7695f2c125493102978f63ff8b798604dc8f0e8cdad963287c4",
-      "updated": "2026-09-28T06:25:16Z",
+      "updated": "2026-09-28T10:27:07Z",
       "lines": 90,
       "summary": "Threat intel (2026-09-26): five package IOCs, all in the offline bundle. Four come from the GitHub Advisory Database, corroborated by OpenSSF: pypi:sh"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 132,
       "summary": "**Agent:** Claude Opus 4.8 (claude-opus-4-8)"
     },
     "LOG-ARCHIVE.index.json": {
       "checksum": "sha256:354d20f698827617b4abb69680ea0ee1f0a5a6f4313369a1f0f4c2984e65d28d",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 25,
       "summary": "{"
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:3b24c750b71851223fcddde55b7607d08ed58850004acab32584dc154de1e7c9",
-      "updated": "2026-09-28T06:25:16Z",
+      "checksum": "sha256:33528925ab77ee523aac9f7b11c1a21b7df64e29044267c047fe192f9303147b",
+      "updated": "2026-09-28T10:27:07Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:b6eda679101d4ad8ee5657069ae107aa6cfd4324298533b66395c0d9f3044046",
-      "updated": "2026-09-28T06:25:16Z",
+      "updated": "2026-09-28T10:27:07Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
     "CONVENTIONS.md": {
       "checksum": "sha256:d4198c52b1f110d9e2284a164880fb7188c2a9098ed3d2fc305b31f8226bac23",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 303,
       "summary": "- All code, comments, commits, and documentation in **English only**"
     },
     "WORKFLOW.md": {
       "checksum": "sha256:60261845b207a16068d9d520b25cd16522b0b52f459fb97e8ad0bf892f10fca1",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 165,
       "summary": "MANIFEST.json tasks is the authoritative machine-readable task graph."
     },
     "GROUNDING.md": {
       "checksum": "sha256:d3744f97b8190fbc73b3fbd44df70cc343d23b99cdc1e92eee686929212b151e",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 209,
       "summary": "This register extends AAHP machinery without replacing it."
     },
     "pii-allowlist.json": {
       "checksum": "sha256:7c1051f6e2bc3943b7c1dbe4da229694455681b8875a346c99279e555edb733f",
-      "updated": "2026-09-28T06:17:18Z",
+      "updated": "2026-09-28T10:25:55Z",
       "lines": 4,
       "summary": "{"
     }
@@ -80,7 +80,7 @@
   "quick_context": "Two changes found while auditing AAHP, the handoff protocol this repository Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete. ",
   "token_budget": {
     "manifest_only": 85,
-    "manifest_plus_core": 148040,
-    "full_read": 158019
+    "manifest_plus_core": 148424,
+    "full_read": 158407
   }
 }
