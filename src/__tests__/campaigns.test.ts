@@ -7429,4 +7429,44 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // metrics-sdk hex-encodes the installer hostname into a label under a
+  // hardcoded zone and resolves it (amazon-inspector, MAL-2026-17194). Only
+  // that per-attacker zone is an indicator; the x9.to apex is not.
+  describe("metrics-sdk dependency-confusion beacon (September 2026)", () => {
+    it("should detect the beacon zone", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.py"),
+        'host = "mssdk-install-" + h + ".84avt3516s4q1obsv9q0mh4u2l8dw3ks.x9.to"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does not flag another zone on the same apex", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.py"),
+        'host = "docs.x9.to"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+      ).toBeUndefined();
+    });
+
+    it("keeps the beacon zone bundled with a campaign", () => {
+      const ioc = getBundledFeed().find(
+        (i) => i.value === "84avt3516s4q1obsv9q0mh4u2l8dw3ks.x9.to"
+      );
+      expect(ioc).toBeDefined();
+      expect(ioc?.campaign).toBeTruthy();
+      expect(ioc?.confidence).toBeGreaterThanOrEqual(0.9);
+    });
+  });
 });

@@ -86883,3 +86883,4 @@
 {"type":"package","value":"mn3sadkoiewu","severity":"critical","confidence":0.9,"source":"MAL-2026-15610","firstSeen":"2026-08-26"}
 {"type":"package","value":"mn4xcouzvhus","severity":"critical","confidence":0.9,"source":"MAL-2026-15611","firstSeen":"2026-08-26"}
 {"type":"package","value":"octopus-action","severity":"critical","confidence":1,"source":"GHSA-27rc-jrqq-3wvj, MAL-2026-14537 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-26"}
+{"type":"package","value":"spotify-url-resolvers","severity":"critical","confidence":1,"source":"GHSA-w77g-6g5j-wr2r, MAL-2026-14538 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-26"}

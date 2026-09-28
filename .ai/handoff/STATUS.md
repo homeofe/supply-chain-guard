@@ -1,3 +1,44 @@
+## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
+
+This branch carries the commit of the still-open PR 352 (2026-09-27) as its
+first commit, so the two PRs do not conflict on generated files. If PR 352 is
+squash-merged first, a rebase of this branch drops that commit as already
+applied; if this PR is merged instead, PR 352 is superseded.
+
+The importer (window from 2026-09-14, 121 advisory pages, not page-capped, no
+`--limit`) added 25 package IOCs, 24 to the bundle and 1 to the catalog. Five
+are bare npm names, each probed against the registry and each already a
+`security holding package` (single `0.0.1-security` version): `@consts/links`,
+`@digi-kernel/digi-kernel-constrains`, `discord-players`, `discord-resolvers`
+and `spotify-url-resolvers`. The last one went to the catalog because its
+`firstSeen` (2026-08-26, the amazon-inspector record MAL-2026-14538) is before
+`bundleCutoffDate` 2026-08-27; the GHSA only appeared now. It is the same
+Telegram project-uploader as `discord-players`; a scan without `feed refresh`
+does not see this one name. Left to the policy, not curated into the bundle. The other 20 are version pins:
+`pypi:aseity` 0.1.0, `pypi:donutpromotion` 0.1.0, `pypi:claudedashbord` 0.1.0
+to 0.1.3, `pypi:coinscan` 0.1.0, `pypi:caracas4check` 1.1.1 and 1.1.2,
+`pypi:scrapetools2` 0.2.0, 0.2.1, 1.2.0 and 1.2.1, `pypi:metrio` and
+`pypi:metrics-sdk` 999.0.0, 1000.0.0 and 1001.0.0, and
+`@bb1ptest23/test-paket` 1.0.3 (OpenSSF only, 0.9; the name is a live bug
+bounty PoC with versions 1.0.0 and 1.0.3, so it is pinned, not name-blocked).
+15 advisories stayed unmappable (bounded version ranges). No `catalogWindows`
+entry, no decline entry.
+
+One atomic indicator added by hand, with a `campaign` so it stays bundled:
+the metrics-sdk dependency-confusion beacon zone
+`84avt3516s4q1obsv9q0mh4u2l8dw3ks[.]x9[.]to` (amazon-inspector,
+MAL-2026-17194, 0.9). Only that zone, never the `x9[.]to` apex; a new
+campaigns test asserts both directions. `thisisafalsepositive[.]st` from
+PR 352 is now two-source (amazon-inspector names it as the payload manifest
+host of claudedashbord and coinscan, MAL-2026-17195 and MAL-2026-17197), so
+its confidence rises from 0.85 to 0.95.
+
+Not ingested: the scrapetools2 IPFS gateway hosts and IPNS name (single
+analysis, and at least one listed gateway is a shared public service), and the
+Telegram bot token of the discord-players family (no blocklist collection for
+bot tokens). Vendor write-ups since the last run added nothing not already
+covered.
+
 ## Daily threat-intel import (2026-09-27) (claude-opus-5-5)
 
 The importer (window from 2026-09-13, 311 advisory pages, not page-capped)
