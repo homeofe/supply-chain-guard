@@ -598,8 +598,45 @@ function isPrivateAddressLexicalContextOkIndexed(
   if (octets === null || octets[0] !== 10) return true;
 
   if (followsRequirementMarker(content, matchStart)) return false;
+  if (followsSpecCitation(content, matchStart)) return false;
 
   return v8Context.allows(matchStart);
+}
+
+/**
+ * A section number cited after the specification it belongs to, on the same
+ * line: `(JSON Schema 2020-12, 10.3.2.3)`, `ECMA-262: 10.4.2.1`,
+ * `RFC 9110, 10.2.1.1`. Standards number their sections in dotted parts, and a
+ * chapter 10 four-part number has the 10/8 shape. Only a named specification
+ * (with an optional version) followed by a comma or colon counts, and only when
+ * adjacent: `JSON Schema server, 10.3.2.3` names a host. The RFCs that DEFINE
+ * private or special-purpose address space are excluded, because a literal after
+ * them is an example address, not a section: `RFC 1918, 10.3.2.3`.
+ */
+const SPEC_CITATION_AT_END = new RegExp(
+  String.raw`(?:^|[^\w-])(?:` +
+    [
+      String.raw`json\s+schema(?:\s+(?:draft[-\s]?\d{1,2}|\d{4}-\d{2}))?`,
+      String.raw`ecma-\d{2,4}(?:\s+\d{1,2}(?:st|nd|rd|th)\s+edition)?`,
+      String.raw`iso(?:\/iec)?\s?\d{3,5}(?:-\d{1,3}){0,3}(?::\d{4})?`,
+      String.raw`rfc\s?(?!(?:1918|3927|4193|5735|6598|6890)\b)\d{3,5}`,
+    ].join("|") +
+    String.raw`)\s*[,:]\s*$`,
+  "i",
+);
+
+/** Longest citation plus punctuation and a little spacing; bounds the lookback. */
+const SPEC_CITATION_WINDOW = 48;
+
+function followsSpecCitation(content: string, matchStart: number): boolean {
+  const start = Math.max(0, matchStart - SPEC_CITATION_WINDOW);
+  let prefix = content.slice(start, matchStart);
+  const newline = prefix.lastIndexOf("\n");
+  if (newline >= 0) prefix = prefix.slice(newline + 1);
+  // Same sentinel as followsRequirementMarker: a window cut mid-line is not a
+  // word boundary.
+  else if (start > 0) prefix = "x" + prefix;
+  return SPEC_CITATION_AT_END.test(prefix);
 }
 
 /**

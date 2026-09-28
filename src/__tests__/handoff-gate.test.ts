@@ -290,15 +290,14 @@ describe("handoff staleness gate", () => {
   it(
     "summarizes content beyond Markdown header chrome",
     () => {
-      // aahp_auto_summary (in the packaged _aahp-lib.sh) strips title/blockquote/
-      // "---"/blank/HTML-comment lines and PURE table-separator rows
-      // ("|---|---|"), then takes the first surviving line. A table HEADER or
-      // DATA row ("| Field | Value |") is real document content, not chrome, so
-      // it is not stripped - it is the correct summary here, not the later
-      // prose line. (An earlier, narrower AAHP fix tightened the separator-row
-      // regex from stripping every pipe-delimited line to only pure separator
-      // rows, specifically so files that are mostly tables still get a real
-      // summary instead of "(no summary available)".)
+      // What this gate relies on is that the summary is real content and never
+      // header chrome (title, blockquote, "---", blank or HTML-comment lines,
+      // pure separator rows). Which content line wins depends on the pinned
+      // @elvatis_com/aahp: up to 3.12.0 the packaged aahp_auto_summary takes the
+      // first surviving line, the table header "| Field | Value |"; later
+      // releases build the manifest in node and skip tables to take the first
+      // prose sentence. Both are content, so both pass, and a bump of the pinned
+      // version does not need this test edited again.
       fs.writeFileSync(
         path.join(tmp, ".ai", "handoff", "STATUS.md"),
         [
@@ -325,7 +324,11 @@ describe("handoff staleness gate", () => {
       const manifest = JSON.parse(
         fs.readFileSync(path.join(tmp, ".ai", "handoff", "MANIFEST.json"), "utf8"),
       );
-      expect(manifest.files["STATUS.md"].summary).toBe("| Field | Value |");
+      const summary = manifest.files["STATUS.md"].summary;
+      expect(["| Field | Value |", "AAHP summary prose is visible after the table."]).toContain(summary);
+      for (const chrome of ["Fixture status", "Generated-looking", "A second quoted line", "---", "Current state"]) {
+        expect(summary).not.toContain(chrome);
+      }
     },
     20000, // calls refresh() again on top of beforeEach's; see beforeEach comment
   );

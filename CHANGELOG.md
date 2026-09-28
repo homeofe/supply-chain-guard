@@ -36,6 +36,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   source (amazon-inspector, as the payload host of claudedashbord and
   coinscan) and its confidence rises from 0.85 to 0.95.
 
+### Fixed
+
+- `INTERNAL_PRIVATE_IP` no longer reports a four-part section number cited
+  after the specification it belongs to, such as `(JSON Schema 2020-12,
+  10.3.2.3)` in a code comment, which a consumer's required scan reported as a
+  private address. Only a named specification (JSON Schema, ECMA-262, ISO or
+  ISO/IEC, or an RFC) with an optional version, followed by a comma or colon
+  and the number on the same line, counts. The RFCs that define private or
+  special-purpose address space (1918, 3927, 4193, 5735, 6598, 6890) are
+  excluded, so `RFC 1918, 10.3.2.3` still reports, and only the 10/8 shape is
+  affected: other private ranges keep reporting.
+
 ## [6.3.1] - 2026-09-26
 
 ### Added

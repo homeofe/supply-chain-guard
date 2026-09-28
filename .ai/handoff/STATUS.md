@@ -1,3 +1,42 @@
+## INTERNAL_PRIVATE_IP section numbers; handoff test independent of the aahp version (2026-09-28) (claude-opus-5.5)
+
+Two changes found while auditing AAHP, the handoff protocol this repository
+consumes.
+
+**Scanner precision.** A consumer's required scan (supply-chain-guard 6.3.1 with
+`refresh-catalog: true`) reported `INTERNAL_PRIVATE_IP` at medium for a code
+comment citing `(JSON Schema 2020-12, 10.3.2.3)`: a section number with the 10/8
+shape. The existing `followsRequirementMarker` guard covers `Req`, `section`,
+`§` and the like only when adjacent, so a citation followed by a comma slipped
+through. New `followsSpecCitation` accepts a named specification (JSON Schema
+with an optional draft or date, ECMA-262 with an optional edition, ISO or
+ISO/IEC with part and year, RFC) followed by a comma or colon and the number on
+the same line. RFCs that define private or special-purpose address space are
+excluded so an example address after them still reports. Like the requirement
+guard it is only consulted for 10/8 candidates.
+
+Evidence (Linux, full suite 189 files / 4825 tests green; `npm run lint` and
+`npm run build` exit 0): the new precision tests go red with the guard call
+removed. Measured with the base and the patched build on three trees: the
+consumer tree that carried the comment goes from 1 to 0 `INTERNAL_PRIVATE_IP`
+with every other finding identical; a second consumer tree and this repository
+are unchanged except for the examples in the new doc comment itself, which only
+the base build reports.
+
+**handoff-gate test.** `summarizes content beyond Markdown header chrome`
+asserted the exact summary `| Field | Value |`. AAHP's next release rebuilds
+MANIFEST.json in node and skips tables, so its summary for that fixture is the
+prose line. The test now asserts what the gate relies on: a content line, never
+header chrome. Measured with an AAHP main tarball installed as
+`@elvatis_com/aahp`: the old assertion fails, the new one passes, and so does
+the whole handoff-gate file (17 of 17); it also passes on the pinned 3.12.0.
+
+Not in this change, open follow-ups: content-scanning extensionless files by
+shebang and `.bats` files (a consumer's git hooks ship in its npm tarball as
+executable shell and are counted but not read), which changes findings for
+every consumer and needs its own measurement; the Action installing
+`supply-chain-guard@<version>` by version rather than by integrity.
+
 ## Daily threat-intel import (2026-09-28) (claude-opus-5-5)
 
 This branch carries the commit of the still-open PR 352 (2026-09-27) as its
