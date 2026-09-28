@@ -276,6 +276,15 @@ like any other. In order:
    Bump `package.json` too, then run `npm install --package-lock-only`: npm rewrites
    the lockfile's version fields only at install time, so an edit-based bump leaves it
    a release behind.
+
+   `action.yml` pins more than the version. Its install step also names the
+   repository, its numeric id and the workflow file that must have signed the
+   release's npm provenance (`SCG_EXPECTED_*`), and
+   `scripts/verify-action-install.mjs` refuses any other signer. Only the version
+   moves on a release. If the publish job ever moves to another workflow file,
+   change `SCG_EXPECTED_WORKFLOW` in the same commit, or every Action run of that
+   release fails closed. A rename or transfer of the repository keeps the id and
+   changes the name, so it needs `SCG_EXPECTED_REPOSITORY` updated too.
 5. **`npm run release:prepare`**, then **`node scripts/feed-migrate.mjs --write`**.
    This advances `bundleCutoffDate` to 30 days before the release and migrates
    package indicators that have left the offline window into the catalog. The

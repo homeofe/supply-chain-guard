@@ -447,6 +447,9 @@ export function matchPatternInSemanticText(
  * Evaluate one pattern against one file with the complete PatternEntry contract.
  * Returns null when file/path metadata intentionally makes the pattern
  * inapplicable. Any safety-bound limitation becomes a deduplicated finding.
+ *
+ * `fileExtension` overrides the path's own extension for `onlyExtensions`
+ * only; see isPatternApplicableToFile.
  */
 export function matchPatternInFile(
   pattern: FilePattern,
@@ -455,8 +458,9 @@ export function matchPatternInFile(
   findings: Finding[],
   flags = "g",
   options?: PatternMatchOptions,
+  fileExtension?: string,
 ): PatternMatchResult | null {
-  if (!isPatternApplicableToFile(pattern, content, relativePath)) return null;
+  if (!isPatternApplicableToFile(pattern, content, relativePath, fileExtension)) return null;
 
   const result = matchPatternInContent(pattern, content, flags, options);
   recordIncompleteCoverage(findings, relativePath, pattern.rule, result);

@@ -76,15 +76,53 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # check-latest: a runner's tool cache can hold an old Node 24 whose npm is
+    # older than 11.12.0, which cannot report the attestations the install step
+    # verifies. Resolving the newest 24.x avoids that; if npm is still too old,
+    # the install step fails closed and says so.
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: "24"
+        check-latest: true
         package-manager-cache: false
 
+    # The scanner is verified before it runs, not only pinned by version: a
+    # registry or CDN response carrying other bytes under this version would
+    # otherwise run with the checkout and the token in reach. It is installed
+    # into a throwaway project (never -g, so a lockfile records exactly what was
+    # installed), npm verifies the registry signature and the Sigstore
+    # provenance, and scripts/verify-action-install.mjs then requires that the
+    # provenance exists and was signed by this repository's release workflow at
+    # this version's tag, for the tarball on disk. Any failure stops the Action
+    # before the scan step; nothing is added to PATH.
     - name: Install supply-chain-guard
       shell: bash
-      run: npm install -g supply-chain-guard@6.3.1 --ignore-scripts --no-audit --no-fund
+      env:
+        SCG_VERSION: "6.3.1"
+        SCG_EXPECTED_REPOSITORY: "homeofe/supply-chain-guard"
+        SCG_EXPECTED_REPOSITORY_ID: "1185867580"
+        SCG_EXPECTED_WORKFLOW: ".github/workflows/ci.yml"
+      run: |
+        set -euo pipefail
+        SCG_INSTALL_DIR=$(mktemp -d "$RUNNER_TEMP/scg-install.XXXXXX")
+        export SCG_INSTALL_DIR
+        printf '{"name":"scg-action-install","version":"0.0.0","private":true}\n' > "$SCG_INSTALL_DIR/package.json"
+        # The public registry explicitly: provenance and registry keys are
+        # verified against it, and a runner-level .npmrc must not redirect this.
+        npm install --prefix "$SCG_INSTALL_DIR" --save-exact --ignore-scripts --no-audit --no-fund \
+          --registry=https://registry.npmjs.org/ "supply-chain-guard@$SCG_VERSION"
+        SCG_NPM_VERSION=$(npm --version)
+        export SCG_NPM_VERSION
+        export SCG_AUDIT_JSON="$SCG_INSTALL_DIR/audit-signatures.json"
+        if ! (cd "$SCG_INSTALL_DIR" && npm audit signatures --json --include-attestations \
+          --registry=https://registry.npmjs.org/ > "$SCG_AUDIT_JSON"); then
+          echo "::error title=supply-chain-guard install verification failed::npm audit signatures rejected the installed scanner; it will not be run." >&2
+          cat "$SCG_AUDIT_JSON" >&2 || true
+          exit 1
+        fi
+        node "$GITHUB_ACTION_PATH/scripts/verify-action-install.mjs"
+        echo "$SCG_INSTALL_DIR/node_modules/.bin" >> "$GITHUB_PATH"
 
     - name: Run scan
       id: scan

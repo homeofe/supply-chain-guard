@@ -3503,6 +3503,10 @@ export const SCANNABLE_EXTENSIONS = new Set([
   ".rb",
   ".php",
   ".cs",
+  // Perl scripts and modules. An extensionless `#!/usr/bin/perl` script is read
+  // (script-language.ts), so the same code named `.pl` or `.pm` must be too.
+  ".pl",
+  ".pm",
   // Single-file components and notebooks carry executable script blocks.
   ".vue",
   ".svelte",

@@ -26,6 +26,7 @@ import {
 import { parseGitHubUrl } from "./github-trust-scanner.js";
 import { hasPartialScanFinding, matchPatternInFile, recordUnreadablePath } from "./pattern-scanner.js";
 import { collectExtractedFiles } from "./extracted-file-walker.js";
+import { scriptLanguageExtension } from "./script-language.js";
 import { getBundledFeedRef, loadThreatIntel } from "./threat-intel.js";
 import type { FeedIOC } from "./threat-intel.js";
 import { matchBareNpmIOC } from "./install-guard.js";
@@ -733,7 +734,13 @@ export function scanExtractedNpmFiles(
 
   for (const filePath of files) {
     const ext = path.extname(filePath).toLowerCase();
-    if (!SCANNABLE_EXTENSIONS.has(ext)) continue;
+    // A tarball's `bin/` launchers and shipped git hooks are executable
+    // scripts with no extension; script-language.ts decides from the shebang
+    // (first line only, so an oversized binary is never loaded for this).
+    const scanExt = SCANNABLE_EXTENSIONS.has(ext)
+      ? ext
+      : scriptLanguageExtension(filePath, path.basename(filePath), ext);
+    if (scanExt === null) continue;
 
     let stat: fs.Stats;
     try {
@@ -765,6 +772,8 @@ export function scanExtractedNpmFiles(
         relativePath,
         findings,
         "g",
+        undefined,
+        scanExt,
       );
       for (const hit of hits ?? []) {
         findings.push({

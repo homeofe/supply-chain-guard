@@ -25,11 +25,11 @@
     "src/github-trust-scanner.ts": "6cc4949fdbb643b0d3334d45d02b963b6f37a912347d9d96b94e5505403d74ba",
     "src/install-hook-scanner.ts": "a9df5b0e00bfa515570196385ae42253e3612c6a9060d5bb078188db9f3babe5",
     "src/ioc-blocklist.ts": "fbe9650d307298f03f85ac84cc832f9c1080a95092313a99da52a8c762a1a3e9",
-    "src/patterns.ts": "d449e46aa847b9997bab8443a8ac1cf54ccb4fa071f132e6070022e046fc3a22",
+    "src/patterns.ts": "d52ef98a41ce989b0b8e0ef62d59c465c0ce45580311c0f3ed4f9c5e022ffe9e",
     "src/playbooks.ts": "f0f61802cbfd10f314bdc52a28f09e130edee3aee4f9b419a9e6f026d56af735",
     "src/remediation-engine.ts": "5784de7b7193c2ac0630e7ccbae46c3759d0ee90249747e36426527583b9532b",
     "src/reporter.ts": "6e33902a3ba53f4a31c67656fe719902b60bce836505a3921c225a6515e5c789",
-    "src/scanner.ts": "4b71ecc36b4404933bc42cbc8a9da744bcfe7650f4638330f88c632cd87f44e4",
+    "src/scanner.ts": "1fb433ef32bd405084a3976ea1966beb94ee7644f51f96f46c95ad588986f791",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
     "src/threat-intel.ts": "3219e63dac9c458d5435182ac4f65427397451f78d61e03d859d45bec163b8bc",
     "src/workflow-modeler.ts": "9da285d7f2e19bf800c5c4018b3469c8b66c525d50818973f7726e4d4bdd11be"

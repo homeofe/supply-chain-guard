@@ -43,6 +43,7 @@ import {
   type LockfileDependency,
 } from "./lockfile-feed.js";
 import { TEST_FILE_PATTERN } from "./pattern-applicability.js";
+import { scriptLanguageExtension } from "./script-language.js";
 import {
   hasPartialScanFinding,
   matchPatternInFile,
@@ -516,8 +517,18 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       internalDisclosureScanned = true;
     }
 
+    // The language this file is read as. A scannable extension answers for
+    // itself. Otherwise a `.bats` suite is bash, and an extensionless file is
+    // whatever its shebang (or, with none, its git-hook name) says: hooks and
+    // bin/ launchers carry no extension and were counted here without ever
+    // being opened. The digest pass above already holds the bytes of any file
+    // up to MAX_FILE_SIZE; a larger one has only its first line read.
+    const scanExt = SCANNABLE_EXTENSIONS.has(ext)
+      ? ext
+      : scriptLanguageExtension(filePath, basename, ext, fileBytes);
+
     // Successfully analyzed extensionless Docker/config targets count once.
-    if (!SCANNABLE_EXTENSIONS.has(ext)) {
+    if (scanExt === null) {
       if (prefetchedContent !== undefined) filesScanned++;
       continue;
     }
@@ -575,6 +586,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
       relativePath,
       findings,
       trustedOwnFile,
+      scanExt,
     );
 
     // Internal topology disclosure: private addresses, internal-only
@@ -583,7 +595,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     // change the exit code of an existing --fail-on high pipeline.
     if (!internalDisclosureScanned) {
       findings.push(
-        ...scanInternalDisclosure(content, relativePath, internalDisclosure),
+        ...scanInternalDisclosure(
+          content,
+          relativePath,
+          internalDisclosure,
+          scanExt !== ext ? scanExt : undefined,
+        ),
       );
     }
 
@@ -598,7 +615,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
 
     // Check beacon and miner patterns (T-008)
-    checkBeaconMinerPatterns(content, relativePath, findings, trustedOwnFile);
+    checkBeaconMinerPatterns(content, relativePath, findings, trustedOwnFile, scanExt);
 
     // Entropy analysis for obfuscated payloads (v4.0)
     const entropyFindings = analyzeEntropy(content, relativePath);
@@ -1280,6 +1297,7 @@ function checkFilePatterns(
   relativePath: string,
   findings: Finding[],
   trustedOwnFile: boolean,
+  fileExtension?: string,
 ): void {
   // Note: LURE_PATTERNS deliberately excluded here. README-style files are
   // already covered by scanReadmeLures() in github-trust-scanner.ts (called
@@ -1307,6 +1325,8 @@ function checkFilePatterns(
       relativePath,
       findings,
       "g",
+      undefined,
+      fileExtension,
     );
     for (const hit of hits ?? []) {
       if (
@@ -1516,6 +1536,7 @@ function checkBeaconMinerPatterns(
   relativePath: string,
   findings: Finding[],
   trustedOwnFile: boolean,
+  fileExtension?: string,
 ): void {
   for (const pattern of BEACON_MINER_PATTERNS) {
     const hits = matchPatternInFile(
@@ -1524,6 +1545,8 @@ function checkBeaconMinerPatterns(
       relativePath,
       findings,
       "gi",
+      undefined,
+      fileExtension,
     );
     for (const hit of hits ?? []) {
       findings.push({
