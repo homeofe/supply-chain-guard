@@ -10,8 +10,12 @@
 #   Layer 4: TRUST-TTL expiry (advisory)
 #
 # The CLI is self-contained: it runs its own bundled gate scripts, so this
-# workflow no longer shells out to a vendored copy under scripts/. --no-install
-# forces the pinned node_modules copy of the CLI, never a fetched one.
+# workflow no longer shells out to a vendored copy under scripts/. It is invoked
+# by PATH inside node_modules, never through npx: the path can only be the copy
+# `npm ci` placed from the committed lockfile, while `npx --no-install aahp` can
+# still resolve a different, global `aahp` on PATH (measured, see
+# scripts/check-aahp-pin.mjs). This is also the form AAHP's adopter workflow uses
+# and that `aahp doctor`'s cli-source gate (AAHP 4.0.0) expects.
 #
 # Layer 2 is handed the base commit the EVENT knows (AAHP_BASE_SHA on the verify
 # step). It used to infer one, and the inference had no notion of a wrong answer:
@@ -97,8 +101,8 @@ jobs:
         with:
           # Full history so the content-drift gate can diff against the base.
           fetch-depth: 0
-          # Matches the canonical AAHP verify workflow shipped with the pinned CLI
-          # release. The gate reads local history only and never talks to the remote.
+          # As in AAHP's adopter verify workflow. The gate reads local history only
+          # and never talks to the remote.
           persist-credentials: false
 
       - name: Set up Node.js
@@ -116,7 +120,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Run aahp verify (CI level, no escape hatch)
-        run: npx --no-install aahp verify . --level ci
+        run: node ./node_modules/@elvatis_com/aahp/bin/aahp.js verify . --level ci
         env:
           # One operand per event, and every one of them names a commit that is NOT
           # the commit under test: the pull request base, the pre-push commit, the
@@ -126,4 +130,4 @@ jobs:
           AAHP_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.base }}
 
       - name: Run aahp doctor (conformance gates)
-        run: npx --no-install aahp doctor . --json
+        run: node ./node_modules/@elvatis_com/aahp/bin/aahp.js doctor . --json

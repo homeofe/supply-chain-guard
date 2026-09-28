@@ -36,6 +36,18 @@ shebang and `.bats` files (a consumer's git hooks ship in its npm tarball as
 executable shell and are counted but not read), which changes findings for
 every consumer and needs its own measurement; the Action installing
 `supply-chain-guard@<version>` by version rather than by integrity.
+## aahp CLI invoked by path in the workflows (2026-09-28) (claude-opus-5.5)
+
+The three workflow steps that ran `npx --no-install aahp ...` (verify and doctor in
+`aahp-verify.yml`, the AAHP conformance step in `ci.yml`) now run
+`node ./node_modules/@elvatis_com/aahp/bin/aahp.js ...`. The path can only be the
+copy `npm ci` placed from the committed lockfile; `npx --no-install` can still
+resolve a global `aahp` on PATH, which this repository measured on 2026-08-20
+(scripts/check-aahp-pin.mjs). It is also the form AAHP's adopter workflow uses:
+the upcoming AAHP 4.0.0 adds a doctor gate, `cli-source`, which reports the npx
+spelling as advisory. The stale comment that the workflow "matches the canonical
+AAHP verify workflow" is corrected. Works unchanged with the pinned 3.12.0.
+
 ## Dependabot: 7-day cooldown and grouped lanes; the stale "dependabot exempt" claims (2026-09-28) (claude-opus-5.5)
 
 `.github/dependabot.yml` gains a 7-day `cooldown` on the npm and github-actions
