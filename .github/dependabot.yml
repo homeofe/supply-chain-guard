@@ -8,6 +8,24 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    # A release is picked up only after it has been public for a week: a
+    # compromised version is usually caught and unpublished within days.
+    # Security updates are not delayed by this.
+    cooldown:
+      default-days: 7
+    # Development and production dependencies land in separate PRs. From
+    # @elvatis_com/aahp 4.0.0 on, a PR that changes only integrity-pinned
+    # registry devDependencies can be exempted from the aahp-verify handoff
+    # gate by content (handoffImpact.npmDevDependencyUpdates); a runtime
+    # dependency change always needs a handoff entry, so mixing the two in one
+    # PR would hold the dev updates back.
+    groups:
+      npm-development:
+        applies-to: version-updates
+        dependency-type: development
+      npm-production:
+        applies-to: version-updates
+        dependency-type: production
     ignore:
       # commander 15+ is ESM-only (no CommonJS "require" export) and requires
       # Node >=22.12. This package ships as a CommonJS CLI + require()-able
@@ -19,6 +37,15 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+    # One PR per week for all action pins: each one changes a workflow file and
+    # needs a handoff entry, so one grouped PR means one entry.
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
   # Keeps the digest-pinned node:24-alpine base image in the Dockerfile fresh:
   # the FROM lines pin by sha256 digest, so security updates only arrive via
   # these deliberate weekly bump PRs.

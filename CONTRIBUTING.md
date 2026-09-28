@@ -315,8 +315,10 @@ Two things about this surprise people:
 - **A code change must bring its handoff state with it.** `aahp-verify` enforces a
   content-drift gate: if code changed, `.ai/handoff/STATUS.md` and `MANIFEST.json`
   must change too. Add a short entry to STATUS.md describing what you did and why,
-  then run `npm run handoff:refresh` and commit the result. Only dependabot is
-  exempt.
+  then run `npm run handoff:refresh` and commit the result. This applies to
+  Dependabot pull requests too: the gate has no actor exemption, so a dependency
+  bump lands through a branch that carries the handoff entry (see the comments
+  in `aahp-verify.yml`).
 
 You can also validate the published artifact locally, exactly as CI does:
 
