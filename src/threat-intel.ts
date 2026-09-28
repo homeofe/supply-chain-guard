@@ -37,7 +37,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-09-26T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-09-27T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -10012,6 +10012,22 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "package", value: "@digift/cli@99.99.100", severity: "critical", confidence: 1.0, source: "GHSA-2394-2grm-2336, MAL-2026-17187 (ossf-package-analysis)", firstSeen: "2026-09-25" },
   { type: "package", value: "@digift/cli@99.99.99", severity: "critical", confidence: 0.9, source: "npm registry: published by the account behind GHSA-2394-2grm-2336 in the same minute as 99.99.100, since unpublished; the advisory lists 99.99.100 only", firstSeen: "2026-09-25" },
   { type: "package", value: "@nubjs/types@0.9.4", severity: "critical", confidence: 0.9, source: "GHSA-7qx8-98q7-66p4, MAL-2026-17186 (ghsa-malware)", firstSeen: "2026-09-25" },
+
+  // Imported from GitHub Advisory Database (2026-09-13) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:donutautosellsrc@0.3.7", severity: "critical", confidence: 1.0, source: "GHSA-2w77-qp99-3jvq, MAL-2026-17192 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:donutautosellsrc@0.3.8", severity: "critical", confidence: 1.0, source: "GHSA-2w77-qp99-3jvq, MAL-2026-17192 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:donutautosellsrc@0.3.9", severity: "critical", confidence: 1.0, source: "GHSA-2w77-qp99-3jvq, MAL-2026-17192 (kam193)", firstSeen: "2026-09-27" },
+  { type: "package", value: "pypi:requests-cache-utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-mc8h-7wqw-2mcf, MAL-2026-17191 (kam193)", firstSeen: "2026-09-26" },
+  { type: "package", value: "cma-self-hosted-sandbox-cf@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wjmh-pc3x-575f, MAL-2026-17190 (amazon-inspector)", firstSeen: "2026-09-26" },
+  { type: "package", value: "chai-as-relay@1.2.1", severity: "critical", confidence: 1.0, source: "GHSA-mq79-xj84-m775, MAL-2026-17189 (amazon-inspector)", firstSeen: "2026-09-26" },
+  { type: "package", value: "@alphaspace/core@99.0.3", severity: "critical", confidence: 1.0, source: "GHSA-5qqj-qfpp-jfqw, MAL-2026-17169 (amazon-inspector)", firstSeen: "2026-09-25" },
+
+  // Atomic indicators from the per-source analyses of the advisories above (OSV).
+  { type: "domain", value: "thisisafalsepositive.st", severity: "critical", confidence: 0.85, campaign: "donutautosellsrc PyPI infostealer", source: "MAL-2026-17192 (kam193, single-source)", firstSeen: "2026-09-27" },
+  { type: "domain", value: "sltnnt.ru", severity: "critical", confidence: 0.85, campaign: "donutautosellsrc PyPI infostealer", source: "MAL-2026-17192 (kam193, single-source)", firstSeen: "2026-09-27" },
+  { type: "ip", value: "104.234.65.75", severity: "critical", confidence: 0.85, campaign: "requests-cache-utils PyPI infostealer", source: "MAL-2026-17191 (kam193, single-source)", firstSeen: "2026-09-26" },
+  { type: "domain", value: "49bl3t5yt786ymbtth24nnlbs2ytmka9.oastify.com", severity: "critical", confidence: 0.9, campaign: "cma-self-hosted-sandbox-cf install-time recon", source: "MAL-2026-17190 (amazon-inspector)", firstSeen: "2026-09-26" },
+  { type: "domain", value: "f5778d1d81cc30c39dcdd0da5ca1d49a.m.pipedream.net", severity: "critical", confidence: 0.9, campaign: "@alphaspace/core install-time recon", source: "MAL-2026-17169 (amazon-inspector)", firstSeen: "2026-09-25" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

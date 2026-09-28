@@ -7376,4 +7376,57 @@ describe("Campaign Signatures", () => {
       }
     });
   });
+
+  // =================================================================
+  // Install-time infostealers and recon collectors (September 2026)
+  // =================================================================
+
+  // Atomic indicators from the OSV per-source analyses of MAL-2026-17169,
+  // MAL-2026-17190, MAL-2026-17191 and MAL-2026-17192. The package pins
+  // come from the importer; these are the hosts the code talks to.
+  describe("OSV-published install-time collectors (September 2026)", () => {
+    it("should detect the donutautosellsrc exfiltration domain", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "c2.py"),
+        'C2 = "https://sltnnt.ru/api"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("should detect the requests-cache-utils payload host", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "setup.py"),
+        'URL = "http://104.234.65.75:700/setup.exe"'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_IP"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("keeps every indicator in the bundle", () => {
+      const feed = getBundledFeed();
+      const values = [
+        "thisisafalsepositive.st",
+        "sltnnt.ru",
+        "104.234.65.75",
+        "49bl3t5yt786ymbtth24nnlbs2ytmka9.oastify.com",
+        "f5778d1d81cc30c39dcdd0da5ca1d49a.m.pipedream.net",
+      ];
+      for (const value of values) {
+        const ioc = feed.find((i) => i.value === value);
+        expect(ioc, `${value} must be bundled`).toBeDefined();
+        expect(ioc?.campaign, `${value} must carry a campaign`).toBeTruthy();
+      }
+    });
+  });
 });

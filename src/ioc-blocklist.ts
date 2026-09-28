@@ -516,6 +516,17 @@ export const KNOWN_C2_DOMAINS: string[] = [
   "c747d139e7e9.skyleen.fr",
   "73376a079d87.skyleen.fr",
   "d4f77a3a8cb0.skyleen.fr",
+  // donutautosellsrc PyPI infostealer (September 2026). Hosts of the
+  // steganographic payload image and the exfiltration C2, from the kam193
+  // analysis in MAL-2026-17192. Single-source.
+  "thisisafalsepositive.st",
+  "sltnnt.ru",
+  // Install-time recon collectors hardcoded in two npm packages (September
+  // 2026), from the amazon-inspector analyses in MAL-2026-17190 and
+  // MAL-2026-17169. Only the per-attacker subdomains are listed, never the
+  // shared OAST / webhook apex.
+  "49bl3t5yt786ymbtth24nnlbs2ytmka9.oastify.com",
+  "f5778d1d81cc30c39dcdd0da5ca1d49a.m.pipedream.net",
 ];
 
 // ---------------------------------------------------------------------------
@@ -771,6 +782,10 @@ export const KNOWN_C2_IPS: string[] = [
   "85.137.56.10",
   // MemTensor sckit Go worm (September 2026). Single-source (Aikido).
   "139.84.223.178",
+  // requests-cache-utils PyPI infostealer (September 2026). Serves the
+  // second-stage executable on port 700 (kam193, MAL-2026-17191).
+  // Single-source.
+  "104.234.65.75",
 ];
 
 // ---------------------------------------------------------------------------

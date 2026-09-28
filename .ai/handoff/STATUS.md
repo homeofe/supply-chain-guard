@@ -1,3 +1,37 @@
+## Daily threat-intel import (2026-09-27) (claude-opus-5-5)
+
+The importer (window from 2026-09-13, 311 advisory pages, not page-capped)
+added 7 package IOCs, 7 to the bundle and 0 to the catalog:
+`pypi:donutautosellsrc` 0.3.7, 0.3.8 and 0.3.9 (GHSA-2w77-qp99-3jvq),
+`pypi:requests-cache-utils` 1.0.0 (GHSA-mc8h-7wqw-2mcf),
+`cma-self-hosted-sandbox-cf` 1.0.0 (GHSA-wjmh-pc3x-575f), `chai-as-relay`
+1.2.1 (GHSA-mq79-xj84-m775) and `@alphaspace/core` 99.0.3
+(GHSA-5qqj-qfpp-jfqw; 99.0.0 to 99.0.2 were already bundled). All are version
+pins. Registry check: each npm name has exactly the pinned version in its
+`time` map (`cma-self-hosted-sandbox-cf` unpublished, `@alphaspace/core` gone,
+`chai-as-relay` still live with that single version), and both PyPI projects
+return 404. 62 advisories stayed unmappable (bounded version ranges), as on
+earlier runs. No `catalogWindows` entry, no decline entry.
+
+Five atomic indicators were added by hand from the OSV per-source analyses of
+those advisories, each with a `campaign` so they stay bundled:
+`thisisafalsepositive[.]st` (steganographic payload host) and `sltnnt[.]ru`
+(exfiltration C2) for donutautosellsrc (kam193, single-source, 0.85);
+`104[.]234[.]65[.]75` (second-stage host on port 700) for
+requests-cache-utils (kam193, single-source, 0.85); and the per-attacker
+recon collectors `49bl3t5yt786ymbtth24nnlbs2ytmka9[.]oastify[.]com`
+(cma-self-hosted-sandbox-cf) and
+`f5778d1d81cc30c39dcdd0da5ca1d49a[.]m[.]pipedream[.]net` (@alphaspace/core),
+amazon-inspector, 0.9. Only the subdomains, never the shared apex. Vendor
+write-ups since the last run (Socket, StepSecurity, Aikido: MemTensor sckit,
+Graphalgo, the supplychain[.]local Go worm, PolinRider) were already covered.
+
+Observation, not acted on: the engine has no rule for the OAST and webhook
+collector apexes (`oastify[.]com`, `m[.]pipedream[.]net`) themselves, which
+dependency-confusion recon packages use constantly. A generic rule would be a
+scanner change with false-positive risk (legitimate webhook use), so it is an
+owner decision, not daily intel.
+
 ## v6.3.1: a deploy key used to log in is not egress (2026-09-26) (claude-opus-5-5)
 
 **6.3.0 reported every push-to-deploy workflow whose only secret is its SSH

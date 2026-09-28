@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory
+  Database, corroborated by OpenSSF, all in the offline bundle:
+  `pypi:donutautosellsrc` 0.3.7 to 0.3.9, `pypi:requests-cache-utils` 1.0.0,
+  `cma-self-hosted-sandbox-cf` 1.0.0, `chai-as-relay` 1.2.1 and
+  `@alphaspace/core` 99.0.3. Five atomic indicators from the OSV per-source
+  analyses of those advisories, also bundled: the donutautosellsrc payload
+  and exfiltration domains `thisisafalsepositive[.]st` and `sltnnt[.]ru`, the
+  requests-cache-utils payload host `104[.]234[.]65[.]75`, and the two
+  per-attacker install-time recon collectors on `oastify[.]com` and
+  `m[.]pipedream[.]net` (only those subdomains, never the shared apex).
+
 ## [6.3.1] - 2026-09-26
 
 ### Added
