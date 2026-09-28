@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.3.2] - 2026-09-28
+
 ### Added
 
 - Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory
@@ -35,6 +37,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   that zone, never the apex). `thisisafalsepositive[.]st` now has a second
   source (amazon-inspector, as the payload host of claudedashbord and
   coinscan) and its confidence rises from 0.85 to 0.95.
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-27 to 2026-08-29, moving 1029
+  package indicators dated 2026-08-27 and 2026-08-28 from the bundle into the
+  catalog. None of them is asserted by a test or named in the README or docs,
+  and none carries a campaign or family. They stay enforced after
+  `feed refresh`. 468 entries of those two days stay bundled under a curated
+  block, because the campaign tests assert them offline: the Douqiu
+  `@hd-team` names, the `pypi:flyteplugins-*` routing entries, the
+  `@fleetbo/svro` and `@7nohe/openapi-react-query-codegen` version pins, four
+  registry-probed bare names, and the 407 `3layerdipstack` names the anchored
+  rule is measured against.
 
 ### Fixed
 
@@ -6719,7 +6734,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.1...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.2...HEAD
+[6.3.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.2
 [6.3.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.1
 [6.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.0
 [6.2.5]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.2.5

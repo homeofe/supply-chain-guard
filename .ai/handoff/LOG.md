@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-09-28] v6.3.2
+
+Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory Database, corroborated by OpenSSF, all in the offline bundle: pypi:donutautosellsrc 0.3.7 to 0.3.9, pypi:requests-cache-utils...
+
+Full notes: CHANGELOG.md, section [6.3.2].
+
+---
+
 ## [2026-09-26] v6.3.1
 
 Threat intel (2026-09-26): five package IOCs, all in the offline bundle. Four come from the GitHub Advisory Database, corroborated by OpenSSF: pypi:sherpy 0.1.0 and 0.1.1, @digift/cli 99.99.100...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.2.0].
 Threat-intelligence batch for 2026-09-16: 71 new package IOCs from the advisory databases and 50 indicators added by hand from primary vendor write-ups, covering two previously uncovered campaigns.
 
 Full notes: CHANGELOG.md, section [6.1.3].
-
----
-
-## [2026-09-15] v6.1.2
-
-Threat-intelligence batch for 2026-09-15: 54 new package IOCs from the advisory databases and 7 atomic indicators added by hand, covering five campaigns.
-
-Full notes: CHANGELOG.md, section [6.1.2].
