@@ -7,6 +7,26 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.3.3] - 2026-09-29
+
+### Changed
+
+- The bundle cutoff advanced from 2026-08-29 to 2026-08-30, moving 145
+  package indicators dated 2026-08-29 from the bundle into the catalog. None
+  of them is asserted by a test or named in the README or docs, and none
+  carries a campaign or family. They stay enforced after `feed refresh`.
+- The development dependency `fast-uri` moved from 3.1.6 to 3.1.8 for
+  GHSA-qw65-cvwx-89v3 and GHSA-58mr-gqgx-xq4g. It reaches the tree only
+  through `ajv`, a development dependency, so the published package never
+  carried it.
+
+### Fixed
+
+- The 6.3.2 entry below keeps its `(JSON Schema 2020-12, 10.3.2.3)` citation
+  on one line. Wrapped across two lines, it was reported as
+  `INTERNAL_PRIVATE_IP` by this project's own scan, because the
+  specification-citation guard reads only the line holding the number.
+
 ### Added
 - Threat intel (2026-09-29): 58 package IOCs from the GitHub Advisory
   Database and OpenSSF, 51 in the offline bundle and 7 in the catalog. 26 npm
@@ -6759,7 +6779,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.3...HEAD
+[6.3.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.3
 [6.3.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.2
 [6.3.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.1
 [6.3.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.0

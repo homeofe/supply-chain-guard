@@ -1,3 +1,23 @@
+## Release v6.3.3 (2026-09-29) (claude-opus-5-5)
+
+Release preparation on top of PRs 359 and 360. Version bumped at all 17
+configured version sites (35 occurrences, each file's count checked against
+the lines the 6.3.2 release changed, so no README CIDR was touched) plus
+`package.json` and the lockfile; `bundledVersion` in `src/threat-intel.ts`
+bumped by hand, as it is not gated.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-08-29 to
+2026-08-30, and `planMigration` moved 145 package entries of 2026-08-29 to the
+catalog. Before applying, each moved value (and its bare name) was searched in
+every test file, the README and `docs/`: zero hits, with the control
+`@hd-team` found by the same search, so the zero is not a broken query. None
+carries a campaign or family. Unlike the last four releases, no curation was
+needed.
+
+`fast-uri` 3.1.8 (PR 359) is development-only (through `ajv`); the published
+package never contained it. Code-scanning alert 76 is fixed by the CHANGELOG
+rewrap in PR 360 and should close on the first scan of `main` that includes it.
+
 ## Daily threat-intel import (2026-09-29) (claude-opus-5-5)
 
 The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no

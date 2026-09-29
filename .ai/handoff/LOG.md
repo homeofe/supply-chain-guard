@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-09-29] v6.3.3
+
+The bundle cutoff advanced from 2026-08-29 to 2026-08-30, moving 145 package indicators dated 2026-08-29 from the bundle into the catalog. None of them is asserted by a test or named in the README...
+
+Full notes: CHANGELOG.md, section [6.3.3].
+
+---
+
 ## [2026-09-28] v6.3.2
 
 Threat intel (2026-09-27): seven package IOCs from the GitHub Advisory Database, corroborated by OpenSSF, all in the offline bundle: pypi:donutautosellsrc 0.3.7 to 0.3.9, pypi:requests-cache-utils...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.2.1].
 The threat feed is now split into a compiled-in bundle and a downloadable, version-pinned catalog. Catalog indexes and gzip shards are authenticated against a digest anchored in the installed...
 
 Full notes: CHANGELOG.md, section [6.2.0].
-
----
-
-## [2026-09-16] v6.1.3
-
-Threat-intelligence batch for 2026-09-16: 71 new package IOCs from the advisory databases and 50 indicators added by hand from primary vendor write-ups, covering two previously uncovered campaigns.
-
-Full notes: CHANGELOG.md, section [6.1.3].

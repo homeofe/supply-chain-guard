@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790681342",
-    "timestamp": "2026-09-29T11:29:02Z",
-    "commit": "33ec487",
+    "session_id": "cli-1790682913",
+    "timestamp": "2026-09-29T11:55:13Z",
+    "commit": "938404a",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:62a250c29b9ebc4eb1d9d1e89175346e62c18f4936ddc89292fa295f103fbc9b",
-      "updated": "2026-09-29T11:28:46Z",
-      "lines": 12942,
-      "summary": "The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no `--limit`, nothing left waiting) added 58 package IOCs, 51 to the..."
+      "checksum": "sha256:9557321c15c3c7cbb75e07957d87c49ae19f3b2187edf515527c5824d7b4ead4",
+      "updated": "2026-09-29T11:54:49Z",
+      "lines": 12962,
+      "summary": "Release preparation on top of PRs 359 and 360."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:27be0e11182fc01e6e89fecb96e3165671cb3c44aa4a6d246a7b8a60d7ae24bf",
-      "updated": "2026-09-28T11:12:15Z",
+      "checksum": "sha256:9f7ab1eda5802c931b785b8b028b632bbbe35dc81c05b80250fddfd772d9885d",
+      "updated": "2026-09-29T11:53:40Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:2902b806206dce4ef3a646c3f4e7d082142ac1f8050826e33b59d1aa42eb7286",
-      "updated": "2026-09-28T11:12:19Z",
+      "checksum": "sha256:45c815740cb9e528ed1953b84aa2b23f0bad6c18fac3e058dec13d87e6760245",
+      "updated": "2026-09-29T11:55:12Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-09-28] v6.3.2"
+      "summary": "Latest entry: [2026-09-29] v6.3.3"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:38fef0271912ad8d759379fb5ca157ab919a2a9fa95a9175539b98a658e50dea",
-      "updated": "2026-09-28T11:12:19Z",
+      "checksum": "sha256:4121f7e4cff623af336bcfe67f29c61f38055f411484505d62dd0a38929a28bc",
+      "updated": "2026-09-29T11:55:12Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:e546b59ae25bc3ddcff9c9552c5d7387cd04661a25075b7944537f606d9a1e1d",
-      "updated": "2026-09-28T11:12:19Z",
+      "checksum": "sha256:379a83fa9ed174fc26189d537c42ac967e15109707b1c2d64bd614b94ca8d25c",
+      "updated": "2026-09-29T11:55:12Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no `--limit`, nothing left waiting) added 58 package IOCs, 51 to the... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Release preparation on top of PRs 359 and 360. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 932,
-    "manifest_plus_core": 192910,
-    "full_read": 206601
+    "manifest_only": 882,
+    "manifest_plus_core": 193130,
+    "full_read": 206821
   }
 }
