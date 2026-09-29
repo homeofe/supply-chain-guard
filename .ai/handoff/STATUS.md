@@ -1,3 +1,32 @@
+## Daily threat-intel import (2026-09-29) (claude-opus-5-5)
+
+The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no
+`--limit`, nothing left waiting) added 58 package IOCs, 51 to the bundle and 7
+to the catalog. 26 are bare npm names, each probed against the registry and
+each already a `security holding package` (single `0.0.1-security` version,
+all created by npm on 2026-09-28). Seven of them went to the catalog because
+their `firstSeen` is before `bundleCutoffDate` 2026-08-29 although the
+advisory only appeared now: `hardhat-cap` (2026-08-07), `chaikit` and `o0o9`
+(2026-08-19), `swiper_angular` (2026-07-25), and
+`capacitor-plugin-service-worker`, `seek-pass` and `api-typings`
+(2026-05-04). A scan without `feed refresh` does not see those seven names.
+Left to the policy, not curated into the bundle, as on 2026-09-28. The other
+32 are version pins (hardhat, native-loader and Nebula LLM SDK lures,
+`my-skibidi` 1.0.0 to 1.1.6, two dependency-confusion probes, and
+`pypi:aseitylab` 0.1.0/0.1.1 and `pypi:azure-langchain-example` 0.1.0, both
+carrying their `pypi:` prefix from the importer). 15 advisories stayed
+unmappable (bounded version ranges). No `catalogWindows` entry, no decline
+entry, nothing declined.
+
+No atomic indicator added by hand. The vendor write-ups found since the last
+run (the MemTensor sckit worm, JFrog on `@7nohe/openapi-react-query-codegen`,
+Mandiant's AI-assistant session hijack case study) are already covered or
+publish no host, IP, hash or account indicators.
+
+D-062 bookkeeping: unchanged. PR 326 is merged and contained in v6.3.0, the
+queue lines and the STATUS line below already record it; d5, d7 and d9 stay
+out of that release and advisory GHSA-pvhm-wc2r-q627 stays a draft.
+
 ## Release v6.3.2 (2026-09-28) (claude-opus-5-5)
 
 Release preparation on top of PRs 352 to 357. Version bumped at all 17

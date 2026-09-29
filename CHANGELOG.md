@@ -7,6 +7,31 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+- Threat intel (2026-09-29): 58 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 51 in the offline bundle and 7 in the catalog. 26 npm
+  names are blocked outright, each already a security holding package on the
+  registry: `@digift/cli`, `@wbnr/design-kit`, `@wbnr/lottiefiles-loader`,
+  `wbnr-probe-visible-check`, `img-to-native`, `native-runner`,
+  `nebulajs-api`, `nebula-sdk`, `vite-plugin-crypto`,
+  `tailwindcss-form-kit`, `kalasnik-npm-simple-test`, `kjj81`, `uuid-date`,
+  `riot-private`, `ultra-ws`, `discord-mfa-solver`, `vinzzsync-wacli`,
+  `open-item-validator` and `tanksync` (bundle), and `hardhat-cap`,
+  `chaikit`, `o0o9`, `capacitor-plugin-service-worker`, `swiper_angular`,
+  `seek-pass` and `api-typings` (catalog, first seen before the bundle
+  cutoff). The rest are version pins: the hardhat and native-loader lures
+  `hardhat-lock` 2.21.0, `mini-hardhat` 1.1.4, `hardhat-zet` 2.0.1,
+  `native-env` 1.0.1, `dotenv-native` 1.0.1, `fabric-native-loader` 1.0.0,
+  `fabric-render-bridge` 1.0.0, `fabric-asset-pipeline` 1.0.0 and 1.0.1,
+  `rai6jaisahthaghee5ou-loader-package` 1.0.0; the Nebula LLM SDK lures
+  `llm-nebula`, `nebula-llm` and `nebulaai-sdk` 1.0.0; `chalk-figlet` 1.2.0,
+  `figlet-chalk-render` 1.2.1, `items-validator` 1.0.5,
+  `test-agency-assignment` 1.0.2, `simple-date-formatter-new-12` 1.0.0,
+  nine versions of `my-skibidi` (1.0.0 to 1.1.6), the dependency-confusion
+  probes `git-en-boite-logging` 0.0.0 and `eslint-plugin-skywagon-web`
+  100.0.0, and `pypi:aseitylab` 0.1.0 and 0.1.1 and
+  `pypi:azure-langchain-example` 0.1.0.
+
 ## [6.3.2] - 2026-09-28
 
 ### Added
