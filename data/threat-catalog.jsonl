@@ -87913,3 +87913,10 @@
 {"type":"package","value":"isite@2025.7.1","severity":"critical","confidence":1,"source":"GHSA-hmvc-prpq-wwcr, MAL-2026-10735","firstSeen":"2026-08-27"}
 {"type":"package","value":"@cortana-md/engine","severity":"critical","confidence":0.9,"source":"GHSA-2569-5468-g975, MAL-2026-14553 (ghsa-malware)","firstSeen":"2026-08-27"}
 {"type":"package","value":"pypi:calcboxlite@1.0","severity":"critical","confidence":0.9,"source":"MAL-2026-15488 (amazon-inspector)","firstSeen":"2026-08-28"}
+{"type":"package","value":"hardhat-cap","severity":"critical","confidence":1,"source":"GHSA-3jrx-49jf-x2rp, MAL-2026-13616 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-07"}
+{"type":"package","value":"chaikit","severity":"critical","confidence":1,"source":"GHSA-6c2m-985r-wrwm, MAL-2026-14201 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"o0o9","severity":"critical","confidence":1,"source":"GHSA-5f5h-pg84-39h4, MAL-2026-14277 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"capacitor-plugin-service-worker","severity":"critical","confidence":1,"source":"GHSA-qg5c-9jmq-fpmf, MAL-2026-3327 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-04"}
+{"type":"package","value":"swiper_angular","severity":"critical","confidence":1,"source":"GHSA-r6m9-x8fm-wq5c, MAL-2026-11065 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-07-25"}
+{"type":"package","value":"seek-pass","severity":"critical","confidence":1,"source":"GHSA-q39g-5xh5-89h3, MAL-2026-3330 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-04"}
+{"type":"package","value":"api-typings","severity":"critical","confidence":1,"source":"GHSA-gjx9-hrcc-f6qj, MAL-2026-3329 (amazon-inspector+ghsa-malware+ossf-package-analysis)","firstSeen":"2026-05-04"}
