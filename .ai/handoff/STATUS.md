@@ -23,6 +23,15 @@ run (the MemTensor sckit worm, JFrog on `@7nohe/openapi-react-query-codegen`,
 Mandiant's AI-assistant session hijack case study) are already covered or
 publish no host, IP, hash or account indicators.
 
+Also in this PR: code-scanning alert 76 (`INTERNAL_PRIVATE_IP`,
+`CHANGELOG.md` line 58 on main) is the scanner flagging its own 6.3.2 entry.
+The cited `(JSON Schema 2020-12, 10.3.2.3)` was wrapped across two lines, and
+`followsSpecCitation` only looks for the specification on the number's own
+line. The entry is rewrapped so the citation sits on one line; measured with
+the built CLI, the original lines give 1 finding and the rewrapped ones 0.
+Open observation, not changed here: the same wrap in any consumer's prose or
+comment still reports, because the guard is line-bound by design.
+
 D-062 bookkeeping: unchanged. PR 326 is merged and contained in v6.3.0, the
 queue lines and the STATUS line below already record it; d5, d7 and d9 stay
 out of that release and advisory GHSA-pvhm-wc2r-q627 stays a draft.

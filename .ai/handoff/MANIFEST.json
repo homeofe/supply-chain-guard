@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790681006",
-    "timestamp": "2026-09-29T11:23:26Z",
-    "commit": "9416d7d",
+    "session_id": "cli-1790681342",
+    "timestamp": "2026-09-29T11:29:02Z",
+    "commit": "33ec487",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:87ebd6bdcc93b50c384c3c5c219570f29053dfb64f7f8ca58c549a60acf8bc18",
-      "updated": "2026-09-29T11:23:17Z",
-      "lines": 12933,
+      "checksum": "sha256:62a250c29b9ebc4eb1d9d1e89175346e62c18f4936ddc89292fa295f103fbc9b",
+      "updated": "2026-09-29T11:28:46Z",
+      "lines": 12942,
       "summary": "The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no `--limit`, nothing left waiting) added 58 package IOCs, 51 to the..."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "The importer (window from 2026-09-15, 121 advisory pages, not page-capped, no `--limit`, nothing left waiting) added 58 package IOCs, 51 to the... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 932,
-    "manifest_plus_core": 192762,
-    "full_read": 206453
+    "manifest_plus_core": 192910,
+    "full_read": 206601
   }
 }
