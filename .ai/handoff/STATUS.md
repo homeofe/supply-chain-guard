@@ -1,3 +1,17 @@
+## Dependabot entry for the publish toolchain (2026-09-30) (claude-opus-5-5)
+
+Dependabot ran security updates for `undici`, `brace-expansion` and
+`ip-address` in `/.github/publish-toolchain` on every push to `main` since
+2026-09-29 and each ended `security_update_not_possible`: those packages ship
+inside npm's own tarball, so only a new npm release can move them. The
+directory had no entry in `.github/dependabot.yml`. It now has one that allows
+the `npm` pin alone (weekly, 7-day cooldown, one PR at a time). GitHub's
+documentation states that `allow` and `ignore` apply to security updates as
+well; whether the failing jobs stop is confirmed by the first Dependabot run on
+`main` after the merge, not by this PR's CI. A new test in
+`npm-install-pinning.test.ts` pins the entry: removing `allow`, widening it,
+or moving the directory each go red; a comment stays green.
+
 ## Risk-trend window, self-scan policy, publish-toolchain audit (2026-09-30) (claude-opus-5-5)
 
 **Risk-trend rules.** `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING`

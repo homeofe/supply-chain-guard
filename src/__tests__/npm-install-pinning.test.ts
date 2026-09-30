@@ -192,6 +192,22 @@ describe("the publish job's npm", () => {
     expect(preflightLevel).toEqual(compatLevel);
   });
 
+  it("is maintained by Dependabot as the pin only, never as its bundled packages", () => {
+    // A security update of a package npm bundles is not possible (npm ships it
+    // inside its own tarball) and failed on every push to main. The entry for
+    // the toolchain directory must allow the pin alone.
+    const config = read(".github/dependabot.yml")
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*#/.test(line))
+      .join("\n");
+    const entries = config.split(/\n {2}- package-ecosystem: /).slice(1);
+    const toolchain = entries.filter((e) => /\n {4}directory: "\/\.github\/publish-toolchain"\n/.test(e));
+    expect(toolchain).toHaveLength(1);
+    expect(toolchain[0]).toMatch(/^"npm"\n/);
+    const allow = toolchain[0].match(/\n {4}allow:\n((?: {6}.*\n?)+)/);
+    expect(allow?.[1].trim().split("\n").map((l) => l.trim())).toEqual(['- dependency-name: "npm"']);
+  });
+
   it("gates the required aggregator", () => {
     expect(job("build")).toMatch(/needs: \[[^\]]*publish-preflight[^\]]*\]/);
     expect(job("build")).toContain("PREFLIGHT_RESULT");

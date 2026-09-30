@@ -33,6 +33,24 @@ updates:
       # line until a deliberate ESM migration. See PR #39.
       - dependency-name: "commander"
         versions: [">=15"]
+  # The pinned npm that publishes this package (.github/publish-toolchain).
+  # npm ships its own dependencies bundled inside its tarball, so an advisory
+  # against one of them can only be resolved by a new npm release: a security
+  # update of a bundled package is not possible and only fails. Only the pin
+  # itself is maintained here; the preflight audits the bundled packages
+  # (scripts/audit-publish-toolchain.mjs).
+  - package-ecosystem: "npm"
+    directory: "/.github/publish-toolchain"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-name: "npm"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
