@@ -43,9 +43,23 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   in `.github/dependabot.yml`, allowing the pin alone. Security updates of
   the packages npm bundles are not possible, since they ship inside npm's own
   tarball; they are covered by the preflight audit instead.
+- The threat-feed and catalog cache now lives in one directory per user
+  instead of `.scg-cache` under the working directory: `--cache-dir`, then
+  `SCG_CACHE_DIR`, then `%LOCALAPPDATA%\supply-chain-guard\cache` (Windows),
+  `~/Library/Caches/supply-chain-guard` (macOS) or
+  `$XDG_CACHE_HOME/supply-chain-guard` / `~/.cache/supply-chain-guard`. One
+  `feed refresh` now serves scans started from any directory, the MCP server
+  included. A `.scg-cache` left in the working directory is no longer read;
+  the catalog finding names it, and `--cache-dir .scg-cache` keeps using it.
+  Reports show a cache under the home directory as `~/...`. The Docker image
+  keeps the cache in the container user's home; the README shows the volume
+  that preserves it across runs.
 
 ### Fixed
 
+- A scan started inside a checkout no longer reads a threat-feed or catalog
+  cache that the checkout carries in `.scg-cache`. The GitHub Action already
+  isolated its cache for this reason; the CLI and the MCP server now do too.
 - The risk-trend rules now include the current scan in their window. A
   project whose score had just dropped to 0 was still reported with
   `RISK_STAGNATION_HIGH`, `RISK_TREND_INCREASING` or

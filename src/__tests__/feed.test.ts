@@ -392,6 +392,27 @@ describe("decodeCatalogBody", () => {
 // ---------------------------------------------------------------------------
 
 describe("refreshFeed", () => {
+  it("writes to the default cache directory that a scan without --cache-dir reads", async () => {
+    // The case that used to fail: "feed refresh" run in one directory, the
+    // scan started from another. Neither names a directory, so both resolve
+    // the default, which no longer depends on the working directory.
+    const before = process.env.SCG_CACHE_DIR;
+    process.env.SCG_CACHE_DIR = tmpDir;
+    try {
+      mockHttpResponse(200, [
+        JSON.stringify({ schema: 1, package: "supply-chain-guard", version: "9.9.9", entryCount: 1, entries: [EXTRA_DOMAIN_IOC] }),
+      ]);
+      const result = await refreshFeed("https://feed.invalid/feed.json");
+      expect(result.cachePath).toBe(path.join(tmpDir, FEED_CACHE_FILE));
+      resetThreatIntelCache();
+      expect(loadThreatIntel().some((ioc) => ioc.value === EXTRA_DOMAIN)).toBe(true);
+    } finally {
+      if (before === undefined) delete process.env.SCG_CACHE_DIR;
+      else process.env.SCG_CACHE_DIR = before;
+      resetThreatIntelCache();
+    }
+  });
+
   it("downloads the published feed and writes the cache loadThreatIntel reads", async () => {
     const body = JSON.stringify({
       schema: 1,

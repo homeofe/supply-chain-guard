@@ -6,7 +6,9 @@ import { createHash } from "node:crypto";
 import { scan } from "../scanner.js";
 import {
   CATALOG_CACHE_FILE,
+  FEED_CACHE_FILE,
   lastCatalogState,
+  loadThreatIntel,
   resetThreatIntelCache,
 } from "../threat-intel.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
@@ -174,6 +176,37 @@ describe("Core Scanner", () => {
       process.chdir(previous);
       resetThreatIntelCache();
       fs.rmSync(isolated, { recursive: true, force: true });
+    }
+  });
+
+  // The CLI default used to be `.scg-cache` under the working directory, so a
+  // scan started inside a checkout read whatever cache that checkout carried,
+  // the same target-controlled input the Action already isolates. The default
+  // is now the per-user cache (SCG_CACHE_DIR in this suite), and a cache left
+  // in the working directory is named in the finding instead of being read.
+  it("does not read a cache from the working directory by default, and says so", async () => {
+    const plantedDomain = "planted-cwd-cache.example";
+    fs.mkdirSync(path.join(tempDir, ".scg-cache"));
+    fs.writeFileSync(
+      path.join(tempDir, ".scg-cache", FEED_CACHE_FILE),
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        entries: [{ type: "domain", value: plantedDomain, severity: "critical", confidence: 1 }],
+      }),
+    );
+    fs.writeFileSync(path.join(tempDir, ".supply-chain-guard.yml"), "catalog: required\n");
+
+    const previous = process.cwd();
+    process.chdir(tempDir);
+    try {
+      resetThreatIntelCache();
+      expect(loadThreatIntel().some((ioc) => ioc.value === plantedDomain)).toBe(false);
+      const report = await scan({ target: ".", format: "json", noHistory: true });
+      const finding = report.findings.find((f) => f.rule === "THREAT_FEED_CATALOG_MISSING");
+      expect(finding?.description).toMatch(/\.scg-cache directory in the working directory was not read/);
+    } finally {
+      process.chdir(previous);
+      resetThreatIntelCache();
     }
   });
 

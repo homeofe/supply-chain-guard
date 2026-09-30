@@ -30,8 +30,8 @@ import { createHash } from "node:crypto";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
 import { CATALOG_DIGEST } from "./catalog-digest.js";
+import { resolveCacheDir } from "./cache-dir.js";
 import {
-  CACHE_DIR,
   FEED_CACHE_FILE,
   CATALOG_CACHE_FILE,
   FEED_REMOTE_LIMITS,
@@ -369,6 +369,7 @@ export function catalogSeverityFor(
 export function catalogFindings(
   state: CatalogState,
   mode: "optional" | "required" = "optional",
+  context: { legacyCacheInWorkingDir?: boolean } = {},
 ): Finding[] {
   if (state.available) return [];
 
@@ -383,6 +384,13 @@ export function catalogFindings(
 
   const reason = state.reason ?? "absent";
   const built = state.cachedVersion ? ` (it was built for ${state.cachedVersion})` : "";
+  // A cache in the working directory is the former default location. It is
+  // no longer read unless named, so say where the catalog is looked for now.
+  const legacy = context.legacyCacheInWorkingDir
+    ? " A .scg-cache directory in the working directory was not read: the cache " +
+      "now lives in one directory per user, so one refresh serves scans from any " +
+      "directory. Run the refresh once, or pass --cache-dir .scg-cache to keep using it."
+    : "";
 
   return [
     {
@@ -391,7 +399,8 @@ export function catalogFindings(
         `${missing} historical indicators were not consulted by this scan, because ` +
         `${CATALOG_REASON_TEXT[reason]}${built}. Those indicators are published ` +
         `separately from the package and are downloaded on demand, so this scan ` +
-        `matched against the bundled set alone and no other part of the result says so.`,
+        `matched against the bundled set alone and no other part of the result says so.` +
+        legacy,
       severity: catalogSeverityFor(reason, mode),
       confidence: 1.0,
       category: "trust",
@@ -704,10 +713,11 @@ async function installCatalog(
 
 export async function refreshFeed(
   feedUrl: string = DEFAULT_FEED_URL,
-  cacheDir: string = CACHE_DIR,
+  cacheDirOption?: string,
   limitOverrides: FeedLimitOverrides = {},
 ): Promise<RefreshResult> {
   const limits: RemoteRequestLimits = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
+  const cacheDir = resolveCacheDir(cacheDirOption);
   try {
     const body = await httpsGetBody(feedUrl, limits);
     const entries = parseFeedPayload(body);

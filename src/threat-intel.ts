@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 
 import { CATALOG_DIGEST } from "./catalog-digest.js";
+import { displayCachePath, resolveCacheDir } from "./cache-dir.js";
 import type { Finding, ThreatIntelSource, DetectionSetProvenance } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -9076,8 +9077,10 @@ const BUNDLED_FEED: FeedIOC[] = [
   ...FEED_CHUNK_21,
 ];
 
-// Exported so the feed channel (feed.ts: "feed refresh") writes its download
-// to the exact location loadThreatIntel() reads from.
+// The former default cache directory, relative to the working directory. The
+// default is now per user (src/cache-dir.ts, resolveCacheDir), which "feed
+// refresh" and loadThreatIntel() both call so they agree on the location.
+// Kept exported for API compatibility; nothing in the scanner defaults to it.
 export const CACHE_DIR = ".scg-cache";
 export const FEED_CACHE_FILE = "threat-feed.json";
 
@@ -9299,7 +9302,7 @@ export function loadThreatIntel(
   cacheDir?: string,
   remoteFeedUrl?: string,
 ): FeedIOC[] {
-  const cacheBase = cacheDir ?? CACHE_DIR;
+  const cacheBase = resolveCacheDir(cacheDir);
   const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
 
   // Identity of the inputs: which cache file, and what state is it in. stat()
@@ -9528,7 +9531,7 @@ export async function updateThreatFeed(
   cacheDir?: string,
   limitOverrides: FeedLimitOverrides = {},
 ): Promise<{ added: number; total: number }> {
-  const cacheBase = cacheDir ?? CACHE_DIR;
+  const cacheBase = resolveCacheDir(cacheDir);
   const { maxBytes, timeoutMs } = { ...FEED_REMOTE_LIMITS, ...limitOverrides };
   // One signal for the whole call. `fetch` alone imposes a headers timeout and
   // (through undici) a body INACTIVITY backstop; neither ever fires on a peer
@@ -10188,7 +10191,7 @@ export function getDetectionSetProvenance(
   cacheDir?: string,
   catalogState?: CatalogState,
 ): DetectionSetProvenance {
-  const cacheBase = cacheDir ?? CACHE_DIR;
+  const cacheBase = resolveCacheDir(cacheDir);
   const cachePath = path.join(cacheBase, FEED_CACHE_FILE);
 
   // Ask the loader for the effective set rather than re-deriving it here.
@@ -10227,7 +10230,7 @@ export function getDetectionSetProvenance(
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
     effectiveEntryCount,
-    ...(cacheMerged ? { cachePath, cacheRefreshedAt } : {}),
+    ...(cacheMerged ? { cachePath: displayCachePath(cachePath), cacheRefreshedAt } : {}),
     catalog: {
       consulted: catalog.available,
       entryCount: catalogEntryCount,

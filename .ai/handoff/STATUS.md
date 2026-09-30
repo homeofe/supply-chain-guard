@@ -1,3 +1,41 @@
+## Per-user threat-feed and catalog cache (2026-09-30) (claude-opus-5-5)
+
+Decided by the owner on 2026-09-30. The cache default moves from `.scg-cache`
+in the working directory to one directory per user (`src/cache-dir.ts`,
+`resolveCacheDir`): `--cache-dir`, `SCG_CACHE_DIR`, then the platform cache
+location; without any home directory the old working-directory default stays.
+`loadThreatIntel`, the catalog loader, the provenance and `refreshFeed` all
+resolve through it, so a refresh and a later scan agree regardless of the
+directory either started in.
+
+Why: a `feed refresh` in one directory was invisible to scans from any other,
+which then ran without the 88,067-entry catalog and said so only at info; and a
+scan started inside a checkout read a cache that checkout could commit, the
+target-controlled input `action.yml` already isolates for the Action.
+
+Details that matter for review:
+- Reports are published, and a per-user path carries the account name, so
+  `detectionSet.cachePath` shows the home directory as `~` (case-insensitive on
+  Windows; `/home/alice2` is not treated as under `/home/alice`).
+- A relative `XDG_CACHE_HOME` or `LOCALAPPDATA` is ignored; it would bring the
+  working directory back.
+- A `.scg-cache` left in the working directory is not read; the catalog
+  finding names it and the way to keep it (`--cache-dir .scg-cache`).
+- `vitest.config.mts` sets `SCG_CACHE_DIR` to an empty per-run directory, so no
+  test reads or writes the developer's real cache.
+- Docker: measured in `node:24-alpine` with the image's `adduser -S scg`:
+  `/home/scg/.cache/supply-chain-guard` is created and writable. The cache is
+  lost with `--rm`; the README shows a named volume for it.
+
+Tests: `cache-dir.test.ts` (order, platforms, relative env values, no-home
+fallback, redaction, legacy hint), a `refreshFeed`-then-`loadThreatIntel` case
+without a directory in `feed.test.ts`, and a scan-level case in
+`scanner.test.ts` (a planted `.scg-cache` feed in the working directory is not
+read, and the finding names it). Seven cuts go red (env ignored, default back to
+the working directory, relative env accepted, loader or refresh on the old
+default, raw home path in the report, scanner dropping the hint); a comment
+stays green.
+
 ## Dependabot entry for the publish toolchain (2026-09-30) (claude-opus-5-5)
 
 Dependabot ran security updates for `undici`, `brace-expansion` and
