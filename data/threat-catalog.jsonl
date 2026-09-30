@@ -88065,3 +88065,44 @@
 {"type":"package","value":"techportal@4.0.11","severity":"critical","confidence":1,"source":"GHSA-649g-mjr9-4j74, MAL-2026-15561","firstSeen":"2026-08-29"}
 {"type":"package","value":"es6-migrator@1.0.0","severity":"critical","confidence":1,"source":"GHSA-72gm-4hgv-6x64, MAL-2026-15553 (amazon-inspector)","firstSeen":"2026-08-29"}
 {"type":"package","value":"@testrelic/playwright-analytics@2.12.1-next.88","severity":"critical","confidence":1,"source":"GHSA-73rf-vqvh-pc36, MAL-2026-15565 (amazon-inspector)","firstSeen":"2026-08-29"}
+{"type":"package","value":"txs-lib-sdk","severity":"critical","confidence":1,"source":"GHSA-g36j-xxq9-x243, MAL-2026-14198 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"ts-rand-sdk","severity":"critical","confidence":1,"source":"GHSA-3p7v-9fcr-jcp8, MAL-2026-14193 (amazon-inspector+ghsa-malware)","firstSeen":"2026-08-19"}
+{"type":"package","value":"epic-ue-newsletter@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49205 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-newsletter@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49205 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-shared@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49206 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-shared@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49206 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-components@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49201 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-components@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49201 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-header-footer@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49203 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-header-footer@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49203 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-map@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49204 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-map@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49204 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-spotlight@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49207 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-spotlight@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49207 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-feed@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49202 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-feed@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49202 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-seller-portal-frontend@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49189 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-seller-portal-frontend@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49189 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-support-ticket-submission@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49194 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-support-ticket-submission@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49194 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ticket-loader@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49195 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ticket-loader@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49195 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-sticky-header@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49193 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-sticky-header@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49193 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-service-worker@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49191 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-service-worker@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49191 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-tracking@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49198 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-tracking@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49198 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-blog@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49200 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-ue-blog@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49200 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-tools-core@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49196 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-tools-core@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49196 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-support-prettier-config@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2022-2769 (ghsa-malware)","firstSeen":"2022-05-18"}
+{"type":"package","value":"epic-support-prettier-config@1.0.1","severity":"critical","confidence":0.9,"source":"MAL-2022-2769 (ghsa-malware)","firstSeen":"2022-05-18"}
+{"type":"package","value":"epic-support-prettier-config@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2022-2769 (ghsa-malware)","firstSeen":"2022-05-18"}
+{"type":"package","value":"epic-support-prettier-config@2.0.0","severity":"critical","confidence":0.9,"source":"MAL-2022-2769 (ghsa-malware)","firstSeen":"2022-05-18"}
+{"type":"package","value":"epic-service-client@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49190 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"epic-service-client@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49190 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"tailwind-contact-forms@0.5.5","severity":"critical","confidence":0.9,"source":"MAL-2026-15925 (amazon-inspector)","firstSeen":"2026-09-04"}
+{"type":"package","value":"@dreamguyxeon/libsignal-node@1.0.3","severity":"critical","confidence":0.9,"source":"MAL-2026-13931 (amazon-inspector)","firstSeen":"2026-08-10"}
+{"type":"package","value":"@dreamguyxeon/libsignal-node@1.0.2","severity":"critical","confidence":0.9,"source":"MAL-2026-13931 (amazon-inspector)","firstSeen":"2026-08-10"}

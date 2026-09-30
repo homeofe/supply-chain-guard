@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790750909",
-    "timestamp": "2026-09-30T06:48:29Z",
-    "commit": "f39b4dc",
+    "session_id": "cli-1790751386",
+    "timestamp": "2026-09-30T06:56:26Z",
+    "commit": "217bb80",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9555a8564cb464113b623553a6686c71c31f610ff217024d4e7bb745679b7e13",
-      "updated": "2026-09-30T06:35:21Z",
-      "lines": 13015,
+      "checksum": "sha256:913ee4163463bb8979c33396ab6d5f73e2599fc4b27d759f9b751c15f2c3e262",
+      "updated": "2026-09-30T06:55:53Z",
+      "lines": 13045,
       "summary": "Risk-trend rules. `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING` (`src/continuous-monitor.ts`) and `RISK_TRAJECTORY_DEGRADING`..."
     },
     "NEXT_ACTIONS.md": {
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:9acbac74b6987b2218f49e66c0a2dab40f4ac088b1ada8586b6952259b15e8e6",
-      "updated": "2026-09-30T06:18:03Z",
+      "updated": "2026-09-30T06:56:25Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:8f3f00e834d552c1639874ad50796736f4f809b0291a471cc559238731cedb70",
-      "updated": "2026-09-30T06:18:03Z",
+      "updated": "2026-09-30T06:56:25Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Risk-trend rules. `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING` (`src/continuous-monitor.ts`) and `RISK_TRAJECTORY_DEGRADING`... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 925,
-    "manifest_plus_core": 194057,
-    "full_read": 207748
+    "manifest_plus_core": 194531,
+    "full_read": 208222
   }
 }
