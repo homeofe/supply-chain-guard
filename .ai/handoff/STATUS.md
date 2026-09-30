@@ -1,3 +1,38 @@
+## Docker image cache in /cache (2026-09-30) (claude-opus-5-5)
+
+Found while preparing 6.4.0: this project's own code-scanning run flagged the
+README Docker example from PR 365 (alerts 78 and 79, "Developer filesystem
+path committed") for mounting a volume on `/home/scg/.cache/supply-chain-guard`.
+Checking it showed a worse problem: measured with a replica of the image's user
+setup, a named volume on that path is created root-owned (uid 0) and the `scg`
+user gets `EACCES`, so the documented example could not have worked. The
+earlier check had only tested the home directory without a volume.
+
+The image now creates `/cache` owned by `scg` and sets `SCG_CACHE_DIR=/cache`;
+a new named volume on `/cache` takes that owner and was measured writable and
+persistent across runs. The README mounts `-v scg-cache:/cache` and names no
+home path. The Docker smoke job in `ci.yml` gains a step that mounts a real
+named volume on `/cache` and writes to it, so this is checked in the
+environment it lives in, not only by reading files.
+`docker-cache-volume.test.ts` holds the Dockerfile, the README and the smoke
+step together; five cuts go red (`/cache` not chowned, `SCG_CACHE_DIR` unset,
+README back on the home path, smoke step removed, smoke step no longer
+failing), a comment stays green.
+
+Test isolation, hardened in the same change. A self-scan on the development
+machine reported the synthetic `evil-feed-refresh-test.example` from
+`feed.test.ts` as a critical threat-intel match. Cause: the PR 365 mutation run
+cut the `SCG_CACHE_DIR` branch on purpose, and the refresh test that names no
+directory then wrote its one-entry fixture feed into the real per-user cache
+(`%LOCALAPPDATA%\supply-chain-guard\cache`). That file was removed (content
+checked first; the unrelated `external-intel` directory beside it was left
+alone). `vitest.config.mts` now also points `LOCALAPPDATA` and
+`XDG_CACHE_HOME` at the per-run test directory; the same cut was re-run and
+still turns 3 tests red while the real cache stays untouched.
+
+Codex did not review PR 367: its connector reported that the usage limit for
+security reviews was reached.
+
 ## Per-user threat-feed and catalog cache (2026-09-30) (claude-opus-5-5)
 
 Decided by the owner on 2026-09-30. The cache default moves from `.scg-cache`

@@ -74,7 +74,13 @@ ENV PATH=/opt/supply-chain-guard/node_modules/.bin:$PATH
 
 # Run as a non-root user. /scan is the conventional mount point:
 #   docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard scan /scan
-RUN addgroup -S scg && adduser -S scg -G scg && mkdir -p /scan && chown scg:scg /scan
+#
+# /cache holds the threat-feed and catalog cache (SCG_CACHE_DIR). It exists in
+# the image and belongs to scg, so a named volume mounted there starts with
+# that owner and is writable. A volume on a path the image does not have is
+# created root-owned, which the scg user cannot write (measured).
+RUN addgroup -S scg && adduser -S scg -G scg && mkdir -p /scan /cache && chown scg:scg /scan /cache
+ENV SCG_CACHE_DIR=/cache
 USER scg
 WORKDIR /scan
 

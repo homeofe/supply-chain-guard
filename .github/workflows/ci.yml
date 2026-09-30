@@ -443,6 +443,23 @@ jobs:
             || { echo "::error title=Docker scan::image did not emit parseable JSON (exit $rc)"; echo "$out" | head -20; exit 1; }
           echo "Image completed a scan and emitted parseable JSON (exit $rc)."
 
+      # The README tells users to keep the catalog cache in a named volume on
+      # /cache. A volume on a path the image does not create is root-owned and
+      # not writable by the scg user, which an earlier README example got wrong
+      # with every unit test green. This runs the documented mount for real.
+      - name: The documented cache volume is writable by the image user
+        run: |
+          vol="scg-smoke-cache-${GITHUB_RUN_ID}"
+          docker volume create "$vol" > /dev/null
+          set +e
+          out=$(docker run --rm -v "$vol:/cache" --entrypoint sh scg:ci -c 'test "$SCG_CACHE_DIR" = /cache && touch "$SCG_CACHE_DIR/probe" && echo writable' 2>&1)
+          rc=$?
+          set -e
+          docker volume rm "$vol" > /dev/null
+          [ "$rc" = 0 ] && [ "$out" = writable ] \
+            || { echo "::error title=Docker cache volume::SCG_CACHE_DIR is not /cache or a named volume there is not writable (exit $rc): $out"; exit 1; }
+          echo "A named volume on /cache is writable and SCG_CACHE_DIR points at it."
+
 
   # Aggregator. "Build and Test" is a REQUIRED status check, and its NAME is a
   # contract with branch protection, so it stays one context with one producer

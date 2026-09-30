@@ -248,12 +248,12 @@ docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.3 scan /s
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
 
-The catalog cache lives in the container user's home, so it is gone after
-`--rm`. To keep it across runs, give it a volume:
+The image keeps the catalog cache in `/cache` (`SCG_CACHE_DIR`), so it is gone
+after `--rm`. To keep it across runs, mount a named volume there:
 
 ```bash
-docker run --rm -v scg-cache:/home/scg/.cache/supply-chain-guard ghcr.io/homeofe/supply-chain-guard:6.3.3 feed refresh
-docker run --rm -v scg-cache:/home/scg/.cache/supply-chain-guard -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.3 scan /scan
+docker run --rm -v scg-cache:/cache ghcr.io/homeofe/supply-chain-guard:6.3.3 feed refresh
+docker run --rm -v scg-cache:/cache -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.3 scan /scan
 ```
 
 ## Quickstart
