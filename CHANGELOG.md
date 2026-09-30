@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.4.0] - 2026-09-30
+
 ### Added
 
 - Threat intel (2026-09-30): 138 package IOCs from the GitHub Advisory
@@ -29,6 +31,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The bundle cutoff advanced from 2026-08-30 to 2026-08-31, moving 21
+  package indicators dated 2026-08-30 from the bundle into the catalog. None
+  of them is asserted by a test or named in the README or docs, and none
+  carries a campaign or family. They stay enforced after `feed refresh`.
 - The publish-toolchain preflight audits the pinned npm through
   `scripts/audit-publish-toolchain.mjs`. npm bundles its dependencies, so an
   advisory against one of them is fixable only by a new npm release. The
@@ -6856,7 +6862,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.3.3...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.4.0...HEAD
+[6.4.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.0
 [6.3.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.3
 [6.3.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.2
 [6.3.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.1
