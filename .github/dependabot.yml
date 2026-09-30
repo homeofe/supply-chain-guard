@@ -36,19 +36,20 @@ updates:
   # The pinned npm that publishes this package (.github/publish-toolchain).
   # npm ships its own dependencies bundled inside its tarball, so an advisory
   # against one of them can only be resolved by a new npm release: a security
-  # update of a bundled package is not possible and only fails. Only the pin
-  # itself is maintained here; the preflight audits the bundled packages
-  # (scripts/audit-publish-toolchain.mjs).
+  # update of a bundled package is not possible and only fails; `allow` keeps
+  # security updates to the pin itself, and the preflight audits the bundled
+  # packages (scripts/audit-publish-toolchain.mjs). Version updates are off
+  # (limit 0): the pin moves by hand, deliberately, including across majors
+  # (docs/node-support.md). With a limit, Dependabot proposed npm 12 and the
+  # pull request was refused on creation.
   - package-ecosystem: "npm"
     directory: "/.github/publish-toolchain"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
-    cooldown:
-      default-days: 7
     allow:
       - dependency-name: "npm"
   - package-ecosystem: "github-actions"

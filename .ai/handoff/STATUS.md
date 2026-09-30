@@ -35,6 +35,30 @@ read, and the finding names it). Seven cuts go red (env ignored, default back to
 the working directory, relative env accepted, loader or refresh on the old
 default, raw home path in the report, scanner dropping the hint); a comment
 stays green.
+## Dependabot toolchain entry: no version-update PRs (2026-09-30) (claude-opus-5-5)
+
+Measured on the first Dependabot run after PR 364: the per-package security
+update jobs for the bundled `undici`, `brace-expansion` and `ip-address` no
+longer start. Instead the entry's version-update job tried to open a PR moving
+the pin from npm 11.19.1 to 12.1.0, and GitHub refused it on creation
+(`dependency_file_not_supported`, "invalid or unauthorized changes"). The pin
+moves by hand and deliberately (`docs/node-support.md`), a major included, so
+the entry now sets `open-pull-requests-limit: 0`, which turns version updates
+off; `allow: npm` still scopes security updates to the pin. The test in
+`npm-install-pinning.test.ts` also requires the limit; re-enabling version PRs
+turns it red, as do the three earlier cuts; a comment stays green. Whether the
+job stays quiet is confirmed by the next Dependabot run on `main`.
+
+Full-suite verification on openclaw (Linux, `zip`, `jq` and Bash present), in
+a fresh clone under `/tmp`: `main` at `de2a193` 193 files / 4,916 tests, and PR
+365 at `8f1014b` 194 files / 4,930 tests, all passing, none skipped.
+
+Open for the owner (repository settings, not code): OpenSSF Scorecard alerts
+74 (BranchProtection 3/10: stale-review dismissal, code-owner review, last-push
+approval, up-to-date branches) and 9 (CodeReview 0/29 approved changesets).
+Alert 75 (Vulnerabilities) and the ten Dependabot alerts are the bundled npm
+packages covered by the dated audit exceptions; they close when an npm release
+ships the fixed versions and the pin moves.
 
 ## Dependabot entry for the publish toolchain (2026-09-30) (claude-opus-5-5)
 

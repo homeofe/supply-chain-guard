@@ -39,7 +39,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   Three are listed, expiring 2026-10-31: GHSA-qhr7-859c-m2p7 and
   GHSA-6j4f-fj2g-mc7p (`brace-expansion`) and GHSA-rfgv-xxqx-mfg5
   (`undici`), none reachable from `npm publish`.
-- Dependabot maintains the publish toolchain's npm pin through its own entry
+- The publish toolchain has its own entry in `.github/dependabot.yml`: security
+  updates are allowed for the `npm` pin alone, and version updates are off,
+  since the pin moves by hand. Security updates of the packages npm bundles
+  are not possible, as they ship inside npm's own tarball; they are covered by
+  the preflight audit instead.
   in `.github/dependabot.yml`, allowing the pin alone. Security updates of
   the packages npm bundles are not possible, since they ship inside npm's own
   tarball; they are covered by the preflight audit instead.
