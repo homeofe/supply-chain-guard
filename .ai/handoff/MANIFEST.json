@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790752880",
-    "timestamp": "2026-09-30T07:21:20Z",
-    "commit": "015e299",
+    "session_id": "cli-1790754399",
+    "timestamp": "2026-09-30T07:46:39Z",
+    "commit": "dab3c4c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:93bf3f9217363a9db59246e021112e1ba7a927033bdf9a99877ab450cbce1364",
-      "updated": "2026-09-30T07:20:47Z",
-      "lines": 13121,
-      "summary": "Decided by the owner on 2026-09-30."
+      "checksum": "sha256:0c7e2ed7b6155a6da48f4ea59b6b15bc10ee4e4675b5f7844f1934f66cbe1377",
+      "updated": "2026-09-30T07:46:31Z",
+      "lines": 13156,
+      "summary": "Found while preparing 6.4.0: this project's own code-scanning run flagged the README Docker example from PR 365 (alerts 78 and 79, \"Developer..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:9f7ab1eda5802c931b785b8b028b632bbbe35dc81c05b80250fddfd772d9885d",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:22ccb6ce20ddadbfef8ea1d14b0c34713626733d35d41baf84c064500fc9ec2a",
-      "updated": "2026-09-30T07:21:20Z",
+      "checksum": "sha256:046b579a09a7c4cdd19b63c7bfcaf8c7bb0457803420497e81bc119a4ad66cb9",
+      "updated": "2026-09-30T07:44:22Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:c5ad40518731c5f5ca986fc032e474b55242a31b673e7f9260a0cf4cd38c1770",
-      "updated": "2026-09-30T07:21:20Z",
+      "checksum": "sha256:3003a2766b3e791ecbd44c676eafa1aca3418868613b2cc2336de79c1e8cea78",
+      "updated": "2026-09-30T07:44:22Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Decided by the owner on 2026-09-30. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Found while preparing 6.4.0: this project's own code-scanning run flagged the README Docker example from PR 365 (alerts 78 and 79, \"Developer... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 876,
-    "manifest_plus_core": 195658,
-    "full_read": 209353
+    "manifest_only": 931,
+    "manifest_plus_core": 196246,
+    "full_read": 209941
   }
 }

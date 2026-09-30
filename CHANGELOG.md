@@ -56,8 +56,10 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   included. A `.scg-cache` left in the working directory is no longer read;
   the catalog finding names it, and `--cache-dir .scg-cache` keeps using it.
   Reports show a cache under the home directory as `~/...`. The Docker image
-  keeps the cache in the container user's home; the README shows the volume
-  that preserves it across runs.
+  keeps the cache in `/cache` (`SCG_CACHE_DIR`), a directory it creates for
+  its user, so a named volume mounted there (`-v scg-cache:/cache`, shown in
+  the README) is writable and preserves the cache across runs. The Docker
+  smoke job in CI mounts such a volume and writes to it.
 
 ### Fixed
 
