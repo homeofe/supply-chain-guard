@@ -183,7 +183,13 @@ describe("the publish job's npm", () => {
       [...text.matchAll(new RegExp(`npm audit --audit-level=(\\w+)${prefix}`, "g"))].map((m) => m[1]);
     const compatLevel = level(job("compat"), "\\s*\\n");
     expect(compatLevel).toHaveLength(1);
-    expect(level(job("publish-preflight"), " --prefix \\.github/publish-toolchain")).toEqual(compatLevel);
+    // The preflight audits through scripts/audit-publish-toolchain.mjs, which
+    // runs npm audit on .github/publish-toolchain and applies the dated
+    // exceptions (see src/__tests__/audit-publish-toolchain.test.ts).
+    const preflightLevel = [
+      ...job("publish-preflight").matchAll(/^ {8}run: node scripts\/audit-publish-toolchain\.mjs --audit-level=(\w+)[ \t]*$/gm),
+    ].map((m) => m[1]);
+    expect(preflightLevel).toEqual(compatLevel);
   });
 
   it("gates the required aggregator", () => {

@@ -258,6 +258,18 @@ Vulnerabilities) could see what 11.18.0 bundles: `brace-expansion`, `ip-address`
 release with all four fixed. 6.3.0 therefore moves two publish-lane variables, the
 Node major and the npm pin, as a deliberate exception to one per release.
 
+npm ships those packages bundled inside its own tarball, so an advisory against one
+of them can only be fixed by a new npm release; `overrides` do not reach bundled
+packages. Advisories published on 2026-09-30 against the bundled `brace-expansion`
+and `undici` are present in every npm release of that date (11.19.1, 11.20.0 and
+12.1.0 were checked). The preflight therefore audits through
+`scripts/audit-publish-toolchain.mjs`, which reads
+`npm audit --json` and accepts an advisory only when
+`.github/publish-toolchain/audit-exceptions.json` names it for its package, with a
+reason and an expiry date. Every unlisted advisory at the threshold fails, an
+expired exception fails, and an exception the report no longer contains fails, so
+the list is emptied in the same change that bumps the pin.
+
 ## What is deliberately not governed here
 
 Threat intelligence and test fixtures mention Node versions as data, not as policy: a

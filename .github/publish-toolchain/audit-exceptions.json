@@ -1,0 +1,20 @@
+[
+  {
+    "ghsa": "GHSA-qhr7-859c-m2p7",
+    "package": "brace-expansion",
+    "reason": "Bundled inside npm 11.19.1; no npm release (11.20.0, 12.1.0) ships a fixed brace-expansion yet. npm reaches it through minimatch, which expands the file globs of the package being published, i.e. this repository's own package.json and .npmignore, never untrusted input.",
+    "expires": "2026-10-31"
+  },
+  {
+    "ghsa": "GHSA-6j4f-fj2g-mc7p",
+    "package": "brace-expansion",
+    "reason": "Same bundled brace-expansion and the same reach as GHSA-qhr7-859c-m2p7: only this repository's own publish globs are expanded.",
+    "expires": "2026-10-31"
+  },
+  {
+    "ghsa": "GHSA-rfgv-xxqx-mfg5",
+    "package": "undici",
+    "reason": "Bundled inside npm 11.19.1; no npm release ships a fixed undici yet. Within npm only node-gyp depends on it, to download Node headers for native builds. npm publish runs no native build, and the advisory concerns WebSocket connections, which npm does not open.",
+    "expires": "2026-10-31"
+  }
+]

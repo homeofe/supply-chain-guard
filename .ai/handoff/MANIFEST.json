@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790682913",
-    "timestamp": "2026-09-29T11:55:13Z",
-    "commit": "938404a",
+    "session_id": "cli-1790750909",
+    "timestamp": "2026-09-30T06:48:29Z",
+    "commit": "f39b4dc",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9557321c15c3c7cbb75e07957d87c49ae19f3b2187edf515527c5824d7b4ead4",
-      "updated": "2026-09-29T11:54:49Z",
-      "lines": 12962,
-      "summary": "Release preparation on top of PRs 359 and 360."
+      "checksum": "sha256:9555a8564cb464113b623553a6686c71c31f610ff217024d4e7bb745679b7e13",
+      "updated": "2026-09-30T06:35:21Z",
+      "lines": 13015,
+      "summary": "Risk-trend rules. `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING` (`src/continuous-monitor.ts`) and `RISK_TRAJECTORY_DEGRADING`..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:9f7ab1eda5802c931b785b8b028b632bbbe35dc81c05b80250fddfd772d9885d",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:4121f7e4cff623af336bcfe67f29c61f38055f411484505d62dd0a38929a28bc",
-      "updated": "2026-09-29T11:55:12Z",
+      "checksum": "sha256:9acbac74b6987b2218f49e66c0a2dab40f4ac088b1ada8586b6952259b15e8e6",
+      "updated": "2026-09-30T06:18:03Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:379a83fa9ed174fc26189d537c42ac967e15109707b1c2d64bd614b94ca8d25c",
-      "updated": "2026-09-29T11:55:12Z",
+      "checksum": "sha256:8f3f00e834d552c1639874ad50796736f4f809b0291a471cc559238731cedb70",
+      "updated": "2026-09-30T06:18:03Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Release preparation on top of PRs 359 and 360. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Risk-trend rules. `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING` (`src/continuous-monitor.ts`) and `RISK_TRAJECTORY_DEGRADING`... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 882,
-    "manifest_plus_core": 193130,
-    "full_read": 206821
+    "manifest_only": 925,
+    "manifest_plus_core": 194057,
+    "full_read": 207748
   }
 }

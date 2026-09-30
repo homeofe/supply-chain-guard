@@ -17,8 +17,13 @@ export function forecastRisk(
   const findings: Finding[] = [];
   if (history.length < 5) return findings;
 
-  // Simple linear regression on last 10 data points
-  const recent = history.slice(-10);
+  // Simple linear regression on the last 10 data points, the current scan
+  // being the last of them. Fitted to the stored history alone, the line
+  // described the scans before this one, and a project whose score had just
+  // dropped to 0 was told its posture was "worsening".
+  const recent = [...history.map((h) => h.score), currentScore]
+    .slice(-10)
+    .map((score) => ({ score }));
   const n = recent.length;
   const xMean = (n - 1) / 2;
   const yMean = recent.reduce((s, h) => s + h.score, 0) / n;
@@ -63,7 +68,9 @@ export function forecastRisk(
   }
   const stdev = Math.sqrt(sumSq / n);
 
-  if (slope > 5) {
+  // A scan below the window's own average is not evidence of a rise, however
+  // steep the scans before it were.
+  if (slope > 5 && currentScore >= yMean) {
     // Getting worse fast - real degradation worth flagging.
     findings.push({
       rule: "RISK_TRAJECTORY_DEGRADING",

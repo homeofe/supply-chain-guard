@@ -1,3 +1,56 @@
+## Risk-trend window, self-scan policy, publish-toolchain audit (2026-09-30) (claude-opus-5-5)
+
+**Risk-trend rules.** `RISK_STAGNATION_HIGH` and `RISK_TREND_INCREASING`
+(`src/continuous-monitor.ts`) and `RISK_TRAJECTORY_DEGRADING`
+(`src/risk-forecast.ts`) computed their window from the stored history only,
+never from the current scan. Replayed with a real 25-entry history on a tree
+with no findings, the first scan reported two high trend findings and exited 1;
+with the fix it exits 0, with one medium `RISK_TRAJECTORY_UNSTABLE` that the
+history's real 100/5/100 swings justify, and the second scan is clean. The
+window now ends with the current scan; stagnation needs it above 50, a rising
+trend needs it above the older baseline, a degrading trajectory needs it at or
+above the window average. The control in `state-store-corruption.test.ts` now
+scans a risky manifest (score 75), because a trend that ends in a clean scan is
+no longer a rising one; a new case there holds the clean scan at exit 0. Cuts:
+both fixes reverted (3 red), the trend guard alone (2 red), the trajectory
+guard alone (1 red, after adding the 0..90 then 30 case that only that guard
+decides).
+
+**Self-scan with a scanner of another version.** `src/self-scan-trust.ts`
+recognises the inert IOC files only by the digest in the RUNNING scanner's
+`self-scan-manifest.json`, which matches only when scanner and checkout are the
+same version (the CI self-scan). The daily import changes `src/threat-intel.ts`
+every day, so an installed release scanning a newer checkout reported the feed,
+the blocklist and the tests quoting them as some 2,000 critical findings.
+`.supply-chain-guard.yml` now carries 61 rule-and-path entries, generated from
+the measured union of two scans by different versions (16 files: the feed, the
+blocklist, the pattern tables, the broad-gap matchers, the internal-disclosure
+rule data, their `dist/` builds, five test files quoting real indicators, and
+`ossf/scorecard-action` in scorecard.yml). Re-measured against the changed tree
+with three scanner versions: nothing above info. `THREAT_FEED_CATALOG_MISSING`
+(info, a machine without `feed refresh`) is not suppressed on purpose.
+`src/__tests__/self-scan-policy.test.ts` pins it; five cuts (bare entry,
+`src/**`, basename glob, dropped entry, stale path) go red, a comment stays
+green.
+
+**Publish-toolchain audit.** npm bundles its dependencies, so an advisory
+against one is fixable only by a new npm release, and `overrides` cannot reach
+it. npm 11.19.1, 11.20.0 and 12.1.0 all bundle the affected `brace-expansion`
+and `undici` (measured). With the owner's approval the preflight runs
+`scripts/audit-publish-toolchain.mjs`, with three dated exceptions in
+`.github/publish-toolchain/audit-exceptions.json` (expiring 2026-10-31).
+Reach: `brace-expansion` through `minimatch` expands only this repository's own
+publish globs; `undici` is used within npm only by `node-gyp`, which
+`npm publish` does not run. Eight cuts go red, including replacing the real
+step by the same text in a comment; a comment next to it stays green. When a
+fixed npm ships: bump the pin and delete the three entries in the same change;
+the script fails on any exception the report no longer contains.
+
+Local environment note: with `core.autocrlf=true` the worktree copies of the
+workflow files carry CRLF, and five tests in `npm-install-pinning.test.ts` plus
+three in `self-scan-visibility.test.ts` fail on unmodified `main` for that
+reason alone. With the files normalised to LF the affected suites pass.
+
 ## Release v6.3.3 (2026-09-29) (claude-opus-5-5)
 
 Release preparation on top of PRs 359 and 360. Version bumped at all 17

@@ -220,8 +220,13 @@ export function analyzeRiskTrend(
   const findings: Finding[] = [];
   if (history.length < 2) return findings;
 
-  const recent = history.slice(-5);
-  const avgRecent = recent.reduce((s, h) => s + h.score, 0) / recent.length;
+  // The window ends with THIS scan. Built from the stored history alone, a
+  // project that has just been cleaned up (current score 0) was still told its
+  // risk "remained above 50" and was "trending upward", at high severity and
+  // exit 1, for the one scan that proved the opposite.
+  const series = [...history.map((h) => h.score), currentScore];
+  const recent = series.slice(-5);
+  const avgRecent = recent.reduce((s, score) => s + score, 0) / recent.length;
   const prevScore = history[history.length - 1].score;
 
   // Spike detection: current score > 2x previous
@@ -238,9 +243,11 @@ export function analyzeRiskTrend(
 
   // Increasing trend: average of last 5 scans > average of 5 before that
   if (history.length >= 10) {
-    const older = history.slice(-10, -5);
-    const avgOlder = older.reduce((s, h) => s + h.score, 0) / older.length;
-    if (avgRecent > avgOlder * 1.3 && avgRecent > 20) {
+    const older = series.slice(-10, -5);
+    const avgOlder = older.reduce((s, score) => s + score, 0) / older.length;
+    // The current scan itself has to sit above the older baseline: an average
+    // still carried by earlier scans is not a rise when this one dropped.
+    if (avgRecent > avgOlder * 1.3 && avgRecent > 20 && currentScore > avgOlder) {
       findings.push({
         rule: "RISK_TREND_INCREASING",
         description: `Risk score trending upward: recent average ${Math.round(avgRecent)} vs previous ${Math.round(avgOlder)}. Supply-chain risk is growing.`,
@@ -254,7 +261,7 @@ export function analyzeRiskTrend(
 
   // Stagnation at high risk - require at least 5 history entries to avoid
   // false alarms from new projects that haven't been remediated yet
-  if (history.length >= 5 && recent.every((h) => h.score > 50) && recent.length >= 3) {
+  if (history.length >= 5 && recent.every((score) => score > 50) && recent.length >= 3) {
     findings.push({
       rule: "RISK_STAGNATION_HIGH",
       description: `Risk score has remained above 50 for the last ${recent.length} scans. High risk is not being remediated.`,
