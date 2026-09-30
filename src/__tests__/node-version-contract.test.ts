@@ -67,8 +67,8 @@ interface NodePolicy {
   transitionRemovedIn?: string;
   /**
    * The upstream Active LTS major, hand-copied from the nodejs/Release schedule and
-   * verified on 2026-08-22 (Node 24: Active LTS from 2025-10-28, Maintenance from
-   * 2026-10-20). Deliberately NOT resolved over the network at test time.
+   * last verified on 2026-09-30 (Node 24: Active LTS from 2025-10-28, Maintenance from
+   * 2026-10-20; Node 26: LTS from 2026-10-28). Deliberately NOT resolved over the network at test time.
    * `activeLtsReviewedIn` is what stops this constant going stale in silence.
    */
   activeLtsMajor: number;

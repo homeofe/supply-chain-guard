@@ -2192,13 +2192,6 @@ const FEED_CHUNK_13: FeedIOC[] = [
   { type: "domain", value: "apiyf.dq87771.com", severity: "critical", confidence: 0.85, family: "Douqiu", campaign: "Douqiu npm config server", source: "Panther", firstSeen: "2026-05-05" },
 
 
-  // Imported from GitHub Advisory Database (2026-08-16) - see docs/threat-feed-sources.md
-  { type: "package", value: "gclassroom", severity: "critical", confidence: 0.9, source: "GHSA-6c25-pq89-3m9w", firstSeen: "2026-08-30" },
-  { type: "package", value: "opiumbest", severity: "critical", confidence: 0.9, source: "GHSA-pwqr-5gcr-9rc4", firstSeen: "2026-08-30" },
-  { type: "package", value: "quesoeducation", severity: "critical", confidence: 0.9, source: "GHSA-mm9m-8q5p-fxwx", firstSeen: "2026-08-30" },
-  { type: "package", value: "grafeno-webhook@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-477g-wmjw-mjmr, MAL-2026-15573", firstSeen: "2026-08-30" },
-  { type: "package", value: "grafeno-billing@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-8x3v-8vvh-78qm, MAL-2026-15571", firstSeen: "2026-08-30" },
-  { type: "package", value: "grafeno-payments@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wv93-x8h7-2vq7, MAL-2026-15572", firstSeen: "2026-08-30" },
 ];
 
 const FEED_CHUNK_14: FeedIOC[] = [
@@ -2233,18 +2226,6 @@ const FEED_CHUNK_14: FeedIOC[] = [
   { type: "package", value: "cre-setup@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-85ff-72jm-25qf, MAL-2026-15591", firstSeen: "2026-08-31" },
   { type: "package", value: "fuels-core@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-w76m-93w4-w9vj, MAL-2026-15592", firstSeen: "2026-08-31" },
   { type: "package", value: "autobahn-electron-probe@99.99.1", severity: "critical", confidence: 1.0, source: "GHSA-8jx3-79xq-v4q4, MAL-2026-15589", firstSeen: "2026-08-31" },
-  { type: "package", value: "@lucideproxy/svg", severity: "critical", confidence: 1.0, source: "GHSA-6j97-93gg-j7r8, MAL-2026-15600", firstSeen: "2026-08-30" },
-  { type: "package", value: "@fidzzhost/baileys", severity: "critical", confidence: 1.0, source: "GHSA-vc2v-c8j2-qxg9, MAL-2026-15579", firstSeen: "2026-08-30" },
-  { type: "package", value: "cloudfcrxz", severity: "critical", confidence: 1.0, source: "GHSA-p375-pmrj-262v, MAL-2026-15581", firstSeen: "2026-08-30" },
-  { type: "package", value: "cloufcrxz", severity: "critical", confidence: 1.0, source: "GHSA-gxpc-36pf-vcrw, MAL-2026-15582", firstSeen: "2026-08-30" },
-  { type: "package", value: "real-browser-plus", severity: "critical", confidence: 1.0, source: "GHSA-ffvr-gx62-j45m, MAL-2026-15587", firstSeen: "2026-08-30" },
-  { type: "package", value: "h2-codex", severity: "critical", confidence: 1.0, source: "GHSA-8h78-gfj3-qrp2, MAL-2026-15583", firstSeen: "2026-08-30" },
-  { type: "package", value: "h3client", severity: "critical", confidence: 1.0, source: "GHSA-89vf-5xgx-fhq7, MAL-2026-15585", firstSeen: "2026-08-30" },
-  { type: "package", value: "brat-codex", severity: "critical", confidence: 1.0, source: "GHSA-63wg-22hx-h5q4, MAL-2026-15580", firstSeen: "2026-08-30" },
-  { type: "package", value: "h3-codex", severity: "critical", confidence: 1.0, source: "GHSA-w6m7-6jhr-mfjc, MAL-2026-15584", firstSeen: "2026-08-30" },
-  { type: "package", value: "originaldevelopmentstelemetry", severity: "critical", confidence: 1.0, source: "GHSA-m8hq-jrvf-g8xm, MAL-2026-15586", firstSeen: "2026-08-30" },
-  { type: "package", value: "pypi:auth-app-streamlit@2.1.1", severity: "critical", confidence: 1.0, source: "GHSA-ff3f-7fvh-5cpv, MAL-2026-15577", firstSeen: "2026-08-30" },
-  { type: "package", value: "pypi:trongridor@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-vg2j-fq8r-2c48, MAL-2026-15578", firstSeen: "2026-08-30" },
 
   // Baileys WhatsApp fork channel-farming campaign (safedep, August 2026). Malicious
   // forks of the Baileys WhatsApp Web library subscribe the installer's paired session
@@ -6758,9 +6739,6 @@ const FEED_CHUNK_19: FeedIOC[] = [
   { type: "package", value: "@pipi596888/ccursor", severity: "critical", confidence: 0.9, source: "GHSA-46qc-q49r-c3q4, MAL-2026-15644 (ghsa-malware)", firstSeen: "2026-08-31" },
   { type: "package", value: "pig-ui-first", severity: "critical", confidence: 0.9, source: "GHSA-cj5g-xq95-52x6, MAL-2026-15646 (ghsa-malware)", firstSeen: "2026-08-31" },
   { type: "package", value: "selfsigned-certificate", severity: "critical", confidence: 0.9, source: "GHSA-3whj-3fjw-x5w8, MAL-2026-15623 (ghsa-malware)", firstSeen: "2026-08-31" },
-  { type: "package", value: "com.db.autobahn.notification-center-electron@88.88.1", severity: "critical", confidence: 1.0, source: "GHSA-q6wc-5f8x-wwwj, MAL-2026-15590 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-08-30" },
-  { type: "package", value: "autobahn-electron-probe@99.99.2", severity: "critical", confidence: 1.0, source: "GHSA-8jx3-79xq-v4q4, MAL-2026-15589 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-08-30" },
-  { type: "package", value: "autobahn-electron-probe@99.99.3", severity: "critical", confidence: 1.0, source: "GHSA-8jx3-79xq-v4q4, MAL-2026-15589 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-08-30" },
   { type: "hash", value: "8e5d1af68ca340ae0c6e8132cb00c686ec2d60502c1994d94ce353d1472ad5a3", severity: "critical", confidence: 1.0, family: "Shai-Hulud", campaign: "Trinitite", source: "safedep, Aikido", firstSeen: "2026-08-28" },
   { type: "hash", value: "b49afb7dba04cd99b357ce7c652c823a3707f28e130bd5c6645851a7adc030d6", severity: "critical", confidence: 1.0, family: "Shai-Hulud", campaign: "Trinitite", source: "Socket, safedep, Aikido", firstSeen: "2026-08-28" },
   { type: "hash", value: "709af2fdeb50324229e94c44c679a0fab18bd8e17d3864405989c526cbb63ad8", severity: "critical", confidence: 1.0, family: "Shai-Hulud", campaign: "Trinitite", source: "safedep, Aikido", firstSeen: "2026-08-28" },
@@ -10225,7 +10203,7 @@ export function getDetectionSetProvenance(
   }
 
   return {
-    bundledVersion: "6.3.3",
+    bundledVersion: "6.4.0",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,

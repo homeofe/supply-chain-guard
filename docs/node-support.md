@@ -15,7 +15,7 @@ Change the policy here and the gate names every file that has to follow.
   "supportedMajors": [22, 24],
   "transitionMajors": [],
   "activeLtsMajor": 24,
-  "activeLtsReviewedIn": "6.4.0",
+  "activeLtsReviewedIn": "6.4.1",
   "publishMajor": 24,
   "runtimeMajor": 24,
   "devBaseline": 24
@@ -121,8 +121,13 @@ this package ever starts using an API whose behaviour differs across majors.
 
 ### `activeLtsMajor` is a fact from upstream, and it goes stale
 
-The field is a **hand-copied constant, verified on 2026-08-22 against the
-`nodejs/Release` schedule**. It is not derived at test time: a gate that resolves an
+The field is a **hand-copied constant, last verified on 2026-09-30 against the
+`nodejs/Release` schedule** (first on 2026-08-22). On 2026-09-30 Node 24 is still the
+Active LTS and enters Maintenance on 2026-10-20; Node 26 becomes LTS on 2026-10-28.
+The review milestone is therefore the very next release, 6.4.1: a later one would let
+patch releases after 2026-10-28 carry a stale `activeLtsMajor` without the gate
+noticing. Once Node 26 is the Active LTS, `supportedMajors` and the `compat` matrix
+must reach it. It is not derived at test time: a gate that resolves an
 upstream fact over the network is a gate whose result depends on a stranger's uptime,
 which is precisely the class of dependency this package exists to flag.
 

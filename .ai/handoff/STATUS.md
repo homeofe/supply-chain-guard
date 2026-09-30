@@ -32,6 +32,36 @@ still turns 3 tests red while the real cache stays untouched.
 
 Codex did not review PR 367: its connector reported that the usage limit for
 security reviews was reached.
+## Release v6.4.0 (2026-09-30) (claude-opus-5-5)
+
+Minor release, decided by the owner: the default cache location changes
+(PR 365), so this is not a patch. Carries PRs 362 to 366 and 368.
+
+Version bumped from 6.3.3 at all 17 configured version sites plus
+`package.json` (37 occurrences). Each file's count was measured first and the
+replacement matched free-standing occurrences only, asserting the same count,
+so no README CIDR or longer version string was touched. README has 9 now, two
+more than 6.3.3, from the Docker volume example PR 365 added. `npm install
+--package-lock-only` changed only the lockfile's two version fields.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-08-30 to
+2026-08-31; `planMigration` moved 21 package entries of 2026-08-30 to the
+catalog (now 88,129). Before applying, each moved value and its bare name was
+searched in every test file, the README and `docs/`: zero hits, with the
+control `@hd-team` found by the same search. None carries a campaign or family.
+SECURITY.md needs no change (6.x is already supported).
+
+Active LTS review, due at 6.4.0 (`node-version-contract.test.ts` failed on the
+release branch on openclaw and in CI, as designed). The `nodejs/Release`
+`schedule.json` was re-read on 2026-09-30: Node 24 is still the Active LTS
+(Maintenance from 2026-10-20), so `activeLtsMajor` stays 24. Node 26 becomes LTS
+on 2026-10-28; from then on `supportedMajors` and the `compat` matrix must reach
+26. `activeLtsReviewedIn` moves to 6.4.1, the very next release, because a later
+milestone would let patch releases after 2026-10-28 keep a stale value unnoticed.
+
+The Dependabot alerts against the packages npm bundles stay open by the
+owner's decision until an npm release ships the fixed versions; the dated
+audit exceptions expire 2026-10-31.
 
 ## Per-user threat-feed and catalog cache (2026-09-30) (claude-opus-5-5)
 
