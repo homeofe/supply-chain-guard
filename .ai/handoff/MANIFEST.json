@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790752396",
-    "timestamp": "2026-09-30T07:13:16Z",
-    "commit": "de2a193",
+    "session_id": "cli-1790752880",
+    "timestamp": "2026-09-30T07:21:20Z",
+    "commit": "015e299",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b91619dd2e1cf26f11abde1ebcd12545e29960c5b142a797ec19685d22d36fe1",
-      "updated": "2026-09-30T07:12:58Z",
-      "lines": 13097,
+      "checksum": "sha256:93bf3f9217363a9db59246e021112e1ba7a927033bdf9a99877ab450cbce1364",
+      "updated": "2026-09-30T07:20:47Z",
+      "lines": 13121,
       "summary": "Decided by the owner on 2026-09-30."
     },
     "NEXT_ACTIONS.md": {
@@ -42,13 +42,13 @@
     },
     "DASHBOARD.md": {
       "checksum": "sha256:22ccb6ce20ddadbfef8ea1d14b0c34713626733d35d41baf84c064500fc9ec2a",
-      "updated": "2026-09-30T07:13:15Z",
+      "updated": "2026-09-30T07:21:20Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
       "checksum": "sha256:c5ad40518731c5f5ca986fc032e474b55242a31b673e7f9260a0cf4cd38c1770",
-      "updated": "2026-09-30T07:13:15Z",
+      "updated": "2026-09-30T07:21:20Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -80,7 +80,7 @@
   "quick_context": "Decided by the owner on 2026-09-30. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 876,
-    "manifest_plus_core": 195263,
-    "full_read": 208958
+    "manifest_plus_core": 195658,
+    "full_read": 209353
   }
 }

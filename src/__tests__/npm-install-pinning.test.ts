@@ -206,6 +206,9 @@ describe("the publish job's npm", () => {
     expect(toolchain[0]).toMatch(/^"npm"\n/);
     const allow = toolchain[0].match(/\n {4}allow:\n((?: {6}.*\n?)+)/);
     expect(allow?.[1].trim().split("\n").map((l) => l.trim())).toEqual(['- dependency-name: "npm"']);
+    // No version-update pull requests: the pin moves by hand (a proposed npm
+    // major was refused on creation). Security updates are not limited by this.
+    expect(toolchain[0]).toMatch(/\n {4}open-pull-requests-limit: 0\n/);
   });
 
   it("gates the required aggregator", () => {
