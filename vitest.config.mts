@@ -1,13 +1,14 @@
 import { defineConfig } from "vitest/config";
-import * as os from "node:os";
 import * as path from "node:path";
+import { testCacheRoot } from "./vitest.test-cache.mts";
 
 const coverageRun = process.argv.some((arg) => arg === "--coverage" || arg.startsWith("--coverage."));
-const testCacheRoot = path.join(os.tmpdir(), `scg-vitest-cache-${process.pid}`);
 
 export default defineConfig({
   test: {
     include: ["src/__tests__/**/*.test.ts"],
+    // Removes testCacheRoot when the run ends (vitest.global-setup.mts).
+    globalSetup: ["./vitest.global-setup.mts"],
     // SCG_CACHE_DIR keeps every test that does not name a cache directory off
     // the developer's real per-user cache (src/cache-dir.ts): an empty,
     // per-run directory, so no test reads a catalog it did not install.

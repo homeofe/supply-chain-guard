@@ -1,3 +1,21 @@
+## Test cache directory is removed after each run (2026-09-30) (claude-opus-5-5)
+
+The per-run test cache directory introduced today (`scg-vitest-cache-<pid>` in
+the system temp directory, standing in for `SCG_CACHE_DIR`, `LOCALAPPDATA` and
+`XDG_CACHE_HOME`) was never removed: one was left behind by the 6.4.0 release
+verification on openclaw, and two on the Windows workstation. The path now
+lives in `vitest.test-cache.mts`, shared by `vitest.config.mts` and a new
+`vitest.global-setup.mts` whose teardown removes exactly that directory.
+Measured with `external-intel-scan.test.ts`, which creates it: without the
+teardown the directory stays, with it none is left. The leftovers on both
+machines were removed.
+
+Noted, not changed: `defaultThreatIntelCacheDir` in
+`src/external-threat-intel.ts` resolves its own per-user directory
+(LOCALAPPDATA / XDG_CACHE_HOME / `~/.cache`) instead of going through
+`src/cache-dir.ts`; it accepts a relative value and has no macOS branch.
+Unifying the two is a candidate for a later change.
+
 ## Docker image cache in /cache (2026-09-30) (claude-opus-5-5)
 
 Found while preparing 6.4.0: this project's own code-scanning run flagged the

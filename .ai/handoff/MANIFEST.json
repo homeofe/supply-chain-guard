@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790754820",
-    "timestamp": "2026-09-30T07:53:40Z",
-    "commit": "d952394",
+    "session_id": "cli-1790755427",
+    "timestamp": "2026-09-30T08:03:47Z",
+    "commit": "93ca286",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:d65847e3800cf5c7f922630f341e9b04307f1260684dbaf84b719ee46e2f7eab",
-      "updated": "2026-09-30T07:53:38Z",
-      "lines": 13186,
-      "summary": "Found while preparing 6.4.0: this project's own code-scanning run flagged the README Docker example from PR 365 (alerts 78 and 79, \"Developer..."
+      "checksum": "sha256:8e1a0151d0dbfd75ded40e26df6e5ccc40f86166471bf14b2d9213fa8df41bf9",
+      "updated": "2026-09-30T08:03:39Z",
+      "lines": 13204,
+      "summary": "The per-run test cache directory introduced today (`scg-vitest-cache-<pid>` in the system temp directory, standing in for `SCG_CACHE_DIR`..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:85befee0c17db43f6f7effd52237b7ccd32e31e46fe9abc5e2cbc2fe14ba745d",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Found while preparing 6.4.0: this project's own code-scanning run flagged the README Docker example from PR 365 (alerts 78 and 79, \"Developer... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "The per-run test cache directory introduced today (`scg-vitest-cache-<pid>` in the system temp directory, standing in for `SCG_CACHE_DIR`... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 931,
-    "manifest_plus_core": 196697,
-    "full_read": 210392
+    "manifest_only": 929,
+    "manifest_plus_core": 196952,
+    "full_read": 210647
   }
 }

@@ -7,6 +7,12 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- The test run removes its per-run cache directory (`scg-vitest-cache-<pid>`
+  in the system temp directory) when it ends, through a vitest global
+  teardown. Each run used to leave one behind.
+
 ## [6.4.0] - 2026-09-30
 
 ### Added
