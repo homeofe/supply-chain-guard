@@ -7,6 +7,39 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-09-30): 138 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 97 in the offline bundle and 41 in the catalog. 35
+  npm names are blocked outright, each already a security holding package on
+  the registry: `sk-lib-enc`, `@xoxo-momo/kit` and 31 `@hrmony/*`
+  dependency-confusion names (bundle), and `txs-lib-sdk` and `ts-rand-sdk`
+  (catalog, first seen 2026-08-19). The other 64 bundle entries are version
+  pins, among them the `dotenv-precheck`, `dotenv-preflight`, `esm-dotenv`
+  and `chaienv` lures, the `fabric-loader-core` and `fabric-mod-utils`
+  loaders, `solidity-lock` 2.21.0, the Baileys forks `@akapaki/baileys`,
+  `@chatunity/baileys` and `itsmeeaizat-bailey`, the Express typosquats
+  (`exprdd`, `exptred`, `express-nodejs` and five more, all 5.2.1),
+  `@rutxploit-sec/*` and `@selfpentest/*` probes, and
+  `pypi:bfox-build-utils` 1.0.997 and `pypi:queeuees` 0.0.1. The 39 other
+  catalog entries are version pins whose records date from before the bundle
+  cutoff: 36 `epic-*` dependency-confusion versions (2022-05-18 and
+  2025-10-30), `@dreamguyxeon/libsignal-node` 1.0.2 and 1.0.3, and
+  `tailwind-contact-forms` 0.5.5 (a declared catalog-window day).
+
+### Changed
+
+- The publish-toolchain preflight audits the pinned npm through
+  `scripts/audit-publish-toolchain.mjs`. npm bundles its dependencies, so an
+  advisory against one of them is fixable only by a new npm release. The
+  script accepts such an advisory only when
+  `.github/publish-toolchain/audit-exceptions.json` names it for its package
+  with a reason and an expiry date; any other advisory at the threshold, an
+  expired exception and an exception the report no longer contains all fail.
+  Three are listed, expiring 2026-10-31: GHSA-qhr7-859c-m2p7 and
+  GHSA-6j4f-fj2g-mc7p (`brace-expansion`) and GHSA-rfgv-xxqx-mfg5
+  (`undici`), none reachable from `npm publish`.
+
 ### Fixed
 
 - The risk-trend rules now include the current scan in their window. A
@@ -26,18 +59,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   runs on them and the same indicator anywhere else in the tree still
   reports.
 
-### Changed
-
-- The publish-toolchain preflight audits the pinned npm through
-  `scripts/audit-publish-toolchain.mjs`. npm bundles its dependencies, so an
-  advisory against one of them is fixable only by a new npm release. The
-  script accepts such an advisory only when
-  `.github/publish-toolchain/audit-exceptions.json` names it for its package
-  with a reason and an expiry date; any other advisory at the threshold, an
-  expired exception and an exception the report no longer contains all fail.
-  Three are listed, expiring 2026-10-31: GHSA-qhr7-859c-m2p7 and
-  GHSA-6j4f-fj2g-mc7p (`brace-expansion`) and GHSA-rfgv-xxqx-mfg5
-  (`undici`), none reachable from `npm publish`.
 
 ## [6.3.3] - 2026-09-29
 

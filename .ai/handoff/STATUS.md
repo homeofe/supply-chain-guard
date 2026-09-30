@@ -50,6 +50,36 @@ Local environment note: with `core.autocrlf=true` the worktree copies of the
 workflow files carry CRLF, and five tests in `npm-install-pinning.test.ts` plus
 three in `self-scan-visibility.test.ts` fail on unmodified `main` for that
 reason alone. With the files normalised to LF the affected suites pass.
+## Daily threat-intel import (2026-09-30) (claude-opus-5-5)
+
+The importer (window from 2026-09-16, 121 advisory pages, not page-capped, no
+`--limit`, nothing left waiting) added 138 package IOCs, 97 to the bundle and
+41 to the catalog. 35 are bare npm names, each probed against the registry and
+each already a `security holding package` (single `0.0.1-security` version, or
+that plus the removed malicious versions): `sk-lib-enc`, `@xoxo-momo/kit` and
+31 `@hrmony/*` names to the bundle, `txs-lib-sdk` and `ts-rand-sdk` (first
+seen 2026-08-19) to the catalog. The rest of the catalog share is old records
+re-published now: 36 `epic-*` dependency-confusion versions (2022-05-18 and
+2025-10-30), `@dreamguyxeon/libsignal-node` 1.0.2/1.0.3 (2026-08-10) and
+`tailwind-contact-forms` 0.5.5 (2026-09-04, a declared catalog-window day,
+single amazon-inspector record). Left to the policy, not curated into the
+bundle. Both PyPI pins carry their `pypi:` prefix from the importer. 15
+advisories stayed unmappable (bounded version ranges). No `catalogWindows`
+entry, no decline entry, nothing declined.
+
+Observation: the first dry run also proposed `pypi:darkglitch` 1.2.0, 1.2.9,
+1.4.4, 1.4.5 (MAL-2026-10756, 2026-07-16) and `pypi:cleanup-string` 1.0.0
+(MAL-2026-17325). Minutes later neither the applying run nor a second dry run
+mapped them, although MAL-2026-10756 is live on OSV with those versions. Not
+hand-added; if a later run proposes them they import normally.
+
+The `@hrmony/*` names (like the `@wbnr/*` names on 2026-09-28) are a
+dependency-confusion scope: a name block also matches the targeted company's
+own internally published packages of the same name. Open question for the
+owner whether such scopes should stay name-blocked or be version-pinned.
+
+No non-package indicators added: the vendor write-ups found this run
+(MemTensor/sckit, PhantomRaven, RedC2, TrapDoor) are already covered.
 
 ## Release v6.3.3 (2026-09-29) (claude-opus-5-5)
 
