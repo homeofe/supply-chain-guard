@@ -291,6 +291,7 @@ src/
 data/
   threat-catalog.jsonl    # Historical, downloadable package indicators
 scripts/
+  audit-publish-toolchain.mjs # npm audit of the pinned publish npm, with dated exceptions
   feed-migrate.mjs        # Bundle-to-catalog migration planner and writer
   feed-partition.mjs      # Shared bundle/catalog placement policy
   generate-catalog.mjs    # Deterministic catalog index and shard generator

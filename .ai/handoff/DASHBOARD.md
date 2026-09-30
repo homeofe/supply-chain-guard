@@ -16,7 +16,7 @@ Current package inventory and CI gate wiring are generated below.
 | Version | 6.3.3 |
 | Node engines | >=22.0.0 |
 | Source modules | 91 under `src/` |
-| Test files | 191 under `src/__tests__/` |
+| Test files | 193 under `src/__tests__/` |
 | tsconfig `types: ["node"]` | yes |
 | Build / test / audit gates | enforced in required CI - see below |
 

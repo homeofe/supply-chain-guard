@@ -70,6 +70,224 @@ suppress:
     path: .ai/handoff/STATUS.md
     reason: handoff notes record the same rule work with example host-name keys; prose about the detection
 
+  # --- Scanning this repository with a scanner of a different version ---
+  #
+  # The scanner recognises its OWN inert IOC definitions by content: an exact
+  # path plus the SHA-256 recorded in the self-scan-manifest.json that ships with
+  # the RUNNING scanner (src/self-scan-trust.ts). That holds only when scanner and
+  # checkout are the same version, as in CI, where dist/cli.js scans the tree it
+  # was built from. Anyone who runs an installed release against this repository
+  # scans a different version: the daily threat-intel import changes
+  # src/threat-intel.ts every day, so the digests never match and the feed, the
+  # blocklist and the tests that quote them are read as findings by the IOC
+  # rules they define.
+  #
+  # The entries below cover exactly those rule and file pairs, measured from
+  # both scans. They are scoped by rule AND path: every other rule still runs on
+  # these files, and the same indicator anywhere else in the tree still reports.
+  # In CI the files are recognised by digest first, so these entries do not
+  # change the CI self-scan verdict; they exist for scans with any other
+  # version. Pinned by src/__tests__/self-scan-policy.test.ts.
+
+  - rule: CODECOV_EXFIL
+    path: src/broad-gap-pattern-matchers.ts
+    reason: the correlated matchers that implement this rule; the source spells out the construct it looks for
+  - rule: DROPPER_ANTIVM
+    path: src/broad-gap-pattern-matchers.ts
+    reason: the correlated matchers that implement this rule; the source spells out the construct it looks for
+  - rule: XZ_BUILD_INJECT
+    path: src/broad-gap-pattern-matchers.ts
+    reason: the correlated matchers that implement this rule; the source spells out the construct it looks for
+
+  - rule: INTERNAL_HOSTNAME
+    path: src/internal-disclosure.ts
+    reason: the internal-disclosure rule module lists well-known container and cluster default addresses and host suffixes so it can classify them; data of the rule, not infrastructure
+  - rule: INTERNAL_PRIVATE_IP
+    path: src/internal-disclosure.ts
+    reason: the internal-disclosure rule module lists well-known container and cluster default addresses and host suffixes so it can classify them; data of the rule, not infrastructure
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: IOC_KNOWN_C2_IP
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: IOC_KNOWN_C2_WALLET
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+  - rule: THREAT_INTEL_MATCH
+    path: src/ioc-blocklist.ts
+    reason: the IOC blocklist itself (C2 domains and IPs, dead drops, wallets, hashes, accounts); the definitions, not a use of them
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/patterns.ts
+    reason: detection pattern tables quoting the campaign infrastructure they detect; definitions, not a use of them
+  - rule: IOC_KNOWN_C2_IP
+    path: src/patterns.ts
+    reason: detection pattern tables quoting the campaign infrastructure they detect; definitions, not a use of them
+  - rule: THREAT_INTEL_MATCH
+    path: src/patterns.ts
+    reason: detection pattern tables quoting the campaign infrastructure they detect; definitions, not a use of them
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+  - rule: IOC_KNOWN_C2_IP
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+  - rule: THREAT_INTEL_MATCH
+    path: src/threat-intel.ts
+    reason: the offline threat feed itself; every value in it is an indicator this scanner matches, so a mismatched scanner reads the definitions as hits
+
+  - rule: CODECOV_EXFIL
+    path: dist/broad-gap-pattern-matchers.js
+    reason: compiled output of src/broad-gap-pattern-matchers.ts; the same matcher definitions
+  - rule: DROPPER_ANTIVM
+    path: dist/broad-gap-pattern-matchers.js
+    reason: compiled output of src/broad-gap-pattern-matchers.ts; the same matcher definitions
+  - rule: VIDAR_WALLET_THEFT
+    path: dist/broad-gap-pattern-matchers.js
+    reason: compiled output of src/broad-gap-pattern-matchers.ts; the same matcher definitions
+  - rule: XZ_BUILD_INJECT
+    path: dist/broad-gap-pattern-matchers.js
+    reason: compiled output of src/broad-gap-pattern-matchers.ts; the same matcher definitions
+
+  - rule: INTERNAL_HOSTNAME
+    path: dist/internal-disclosure.js
+    reason: compiled output of src/internal-disclosure.ts; the same default-address and host-suffix data of the rule
+  - rule: INTERNAL_PRIVATE_IP
+    path: dist/internal-disclosure.js
+    reason: compiled output of src/internal-disclosure.ts; the same default-address and host-suffix data of the rule
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: IOC_KNOWN_C2_IP
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: IOC_KNOWN_C2_WALLET
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+  - rule: THREAT_INTEL_MATCH
+    path: dist/ioc-blocklist.js
+    reason: compiled output of src/ioc-blocklist.ts; the same blocklist definitions
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: dist/patterns.js
+    reason: compiled output of src/patterns.ts; the same pattern tables
+  - rule: IOC_KNOWN_C2_IP
+    path: dist/patterns.js
+    reason: compiled output of src/patterns.ts; the same pattern tables
+  - rule: THREAT_INTEL_MATCH
+    path: dist/patterns.js
+    reason: compiled output of src/patterns.ts; the same pattern tables
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+  - rule: IOC_KNOWN_C2_IP
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+  - rule: THREAT_INTEL_MATCH
+    path: dist/threat-intel.js
+    reason: compiled output of src/threat-intel.ts, the offline threat feed; the same definitions, read as hits by a scanner of another version
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_C2_IP
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_C2_WALLET
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: THREAT_INTEL_MATCH
+    path: src/__tests__/campaigns.test.ts
+    reason: campaigns.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+
+  - rule: IOC_KNOWN_MALICIOUS_ACCOUNT
+    path: src/__tests__/go-scanner.test.ts
+    reason: go-scanner.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+
+  - rule: IOC_KNOWN_C2_IP
+    path: src/__tests__/issue-54-hardening.test.ts
+    reason: issue-54-hardening.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_DEAD_DROP
+    path: src/__tests__/issue-54-hardening.test.ts
+    reason: issue-54-hardening.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: THREAT_INTEL_MATCH
+    path: src/__tests__/issue-54-hardening.test.ts
+    reason: issue-54-hardening.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/__tests__/mcp-server.test.ts
+    reason: mcp-server.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: THREAT_INTEL_MATCH
+    path: src/__tests__/mcp-server.test.ts
+    reason: mcp-server.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+
+  - rule: IOC_KNOWN_C2_DOMAIN
+    path: src/__tests__/threat-intel.test.ts
+    reason: threat-intel.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_C2_IP
+    path: src/__tests__/threat-intel.test.ts
+    reason: threat-intel.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: IOC_KNOWN_MALWARE_HASH
+    path: src/__tests__/threat-intel.test.ts
+    reason: threat-intel.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+  - rule: THREAT_INTEL_MATCH
+    path: src/__tests__/threat-intel.test.ts
+    reason: threat-intel.test.ts asserts that the scanner detects real campaign indicators, so it quotes them; test data about the detection
+
+  - rule: GHA_THIRD_PARTY_ACTION
+    path: .github/workflows/scorecard.yml
+    reason: ossf/scorecard-action, the official OpenSSF Scorecard action, pinned to a full commit SHA and run with read-only permissions plus the id-token and security-events scopes Scorecard documents
+
   # The DOCKER_NPM_GLOBAL suppression that used to sit here is gone: the rule
   # now inspects the package specs and no longer fires on our image's local
   # tarball install. Fixing the rule beat documenting an exception for it.

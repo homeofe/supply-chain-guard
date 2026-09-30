@@ -7,6 +7,38 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- The risk-trend rules now include the current scan in their window. A
+  project whose score had just dropped to 0 was still reported with
+  `RISK_STAGNATION_HIGH`, `RISK_TREND_INCREASING` or
+  `RISK_TRAJECTORY_DEGRADING` at high severity, and exited 1, because the
+  window held only the stored scans before it. Stagnation now requires the
+  current scan above 50 too, and a rising trend or degrading trajectory is
+  reported only when the current scan is not below the baseline it is
+  compared with.
+- A self-scan of this repository with a scanner of a different version stays
+  clean. The scanner recognises its own IOC definitions (the offline feed,
+  the blocklist, the pattern tables and the tests quoting real indicators) by
+  content digest, which matches only when scanner and checkout are the same
+  version. `.supply-chain-guard.yml` now suppresses the IOC rules on exactly
+  those files, each entry scoped by rule and path, so every other rule still
+  runs on them and the same indicator anywhere else in the tree still
+  reports.
+
+### Changed
+
+- The publish-toolchain preflight audits the pinned npm through
+  `scripts/audit-publish-toolchain.mjs`. npm bundles its dependencies, so an
+  advisory against one of them is fixable only by a new npm release. The
+  script accepts such an advisory only when
+  `.github/publish-toolchain/audit-exceptions.json` names it for its package
+  with a reason and an expiry date; any other advisory at the threshold, an
+  expired exception and an exception the report no longer contains all fail.
+  Three are listed, expiring 2026-10-31: GHSA-qhr7-859c-m2p7 and
+  GHSA-6j4f-fj2g-mc7p (`brace-expansion`) and GHSA-rfgv-xxqx-mfg5
+  (`undici`), none reachable from `npm publish`.
+
 ## [6.3.3] - 2026-09-29
 
 ### Changed

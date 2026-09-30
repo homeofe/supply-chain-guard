@@ -498,8 +498,15 @@ jobs:
       # turns every pull request red, including the release pull request, before
       # a tag can reach the publish job. Same threshold as the compat job's audit
       # of this package's own dependencies.
+      #
+      # npm bundles those packages, so only a new npm release can fix one. The
+      # script reads `npm audit --json` and accepts an advisory only when
+      # .github/publish-toolchain/audit-exceptions.json names it, with a reason
+      # and an expiry date; an expired or no longer reported exception fails, as
+      # does every unlisted advisory at the threshold (2026-09-30: no npm release
+      # carried the fixed brace-expansion and undici).
       - name: Audit the pinned npm
-        run: npm audit --audit-level=high --prefix .github/publish-toolchain
+        run: node scripts/audit-publish-toolchain.mjs --audit-level=high
 
   build:
     name: Build and Test

