@@ -241,7 +241,7 @@ program
   .option("--two-tier", "Use two-tier gated verdict and risk scoring")
   .option("--scorecard <score>", "OpenSSF Scorecard score (0.0 - 10.0)")
   .option("--external-intel", "Look up OSV, EPSS, CISA KEV and OpenSSF Scorecard for the scanned project and feed them into the two-tier score (requires network; off by default)")
-  .option("--cache-dir <dir>", "Cache directory for the threat feed and catalog (default: .scg-cache)")
+  .option("--cache-dir <dir>", "Cache directory for the threat feed and catalog (default: SCG_CACHE_DIR, else the per-user cache directory)")
   .action(
     async (
       target: string,
@@ -984,7 +984,7 @@ feedCmd
     "Download the published IOC feed into the local cache for same-day protection (default source: the project's feed.json on GitHub main)",
   )
   .option("-u, --url <url>", "Feed URL to download instead of the default")
-  .option("-c, --cache-dir <dir>", "Cache directory to write to (default: .scg-cache)")
+  .option("-c, --cache-dir <dir>", "Cache directory to write to (default: SCG_CACHE_DIR, else the per-user cache directory)")
   .action(async (opts: { url?: string; cacheDir?: string }) => {
     try {
       const { refreshFeed, DEFAULT_FEED_URL } = await import("./feed.js");

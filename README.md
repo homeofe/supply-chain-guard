@@ -28,9 +28,10 @@ npx supply-chain-guard scan .
 
 It exits `1` on a high finding or a scan that could not examine everything, and
 `2` on a critical finding, so it can gate a script as it is. To add the historical
-package catalog, run `npx supply-chain-guard feed refresh` with network access in
-the directory you scan from. The catalog is cached there in `.scg-cache` and
-belongs to the installed version, so refresh again after an upgrade.
+package catalog, run `npx supply-chain-guard feed refresh` once with network
+access. The catalog is cached per user (see [Catalog cache](#catalog-cache)), so
+scans from any directory use it; it belongs to the installed version, so refresh
+again after an upgrade.
 
 Gate every pull request:
 
@@ -246,6 +247,14 @@ docker run --rm -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.3 scan /s
 ```
 
 `${PWD}` works in bash, zsh, and PowerShell; in cmd.exe use `%cd%` instead.
+
+The catalog cache lives in the container user's home, so it is gone after
+`--rm`. To keep it across runs, give it a volume:
+
+```bash
+docker run --rm -v scg-cache:/home/scg/.cache/supply-chain-guard ghcr.io/homeofe/supply-chain-guard:6.3.3 feed refresh
+docker run --rm -v scg-cache:/home/scg/.cache/supply-chain-guard -v ${PWD}:/scan ghcr.io/homeofe/supply-chain-guard:6.3.3 scan /scan
+```
 
 ## Quickstart
 
@@ -959,8 +968,8 @@ data-egress-restricted environments.
 An offline scan matches against the bundled indicator set: every domain, URL, IP
 and hash, every curated campaign, and the recent package indicators. Older
 package indicators live in the historical catalog, which is much larger than the
-bundle and is downloaded by `supply-chain-guard feed refresh` into `.scg-cache`
-in the working directory (or `--cache-dir`). A scan without that cache, or with
+bundle and is downloaded by `supply-chain-guard feed refresh` into the per-user
+cache directory (see [Catalog cache](#catalog-cache)). A scan without that cache, or with
 one left over from another release, runs against the bundled set only, and every
 `scan` report says so in its Catalog line (see
 [THREAT_FEED_CATALOG_MISSING](#threat_feed_catalog_missing)).
@@ -1106,8 +1115,26 @@ catalog is narrower than a scan with it, and without this rule it reports exactl
 the same success.
 
 `supply-chain-guard feed refresh` downloads the catalog and caches it for later
-scans, in `.scg-cache` under the working directory unless `--cache-dir` names
-another. The cache belongs to one release, so an upgrade needs a new refresh.
+scans, in the per-user cache directory unless `--cache-dir` or `SCG_CACHE_DIR`
+names another (see [Catalog cache](#catalog-cache)). The cache belongs to one
+release, so an upgrade needs a new refresh.
+
+#### Catalog cache
+
+`feed refresh` and every scan resolve the same directory, in this order:
+
+1. `--cache-dir <dir>`
+2. the `SCG_CACHE_DIR` environment variable
+3. the per-user cache directory: `%LOCALAPPDATA%\supply-chain-guard\cache` on
+   Windows, `~/Library/Caches/supply-chain-guard` on macOS, and
+   `$XDG_CACHE_HOME/supply-chain-guard` or `~/.cache/supply-chain-guard` elsewhere
+
+The working directory is not used, so one refresh serves scans started from any
+directory, and a scanned checkout cannot supply its own cache. A `.scg-cache`
+directory left in the working directory by earlier releases is no longer read;
+the catalog finding says so when one is present. Pass `--cache-dir .scg-cache`
+to keep using it, or refresh once. Reports name a cache under the home
+directory as `~/...`, without the account name.
 The finding names how many historical indicators were not consulted and
 why, and the reason matters:
 

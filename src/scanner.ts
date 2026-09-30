@@ -117,6 +117,7 @@ import { modelWorkflows } from "./workflow-modeler.js";
 import { scanWorkflowGraph } from "./workflow-graph.js";
 import { scanOpenClawPlugin } from "./openclaw-plugin-scanner.js";
 import { feedFreshness, feedStalenessFindings, catalogFindings } from "./feed.js";
+import { legacyCacheIgnored } from "./cache-dir.js";
 import { checkRegistryVersionDrift } from "./publishing-anomaly-detector.js";
 import { readRiskHistory, riskHistoryUnreadableFinding, analyzeRiskTrend, saveRiskHistory, getRiskTrend } from "./continuous-monitor.js";
 import { readTriageDecisions, triageStoreUnreadableFinding, checkTriageGovernance } from "./triage-engine.js";
@@ -310,7 +311,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   }
 
   // v4.5: Load threat intelligence feed. The Action passes an isolated cacheDir
-  // under RUNNER_TEMP; the CLI default remains process.cwd() `.scg-cache`.
+  // under RUNNER_TEMP; the CLI default is the per-user cache (src/cache-dir.ts).
   // Catalog availability is snapshotted here: nested scanners must not reload
   // from a different directory and overwrite lastCatalog before the finding.
   const threatFeed = loadThreatIntel(options.cacheDir);
@@ -837,7 +838,9 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // cannot change what this scan reports. Carries no `file`, for the same
   // reason: the path-ignore filter below drops anything that looks like a
   // repo finding.
-  for (const pushed of catalogFindings(catalogState, policy?.catalog ?? "optional")) findings.push(pushed);
+  for (const pushed of catalogFindings(catalogState, policy?.catalog ?? "optional", {
+    legacyCacheInWorkingDir: legacyCacheIgnored(options.cacheDir),
+  })) findings.push(pushed);
 
   // Apply path ignores to out-of-band scanners too. The primary file walk was
   // pruned before scanning, but Git/lockfile/agent scanners discover their own

@@ -262,6 +262,7 @@ src/
   external-threat-intel.ts # Opt-in OSV, EPSS, CISA KEV and Scorecard clients
   catalog-digest.ts       # Package-anchored catalog integrity metadata
   feed.ts                 # Feed/catalog refresh, cache loading and feed stats
+  cache-dir.ts            # Per-user cache directory resolution (--cache-dir, SCG_CACHE_DIR)
   risk-engine.ts          # Multi-dimensional risk scoring
   two-tier-scoring.ts     # Correlated threat gate and composite risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning

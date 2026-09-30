@@ -100,6 +100,7 @@ export {
   FEED_STALE_RULE,
   type FeedFreshness,
 } from "./feed.js";
+export { resolveCacheDir, userCacheDir, LEGACY_CACHE_DIR } from "./cache-dir.js";
 export { calculateRiskDimensions } from "./risk-engine.js";
 export { getChangedFiles } from "./diff-scanner.js";
 export { listOrgRepos, analyzeOrgFindings } from "./org-scanner.js";

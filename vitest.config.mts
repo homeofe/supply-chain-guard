@@ -1,11 +1,19 @@
 import { defineConfig } from "vitest/config";
+import * as os from "node:os";
+import * as path from "node:path";
 
 const coverageRun = process.argv.some((arg) => arg === "--coverage" || arg.startsWith("--coverage."));
 
 export default defineConfig({
   test: {
     include: ["src/__tests__/**/*.test.ts"],
-    env: { SCG_VITEST_COVERAGE: coverageRun ? "1" : "0" },
+    // SCG_CACHE_DIR keeps every test that does not name a cache directory off
+    // the developer's real per-user cache (src/cache-dir.ts): an empty,
+    // per-run directory, so no test reads a catalog it did not install.
+    env: {
+      SCG_VITEST_COVERAGE: coverageRun ? "1" : "0",
+      SCG_CACHE_DIR: path.join(os.tmpdir(), `scg-vitest-cache-${process.pid}`),
+    },
     coverage: {
       provider: "v8",
       include: ["src/**"],

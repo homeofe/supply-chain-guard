@@ -780,9 +780,11 @@ export interface ScanOptions {
   /** Use bundled feed only without merging refreshed local cache (--hermetic) */
   hermetic?: boolean;
   /**
-   * Directory for the threat-feed and catalog caches. Defaults to `.scg-cache`
-   * under process.cwd(). Pass an isolated directory when the scan target must
-   * not control the catalog cache (the GitHub Action does this).
+   * Directory for the threat-feed and catalog caches. Defaults to
+   * `SCG_CACHE_DIR`, else the per-user cache directory (src/cache-dir.ts), so
+   * the working directory does not supply the cache (it still does for a
+   * process without a home directory). The GitHub Action passes an isolated
+   * directory under RUNNER_TEMP.
    */
   cacheDir?: string;
   /**
