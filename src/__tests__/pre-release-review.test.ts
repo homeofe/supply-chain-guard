@@ -175,6 +175,41 @@ describe("the 2026-09-22 daily intelligence", () => {
   });
 });
 
+describe("the 2026-09-17 daily intelligence", () => {
+  // The catalog window for that day was set for the GitHub Advisory Database
+  // bulk migration of the historical OpenSSF corpus; a window covers the whole
+  // day, so it also moved that day's fresh records (MAL-2026-16248 to 16275)
+  // out of the offline bundle.
+  const malIn = (e: FeedIOC, lo: number, hi: number) =>
+    [...String(e.source ?? "").matchAll(/MAL-(\d{4})-(\d+)/g)].some(
+      (m) => m[1] === "2026" && Number(m[2]) >= lo && Number(m[2]) <= hi,
+    );
+  const historical = (e: FeedIOC) =>
+    [...String(e.source ?? "").matchAll(/MAL-(\d{4})-(\d+)/g)].some(
+      (m) => Number(m[1]) < 2026 || (m[1] === "2026" && Number(m[2]) <= 12395),
+    );
+  const day = () => getBundledFeed().filter((e) => e.type === "package" && e.firstSeen === "2026-09-17");
+
+  it("ships the records outside the bulk batch in the bundle", () => {
+    const fresh = day().filter((e) => malIn(e, 16248, 16275));
+    expect(fresh).toHaveLength(64);
+    expect(fresh.map((e) => e.value)).toContain("pulse-pwn-9f3a2");
+    // Control: the historical batch itself stays out of the bundle.
+    expect(day().filter(historical)).toEqual([]);
+  });
+
+  it("stays in the bundle at the next release's migration", () => {
+    const root = path.resolve(__dirname, "..", "..");
+    const source = fs.readFileSync(path.join(root, "src", "threat-intel.ts"), "utf8");
+    const moves = new Set(
+      (planMigration(source, loadPartitionConfig(root)) as { move: Array<{ value: string }> }).move.map((m) => m.value),
+    );
+    const fresh = day().filter((e) => malIn(e, 16248, 16275)).map((e) => e.value);
+    expect(fresh).toHaveLength(64);
+    expect(fresh.filter((v) => moves.has(v))).toEqual([]);
+  });
+});
+
 describe("MCP scan_directory", () => {
   it("states whether the historical catalog was consulted, whatever the severity filter", async () => {
     const dir = tmp();

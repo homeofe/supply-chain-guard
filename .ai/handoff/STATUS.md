@@ -1,3 +1,40 @@
+## Threat intel 2026-10-01 (claude-opus-5-5)
+
+Daily import (published >= 2026-09-17, 122 pages, no slicing, no `--limit`):
+399 new entries, 163 to the bundle and 236 to the catalog as routed by the
+importer. Skipped 16 (15 unmappable version ranges, 1 withdrawn). Nothing
+declined, nothing deferred, no new decline or deferral entry.
+
+The catalog side is version pins with old `firstSeen` (2022 lures, the
+October 2025 amazon-inspector `0.0.1-security`/`1.0.0` pairs, four
+`pypi:darkglitch` versions from July 2026), routed by the date rule. Two of
+them fell on the 2026-09-17 window day and were fresh records, not the bulk
+batch, which exposed the same defect the 2026-09-22 window had: the
+2026-09-17 window had already swept 62 of that day's fresh records
+(MAL-2026-16248 to 16275, amazon-inspector, kam193, ghsa-malware) into the
+catalog. All 64 were moved back, field for field, under a curated block in
+`FEED_CHUNK_22`, with a `planMigration` test in `pre-release-review.test.ts`
+and the window's `reason` updated. Final split from the import: 165 bundle,
+234 catalog. The historical batch of that day (MAL-2025 and older, MAL-2026
+up to 12395) stays in the catalog.
+
+Bare-name probe of all 97 bare entries: 22 security holding packages, 9
+unpublished, 5 gone (404), 61 live. Every live one is a member of the Baileys
+WhatsApp fork channel-subscription family; OSV marks all versions affected
+for each of the 61 and the GHSA ranges read `> 0`. These are author-published
+forks, not hijacked packages, so the name blocks stay.
+
+Hand-added: `@dforge-core/dforge-mcp` 0.2.21 (GHAPPIER loader, CloudSEK,
+reported by Infosecurity Magazine and others), pinned in
+`KNOWN_BAD_NPM_VERSIONS` and as a bundled FeedIOC with `campaign`. The
+registry times match the report (0.2.21 at 17:19:50Z, clean 0.2.22 at
+17:55:28Z on 2026-09-09). CloudSEK's IOC table is in a gated PDF, so no
+atomic indicators were added. Noted, not added: the registry also no longer
+lists 0.2.20, which no source names as malicious.
+
+D-062 bookkeeping: unchanged. Advisory GHSA-pvhm-wc2r-q627 stays a draft:
+d9 not released.
+
 ## Test cache directory is removed after each run (2026-09-30) (claude-opus-5-5)
 
 The per-run test cache directory introduced today (`scg-vitest-cache-<pid>` in

@@ -7469,4 +7469,49 @@ describe("Campaign Signatures", () => {
       expect(ioc?.confidence).toBeGreaterThanOrEqual(0.9);
     });
   });
+
+  // GHAPPIER: a legitimate MCP server published from a hijacked maintainer
+  // account through a rewritten release workflow (CloudSEK). Only 0.2.21 is
+  // malicious; 0.2.22 restored the project, so the name must never be blocked.
+  describe("GHAPPIER loader via npm trusted publishing (September 2026)", () => {
+    const manifest = (version: string) =>
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          name: "consumer",
+          version: "1.0.0",
+          dependencies: { "@dforge-core/dforge-mcp": version },
+        })
+      );
+
+    it("should flag @dforge-core/dforge-mcp@0.2.21 as a known-bad version", async () => {
+      manifest("0.2.21");
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_BAD_VERSION"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("must NOT flag the clean 0.2.22 release", async () => {
+      manifest("0.2.22");
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_BAD_VERSION"),
+        "only 0.2.21 is malicious",
+      ).toBeUndefined();
+      expect(
+        report.findings.find((f) => f.severity === "critical" && f.description.includes("dforge-mcp")),
+      ).toBeUndefined();
+    });
+
+    it("keeps the pinned version bundled with a campaign", () => {
+      const ioc = getBundledFeed().find(
+        (i) => i.value === "@dforge-core/dforge-mcp@0.2.21"
+      );
+      expect(ioc).toBeDefined();
+      expect(ioc?.campaign).toBeTruthy();
+    });
+  });
 });
