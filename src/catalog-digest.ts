@@ -11,9 +11,9 @@
 // read off loadThreatIntel()'s hot path, is typechecked, and supplies the
 // version refreshFeed() needs to build the catalog URL.
 export const CATALOG_DIGEST = {
-  version: "6.4.0",
-  sha256: "0040bb1675685a9b0158074bc525630ad2a6f5668509678797b4ff3930a8a1fb",
-  entriesSha256: "479b5ef95f5a5add7fd7ca87995ef65e1f96fe3ea979cef49eddf0a3d379e3b1",
-  entryCount: 88301,
+  version: "6.4.1",
+  sha256: "d6b7394431b3a79e6a42d72ac56ed4973ed9d18faa2c7600370964803059ddc5",
+  entriesSha256: "03bf81738d2f33995feeb5f8707ee3b2cd8f4d058241dc0f88c61c64eea4cf34",
+  entryCount: 92821,
   shardCount: 2,
 } as const;

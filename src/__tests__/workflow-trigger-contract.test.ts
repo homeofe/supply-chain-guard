@@ -370,11 +370,11 @@ describe("consumer-repo disclosure gate", () => {
 
   it("fires on every disclosure shape that actually reached a published surface", () => {
     for (const shape of [
-      `Measured against ${ORG}/atlas: 10 criticals`,   // the merged-PR-body shape
-      `regression seen in ${ORG}-trust`,               // hyphenated form
-      `https://github.com/${ORG}/ideabase/issues/24`,  // full URL form
-      `See ${ORG.toUpperCase()}/Atlas`,                // case-insensitive
-      `Remediates a finding (${ORG}/ideabase#24).`,    // the v5.2.41 CHANGELOG line
+      `Measured against ${ORG}/sample-app: 10 criticals`, // the merged-PR-body shape
+      `regression seen in ${ORG}-sample`,              // hyphenated form
+      `https://github.com/${ORG}/sample-repo/issues/24`, // full URL form
+      `See ${ORG.toUpperCase()}/Sample-App`,           // case-insensitive
+      `Remediates a finding (${ORG}/sample-repo#24).`, // the v5.2.41 CHANGELOG line shape
     ]) {
       expect(re().test(shape), shape).toBe(true);
     }

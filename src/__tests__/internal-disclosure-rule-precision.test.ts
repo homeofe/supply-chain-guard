@@ -218,8 +218,8 @@ describe("INTERNAL_HOSTNAME: dotted keys and replacement fields", () => {
       ["tools/report.py", 'print(f"{report.local} local reference(s) exempt")'],
       ["tools/report.py", "print(F'{report.local:>4} local')"],
       ["tools/report.py", 'print(rf"{a.b.local} and {counts.home}")'],
-      ["src/log.js", "console.log(`${counts.local} local actions`)"],
-      ["src/log.ts", "const s = `total ${a + counts.local} and ${ stats.home }`;"],
+      ["src/log.js", "console.log(`${totals.local} local actions`)"],
+      ["src/log.ts", "const s = `total ${a + totals.local} and ${ stats.home }`;"],
     ];
     for (const [file, line] of cases) {
       expect(ofRule(scanLines(file, line), "INTERNAL_HOSTNAME"), line).toHaveLength(0);
@@ -266,10 +266,10 @@ describe("INTERNAL_HOSTNAME: markdown code reads as code", () => {
     ofRule(scanLines(file, ...lines), "INTERNAL_HOSTNAME");
 
   it("reports a span that is exactly an identifier-shaped name at low", () => {
-    // The handoff note that quoted a restored property access.
+    // Prose quoting a property access.
     for (const line of [
-      "the two `counts.local` reads that build the summary line",
-      "`counts.local` as an internal-hostname-shaped string",
+      "the two `totals.local` reads in the summary",
+      "`totals.local` is a property access",
       // The residual: a host written the same way reads the same way.
       "connect to `db01.corp` first",
     ]) {
@@ -281,11 +281,11 @@ describe("INTERNAL_HOSTNAME: markdown code reads as code", () => {
 
   it("drops a dotted name used as code inside a span or a language-tagged fence", () => {
     for (const lines of [
-      ["call `summarize(counts.local)` once"],
-      ["`counts.local += 1;`"],
-      ["```js", "const n = counts.local;", "```"],
-      ["```typescript", "if (counts.local > 0) report();", "```"],
-      ["```python", "total = counts.local + counts.remote", "```"],
+      ["call `summarize(totals.local)` once"],
+      ["`totals.local += 1;`"],
+      ["```js", "const n = totals.local;", "```"],
+      ["```typescript", "if (totals.local > 0) report();", "```"],
+      ["```python", "total = totals.local + totals.remote", "```"],
     ]) {
       expect(hostnames("docs/notes.md", ...lines), lines.join(" | ")).toHaveLength(0);
     }
