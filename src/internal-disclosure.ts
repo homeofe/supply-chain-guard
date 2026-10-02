@@ -1784,7 +1784,10 @@ const IDENTIFIER_SHAPED_NAME = /^[a-z_$][\w$]*(?:\.[a-z_$][\w$]*)+$/i;
  *   - "prose": anything else (`ping db01.corp`, `host: db01.corp`,
  *     `my-mac.local`), which reports exactly as prose does.
  */
-export function classifyHostnameInCodeSpan(
+// Not exported on purpose: JSDoc of an export is copied into dist/*.d.ts, and
+// the example names above would make the published declaration file match
+// INTERNAL_HOSTNAME.
+function classifyHostnameInCodeSpan(
   line: string,
   span: readonly [number, number],
   column: number,

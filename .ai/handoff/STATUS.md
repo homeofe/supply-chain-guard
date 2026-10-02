@@ -40,9 +40,9 @@ Four rule-precision items that were still open after 6.3.1, each measured on
 real fleet input, fixed in one change on the owner's decision:
 
 - d6(b) `BEACON_TIMEOUT_FETCH` on a committed minified bundle. Cause: the
-  matcher's gap ran the whole line, and a minified file is one line, so a
-  `setTimeout(` paired with an `XMLHttpRequest` 6,325 characters later (htmx
-  2.0.4, measured). Fix: a 512-character bound on both beacon matchers
+  matcher's gap ran the whole line, and a minified file is one line, so the
+  timer call paired with a transport 6,325 characters later (htmx 2.0.4,
+  measured). Fix: a 512-character bound on both beacon matchers
   (`GAP_DOT_BEACON`), the protestware bound. A file-name exclusion was ruled
   out again, since the scanned package names its files. The bound hides
   nothing a newline does not already hide. The legacy pattern strings keep
