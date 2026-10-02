@@ -35,6 +35,32 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   in the system temp directory) when it ends, through a vitest global
   teardown. Each run used to leave one behind.
 
+### Fixed
+
+- `BEACON_TIMEOUT_FETCH` no longer pairs a `setTimeout(` with a transport
+  call kilobytes later on the same line, which reported every committed
+  minified bundle that uses `XMLHttpRequest` (htmx 2.0.4: the closest pair is
+  6,325 characters apart). Both beacon rules now require the transport within
+  512 characters of the timer, the bound the protestware rules already use. The
+  file name still plays no part for the timeout rule, so a beacon in a file
+  named `*.min.js` keeps reporting.
+- `INTERNAL_PRIVATE_IP` treats the German requirement markers `Anf.` and
+  `Anforderung` like `Req` and `Requirement`, so `Anf. 10.4.1.1` in a
+  bilingual compliance catalogue is a requirement number, not an address.
+- `INTERNAL_HOSTNAME` reads code in Markdown as code. In a fence tagged with a
+  programming language (`js`, `ts`, `py` and others), and in an inline span
+  that holds program syntax (`` `summarize(counts.local)` ``), a dotted name
+  is a host only inside a string, after `://` or after `@`, as in a source
+  file. A span that is exactly an identifier-shaped name (`` `counts.local` ``)
+  reports at low instead of medium, because nothing in the file tells a quoted
+  property access from a quoted host. Prose, untagged, text and shell fences,
+  and hyphenated names keep medium.
+- A private or unique-local address inside an explanatory code comment (one
+  that says such as, refused, blocked, SSRF, unique local and the like)
+  reports at info in any code file, not only in the file that classifies
+  addresses itself: the comment narrating a past miss usually sits in the
+  caller. A comment without such a cue keeps medium.
+
 ## [6.4.0] - 2026-09-30
 
 ### Added
