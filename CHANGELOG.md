@@ -7,6 +7,28 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-10-01): 399 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 165 in the offline bundle and 234 in the catalog.
+  Most bundle entries are from 2026-09-30, among them 61 names of the Baileys
+  WhatsApp fork channel-subscription family, blocked outright because the
+  advisories mark every version malicious (for example `@queenanya/baileys`,
+  `whalibmob`, `levvleys`). The catalog entries are version pins whose records
+  date from before the bundle cutoff (2022, October 2025 and July 2026).
+- GHAPPIER loader: `@dforge-core/dforge-mcp` 0.2.21, published from a
+  hijacked maintainer account through a rewritten release workflow, is pinned
+  as a known-bad version. The package itself is legitimate and 0.2.22 is
+  clean, so the name is not blocked.
+
+### Fixed
+
+- The 2026-09-17 catalog window, declared for the bulk migration of the
+  historical OpenSSF corpus, also sent that day's fresh malware records
+  (MAL-2026-16248 to 16275, 64 entries) to the catalog, so a default offline
+  scan did not see them. They are back in the offline bundle under a curated
+  block that keeps them there at every later migration.
+
 ### Changed
 
 - The test run removes its per-run cache directory (`scg-vitest-cache-<pid>`

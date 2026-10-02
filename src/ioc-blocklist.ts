@@ -2842,6 +2842,13 @@ export const KNOWN_BAD_NPM_VERSIONS: Record<string, { versions: string[]; descri
     versions: ["0.1.21", "0.1.23", "0.1.25"],
     description: "MemTensor sckit Go worm: credential stealer with self-propagation, published from a compromised release pipeline (SafeDep + Aikido, September 2026)",
   },
+  // GHAPPIER loader (September 2026). Legitimate MCP server published from a
+  // hijacked maintainer account with a rewritten release workflow; 0.2.21 was
+  // live for 35 minutes, 0.2.22 is the clean restore.
+  "@dforge-core/dforge-mcp": {
+    versions: ["0.2.21"],
+    description: "GHAPPIER loader: remote shell loader fired on MCP server start, published from a hijacked maintainer account via trusted publishing (CloudSEK, September 2026)",
+  },
 };
 
 // ---------------------------------------------------------------------------
