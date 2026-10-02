@@ -57,6 +57,17 @@ const GAP_DOT_PROTESTWARE: GapSpec = {
   barrierMask: GAP_DOT.barrierMask,
   maxChars: PROTESTWARE_MAX_GAP_CHARS,
 };
+// A beacon names its transport inside the timer callback. Without a bound, a
+// minified bundle is one line, and any setTimeout( pairs with an
+// XMLHttpRequest tens of kilobytes later (htmx 2.0.4: 6,325 characters at the
+// closest). The bound keys on distance, never on the file name, which the
+// scanned package chooses; and it hides nothing a newline does not already
+// hide, since the line feed is a barrier of the same gap.
+const BEACON_MAX_GAP_CHARS = 512;
+const GAP_DOT_BEACON: GapSpec = {
+  barrierMask: GAP_DOT.barrierMask,
+  maxChars: BEACON_MAX_GAP_CHARS,
+};
 
 
 const WS0 = String.raw`[^\S\n]*`;
@@ -1159,11 +1170,11 @@ export function createCoreBroadGapMatchers(
     }]),
     BEACON_INTERVAL_FETCH: makeOrderedEventMatcher([{
       tokens: [String.raw`setInterval${WS0}\(`, beaconTransport],
-      gaps: [GAP_DOT],
+      gaps: [GAP_DOT_BEACON],
     }], true),
     BEACON_TIMEOUT_FETCH: makeOrderedEventMatcher([{
       tokens: [String.raw`setTimeout${WS0}\(`, beaconTransport],
-      gaps: [GAP_DOT],
+      gaps: [GAP_DOT_BEACON],
     }], true),
     PROTESTWARE_LOCALE_DESTRUCT: makeOrderedEventMatcher([{
       tokens: [

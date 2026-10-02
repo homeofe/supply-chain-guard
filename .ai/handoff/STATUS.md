@@ -34,6 +34,53 @@ lists 0.2.20, which no source names as malicious.
 
 D-062 bookkeeping: unchanged. Advisory GHSA-pvhm-wc2r-q627 stays a draft:
 d9 not released.
+## D-062 follow-ups: d3, d4, d6(b), d10 (2026-10-02) (claude-opus-5-5)
+
+Four rule-precision items that were still open after 6.3.1, each measured on
+real fleet input, fixed in one change on the owner's decision:
+
+- d6(b) `BEACON_TIMEOUT_FETCH` on a committed minified bundle. Cause: the
+  matcher's gap ran the whole line, and a minified file is one line, so a
+  `setTimeout(` paired with an `XMLHttpRequest` 6,325 characters later (htmx
+  2.0.4, measured). Fix: a 512-character bound on both beacon matchers
+  (`GAP_DOT_BEACON`), the protestware bound. A file-name exclusion was ruled
+  out again, since the scanned package names its files. The bound hides
+  nothing a newline does not already hide. The legacy pattern strings keep
+  `.*`, as protestware's do.
+- d4 German requirement markers: `Anf.` and `Anforderung` join
+  `REQUIREMENT_MARKER_AT_END`. `Anf` without the full stop, `Anfrage`,
+  `Anforderungen` and `Wanf.` still report.
+- d3 dotted identifiers in Markdown code. Owner decision 2026-10-02: fences
+  tagged with a programming language, and inline spans holding program
+  syntax, get the source-code discipline. A span that is exactly an
+  identifier-shaped name reports at low instead of medium. Accepted residual: a
+  real host quoted the same way (`` `db01.corp` ``) also drops to low.
+  Hyphenated names, prose, untagged, `text` and shell fences keep medium.
+- d10 explanatory comments in a calling file. Owner decision 2026-10-02: the
+  info downgrade keys on the comment block's cue words, not on whether the file
+  classifies addresses. `PRIVATE_RANGE_CLASSIFIER` is gone. Accepted residual:
+  a real address next to a cue word (`e.g.`) in a code comment reports info.
+  The calling-file comment from the fleet measurement could not be read from
+  here, so whether it carries a cue word is unverified.
+
+Proof. Each fix was cut back out and the new test went red on the intended
+case; the baseline and the restored tree are green. The cuts were the beacon
+gap unbounded and the bound moved to 513, each German marker removed, the
+classifier-file requirement restored, and the d3 fence branch, span branch and
+low downgrade each removed. One more cut dropped the in-span string test,
+which would silence too much. Real input, published 6.4.0 against this tree:
+htmx 2.0.4 `htmx.min.js` 1 medium -> 0; a fleet handoff file quoting
+`counts.local` twice 2 medium -> 2 low, its other three findings unchanged.
+
+Scorecard "Vulnerabilities" (10 advisories) checked the same day: all ten sit
+in the npm CLI bundled inside `.github/publish-toolchain` (brace-expansion
+5.0.9, ip-address 10.5.0, undici 6.28.0). Neither npm 11.21.0 nor 12.2.0
+(both 2026-09-30) bundles a fixed version, so no pin bump clears them yet. The
+toolchain audit is green: three are high and excepted until 2026-10-31, the
+other seven are below its `high` threshold. The open alerts stay as decided on
+2026-09-30.
+
+D-062 still open: d5, d7, d9 (moved out of PR 326, cross-file design needed).
 
 ## Test cache directory is removed after each run (2026-09-30) (claude-opus-5-5)
 

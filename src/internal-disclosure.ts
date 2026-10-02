@@ -643,12 +643,14 @@ function followsSpecCitation(content: string, matchStart: number): boolean {
  * A requirement marker written directly in front of the candidate, on the same
  * line: `Req 10.4.1.1`, `Requirement 10.4.1.1`, `§ 10.4.1.1`. PCI DSS v4.0
  * numbers its requirements in four dotted parts, and its chapter 10 collides
- * with 10/8. Only these markers, and only adjacent: `Req host` followed by an
+ * with 10/8. Bilingual compliance catalogues write the German markers
+ * `Anf. 10.4.1.1` and `Anforderung 10.4.1.1`. Only these markers, and only
+ * adjacent: `Req host` followed by an
  * address names a host. A fifth part (`10.4.1.1.2`) never reaches here, because the pattern
  * rejects a candidate followed by `.`.
  */
 const REQUIREMENT_MARKER_AT_END =
-  /(?:^|[^\w])(?:(?:req|requirement|section|control|clause|annex)[.:]?|sec\.|§)\s*$/i;
+  /(?:^|[^\w])(?:(?:req|requirement|section|control|clause|annex|anforderung)[.:]?|sec\.|anf\.|§)\s*$/i;
 
 /** Longest marker plus punctuation and a little spacing; bounds the lookback. */
 const REQUIREMENT_MARKER_WINDOW = 24;
@@ -984,45 +986,20 @@ export interface InternalPatternEntry extends PatternEntry {
 }
 
 /**
- * Classifier signals for INTERNAL_PRIVATE_IP / INTERNAL_PRIVATE_IPV6.
+ * Explanatory comments for INTERNAL_PRIVATE_IP / INTERNAL_PRIVATE_IPV6.
  *
  * An SSRF guard or address classifier is documented with the addresses it
- * refuses, and its comments have to name a private literal because that is
- * their subject. In a CODE file that matches any signal below, a private or
- * ULA literal inside a COMMENT reports at `info` instead of `medium`, but only
- * when its comment block also reads as an explanation (CLASSIFIER_COMMENT_CUE):
- * `# primary database at <private address>` keeps `medium` in any file.
- * A literal in string position, or in a file with no signal, keeps `medium`.
+ * refuses, and so is the code that calls it: a comment narrating why a past
+ * check missed `[fd00::1]` has to name the literal because that is its
+ * subject. In a CODE file, a private or ULA literal inside a COMMENT reports at
+ * `info` instead of `medium` when its comment block reads as an explanation
+ * (one of the cue words below). The decision keys on the comment, not on
+ * whether the file itself classifies addresses, because the narration often
+ * sits in the caller. `# primary database at <private address>` has no cue and
+ * keeps `medium` in any file. A literal in string position keeps `medium`.
  *
- * Signals, any one of which is enough:
- *   - a string prefix test on a private or ULA prefix: `startsWith("10.")`,
- *     `startswith(("192.168.", ...))`, `HasPrefix(h, "fd")`, with `10.`,
- *     `172.16` to `172.31`, `192.168`, `fc`, `fd`, `fe80`;
- *   - an anchored regex on one of those prefixes: `^10\.`, `^172\.`,
- *     `^192\.168`, `^f[cd]`, `^fc`, `^fd`, `^fe80`;
- *   - a private-address predicate call: `is_private(`, `isPrivate(`,
- *     `IsPrivate(`, `isPrivateAddress(`, or Python's `.is_private` property;
- *   - an ipaddr.js range check: `.range() === "private"` (also `uniqueLocal`,
- *     `linkLocal`, `loopback`, `carrierGradeNat`);
- *   - a Python network literal on a private prefix: `ip_network("10.`.
- *
- * Every quantifier is bounded, so one pass over a 5 MB file stays linear.
- */
-const PRIVATE_RANGE_CLASSIFIER = new RegExp(
-  [
-    String.raw`\b(?:startsWith|startswith|HasPrefix)\s*\(\s*(?:\(\s*)?(?:[\w.]{1,64}\s*,\s*)?["'](?:10\.|172\.(?:1[6-9]|2\d|3[01])|192\.168|f[cd]|fe80)`,
-    String.raw`\^(?:\(\?:|\()?(?:10\\\.|172\\\.|192\\\.168|f\[cd\]|fe80|f[cd](?=[/'"|)]))`,
-    String.raw`\bis_?private\w{0,32}\s*\(`,
-    String.raw`\.is_private\b`,
-    String.raw`\.range\(\s*\)\s*[!=]==?\s*["'](?:private|uniqueLocal|linkLocal|loopback|carrierGradeNat)["']`,
-    String.raw`\bip_network\(\s*["'](?:10\.|172\.|192\.168|f[cd]|fe80)`,
-  ].join("|"),
-  "i",
-);
-
-/**
- * Words that make a comment block an explanation of what a classifier does
- * rather than a note about where something lives.
+ * The residual this accepts: a real address written in a comment next to a
+ * cue word (`# the gateway, e.g. <address>`) reports at info, not medium.
  */
 const CLASSIFIER_COMMENT_CUE =
   /\b(?:such as|for example|for instance|refus\w*|reject\w*|block\w*|den(?:y|ies|ied)|rfc\s?(?:1918|4193|6598)|unique[- ]local|link[- ]local|ula|ssrf|prefix\w*|private ranges?)\b|\be\.g\./i;
@@ -1721,42 +1698,119 @@ interface MarkdownCodeMap {
   illustrative: boolean[];
   /** Column ranges of inline code spans, for lines outside a fence. */
   inline: Array<Array<[number, number]>>;
+  /**
+   * For a line inside a fence tagged with a programming language, the file
+   * path that language would have (`x.ts`, `x.py`); "" everywhere else.
+   */
+  fenceLanguagePath: string[];
 }
+
+/**
+ * Fence info strings that name a programming language, mapped to the
+ * extension CODE_FILE knows. Shell, config and log fences are absent on
+ * purpose: there a bare name is a host, as it is in prose.
+ */
+const FENCE_LANGUAGE_EXTENSIONS: Record<string, string> = {
+  js: "js", javascript: "js", mjs: "mjs", cjs: "cjs", jsx: "jsx",
+  ts: "ts", typescript: "ts", tsx: "tsx",
+  py: "py", python: "py", python3: "py",
+  rb: "rb", ruby: "rb", rs: "rs", rust: "rs", go: "go", golang: "go",
+  java: "java", kt: "kt", kotlin: "kt", php: "php", cs: "cs", csharp: "cs",
+  swift: "swift", scala: "scala", dart: "dart",
+  c: "c", h: "h", cpp: "cpp", "c++": "cpp", hpp: "hpp",
+};
 
 /** Build the fenced-block and inline-span map for a markdown document. */
 export function buildMarkdownCodeMap(lines: string[]): MarkdownCodeMap {
   const fenced: boolean[] = [];
   const illustrative: boolean[] = [];
   const inline: Array<Array<[number, number]>> = [];
+  const fenceLanguagePath: string[] = [];
   let openFence: string | null = null;
   let openIllustrative = false;
+  let openLanguagePath = "";
 
   for (const line of lines) {
     const fenceMatch = /^\s{0,3}(`{3,}|~{3,})\s*([A-Za-z0-9_+-]*)/.exec(line);
     if (openFence === null && fenceMatch) {
       openFence = fenceMatch[1][0];
-      openIllustrative = ILLUSTRATIVE_FENCE_LANGS.has((fenceMatch[2] ?? "").toLowerCase());
+      const lang = (fenceMatch[2] ?? "").toLowerCase();
+      openIllustrative = ILLUSTRATIVE_FENCE_LANGS.has(lang);
+      const ext = Object.hasOwn(FENCE_LANGUAGE_EXTENSIONS, lang) ? FENCE_LANGUAGE_EXTENSIONS[lang] : "";
+      openLanguagePath = ext ? `fence.${ext}` : "";
       fenced.push(true); // the fence line itself counts as code
       illustrative.push(openIllustrative);
       inline.push([]);
+      fenceLanguagePath.push(openLanguagePath);
       continue;
     }
     if (openFence !== null) {
       fenced.push(true);
       illustrative.push(openIllustrative);
       inline.push([]);
+      fenceLanguagePath.push(openLanguagePath);
       if (fenceMatch && fenceMatch[1][0] === openFence) {
         openFence = null;
         openIllustrative = false;
+        openLanguagePath = "";
       }
       continue;
     }
     fenced.push(false);
     illustrative.push(false);
     inline.push(line.includes("`") ? inlineCodeRanges(line) : []);
+    fenceLanguagePath.push("");
   }
 
-  return { fenced, illustrative, inline };
+  return { fenced, illustrative, inline, fenceLanguagePath };
+}
+
+/** Program syntax that makes an inline span an expression rather than a name. */
+const CODE_SPAN_SYNTAX = /[(){};[\]]|=>|\+\+|[+\-*/!=<>]=|\s=\s/;
+
+/** Every label an identifier: `counts.local`, not `my-mac.local` or `10th.lan`. */
+const IDENTIFIER_SHAPED_NAME = /^[a-z_$][\w$]*(?:\.[a-z_$][\w$]*)+$/i;
+
+/**
+ * How an INTERNAL_HOSTNAME candidate inside a markdown inline code span reads.
+ *
+ *   - "code": the span holds program syntax (`foo(counts.local)`), so the
+ *     source-code discipline applies inside the span: the name must be in a
+ *     string, or follow `://` or `@`, to be a host.
+ *   - "bare-identifier": the span is exactly the candidate and every label is an
+ *     identifier (`counts.local`). That is how prose quotes a property access,
+ *     and also how it quotes a host such as `db01.corp`: nothing in the file
+ *     tells the two apart, so it reports, at low instead of medium.
+ *   - "prose": anything else (`ping db01.corp`, `host: db01.corp`,
+ *     `my-mac.local`), which reports exactly as prose does.
+ */
+export function classifyHostnameInCodeSpan(
+  line: string,
+  span: readonly [number, number],
+  column: number,
+  end: number,
+): "code" | "bare-identifier" | "prose" {
+  let open = span[0];
+  while (open < span[1] && line[open] === "`") open++;
+  let close = span[1];
+  while (close > open && line[close - 1] === "`") close--;
+  const inner = line.slice(open, close);
+  const candidate = line.slice(column, end);
+  if (inner.trim() === candidate) {
+    return IDENTIFIER_SHAPED_NAME.test(candidate) ? "bare-identifier" : "prose";
+  }
+  return CODE_SPAN_SYNTAX.test(inner) ? "code" : "prose";
+}
+
+/** The source-code host test, applied to the text of one inline span. */
+function isHostInCodeSpan(line: string, span: readonly [number, number], column: number): boolean {
+  const inner = line.slice(span[0], span[1]);
+  const at = column - span[0];
+  return isHostnameContextOkCached(inner, at, {
+    quoted: quotedRanges(inner.replace(/^`+|`+$/g, (run) => " ".repeat(run.length))),
+    commentAt: -1,
+    blockComment: false,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2387,12 +2441,6 @@ export function scanInternalDisclosure(
     return ctx.fields;
   };
 
-  // Private-range classification is a property of the whole file: tested once,
-  // and only when a private literal in a comment needs the answer.
-  let classifierFile: boolean | undefined;
-  const isClassifierFile = (): boolean =>
-    (classifierFile ??= PRIVATE_RANGE_CLASSIFIER.test(content));
-
   /** True when `column` on `lineNo` sits in a real comment, not a string. */
   const inComment = (lineNo: number, column: number): boolean => {
     const ctx = contextFor(lineNo);
@@ -2500,6 +2548,25 @@ export function scanInternalDisclosure(
         const end = column + match[0].length;
         if (codeMap.inline[lineNo].some(([a, b]) => column >= a && end <= b)) continue;
       }
+      // Markdown code reads as code (d3): a fence tagged with a programming
+      // language gets the source-code discipline, and so does an inline span
+      // holding program syntax. Untagged, shell and text fences stay prose.
+      let markdownBareIdentifier = false;
+      if (codeMap && pattern.rule === "INTERNAL_HOSTNAME") {
+        const fencePath = codeMap.fenceLanguagePath[lineNo];
+        if (fencePath) {
+          const fenceContext = buildLineContext(line, !C_FAMILY_FILE.test(fencePath));
+          if (!isHostnameContextOkCached(line, column, fenceContext)) continue;
+        } else {
+          const end = column + match[0].length;
+          const span = codeMap.inline[lineNo].find(([a, b]) => column >= a && end <= b);
+          if (span) {
+            const reading = classifyHostnameInCodeSpan(line, span, column, end);
+            if (reading === "code" && !isHostInCodeSpan(line, span, column)) continue;
+            markdownBareIdentifier = reading === "bare-identifier";
+          }
+        }
+      }
 
       if (kept >= MAX_FINDINGS_PER_RULE) {
         truncationReasons.add(
@@ -2510,14 +2577,15 @@ export function scanInternalDisclosure(
       kept++;
 
       let severity = pattern.severityFor?.(match) ?? pattern.severity;
+      // See classifyHostnameInCodeSpan: a quoted property access or a host.
+      if (markdownBareIdentifier) severity = "low";
       if (
         (pattern.rule === "INTERNAL_PRIVATE_IP" || pattern.rule === "INTERNAL_PRIVATE_IPV6") &&
         isCodeFile &&
         inComment(lineNo, column) &&
-        isClassifierFile() &&
         commentBlockHasCue(lineNo)
       ) {
-        // Documentation of an address classifier: see PRIVATE_RANGE_CLASSIFIER.
+        // An explanatory comment: see CLASSIFIER_COMMENT_CUE.
         severity = "info";
       }
 

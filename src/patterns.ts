@@ -3361,7 +3361,8 @@ export const KNOWN_NATIVE_PACKAGES = new Set([
  * The interval twin's file exclusion, as it has always been. The timeout twin
  * has none: a file name is chosen by the scanned package, so `*.min.js` must
  * not become a place where a setTimeout beacon goes unreported. Its false
- * positives on bundles are handled by the call-shaped transport instead.
+ * positives on bundles are handled by the call-shaped transport and by the
+ * matcher's 512-character bound between timer and transport.
  */
 export const BEACON_NOT_FILE_PATTERN = /\.min\.(js|css)$|\.(md|markdown|txt|rst)$/i;
 

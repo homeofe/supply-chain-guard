@@ -258,6 +258,61 @@ describe("INTERNAL_HOSTNAME: dotted keys and replacement fields", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Dotted identifiers in markdown code (d3)
+// ---------------------------------------------------------------------------
+
+describe("INTERNAL_HOSTNAME: markdown code reads as code", () => {
+  const hostnames = (file: string, ...lines: string[]) =>
+    ofRule(scanLines(file, ...lines), "INTERNAL_HOSTNAME");
+
+  it("reports a span that is exactly an identifier-shaped name at low", () => {
+    // The handoff note that quoted a restored property access.
+    for (const line of [
+      "the two `counts.local` reads that build the summary line",
+      "`counts.local` as an internal-hostname-shaped string",
+      // The residual: a host written the same way reads the same way.
+      "connect to `db01.corp` first",
+    ]) {
+      const found = hostnames(".ai/handoff/STATUS.md", line);
+      expect(found, line).toHaveLength(1);
+      expect(found[0].severity, line).toBe("low");
+    }
+  });
+
+  it("drops a dotted name used as code inside a span or a language-tagged fence", () => {
+    for (const lines of [
+      ["call `summarize(counts.local)` once"],
+      ["`counts.local += 1;`"],
+      ["```js", "const n = counts.local;", "```"],
+      ["```typescript", "if (counts.local > 0) report();", "```"],
+      ["```python", "total = counts.local + counts.remote", "```"],
+    ]) {
+      expect(hostnames("docs/notes.md", ...lines), lines.join(" | ")).toHaveLength(0);
+    }
+  });
+
+  it("still reports a host in prose, shell, text and untagged fences, and in a string inside code", () => {
+    for (const lines of [
+      ["connect to db01.corp first"],
+      ["run `ping db01.corp` from the jump host"],
+      ["set `host: db01.corp` in the config"],
+      ["the `my-mac.local` printer"],
+      ["```", "db01.corp", "```"],
+      ["```text", "db01.corp", "```"],
+      ["```bash", "ssh admin@db01.corp", "```"],
+      ["```js", 'const host = "db01.corp";', "```"],
+      ["```ts", "// the primary lives at db01.corp", "```"],
+      ['call `connect("db01.corp")` once'],
+      ["call `connect(admin@db01.corp)` once"],
+    ]) {
+      const found = hostnames("docs/notes.md", ...lines);
+      expect(found, lines.join(" | ")).toHaveLength(1);
+      expect(found[0].severity, lines.join(" | ")).toBe("medium");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Four-part requirement numbers
 // ---------------------------------------------------------------------------
 
@@ -276,6 +331,10 @@ describe("INTERNAL_PRIVATE_IP: requirement numbers", () => {
       "clause 10.2.1.1",
       "Annex 10.2.1.1",
       "Req 10.4.1.1.2 is a sub-requirement",
+      // German markers in a bilingual catalogue (d4).
+      "PCI DSS v4.0 Anf. 10.4.1.1",
+      "Anforderung 10.4.1.1",
+      "anf.10.4.1.1",
     ]) {
       expect(ofRule(scanLines("src/catalog.ts", `const t = "${text}";`), "INTERNAL_PRIVATE_IP"), text).toHaveLength(0);
       expect(ofRule(scanLines("docs/pci.md", text), "INTERNAL_PRIVATE_IP"), text).toHaveLength(0);
@@ -290,6 +349,10 @@ describe("INTERNAL_PRIVATE_IP: requirement numbers", () => {
       ["docs/net.md", "Req host 10.4.1.1"],
       ["docs/net.md", "Prereq 10.4.1.1"],
       ["docs/net.md", "Requirements 10.4.1.1"],
+      ["docs/net.md", "Anforderungen 10.4.1.1"],
+      ["docs/net.md", "Anfrage 10.4.1.1"],
+      ["docs/net.md", "Anf 10.4.1.1"],
+      ["docs/net.md", "Wanf. 10.4.1.1"],
       ["docs/net.md", "Sec 10.4.1.1"],
       ["docs/net.md", "Section\n10.4.1.1"],
       ["docs/net.md", "Section 192.168.4.1"],
@@ -419,11 +482,25 @@ describe("INTERNAL_PRIVATE_IP/IPV6: comments in an address classifier", () => {
     }
   });
 
-  it("keeps medium for the same comment in a file with no classifier", () => {
-    const found = scanLines("src/ssrf.ts", ...CLASSIFIER_EXAMPLE.slice(0, 3), "return connect(host);");
+  // d10: the narration often sits in the caller, which classifies nothing itself.
+  it("reports the same explanatory comment at info in a file that only calls the classifier", () => {
+    const found = scanLines("src/route.ts", ...CLASSIFIER_EXAMPLE.slice(0, 3), "return connect(host);");
     const all = [...ofRule(found, "INTERNAL_PRIVATE_IP"), ...ofRule(found, "INTERNAL_PRIVATE_IPV6")];
     expect(all.length).toBeGreaterThanOrEqual(2);
-    for (const f of all) expect(f.severity).toBe("medium");
+    for (const f of all) expect(f.severity).toBe("info");
+  });
+
+  it("keeps medium for a cue-free comment in a file that only calls the classifier", () => {
+    for (const [file, comment] of [
+      ["src/route.ts", "// the old check let [fd00::1] through, fixed in v2"],
+      ["src/route.ts", "// primary database at 10.20.30.40"],
+      ["app/views.py", "# primary database at 10.20.30.40"],
+    ]) {
+      const found = scanLines(file, comment, "return connect(host);");
+      const all = [...ofRule(found, "INTERNAL_PRIVATE_IP"), ...ofRule(found, "INTERNAL_PRIVATE_IPV6")];
+      expect(all, comment).toHaveLength(1);
+      expect(all[0].severity, comment).toBe("medium");
+    }
   });
 
   it("keeps medium for a literal in string position, even in a classifier file", () => {
