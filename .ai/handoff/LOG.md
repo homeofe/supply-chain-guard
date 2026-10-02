@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-02] v6.4.1
+
+Threat intel (2026-10-01): 399 package IOCs from the GitHub Advisory Database and OpenSSF, 165 in the offline bundle and 234 in the catalog. Most bundle entries are from 2026-09-30, among them 61...
+
+Full notes: CHANGELOG.md, section [6.4.1].
+
+---
+
 ## [2026-09-30] v6.4.0
 
 Threat intel (2026-09-30): 138 package IOCs from the GitHub Advisory Database and OpenSSF, 97 in the offline bundle and 41 in the catalog. 35 npm names are blocked outright, each already a...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.2.3].
 493 package indicators from the GitHub Advisory Database malware feed, corroborated against OSV and routed entirely to the catalog: every one carries a firstSeen of 2026-09-17, the declared...
 
 Full notes: CHANGELOG.md, section [6.2.2].
-
----
-
-## [2026-09-19] v6.2.1
-
-12,574 package indicators from the GitHub Advisory Database malware feed, corroborated against OSV: 60 in the bundle and 12,514 in the catalog.
-
-Full notes: CHANGELOG.md, section [6.2.1].

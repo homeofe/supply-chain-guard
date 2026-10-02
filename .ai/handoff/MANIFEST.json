@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1790936199",
-    "timestamp": "2026-10-02T10:16:39Z",
-    "commit": "78a64d6",
+    "session_id": "cli-1790937314",
+    "timestamp": "2026-10-02T10:35:14Z",
+    "commit": "547ea42",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:de553a651e43712bf7173b19125671861f9efefd246a08e16cc8521a174dbf4c",
-      "updated": "2026-10-02T10:16:37Z",
-      "lines": 13288,
-      "summary": "Four rule-precision items that were still open after 6.3.1, each measured on real fleet input, fixed in one change on the owner's decision:"
+      "checksum": "sha256:2520f4dd3442e00ff127ec0200c9ed4177a6442ab3ad3ec834eed6cce23c4f63",
+      "updated": "2026-10-02T10:35:08Z",
+      "lines": 13317,
+      "summary": "Patch release: the 2026-10-01 threat intel (PR 370), the four rule-precision fixes (PR 371) and the test-cache teardown (PR 369)."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:85befee0c17db43f6f7effd52237b7ccd32e31e46fe9abc5e2cbc2fe14ba745d",
-      "updated": "2026-09-30T07:35:32Z",
+      "checksum": "sha256:88eee177217bbdd0b9d0c053f39d3ba45f74f02f8d576233529b6ef86da3b881",
+      "updated": "2026-10-02T10:35:12Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:6866a72aa0ad842c517d9fc9f27a06b1a6dc4258b258bade79c2e532ca83e721",
-      "updated": "2026-09-30T07:34:58Z",
+      "checksum": "sha256:5f39c75ef9bb7faa5f7463bb1ca75e2fe1dab737593e93efbdd3289ffd43ccd2",
+      "updated": "2026-10-02T10:35:13Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-09-30] v6.4.0"
+      "summary": "Latest entry: [2026-10-02] v6.4.1"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:aaba9f3a87acc6c3c21cbcd78e03ad66048f851e27d396f7e364506d9b5a0384",
-      "updated": "2026-09-30T07:53:00Z",
+      "checksum": "sha256:3ad4fbcd2856fe7f09976adff200e3165e01c9b862ebc6796738f3630628b604",
+      "updated": "2026-10-02T10:35:13Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:66c2789e160f4181482eef21dcebdb1341527abca12118ecb12723d7efce9ee7",
-      "updated": "2026-09-30T07:53:00Z",
+      "checksum": "sha256:eff4f42360eb06b4075fba73f8c3f6bfe01dad33ec7e8943a577ae6ab81b1e36",
+      "updated": "2026-10-02T10:35:13Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Four rule-precision items that were still open after 6.3.1, each measured on real fleet input, fixed in one change on the owner's decision:. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Patch release: the 2026-10-01 threat intel (PR 370), the four rule-precision fixes (PR 371) and the test-cache teardown (PR 369). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 929,
-    "manifest_plus_core": 198218,
-    "full_read": 211913
+    "manifest_only": 923,
+    "manifest_plus_core": 198603,
+    "full_read": 212311
   }
 }

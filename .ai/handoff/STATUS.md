@@ -1,7 +1,36 @@
-## D-062 follow-ups: d3, d4, d6(b), d10 (2026-10-02) (claude-opus-5-5)
+## Release v6.4.1 (2026-10-02) (claude-opus-5-5)
+
+Patch release: the 2026-10-01 threat intel (PR 370), the four rule-precision
+fixes (PR 371) and the test-cache teardown (PR 369). No new feature.
+
+Version bumped from 6.4.0 at all 17 configured version sites plus
+`package.json` (37 occurrences), matching free-standing occurrences only, so
+`@bitwarden/cli@2026.4.0` in the bundle and the README CIDRs were not touched.
+`npm install --package-lock-only` changed only the lockfile's two version
+fields.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-08-31 to
+2026-09-02; `planMigration` moved 4,520 package entries to the catalog (now
+92,821), 3,451 stay bundled. 4,475 of them are the 2026-08-31 publication
+(4,232 carry MAL-2025 ids), 45 are from 2026-09-01. None carries a campaign
+or family. Before applying, every moved value and its bare name was searched in
+all test files, the README and `docs/`: zero hits, with the control
+`@dforge-core/dforge-mcp` found by the same search. SECURITY.md needs no change.
+
+Active LTS review, due at 6.4.1. The `nodejs/Release` `schedule.json` was
+re-read on 2026-10-02: Node 24 is still the Active LTS (Maintenance from
+2026-10-20), so `activeLtsMajor` stays 24 and `activeLtsReviewedIn` moves to
+6.4.2. Node 26 becomes LTS on 2026-10-28; the first release after that date
+has to move `activeLtsMajor` to 26 and add a Node 26 leg.
+
+Public-content hygiene in the same commit: handoff notes, test fixtures,
+code comments and the CHANGELOG no longer name or quote other repositories.
+Test examples use neutral placeholder names.
+
+## Rule-precision follow-ups: d3, d4, d6(b), d10 (2026-10-02) (claude-opus-5-5)
 
 Four rule-precision items that were still open after 6.3.1, each measured on
-real fleet input, fixed in one change on the owner's decision:
+real input, fixed in one change on the owner's decision:
 
 - d6(b) `BEACON_TIMEOUT_FETCH` on a committed minified bundle. Cause: the
   matcher's gap ran the whole line, and a minified file is one line, so the
@@ -24,8 +53,8 @@ real fleet input, fixed in one change on the owner's decision:
   info downgrade keys on the comment block's cue words, not on whether the file
   classifies addresses. `PRIVATE_RANGE_CLASSIFIER` is gone. Accepted residual:
   a real address next to a cue word (`e.g.`) in a code comment reports info.
-  The calling-file comment from the fleet measurement could not be read from
-  here, so whether it carries a cue word is unverified.
+  The calling-file comment behind this item could not be re-read here, so
+  whether it carries a cue word is unverified.
 
 Proof. Each fix was cut back out and the new test went red on the intended
 case; the baseline and the restored tree are green. The cuts were the beacon
@@ -33,8 +62,8 @@ gap unbounded and the bound moved to 513, each German marker removed, the
 classifier-file requirement restored, and the d3 fence branch, span branch and
 low downgrade each removed. One more cut dropped the in-span string test,
 which would silence too much. Real input, published 6.4.0 against this tree:
-htmx 2.0.4 `htmx.min.js` 1 medium -> 0; a fleet handoff file quoting
-`counts.local` twice 2 medium -> 2 low, its other three findings unchanged.
+htmx 2.0.4 `htmx.min.js` 1 medium -> 0; a Markdown handoff file quoting a
+property access twice 2 medium -> 2 low, its other three findings unchanged.
 
 Scorecard "Vulnerabilities" (10 advisories) checked the same day: all ten sit
 in the npm CLI bundled inside `.github/publish-toolchain` (brace-expansion
@@ -44,7 +73,7 @@ toolchain audit is green: three are high and excepted until 2026-10-31, the
 other seven are below its `high` threshold. The open alerts stay as decided on
 2026-09-30.
 
-D-062 still open: d5, d7, d9 (moved out of PR 326, cross-file design needed).
+Still open: d5, d7, d9 (moved out of PR 326, cross-file design needed).
 
 ## Threat intel 2026-10-01 (claude-opus-5-5)
 
@@ -705,7 +734,7 @@ owner decision, not daily intel.
 **6.3.0 reported every push-to-deploy workflow whose only secret is its SSH
 key.** It added `ssh`, `scp` and `rsync` to a remote host to the outbound
 calls of `WORKFLOW_SECRET_TO_UPLOAD_PATH`, and the key's own use, logging in,
-matched. Measured by the ideabase session on the owner's fleet and reproduced
+matched. Measured on the owner's own repositories and reproduced
 here with a neutral fixture: 0 findings at 6.2.4, 1 at 6.3.0, in eight deploy
 workflows, several of them in pipelines gating on medium. The pre-release
 review of 6.3.0 missed it, and so did the test suite, which asserted the

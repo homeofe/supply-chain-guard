@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.4.1] - 2026-10-02
+
 ### Added
 
 - Threat intel (2026-10-01): 399 package IOCs from the GitHub Advisory
@@ -21,14 +23,6 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   as a known-bad version. The package itself is legitimate and 0.2.22 is
   clean, so the name is not blocked.
 
-### Fixed
-
-- The 2026-09-17 catalog window, declared for the bulk migration of the
-  historical OpenSSF corpus, also sent that day's fresh malware records
-  (MAL-2026-16248 to 16275, 64 entries) to the catalog, so a default offline
-  scan did not see them. They are back in the offline bundle under a curated
-  block that keeps them there at every later migration.
-
 ### Changed
 
 - The test run removes its per-run cache directory (`scg-vitest-cache-<pid>`
@@ -37,6 +31,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- The 2026-09-17 catalog window, declared for the bulk migration of the
+  historical OpenSSF corpus, also sent that day's fresh malware records
+  (MAL-2026-16248 to 16275, 64 entries) to the catalog, so a default offline
+  scan did not see them. They are back in the offline bundle under a curated
+  block that keeps them there at every later migration.
 - `BEACON_TIMEOUT_FETCH` no longer pairs a `setTimeout(` with a transport
   call kilobytes later on the same line, which reported every committed
   minified bundle that uses `XMLHttpRequest` (htmx 2.0.4: the closest pair is
@@ -49,9 +48,9 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   bilingual compliance catalogue is a requirement number, not an address.
 - `INTERNAL_HOSTNAME` reads code in Markdown as code. In a fence tagged with a
   programming language (`js`, `ts`, `py` and others), and in an inline span
-  that holds program syntax (`` `summarize(counts.local)` ``), a dotted name
+  that holds program syntax (`` `summarize(totals.local)` ``), a dotted name
   is a host only inside a string, after `://` or after `@`, as in a source
-  file. A span that is exactly an identifier-shaped name (`` `counts.local` ``)
+  file. A span that is exactly an identifier-shaped name (`` `totals.local` ``)
   reports at low instead of medium, because nothing in the file tells a quoted
   property access from a quoted host. Prose, untagged, text and shell fences,
   and hyphenated names keep medium.
@@ -6916,7 +6915,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.4.0...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.4.1...HEAD
+[6.4.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.1
 [6.4.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.0
 [6.3.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.3
 [6.3.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.3.2

@@ -1768,17 +1768,17 @@ export function buildMarkdownCodeMap(lines: string[]): MarkdownCodeMap {
 /** Program syntax that makes an inline span an expression rather than a name. */
 const CODE_SPAN_SYNTAX = /[(){};[\]]|=>|\+\+|[+\-*/!=<>]=|\s=\s/;
 
-/** Every label an identifier: `counts.local`, not `my-mac.local` or `10th.lan`. */
+/** Every label an identifier: `totals.local`, not `my-mac.local` or `10th.lan`. */
 const IDENTIFIER_SHAPED_NAME = /^[a-z_$][\w$]*(?:\.[a-z_$][\w$]*)+$/i;
 
 /**
  * How an INTERNAL_HOSTNAME candidate inside a markdown inline code span reads.
  *
- *   - "code": the span holds program syntax (`foo(counts.local)`), so the
+ *   - "code": the span holds program syntax (`foo(totals.local)`), so the
  *     source-code discipline applies inside the span: the name must be in a
  *     string, or follow `://` or `@`, to be a host.
  *   - "bare-identifier": the span is exactly the candidate and every label is an
- *     identifier (`counts.local`). That is how prose quotes a property access,
+ *     identifier (`totals.local`). That is how prose quotes a property access,
  *     and also how it quotes a host such as `db01.corp`: nothing in the file
  *     tells the two apart, so it reports, at low instead of medium.
  *   - "prose": anything else (`ping db01.corp`, `host: db01.corp`,

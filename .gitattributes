@@ -15,7 +15,7 @@
 # and the only one that does not lose somebody's note.
 #
 # Verified for local `git merge`. GitHub does NOT honour merge drivers
-# server-side (measured 2026-07-31 in Shield: two PRs touching STATUS.md still
+# server-side (measured 2026-07-31 in another repository: two PRs touching STATUS.md still
 # showed as CONFLICTING after a third merged), so a PR touching STATUS.md still
 # needs a local merge before it can land. What this removes is the HAND
 # resolution, not the merge itself. Measured here on 2026-08-23: twenty-two
