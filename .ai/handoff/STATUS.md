@@ -54,15 +54,13 @@ same digest (MemTensor sckit, PointBlank, PhantomSync, cloud-baileys,
 siriusbeyond, n8n nodes, nimbusedge, simple-date-formatter): all already
 present. Control: `moidevl` was found by the same search.
 
-OPEN, owner decision: `Publish toolchain preflight` is red on this PR, and
-`Build and Test` with it, for a reason unrelated to the change. The audit now
-reports GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` <= 4.2.0, no patched
-version) in the npm bundled in `.github/publish-toolchain`. It is not in
-`audit-exceptions.json`, so every PR and the next tag fail the same way until
-the exception or a toolchain bump lands. Main's last green run came before the
-audit flagged it. This routine adds no audit exception: the reach analysis in
-its `reason` is the owner's sign-off. The full suite itself is green on both
-compat legs (195 files, 4,951 tests).
+The first CI run of this PR was red on `Publish toolchain preflight` only:
+GHSA-ch52-4w7c-c8xp in the npm bundled in the publish toolchain, unrelated to
+this change. The owner chose the dated exception, which PR 374 shipped (see the
+note above), and this branch was rebased onto it. A bump was not an option:
+npm 11.19.1, 11.21.0 and 12.2.0 all bundle the same `http-cache-semantics`
+4.2.0, `brace-expansion` 5.0.9, `undici` 6.28.0 and `ip-address` 10.5.0
+(tarballs unpacked and compared on 2026-10-03).
 
 ## Release v6.4.1 (2026-10-02) (claude-opus-5-5)
 
