@@ -133,7 +133,8 @@ describe("a cache left in the working directory", () => {
     fs.mkdirSync(path.join(cwd, LEGACY_CACHE_DIR));
     const ctx = { ...linux, env: {} };
     expect(legacyCacheIgnored(undefined, ctx, cwd)).toBe(true);
-    // Named explicitly, or the default itself: nothing is being ignored.
+    expect(legacyCacheIgnored("other-cache", ctx, cwd)).toBe(true);
+    // Selecting the legacy path explicitly, or as the default: nothing is ignored.
     expect(legacyCacheIgnored(LEGACY_CACHE_DIR, ctx, cwd)).toBe(false);
     expect(legacyCacheIgnored(undefined, { platform: "linux", homedir: "", env: {} }, cwd)).toBe(false);
   });
@@ -165,6 +166,17 @@ describe("a cache left in the working directory", () => {
     fs.mkdirSync(path.join(cwd, LEGACY_CACHE_DIR));
     expect(legacyRefreshNote(LEGACY_CACHE_DIR, ctx, cwd)).toBeNull();
     expect(legacyRefreshNote(undefined, { ...linux, env: { SCG_CACHE_DIR: LEGACY_CACHE_DIR } }, cwd)).toBeNull();
+  });
+
+  it("names a legacy cache when an explicit alternate cache path was refreshed", () => {
+    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cwd-"));
+    fs.mkdirSync(path.join(cwd, LEGACY_CACHE_DIR));
+    const ctx = { ...linux, env: {} };
+    const note = legacyRefreshNote("other-cache", ctx, cwd);
+    expect(note).toContain("other-cache");
+    expect(note).not.toContain("~/.cache/supply-chain-guard");
+    expect(legacyRefreshNote(path.join(cwd, LEGACY_CACHE_DIR), ctx, cwd)).toBeNull();
+    expect(legacyRefreshNote(undefined, { ...linux, env: { SCG_CACHE_DIR: "other-cache" } }, cwd)).toContain("other-cache");
   });
 
   it("is named in the catalog finding, with the way to keep using it", () => {
