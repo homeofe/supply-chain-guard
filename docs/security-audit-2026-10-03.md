@@ -40,13 +40,16 @@ malware payload was needed for the reproductions.
 
 ## Confirmed findings
 
+The behaviors in this section were observed at the reviewed main commit before
+the fixes in this PR. Source links point to the corresponding current code.
+
 ### 1. Project-controlled history path writes outside the scan root - high
 
-[`ensureStateDir`](../src/state-dir.ts#L39) creates and uses `.scg-history`
+[`ensureStateDir`](../src/state-dir.ts#L40) created and used `.scg-history`
 without rejecting a symlink or junction. A default scan then writes its risk
 history through that path
-([`scanner.ts`](../src/scanner.ts#L1097),
-[`continuous-monitor.ts`](../src/continuous-monitor.ts#L195)). A scanned
+([`scanner.ts`](../src/scanner.ts#L1130),
+[`continuous-monitor.ts`](../src/continuous-monitor.ts#L176)). A scanned
 project can therefore redirect the scanner's fixed history filenames to a
 directory outside the project, with the scanner user's filesystem privileges.
 
@@ -65,7 +68,7 @@ external target remains untouched.
 
 ### 2. Git remote credentials can enter JSON and SARIF reports - high when present
 
-[`scanner.ts`](../src/scanner.ts#L1223) reads `remote.origin.url` directly into
+[`scanner.ts`](../src/scanner.ts#L1257) read `remote.origin.url` directly into
 `repositoryUri`; [`reporter.ts`](../src/reporter.ts#L1112) carries that value
 into SARIF, and the JSON result carries it too. Git remote URLs can contain
 HTTP user information or query parameters. If one contains a credential, a
@@ -85,7 +88,7 @@ historical report only if its Git remote actually contained a credential.
 
 ### 3. Untrusted policy glob can stall a scan - medium to high
 
-[`matchGlob`](../src/policy-engine.ts#L26) turns every `*` into a regex fragment
+[`matchGlob`](../src/policy-engine.ts#L30) turned every `*` into a regex fragment
 and executes the resulting expression against paths. The policy file is read
 from the scanned project. Repeated wildcards can cause expensive backtracking
 on a long, nearly matching filename.
@@ -101,10 +104,10 @@ repeated wildcards that completes within a fixed budget.
 
 ### 4. Corrupt refreshed threat cache silently removes detections - medium to high
 
-[`loadThreatIntel`](../src/threat-intel.ts#L5144) ignores a cache parse failure
+[`loadThreatIntel`](../src/threat-intel.ts#L5152) ignored a cache parse failure
 and continues without a cache-corruption or partial-scan signal. A direct
 cache write during refresh is one plausible way to leave incomplete JSON
-([`feed.ts`](../src/feed.ts#L725)).
+([`feed.ts`](../src/feed.ts#L727)).
 
 With a valid synthetic cache, a matching IOC produced a finding and exit code
 2. Replacing that cache with malformed JSON removed the finding: the next scan
@@ -118,8 +121,8 @@ scan entry point.
 
 ### 5. Cache provenance contradicts the actual detection set - medium
 
-The loader still merges an expired but parseable threat cache, while
-[`getDetectionSetProvenance`](../src/threat-intel.ts#L6015) sets `cacheMerged`
+The loader merged an expired but parseable threat cache, while
+[`getDetectionSetProvenance`](../src/threat-intel.ts#L6023) set `cacheMerged`
 only if the cache is newer than the TTL. The resulting metadata can say
 `cacheMerged:false` even when cache-only entries influenced the verdict.
 
@@ -134,8 +137,8 @@ staleness as a separate property. Assert the same provenance in JSON and SARIF.
 
 ### Incremental scan with no changes scans the full tree
 
-[`diff-scanner.ts`](../src/diff-scanner.ts#L17) returns an empty list both for
-no changes and a diff error. [`scanner.ts`](../src/scanner.ts#L306) only applies
+[`diff-scanner.ts`](../src/diff-scanner.ts#L22) returned an empty list both for
+no changes and a diff error. [`scanner.ts`](../src/scanner.ts#L307) only applied
 the changed-file filter when that list is nonempty. In a Git test project,
 `scan --since HEAD` reported one file scanned despite `git diff HEAD HEAD`
 reporting no changes. This can increase CI work and obscures an invalid ref.
@@ -155,7 +158,8 @@ observation is about the separate PR; it is not a defect introduced here.
 
 At the time of review, PR #377's `AAHP Verify` job also failed because its
 handoff state and manifest had not changed with the code. Other observed
-checks passed. That CI snapshot must be rechecked at the PR's next head.
+checks passed. The correction updated the handoff files, and `AAHP Verify`
+passed at the new PR head.
 
 ## Priority and acceptance
 
