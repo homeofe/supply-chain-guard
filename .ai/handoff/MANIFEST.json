@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791016551",
-    "timestamp": "2026-10-03T08:35:51Z",
-    "commit": "d7524f1",
+    "session_id": "cli-1791017152",
+    "timestamp": "2026-10-03T08:45:52Z",
+    "commit": "3c7827c",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:9f1ecd120759f0a0b649308841ad79c8eb31a497d952e9f24d44ed74f8326b1d",
-      "updated": "2026-10-03T08:35:18Z",
-      "lines": 13397,
-      "summary": "The owner asked for the Socket package page as a badge and for the badge wall to be tidied up."
+      "checksum": "sha256:68b1f7273f5e35e4fc37f2d28e4a8a61453490c0568344d84c65bf35198fddf8",
+      "updated": "2026-10-03T08:45:40Z",
+      "lines": 13423,
+      "summary": "Patch release: the 2026-10-03 threat intel (PR 373), the dated publish-audit exception for GHSA-ch52-4w7c-c8xp (PR 374) and the README badge table..."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:88eee177217bbdd0b9d0c053f39d3ba45f74f02f8d576233529b6ef86da3b881",
-      "updated": "2026-10-02T10:35:12Z",
+      "checksum": "sha256:3ab8e0b8df0c3e305490f7b382258b81112d0f1c327b960e691a89da81997dfa",
+      "updated": "2026-10-03T08:45:40Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:5f39c75ef9bb7faa5f7463bb1ca75e2fe1dab737593e93efbdd3289ffd43ccd2",
-      "updated": "2026-10-02T10:35:13Z",
+      "checksum": "sha256:c9623423bfc893f25762c0e31f58b328fe262f9a1173b0a9b08f1bb32abfbe52",
+      "updated": "2026-10-03T08:45:51Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-02] v6.4.1"
+      "summary": "Latest entry: [2026-10-03] v6.4.2"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:3ad4fbcd2856fe7f09976adff200e3165e01c9b862ebc6796738f3630628b604",
-      "updated": "2026-10-02T10:35:13Z",
+      "checksum": "sha256:c21d2e4b040a70d9dbb6ca7e9ed871fcf0d62012baefce91e03695c444253c96",
+      "updated": "2026-10-03T08:45:51Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:eff4f42360eb06b4075fba73f8c3f6bfe01dad33ec7e8943a577ae6ab81b1e36",
-      "updated": "2026-10-02T10:35:13Z",
+      "checksum": "sha256:e28d477f024af5b65d86cc1e3680c20810b2f2ac3c74342fcdf2c253d9048338",
+      "updated": "2026-10-03T08:45:51Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The owner asked for the Socket package page as a badge and for the badge wall to be tidied up. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Patch release: the 2026-10-03 threat intel (PR 373), the dated publish-audit exception for GHSA-ch52-4w7c-c8xp (PR 374) and the README badge table... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 906,
-    "manifest_plus_core": 199785,
-    "full_read": 213493
+    "manifest_only": 933,
+    "manifest_plus_core": 200180,
+    "full_read": 213890
   }
 }

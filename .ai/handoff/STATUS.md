@@ -1,3 +1,29 @@
+## Release v6.4.2 (2026-10-03) (claude-opus-5-5)
+
+Patch release: the 2026-10-03 threat intel (PR 373), the dated publish-audit
+exception for GHSA-ch52-4w7c-c8xp (PR 374) and the README badge table with
+the Socket badge (PR 375). No new feature.
+
+Version bumped from 6.4.1 at all configured version sites plus
+`package.json` (37 occurrences, the same count as 6.4.1). Only free-standing
+occurrences were matched, so the README CIDRs and `10.96.4.11` in a test
+fixture were not touched. `npm install --package-lock-only` changed only the
+lockfile's two version fields; `src/catalog-digest.ts` was regenerated.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-09-02 to
+2026-09-03. `planMigration` moves 0 entries; 3,544 stay bundled. That zero was
+checked rather than trusted: the bundle holds 4 plain package entries dated
+2026-09-01/02 (`@mrlegendbot/baileys` 1.2.4 and 1.2.5,
+`@systemzero/baileys@1.1.2`, `eslint-rxjs@1.0.0`), and all four sit under
+curated comment blocks, which the migration keeps. The 80 entries dated
+2026-09-03 are on the cutoff and stay. SECURITY.md needs no change (patch).
+
+Active LTS review, due at 6.4.2. `schedule.json` in `nodejs/Release` re-read
+on 2026-10-03: Node 24 is Active LTS until Maintenance on 2026-10-20, and
+Node 26 enters LTS on 2026-10-28. `activeLtsMajor` stays 24, and
+`activeLtsReviewedIn` moves to 6.4.3. The first release cut after 2026-10-28
+has to move `activeLtsMajor` to 26 and add a Node 26 compat leg.
+
 ## README badge table and Socket badge (2026-10-03) (claude-opus-5-5)
 
 The owner asked for the Socket package page as a badge and for the badge wall
