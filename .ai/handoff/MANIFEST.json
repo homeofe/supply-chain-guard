@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791016159",
-    "timestamp": "2026-10-03T08:29:19Z",
-    "commit": "a74433c",
+    "session_id": "cli-1791016551",
+    "timestamp": "2026-10-03T08:35:51Z",
+    "commit": "d7524f1",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:4b88ace50986b1a27abaa62c84ded701f287f10a8eb8943e278845b89f8c60c7",
-      "updated": "2026-10-03T08:29:13Z",
-      "lines": 13356,
+      "checksum": "sha256:9f1ecd120759f0a0b649308841ad79c8eb31a497d952e9f24d44ed74f8326b1d",
+      "updated": "2026-10-03T08:35:18Z",
+      "lines": 13397,
       "summary": "The owner asked for the Socket package page as a badge and for the badge wall to be tidied up."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "The owner asked for the Socket package page as a badge and for the badge wall to be tidied up. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 906,
-    "manifest_plus_core": 199166,
-    "full_read": 212874
+    "manifest_plus_core": 199785,
+    "full_read": 213493
   }
 }
