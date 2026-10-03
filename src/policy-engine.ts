@@ -30,37 +30,51 @@ import type {
 export function matchGlob(glob: string, filePath: string): boolean {
   const g = glob.replace(/\\/g, "/");
   const p = filePath.replace(/\\/g, "/");
-  let re = "";
+  // The policy is project-controlled. A regex made from repeated wildcards
+  // backtracks exponentially on a near match, so advance a bounded set of
+  // path positions instead. Each token costs O(path length).
+  if (g.length * (p.length + 1) > 1_000_000) return false;
+  let positions = new Uint8Array(p.length + 1);
+  positions[0] = 1;
   for (let i = 0; i < g.length; i++) {
     const c = g[i];
+    const next = new Uint8Array(p.length + 1);
     if (c === "*") {
       if (g[i + 1] === "*") {
-        i++; // consume the second "*"
+        i++;
         if (g[i + 1] === "/") {
-          // "**/" matches zero or more leading path segments, each ending in a
-          // "/". So "**/x" matches "x" at the root and "a/b/x", but NOT "ax":
-          // the segment boundary is required (was ".*" which over-matched
-          // lookalike basenames like "notx" - v5.14.0 gate finding).
-          re += "(?:.*/)?";
-          i++; // consume the "/"
+          // **/ consumes nothing, or any prefix ending at a slash.
+          next.set(positions);
+          let reachable = false;
+          for (let j = 1; j <= p.length; j++) {
+            reachable ||= positions[j - 1] === 1;
+            if (p[j - 1] === "/" && reachable) next[j] = 1;
+          }
+          i++;
         } else {
-          // bare "**" (end of glob or "**foo"): match across separators.
-          re += ".*";
+          next.set(positions);
+          for (let j = 1; j <= p.length; j++) {
+            if (next[j - 1]) next[j] = 1;
+          }
         }
       } else {
-        re += "[^/]*";
+        next.set(positions);
+        for (let j = 1; j <= p.length; j++) {
+          if (p[j - 1] !== "/" && next[j - 1]) next[j] = 1;
+        }
       }
     } else if (c === "?") {
-      re += "[^/]";
+      for (let j = 0; j < p.length; j++) {
+        if (positions[j] && p[j] !== "/") next[j + 1] = 1;
+      }
     } else {
-      re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+      for (let j = 0; j < p.length; j++) {
+        if (positions[j] && p[j] === c) next[j + 1] = 1;
+      }
     }
+    positions = next;
   }
-  try {
-    return new RegExp(`^${re}$`).test(p);
-  } catch {
-    return false;
-  }
+  return positions[p.length] === 1;
 }
 
 // ---------------------------------------------------------------------------

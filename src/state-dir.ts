@@ -17,6 +17,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
 
 /** Directory name used for all scanner state inside a scanned repository. */
 export const STATE_DIR = ".scg-history";
@@ -38,18 +39,81 @@ const SELF_IGNORE = `# Created automatically by supply-chain-guard.
  */
 export function ensureStateDir(repoDir: string): string {
   const stateDir = path.join(repoDir, STATE_DIR);
-  fs.mkdirSync(stateDir, { recursive: true });
+  try {
+    fs.mkdirSync(stateDir);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  assertSafeStateDir(repoDir, stateDir);
 
   const ignorePath = path.join(stateDir, ".gitignore");
   try {
-    if (!fs.existsSync(ignorePath) || fs.readFileSync(ignorePath, "utf-8") !== SELF_IGNORE) {
-      fs.writeFileSync(ignorePath, SELF_IGNORE);
+    const current = lstatOptional(ignorePath);
+    if (current && (!current.isFile() || current.isSymbolicLink())) {
+      throw new UnsafeStatePathError();
     }
-  } catch {
+    if (!current || fs.readFileSync(ignorePath, "utf-8") !== SELF_IGNORE) {
+      atomicWriteStateFile(repoDir, stateDir, ".gitignore", SELF_IGNORE);
+    }
+  } catch (error) {
+    if (error instanceof UnsafeStatePathError) throw error;
     // A missing self-ignore is a hygiene problem, not a scan failure.
   }
 
   return stateDir;
+}
+
+class UnsafeStatePathError extends Error {
+  constructor() {
+    super("Scanner state path is a link or leaves the scanned repository");
+  }
+}
+
+function lstatOptional(filePath: string): fs.Stats | undefined {
+  try {
+    return fs.lstatSync(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function assertSafeStateDir(repoDir: string, stateDir: string): void {
+  const stat = fs.lstatSync(stateDir);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new UnsafeStatePathError();
+  const expected = path.join(fs.realpathSync(repoDir), STATE_DIR);
+  if (fs.realpathSync(stateDir) !== expected) throw new UnsafeStatePathError();
+}
+
+function atomicWriteStateFile(
+  repoDir: string,
+  stateDir: string,
+  fileName: string,
+  content: string,
+): void {
+  assertSafeStateDir(repoDir, stateDir);
+  const destination = path.join(stateDir, fileName);
+  const current = lstatOptional(destination);
+  if (current && (!current.isFile() || current.isSymbolicLink())) {
+    throw new UnsafeStatePathError();
+  }
+  const temporary = path.join(stateDir, `.scg-${randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(temporary, content, { flag: "wx", mode: 0o600 });
+    assertSafeStateDir(repoDir, stateDir);
+    fs.renameSync(temporary, destination);
+  } finally {
+    try { fs.rmSync(temporary, { force: true }); } catch { /* no temporary file */ }
+  }
+}
+
+/** Persist a scanner-owned file without following a pre-existing file link. */
+export function writeStateFile(repoDir: string, fileName: string, content: string): void {
+  if (path.basename(fileName) !== fileName || fileName === "." || fileName === "..") {
+    throw new UnsafeStatePathError();
+  }
+  const stateDir = ensureStateDir(repoDir);
+  atomicWriteStateFile(repoDir, stateDir, fileName, content);
 }
 
 // ---------------------------------------------------------------------------
@@ -141,8 +205,24 @@ export function readJsonArrayStore<T>(
   fileName: string,
   isEntry: (value: unknown) => value is T,
 ): StateStoreRead<T> {
-  const storePath = path.join(repoDir, STATE_DIR, fileName);
-  if (!fs.existsSync(storePath)) return { entries: [], status: "absent" };
+  const stateDir = path.join(repoDir, STATE_DIR);
+  const storePath = path.join(stateDir, fileName);
+  try {
+    const directory = lstatOptional(stateDir);
+    if (!directory) return { entries: [], status: "absent" };
+    assertSafeStateDir(repoDir, stateDir);
+    const ignore = lstatOptional(path.join(stateDir, ".gitignore"));
+    if (ignore && (!ignore.isFile() || ignore.isSymbolicLink())) {
+      return { entries: [], status: "unreadable", reason: "read-failed" };
+    }
+    const store = lstatOptional(storePath);
+    if (!store) return { entries: [], status: "absent" };
+    if (!store.isFile() || store.isSymbolicLink()) {
+      return { entries: [], status: "unreadable", reason: "read-failed" };
+    }
+  } catch {
+    return { entries: [], status: "unreadable", reason: "read-failed" };
+  }
 
   let raw: string;
   try {

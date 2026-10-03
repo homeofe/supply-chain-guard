@@ -5037,9 +5037,13 @@ export interface FeedCacheState {
   ageMs?: number;
   /** Age exceeds CACHE_TTL_MS: still used, but a refresh is due. */
   stale: boolean;
+  /** A cache file existed but its contents could not be used completely. */
+  unreadable: boolean;
+  /** Timestamp recorded by a parseable cache document. */
+  refreshedAt?: string;
 }
 
-let lastCacheState: FeedCacheState = { present: false, entryCount: 0, stale: false };
+let lastCacheState: FeedCacheState = { present: false, entryCount: 0, stale: false, unreadable: false };
 
 let lastCatalog: CatalogState = { available: false, reason: "absent", entryCount: 0 };
 
@@ -5111,10 +5115,14 @@ export function loadThreatIntel(
   // is one syscall against a read+parse of the entire document.
   let stamp = "none";
   let stat: fs.Stats | undefined;
+  let statFailed = false;
   try {
     stat = fs.statSync(cachePath);
     stamp = `${stat.mtimeMs}:${stat.size}`;
-  } catch { /* no cache file: stamp stays "none" */ }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") statFailed = true;
+  }
+  if (statFailed) stamp = "unreadable";
 
   // The TTL is evaluated against wall-clock time, so a memo may not outlive the
   // window in which the cache is still considered fresh. Bucket by TTL period
@@ -5137,11 +5145,12 @@ export function loadThreatIntel(
   if (memoizedFeed && memoizedFeed.key === key) return memoizedFeed.feed;
 
   let feed = [...BUNDLED_FEED];
-  let state: FeedCacheState = { present: false, entryCount: 0, stale: false };
+  let state: FeedCacheState = { present: false, entryCount: 0, stale: false, unreadable: statFailed };
 
   // Try to load cached remote feed. Age does NOT gate the merge: see
   // CACHE_TTL_MS. A stale cache is reported, never silently discarded.
   if (stat) {
+    state.unreadable = true;
     try {
       const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
         timestamp: string;
@@ -5161,10 +5170,12 @@ export function loadThreatIntel(
           present: true,
           entryCount: remoteEntries.length,
           ageMs: age,
-          stale: age !== undefined && age >= CACHE_TTL_MS,
+          stale: age === undefined || age >= CACHE_TTL_MS,
+          unreadable: age === undefined || remoteEntries.length !== cached.entries.length,
+          ...(age === undefined ? {} : { refreshedAt: cached.timestamp }),
         };
       }
-    } catch { /* ignore corrupt cache */ }
+    } catch { /* unreadable remains true; scanner reports partial coverage */ }
   }
 
   lastCacheState = state;
@@ -6009,22 +6020,8 @@ export function getDetectionSetProvenance(
   const catalog = catalogState ?? lastCatalogState();
   const catalogEntryCount: number = CATALOG_DIGEST.entryCount;
 
-  let cacheMerged = false;
-  let cacheRefreshedAt: string | undefined;
-
-  try {
-    const cached = JSON.parse(fs.readFileSync(cachePath, "utf-8")) as {
-      timestamp: string;
-      entries: FeedIOC[];
-    };
-    const age = Date.now() - new Date(cached.timestamp).getTime();
-    if (age < CACHE_TTL_MS && Array.isArray(cached.entries)) {
-      cacheMerged = true;
-      cacheRefreshedAt = cached.timestamp;
-    }
-  } catch {
-    // No cache or invalid cache
-  }
+  const cache = getFeedCacheState();
+  const cacheMerged = cache.present;
 
   return {
     bundledVersion: "6.4.2",
@@ -6032,7 +6029,7 @@ export function getDetectionSetProvenance(
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
     effectiveEntryCount,
-    ...(cacheMerged ? { cachePath: displayCachePath(cachePath), cacheRefreshedAt } : {}),
+    ...(cacheMerged ? { cachePath: displayCachePath(cachePath), cacheRefreshedAt: cache.refreshedAt } : {}),
     catalog: {
       consulted: catalog.available,
       entryCount: catalogEntryCount,

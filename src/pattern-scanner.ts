@@ -64,6 +64,8 @@ export const PARTIAL_SCAN_RULES: ReadonlySet<string> = new Set([
   "INTERNAL_DENYLIST_INVALID_ENTRY",
   "INTERNAL_DENYLIST_REFUSED",
   "POLICY_INVALID_INTERNAL_TERM",
+  "THREAT_FEED_CACHE_UNREADABLE",
+  "DIFF_BASE_UNAVAILABLE",
   // A state store that exists but does not parse is a configured source that
   // could not be evaluated, which is the exact test above. Trend, forecast and
   // triage governance silently produce nothing from one, so without these two

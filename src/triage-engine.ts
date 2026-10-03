@@ -5,13 +5,11 @@
  * Persists triage decisions for team collaboration.
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { Finding, TriageDecision, FindingStatus } from "./types.js";
 import {
   STATE_DIR,
-  ensureStateDir,
   readJsonArrayStore,
+  writeStateFile,
   type StateStoreRead,
   type StateStoreUnreadableReason,
 } from "./state-dir.js";
@@ -157,11 +155,7 @@ export function saveTriageDecisions(
   dir: string,
   decisions: TriageDecision[],
 ): void {
-  const triageDir = ensureStateDir(dir);
-  fs.writeFileSync(
-    path.join(triageDir, TRIAGE_FILE),
-    JSON.stringify(decisions, null, 2),
-  );
+  writeStateFile(dir, TRIAGE_FILE, JSON.stringify(decisions, null, 2));
 }
 
 /**

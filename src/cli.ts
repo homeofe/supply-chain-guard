@@ -913,6 +913,7 @@ feedCmd
               staleAfterDays: FEED_STALE_AFTER_DAYS,
               cache: {
                 present: cache.present,
+                unreadable: cache.unreadable,
                 entryCount: cache.entryCount,
                 ageHours: cache.ageMs === undefined ? null : Math.round(cache.ageMs / 3600000),
                 refreshDue: cache.stale,
@@ -933,7 +934,9 @@ feedCmd
       console.log(`\n  Threat-intel feed statistics:\n`);
       console.log(`  Bundled entries:   ${bundled.length}`);
       console.log(`  Effective entries: ${stats.total} (bundled + refreshed cache)`);
-      if (cache.present) {
+      if (cache.unreadable) {
+        console.log("  Refreshed cache:   unreadable or incomplete - refresh before relying on a scan");
+      } else if (cache.present) {
         const hrs = cache.ageMs === undefined ? null : Math.round(cache.ageMs / 3600000);
         console.log(
           `  Refreshed cache:   ${cache.entryCount} entries` +
@@ -955,7 +958,7 @@ feedCmd
             `  \`supply-chain-guard feed refresh\` before scanning.`,
         );
       }
-      if (cache.stale) {
+      if (cache.stale && !cache.unreadable) {
         console.log(
           `\n  The refreshed cache is over 24h old. Its ${cache.entryCount} entries are STILL\n` +
             `  being matched - stale intel is not discarded - but anything published\n` +

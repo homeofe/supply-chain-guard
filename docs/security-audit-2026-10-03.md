@@ -6,7 +6,7 @@ This review covers the `supply-chain-guard` repository at
 `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` (v6.4.2), plus the separately
 identified state of [PR #377](https://github.com/homeofe/supply-chain-guard/pull/377)
 at `cbfde9624b2cdadfe76a7396285a1d26090188b3`. Its purpose is to record
-confirmed defects and guide fixes. This change contains no runtime fixes.
+confirmed defects, the fixes in this PR, and remaining verification work.
 
 The review inventoried the repository and searched the complete source, test,
 script, and workflow trees for process execution, network access, filesystem
@@ -164,7 +164,16 @@ checks passed. That CI snapshot must be rechecked at the PR's next head.
 3. Correct cache provenance and incremental-scan behavior.
 4. Resolve the separately tracked PR #377 behavior and handoff gate.
 
-This report records reproducible defects. None is fixed by this PR. Closing a
-finding requires a focused regression at the public scanner interface, an
-output and exit-code assertion where relevant, the complete test suite, and
-the required build and handoff gates at the fixing commit.
+## Fixes in this PR
+
+This PR rejects linked state directories and state files, writes state files
+through temporary files and rename, sanitizes Git remote URLs before adding
+them to scan results, replaces policy-glob regexes with a bounded matcher,
+marks unusable feed caches as partial coverage, writes refreshed feeds
+atomically, derives cache provenance from the loader's actual merge, and
+distinguishes empty Git diffs from errors. Focused regression tests exercise
+the public scan result and output formats where the defect affected a verdict.
+
+The PR #377 finding belongs to a separate open branch and must be corrected
+there. Closing any finding requires its focused regression, the complete test
+suite, and the required build and handoff gates at the fixing commit.

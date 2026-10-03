@@ -3,8 +3,9 @@
 The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d`
 is recorded in `docs/security-audit-2026-10-03.md`. Five confirmed security
 and reporting findings and two functional findings are documented there with
-reproduction evidence, impact limits, and fix directions. This PR records the
-audit only; it does not close the findings. The local file containing the
+reproduction evidence and impact limits. This PR fixes the five main-branch
+findings and the incremental-diff behavior with focused regressions. The
+separate PR #377 needs its own correction. The local file containing the
 current Git remote URL is intentionally outside this PR.
 
 ## Release v6.4.2 (2026-10-03) (claude-opus-5-5)
