@@ -30,6 +30,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
   assistant" extensions sent the contents of every opened file, is a known C2
   domain. There is one original analysis, so the confidence is 0.85.
 
+### Changed
+
+- README: the badges are grouped in a table with three rows (Package, Build,
+  Security) instead of one wrapped line of twelve. A Socket badge links to the
+  package's Socket report. It is a static `shields.io` badge because GitHub's
+  image proxy receives `403 Forbidden` from Socket's own badge endpoint, which
+  would show as a broken image.
+
 ### Fixed
 
 - The publish-toolchain preflight failed on every pull request after GitHub
