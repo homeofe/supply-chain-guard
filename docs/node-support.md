@@ -273,7 +273,9 @@ and `undici` are present in every npm release of that date (11.19.1, 11.20.0 and
 `.github/publish-toolchain/audit-exceptions.json` names it for its package, with a
 reason and an expiry date. Every unlisted advisory at the threshold fails, an
 expired exception fails, and an exception the report no longer contains fails, so
-the list is emptied in the same change that bumps the pin.
+the list is emptied in the same change that bumps the pin. An advisory reviewed on
+2026-10-02 against the bundled `http-cache-semantics` joined the list the same way:
+it has no patched version at all, so no npm release can carry a fix yet.
 
 ## What is deliberately not governed here
 
