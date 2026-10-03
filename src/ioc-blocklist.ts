@@ -534,6 +534,11 @@ export const KNOWN_C2_DOMAINS: string[] = [
   // over DNS and plain HTTP (amazon-inspector, MAL-2026-17194). Only the
   // per-attacker zone is listed, never the x9[.]to apex.
   "84avt3516s4q1obsv9q0mh4u2l8dw3ks.x9.to",
+  // MaliciousCorgi (January 2026): two VS Code Marketplace "AI assistant"
+  // extensions that Base64-encoded every opened file and sent it to this
+  // server. Koi Security research, quoted by the Phoenix Security MPI corpus;
+  // both trace to one original analysis, so the feed confidence is 0.85.
+  "aihao123.cn",
 ];
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,29 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-10-03): 88 package IOCs from the GitHub Advisory
+  Database and OpenSSF, 86 in the offline bundle and 2 in the catalog. Among
+  them are 15 more names of the Baileys WhatsApp fork family (for example
+  `@zanta/baileys`, `luoxy-baileys`, `wailib`). They are blocked by name
+  because every published version falls inside the advisory window, and all
+  were first published between 2026-08-16 and 2026-10-01. The batch also adds
+  a set of internal-sounding npm names that npm has since unpublished, and the
+  PyPI packages `voxeval`, `voxel-tts`, `dedh-devops-automation`,
+  `spo365-graph`, `friendly-tools` and `shortneer`, each pinned to its
+  published versions. The 2 catalog entries are `account-merge-site` pins
+  from October 2025.
+- Six single-source npm names from a vendor's September 2026 malicious-code
+  digest that no advisory database carries: `amicat`, `bmcat`, `eyevox`,
+  `moidevh`, `moidevk` (the self-deleting anti-proctoring operator) and
+  `fs-pwn-meeb322k` (the Strapi plugin `meeb322k` campaign). npm has
+  unpublished all six. They carry a family, so they stay in the offline
+  bundle, at confidence 0.85.
+- MaliciousCorgi: `aihao123[.]cn`, the server to which two VS Code "AI
+  assistant" extensions sent the contents of every opened file, is a known C2
+  domain. There is one original analysis, so the confidence is 0.85.
+
 ### Fixed
 
 - The publish-toolchain preflight failed on every pull request after GitHub

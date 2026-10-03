@@ -20,6 +20,47 @@ Proof: with the real toolchain lockfile,
 with "GHSA-ch52-4w7c-c8xp is not excepted" (the CI failure reproduced) and 0
 with the entry. Dependabot had not opened an alert for this advisory at the
 time; the query returned the existing undici alerts, so the query works.
+## Threat intel 2026-10-03 (claude-opus-5-5)
+
+Daily import over the default 14-day window (published from 2026-09-19): 622
+advisories, 4,230 OpenSSF records, 88 new entries, 86 to the bundle and 2 to
+the catalog (the `account-merge-site` pins, firstSeen 2025-10-30, before the
+cutoff). Nothing unmappable, no page cap, no `--limit`, nothing declined or
+deferred, no `catalogWindows` change.
+
+Bare names probed against the npm registry before applying. 6 are security
+holding packages, 10 are unpublished, and 15 are live Baileys/WhatsApp forks.
+For the forks the `time` map shows every version published between 2026-08-16
+and 2026-10-01, inside the advisory window, with no earlier clean release, so
+the name-block stands and no version pin is needed.
+
+Hand enrichment, all bundled with a campaign or family:
+- `amicat`, `bmcat`, `eyevox`, `moidevh`, `moidevk`, `fs-pwn-meeb322k`: in the
+  Xygeni September 2026 digest, absent from both stores, no GHSA/OSV record,
+  all unpublished on npm. Single-source, confidence 0.85. Their advisory
+  siblings (`moidevl`, the `strapi-plugin-*-meeb322k` set) were already bundled.
+- `aihao123[.]cn` (MaliciousCorgi, January 2026): added to KNOWN_C2_DOMAINS and
+  the bundle. Phoenix Security quotes it verbatim from the Koi Security
+  analysis. Koi's own blog now redirects, so this is one original analysis and
+  the confidence is 0.85. The two extension identifiers were seen only in a
+  search summary and are NOT added: no fetched page confirmed them verbatim.
+
+Proof: the new campaigns.test.ts blocks went red on 4 of 5 when the domain
+(both stores) and `eyevox` were cut. The lookalike-apex negative stayed green,
+and the restored tree is green.
+
+Coverage checks also ran against the other September campaigns named in the
+same digest (MemTensor sckit, PointBlank, PhantomSync, cloud-baileys,
+siriusbeyond, n8n nodes, nimbusedge, simple-date-formatter): all already
+present. Control: `moidevl` was found by the same search.
+
+The first CI run of this PR was red on `Publish toolchain preflight` only:
+GHSA-ch52-4w7c-c8xp in the npm bundled in the publish toolchain, unrelated to
+this change. The owner chose the dated exception, which PR 374 shipped (see the
+note above), and this branch was rebased onto it. A bump was not an option:
+npm 11.19.1, 11.21.0 and 12.2.0 all bundle the same `http-cache-semantics`
+4.2.0, `brace-expansion` 5.0.9, `undici` 6.28.0 and `ip-address` 10.5.0
+(tarballs unpacked and compared on 2026-10-03).
 
 ## Release v6.4.1 (2026-10-02) (claude-opus-5-5)
 
