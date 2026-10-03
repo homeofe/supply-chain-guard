@@ -33,7 +33,7 @@ export function matchGlob(glob: string, filePath: string): boolean {
   // The policy is project-controlled. A regex made from repeated wildcards
   // backtracks exponentially on a near match, so advance a bounded set of
   // path positions instead. Each token costs O(path length).
-  if (g.length * (p.length + 1) > 1_000_000) return false;
+  if (g.length > 1024 || g.length * (p.length + 1) > 1_000_000) return false;
   let positions = new Uint8Array(p.length + 1);
   positions[0] = 1;
   for (let i = 0; i < g.length; i++) {

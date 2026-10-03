@@ -171,7 +171,8 @@ through temporary files and rename, sanitizes Git remote URLs before adding
 them to scan results, replaces policy-glob regexes with a bounded matcher,
 marks unusable feed caches as partial coverage, writes refreshed feeds
 atomically, derives cache provenance from the loader's actual merge, and
-distinguishes empty Git diffs from errors. Focused regression tests exercise
+distinguishes empty Git diffs from errors. The Action's coverage gate now
+recognizes the new partial-scan rules. Focused regression tests exercise
 the public scan result and output formats where the defect affected a verdict.
 
 The PR #377 finding belongs to a separate open branch and must be corrected
