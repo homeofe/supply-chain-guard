@@ -6027,7 +6027,7 @@ export function getDetectionSetProvenance(
   }
 
   return {
-    bundledVersion: "6.4.1",
+    bundledVersion: "6.4.2",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
