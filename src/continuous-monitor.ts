@@ -5,13 +5,11 @@
  * and detects risk regressions and spikes.
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { Finding, RiskHistoryEntry, ScanReport } from "./types.js";
 import {
   STATE_DIR,
-  ensureStateDir,
   readJsonArrayStore,
+  writeStateFile,
   type StateStoreRead,
   type StateStoreUnreadableReason,
 } from "./state-dir.js";
@@ -192,8 +190,6 @@ export function saveRiskHistory(
     );
   }
 
-  const historyDir = ensureStateDir(dir);
-
   const history = existing.entries;
   history.push({
     timestamp: report.timestamp,
@@ -204,10 +200,7 @@ export function saveRiskHistory(
 
   // Keep only last N entries
   const trimmed = history.slice(-MAX_HISTORY_ENTRIES);
-  fs.writeFileSync(
-    path.join(historyDir, HISTORY_FILE),
-    JSON.stringify(trimmed, null, 2),
-  );
+  writeStateFile(dir, HISTORY_FILE, JSON.stringify(trimmed, null, 2));
 }
 
 /**

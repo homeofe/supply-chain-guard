@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
 import { STATE_DIR, ensureStateDir } from "../state-dir.js";
 import { saveRiskHistory } from "../continuous-monitor.js";
 import { saveTriageDecisions } from "../triage-engine.js";
+import { scan } from "../scanner.js";
 import type { ScanReport } from "../types.js";
 
 let tempDir: string;
@@ -81,5 +82,43 @@ describe("scanner state directory", () => {
     const staged = git("diff", "--cached", "--name-only");
     expect(staged).not.toContain(STATE_DIR);
     expect(staged.trim()).toBe("");
+  });
+
+  it("does not write through a linked state directory during a public scan", async () => {
+    const project = path.join(tempDir, "project");
+    const outside = path.join(tempDir, "outside");
+    fs.mkdirSync(project);
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(project, "index.js"), "export const value = 1;\n");
+    fs.writeFileSync(path.join(outside, ".gitignore"), "keep-this-rule\n");
+    fs.symlinkSync(outside, path.join(project, STATE_DIR), process.platform === "win32" ? "junction" : "dir");
+
+    const result = await scan({ target: project, format: "json" });
+    expect(result.partialScan).toBe(true);
+    expect(result.findings.map((finding) => finding.rule)).toContain("RISK_HISTORY_UNREADABLE");
+    expect(fs.readFileSync(path.join(outside, ".gitignore"), "utf-8")).toBe("keep-this-rule\n");
+    expect(fs.existsSync(path.join(outside, "risk-history.json"))).toBe(false);
+  });
+
+  it("replaces a hard-linked state file without overwriting its external peer", () => {
+    const outside = path.join(tempDir, "outside.json");
+    fs.writeFileSync(outside, "keep-this-content");
+    ensureStateDir(tempDir);
+    fs.linkSync(outside, path.join(tempDir, STATE_DIR, "triage-decisions.json"));
+
+    saveTriageDecisions(tempDir, []);
+    expect(fs.readFileSync(outside, "utf-8")).toBe("keep-this-content");
+    expect(JSON.parse(fs.readFileSync(path.join(tempDir, STATE_DIR, "triage-decisions.json"), "utf-8"))).toEqual([]);
+  });
+
+  it("refuses a linked history file before reading or writing its target", () => {
+    if (process.platform === "win32") return; // file symlinks may require elevated privileges
+    const outside = path.join(tempDir, "outside-history.json");
+    fs.writeFileSync(outside, "[]");
+    ensureStateDir(tempDir);
+    fs.symlinkSync(outside, path.join(tempDir, STATE_DIR, "risk-history.json"));
+
+    expect(() => saveRiskHistory(tempDir, report)).toThrow();
+    expect(fs.readFileSync(outside, "utf-8")).toBe("[]");
   });
 });

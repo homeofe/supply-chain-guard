@@ -163,6 +163,11 @@ describe("Policy Engine", () => {
       expect(matchGlob("**/vendor.js", "myvendor.js")).toBe(false);
       expect(matchGlob("**/test.js", "latest.js")).toBe(false);
     });
+
+    it("handles repeated project-controlled wildcards without regex backtracking", () => {
+      expect(matchGlob("a*".repeat(12) + "b", "a".repeat(180))).toBe(false);
+      expect(matchGlob("a*".repeat(12) + "b", "a".repeat(80) + "b")).toBe(true);
+    });
   });
 
   describe("applyInlineSuppressions", () => {

@@ -26,7 +26,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { fetchHttpsBuffer, type RemoteRequestLimits } from "./remote-download.js";
 import type { Finding } from "./types.js";
 import { CATALOG_DIGEST } from "./catalog-digest.js";
@@ -724,10 +724,17 @@ export async function refreshFeed(
 
     fs.mkdirSync(cacheDir, { recursive: true });
     const cachePath = path.join(cacheDir, FEED_CACHE_FILE);
-    fs.writeFileSync(
-      cachePath,
-      JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
-    );
+    const temporary = path.join(cacheDir, `.scg-feed-${randomUUID()}.tmp`);
+    try {
+      fs.writeFileSync(
+        temporary,
+        JSON.stringify({ timestamp: new Date().toISOString(), entries }, null, 2),
+        { flag: "wx", mode: 0o600 },
+      );
+      fs.renameSync(temporary, cachePath);
+    } finally {
+      try { fs.rmSync(temporary, { force: true }); } catch { /* no temporary file */ }
+    }
 
     // The catalog is a second, independent document. Its failures are recorded
     // and returned, never thrown: a caller who asked to refresh the feed got

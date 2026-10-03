@@ -15,10 +15,18 @@ export function getChangedFiles(
   dir: string,
   sinceCommit: string,
 ): string[] {
+  return getChangedFilesResult(dir, sinceCommit).files;
+}
+
+/** Keep an empty successful diff distinct from an invalid or unavailable ref. */
+export function getChangedFilesResult(
+  dir: string,
+  sinceCommit: string,
+): { status: "ok" | "error"; files: string[] } {
   // Reject a ref that could be read as a git option or inject arguments;
   // execFileSync (no shell) handles the rest.
   if (!/^[A-Za-z0-9._/-]+$/.test(sinceCommit) || sinceCommit.startsWith("-")) {
-    return [];
+    return { status: "error", files: [] };
   }
   try {
     const output = execFileSync(
@@ -26,13 +34,13 @@ export function getChangedFiles(
       ["-C", dir, "diff", "--name-only", sinceCommit, "HEAD"],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
-    return output
+    return { status: "ok", files: output
       .trim()
       .split("\n")
       .filter(Boolean)
-      .map((f) => path.join(dir, f));
+      .map((f) => path.join(dir, f)) };
   } catch {
-    return [];
+    return { status: "error", files: [] };
   }
 }
 

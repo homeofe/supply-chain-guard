@@ -1,3 +1,16 @@
+## Daybreak-Blue-Scan - security audit report (2026-10-03)
+
+The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d`
+is recorded in `docs/security-audit-2026-10-03.md`. Five confirmed security
+and reporting findings and two functional findings are documented there with
+reproduction evidence and impact limits. This PR fixes the five main-branch
+findings and the incremental-diff behavior with focused regressions. The
+separate PR #377 received its correction at `ebbf6f2` and was merged into
+main as `b7d73e7` before this PR was updated. The full Linux suite at
+runtime-fix commit `dda2f2b` passed 4,960 tests in 197 files; build and the
+observed PR #378 CI checks were green. The local file containing the
+current Git remote URL is intentionally outside this PR.
+
 ## Legacy cache refresh note correction (2026-10-03)
 
 The refresh note now compares the selected cache path with the legacy

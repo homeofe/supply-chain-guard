@@ -106,9 +106,10 @@ import { correlateFindings } from "./correlation-engine.js";
 import { calculateTrustBreakdown } from "./trust-breakdown.js";
 import { loadPolicyConfig, applyPolicy, applyBaseline, applyInlineSuppressions, describePolicyEffect, matchGlob } from "./policy-engine.js";
 import { detectTrustSignals } from "./trust-signals.js";
-import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance, lastCatalogState } from "./threat-intel.js";
+import { loadThreatIntel, checkThreatIntel, isInertThreatFeedFile, isInertThreatCatalogFile, getDetectionSetProvenance, getFeedCacheState, lastCatalogState } from "./threat-intel.js";
 import { calculateRiskDimensions } from "./risk-engine.js";
-import { getChangedFiles } from "./diff-scanner.js";
+import { getChangedFilesResult } from "./diff-scanner.js";
+import { publicGitRemoteUrl } from "./git-remote-url.js";
 import { generateRemediations, generateFixSuggestions } from "./remediation-engine.js";
 import { generatePlaybooks } from "./playbooks.js";
 import { buildAttackGraph } from "./attack-graph.js";
@@ -303,11 +304,12 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     }
   }
 
-  if (options.sinceCommit && fs.existsSync(path.join(scanDir, ".git"))) {
-    const changedFiles = new Set(getChangedFiles(scanDir, options.sinceCommit));
-    if (changedFiles.size > 0) {
-      allFiles = allFiles.filter((f) => changedFiles.has(f));
-    }
+  let diffStatus: "none" | "changed" | "unchanged" | "error" = "none";
+  if (options.sinceCommit) {
+    const diff = getChangedFilesResult(scanDir, options.sinceCommit);
+    diffStatus = diff.status === "error" ? "error" : diff.files.length === 0 ? "unchanged" : "changed";
+    const changedFiles = new Set(diff.files);
+    allFiles = diff.status === "ok" ? allFiles.filter((f) => changedFiles.has(f)) : [];
   }
 
   // v4.5: Load threat intelligence feed. The Action passes an isolated cacheDir
@@ -315,6 +317,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Catalog availability is snapshotted here: nested scanners must not reload
   // from a different directory and overwrite lastCatalog before the finding.
   const threatFeed = loadThreatIntel(options.cacheDir);
+  const feedCacheState = getFeedCacheState();
   const catalogState = lastCatalogState();
 
   // Internal-disclosure deny-list. Loaded once: the hashed terms come from the
@@ -327,6 +330,35 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
     ...pathCoverageFindings,
     ...internalDisclosure.loadFindings,
   ];
+  if (diffStatus === "unchanged") {
+    findings.push({
+      rule: "DIFF_NO_CHANGES",
+      description: "The requested Git diff contains no changed files to scan.",
+      severity: "info",
+      confidence: 1,
+      category: "info",
+      recommendation: "Run a full scan if a verdict on the complete project is needed.",
+    });
+  } else if (diffStatus === "error") {
+    findings.push({
+      rule: "DIFF_BASE_UNAVAILABLE",
+      description: "The requested Git diff could not be evaluated, so changed-file coverage is unavailable.",
+      severity: "high",
+      confidence: 1,
+      category: "trust",
+      recommendation: "Provide a valid reachable Git ref and rerun the scan.",
+    });
+  }
+  if (feedCacheState.unreadable) {
+    findings.push({
+      rule: "THREAT_FEED_CACHE_UNREADABLE",
+      description: "The refreshed threat feed cache exists but could not be used completely, so same-day indicators may be missing from this scan.",
+      severity: "high",
+      confidence: 1,
+      category: "trust",
+      recommendation: "Refresh the threat feed cache and rerun the scan before treating this verdict as complete.",
+    });
+  }
 
   // Direct dependencies the package.json check reported, by INSTALLED name
   // (aliases resolved); see the lockfile excuse pass after the path filters.
@@ -898,7 +930,7 @@ export async function scan(options: ScanOptions): Promise<ScanReport> {
   // Java, C#, Ruby, PHP, Kotlin, Swift or plain-HTML project, with remediation
   // text naming only causes that do not apply. Measured on a two-file Maven
   // project before this split.
-  if (allFiles.length === 0) {
+  if (allFiles.length === 0 && diffStatus !== "unchanged") {
     findings.push({
       rule: "SCAN_ZERO_COVERAGE",
       description:
@@ -1227,7 +1259,7 @@ function resolveGitProvenance(scanDir: string): {
         encoding: "utf-8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim();
-      if (u) repositoryUri = u;
+      if (u) repositoryUri = publicGitRemoteUrl(u);
     } catch {}
 
     return { commit: commit || undefined, branch, repositoryUri };
