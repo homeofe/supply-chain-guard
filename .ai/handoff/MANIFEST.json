@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791004951",
-    "timestamp": "2026-10-03T05:22:31Z",
-    "commit": "1e02925",
+    "session_id": "cli-1791005374",
+    "timestamp": "2026-10-03T05:29:34Z",
+    "commit": "ae582a2",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:3ddf55fa4f739be79da20c0de27c38d96b597d06e48b782578e78ccfd1b380d2",
-      "updated": "2026-10-03T05:22:23Z",
-      "lines": 13351,
+      "checksum": "sha256:8b3e723e7950c76244d80b935b621349a708c210da70ab1ee0e0642556bf7ba1",
+      "updated": "2026-10-03T05:29:28Z",
+      "lines": 13361,
       "summary": "Daily import over the default 14-day window (published from 2026-09-19): 622 advisories, 4,230 OpenSSF records, 88 new entries, 86 to the bundle..."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "Daily import over the default 14-day window (published from 2026-09-19): 622 advisories, 4,230 OpenSSF records, 88 new entries, 86 to the bundle... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 932,
-    "manifest_plus_core": 199105,
-    "full_read": 212813
+    "manifest_plus_core": 199269,
+    "full_read": 212977
   }
 }
