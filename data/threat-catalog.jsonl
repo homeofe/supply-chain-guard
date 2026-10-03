@@ -92819,3 +92819,5 @@
 {"type":"package","value":"mfafix@1.0.0","severity":"critical","confidence":1,"source":"GHSA-f2gv-xpgh-37r5, MAL-2026-15630 (amazon-inspector)","firstSeen":"2026-08-31"}
 {"type":"package","value":"nextjsupdater@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2026-15631 (amazon-inspector)","firstSeen":"2026-08-31"}
 {"type":"package","value":"nextjsupdater@1.2.2","severity":"critical","confidence":0.9,"source":"MAL-2026-15631 (amazon-inspector)","firstSeen":"2026-08-31"}
+{"type":"package","value":"account-merge-site@0.0.1-security","severity":"critical","confidence":0.9,"source":"MAL-2025-49107 (amazon-inspector)","firstSeen":"2025-10-30"}
+{"type":"package","value":"account-merge-site@1.0.0","severity":"critical","confidence":0.9,"source":"MAL-2025-49107 (amazon-inspector)","firstSeen":"2025-10-30"}

@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791015156",
-    "timestamp": "2026-10-03T08:12:36Z",
+    "session_id": "cli-1791004951",
+    "timestamp": "2026-10-03T05:22:31Z",
     "commit": "1e02925",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:979277d2cda7bb164efc89df5bb0377f424d4d70d8c9966997251d99f51a7b7b",
-      "updated": "2026-10-03T08:12:28Z",
-      "lines": 13340,
-      "summary": "GitHub reviewed GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` <= 4.2.0) at 2026-10-02 22:36 UTC, after main's last green run."
+      "checksum": "sha256:3ddf55fa4f739be79da20c0de27c38d96b597d06e48b782578e78ccfd1b380d2",
+      "updated": "2026-10-03T05:22:23Z",
+      "lines": 13351,
+      "summary": "Daily import over the default 14-day window (published from 2026-09-19): 622 advisories, 4,230 OpenSSF records, 88 new entries, 86 to the bundle..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:88eee177217bbdd0b9d0c053f39d3ba45f74f02f8d576233529b6ef86da3b881",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "GitHub reviewed GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` <= 4.2.0) at 2026-10-02 22:36 UTC, after main's last green run. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Daily import over the default 14-day window (published from 2026-09-19): 622 advisories, 4,230 OpenSSF records, 88 new entries, 86 to the bundle... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 923,
-    "manifest_plus_core": 198943,
-    "full_read": 212651
+    "manifest_only": 932,
+    "manifest_plus_core": 199105,
+    "full_read": 212813
   }
 }

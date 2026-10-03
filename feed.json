@@ -2,8 +2,8 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.4.1",
-  "entryCount": 3451,
-  "generatedAt": "2026-10-01T00:00:00.000Z",
+  "entryCount": 3544,
+  "generatedAt": "2026-10-03T00:00:00.000Z",
   "entries": [
     {
       "type": "domain",
@@ -30216,6 +30216,757 @@
       "confidence": 1,
       "source": "GHSA-mjhw-5x2v-v3wg, MAL-2026-16252 (amazon-inspector+ghsa-malware)",
       "firstSeen": "2026-09-17"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxeval@0.4.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xmhj-hj4f-c924, MAL-2026-17457 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxeval@0.4.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xmhj-hj4f-c924, MAL-2026-17457 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxeval@0.4.4",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xmhj-hj4f-c924, MAL-2026-17457 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxeval@0.4.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xmhj-hj4f-c924, MAL-2026-17457 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "@woodpecker-web-shared/components",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-44hm-95r4-wcrf, MAL-2026-16354 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "bnppf-flag-icons",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-34p9-xxp2-hv3g, MAL-2026-16350 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "hardhat-zet",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mw8r-6m3f-qmg8, MAL-2026-17234 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-28"
+    },
+    {
+      "type": "package",
+      "value": "@smwebserver/static@99.9.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-xh7x-r46x-g84q, MAL-2026-17456 (ossf-package-analysis)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "translate-base-font",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-grv5-7wp6-vw6h, MAL-2026-17458 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "ui.dist.min.js",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-325f-rjxf-3gm9, MAL-2026-17460 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "ui-base-colors",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-qgqx-3mhx-jwx3, MAL-2026-17459 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@0.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.6.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.6.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.6.999",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.8.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.8.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:dedh-devops-automation@5.9.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-mc5h-r7fw-gr4j, MAL-2026-17455 (kam193)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "niksinnkatalapp",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g37r-cvvp-rj75, MAL-2026-17435",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "@bluewin/utils@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-9ggj-2v34-hwv8, MAL-2026-17437",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "ai-workshop-radio-app",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rxfj-38w3-hw2x, MAL-2026-17428",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "live-detection-dashboard",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-h4cx-hwvc-8mgj, MAL-2026-17434",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "brioche-apl-dev-env",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8r2r-7gc9-8vq8, MAL-2026-17432",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "ai-workshop-radio-lambda",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-427x-rv7c-m3f9, MAL-2026-17429",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "alexa-cybertron-team-code-review-agent",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-g7c3-m79h-9cqq, MAL-2026-17430",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "danz-bails",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-83xg-jvg8-96qw, MAL-2026-17444",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "apl-rive-renderer",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-66jg-9x42-xwh9, MAL-2026-17431",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "xcvrenzcompany",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-474r-6338-73gj, MAL-2026-17452",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "okra-cloud-cdk",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-7rq8-hfxr-pxhw, MAL-2026-17436",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "prastzy@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-phvc-2p87-8jf3, MAL-2026-17448",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "@zanta/baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-44wf-ggpw-qq53, MAL-2026-17443",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "wailib@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-w72m-vjx4-9m36, MAL-2026-17451",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "figma-to-apl",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-fmw8-mrp6-mj68, MAL-2026-17433",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "ai-workshop-maa15-radio",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-5m79-v4p8-r597, MAL-2026-17427",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "mikuhostt-baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-p4xf-x6j2-mq3f, MAL-2026-17447",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "luoxy-baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-rhcf-fwmc-3cm3, MAL-2026-17446",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "prastzyy@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-23mj-w7jj-h63m, MAL-2026-17449",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "rubbydev-crash-baileys@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2cr6-p8h2-g7pv, MAL-2026-17450",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "@fazzcodestudio/wa-web",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-6c6x-j4h9-g6mh, MAL-2026-17441",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@smart-dev-wa/baileys@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x69h-gm3h-2w4q, MAL-2026-17442",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "ichigo-baileys",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jmwp-25hp-85hw, MAL-2026-17445",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@erlanzz/baileys@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-pwrr-vrh9-c7gf, MAL-2026-17440",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "@developmentyora/baileyss@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hr4v-9q47-37m3, MAL-2026-17439",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "@celestial-community/baileys@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-vcwh-7gr6-f894, MAL-2026-17438",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-f@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-x2m2-w3gv-m5wg, MAL-2026-17426 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-e@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-7hq7-x7ww-7cxr, MAL-2026-17425 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-b@0.0.1-security",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-27m4-jjxc-69wf, MAL-2026-17424 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-b@0.0.1-security.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-27m4-jjxc-69wf, MAL-2026-17424 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "kartykgithub-ph-b@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-27m4-jjxc-69wf, MAL-2026-17424 (ghsa-malware)",
+      "firstSeen": "2026-10-02"
+    },
+    {
+      "type": "package",
+      "value": "pypi:shortneer@0.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-2wm2-fc38-63vw, MAL-2026-17422 (kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "illusion-datalab@1.1.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-834w-x8gq-8rmx, MAL-2026-17423 (ghsa-malware)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "illusion-datalab@1.1.2",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-834w-x8gq-8rmx, MAL-2026-17423 (ghsa-malware)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "illusion-datalab@1.1.3",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-834w-x8gq-8rmx, MAL-2026-17423 (ghsa-malware)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "illusion-datalab@1.1.4",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-834w-x8gq-8rmx, MAL-2026-17423 (ghsa-malware)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "illusion-datalab@1.1.5",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "GHSA-834w-x8gq-8rmx, MAL-2026-17423 (ghsa-malware)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.5",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.6",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.7",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "homestack-cheer@1.1.8",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-x567-p88w-3697, MAL-2026-16333 (amazon-inspector+ghsa-malware)",
+      "firstSeen": "2026-09-21"
+    },
+    {
+      "type": "package",
+      "value": "pypi:spo365-graph@1.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jf8h-4jc3-c652, MAL-2026-17421 (kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:spo365-graph@1.1.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jf8h-4jc3-c652, MAL-2026-17421 (kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:spo365-graph@1.1.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jf8h-4jc3-c652, MAL-2026-17421 (kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:spo365-graph@1.1.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-jf8h-4jc3-c652, MAL-2026-17421 (kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:friendly-tools@0.1",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8hwj-527f-mmvm, MAL-2026-17419 (amazon-inspector+kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:friendly-tools@0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-8hwj-527f-mmvm, MAL-2026-17419 (amazon-inspector+kam193)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "online-header@99.0.0",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-hg4r-6gv8-6hmj, MAL-2026-17420 (ossf-package-analysis)",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "future-scripts@0.0.2",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c9xw-xmvx-ffm7, MAL-2026-17418",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "future-scripts@0.0.3",
+      "severity": "critical",
+      "confidence": 1,
+      "source": "GHSA-c9xw-xmvx-ffm7, MAL-2026-17418",
+      "firstSeen": "2026-09-30"
+    },
+    {
+      "type": "package",
+      "value": "prastzyy",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17449",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "prastzy",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17448",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@erlanzz/baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17440",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "rubbydev-crash-baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17450",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "wailib",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17451",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@smart-dev-wa/baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17442",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@developmentyora/baileyss",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17439",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "@celestial-community/baileys",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17438",
+      "firstSeen": "2026-10-01"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxel-tts@0.5.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17461 (kam193)",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "pypi:voxel-tts@0.5.1",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17461 (kam193)",
+      "firstSeen": "2026-10-03"
+    },
+    {
+      "type": "package",
+      "value": "amicat",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Self-deleting anti-proctoring operator",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "bmcat",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Self-deleting anti-proctoring operator",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "eyevox",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Self-deleting anti-proctoring operator",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-08-28"
+    },
+    {
+      "type": "package",
+      "value": "moidevh",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Self-deleting anti-proctoring operator",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "moidevk",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Self-deleting anti-proctoring operator",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-08-31"
+    },
+    {
+      "type": "package",
+      "value": "fs-pwn-meeb322k",
+      "severity": "critical",
+      "confidence": 0.85,
+      "family": "Strapi plugin meeb322k",
+      "source": "Xygeni September 2026 malicious code digest (single-source)",
+      "firstSeen": "2026-09-14"
+    },
+    {
+      "type": "domain",
+      "value": "aihao123.cn",
+      "severity": "critical",
+      "confidence": 0.85,
+      "campaign": "MaliciousCorgi VS Code AI extension exfiltration",
+      "source": "Koi Security MaliciousCorgi report, Phoenix Security MPI corpus",
+      "firstSeen": "2026-01-28"
     }
   ]
 }

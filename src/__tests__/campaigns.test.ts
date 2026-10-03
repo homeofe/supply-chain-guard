@@ -7514,4 +7514,67 @@ describe("Campaign Signatures", () => {
       expect(ioc?.campaign).toBeTruthy();
     });
   });
+
+  // MaliciousCorgi: two VS Code "AI assistant" extensions sent every opened
+  // file, Base64-encoded, to one server (Koi Security). One original analysis,
+  // so the feed entry is held at 0.85.
+  describe("MaliciousCorgi VS Code AI extension exfiltration (January 2026)", () => {
+    it("should detect the exfiltration server", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "extension.js"),
+        'const ENDPOINT = "https://api.aihao123.cn/upload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      const finding = report.findings.find(
+        (f) => f.rule === "IOC_KNOWN_C2_DOMAIN"
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.severity).toBe("critical");
+    });
+
+    it("does not flag a different apex sharing the label", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "extension.js"),
+        'const ENDPOINT = "https://aihao123.com/upload";'
+      );
+
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.find((f) => f.rule === "IOC_KNOWN_C2_DOMAIN")
+      ).toBeUndefined();
+    });
+
+    it("keeps the server bundled with a campaign", () => {
+      const ioc = getBundledFeed().find((i) => i.value === "aihao123.cn");
+      expect(ioc).toBeDefined();
+      expect(ioc?.campaign).toBeTruthy();
+    });
+  });
+
+  // Single-source package names from the Xygeni September 2026 digest with no
+  // advisory record. They carry a family so the bundle cutoff never moves
+  // them out of the offline package.
+  describe("Xygeni September 2026 single-source names", () => {
+    it("keeps every name bundled with a family at reduced confidence", () => {
+      const feed = getBundledFeed();
+      for (const value of ["amicat", "bmcat", "eyevox", "moidevh", "moidevk", "fs-pwn-meeb322k"]) {
+        const ioc = feed.find((i) => i.value === value);
+        expect(ioc, `${value} must be bundled`).toBeDefined();
+        expect(ioc?.family, `${value} must carry a family`).toBeTruthy();
+        expect(ioc?.confidence).toBeLessThan(0.9);
+      }
+    });
+
+    it("flags a dependency on one of them", async () => {
+      fs.writeFileSync(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ name: "consumer", version: "1.0.0", dependencies: { eyevox: "^1.0.0" } })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(
+        report.findings.some((f) => f.severity === "critical" && f.description.includes("eyevox"))
+      ).toBe(true);
+    });
+  });
 });
