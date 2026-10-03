@@ -991,6 +991,9 @@ feedCmd
       const result = await refreshFeed(opts.url ?? DEFAULT_FEED_URL, opts.cacheDir);
       console.log(`\n  Threat feed refreshed: ${result.entryCount} entries cached.`);
       console.log(`  Cache file: ${result.cachePath}`);
+      const { legacyRefreshNote } = await import("./cache-dir.js");
+      const legacyNote = legacyRefreshNote(opts.cacheDir);
+      if (legacyNote) console.log(legacyNote);
       console.log(`  Every scan from now on merges these entries over the bundled feed.`);
       console.log(`  They do not expire; refresh daily to keep picking up new IOCs.`);
 

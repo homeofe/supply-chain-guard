@@ -6,6 +6,7 @@ import {
   LEGACY_CACHE_DIR,
   displayCachePath,
   legacyCacheIgnored,
+  legacyRefreshNote,
   resolveCacheDir,
   userCacheDir,
 } from "../cache-dir.js";
@@ -140,6 +141,30 @@ describe("a cache left in the working directory", () => {
   it("is not reported when there is none", () => {
     cwd = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cwd-"));
     expect(legacyCacheIgnored(undefined, { ...linux, env: {} }, cwd)).toBe(false);
+  });
+
+  it("is named by feed refresh, with the default it wrote to and both ways to keep it", () => {
+    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cwd-"));
+    fs.mkdirSync(path.join(cwd, LEGACY_CACHE_DIR));
+    const ctx = { ...linux, env: {} };
+    const note = legacyRefreshNote(undefined, ctx, cwd);
+    expect(note).not.toBeNull();
+    expect(note).toMatch(/\.scg-cache directory exists in the working directory/);
+    expect(note).toMatch(/since 6\.4\.0/);
+    expect(note).toContain("~/.cache/supply-chain-guard");
+    expect(note).toContain("--cache-dir .scg-cache");
+    expect(note).toContain("SCG_CACHE_DIR=.scg-cache");
+    // The account name never appears: the home directory is shown as ~.
+    expect(note).not.toContain("/home/alice");
+  });
+
+  it("is not named by feed refresh when the refresh wrote there or there is none", () => {
+    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "scg-cwd-"));
+    const ctx = { ...linux, env: {} };
+    expect(legacyRefreshNote(undefined, ctx, cwd)).toBeNull();
+    fs.mkdirSync(path.join(cwd, LEGACY_CACHE_DIR));
+    expect(legacyRefreshNote(LEGACY_CACHE_DIR, ctx, cwd)).toBeNull();
+    expect(legacyRefreshNote(undefined, { ...linux, env: { SCG_CACHE_DIR: LEGACY_CACHE_DIR } }, cwd)).toBeNull();
   });
 
   it("is named in the catalog finding, with the way to keep using it", () => {

@@ -1128,6 +1128,20 @@ directory left in the working directory by earlier releases is no longer read;
 the catalog finding says so when one is present. Pass `--cache-dir .scg-cache`
 to keep using it, or refresh once. Reports name a cache under the home
 directory as `~/...`, without the account name.
+
+**Upgrading from 6.3.x or earlier.** Before 6.4.0 a refresh wrote
+`.scg-cache/threat-feed.json` in the working directory. A pipeline step that
+refreshes and then checks that file fails after the upgrade although the refresh
+succeeded, because the file is now written to the per-user directory. Set the
+directory on that step, for example in a GitHub Actions step:
+
+```yaml
+env:
+  SCG_CACHE_DIR: .scg-cache
+```
+
+`feed refresh` and `feed stats` both honour it. `feed refresh` prints a note when
+it finds a `.scg-cache` in the working directory that it did not write.
 The finding names how many historical indicators were not consulted and
 why, and the reason matters:
 
