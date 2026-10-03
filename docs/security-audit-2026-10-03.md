@@ -5,7 +5,8 @@
 This review covers the `supply-chain-guard` repository at
 `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` (v6.4.2), plus the separately
 identified state of [PR #377](https://github.com/homeofe/supply-chain-guard/pull/377)
-at `cbfde9624b2cdadfe76a7396285a1d26090188b3`. Its purpose is to record
+at `cbfde9624b2cdadfe76a7396285a1d26090188b3`. The separate correction on
+that PR is `ebbf6f2cfdbfe56f2228a2c7e7ff76e7a711d8ca`. Its purpose is to record
 confirmed defects, the fixes in this PR, and remaining verification work.
 
 The review inventoried the repository and searched the complete source, test,
@@ -148,9 +149,9 @@ legacy `.scg-cache` exists but refresh uses a different explicitly selected
 cache path. The current helper in
 [`cache-dir.ts`](../src/cache-dir.ts#L104) treats every explicit cache choice as
 excluding the legacy note. The PR's focused test covers the explicit legacy
-path but not a different explicit path. Compare the resolved write path with
-the legacy path and add that missing case. This observation is about the
-separate PR; it is not a defect introduced by this documentation change.
+path but not a different explicit path. The correction in PR #377 compares the
+resolved write path with the legacy path and tests the missing case. This
+observation is about the separate PR; it is not a defect introduced here.
 
 At the time of review, PR #377's `AAHP Verify` job also failed because its
 handoff state and manifest had not changed with the code. Other observed
@@ -175,6 +176,9 @@ distinguishes empty Git diffs from errors. The Action's coverage gate now
 recognizes the new partial-scan rules. Focused regression tests exercise
 the public scan result and output formats where the defect affected a verdict.
 
-The PR #377 finding belongs to a separate open branch and must be corrected
-there. Closing any finding requires its focused regression, the complete test
-suite, and the required build and handoff gates at the fixing commit.
+The PR #377 finding was corrected on its existing branch rather than copied
+into this PR. At runtime-fix commit `dda2f2b54c07f442098a14af6dc98ae07c127830`,
+the Linux suite passed all 4,960 tests in 197 files, the local and Linux builds
+passed, and the observed CI checks on PR #378 were green. Closing any finding
+requires its focused regression, the full suite, and the build and handoff
+gates at the fixing commit.

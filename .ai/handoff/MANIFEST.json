@@ -3,17 +3,17 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791055123",
-    "timestamp": "2026-10-03T19:18:43Z",
-    "commit": "4104341",
+    "session_id": "cli-1791055567",
+    "timestamp": "2026-10-03T19:26:07Z",
+    "commit": "dda2f2b",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:fc06df9466d634c7f3adffc0d5067b2ebdd4b69f3d1ebdafc4d381ba42a22885",
-      "updated": "2026-10-03T19:13:36Z",
-      "lines": 13433,
+      "checksum": "sha256:fc06a898b8e5783fe034a0476d18312e13457b23f97f68d13ee785dca5bbc42d",
+      "updated": "2026-10-03T19:25:40Z",
+      "lines": 13435,
       "summary": "The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` is recorded in `docs/security-audit-2026-10-03.md`."
     },
     "NEXT_ACTIONS.md": {
@@ -80,7 +80,7 @@
   "quick_context": "The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` is recorded in `docs/security-audit-2026-10-03.md`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
     "manifest_only": 923,
-    "manifest_plus_core": 200313,
-    "full_read": 214029
+    "manifest_plus_core": 200351,
+    "full_read": 214067
   }
 }
