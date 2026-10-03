@@ -98,17 +98,38 @@ export function displayCachePath(p: string, ctx: CacheDirContext = {}): string {
 }
 
 /**
- * Whether the working directory still holds a cache in the former location that the default
- * no longer reads. Only meaningful when no directory was chosen explicitly.
+ * Whether the working directory still holds a cache in the former location
+ * that the selected cache path does not read.
  */
 export function legacyCacheIgnored(explicit?: string, ctx: CacheDirContext = {}, cwd: string = process.cwd()): boolean {
-  if (explicit !== undefined && explicit !== "") return false;
-  const used = path.resolve(cwd, resolveCacheDir(undefined, ctx));
+  const used = path.resolve(cwd, resolveCacheDir(explicit, ctx));
   const legacy = path.resolve(cwd, LEGACY_CACHE_DIR);
-  if (used === legacy) return false;
+  const samePath = (ctx.platform ?? process.platform) === "win32"
+    ? used.toLowerCase() === legacy.toLowerCase()
+    : used === legacy;
+  if (samePath) return false;
   try {
     return fs.statSync(legacy).isDirectory();
   } catch {
     return false;
   }
+}
+
+/**
+ * The note `feed refresh` prints when it wrote somewhere other than a `.scg-cache` that still
+ * sits in the working directory, or null when there is nothing to say.
+ *
+ * Before 6.4.0 a refresh wrote `.scg-cache/threat-feed.json` in the working directory, and CI
+ * steps were written to check that file after refreshing. Since the move such a step fails
+ * with "missing or empty" right after a successful refresh, and nothing in the refresh output
+ * connected the two. The catalog finding already names an ignored `.scg-cache`, but only a
+ * scan reaches it; a pipeline that checks the file first never gets there.
+ */
+export function legacyRefreshNote(explicit?: string, ctx: CacheDirContext = {}, cwd: string = process.cwd()): string | null {
+  if (!legacyCacheIgnored(explicit, ctx, cwd)) return null;
+  return (
+    `  Note: a ${LEGACY_CACHE_DIR} directory exists in the working directory, but since 6.4.0 the\n` +
+    `  refresh used ${displayCachePath(resolveCacheDir(explicit, ctx), ctx)}, so it was not written there.\n` +
+    `  To keep using it, pass --cache-dir ${LEGACY_CACHE_DIR} or set SCG_CACHE_DIR=${LEGACY_CACHE_DIR}.`
+  );
 }

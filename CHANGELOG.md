@@ -7,6 +7,19 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- `feed refresh` now says when a `.scg-cache` directory in the working directory
+  was not written. Since 6.4.0 the default cache is one directory per user, so a
+  CI step that refreshes the feed and then checks `.scg-cache/threat-feed.json`
+  fails with "missing or empty" right after a successful refresh. The refresh
+  output named the file it wrote but not the one it skipped. It now prints a note
+  with the cache path it used and both ways to keep the old location
+  (`--cache-dir .scg-cache` or `SCG_CACHE_DIR=.scg-cache`).
+- README, Catalog cache: an upgrade note for pipelines written against 6.3.x or
+  earlier. The 6.4.0 entry listed the cache move under Changed without saying
+  that it breaks such a step; this note says so and gives the one-line fix.
+
 ## [6.4.2] - 2026-10-03
 
 ### Added

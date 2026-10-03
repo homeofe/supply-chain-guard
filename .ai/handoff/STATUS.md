@@ -1,3 +1,12 @@
+## Legacy cache refresh note correction (2026-10-03)
+
+The refresh note now compares the selected cache path with the legacy
+`.scg-cache` path. An explicit alternate directory and an alternate
+`SCG_CACHE_DIR` both keep the note visible; a selection of the legacy directory
+itself remains silent. The note names the path actually written. The focused
+cache-directory test covers these cases. This section and the refreshed
+MANIFEST.json close the PR's handoff drift.
+
 ## Release v6.4.2 (2026-10-03) (claude-opus-5-5)
 
 Patch release: the 2026-10-03 threat intel (PR 373), the dated publish-audit
