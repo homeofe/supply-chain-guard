@@ -1,3 +1,26 @@
+## Publish-toolchain audit exception for http-cache-semantics (2026-10-03) (claude-opus-5-5)
+
+GitHub reviewed GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` <= 4.2.0) at
+2026-10-02 22:36 UTC, after main's last green run. From then on,
+`Publish toolchain preflight`, and `Build and Test` with it, failed on every
+PR, first seen on the 2026-10-03 threat-intel PR. The advisory has no patched
+version, and 4.2.0 is the newest upstream release (registry checked
+2026-10-03), so neither npm 11.21.0 nor 12.2.0 can carry a fix.
+
+Added as the fourth dated exception, expiring 2026-10-31 like the others, in
+line with the 2026-09-30 decision to keep the bundled-npm Dependabot alerts
+open and wait for npm. Reach: in the pinned npm 11.19.1, `make-fetch-happen`
+is the only dependent (lockfile checked). It uses the package for npm's own
+per-user registry cache. The flaw needs a cache shared between users and an
+attacker-chosen `max-stale`; the publish runner is fresh and single-user, and
+npm sets its own headers.
+
+Proof: with the real toolchain lockfile,
+`node scripts/audit-publish-toolchain.mjs --audit-level=high` exits 1 on main
+with "GHSA-ch52-4w7c-c8xp is not excepted" (the CI failure reproduced) and 0
+with the entry. Dependabot had not opened an alert for this advisory at the
+time; the query returned the existing undici alerts, so the query works.
+
 ## Release v6.4.1 (2026-10-02) (claude-opus-5-5)
 
 Patch release: the 2026-10-01 threat intel (PR 370), the four rule-precision

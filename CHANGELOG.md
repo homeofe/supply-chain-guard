@@ -7,6 +7,17 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Fixed
+
+- The publish-toolchain preflight failed on every pull request after GitHub
+  reviewed GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` up to 4.2.0) on
+  2026-10-02. npm bundles that package, the advisory has no patched version,
+  and 4.2.0 is the newest release, so no npm bump can fix it. It joins
+  `.github/publish-toolchain/audit-exceptions.json` with the same 2026-10-31
+  expiry as the other three. npm uses it only for its own per-user registry
+  cache, while the flaw needs a cache shared between users and a client that
+  sets `max-stale`, so `npm publish` on a fresh runner cannot reach it.
+
 ## [6.4.1] - 2026-10-02
 
 ### Added

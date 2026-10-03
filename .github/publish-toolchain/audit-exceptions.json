@@ -16,5 +16,11 @@
     "package": "undici",
     "reason": "Bundled inside npm 11.19.1; no npm release ships a fixed undici yet. Within npm only node-gyp depends on it, to download Node headers for native builds. npm publish runs no native build, and the advisory concerns WebSocket connections, which npm does not open.",
     "expires": "2026-10-31"
+  },
+  {
+    "ghsa": "GHSA-ch52-4w7c-c8xp",
+    "package": "http-cache-semantics",
+    "reason": "Bundled inside npm 11.19.1; the advisory has no patched version and 4.2.0 is the newest upstream release, so no npm release can ship a fix yet. npm reaches it through make-fetch-happen for its own per-user registry cache. The flaw needs a cache shared between users and an attacker who sets max-stale on a request; the publish job runs on a fresh single-user runner, and npm sets its own request headers.",
+    "expires": "2026-10-31"
   }
 ]
