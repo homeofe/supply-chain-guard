@@ -5,10 +5,20 @@ is recorded in `docs/security-audit-2026-10-03.md`. Five confirmed security
 and reporting findings and two functional findings are documented there with
 reproduction evidence and impact limits. This PR fixes the five main-branch
 findings and the incremental-diff behavior with focused regressions. The
-separate PR #377 received its correction at `ebbf6f2`. The full Linux suite at
+separate PR #377 received its correction at `ebbf6f2` and was merged into
+main as `b7d73e7` before this PR was updated. The full Linux suite at
 runtime-fix commit `dda2f2b` passed 4,960 tests in 197 files; build and the
 observed PR #378 CI checks were green. The local file containing the
 current Git remote URL is intentionally outside this PR.
+
+## Legacy cache refresh note correction (2026-10-03)
+
+The refresh note now compares the selected cache path with the legacy
+`.scg-cache` path. An explicit alternate directory and an alternate
+`SCG_CACHE_DIR` both keep the note visible; a selection of the legacy directory
+itself remains silent. The note names the path actually written. The focused
+cache-directory test covers these cases. This section and the refreshed
+MANIFEST.json close the PR's handoff drift.
 
 ## Release v6.4.2 (2026-10-03) (claude-opus-5-5)
 
