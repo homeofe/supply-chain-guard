@@ -1,3 +1,19 @@
+## README badge table and Socket badge (2026-10-03) (claude-opus-5-5)
+
+The owner asked for the Socket package page as a badge and for the badge wall
+to be tidied up. The twelve badges now sit in a three-row table (Package, Build,
+Security). The self-scan badge keeps the exact markdown that
+`self-scan-visibility.test.ts` pins within the first 30 lines.
+
+Socket's own endpoint (`socket.dev/api/badge/npm/package/<name>`) is NOT used.
+It sits behind a Cloudflare bot challenge, and GitHub's camo proxy gets
+`403 Forbidden` from it. Measured 2026-10-03 on two public READMEs that use
+it (gpu.js, t3-env core): the Socket image was 403 while every other badge in
+the same README loaded with 200. The badge is a static `shields.io`
+"Socket | package report" link instead. All 11 camo-proxied badges in the new
+table were fetched through camo after rendering with GitHub's markdown API:
+200 each. If Socket fixes its endpoint, swap the image URL and keep the link.
+
 ## Publish-toolchain audit exception for http-cache-semantics (2026-10-03) (claude-opus-5-5)
 
 GitHub reviewed GHSA-ch52-4w7c-c8xp (high, `http-cache-semantics` <= 4.2.0) at
