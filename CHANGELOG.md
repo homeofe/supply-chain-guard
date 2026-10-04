@@ -7,6 +7,16 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+### Added
+
+- Threat intel (2026-10-04): 15 package IOCs from the GitHub Advisory
+  Database and OpenSSF, all 15 in the offline bundle and none in the catalog.
+  All are PyPI versions published on 2026-10-03: `voxcpmtts3` (3 versions),
+  `voxcpmui3`, `voxcpmui4`, `voxcpmeval`, `voxcpmintel`, `voxcpmkit` and
+  `voxcpmruntime` (a family of names imitating the VoxCPM text-to-speech
+  project), plus `infrabench` (3 versions), `caoxiltts` (2 versions) and
+  `echogen`. Each is pinned to the reported versions.
+
 ### Changed
 
 - `feed refresh` now says when a `.scg-cache` directory in the working directory

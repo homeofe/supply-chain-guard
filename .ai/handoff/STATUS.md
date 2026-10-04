@@ -1,3 +1,17 @@
+## Threat intel import (2026-10-04) (claude-opus-5-5)
+
+Daily routine run. `feed:import` (default window, published >= 2026-09-20)
+fetched 630 advisories and 4,239 OpenSSF MAL records and proposed 15 new
+entries: 15 to the bundle, 0 to the catalog. No page cap, no `--limit`, no
+unmappable advisories, no decline-list hits, no `catalogWindows` change.
+All 15 are prefixed `pypi:` version pins from kam193 / GHSA, first seen
+2026-10-03 (voxcpm* family, infrabench, caoxiltts, echogen).
+
+Enrichment (vendor write-ups): nothing addable. The only campaign with
+published atomic indicators in this week's coverage was ChainDrop (August
+2026); its exfil domains and three SHA-256 hashes are already in
+`src/ioc-blocklist.ts` and the bundle. No hand-added entries.
+
 ## Daybreak-Blue-Scan - security audit report (2026-10-03)
 
 The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d`

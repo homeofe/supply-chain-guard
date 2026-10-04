@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791056102",
-    "timestamp": "2026-10-03T19:35:02Z",
-    "commit": "9928a21",
+    "session_id": "cli-1791091091",
+    "timestamp": "2026-10-04T05:18:11Z",
+    "commit": "521e190",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b3e0e014d651d3439eb485ec3662681b1fd7f3af18bcd0051bf64f3a82edc335",
-      "updated": "2026-10-03T19:34:56Z",
-      "lines": 13445,
-      "summary": "The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` is recorded in `docs/security-audit-2026-10-03.md`."
+      "checksum": "sha256:56e05a434ffcd49f4a155c48d3a151f46907b15e74c1dbbd8c387510886555da",
+      "updated": "2026-10-04T05:17:56Z",
+      "lines": 13459,
+      "summary": "Daily routine run. `feed:import` (default window, published >= 2026-09-20) fetched 630 advisories and 4,239 OpenSSF MAL records and proposed 15..."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3ab8e0b8df0c3e305490f7b382258b81112d0f1c327b960e691a89da81997dfa",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The repository-wide review at main `df75b5aeaa3b666ccffd5f6a1b149ad79bde911d` is recorded in `docs/security-audit-2026-10-03.md`. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Daily routine run. `feed:import` (default window, published >= 2026-09-20) fetched 630 advisories and 4,239 OpenSSF MAL records and proposed 15... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 923,
-    "manifest_plus_core": 200483,
-    "full_read": 214199
+    "manifest_only": 932,
+    "manifest_plus_core": 200682,
+    "full_read": 214398
   }
 }

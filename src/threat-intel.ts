@@ -38,7 +38,7 @@ export type FeedIOCInput = Omit<FeedIOC, "confidence"> & {
  * Generation timestamp for the bundled IOC feed (v5.29, issue #208).
  * Pure function of feed updates; preserved across builds.
  */
-export const FEED_GENERATED_AT = "2026-10-03T00:00:00.000Z";
+export const FEED_GENERATED_AT = "2026-10-04T00:00:00.000Z";
 
 // ---------------------------------------------------------------------------
 // Default bundled feed (curated by supply-chain-guard)
@@ -4845,6 +4845,23 @@ const FEED_CHUNK_22: FeedIOC[] = [
   // "AI assistant" extensions. One original analysis (Koi Security), quoted by
   // the Phoenix Security MPI corpus, hence 0.85.
   { type: "domain", value: "aihao123.cn", severity: "critical", confidence: 0.85, campaign: "MaliciousCorgi VS Code AI extension exfiltration", source: "Koi Security MaliciousCorgi report, Phoenix Security MPI corpus", firstSeen: "2026-01-28" },
+
+  // Imported from GitHub Advisory Database (2026-09-20) - see docs/threat-feed-sources.md
+  { type: "package", value: "pypi:caoxiltts@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-cxq8-x7f3-hc2x, MAL-2026-17471 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:caoxiltts@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-cxq8-x7f3-hc2x, MAL-2026-17471 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:infrabench@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-jf4p-2v4v-8p64, MAL-2026-17469 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:infrabench@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-jf4p-2v4v-8p64, MAL-2026-17469 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:infrabench@0.2.0", severity: "critical", confidence: 1.0, source: "GHSA-jf4p-2v4v-8p64, MAL-2026-17469 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmruntime@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-m88v-2prv-cxqq, MAL-2026-17470 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmui4@0.2.0", severity: "critical", confidence: 1.0, source: "GHSA-ch5r-pf97-q38j, MAL-2026-17467 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmkit@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-88g5-8rp2-p28f, MAL-2026-17466 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmeval@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-5r29-p327-w47g, MAL-2026-17465 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmintel@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-89pg-5wh4-xm89, MAL-2026-17468 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmui3@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-g2fc-7mrh-v3hg, MAL-2026-17464 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmtts3@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-7wrq-444c-xg89, MAL-2026-17463 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmtts3@0.1.1", severity: "critical", confidence: 1.0, source: "GHSA-7wrq-444c-xg89, MAL-2026-17463 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:voxcpmtts3@0.1.2", severity: "critical", confidence: 1.0, source: "GHSA-7wrq-444c-xg89, MAL-2026-17463 (kam193)", firstSeen: "2026-10-03" },
+  { type: "package", value: "pypi:echogen@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-w6gm-xv6q-cq55, MAL-2026-17462 (kam193)", firstSeen: "2026-10-03" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips
