@@ -7,6 +7,8 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ## [Unreleased]
 
+## [6.4.3] - 2026-10-04
+
 ### Added
 
 - Threat intel (2026-10-04): 15 package IOCs from the GitHub Advisory
@@ -19,6 +21,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The bundle cutoff advanced from 2026-09-03 to 2026-09-04, moving 79
+  package indicators dated 2026-09-03 from the bundle into the catalog. None
+  of them is asserted by a test or named in the README or docs, and none
+  carries a campaign or family. They stay enforced after `feed refresh`.
+  `vscode:AzureCdnInfo.edrtester` from the same day stays bundled under a
+  curated comment block: it is the only VS Code extension entry in the
+  bundle, and moving it would have left a default offline scan with no VS
+  Code coverage.
+- Node support policy: the Active LTS review was due at this release. The
+  `nodejs/Release` schedule, re-read on 2026-10-04, still has Node 24 as the
+  Active LTS until 2026-10-20 and Node 26 entering LTS on 2026-10-28, so
+  `activeLtsMajor` stays 24 and the review milestone moves to 6.4.4.
 - `feed refresh` now says when a `.scg-cache` directory in the working directory
   was not written. Since 6.4.0 the default cache is one directory per user, so a
   CI step that refreshes the feed and then checks `.scg-cache/threat-feed.json`
@@ -29,6 +43,45 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 - README, Catalog cache: an upgrade note for pipelines written against 6.3.x or
   earlier. The 6.4.0 entry listed the cache move under Changed without saying
   that it breaks such a step; this note says so and gives the one-line fix.
+
+### Fixed
+
+- `scan --since <ref>` with no changed files used to scan the whole tree,
+  because an empty diff and a failed diff both came back as an empty list. An
+  empty diff now scans nothing and reports `DIFF_NO_CHANGES` (info); a ref Git
+  cannot evaluate reports `DIFF_BASE_UNAVAILABLE` (high) and marks the scan
+  partial instead of silently widening it.
+- Cache provenance now comes from what the loader actually merged. An expired
+  but readable feed cache is still used, yet the report said
+  `cacheMerged: false` and left out the cache path and refresh time.
+
+### Security
+
+These come from the repository security review of 6.4.2, recorded with
+reproduction notes in `docs/security-audit-2026-10-03.md`.
+
+- **A scanned project could redirect the scanner's state writes.** A
+  `.scg-history` symlink or junction in the scanned project made a default
+  scan write `risk-history.json` and a `.gitignore` into the link target,
+  outside the project. Linked state directories and linked or hard-linked
+  state files are now refused, state files are written through a temporary
+  file and a rename, and a refused path makes the scan partial with
+  `RISK_HISTORY_UNREADABLE` instead of writing.
+- **Git remote credentials could reach JSON and SARIF reports.** The
+  repository URI was copied from `remote.origin.url` as-is, so user
+  information, a query or a fragment in it went into report files and CI
+  artifacts. The URL is now sanitized once and the same value is used for
+  both formats.
+- **A project policy glob could stall a scan.** Ignore globs from the scanned
+  project were turned into backtracking regexes, and a short glob of repeated
+  wildcards against a long path ran for seconds. Matching is now linear in the
+  path length, with input limits.
+- **A corrupt refreshed feed cache silently removed detections.** An
+  unparseable cache was skipped without any signal, so cache-only indicators
+  stopped matching and the scan still exited clean. It now reports
+  `THREAT_FEED_CACHE_UNREADABLE` and marks the scan partial, and `feed refresh`
+  writes the cache atomically. The GitHub Action's coverage gate recognises
+  the new partial-scan rules.
 
 ## [6.4.2] - 2026-10-03
 
@@ -6982,7 +7035,8 @@ A single threat actor (claiming "TeamPCP") compromised both the Checkmarx KICS D
 ## [1.0.0] - 2026-03-19
 - Initial release: GlassWorm detection, npm scanning, Solana C2 monitoring
 
-[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.4.2...HEAD
+[Unreleased]: https://github.com/homeofe/supply-chain-guard/compare/v6.4.3...HEAD
+[6.4.3]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.3
 [6.4.2]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.2
 [6.4.1]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.1
 [6.4.0]: https://github.com/homeofe/supply-chain-guard/releases/tag/v6.4.0

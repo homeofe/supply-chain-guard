@@ -1,3 +1,40 @@
+## Release v6.4.3 (2026-10-04) (claude-opus-5-5)
+
+Patch release: the 2026-10-04 threat intel (PR 379), the security-audit
+fixes of PR 378 and the legacy-cache refresh note of PR 377. PR 378 had
+shipped without a CHANGELOG entry; the 6.4.3 block now carries its four
+security fixes and the two functional fixes, each checked against the code
+(`PARTIAL_SCAN_RULES`, `publicGitRemoteUrl`, the linked-state test).
+CONTRIBUTING lists the new `src/git-remote-url.ts`.
+
+Version bumped from 6.4.2 at all configured version sites plus
+`package.json` (37 free-standing occurrences, same count as 6.4.2; README
+CIDRs untouched). `npm install --package-lock-only` changed only the
+lockfile's two version fields.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-09-03 to
+2026-09-04. `feed-migrate --write` moved 79 plain importer entries dated
+2026-09-03 to the catalog (bundle 3,480, catalog 92,902). None of the 79
+is named in a test, README or docs (searched with a positive control), and
+none carries a campaign or family.
+
+The first plan moved 80. The 80th was `vscode:AzureCdnInfo.edrtester`, the
+bundle's only `vscode:` entry. Its hand-written rationale sat under an
+importer batch header, so `isCurated` read the block as importer output.
+The name search came back clean because `pre-release-review.test.ts` looks
+up "any bundled `vscode:` entry" by PREFIX, and the targeted test run caught
+it. The header now opens as a curated block. Lesson for every future
+cutoff: after the plan, also check that each ecosystem prefix the tests
+look up (`actions:`, `docker:`, `vscode:`, `terraform:`) keeps at least one
+bundled entry. A name search cannot see a lookup by prefix.
+
+Active LTS review, due at 6.4.3. `schedule.json` in `nodejs/Release` re-read
+on 2026-10-04: Node 24 is Active LTS until Maintenance on 2026-10-20, Node
+26 enters LTS on 2026-10-28. `activeLtsMajor` stays 24 and
+`activeLtsReviewedIn` moves to 6.4.4. The first release cut after
+2026-10-28 still has to move `activeLtsMajor` to 26 and add a Node 26
+compat leg. SECURITY.md needs no change (patch).
+
 ## Threat intel import (2026-10-04) (claude-opus-5-5)
 
 Daily routine run. `feed:import` (default window, published >= 2026-09-20)

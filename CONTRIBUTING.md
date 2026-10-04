@@ -266,6 +266,7 @@ src/
   risk-engine.ts          # Multi-dimensional risk scoring
   two-tier-scoring.ts     # Correlated threat gate and composite risk scoring
   diff-scanner.ts         # Git diff-based incremental scanning
+  git-remote-url.ts       # Strips credentials and parameters from Git remote URLs before reporting
   org-scanner.ts          # Organization-level scanning
   remediation-engine.ts   # Automated fix suggestions
   playbooks.ts            # Incident response playbooks

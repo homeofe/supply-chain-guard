@@ -2321,39 +2321,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "hash", value: "9d6b58886189c0e23f706c32d3d8dda97b0b6d927ece6de07270813f070295b5", severity: "critical", confidence: 0.85, family: "PackagistThemeSpyware", campaign: "Packagist iOS spyware themes", source: "Socket", firstSeen: "2026-08-31" },
   { type: "hash", value: "de539a63cbe27bbd4a7db30fc796cd6dc5309c02ef5e60a3c5cf0835e5601283", severity: "critical", confidence: 0.85, family: "PackagistThemeSpyware", campaign: "Packagist iOS spyware themes", source: "Socket", firstSeen: "2026-08-31" },
 
-  // Imported from GitHub Advisory Database (2026-09-03) - see docs/threat-feed-sources.md
-  { type: "package", value: "pypi:telemetry-helper@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@2.0.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@1.1.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@1.2.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@1.3.0", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:telemetry-helper@2.0.1", severity: "critical", confidence: 1.0, source: "GHSA-r35m-jqvr-hwxp, MAL-2026-15829 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:env-validator-tool@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:env-validator-tool@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:env-validator-tool@1.0.2", severity: "critical", confidence: 1.0, source: "GHSA-49jc-fj5g-832c, MAL-2026-15828 (kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:company-sdk@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-xwp3-c9rw-wggc, MAL-2026-15827 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "frank-apple-utils", severity: "critical", confidence: 0.9, source: "GHSA-xg8f-3qvf-9cfp", firstSeen: "2026-09-03" },
-  { type: "package", value: "apple-internal-test-utility", severity: "critical", confidence: 0.9, source: "GHSA-54h3-c256-wpw8", firstSeen: "2026-09-03" },
-  { type: "package", value: "frank-apple-sync-service", severity: "critical", confidence: 0.9, source: "GHSA-463x-3972-8874", firstSeen: "2026-09-03" },
-  { type: "package", value: "frank-research-poc-apple", severity: "critical", confidence: 1.0, source: "GHSA-78hq-gp8w-grwp, MAL-2026-3081", firstSeen: "2026-09-03" },
-  { type: "package", value: "google-cloud-internal-core-utils", severity: "critical", confidence: 0.9, source: "GHSA-4vvq-8686-f44c", firstSeen: "2026-09-03" },
-  { type: "package", value: "frank-bot-gogle-cloning", severity: "critical", confidence: 1.0, source: "GHSA-52j3-fx2q-cqm9, MAL-2026-3080", firstSeen: "2026-09-03" },
-  { type: "package", value: "google-cloud-internal-build-helper", severity: "critical", confidence: 0.9, source: "GHSA-3qp7-c8c6-w6vj", firstSeen: "2026-09-03" },
-  { type: "package", value: "google-internal-cloud-audit-security-check", severity: "critical", confidence: 0.9, source: "GHSA-cw6m-gmx9-x556", firstSeen: "2026-09-03" },
-  { type: "package", value: "apple-cktool-internal-api-v9", severity: "critical", confidence: 0.9, source: "GHSA-5cfx-4hvj-jxm8", firstSeen: "2026-09-03" },
-  { type: "package", value: "google-cloud-mono-repo-helper", severity: "critical", confidence: 0.9, source: "GHSA-8rcc-3mvv-4c2x", firstSeen: "2026-09-03" },
-  { type: "package", value: "tailwindcss-fluid-styles@2.0.7", severity: "critical", confidence: 1.0, source: "GHSA-qmfx-363x-c6gj, MAL-2026-15826", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/token-units@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-f7jv-2wj8-grw7, MAL-2026-15824", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/token-units@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-f7jv-2wj8-grw7, MAL-2026-15824", firstSeen: "2026-09-03" },
-  { type: "package", value: "real-router-utils@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-fw7f-xj7r-p9v6, MAL-2026-15825", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/evm-address-kit@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-9wh4-p3rc-w4r3, MAL-2026-15823", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/evm-address-kit@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-9wh4-p3rc-w4r3, MAL-2026-15823", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/chain-metadata@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-3qrc-cxw6-3956, MAL-2026-15822", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/chain-metadata@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-3qrc-cxw6-3956, MAL-2026-15822", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/abi-tools@1.0.1", severity: "critical", confidence: 1.0, source: "GHSA-75j4-5w9p-f97f, MAL-2026-15821", firstSeen: "2026-09-03" },
-  { type: "package", value: "@stellarshift/abi-tools@1.0.3", severity: "critical", confidence: 1.0, source: "GHSA-75j4-5w9p-f97f, MAL-2026-15821", firstSeen: "2026-09-03" },
 
   // Baileys scope-copy cluster (September 2026) - counterfeit scopes of the legitimate
   // WhatsApp library; the upstream @whiskeysockets scope is unaffected and NOT blocked.
@@ -2361,54 +2328,6 @@ const FEED_CHUNK_20: FeedIOC[] = [
   { type: "package", value: "@mrlegendbot/baileys@1.2.5", severity: "critical", confidence: 1.0, source: "GHSA-36cp-4g73-5fp7, MAL-2026-15819", firstSeen: "2026-09-01" },
   { type: "package", value: "@systemzero/baileys@1.1.2", severity: "critical", confidence: 1.0, source: "GHSA-qhhx-6r5v-mv3q, MAL-2026-15820", firstSeen: "2026-09-01" },
 
-  // Imported from GitHub Advisory Database (2026-09-03) - see docs/threat-feed-sources.md
-  { type: "package", value: "1nestjs@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-6q46-7f75-44f4, MAL-2026-15909 (ossf-package-analysis)", firstSeen: "2026-09-03" },
-  { type: "package", value: "0nestjs@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-76pm-q26m-pp96, MAL-2026-15908 (ossf-package-analysis)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@avigilon/node-webrtc@2.1.5", severity: "critical", confidence: 1.0, source: "GHSA-qm5q-ggwg-5m4q, MAL-2026-15865 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@avigilon/node-webrtc@2.1.4", severity: "critical", confidence: 1.0, source: "GHSA-qm5q-ggwg-5m4q, MAL-2026-15865 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:asti@0.1.0", severity: "critical", confidence: 1.0, source: "GHSA-wjq4-hhv5-qv6v, MAL-2026-15864 (kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/wallet@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-447h-2v35-hfc9, MAL-2026-15857 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/token@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-5c5g-g3fm-j2h6, MAL-2026-15854 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/tron@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-fvr6-8xmr-6hhh, MAL-2026-15855 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/supabase@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wwp6-gpx7-xrfq, MAL-2026-15853 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/ui@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-g5jv-jxg8-5cqv, MAL-2026-15856 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/contracts@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-m56g-6vpc-xjf7, MAL-2026-15851 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:uvhttp-custom@1.7.9", severity: "critical", confidence: 1.0, source: "GHSA-hf2r-8r5g-8hg8, MAL-2026-15863 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:uvhttp-custom@1.8.1", severity: "critical", confidence: 1.0, source: "GHSA-hf2r-8r5g-8hg8, MAL-2026-15863 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:uvhttp-custom@1.9.9", severity: "critical", confidence: 1.0, source: "GHSA-hf2r-8r5g-8hg8, MAL-2026-15863 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/sdk@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-f4hr-xqh6-ph7f, MAL-2026-15852 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/config@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-h9h4-r8hh-f68q, MAL-2026-15850 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/api@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-54gw-wxg7-4833, MAL-2026-15848 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:trongridi@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-7h6v-482q-hg5f, MAL-2026-15858 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@quantixfinance/common@1.0.0", severity: "critical", confidence: 1.0, source: "GHSA-wq42-fcv5-wx7j, MAL-2026-15849 (amazon-inspector)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:py-2equests@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-9r6c-vv4w-fxv8, MAL-2026-15862 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:py-1requests@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-q75m-3rvx-hjp9, MAL-2026-15861 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:0requests@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-m253-f8h4-jwf8, MAL-2026-15859 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "pypi:py-0requests@0.0.1", severity: "critical", confidence: 1.0, source: "GHSA-wr8r-52pp-3q36, MAL-2026-15860 (amazon-inspector+kam193)", firstSeen: "2026-09-03" },
-  { type: "package", value: "html_vue", severity: "critical", confidence: 0.9, source: "GHSA-3j85-w3wg-w28x, MAL-2026-15887 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "@a23842/dsh-notifier", severity: "critical", confidence: 0.9, source: "GHSA-995p-9xmc-j7v3, MAL-2026-15872 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "dsh-waste-market", severity: "critical", confidence: 0.9, source: "GHSA-h4p9-qw93-r884, MAL-2026-15879 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "vscode-vue", severity: "critical", confidence: 0.9, source: "GHSA-5vjf-q259-p82j, MAL-2026-15894 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "fieldbase-webapplication-buildtools@99.99.99", severity: "critical", confidence: 1.0, source: "GHSA-2567-xx62-q6fm, MAL-2026-15847 (amazon-inspector+ossf-package-analysis)", firstSeen: "2026-09-03" },
-  { type: "package", value: "sliding-score-window", severity: "critical", confidence: 0.9, source: "GHSA-7wm7-mj8v-49f7, MAL-2026-15893 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "ordered-freq-counter", severity: "critical", confidence: 0.9, source: "GHSA-xjh3-6ch8-mr8c, MAL-2026-15890 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "neighbor-key-map", severity: "critical", confidence: 0.9, source: "GHSA-c7w5-hg7j-94q4, MAL-2026-15889 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "ordered-kv-index", severity: "critical", confidence: 0.9, source: "GHSA-r948-p23m-ffg3, MAL-2026-15891 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "btree-lru-cache", severity: "critical", confidence: 0.9, source: "GHSA-p5xg-f96c-j538, MAL-2026-15875 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "btree-time-index", severity: "critical", confidence: 0.9, source: "GHSA-7r97-jh52-2rx8, MAL-2026-15877 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "priority-slot-queue", severity: "critical", confidence: 0.9, source: "GHSA-7gh9-f2pq-8vf3, MAL-2026-15892 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "btree-range-store", severity: "critical", confidence: 0.9, source: "GHSA-5p9f-98mr-w2hr, MAL-2026-15876 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "btree-core", severity: "critical", confidence: 0.9, source: "GHSA-wj64-2cmx-c3j4, MAL-2026-15873 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "btree-leaderboard", severity: "critical", confidence: 0.9, source: "GHSA-jj56-73wg-7pff, MAL-2026-15874 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "indexed-btree", severity: "critical", confidence: 0.9, source: "GHSA-f3xx-wvxc-5vh4, MAL-2026-15888 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "cbc97b7a", severity: "critical", confidence: 1.0, source: "GHSA-9m3c-67f2-gjwf, MAL-2026-15878 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "element-utils-guci", severity: "critical", confidence: 0.9, source: "GHSA-xmq8-5hmm-8m7p, MAL-2026-15882 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "element-guci-util", severity: "critical", confidence: 1.0, source: "GHSA-rv3j-whh5-7gwg, MAL-2026-15880 (amazon-inspector+ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "fullcalendar-windos", severity: "critical", confidence: 0.9, source: "GHSA-r79q-6mfx-5r5v, MAL-2026-15883 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "element-icon-guci", severity: "critical", confidence: 0.9, source: "GHSA-vmx8-58pp-r729, MAL-2026-15881 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "guci-wxrout", severity: "critical", confidence: 0.9, source: "GHSA-wm72-hv9c-mxxr, MAL-2026-15886 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "guci-main", severity: "critical", confidence: 0.9, source: "GHSA-xv44-v947-3jrh, MAL-2026-15885 (ghsa-malware)", firstSeen: "2026-09-03" },
-  { type: "package", value: "guci-date", severity: "critical", confidence: 0.9, source: "GHSA-pg5x-8f3x-f3x5, MAL-2026-15884 (ghsa-malware)", firstSeen: "2026-09-03" },
 
 
   // Corroborated advisories that sit inside the 2026-09-02 / 2026-09-04 bulk-backfill
@@ -3530,7 +3449,10 @@ const FEED_CHUNK_21: FeedIOC[] = [
   { type: "hash", value: "5f892a5424e88a21a3eb3d7f82ebf04d8ac31cdb19ada25153be4165df977d0f", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
   { type: "hash", value: "ab01686d87565250fc4989faddb877d793667b07ec217a61cbd798f5695d62f5", severity: "critical", confidence: 0.85, family: "Graphalgo", campaign: "Graphalgo Terraform providers and Go modules", source: "Aikido Graphalgo Terraform/Go write-up (single-source)", firstSeen: "2026-09-22" },
 
-  // Imported from GitHub Advisory Database (2026-09-07) - see docs/threat-feed-sources.md
+  // VS Code extension kept in the offline bundle (6.4.3 release review). Imported
+  // from the GitHub Advisory Database on 2026-09-07 (docs/threat-feed-sources.md),
+  // then curated by hand: it is the bundle's only `vscode:` entry, so without this
+  // block the cutoff would leave a default offline scan with no VS Code coverage.
   // Whole-extension since 2026-09-23 (was pinned to 1.0.4, the only version the advisory
   // lists): every version the Marketplace still serves (1.0.0, 1.0.1, 1.0.2, 1.0.4) ships the
   // same edrdrill.js beacon to the fronted azure-cdn[.]info host, verified by opening each
@@ -6041,7 +5963,7 @@ export function getDetectionSetProvenance(
   const cacheMerged = cache.present;
 
   return {
-    bundledVersion: "6.4.2",
+    bundledVersion: "6.4.3",
     bundledEntryCount: BUNDLED_FEED.length,
     generatedAt: FEED_GENERATED_AT,
     cacheMerged,
