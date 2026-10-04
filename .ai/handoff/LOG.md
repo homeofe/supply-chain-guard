@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-04] v6.4.3
+
+Threat intel (2026-10-04): 15 package IOCs from the GitHub Advisory Database and OpenSSF, all 15 in the offline bundle and none in the catalog. All are PyPI versions published on 2026-10-03:...
+
+Full notes: CHANGELOG.md, section [6.4.3].
+
+---
+
 ## [2026-10-03] v6.4.2
 
 Threat intel (2026-10-03): 88 package IOCs from the GitHub Advisory Database and OpenSSF, 86 in the offline bundle and 2 in the catalog. Among them are 15 more names of the Baileys WhatsApp fork...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.2.5].
 58 package indicators from the GitHub Advisory Database malware feed, corroborated against OSV: 48 in the bundle and 10 in the catalog. The ten catalog-bound entries carry a firstSeen before the...
 
 Full notes: CHANGELOG.md, section [6.2.4].
-
----
-
-## [2026-09-21] v6.2.3
-
-66 package indicators from the GitHub Advisory Database malware feed, corroborated against OSV: 59 in the bundle and 7 in the catalog. The seven catalog-bound entries carry a firstSeen before the...
-
-Full notes: CHANGELOG.md, section [6.2.3].
