@@ -9,6 +9,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- A third discovery source: the DataDog malicious-software-packages-dataset
+  (npm and PyPI, Apache-2.0), read whole on every run and part of
+  `npm run feed:reconcile`. It added 6,751 entries no other source carried
+  (2,886 to the bundle, 3,865 to the catalog). Only versions the dataset holds
+  a malware sample for in the same ecosystem are pinned (2,902 pins, e.g.
+  `xrpl` 2.14.2 and 4.2.1 to 4.2.4, `vant` 2.13.3 to 2.13.5, `@toptal/picasso`
+  13 of its 1,927 releases). A whole-package verdict becomes a name block
+  (3,849) only for a package the registry has already removed and no other
+  source pins by version, because the dataset also marks hijacked legitimate
+  packages and dependency-confusion names as whole. Claims without a sampled
+  version (509) and manifest lines without a sample in their ecosystem (1,336)
+  are reported, not imported. `--no-datadog` turns the source off.
 - 1,320 GitHub Advisory Database malware entries that no windowed run had
   imported (1,319 to the catalog), found by importing the complete GitHub
   malware history (124,255 advisories). 853 of them are exact pins settled

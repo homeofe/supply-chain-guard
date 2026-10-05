@@ -19,7 +19,7 @@
         "pnpm-lock.yaml",
         "bun.lock"
       ],
-      "import": "GitHub Advisory Database, OpenSSF / OSV"
+      "import": "GitHub Advisory Database, OpenSSF / OSV, DataDog dataset"
     },
     {
       "id": "pypi",
@@ -37,7 +37,7 @@
         "uv.lock",
         "Pipfile.lock"
       ],
-      "import": "GitHub Advisory Database, OpenSSF / OSV"
+      "import": "GitHub Advisory Database, OpenSSF / OSV, DataDog dataset"
     },
     {
       "id": "ruby",

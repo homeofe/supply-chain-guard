@@ -1,3 +1,43 @@
+## DataDog dataset as third source (2026-10-05) (claude-opus-5-5)
+
+Third part of the full reconcile. The DataDog malicious-software-packages-dataset
+(Apache-2.0) named 3,667 npm and 462 PyPI packages in neither store, plus
+3,116/838 the stores held only as version pins.
+
+Three false-positive classes surfaced while reviewing dry runs against the
+real data; each is now a rule with a test that reproduces it:
+
+1. "Whole package" on a LIVE package: pinning every published version would
+   have flagged all 1,927 releases of `@toptal/picasso` (and `@zuplo/cli`,
+   `@qwen-code/qwen-code`, upgini). The dataset marks hijacked legitimate
+   packages whole and files them under `malicious_intent`. Rule: live packages
+   are pinned only on sampled versions.
+2. Manifest in the wrong ecosystem: the npm manifest listed `lightning` 2.6.2
+   and 2.6.3, all samples were under `pypi/` (the PyTorch Lightning PyPI
+   compromise); npm's `lightning` is a different legitimate package. An
+   existing campaigns test caught it. Rule: a version needs a sample in the
+   same ecosystem; 1,336 manifest lines without one are reported.
+3. Dependency-confusion names: `@postman-cse/okta-aio-linux-arm64` is removed
+   from npm, so "removed means bare" turned it into a name block, which would
+   flag Postman's internal package. Rule: a name another source pins by
+   version never becomes bare from this source.
+
+Also: one recursive tree call is truncated by the API, so the tree is walked
+per category; a failed or truncated tree now rejects the run.
+
+Result: 6,751 entries (2,886 bundle, 3,865 catalog): 3,849 bare names on
+removed packages, 2,902 sampled pins. Popular live packages checked by hand
+against their known compromises: `xrpl` 2.14.2 and 4.2.1 to 4.2.4, `vant`
+2.13.3 to 2.13.5 / 3.6.13 to 3.6.14 / 4.9.12 to 4.9.14, `@toptal/picasso` 13
+sampled 54.x versions. 509 claims without a sampled version are reported, not
+imported. Catalog 263,681 entries, bundle 6,489.
+
+Proof: 16 tests, 10 mutation cuts all red (one fixture had to be split because
+it carried both holding signals and hid a cut).
+
+Not mapped yet: the dataset's 103 IDE extensions (marketplace not stated) and
+204 AI skills.
+
 ## GitHub full-history reconcile and the range assessment rule (2026-10-05) (claude-opus-5-5)
 
 Second source of the full reconcile: the complete GitHub malware history

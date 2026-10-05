@@ -2011,6 +2011,7 @@ describe("importUpstreamFeed failure mode", () => {
     expect(report.ossfRecordsFetched).toBe(1);
     expect(report.discoverySources["openssf-malicious-packages"].mapped).toBe(1);
     expect(report.additionsByDiscovery).toEqual({
+      datadogOnly: 0,
       githubOnly: 0,
       openssfOnly: 1,
       githubAndOpenssf: 0,
@@ -2424,6 +2425,7 @@ describe("parseArgs", () => {
       dryRun: true,
       useOsv: false,
       useOssf: true,
+      useDatadog: true,
       json: true,
     });
   });
@@ -2444,6 +2446,7 @@ describe("parseArgs", () => {
       dryRun: false,
       useOsv: true,
       useOssf: true,
+      useDatadog: true,
       json: false,
     });
   });
