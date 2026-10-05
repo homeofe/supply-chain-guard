@@ -1,3 +1,15 @@
+## Secret scanning ignores the threat catalog (2026-10-05) (claude-opus-5-5)
+
+The first secret-scanning alert ("Tencent WeChat API App ID") was an npm
+malware package name from OpenSSF MAL-2025-2613 in `data/threat-catalog.jsonl`,
+whose name matches that credential shape. It was resolved as a false positive
+with the owner's approval. `.github/secret_scanning.yml` now excludes that one
+generated data file; everything else stays scanned. Code-scanning alert 86
+(INTERNAL_HOSTNAME) closes with PR 383 on main. The three Scorecard alerts
+are structural: Vulnerabilities counts the 11 bundled-npm Dependabot alerts
+the owner keeps open until npm ships fixed bundles, Branch-Protection and
+Code-Review reflect the solo-maintainer setup (no required approvals).
+
 ## Unmappable OpenSSF records (2026-10-05, second change) (claude-opus-5-5)
 
 Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the
