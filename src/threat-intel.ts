@@ -4910,6 +4910,9 @@ const FEED_CHUNK_22: FeedIOC[] = [
   { type: "package", value: "ruby:req-throttle-mini@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17568 (amazon-inspector)", firstSeen: "2026-10-05" },
   { type: "package", value: "ruby:request-guard@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17569 (amazon-inspector)", firstSeen: "2026-10-05" },
   { type: "package", value: "ruby:throttle-requests@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17570 (amazon-inspector)", firstSeen: "2026-10-05" },
+
+  // Imported from GitHub Advisory Database (2017-01-01) - see docs/threat-feed-sources.md
+  { type: "package", value: "@subql/common@5.8.3", severity: "critical", confidence: 0.9, source: "GHSA-9333-3c4x-x3h5", firstSeen: "2026-10-05" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

@@ -21,6 +21,9 @@ import * as path from "node:path";
 const IMPORT_SCRIPT_URL = new URL("../../scripts/import-threat-feed.mjs", import.meta.url).href;
 const load = () => import(/* @vite-ignore */ IMPORT_SCRIPT_URL);
 
+/** A publish time before every fixture record. */
+const D = "2026-05-01T00:00:00Z";
+
 const dirs: string[] = [];
 afterEach(() => {
   for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
@@ -98,6 +101,7 @@ describe("resolveBoundedNpmRanges", () => {
     source: "MAL-2026-1 (kam193)",
     confidence: 0.9,
     origins: ["kam193"],
+    assessedAt: "2026-06-01T00:00:00Z",
   });
 
   const registry = (docs: Record<string, unknown>, calls: string[] = []) => async (url: string | URL) => {
@@ -115,7 +119,7 @@ describe("resolveBoundedNpmRanges", () => {
       fetchImpl: registry(
         {
           "@scg/hijacked": {
-            time: { created: "x", modified: "x", unpublished: {}, "2.0.0": "x", "2.0.1": "x", "2.0.2": "x", "2.0.3": "x" },
+            time: { created: "x", modified: "x", unpublished: {}, "2.0.0": D, "2.0.1": D, "2.0.2": D, "2.0.3": D },
           },
         },
         calls,
@@ -155,6 +159,41 @@ describe("resolveBoundedNpmRanges", () => {
     expect(result.unresolved).toEqual([
       { reason: "unmappable-version-range", detail: "MAL-2026-1 npm/scg-gone (not on the registry)" },
     ]);
+  });
+
+  // flipper-frontend-core (GHSA-qmrm-wwg3-xhpg): an attacker published 1.0.0
+  // and 1.1.0, the advisory said "<= 1.1.0", and the rightful owner then
+  // published 0.1.0 and up. Those later versions were never assessed.
+  it("pins no version published after the record, even inside the range", async () => {
+    const { resolveBoundedNpmRanges } = await load();
+    const result = await resolveBoundedNpmRanges(
+      [{ ...pending("scg-reclaimed", [{ introduced: "0" }, { last_affected: "1.1.0" }]), assessedAt: "2022-05-31T12:58:09Z" }],
+      {
+        fetchImpl: registry({
+          "scg-reclaimed": {
+            time: {
+              created: "x",
+              "1.0.0": "2022-05-26T10:00:00Z",
+              "1.1.0": "2022-05-26T11:00:00Z",
+              "0.0.1-security": "2022-05-31T13:00:00Z",
+              "0.1.0": "2022-10-15T00:00:00Z",
+              "0.212.0": "2023-08-19T00:00:00Z",
+            },
+          },
+        }),
+      },
+    );
+    expect(result.entries.map((e: { value: string }) => e.value).sort()).toEqual(["scg-reclaimed@1.0.0", "scg-reclaimed@1.1.0"]);
+  });
+
+  it("pins nothing from the registry when the record has no publication date", async () => {
+    const { resolveBoundedNpmRanges } = await load();
+    const { assessedAt, ...undated } = pending("scg-undated", [{ introduced: "1.0.0" }]);
+    const result = await resolveBoundedNpmRanges([undated], {
+      fetchImpl: registry({ "scg-undated": { time: { "1.0.0": D } } }),
+    });
+    expect(result.entries).toEqual([]);
+    expect(result.unresolved[0].detail).toMatch(/published before the record/);
   });
 
   // An outage must not turn known malware into a skip count.
@@ -216,5 +255,94 @@ describe("checkFailed counts unmapped records", () => {
       ["no-affected-package", "unmappable-version-range", "unsafe-package-name", "unsafe-version"].sort(),
     );
     expect(GAP_SKIP_REASONS.has("withdrawn")).toBe(false);
+  });
+});
+
+describe("GitHub bounded ranges (vulnerable_version_range strings)", () => {
+  it("translates exactly the shapes malware advisories use", async () => {
+    const { githubRangeToOsvEvents } = await load();
+    expect(githubRangeToOsvEvents(">= 3.6.0")).toEqual([{ introduced: "3.6.0" }]);
+    expect(githubRangeToOsvEvents(">= 1.0.0, <= 1.1.9")).toEqual([{ introduced: "1.0.0" }, { last_affected: "1.1.9" }]);
+    expect(githubRangeToOsvEvents(">= 1.0.0, < 1.2.0")).toEqual([{ introduced: "1.0.0" }, { fixed: "1.2.0" }]);
+    expect(githubRangeToOsvEvents("< 2.0.0")).toEqual([{ introduced: "0" }, { fixed: "2.0.0" }]);
+    expect(githubRangeToOsvEvents("<= 2.0.0")).toEqual([{ introduced: "0" }, { last_affected: "2.0.0" }]);
+  });
+
+  // An exclusive lower bound, a second bound of one kind or an unknown
+  // operator has no exact OSV form here, so it is not approximated.
+  it.each(["> 1.0.0", ">= 1.0.0, >= 2.0.0", "< 1.0.0, <= 2.0.0", "!= 1.0.0", "", "1.0.0"])(
+    "refuses %j",
+    async (range) => {
+      const { githubRangeToOsvEvents } = await load();
+      expect(githubRangeToOsvEvents(range)).toBeNull();
+    },
+  );
+
+  it("mapAdvisory hands an npm bounded range to the registry resolver, a PyPI one not", async () => {
+    const { mapAdvisory } = await load();
+    const advisory = (ecosystem: string, range: string) => ({
+      ghsa_id: "GHSA-aaaa-bbbb-cccc",
+      type: "malware",
+      severity: "critical",
+      published_at: "2026-07-01T00:00:00Z",
+      vulnerabilities: [{ package: { ecosystem, name: "scg-range-pkg" }, vulnerable_version_range: range }],
+    });
+    const npm = mapAdvisory(advisory("npm", ">= 99.99.2"));
+    expect(npm.entries).toEqual([]);
+    expect(npm.skipped[0].resolve).toEqual(
+      expect.objectContaining({
+        name: "scg-range-pkg",
+        ranges: [{ type: "SEMVER", events: [{ introduced: "99.99.2" }] }],
+        discoverySource: "github-advisory-database",
+        source: "GHSA-aaaa-bbbb-cccc",
+      }),
+    );
+    // Outside npm: no registry resolution, only the explicitly named version.
+    const pip = mapAdvisory(advisory("pip", ">= 1.0.0"));
+    expect(pip.skipped.some((x: { resolve?: unknown }) => x.resolve)).toBe(false);
+    expect(pip.entries.map((e: { value: string }) => e.value)).toEqual(["pypi:scg-range-pkg@1.0.0"]);
+  });
+
+  // num2words (PyPI): no registry resolution outside npm, but the range names
+  // both affected versions in its own words.
+  it("pins the versions a non-npm range names explicitly, and nothing else", async () => {
+    const { mapAdvisory } = await load();
+    const advisory = (range: string) => ({
+      ghsa_id: "GHSA-aaaa-bbbb-cccc",
+      type: "malware",
+      severity: "critical",
+      published_at: "2025-07-28T00:00:00Z",
+      vulnerabilities: [{ package: { ecosystem: "pip", name: "scg-py" }, vulnerable_version_range: range }],
+    });
+    expect(mapAdvisory(advisory(">= 0.5.15, <= 0.5.16")).entries.map((e: { value: string }) => e.value)).toEqual([
+      "pypi:scg-py@0.5.15",
+      "pypi:scg-py@0.5.16",
+    ]);
+    // `< 1.0.0` names no version: still unmappable, never a guess.
+    const open = mapAdvisory(advisory("< 1.0.0"));
+    expect(open.entries).toEqual([]);
+    expect(open.skipped[0].reason).toBe("unmappable-version-range");
+  });
+
+  it("resolves a GitHub range into pins that keep GitHub as their source", async () => {
+    const { resolveBoundedNpmRanges, mapAdvisory } = await load();
+    const { skipped } = mapAdvisory({
+      ghsa_id: "GHSA-aaaa-bbbb-cccc",
+      type: "malware",
+      severity: "critical",
+      published_at: "2026-07-01T00:00:00Z",
+      vulnerabilities: [{ package: { ecosystem: "npm", name: "scg-range-pkg" }, vulnerable_version_range: ">= 1.0.0, <= 1.0.1" }],
+    });
+    const result = await resolveBoundedNpmRanges([skipped[0].resolve], {
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ time: { created: "x", "0.9.0": D, "1.0.0": D, "1.0.1": D, "1.0.2": D } }),
+      }),
+    });
+    expect(result.entries.map((e: { value: string }) => e.value)).toEqual(["scg-range-pkg@1.0.0", "scg-range-pkg@1.0.1"]);
+    expect(result.entries[0]._discoverySource).toBe("github-advisory-database");
+    expect(result.entries[0].source).toBe("GHSA-aaaa-bbbb-cccc");
+    expect(result.entries[0].firstSeen).toBe("2026-07-01");
   });
 });

@@ -391,6 +391,39 @@ export function parseVersionRange(range) {
 }
 
 /**
+ * Translate a GitHub `vulnerable_version_range` into OSV range events, or null.
+ *
+ * Only the shapes that occur in malware advisories and translate exactly:
+ * an optional lower bound `>= X` and an optional upper bound `< Y` or `<= Y`
+ * (2026-10-05: 192 `>= X`, 140 `>= X, <= Y`, 2 `< Y`, 2 `<= Y`, 1 `>= X, < Y`).
+ * Anything else, an exclusive `> X` included, stays unmappable rather than
+ * being approximated.
+ */
+export function githubRangeToOsvEvents(range) {
+  const raw = typeof range === "string" ? range.trim() : "";
+  if (raw === "") return null;
+  let introduced = "0";
+  let upper = null;
+  let sawLower = false;
+  for (const clause of raw.split(",").map((part) => part.trim())) {
+    const m = /^(>=|<=|<)\s*(\S+)$/.exec(clause);
+    if (!m) return null;
+    const [, op, version] = m;
+    if (op === ">=") {
+      if (sawLower) return null;
+      sawLower = true;
+      introduced = version;
+    } else {
+      if (upper) return null;
+      upper = op === "<" ? { fixed: version } : { last_affected: version };
+    }
+  }
+  const events = [{ introduced }];
+  if (upper) events.push(upper);
+  return events;
+}
+
+/**
  * True if a package name is safe to serialize into the TypeScript feed.
  * `ecosystem` (the import ecosystem key) unlocks that ecosystem's own wider
  * shape; without it only the shared ASCII shapes apply.
@@ -467,10 +500,51 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
 
     const range = parseVersionRange(vuln.vulnerable_version_range);
     if (range.kind === "unmappable") {
-      skipped.push({
+      const skip = {
         reason: "unmappable-version-range",
         detail: `${id} ${ecosystem}/${name} (${String(vuln.vulnerable_version_range ?? "")})`,
-      });
+      };
+      // Same settlement as an OpenSSF record: npm versions are semver, so the
+      // registry's version history turns the range into exact pins.
+      // Outside npm there is no registry resolution, but the versions a range
+      // names explicitly (a non-zero `>=` and a `<=`) are affected by its own
+      // words: pin exactly those (PyPI num2words, `>= 0.5.15, <= 0.5.16`).
+      const anyEvents = githubRangeToOsvEvents(vuln.vulnerable_version_range);
+      const explicit = ecosystem !== "npm" && anyEvents ? explicitRangeVersions([{ events: anyEvents }]) : [];
+      if (explicit.length > 0 && explicit.every((version) => SAFE_VERSION.test(version))) {
+        for (const version of explicit) {
+          const entry = {
+            type: "package",
+            value: feedValue(prefix, name, version),
+            severity,
+            confidence: CONFIDENCE_SINGLE_SOURCE,
+            source: id,
+          };
+          if (firstSeen) entry.firstSeen = firstSeen;
+          entry._ecosystemPrefix = prefix;
+          entry._name = name;
+          entry._discoverySource = DISCOVERY_SOURCE.GITHUB;
+          entries.push(entry);
+        }
+        continue;
+      }
+      const events = ecosystem === "npm" ? anyEvents : null;
+      const ranges = events ? [{ type: "SEMVER", events }] : [];
+      if (ranges.length > 0 && ranges.every(isEvaluableNpmRange)) {
+        skip.resolve = {
+          id,
+          name,
+          ranges,
+          firstSeen,
+          source: id,
+          severity,
+          confidence: CONFIDENCE_SINGLE_SOURCE,
+          origins: [],
+          discoverySource: DISCOVERY_SOURCE.GITHUB,
+          assessedAt: typeof advisory.published_at === "string" ? advisory.published_at : undefined,
+        };
+      }
+      skipped.push(skip);
       continue;
     }
     if (range.kind === "exact" && !SAFE_VERSION.test(range.version)) {
@@ -613,6 +687,7 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
           confidence,
           origins,
           queueDate: typeof record._indexModified === "string" ? record._indexModified.slice(0, 10) : undefined,
+          assessedAt: typeof record.published === "string" ? record.published : undefined,
         };
       }
       skipped.push(skip);
@@ -782,23 +857,36 @@ export async function resolveBoundedNpmRanges(
     }
     if (!response.ok) throw new Error(`npm registry returned HTTP ${response.status} for ${name}`);
     const doc = await response.json();
-    const published = Object.keys(doc?.time ?? {}).filter(
-      (key) => !["created", "modified", "unpublished"].includes(key),
-    );
-    documents.set(name, published);
+    const time = doc?.time ?? {};
+    const published = Object.keys(time).filter((key) => !["created", "modified", "unpublished"].includes(key));
+    documents.set(name, { published, time });
   });
 
   for (const item of pending) {
-    const published = documents.get(item.name);
+    const doc = documents.get(item.name);
+    const published = doc === null ? null : doc.published;
+    // A range describes the versions that existed when the record was first
+    // published. A version published LATER was never assessed: the name may
+    // have changed hands. Measured 2026-10-05 on flipper-frontend-core: an
+    // attacker published 1.0.0 and 1.1.0, the advisory said `<= 1.1.0`, and the
+    // rightful owner then published 0.1.0 to 0.212.0, every one of which the
+    // bare range would have marked as malware. No assessment date means no
+    // version can be shown to predate it, so none is pinned from the registry.
+    const assessed = typeof item.assessedAt === "string" ? Date.parse(item.assessedAt) : NaN;
     const versions =
       published === null
         ? explicitRangeVersions(item.ranges)
-        : published.filter((version) => osvRangesAffect(version, item.ranges));
+        : published.filter(
+            (version) =>
+              osvRangesAffect(version, item.ranges) &&
+              Number.isFinite(assessed) &&
+              Date.parse(doc.time[version]) <= assessed,
+          );
     const safe = versions.filter((version) => SAFE_VERSION.test(version));
     if (safe.length === 0) {
       unresolved.push({
         reason: "unmappable-version-range",
-        detail: `${item.id} npm/${item.name}${published === null ? " (not on the registry)" : " (no published version in range)"}`,
+        detail: `${item.id} npm/${item.name}${published === null ? " (not on the registry)" : " (no version in range published before the record)"}`,
       });
       continue;
     }
@@ -806,14 +894,14 @@ export async function resolveBoundedNpmRanges(
       const entry = {
         type: "package",
         value: feedValue("", item.name, version),
-        severity: "critical",
+        severity: item.severity ?? "critical",
         confidence: item.confidence,
         source: item.source,
       };
       if (item.firstSeen) entry.firstSeen = item.firstSeen;
       entry._ecosystemPrefix = "";
       entry._name = item.name;
-      entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
+      entry._discoverySource = item.discoverySource ?? DISCOVERY_SOURCE.OPENSSF;
       entry._origins = item.origins;
       if (item.queueDate) entry._queueDate = item.queueDate;
       entries.push(entry);

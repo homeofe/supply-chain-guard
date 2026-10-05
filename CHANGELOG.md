@@ -9,6 +9,11 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- 1,320 GitHub Advisory Database malware entries that no windowed run had
+  imported (1,319 to the catalog), found by importing the complete GitHub
+  malware history (124,255 advisories). 853 of them are exact pins settled
+  from GitHub version ranges such as `>= X, <= Y`, which the importer now
+  translates and resolves against the npm registry.
 - 1,409 more OpenSSF malware entries the importer used to skip, all in the
   catalog: 655 NuGet entries whose ids are homoglyph typosquats (Cyrillic
   letters, a hidden combining mark), 753 npm entries (packages squatting CLI
@@ -48,6 +53,13 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Fixed
 
+- 58 catalog pins resolved from OpenSSF version ranges were removed: they
+  named versions published AFTER the record, which no record had assessed.
+  Ranges are now settled only against versions published on or before the
+  record's first publication. The pattern was found on `flipper-frontend-core`,
+  where an attacker's 1.0.0 and 1.1.0 were followed by the rightful owner's
+  0.1.0 to 0.212.0, all inside the advisory's `<= 1.1.0`; the corrected rule
+  pins only the attacker's versions.
 - `scripts/generate-catalog.mjs` no longer spells out an internal-looking
   package name in a comment, which the `INTERNAL_HOSTNAME` self-scan rule
   reported as a code-scanning alert.

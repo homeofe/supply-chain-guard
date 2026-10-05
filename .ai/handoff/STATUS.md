@@ -1,3 +1,37 @@
+## GitHub full-history reconcile and the range assessment rule (2026-10-05) (claude-opus-5-5)
+
+Second source of the full reconcile: the complete GitHub malware history
+(124,255 advisories, 1,243 pages, not truncated) against both stores. 1,186
+entries were missing, 812 of them from June and July 2026, which windowed
+daily runs should have caught (backdated publication dates or days without a
+run; only a full pass sees it). 337 advisories carried a bounded range the
+GitHub adapter could not read.
+
+- GitHub range strings (`>= X`, `>= X, <= Y`, `>= X, < Y`, `< Y`, `<= Y`) are
+  translated into OSV events and settled through the same registry resolver
+  for npm; outside npm only the explicitly named versions are pinned (PyPI
+  num2words), an exclusive `> X` is never approximated.
+- Found while reviewing the result, and the important part: the resolver from
+  PR 383 pinned every registry version inside a range, including versions
+  published AFTER the record. `flipper-frontend-core` (GHSA-qmrm-wwg3-xhpg,
+  `<= 1.1.0`): an attacker's 1.0.0/1.1.0, then the rightful owner's 0.1.0 to
+  0.212.0, all inside the range, so 45 legitimate releases would have been
+  flagged. Ranges now pin only versions published on or before the record's
+  FIRST publication (never `updated_at`/`modified`, both bulk-bumped; flipper's
+  `updated_at` is after the owner's first release). Re-evaluating PR 383's
+  pins under the rule removed 58 from the catalog (largest:
+  airbnb-react-server x11, published by the attacker in the two days after
+  the record and never assessed by it; not turned into a bare name because it
+  is a dependency-confusion name of the victim's internal package).
+- Result: 1,320 new entries (1 bundle, 1,319 catalog), 853 of them range pins.
+  Catalog 259,816 entries. OpenSSF snapshot gate after the correction: 0
+  missing, 666 range pins re-derived, 0 unmapped. GitHub: 0 unmapped.
+- Proof: tests reproduce flipper and the undated case; the date condition cut
+  turns both red. Range translation cuts: 4 of 4 red.
+- The GitHub full-history check cannot run in CI (1,243 pages exceed the
+  1,000 requests/hour of a GITHUB_TOKEN). The scheduled daily routine runs it
+  weekly with the user token.
+
 ## Catalog split into parts (2026-10-05) (claude-opus-5-5)
 
 `data/threat-catalog.jsonl` reached 41 MB with the reconcile (GitHub warns at
