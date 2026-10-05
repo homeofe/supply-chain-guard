@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "supply-chain-guard",
   "version": "6.4.3",
-  "entryCount": 3598,
+  "entryCount": 3602,
   "generatedAt": "2026-10-05T00:00:00.000Z",
   "entries": [
     {
@@ -31398,6 +31398,38 @@
       "severity": "critical",
       "confidence": 0.9,
       "source": "MAL-2026-17531 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:rate-limit-mini@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17567 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:req-throttle-mini@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17568 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:request-guard@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17569 (amazon-inspector)",
+      "firstSeen": "2026-10-05"
+    },
+    {
+      "type": "package",
+      "value": "ruby:throttle-requests@1.0.0",
+      "severity": "critical",
+      "confidence": 0.9,
+      "source": "MAL-2026-17570 (amazon-inspector)",
       "firstSeen": "2026-10-05"
     }
   ]

@@ -82,6 +82,7 @@ request code has permission to change protection.
 | --- | --- | --- |
 | `ci.yml` | PR, push to `main`, semver tags | build, gates, full suite on every Node lane, container smoke, and on a tag: npm publish, MCP Registry listing (`mcp-registry`, after npm, OIDC, pinned and checksum-verified `mcp-publisher`; the GitHub Release does not wait for it), GitHub Release, `vN` major-ref branch fast-forward |
 | `scorecard.yml` | push to `main`, weekly, branch protection changes | publishes the OpenSSF Scorecard behind the README badge. Not a required check and never runs on a PR. Its shape is fixed by the Scorecard API's workflow restrictions, which is why it is not a job in `ci.yml` |
+| `feed-reconcile.yml` | daily, manual | `npm run feed:reconcile`: compares both feed stores against OpenSSF's complete OSV export and fails when a record has been upstream for more than two days and is still missing. Writes nothing. Not a PR check, because its verdict depends on the date rather than on the change |
 | `codeql.yml` | PR, push to `main`, weekly | CodeQL static analysis of `javascript-typescript` and of the workflows themselves (`actions`), into code scanning. Not a required check |
 | `pr-metadata-policy.yml` | PR open/edit/reopen/sync | PR title and body attribution policy. No checkout, so it cannot execute PR code |
 | `aahp-verify.yml` | PR, push to `main` | the four-layer AAHP handoff gate, with no escape hatch at CI level |

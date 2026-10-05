@@ -4904,6 +4904,12 @@ const FEED_CHUNK_22: FeedIOC[] = [
   { type: "package", value: "@angjlar/core@22.2.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17534 (amazon-inspector)", firstSeen: "2026-10-05" },
   { type: "package", value: "@angulr/core@22.2.1", severity: "critical", confidence: 0.9, source: "MAL-2026-17538 (amazon-inspector)", firstSeen: "2026-10-05" },
   { type: "package", value: "api-nebula@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17531 (amazon-inspector)", firstSeen: "2026-10-05" },
+
+  // Imported from GitHub Advisory Database (2026-10-05) - see docs/threat-feed-sources.md
+  { type: "package", value: "ruby:rate-limit-mini@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17567 (amazon-inspector)", firstSeen: "2026-10-05" },
+  { type: "package", value: "ruby:req-throttle-mini@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17568 (amazon-inspector)", firstSeen: "2026-10-05" },
+  { type: "package", value: "ruby:request-guard@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17569 (amazon-inspector)", firstSeen: "2026-10-05" },
+  { type: "package", value: "ruby:throttle-requests@1.0.0", severity: "critical", confidence: 0.9, source: "MAL-2026-17570 (amazon-inspector)", firstSeen: "2026-10-05" },
 ];
 
 // Composed from the chunks above. A single array literal of this size trips

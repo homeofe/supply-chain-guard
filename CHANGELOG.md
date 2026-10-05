@@ -9,6 +9,32 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- `npm run feed:import -- --osv-snapshot`: reconciles the feed against OpenSSF's
+  complete OSV export (`all.zip` per ecosystem) instead of the modified-date
+  window, with no token and no date window. Fail-closed like the windowed
+  import: one unavailable archive or malformed record rejects the whole run.
+- `npm run feed:reconcile` and the daily `Feed completeness` workflow: a dry run
+  that fails when an upstream malware record has been published for more than
+  two days and is still in neither store.
+
+### Fixed
+
+- 164,239 OpenSSF malware entries were missing from both the bundle and the
+  catalog: 142,610 npm, 16,180 PyPI, 4,555 NuGet, 873 RubyGems, 12 Cargo and
+  9 Go entries, first published between 2021 and 2026 (121,698 of them in
+  2025, 9,301 in 2026). 137,197 are whole-package blocks. The windowed
+  OpenSSF import only fetched records that changed after it was introduced on
+  2026-08-31, so untouched records never entered either store. All of them
+  are now in the catalog (257,146 entries), except four RubyGems entries first
+  seen today, which are in the bundle.
+- `catalog:generate` refused two genuine npm malware entries, `cktool.internal`
+  and `cktool.core.internal`, because the private-infrastructure check read
+  the package name as a `.internal` host. The host shape no longer applies to
+  a package name; it still applies to every other value and to `source`.
+- The importer overflowed the call stack when one source mapped a very large
+  batch (`push(...array)`; measured failing at 150,000 candidates), so a very
+  wide window could never complete.
+
 - Threat intel (2026-10-05): 127 package IOCs from the GitHub Advisory
   Database and OpenSSF, 118 in the offline bundle and 9 in the catalog. Every
   entry is pinned to the reported versions. The bundle part is mostly first

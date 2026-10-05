@@ -135,13 +135,15 @@ export function renderDigestModule(digest) {
 // entries, 465 of them carrying no source at all. A check that judges a value
 // has to enumerate spellings and the next spelling walks past, so this one
 // checks shape and structure only.
+const PRIVATE_HOST_SHAPE = /(?:^|[.@/\s])(?:localhost|[\w-]+\.(?:local|internal|lan|corp|home))(?:[:/\s]|$)/i;
+
 const PRIVATE_SHAPES = [
   /(?:^|[^\d.])10\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d.])/,
   /(?:^|[^\d.])192\.168\.\d{1,3}\.\d{1,3}(?![\d.])/,
   /(?:^|[^\d.])172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(?![\d.])/,
   /(?:^|[^\d.])127\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d.])/,
   /(?:^|[^\d.])169\.254\.\d{1,3}\.\d{1,3}(?![\d.])/,
-  /(?:^|[.@/\s])(?:localhost|[\w-]+\.(?:local|internal|lan|corp|home))(?:[:/\s]|$)/i,
+  PRIVATE_HOST_SHAPE,
   /[A-Za-z]:[\\/](?:Users|Windows|Program)/i,
   /(?:^|\s)\/(?:home|Users|root|srv|opt)\//,
 ];
@@ -174,7 +176,17 @@ export function checkCatalogHygiene(entries) {
     }
     for (const field of ["value", "source"]) {
       const v = entry[field];
-      if (typeof v === "string" && PRIVATE_SHAPES.some((re) => re.test(v))) {
+      // A package value is a registry coordinate, not a host. Dependency-
+      // confusion malware is routinely NAMED like an internal module
+      // (`cktool.internal`, MAL-2026-2925), and reading that as a private
+      // hostname refused two genuine npm malware entries. Address and path
+      // shapes still apply to it, and the host shape still applies to `source`
+      // and to every non-package value.
+      const shapes =
+        field === "value" && entry.type === "package"
+          ? PRIVATE_SHAPES.filter((re) => re !== PRIVATE_HOST_SHAPE)
+          : PRIVATE_SHAPES;
+      if (typeof v === "string" && shapes.some((re) => re.test(v))) {
         violations.push(`line ${line}: ${field} matches a private-infrastructure shape`);
       }
     }

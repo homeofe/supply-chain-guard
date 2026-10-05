@@ -24,6 +24,14 @@
 //      Package Analysis, GHSA and others) instead of flattening the database
 //      into one anonymous source. Any index or record fetch failure is fatal:
 //      publishing a partial discovery result would silently omit known malware.
+//      --osv-snapshot reads the complete per-ecosystem all.zip export instead,
+//      with no date window, and turns the GitHub adapter off. The windowed
+//      index only ever sees records that CHANGED inside the window, so a record
+//      nobody touched after this adapter was introduced (2026-08-31) was never
+//      fetched at all: the first full reconcile on 2026-10-05 found 164,239
+//      such entries. The snapshot is the only discovery that can prove the
+//      stores hold every OpenSSF record, and --check turns that proof into a
+//      gate (exit 1 when anything is missing).
 //   3. OSV.dev querybatch (corroboration only)
 //      POST https://api.osv.dev/v1/querybatch
 //      Confirms a GitHub-discovered package is also listed as malicious. It is
@@ -50,6 +58,7 @@
 //     they are ever serialized into a TypeScript source file.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { inflateRawSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { buildFeed, serializeFeed, extractBundledEntries } from "./generate-feed.mjs";
@@ -200,6 +209,16 @@ const ANONYMOUS_REQUEST_BUDGET = 60;
 /** Bounds for untrusted OSV export bodies. Current indexes are below 10 MiB. */
 export const MAX_OSV_INDEX_BYTES = 32 * 1024 * 1024;
 export const MAX_OSV_RECORD_BYTES = 4 * 1024 * 1024;
+/**
+ * Bound for one ecosystem's complete all.zip export. npm's was 217 MB on
+ * 2026-10-05 and grows with every bulk publication, so this leaves room for
+ * several years of growth while still refusing an unbounded body.
+ */
+export const MAX_OSV_SNAPSHOT_BYTES = 1024 * 1024 * 1024;
+/** How long a new upstream record may be missing before --check calls it a gap. */
+export const DEFAULT_CHECK_GRACE_DAYS = 2;
+/** A snapshot archive is hundreds of megabytes; the per-request default is for records. */
+export const DEFAULT_SNAPSHOT_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
  * Default hard cap on upstream pages per run.
@@ -1574,6 +1593,197 @@ export async function fetchOsvMalwareRecords({
   };
 }
 
+// ---------------------------------------------------------------------------
+// Full OSV snapshot (all.zip)
+// ---------------------------------------------------------------------------
+
+const ZIP_EOCD = 0x06054b50;
+const ZIP64_EOCD_LOCATOR = 0x07064b50;
+const ZIP64_EOCD = 0x06064b50;
+const ZIP_CENTRAL_HEADER = 0x02014b50;
+const ZIP_LOCAL_HEADER = 0x04034b50;
+const ZIP_U16_MAX = 0xffff;
+const ZIP_U32_MAX = 0xffffffff;
+
+function zipU64(buffer, offset) {
+  const value = buffer.readBigUInt64LE(offset);
+  if (value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("zip: 64-bit field out of range");
+  return Number(value);
+}
+
+/**
+ * Read the entries of an in-memory zip archive.
+ *
+ * A minimal reader for OSV's all.zip exports, so the importer needs no
+ * dependency: stored and deflated entries, ZIP64 (npm's export holds well over
+ * 65,535 files), no encryption. Every structural inconsistency THROWS. A reader
+ * that skipped a damaged entry would silently drop a malware record, which is
+ * the one failure the snapshot exists to rule out.
+ *
+ * @param {Buffer} buffer
+ * @param {{include?: (name: string) => boolean, maxEntryBytes?: number}} options
+ * @returns {Array<{name: string, data: Buffer}>}
+ */
+export function readZipEntries(buffer, { include = () => true, maxEntryBytes = MAX_OSV_RECORD_BYTES } = {}) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 22) throw new Error("zip: archive is too short");
+  let eocd = -1;
+  for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 22 - ZIP_U16_MAX); i--) {
+    if (buffer.readUInt32LE(i) === ZIP_EOCD) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("zip: end of central directory not found");
+
+  let count = buffer.readUInt16LE(eocd + 10);
+  let cdSize = buffer.readUInt32LE(eocd + 12);
+  let cdOffset = buffer.readUInt32LE(eocd + 16);
+  if (count === ZIP_U16_MAX || cdSize === ZIP_U32_MAX || cdOffset === ZIP_U32_MAX) {
+    const locator = eocd - 20;
+    if (locator < 0 || buffer.readUInt32LE(locator) !== ZIP64_EOCD_LOCATOR) {
+      throw new Error("zip: ZIP64 locator missing for a saturated end record");
+    }
+    const record = zipU64(buffer, locator + 8);
+    if (record + 56 > buffer.length || buffer.readUInt32LE(record) !== ZIP64_EOCD) {
+      throw new Error("zip: ZIP64 end of central directory not found");
+    }
+    count = zipU64(buffer, record + 32);
+    cdSize = zipU64(buffer, record + 40);
+    cdOffset = zipU64(buffer, record + 48);
+  }
+  if (cdOffset + cdSize > buffer.length) throw new Error("zip: central directory out of bounds");
+
+  const entries = [];
+  let p = cdOffset;
+  for (let n = 0; n < count; n++) {
+    if (p + 46 > buffer.length || buffer.readUInt32LE(p) !== ZIP_CENTRAL_HEADER) {
+      throw new Error(`zip: central directory entry ${n} is malformed`);
+    }
+    const flags = buffer.readUInt16LE(p + 8);
+    const method = buffer.readUInt16LE(p + 10);
+    let compressedSize = buffer.readUInt32LE(p + 20);
+    let size = buffer.readUInt32LE(p + 24);
+    const nameLength = buffer.readUInt16LE(p + 28);
+    const extraLength = buffer.readUInt16LE(p + 30);
+    const commentLength = buffer.readUInt16LE(p + 32);
+    let localOffset = buffer.readUInt32LE(p + 42);
+    const name = buffer.toString("utf8", p + 46, p + 46 + nameLength);
+
+    // ZIP64 extended information: only the saturated fields are present, in
+    // this fixed order.
+    let extra = p + 46 + nameLength;
+    const extraEnd = extra + extraLength;
+    while (extra + 4 <= extraEnd) {
+      const id = buffer.readUInt16LE(extra);
+      const length = buffer.readUInt16LE(extra + 2);
+      if (id === 0x0001) {
+        let field = extra + 4;
+        if (size === ZIP_U32_MAX) { size = zipU64(buffer, field); field += 8; }
+        if (compressedSize === ZIP_U32_MAX) { compressedSize = zipU64(buffer, field); field += 8; }
+        if (localOffset === ZIP_U32_MAX) { localOffset = zipU64(buffer, field); field += 8; }
+      }
+      extra += 4 + length;
+    }
+    p = extraEnd + commentLength;
+
+    if (name.endsWith("/") || !include(name)) continue;
+    if (flags & 0x1) throw new Error(`zip: ${name} is encrypted`);
+    if (size > maxEntryBytes) throw new Error(`zip: ${name} declares ${size} bytes, over ${maxEntryBytes}`);
+    if (localOffset + 30 > buffer.length || buffer.readUInt32LE(localOffset) !== ZIP_LOCAL_HEADER) {
+      throw new Error(`zip: local header of ${name} is malformed`);
+    }
+    const dataStart =
+      localOffset + 30 + buffer.readUInt16LE(localOffset + 26) + buffer.readUInt16LE(localOffset + 28);
+    if (dataStart + compressedSize > buffer.length) throw new Error(`zip: ${name} data out of bounds`);
+    const raw = buffer.subarray(dataStart, dataStart + compressedSize);
+    let data;
+    if (method === 0) data = raw;
+    else if (method === 8) data = inflateRawSync(raw, { maxOutputLength: maxEntryBytes });
+    else throw new Error(`zip: ${name} uses unsupported compression method ${method}`);
+    if (data.length !== size) {
+      throw new Error(`zip: ${name} inflated to ${data.length} bytes, expected ${size}`);
+    }
+    entries.push({ name, data });
+  }
+  return entries;
+}
+
+/** Download one snapshot archive into memory, bounded. */
+async function fetchOsvSnapshotArchive(url, { timeoutMs, fetchImpl, maxBytes = MAX_OSV_SNAPSHOT_BYTES }) {
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { "User-Agent": "supply-chain-guard-feed-import" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`OpenSSF/OSV snapshot request failed: ${message}`);
+  }
+  if (!response.ok) throw new Error(`OpenSSF/OSV snapshot returned HTTP ${response.status} for ${url}`);
+  const declared = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new Error(`OpenSSF/OSV snapshot exceeds ${maxBytes} bytes for ${url} (declared ${declared})`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > maxBytes) throw new Error(`OpenSSF/OSV snapshot exceeds ${maxBytes} bytes for ${url}`);
+  return buffer;
+}
+
+/**
+ * Discover EVERY OpenSSF malicious-package record from the complete
+ * per-ecosystem OSV exports, with no date window.
+ *
+ * Same contract as fetchOsvMalwareRecords: one failed archive or record
+ * rejects the whole snapshot before the feed is touched. Zero npm MAL records
+ * is treated as a failure, not as an answer: npm alone held 222,287 on
+ * 2026-10-05, so an empty npm snapshot can only be a broken export or reader.
+ */
+export async function fetchOsvMalwareSnapshot({
+  ecosystems,
+  timeoutMs = DEFAULT_SNAPSHOT_TIMEOUT_MS,
+  fetchImpl = globalThis.fetch,
+  baseUrl = OSV_VULNERABILITIES_URL,
+} = {}) {
+  const selected = ecosystems?.length ? ecosystems : Object.keys(OSV_ECOSYSTEM_DIRECTORY);
+  const records = [];
+  const seen = new Set();
+  const archives = [];
+  // Sequential on purpose: one archive in memory at a time.
+  for (const ecosystem of selected) {
+    const directory = OSV_ECOSYSTEM_DIRECTORY[ecosystem];
+    if (!directory) throw new Error(`no OSV export directory for ecosystem ${ecosystem}`);
+    const url = `${baseUrl}/${encodeURIComponent(directory)}/all.zip`;
+    const archive = await fetchOsvSnapshotArchive(url, { timeoutMs, fetchImpl });
+    const files = readZipEntries(archive, {
+      include: (name) => /^MAL-[A-Za-z0-9-]+\.json$/.test(name.split("/").pop()),
+    });
+    let malRecords = 0;
+    for (const { name, data } of files) {
+      const id = name.split("/").pop().slice(0, -".json".length);
+      if (!SAFE_ADVISORY_ID.test(id)) throw new Error(`OpenSSF/OSV snapshot record ${id} has an unsafe id`);
+      let record;
+      try {
+        record = JSON.parse(data.toString("utf8"));
+      } catch {
+        throw new Error(`OpenSSF/OSV snapshot record ${id} in ${directory} is not valid JSON`);
+      }
+      if (!record || typeof record !== "object" || record.id !== id) {
+        throw new Error(`OpenSSF/OSV snapshot record ${id} returned an unexpected payload`);
+      }
+      malRecords++;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      records.push(typeof record.modified === "string" ? { ...record, _indexModified: record.modified } : record);
+    }
+    if (ecosystem === "npm" && malRecords === 0) {
+      throw new Error("OpenSSF/OSV snapshot for npm holds no MAL records: refusing an empty snapshot");
+    }
+    archives.push({ directory, bytes: archive.length, malRecords });
+  }
+  return { records, indexes: archives.length, modifiedIds: records.length, archives };
+}
+
 /**
  * Build the enabled discovery adapters. New verdict sources join this registry
  * instead of adding source-specific branches to the orchestration below.
@@ -1587,7 +1797,22 @@ export function createDiscoverySources({
   token,
   fetchImpl,
   useOssf = true,
+  osvSnapshot = false,
 } = {}) {
+  if (osvSnapshot) {
+    // A full reconcile against OpenSSF's complete export. GitHub's malware
+    // advisories reach OpenSSF as the `ghsa-malware` origin, and the GitHub
+    // adapter has no snapshot of its own, so it stays with the windowed run.
+    if (!useOssf) throw new Error("--osv-snapshot reads OpenSSF records; it cannot be combined with --no-ossf");
+    return [
+      {
+        id: DISCOVERY_SOURCE.OPENSSF,
+        attribution: OSV_ATTRIBUTION,
+        discover: () => fetchOsvMalwareSnapshot({ ecosystems, fetchImpl }),
+        map: (result) => mapOsvMalwareRecords(result.records, { ecosystems }),
+      },
+    ];
+  }
   const sources = [
     {
       id: DISCOVERY_SOURCE.GITHUB,
@@ -1943,9 +2168,14 @@ export async function importUpstreamFeed({
   ecosystems,
   filterHoldingPackages = false,
   ignoreDeferrals = false,
+  osvSnapshot = false,
+  checkGraceDays = DEFAULT_CHECK_GRACE_DAYS,
   now = new Date(),
   fetchImpl = globalThis.fetch,
 } = {}) {
+  if (osvSnapshot && (since !== undefined || until !== undefined)) {
+    throw new Error("--osv-snapshot reads the complete export; it cannot be combined with --since/--until");
+  }
   const from = since ?? sinceDate(days, now);
   // The programmatic API gets the same validation as the CLI. Undefined means
   // exhaustive; every supplied value must be a real positive-integer cap.
@@ -1959,7 +2189,7 @@ export async function importUpstreamFeed({
   // Scoped to the real network path: an injected fetchImpl (the offline tests) never
   // touches GitHub, so it has no budget to exhaust.
   const resolvedToken = token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  if (!resolvedToken && maxPages > ANONYMOUS_REQUEST_BUDGET && fetchImpl === globalThis.fetch) {
+  if (!osvSnapshot && !resolvedToken && maxPages > ANONYMOUS_REQUEST_BUDGET && fetchImpl === globalThis.fetch) {
     throw new Error(
       `no GITHUB_TOKEN and --max-pages is ${maxPages}: the anonymous REST budget is ` +
         `${ANONYMOUS_REQUEST_BUDGET} requests/hour, so this run cannot finish. Export a token ` +
@@ -1991,6 +2221,7 @@ export async function importUpstreamFeed({
     token,
     fetchImpl,
     useOssf,
+    osvSnapshot,
   });
   const sourceResults = await Promise.all(
     sourceAdapters.map(async (adapter) => ({ adapter, result: await adapter.discover() })),
@@ -2020,8 +2251,10 @@ export async function importUpstreamFeed({
   const discoverySources = {};
   for (const { adapter, result } of sourceResults) {
     const normalized = adapter.map(result);
-    mapped.push(...normalized.entries);
-    skipped.push(...normalized.skipped);
+    // A loop, not push(...array): spreading passes every element as an argument,
+    // and a full snapshot (260,000+ candidates) overflows the call stack.
+    for (const entry of normalized.entries) mapped.push(entry);
+    for (const item of normalized.skipped) skipped.push(item);
     discoverySources[adapter.id] = {
       attribution: adapter.attribution,
       recordsFetched:
@@ -2089,6 +2322,16 @@ export async function importUpstreamFeed({
   const capped = appliedLimit !== null && added.length > appliedLimit;
   const selected = capped ? added.slice(0, appliedLimit) : added;
 
+  // What --check judges. A record upstream published or changed in the last
+  // `checkGraceDays` days is import latency, not a gap: the daily run takes it.
+  // Anything older that is still missing is a gap no routine run will close on
+  // its own. Counted over `added`, not `selected`: --limit must not hide one.
+  const graceCutoff = sinceDate(positiveInt("--grace-days", checkGraceDays), now);
+  let overdue = 0;
+  for (const entry of added) {
+    if ((entry._queueDate ?? entry.firstSeen ?? "") < graceCutoff) overdue++;
+  }
+
   // 4. Corroborate with OSV (never fatal).
   let osv = { ids: new Map(), ok: true };
   if (useOsv && selected.length > 0) {
@@ -2126,8 +2369,11 @@ export async function importUpstreamFeed({
   }
 
   const report = {
-    since: from,
+    // A snapshot has no window: null says so rather than printing the unused default.
+    since: osvSnapshot ? null : from,
     until: until ?? null,
+    osvSnapshot,
+    snapshotArchives: osvSnapshot ? ossfResult?.archives ?? [] : null,
     advisoriesFetched: advisories.length,
     pages,
     truncated,
@@ -2163,6 +2409,9 @@ export async function importUpstreamFeed({
     osvAvailable: osv.ok,
     osvError: osv.error ?? null,
     added: selected.length,
+    // Missing for longer than the grace period; see checkFailed.
+    overdue,
+    checkGraceDays,
     // Where this run sent them. A run that silently sends everything one
     // way is the failure this split exists to make visible.
     addedToBundle: 0,
@@ -2188,8 +2437,9 @@ export async function importUpstreamFeed({
     // CLI refuses to exit clean on it.
     // Only meaningful for the rolling --days window. An explicit --since/--until
     // IS the slicing recovery, so it is deliberately exempt.
+    // A snapshot is complete on every run, so nothing it leaves behind can age out.
     undrainable:
-      capped && !since && !until ? countUndrainable(added, { limit: appliedLimit, days, now }) : 0,
+      capped && !since && !until && !osvSnapshot ? countUndrainable(added, { limit: appliedLimit, days, now }) : 0,
     entries: selected.map(publicEntry),
     dryRun,
     written: false,
@@ -2227,7 +2477,7 @@ export async function importUpstreamFeed({
 
   const updated = updateFeedGeneratedAt(
     toBundle.length > 0
-      ? applyEntries(original, toBundle, { date: from })
+      ? applyEntries(original, toBundle, { date: osvSnapshot ? now.toISOString().slice(0, 10) : from })
       : original,
     now.toISOString().slice(0, 10),
   );
@@ -2343,6 +2593,17 @@ function ecosystemList(raw) {
   return names;
 }
 
+/**
+ * The --check verdict. Red whenever an entry has been upstream for longer than
+ * the grace period and is still in neither store: known malware no scan
+ * detects. A fresher one is import latency, which the daily run closes, and
+ * counting it would turn the gate red every day until nobody reads it.
+ * Deferred candidates are NOT a pass either, because a deferral is a recorded gap.
+ */
+export function checkFailed(report) {
+  return report.overdue > 0 || report.deferred > 0;
+}
+
 export function parseArgs(argv) {
   const opts = { dryRun: false, json: false, useOsv: true, useOssf: true };
   for (let i = 0; i < argv.length; i++) {
@@ -2363,6 +2624,12 @@ export function parseArgs(argv) {
     else if (arg === "--timeout") opts.timeoutMs = positiveInt(arg, next());
     else if (arg === "--filter-holding-packages") opts.filterHoldingPackages = true;
     else if (arg === "--ignore-deferrals") opts.ignoreDeferrals = true;
+    else if (arg === "--osv-snapshot") opts.osvSnapshot = true;
+    else if (arg === "--grace-days") opts.checkGraceDays = positiveInt(arg, next());
+    else if (arg === "--check") {
+      opts.check = true;
+      opts.dryRun = true;
+    }
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else throw new Error(`unknown option: ${arg}`);
   }
@@ -2418,6 +2685,18 @@ const USAGE = `
                         snapshot intentionally incomplete and is intended only
                         for source-outage diagnosis.
     --no-osv            Skip OSV.dev corroboration of GitHub-discovered packages
+    --osv-snapshot      Reconcile against OpenSSF's COMPLETE OSV export (all.zip
+                        per ecosystem) instead of the windowed index. No date
+                        window, no GitHub adapter, no token needed. Imports every
+                        record either store is missing; old ones route to the
+                        catalog by firstSeen like any other entry.
+    --check             Dry run that exits 1 when anything would be added. With
+                        --osv-snapshot this is the completeness gate: zero
+                        missing OpenSSF records, or red. Only entries upstream
+                        for longer than --grace-days count.
+    --grace-days <n>    Age (by upstream modified/published date) after which a
+                        missing entry fails --check (default 2). Younger ones are
+                        import latency that the daily run closes.
     --dry-run           Report only; write nothing
     --json              Machine-readable report on stdout
 
@@ -2437,8 +2716,9 @@ if (isMain) {
       console.log(USAGE);
       process.exit(0);
     }
+    const { check: _check, ...importOpts } = opts;
     report = await importUpstreamFeed({
-      ...opts,
+      ...importOpts,
       token: process.env.GITHUB_TOKEN || process.env.GH_TOKEN || undefined,
     });
   } catch (err) {
@@ -2451,7 +2731,11 @@ if (isMain) {
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    console.log(`\n  Upstream feed import (published >= ${report.since})\n`);
+    console.log(
+      report.osvSnapshot
+        ? `\n  Upstream feed reconcile (complete OpenSSF snapshot, no date window)\n`
+        : `\n  Upstream feed import (published >= ${report.since})\n`,
+    );
     if (report.ecosystems) {
       console.log(`  Ecosystem filter:     ${report.ecosystems.join(", ")} only`);
     }
@@ -2523,6 +2807,18 @@ if (isMain) {
           }. Review the diff before committing.\n`
         : `\n  Nothing written${report.dryRun ? " (--dry-run)" : ""}.\n`,
     );
+  }
+
+  // --check: the completeness gate. Anything an import would still add is a
+  // detection gap in the committed stores, so it is red, loudly, with the count.
+  if (process.argv.includes("--check") && checkFailed(report)) {
+    console.error(
+      `\n  CHECK FAILED: ${report.overdue} upstream malware entr${report.overdue === 1 ? "y has" : "ies have"} been missing from both stores ` +
+        `for more than ${report.checkGraceDays} day(s) (${report.added} missing in total: ${report.addedToBundle} bundle-bound, ` +
+        `${report.addedToCatalog} catalog-bound), plus ${report.deferred} held back by ${DEFERRAL_FILE}.\n` +
+        `  Import them: npm run feed:import -- ${report.osvSnapshot ? "--osv-snapshot" : "<same window>"}\n`,
+    );
+    process.exit(1);
   }
 
   // Exit 2, distinct from the exit 1 that means "failed, nothing written". The
