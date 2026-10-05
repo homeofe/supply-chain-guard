@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders the two generated README blocks from src/ecosystem-coverage.json
 // (the claim, proven row by row in src/__tests__/coverage-matrix.test.ts) and
-// the indicator data actually shipped (feed.json + data/threat-catalog.jsonl):
+// the indicator data actually shipped (feed.json + data/threat-catalog/):
 //   - ecosystem-list:     which ecosystems ship indicators and which have a
 //                         tested matcher but no known malicious package yet;
 //   - ecosystem-coverage: the per-ecosystem table.
@@ -19,6 +19,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readCatalogEntries } from "./catalog-store.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TABLE = {
@@ -111,8 +112,7 @@ export function load() {
   const coverage = JSON.parse(readFileSync(join(root, "src", "ecosystem-coverage.json"), "utf8"));
   const feed = JSON.parse(readFileSync(join(root, "feed.json"), "utf8"));
   const bundleValues = feed.entries.filter((e) => e.type === "package").map((e) => e.value);
-  const catalogValues = readFileSync(join(root, "data", "threat-catalog.jsonl"), "utf8")
-    .split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.type === "package").map((e) => e.value);
+  const catalogValues = readCatalogEntries(root).filter((e) => e.type === "package").map((e) => e.value);
   return { coverage, bundleValues, catalogValues };
 }
 

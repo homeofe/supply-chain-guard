@@ -1734,8 +1734,8 @@ describe("importUpstreamFeed failure mode", () => {
     // when the config is missing would be worse than failing: it would send
     // everything to the bundle, which is the exact regression the routing
     // exists to prevent, and it would do it silently.
-    catalogPath = path.join(tmpRoot, "data", "threat-catalog.jsonl");
-    fs.mkdirSync(path.join(tmpRoot, "data"));
+    catalogPath = path.join(tmpRoot, "data", "threat-catalog", "part-000.jsonl");
+    fs.mkdirSync(path.join(tmpRoot, "data", "threat-catalog"), { recursive: true });
     fs.writeFileSync(catalogPath, "");
     fs.writeFileSync(
       path.join(tmpRoot, "feed-partition.config.json"),
@@ -2336,8 +2336,8 @@ describe("ecosystem filter", () => {
       // Same reason as the main fixture: the importer routes every accepted
       // entry through the partition policy, so the fixture repository has to
       // have one.
-      fs.mkdirSync(path.join(tmpRoot, "data"));
-      fs.writeFileSync(path.join(tmpRoot, "data", "threat-catalog.jsonl"), "");
+      fs.mkdirSync(path.join(tmpRoot, "data", "threat-catalog"), { recursive: true });
+      fs.writeFileSync(path.join(tmpRoot, "data", "threat-catalog", "part-000.jsonl"), "");
       fs.writeFileSync(
         path.join(tmpRoot, "feed-partition.config.json"),
         JSON.stringify({

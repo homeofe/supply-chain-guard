@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791204274",
-    "timestamp": "2026-10-05T12:44:34Z",
-    "commit": "17db994",
+    "session_id": "cli-1791205338",
+    "timestamp": "2026-10-05T13:02:18Z",
+    "commit": "3c60afb",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:59d774d6f8750c88cc0b36fdf5ffd8f74b830a05e88fa625daf28e8892b90ee2",
-      "updated": "2026-10-05T12:44:27Z",
-      "lines": 13633,
-      "summary": "The first secret-scanning alert (\"Tencent WeChat API App ID\") was an npm malware package name from OpenSSF MAL-2025-2613 in..."
+      "checksum": "sha256:449c60242cba8467af3a8861f61decb46e258b6f05ad2652881f67c4761113ac",
+      "updated": "2026-10-05T13:01:55Z",
+      "lines": 13651,
+      "summary": "`data/threat-catalog.jsonl` reached 41 MB with the reconcile (GitHub warns at 50 MB per file, refuses 100 MB)."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:6006b05245eb6f4ed77326ae87d1435e0e9ba8a63d919310ea139f1ae08b42a0",
-      "updated": "2026-10-05T12:06:43Z",
+      "checksum": "sha256:84caf8ffad6decb0c446a624b95b2b798804f10109006e9da4a35147f584d267",
+      "updated": "2026-10-05T13:02:10Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:28885c5818357ae42ddd7d4ce4f065ffca9124a362bdacaaf2846c88e62b2c11",
-      "updated": "2026-10-05T12:06:43Z",
+      "checksum": "sha256:19aedc8e82f753c026a130b731014510986e93b74ed6df990315aab915334372",
+      "updated": "2026-10-05T13:02:10Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The first secret-scanning alert (\"Tencent WeChat API App ID\") was an npm malware package name from OpenSSF MAL-2025-2613 in... Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "`data/threat-catalog.jsonl` reached 41 MB with the reconcile (GitHub warns at 50 MB per file, refuses 100 MB). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 923,
-    "manifest_plus_core": 203185,
-    "full_read": 216899
+    "manifest_only": 914,
+    "manifest_plus_core": 203455,
+    "full_read": 217169
   }
 }

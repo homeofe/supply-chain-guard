@@ -6,11 +6,11 @@
 //
 // Design: docs/threat-feed-catalog-decoupling-design.md sections 4.1 and 4.2.
 
-import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { extractBundledEntries } from "./generate-feed.mjs";
 import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
+import { CATALOG_DIR, catalogExists, checkCatalogLayout, readCatalogText } from "./catalog-store.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -19,7 +19,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
  * a violation reads identically on every platform and can be grepped for in CI
  * logs or asserted by a test. path.join is used only to touch the filesystem.
  */
-export const CATALOG_PATH = "data/threat-catalog.jsonl";
+export const CATALOG_PATH = CATALOG_DIR;
 
 export function checkPartition(root = repoRoot) {
   const config = loadPartitionConfig(root);
@@ -27,13 +27,16 @@ export function checkPartition(root = repoRoot) {
 
   const bundleValues = new Set(extractBundledEntries(root).map((e) => e.value));
 
-  const catalogFile = join(root, "data", "threat-catalog.jsonl");
-  if (!existsSync(catalogFile)) {
-    return [`${CATALOG_PATH} is missing; it must exist, even empty.`];
+  if (!catalogExists(root)) {
+    return [`${CATALOG_PATH}/ is missing; it must exist, even as one empty part.`];
   }
+  // The parts must be the canonical cut of their own content: the layout is a
+  // function of the catalog, so anything else is a hand edit or a writer that
+  // bypassed scripts/catalog-store.mjs.
+  for (const problem of checkCatalogLayout(root)) violations.push(`${CATALOG_PATH}/: ${problem}`);
 
   const catalogValues = new Set();
-  readFileSync(catalogFile, "utf8").split("\n").forEach((line, i) => {
+  readCatalogText(root).split("\n").forEach((line, i) => {
     if (line.trim() === "") return;
     const at = `${CATALOG_PATH} line ${i + 1}`;
 

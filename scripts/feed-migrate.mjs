@@ -11,14 +11,15 @@
 //
 // Design: docs/threat-feed-catalog-decoupling-design.md sections 4.1 and 4.2.
 
-import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
 import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
+import { CATALOG_DIR, readCatalogText, writeCatalogText } from "./catalog-store.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CATALOG_RELATIVE_PATH = "data/threat-catalog.jsonl";
+const CATALOG_RELATIVE_PATH = `${CATALOG_DIR}/`;
 
 const CHUNK_START = /^const FEED_CHUNK_\d+: FeedIOC\[\] = \[/;
 const CHUNK_END = /^\];/;
@@ -354,8 +355,7 @@ async function main(argv) {
   // disjoint by construction because a migrated entry is no longer in the
   // bundle to be moved twice. "By construction" is exactly the kind of claim
   // that stops being true without anyone noticing, so it is checked.
-  const catalogPath = join(repoRoot, "data", "threat-catalog.jsonl");
-  const existing = readFileSync(catalogPath, "utf8");
+  const existing = readCatalogText(repoRoot);
   const existingValues = new Set(
     existing
       .split("\n")
@@ -380,7 +380,7 @@ async function main(argv) {
   // placement gate reports and a re-run corrects. Writing the source first
   // would mean a failed append had already deleted them from the bundle
   // without recording them anywhere, which is silent loss of detection data.
-  appendFileSync(catalogPath, result.jsonl);
+  writeCatalogText(repoRoot, `${existing}${result.jsonl}`);
   writeFileSync(target, result.source);
   console.log(
     `migrated ${result.moved.length} entries into ${CATALOG_RELATIVE_PATH} ` +

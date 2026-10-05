@@ -13,19 +13,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
 import { CATALOG_KEY_ORDER } from "./feed-migrate.mjs";
+import { CATALOG_DIR, readCatalogEntries as readStoreEntries } from "./catalog-store.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Read data/threat-catalog.jsonl into an array of entries. */
+/** Read the committed catalog (every part, in order) into an array of entries. */
 export function readCatalogEntries(root = repoRoot) {
-  const raw = readFileSync(join(root, "data", "threat-catalog.jsonl"), "utf8");
-  // Split on either ending. The file is pinned to LF in .gitattributes, but a
-  // checkout that predates that pin, or a file written by another tool, would
-  // otherwise leave a trailing \r inside the last JSON value on every line.
-  return raw
-    .split(/\r?\n/)
-    .filter((l) => l.trim() !== "")
-    .map((l) => JSON.parse(l));
+  return readStoreEntries(root);
 }
 
 /**
@@ -249,7 +243,7 @@ if (invokedDirectly) {
   const violations = [...checkCatalogHygiene(entries), ...checkCatalogSize(shards)];
   if (violations.length > 0) {
     console.error(
-      `\n  data/threat-catalog.jsonl has ${violations.length} violation(s) and will not be published:\n`,
+      `\n  ${CATALOG_DIR}/ has ${violations.length} violation(s) and will not be published:\n`,
     );
     reportViolations(violations);
     console.error("");

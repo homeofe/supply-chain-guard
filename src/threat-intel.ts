@@ -5524,16 +5524,17 @@ export function isInertThreatFeedFile(filename: string, content: string): boolea
   return true;
 }
 
-/** Basename of the committed catalog store. */
-export const CATALOG_FILE = "threat-catalog.jsonl";
+/** Directory of the committed catalog store (scripts/catalog-store.mjs). */
+export const CATALOG_DIR = "data/threat-catalog";
 
 /**
- * Exact repository-relative path of the catalog store. The exemption is bound
- * to this path, not merely to the basename: a basename match would let ANY
- * scanned repository place a file with this name at any depth and have it
- * skipped, which is an evasion primitive rather than a convenience.
+ * Exact repository-relative shape of one catalog part. The exemption is bound
+ * to this anchored path, not merely to a basename: a basename match would let
+ * ANY scanned repository place a file with this name at any depth and have it
+ * skipped, which is an evasion primitive rather than a convenience. The store
+ * was one file, data/threat-catalog.jsonl, until it grew past 40 MB.
  */
-export const CATALOG_RELATIVE_PATH = "data/threat-catalog.jsonl";
+export const CATALOG_PART_PATH = /^data\/threat-catalog\/part-\d{3}\.jsonl$/;
 
 /**
  * Structural check: is this file supply-chain-guard's own catalog store?
@@ -5553,7 +5554,7 @@ export function isInertThreatCatalogFile(filename: string, content: string): boo
   // Exact relative path, not a basename. Without this, any scanned repository
   // could place a file with this name at any depth and have every content
   // scanner skip it.
-  if (filename.replace(/\\/g, "/") !== CATALOG_RELATIVE_PATH) return false;
+  if (!CATALOG_PART_PATH.test(filename.replace(/\\/g, "/"))) return false;
 
   for (const line of content.split("\n")) {
     if (line.trim() === "") continue;

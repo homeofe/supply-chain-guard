@@ -65,6 +65,7 @@ import { buildFeed, serializeFeed, extractBundledEntries } from "./generate-feed
 import { partitionTarget, loadPartitionConfig } from "./feed-partition.mjs";
 import { buildCatalog, renderDigestModule, readCatalogEntries } from "./generate-catalog.mjs";
 import { CATALOG_KEY_ORDER } from "./feed-migrate.mjs";
+import { CATALOG_DIR, catalogExists, readCatalogText, writeCatalogText } from "./catalog-store.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -2232,9 +2233,8 @@ const CATALOG_FIELDS = CATALOG_KEY_ORDER;
  * re-import the whole corpus.
  */
 export function readCommittedCatalog(root) {
-  const catalogPath = join(root, "data", "threat-catalog.jsonl");
-  if (!existsSync(catalogPath)) return [];
-  return readFileSync(catalogPath, "utf8")
+  if (!catalogExists(root)) return [];
+  return readCatalogText(root)
     .split(/\r?\n/)
     .filter((line) => line.trim() !== "")
     .map((line) => JSON.parse(line));
@@ -2784,8 +2784,7 @@ export async function importUpstreamFeed({
 
   // Both stores are read before anything is written, so the catch below can put
   // either back exactly as it was.
-  const catalogPath = join(root, "data", "threat-catalog.jsonl");
-  const originalCatalog = readFileSync(catalogPath, "utf8");
+  const originalCatalog = readCatalogText(root);
   const originalDigestModule = readFileSync(digestModulePath, "utf8");
 
   const updated = updateFeedGeneratedAt(
@@ -2806,7 +2805,7 @@ export async function importUpstreamFeed({
       // .gitattributes because its digest is published.
       const appended = toCatalog.map((entry) => renderCatalogEntry(entry)).join("\n");
       const needsNewline = originalCatalog.length > 0 && !originalCatalog.endsWith("\n");
-      writeFileSync(catalogPath, `${originalCatalog}${needsNewline ? "\n" : ""}${appended}\n`);
+      writeCatalogText(root, `${originalCatalog}${needsNewline ? "\n" : ""}${appended}\n`);
     }
 
     const reparsed = extractBundledEntries(root);
@@ -2836,7 +2835,7 @@ export async function importUpstreamFeed({
     // catalog holding entries the bundle no longer knows about, which is a
     // worse state than either failure alone.
     writeFileSync(threatIntelPath, original);
-    writeFileSync(catalogPath, originalCatalog);
+    writeCatalogText(root, originalCatalog);
     writeFileSync(digestModulePath, originalDigestModule);
     // feed.json too. It is regenerated inside the same try, so a failure after
     // that point used to leave it describing a bundle that had been rolled
@@ -3131,7 +3130,7 @@ if (isMain) {
       report.written
         ? `\n  Written: src/threat-intel.ts + feed.json${
             report.addedToCatalog > 0
-              ? ` + data/threat-catalog.jsonl (${report.addedToCatalog}) + src/catalog-digest.ts`
+              ? ` + ${CATALOG_DIR}/ (${report.addedToCatalog}) + src/catalog-digest.ts`
               : ""
           }. Review the diff before committing.\n`
         : `\n  Nothing written${report.dryRun ? " (--dry-run)" : ""}.\n`,
