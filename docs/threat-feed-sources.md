@@ -170,6 +170,55 @@ source corroborate itself.
 The relationship is symmetric with the export side: `supply-chain-guard feed osv`
 already emits the feed's package IOCs as OSV-schema records.
 
+### 4. DataDog malicious-software-packages-dataset (discovery)
+
+`GET https://raw.githubusercontent.com/DataDog/malicious-software-packages-dataset/main/samples/{npm,pypi}/manifest.json`
+
+npm and PyPI packages DataDog's security research confirmed as malicious, with
+encrypted samples. After the full OpenSSF and GitHub reconciles of 2026-10-05
+it still named 3,667 npm and 462 PyPI packages that were in neither store.
+Licence: Apache-2.0; every imported entry carries `datadog-malicious-packages`
+in its `source` field, and an overlap with another source is merged with both
+provenances kept.
+
+- **Read whole on every run.** The manifests are a few megabytes, so there is
+  no window and every run, the daily one and `feed:reconcile` alike, reconciles
+  this source completely. A manifest failure rejects the run; an empty npm
+  manifest is refused as a broken export.
+- **Samples are the evidence.** The file tree is walked per category (one
+  recursive call is truncated by the API); a tree that cannot be read
+  completely rejects the run.
+- **A versions list is a compromised legitimate package**, mapped to exact
+  pins, but only for versions the dataset holds a sample of IN THE SAME
+  ecosystem. On 2026-10-05 the npm manifest listed `lightning` 2.6.2 and 2.6.3
+  while every sample was under `pypi/`: the compromise was PyPI's lightning,
+  and npm's lightning is an unrelated legitimate package. Manifest lines
+  without such a sample are reported, not imported.
+- **A `null` claims the whole package**, and the dataset uses it for hijacked
+  legitimate packages too (`@toptal/picasso`, `xrpl`, `vant`). It is settled
+  against the registry before anything is written:
+  - a package the registry removed (404, npm security holding package, every
+    version unpublished) becomes a bare name, unless another source already
+    pins that name by version: that is how a dependency-confusion name is
+    recorded, and a bare name would flag the victim's own internal package
+    (`@postman-cse/okta-aio-linux-arm64`);
+  - otherwise only the sampled versions are pinned. Pinning every published
+    version of a live package would have flagged all 1,927 releases of
+    `@toptal/picasso` instead of its ten trojanized ones;
+  - a claim with no sampled version is not imported and is listed by name.
+
+  Any registry failure other than 404 rejects the run.
+- **Dates.** The manifests carry none. `firstSeen` is the earliest sample date
+  from the dataset's file tree (`<date>-<name>-v<version>.zip`), or the day of
+  the first import for a name without a sample; the release cutoff then moves
+  it to the catalog. `--check` judges these entries by the date their manifest
+  last changed, so an undated entry cannot look new forever.
+- **Not mapped yet:** the dataset's IDE extensions (the manifest does not say
+  whether an id belongs to the VS Code Marketplace or Open VSX, where the same
+  `publisher.name` can be different people) and its AI skills.
+- On by default in the CLI, `--no-datadog` turns it off. The programmatic API
+  leaves it off unless `useDatadog: true` is passed.
+
 ## Mapping
 
 Upstream advisory to `FeedIOC`:

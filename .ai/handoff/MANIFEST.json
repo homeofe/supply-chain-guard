@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791208323",
-    "timestamp": "2026-10-05T13:52:03Z",
-    "commit": "dc988be",
+    "session_id": "cli-1791210054",
+    "timestamp": "2026-10-05T14:20:54Z",
+    "commit": "db24f83",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:7914d3da64d54027c34750d43b883fb557f81305b5c31c24b2bd15515d14cd5f",
-      "updated": "2026-10-05T13:51:55Z",
-      "lines": 13685,
-      "summary": "Second source of the full reconcile: the complete GitHub malware history (124,255 advisories, 1,243 pages, not truncated) against both stores."
+      "checksum": "sha256:b4ce752a64350fc0fd6626c9753aa10f8c2aab051ff06842b64ede7810a78d4b",
+      "updated": "2026-10-05T14:20:43Z",
+      "lines": 13725,
+      "summary": "Third part of the full reconcile."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:84caf8ffad6decb0c446a624b95b2b798804f10109006e9da4a35147f584d267",
-      "updated": "2026-10-05T13:02:10Z",
+      "checksum": "sha256:cfc45f721610492576ed77112b35438a85fd64fcabe2d4be9a7c889e00c52730",
+      "updated": "2026-10-05T14:20:47Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:19aedc8e82f753c026a130b731014510986e93b74ed6df990315aab915334372",
-      "updated": "2026-10-05T13:02:10Z",
+      "checksum": "sha256:44aedca75f690f0048a24bed61087b515ae2cebb182369d52d07139e29efd0ec",
+      "updated": "2026-10-05T14:20:47Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Second source of the full reconcile: the complete GitHub malware history (124,255 advisories, 1,243 pages, not truncated) against both stores. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Third part of the full reconcile. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 930,
-    "manifest_plus_core": 204025,
-    "full_read": 217739
+    "manifest_only": 875,
+    "manifest_plus_core": 204516,
+    "full_read": 218230
   }
 }

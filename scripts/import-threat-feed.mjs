@@ -89,6 +89,7 @@ export const OSV_ATTRIBUTION =
 export const DISCOVERY_SOURCE = {
   GITHUB: "github-advisory-database",
   OPENSSF: "openssf-malicious-packages",
+  DATADOG: "datadog-malicious-software-packages",
 };
 
 /**
@@ -2146,6 +2147,309 @@ export async function fetchOsvMalwareSnapshot({
   return { records, indexes: archives.length, modifiedIds: records.length, archives };
 }
 
+// ---------------------------------------------------------------------------
+// DataDog malicious-software-packages-dataset (third discovery source)
+// ---------------------------------------------------------------------------
+
+export const DATADOG_REPO = "DataDog/malicious-software-packages-dataset";
+export const DATADOG_RAW_URL = `https://raw.githubusercontent.com/${DATADOG_REPO}/main/samples`;
+export const DATADOG_TREES_API = `https://api.github.com/repos/${DATADOG_REPO}/git/trees`;
+/** Attribution required by the dataset's licence (Apache-2.0). */
+export const DATADOG_ATTRIBUTION = `DataDog malicious-software-packages-dataset (${DATADOG_REPO}), Apache-2.0`;
+/** The value carried in each imported entry's `source`. */
+export const DATADOG_SOURCE_LABEL = "datadog-malicious-packages";
+/** Manifest directory -> import ecosystem. Extensions and AI skills are not mapped (see below). */
+export const DATADOG_ECOSYSTEMS = { npm: "npm", pypi: "pip" };
+const MAX_DATADOG_MANIFEST_BYTES = 32 * 1024 * 1024;
+const MAX_DATADOG_TREE_BYTES = 64 * 1024 * 1024;
+
+/**
+ * Earliest sample date and the sampled versions per `<directory>:<path-name>`,
+ * from the dataset's file tree. Samples live at
+ * `samples/<dir>/<category>/<name>/<version>/<YYYY-MM-DD>-<name>-v<version>.zip`,
+ * and a scoped npm name is stored with `@` for `/`.
+ */
+export function parseDatadogSamples(paths) {
+  const dates = new Map();
+  const versions = new Map();
+  for (const p of paths) {
+    const m = /^samples\/([^/]+)\/[^/]+\/(.+)\/([^/]+)\/(\d{4}-\d{2}-\d{2})-[^/]*$/.exec(p);
+    if (!m) continue;
+    const key = `${m[1]}:${m[2]}`;
+    if (!dates.has(key) || m[4] < dates.get(key)) dates.set(key, m[4]);
+    if (!versions.has(key)) versions.set(key, new Set());
+    versions.get(key).add(m[3]);
+  }
+  return { dates, versions };
+}
+
+/** Backwards-compatible view: dates only. */
+export function parseDatadogSampleDates(paths) {
+  return parseDatadogSamples(paths).dates;
+}
+
+/**
+ * Every sample path under samples/<dir>/<category>/, walking one subtree per
+ * category. A single recursive call on the repository root is truncated by
+ * the API (measured 2026-10-05), which silently loses dates and, worse, the
+ * sampled versions the whole-package settlement depends on. Any truncated
+ * subtree is reported, never ignored.
+ */
+async function fetchDatadogSamplePaths(directories, { token, fetchImpl, timeoutMs, treesApi = DATADOG_TREES_API }) {
+  const headers = { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/vnd.github+json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const getTree = async (sha, recursive = false) => {
+    const url = `${treesApi}/${sha}${recursive ? "?recursive=1" : ""}`;
+    const response = await fetchImpl(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+    return readBoundedOsvBody(response, { maxBytes: MAX_DATADOG_TREE_BYTES, format: "json", url });
+  };
+  const child = (tree, name) => (tree?.tree ?? []).find((node) => node?.path === name && node?.type === "tree");
+  const paths = [];
+  const truncated = [];
+  const samples = child(await getTree("main"), "samples");
+  if (!samples) throw new Error("dataset tree has no samples directory");
+  const samplesTree = await getTree(samples.sha);
+  for (const directory of directories) {
+    const dirNode = child(samplesTree, directory);
+    if (!dirNode) continue;
+    const dirTree = await getTree(dirNode.sha);
+    for (const category of (dirTree?.tree ?? []).filter((node) => node?.type === "tree")) {
+      const sub = await getTree(category.sha, true);
+      if (sub?.truncated) truncated.push(`${directory}/${category.path}`);
+      for (const node of sub?.tree ?? []) {
+        if (node?.type === "blob" && typeof node.path === "string") {
+          paths.push(`samples/${directory}/${category.path}/${node.path}`);
+        }
+      }
+    }
+  }
+  return { paths, truncated };
+}
+
+/** The sample-tree key of a manifest name. */
+function datadogPathName(name) {
+  return name.startsWith("@") ? name.replace("/", "@") : name;
+}
+
+/**
+ * Fetch the npm and PyPI manifests and the sample dates.
+ *
+ * The manifests are small enough to read whole on every run, so this source has
+ * no window and every run reconciles it completely. A manifest failure rejects
+ * the run like any other source. The tree only supplies dates; a truncated or
+ * failed tree leaves entries undated, which routes them to the bundle, the
+ * safe direction, and is reported.
+ */
+export async function fetchDatadogDataset({
+  ecosystems,
+  token,
+  timeoutMs = 60000,
+  fetchImpl = globalThis.fetch,
+  rawUrl = DATADOG_RAW_URL,
+  treesApi = DATADOG_TREES_API,
+} = {}) {
+  const selected = Object.entries(DATADOG_ECOSYSTEMS).filter(
+    ([, ecosystem]) => !ecosystems?.length || ecosystems.includes(ecosystem),
+  );
+  const manifests = {};
+  for (const [directory] of selected) {
+    const url = `${rawUrl}/${directory}/manifest.json`;
+    const body = await fetchOsvExport(url, { timeoutMs, fetchImpl, format: "json", maxBytes: MAX_DATADOG_MANIFEST_BYTES });
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new Error(`DataDog manifest ${directory} is not an object`);
+    }
+    manifests[directory] = body;
+  }
+  if (selected.some(([directory]) => directory === "npm") && Object.keys(manifests.npm ?? {}).length === 0) {
+    throw new Error("DataDog npm manifest is empty: refusing an empty snapshot");
+  }
+
+  // When each manifest last changed: the age --check judges a DataDog entry
+  // by. A sample date says when the PACKAGE was seen, not when it entered the
+  // manifest, and an undated entry would otherwise look new on every run.
+  const manifestDates = {};
+  for (const [directory] of selected) {
+    try {
+      const headers = { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/vnd.github+json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const url = `https://api.github.com/repos/${DATADOG_REPO}/commits?path=samples/${directory}/manifest.json&per_page=1`;
+      const response = await fetchImpl(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      const commits = response.ok ? await response.json() : [];
+      const date = commits?.[0]?.commit?.committer?.date;
+      if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date)) manifestDates[directory] = date.slice(0, 10);
+    } catch {
+      // Undated is the conservative outcome: the entry is then judged by firstSeen.
+    }
+  }
+
+  // The sample tree is EVIDENCE, not decoration: a version is only imported
+  // when the dataset holds a sample of it in the same ecosystem. A tree that
+  // could not be read completely therefore rejects the run rather than
+  // importing manifest lines without evidence or silently importing fewer.
+  let tree;
+  try {
+    tree = await fetchDatadogSamplePaths(selected.map(([directory]) => directory), { token, fetchImpl, timeoutMs, treesApi });
+  } catch (err) {
+    throw new Error(`DataDog sample tree could not be read: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (tree.truncated.length > 0) {
+    throw new Error(`DataDog sample tree truncated: ${tree.truncated.join(", ")}`);
+  }
+  const samples = parseDatadogSamples(tree.paths);
+  return { manifests, dates: samples.dates, sampleVersions: samples.versions, treeError: null, manifestDates };
+}
+
+/**
+ * Map the manifests to candidates. A versions list becomes exact pins (a
+ * compromised legitimate package). A null value claims the whole package; it
+ * becomes a bare-name candidate marked `_wholePackageClaim`, which
+ * settleDatadogWholePackages turns into a bare name or into pins after asking
+ * the registry, never blindly.
+ */
+export function mapDatadogDataset({ manifests, dates, sampleVersions = new Map(), manifestDates = {} }, { now = new Date() } = {}) {
+  const entries = [];
+  const skipped = [];
+  const withoutSample = [];
+  const today = now.toISOString().slice(0, 10);
+  for (const [directory, manifest] of Object.entries(manifests)) {
+    const ecosystem = DATADOG_ECOSYSTEMS[directory];
+    const prefix = ECOSYSTEM_PREFIX[ecosystem];
+    for (const [name, versions] of Object.entries(manifest)) {
+      if (!isSafePackageName(name, ecosystem)) {
+        skipped.push({ reason: "unsafe-package-name", detail: `datadog:${directory} (${JSON.stringify(name)})` });
+        continue;
+      }
+      const dated = dates.get(`${directory}:${datadogPathName(name)}`);
+      const base = {
+        type: "package",
+        severity: "critical",
+        confidence: CONFIDENCE_SINGLE_SOURCE,
+        source: DATADOG_SOURCE_LABEL,
+        // The sample date when there is one. Otherwise the day this run first
+        // saw the name, which the release cutoff later moves to the catalog.
+        firstSeen: dated ?? today,
+      };
+      const listed = Array.isArray(versions) ? [...new Set(versions.filter((v) => typeof v === "string"))] : null;
+      if (versions !== null && (!listed || listed.length === 0)) {
+        skipped.push({ reason: "unmappable-version-range", detail: `datadog:${directory} ${name}` });
+        continue;
+      }
+      // Only versions with a sample in THIS ecosystem's directory. The npm
+      // manifest listed `lightning` 2.6.2 and 2.6.3 (2026-10-05) while every
+      // sample was under pypi/: the compromise was PyPI's lightning, and npm's
+      // lightning is an unrelated legitimate package.
+      const sampledHere = sampleVersions.get(`${directory}:${datadogPathName(name)}`) ?? new Set();
+      const list = listed ? listed.filter((v) => sampledHere.has(v)) : null;
+      if (listed && list.length < listed.length) {
+        withoutSample.push(`${prefix}${name}@${listed.filter((v) => !sampledHere.has(v)).join(",")}`);
+      }
+      if (list && list.length === 0) continue;
+      for (const version of list ?? [undefined]) {
+        if (version !== undefined && !SAFE_VERSION.test(version)) {
+          skipped.push({ reason: "unsafe-version", detail: `datadog:${directory} ${name}@${version}` });
+          continue;
+        }
+        const entry = { ...base, value: feedValue(prefix, name, version) };
+        entry._ecosystemPrefix = prefix;
+        entry._name = name;
+        entry._discoverySource = DISCOVERY_SOURCE.DATADOG;
+        entry._origins = ["datadog"];
+        if (manifestDates[directory]) entry._queueDate = manifestDates[directory];
+        if (version === undefined) {
+          entry._wholePackageClaim = true;
+          entry._sampledVersions = [...(sampleVersions.get(`${directory}:${datadogPathName(name)}`) ?? [])];
+        }
+        entries.push(entry);
+      }
+    }
+  }
+  return { entries, skipped, withoutSample };
+}
+
+/**
+ * What the registry says about a package: `removed` (404, npm security
+ * holding package, or every version unpublished) or the versions it publishes.
+ */
+export async function probeRegistry(prefix, name, { fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
+  const url =
+    prefix === "pypi:"
+      ? `https://pypi.org/pypi/${encodeURIComponent(name)}/json`
+      : `${NPM_REGISTRY_URL}/${name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)}`;
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      headers: { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    throw new Error(`registry request failed for ${name}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (response.status === 404) return { removed: true, versions: [] };
+  if (!response.ok) throw new Error(`registry returned HTTP ${response.status} for ${name}`);
+  const doc = await response.json();
+  if (prefix === "pypi:") {
+    const versions = Object.keys(doc?.releases ?? {});
+    return { removed: versions.length === 0, versions };
+  }
+  const versions = Object.keys(doc?.time ?? {}).filter((k) => !["created", "modified", "unpublished"].includes(k));
+  const live = Object.keys(doc?.versions ?? {});
+  const holding =
+    doc?.description === "security holding package" ||
+    (live.length > 0 && live.every((v) => /-security$/.test(v)));
+  if (holding || live.length === 0) return { removed: true, versions };
+  return { removed: false, versions };
+}
+
+/**
+ * Settle every whole-package claim against its registry.
+ *
+ * A removed package becomes a bare name: nothing legitimate can be installed
+ * under it. A LIVE one is pinned only on the versions the dataset holds a
+ * malware sample for. The dataset marks hijacked legitimate packages "whole"
+ * too, and files them under malicious_intent: on 2026-10-05 pinning every
+ * published version would have flagged all 1,927 releases of @toptal/picasso,
+ * whose sampled versions are exactly the ten trojanized 54.0.x ones. A live
+ * package without a sample is not imported and is reported by name, because no
+ * version of it is evidenced as malicious. Any registry failure rejects the run.
+ */
+export async function settleDatadogWholePackages(
+  entries,
+  { fetchImpl = globalThis.fetch, timeoutMs = 15000, concurrency = 8, versionScoped = new Set() } = {},
+) {
+  const claims = entries.filter((e) => e._wholePackageClaim);
+  const rest = entries.filter((e) => !e._wholePackageClaim);
+  const verdicts = await mapConcurrent(claims, concurrency, (e) => probeRegistry(e._ecosystemPrefix, e._name, { fetchImpl, timeoutMs }));
+  const out = [...rest];
+  let bare = 0;
+  let pinned = 0;
+  const liveWithoutSamples = [];
+  claims.forEach((claim, i) => {
+    const { _wholePackageClaim, _sampledVersions = [], ...entry } = claim;
+    // Another source deliberately pins this name by version. That is how a
+    // dependency-confusion name is recorded: the malicious versions are the
+    // attacker's, the NAME is the victim's internal package. A bare name would
+    // flag the victim (@postman-cse/okta-aio-linux-arm64, 2026-10-05), so the
+    // claim adds only sampled versions, removed from the registry or not.
+    const scoped = versionScoped.has(`${entry._ecosystemPrefix}${entry._name}`);
+    if (verdicts[i].removed && !scoped) {
+      out.push(entry);
+      bare++;
+      return;
+    }
+    const sampled = _sampledVersions.filter((v) => SAFE_VERSION.test(v));
+    if (sampled.length === 0) {
+      liveWithoutSamples.push(`${entry._ecosystemPrefix}${entry._name}`);
+      return;
+    }
+    for (const version of sampled) {
+      out.push({ ...entry, value: feedValue(entry._ecosystemPrefix, entry._name, version) });
+      pinned++;
+    }
+  });
+  return { entries: out, probed: claims.length, bare, pinned, liveWithoutSamples };
+}
+
 /**
  * Build the enabled discovery adapters. New verdict sources join this registry
  * instead of adding source-specific branches to the orchestration below.
@@ -2160,7 +2464,20 @@ export function createDiscoverySources({
   fetchImpl,
   useOssf = true,
   osvSnapshot = false,
+  useDatadog = false,
+  now = new Date(),
 } = {}) {
+  const datadog = {
+    id: DISCOVERY_SOURCE.DATADOG,
+    attribution: DATADOG_ATTRIBUTION,
+    discover: () => fetchDatadogDataset({ ecosystems, token, fetchImpl }),
+    lastWithoutSample: [],
+    map(result) {
+      const mapped = mapDatadogDataset(result, { now });
+      this.lastWithoutSample = mapped.withoutSample;
+      return mapped;
+    },
+  };
   if (osvSnapshot) {
     // A full reconcile against OpenSSF's complete export. GitHub's malware
     // advisories reach OpenSSF as the `ghsa-malware` origin, and the GitHub
@@ -2173,6 +2490,7 @@ export function createDiscoverySources({
         discover: () => fetchOsvMalwareSnapshot({ ecosystems, fetchImpl }),
         map: (result) => mapOsvMalwareRecords(result.records, { ecosystems }),
       },
+      ...(useDatadog ? [datadog] : []),
     ];
   }
   const sources = [
@@ -2206,6 +2524,7 @@ export function createDiscoverySources({
       map: (result) => mapOsvMalwareRecords(result.records, { ecosystems }),
     });
   }
+  if (useDatadog) sources.push(datadog);
   return sources;
 }
 
@@ -2285,8 +2604,7 @@ export function formatEntry(entry) {
 
 /** Strip the transient bookkeeping fields before serialization. */
 export function publicEntry(entry) {
-  const { _ecosystemPrefix, _name, _discoverySource, _queueDate, _origins, ...rest } = entry;
-  return rest;
+  return Object.fromEntries(Object.entries(entry).filter(([key]) => !key.startsWith("_")));
 }
 
 /** Advance the deterministic bundled-feed timestamp after a successful import. */
@@ -2530,6 +2848,9 @@ export async function importUpstreamFeed({
   filterHoldingPackages = false,
   ignoreDeferrals = false,
   osvSnapshot = false,
+  // Off for the programmatic API so injected-fetch callers (the tests) stay
+  // two-source; the CLI turns it on by default (parseArgs).
+  useDatadog = false,
   checkGraceDays = DEFAULT_CHECK_GRACE_DAYS,
   now = new Date(),
   fetchImpl = globalThis.fetch,
@@ -2584,6 +2905,8 @@ export async function importUpstreamFeed({
     fetchImpl,
     useOssf,
     osvSnapshot,
+    useDatadog,
+    now,
   });
   const sourceResults = await Promise.all(
     sourceAdapters.map(async (adapter) => ({ adapter, result: await adapter.discover() })),
@@ -2620,7 +2943,11 @@ export async function importUpstreamFeed({
     discoverySources[adapter.id] = {
       attribution: adapter.attribution,
       recordsFetched:
-        adapter.id === DISCOVERY_SOURCE.GITHUB ? result.advisories.length : result.records.length,
+        adapter.id === DISCOVERY_SOURCE.GITHUB
+          ? result.advisories.length
+          : adapter.id === DISCOVERY_SOURCE.DATADOG
+            ? Object.values(result.manifests).reduce((sum, manifest) => sum + Object.keys(manifest).length, 0)
+            : result.records.length,
       mapped: normalized.entries.length,
       skipped: normalized.skipped.length,
     };
@@ -2693,6 +3020,22 @@ export async function importUpstreamFeed({
   } = applyDeferralList(addedAfterDecline, deferralList, { active: deferralsActive });
 
   let added = addedAfterDeferral;
+
+  // 3d. DataDog whole-package claims: ask the registry before turning a name
+  // into a block (settleDatadogWholePackages). The pins a live package yields
+  // are deduplicated again: some of them are already in the stores.
+  let datadogSettlement = { probed: 0, bare: 0, pinned: 0, liveWithoutSamples: [] };
+  if (added.some((entry) => entry._wholePackageClaim)) {
+    const versionScoped = new Set();
+    for (const entry of existing) {
+      if (entry.type !== "package") continue;
+      const { prefix, name, version } = splitPackageValue(entry.value);
+      if (version !== undefined) versionScoped.add(`${prefix}${name}`);
+    }
+    const settled = await settleDatadogWholePackages(added, { fetchImpl, timeoutMs, versionScoped });
+    datadogSettlement = settled;
+    added = dedupe(existing, settled.entries, bundled).added;
+  }
   let holdingPackagesFiltered = 0;
   if (filterHoldingPackages) {
     const livenessResult = await filterHoldingPackages(addedAfterDeferral, {
@@ -2743,12 +3086,15 @@ export async function importUpstreamFeed({
   }
 
   const additionsByDiscovery = {
+    datadogOnly: 0,
     githubOnly: 0,
     openssfOnly: 0,
     githubAndOpenssf: 0,
   };
   for (const entry of selected) {
-    if (entry._discoverySource === DISCOVERY_SOURCE.OPENSSF) {
+    if (entry._discoverySource === DISCOVERY_SOURCE.DATADOG) {
+      additionsByDiscovery.datadogOnly++;
+    } else if (entry._discoverySource === DISCOVERY_SOURCE.OPENSSF) {
       additionsByDiscovery.openssfOnly++;
     } else if (String(entry.source ?? "").includes("MAL-")) {
       additionsByDiscovery.githubAndOpenssf++;
@@ -2771,6 +3117,20 @@ export async function importUpstreamFeed({
     ossfModifiedIds: ossfResult?.modifiedIds ?? 0,
     discoverySources,
     additionsByDiscovery,
+    datadog: useDatadog
+      ? {
+          treeError: sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.result?.treeError ?? null,
+          wholePackageClaimsProbed: datadogSettlement.probed,
+          settledAsBareName: datadogSettlement.bare,
+          settledAsPins: datadogSettlement.pinned,
+          // Live packages the dataset calls malicious with no sampled version:
+          // not imported, listed so a human can look.
+          liveWithoutSamples: datadogSettlement.liveWithoutSamples,
+          // Manifest versions with no sample in their own ecosystem: not imported.
+          manifestWithoutSample:
+            sourceResults.find(({ adapter }) => adapter.id === DISCOVERY_SOURCE.DATADOG)?.adapter.lastWithoutSample ?? [],
+        }
+      : null,
     mapped: mapped.length,
     coalesced,
     duplicates,
@@ -3008,7 +3368,7 @@ export function checkFailed(report) {
 }
 
 export function parseArgs(argv) {
-  const opts = { dryRun: false, json: false, useOsv: true, useOssf: true };
+  const opts = { dryRun: false, json: false, useOsv: true, useOssf: true, useDatadog: true };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const next = () => argv[++i];
@@ -3016,6 +3376,7 @@ export function parseArgs(argv) {
     else if (arg === "--json") opts.json = true;
     else if (arg === "--no-osv") opts.useOsv = false;
     else if (arg === "--no-ossf") opts.useOssf = false;
+    else if (arg === "--no-datadog") opts.useDatadog = false;
     else if (arg === "--days") opts.days = positiveInt(arg, next());
     else if (arg === "--since") opts.since = next();
     else if (arg === "--until") opts.until = next();
@@ -3088,6 +3449,8 @@ const USAGE = `
                         snapshot intentionally incomplete and is intended only
                         for source-outage diagnosis.
     --no-osv            Skip OSV.dev corroboration of GitHub-discovered packages
+    --no-datadog        Disable the DataDog malicious-software-packages-dataset
+                        source (npm and PyPI manifests, read whole every run).
     --osv-snapshot      Reconcile against OpenSSF's COMPLETE OSV export (all.zip
                         per ecosystem) instead of the windowed index. No date
                         window, no GitHub adapter, no token needed. Imports every
@@ -3184,9 +3547,18 @@ if (isMain) {
           : ""
       }`,
     );
+    if (report.datadog) {
+      console.log(
+        `  DataDog dataset:      ${report.datadog.wholePackageClaimsProbed} whole-package claim(s) probed: ` +
+          `${report.datadog.settledAsBareName} bare name(s), ${report.datadog.settledAsPins} pin(s), ` +
+          `${report.datadog.liveWithoutSamples.length} without a sampled version (live, or version-scoped by another source; not imported), ` +
+          `${report.datadog.manifestWithoutSample.length} manifest line(s) without a sample in their ecosystem (not imported)` +
+          (report.datadog.treeError ? ` (sample dates unavailable: ${report.datadog.treeError})` : ""),
+      );
+    }
     if (report.added > 0) {
       console.log(
-        `  Discovery split:     ${report.additionsByDiscovery.githubOnly} GitHub only, ` +
+        `  Discovery split:     ${report.additionsByDiscovery.datadogOnly} DataDog only, ${report.additionsByDiscovery.githubOnly} GitHub only, ` +
           `${report.additionsByDiscovery.openssfOnly} OpenSSF only, ` +
           `${report.additionsByDiscovery.githubAndOpenssf} both`,
       );
