@@ -1,7 +1,8 @@
 name: Feed completeness
 
 # Proves, every day, that the two committed stores (the bundle and the catalog)
-# hold every malicious-package record OpenSSF publishes through OSV.
+# hold every malicious-package record OpenSSF publishes through OSV, and every
+# evidenced entry of the DataDog malicious-software-packages-dataset.
 #
 # Why it exists: the daily import discovers OpenSSF records through a modified-
 # date window, so a record nobody touched after that adapter was introduced was
@@ -51,7 +52,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Compare both stores against the complete OpenSSF snapshot
+      - name: Compare both stores against OpenSSF and the DataDog dataset
         env:
           NODE_OPTIONS: --max-old-space-size=6144
+          # The DataDog source walks the dataset's file tree through the GitHub
+          # API. Anonymous calls get 60 per hour per address, which a shared
+          # runner can exhaust, and a gate that fails at random gets ignored.
+          # The token is read-only (permissions: contents: read above).
+          GITHUB_TOKEN: ${{ github.token }}
         run: npm run feed:reconcile
