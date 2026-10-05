@@ -11,6 +11,14 @@
 
 ---
 
+## [2026-10-05] v6.5.0
+
+IDE extensions from the DataDog dataset: 116 extension versions that both the VS Code Marketplace and Open VSX have since removed, pinned under both prefixes (232 entries), among them the Amazon Q...
+
+Full notes: CHANGELOG.md, section [6.5.0].
+
+---
+
 ## [2026-10-04] v6.4.3
 
 Threat intel (2026-10-04): 15 package IOCs from the GitHub Advisory Database and OpenSSF, all 15 in the offline bundle and none in the catalog. All are PyPI versions published on 2026-10-03:...
@@ -80,11 +88,3 @@ Full notes: CHANGELOG.md, section [6.3.0].
 281 package indicators from the GitHub Advisory Database malware feed and the OpenSSF malicious-packages index: 117 in the bundle and 164 in the catalog. The catalog-bound entries all carry a...
 
 Full notes: CHANGELOG.md, section [6.2.5].
-
----
-
-## [2026-09-22] v6.2.4
-
-58 package indicators from the GitHub Advisory Database malware feed, corroborated against OSV: 48 in the bundle and 10 in the catalog. The ten catalog-bound entries carry a firstSeen before the...
-
-Full notes: CHANGELOG.md, section [6.2.4].

@@ -1,3 +1,31 @@
+## Release v6.5.0 (2026-10-05) (claude-opus-5-5)
+
+Minor release: the full reconcile of all three sources (PRs 381 to 389). It
+adds the complete-snapshot import (`--osv-snapshot`), the `feed:reconcile`
+completeness gate and its daily workflow, the DataDog dataset as a third source
+(packages and IDE extensions), GitHub version-range settlement, the split
+catalog store, and the corrections found on the way (range assessment date,
+sampled-version evidence, Unicode package values in the client validator).
+The catalog goes from 92,902 entries in v6.4.3 to 263,681; the bundle from
+3,480 to 6,721. Users get the new catalog only by upgrading: every client
+downloads the catalog of its own release.
+
+Version bumped from 6.4.3 at all 17 configured version sites plus
+`package.json`; the one remaining `6.4.3` in `src/threat-intel.ts` is a
+historical comment and stays. `npm install --package-lock-only` changed only
+the lockfile's two version fields.
+
+`npm run release:prepare` advanced `bundleCutoffDate` from 2026-09-04 to
+2026-09-05. The migration plan moves 0 entries (no bundled entry carries that
+date), so `feed-migrate --write` had nothing to write.
+
+Active LTS review, due at 6.4.4 and therefore at this minor: `schedule.json`
+in `nodejs/Release` re-read on 2026-10-05, unchanged. Node 24 is Active LTS
+until 2026-10-20, Node 26 enters Active LTS on 2026-10-28. `activeLtsMajor`
+stays 24, `activeLtsReviewedIn` moves to 6.5.1. The first release cut after
+2026-10-28 moves `activeLtsMajor` to 26 and adds a Node 26 compat leg.
+SECURITY.md's supported range (6.x, 5.x) is unchanged.
+
 ## DataDog IDE extensions, decisions on the remaining items (2026-10-05) (claude-opus-5-5)
 
 The owner asked for every remaining item to be fixed or implemented.

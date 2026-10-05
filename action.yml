@@ -99,7 +99,7 @@ runs:
     - name: Install supply-chain-guard
       shell: bash
       env:
-        SCG_VERSION: "6.4.3"
+        SCG_VERSION: "6.5.0"
         SCG_EXPECTED_REPOSITORY: "homeofe/supply-chain-guard"
         SCG_EXPECTED_REPOSITORY_ID: "1185867580"
         SCG_EXPECTED_WORKFLOW: ".github/workflows/ci.yml"
