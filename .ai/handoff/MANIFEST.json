@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791210054",
-    "timestamp": "2026-10-05T14:20:54Z",
-    "commit": "db24f83",
+    "session_id": "cli-1791211590",
+    "timestamp": "2026-10-05T14:46:30Z",
+    "commit": "a2e9edb",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:b4ce752a64350fc0fd6626c9753aa10f8c2aab051ff06842b64ede7810a78d4b",
-      "updated": "2026-10-05T14:20:43Z",
-      "lines": 13725,
-      "summary": "Third part of the full reconcile."
+      "checksum": "sha256:f1bf76aa4b97d5baff8e081ce686157e37daba2a3bcf5a23ccd38c1b36d28a07",
+      "updated": "2026-10-05T14:46:18Z",
+      "lines": 13745,
+      "summary": "Second pass over PRs 381 to 387 at the owner's request, every claim measured again rather than taken from the earlier summary:"
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "Third part of the full reconcile. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Second pass over PRs 381 to 387 at the owner's request, every claim measured again rather than taken from the earlier summary:. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 875,
-    "manifest_plus_core": 204516,
-    "full_read": 218230
+    "manifest_only": 922,
+    "manifest_plus_core": 204855,
+    "full_read": 218569
   }
 }

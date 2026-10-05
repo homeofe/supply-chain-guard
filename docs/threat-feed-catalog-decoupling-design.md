@@ -7,6 +7,15 @@ explicit finding whenever the catalog is absent, stale or unverifiable.
 Status: design approved, revised after review, not yet implemented. Date:
 2026-09-16. Supersedes Tier 3 of `docs/threat-feed-bulk-backfill-strategy.md`.
 
+> **Store layout changed, 2026-10-05.** The single `data/threat-catalog.jsonl`
+> this document describes reached 41 MB after the full OpenSSF reconcile and is
+> now `data/threat-catalog/part-NNN.jsonl`, 100,000 lines per part, read and
+> written only through `scripts/catalog-store.mjs`. The parts concatenate to the
+> former file byte for byte, so the digest chain and the release shards below
+> are unchanged; the self-scan exemption is bound to the anchored part path
+> instead of the single file. Read every mention of the single file below as
+> "the catalog store".
+
 Revision note: the first draft carried seven defects found in review, an eighth
 was found while writing the implementation plan against it, and four more were
 found by re-auditing the design against the code before merging. All twelve are

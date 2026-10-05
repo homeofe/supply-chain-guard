@@ -1,3 +1,23 @@
+## Review of the reconcile work (2026-10-05) (claude-opus-5-5)
+
+Second pass over PRs 381 to 387 at the owner's request, every claim measured
+again rather than taken from the earlier summary:
+
+- Daily path (windowed import + DataDog, as the routine calls it): dry run 0
+  new, 0 unmapped, exit 0. Completeness gate on openclaw (Linux, fresh clone):
+  0 missing, 0 unmapped; full suite there 5,064 of 5,064.
+- Fixed here: `feed-reconcile.yml` passed no token, while the DataDog source
+  added in PR 387 walks the dataset tree through the GitHub API (anonymous:
+  60 requests/hour per address, so the daily gate could fail at random). It
+  now passes the read-only `github.token`. The workflow self-scan reports
+  nothing; a deliberately unsafe copy is flagged (control).
+- Docs: `docs/ci-and-release.md` and the catalog design document now name the
+  split store and the DataDog source.
+- Outside the repository (maintainer machine): the scheduled routine still
+  told the catalog cross-check to `grep -c` the removed single file, which can
+  only print 0. It now reads through `scripts/catalog-store.mjs` with a
+  positive control (`ph-common@77.7.7` must print 1).
+
 ## DataDog dataset as third source (2026-10-05) (claude-opus-5-5)
 
 Third part of the full reconcile. The DataDog malicious-software-packages-dataset
