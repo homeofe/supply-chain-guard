@@ -17,6 +17,8 @@ import { catalogFindings, CATALOG_MISSING_RULE } from "../feed.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
 import { readCatalogEntries } from "../../scripts/generate-catalog.mjs";
+import { scanPackagesLockContent } from "../nuget-scanner.js";
+import { lockfileFeedFindings } from "../lockfile-feed.js";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -221,4 +223,81 @@ describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
     // No comment block left describing entries that are no longer beneath it.
     expect(groups.filter((g: { entries: unknown[] }) => g.entries.length === 0)).toHaveLength(0);
   }, 60_000);
+});
+
+describe("OpenSSF reconcile acceptance: the newly mappable classes reach the scanners", () => {
+  // Each class below was skipped by the importer until 2026-10-05 and is now in
+  // the committed catalog. The claim is not "the catalog holds the string" but
+  // "a scan of a real lockfile reports it", through the scanner's own matcher,
+  // with a negative control beside every positive.
+  const nugetLock = (id: string, resolved: string) =>
+    JSON.stringify({
+      version: 1,
+      dependencies: { "net8.0": { [id]: { type: "Direct", requested: `[${resolved}, )`, resolved, contentHash: "abc=" } } },
+    });
+
+  it("a NuGet homoglyph id (Cyrillic letter) is reported, the ASCII spelling is not", () => {
+    const dir = tmp();
+    installCatalog(dir);
+    const feed = loadThreatIntel(dir);
+    // "Gun\u0430" ends in CYRILLIC SMALL LETTER A, as in MAL-2024-11508.
+    const homoglyph = scanPackagesLockContent(nugetLock("Gun\u0430.Forms.Net", "1.0.0"), "packages.lock.json", feed);
+    expect(homoglyph.some((f) => f.rule === "NUGET_MALICIOUS_PACKAGE")).toBe(true);
+    const ascii = scanPackagesLockContent(nugetLock("Guna.Forms.Net", "1.0.0"), "packages.lock.json", feed);
+    expect(ascii.some((f) => f.rule === "NUGET_MALICIOUS_PACKAGE")).toBe(false);
+  });
+
+  it("an npm package squatting a CLI flag is reported from a lockfile", () => {
+    const dir = tmp();
+    installCatalog(dir);
+    const feed = loadThreatIntel(dir);
+    const hit = lockfileFeedFindings([{ name: "--no-audit", version: "1.0.0" }], "package-lock.json", feed);
+    expect(hit.map((f) => f.rule)).toContain("LOCKFILE_MALICIOUS_PACKAGE");
+    expect(lockfileFeedFindings([{ name: "no-audit", version: "1.0.0" }], "package-lock.json", feed)).toEqual([]);
+  });
+
+  it("a version resolved from a bounded range is pinned, and the version before it is not", () => {
+    const dir = tmp();
+    installCatalog(dir);
+    const feed = loadThreatIntel(dir);
+    // MAL-2022-220: introduced 0.41.1, no versions list upstream.
+    const pinned = lockfileFeedFindings([{ name: "@dydxprotocol/solo", version: "0.41.1" }], "package-lock.json", feed);
+    expect(pinned.map((f) => f.rule)).toContain("LOCKFILE_MALICIOUS_VERSION");
+    expect(lockfileFeedFindings([{ name: "@dydxprotocol/solo", version: "0.41.0" }], "package-lock.json", feed)).toEqual(
+      [],
+    );
+  });
+
+  it("the June 2026 records the daily run never fetched are matched", () => {
+    const dir = tmp();
+    installCatalog(dir);
+    const feed = loadThreatIntel(dir);
+    expect(matchPackageIOC("pypi", "anthropy", "0.0.3", feed)).not.toBeNull();
+    expect(matchBareNpmIOC("anthropic-toolkit", "1.3.1", feed)).not.toBeNull();
+  });
+});
+
+describe("isValidFeedIOC: package values may be Unicode, never invisible", () => {
+  // One invalid line refuses the whole catalog, so this shape decides whether
+  // 258,000 indicators load. It was ASCII-only, and the first Cyrillic NuGet
+  // homoglyph in the catalog switched every one of them off.
+  const pkg = (value: string) => ({ type: "package", value, severity: "critical", confidence: 1 });
+
+  it("accepts letters, combining marks and digits outside ASCII", async () => {
+    const { isValidFeedIOC } = await import("../threat-intel.js");
+    expect(isValidFeedIOC(pkg("nuget:Gun\u0430.Forms.Net@1.0.0"))).toBe(true);
+    expect(isValidFeedIOC(pkg("nuget:Soln\u0435t.W\u0430llet\u17b5@1.0.0"))).toBe(true);
+    expect(isValidFeedIOC(pkg("--no-audit"))).toBe(true);
+  });
+
+  it.each([
+    ["a right-to-left override", "nuget:evil\u202epkg"],
+    ["a zero-width joiner", "nuget:ev\u200dil"],
+    ["a no-break space", "nuget:evil\u00a0pkg"],
+    ["an ASCII space", "nuget:evil pkg"],
+    ["a control character", "nuget:evil\u0007"],
+  ])("refuses %s", async (_label, value) => {
+    const { isValidFeedIOC } = await import("../threat-intel.js");
+    expect(isValidFeedIOC(pkg(value))).toBe(false);
+  });
 });

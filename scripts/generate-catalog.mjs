@@ -177,9 +177,11 @@ export function checkCatalogHygiene(entries) {
     for (const field of ["value", "source"]) {
       const v = entry[field];
       // A package value is a registry coordinate, not a host. Dependency-
-      // confusion malware is routinely NAMED like an internal module
-      // (`cktool.internal`, MAL-2026-2925), and reading that as a private
-      // hostname refused two genuine npm malware entries. Address and path
+      // confusion malware is routinely NAMED like an internal module (a name
+      // ending in an internal-only TLD; MAL-2026-2924 and MAL-2026-2925), and
+      // reading that as a private hostname refused two genuine npm malware
+      // entries. The name is deliberately not spelled out here: the
+      // INTERNAL_HOSTNAME self-scan rule reads it as a host. Address and path
       // shapes still apply to it, and the host shape still applies to `source`
       // and to every non-package value.
       const shapes =

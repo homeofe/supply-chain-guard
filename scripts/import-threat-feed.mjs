@@ -250,6 +250,67 @@ const DECLINE_FILE = "threat-feed-declined.json";
  */
 const MIN_DECLINE_PREFIX = 6;
 
+/** Repo-root file listing upstream records no mapping can turn into an IOC. See loadUnresolvableList. */
+const UNRESOLVABLE_FILE = "threat-feed-unresolvable.json";
+
+/** Skip reasons that leave a malware record undetected, as opposed to out of scope. */
+export const GAP_SKIP_REASONS = new Set([
+  "unsafe-package-name",
+  "unsafe-version",
+  "unmappable-version-range",
+  "no-affected-package",
+]);
+
+/**
+ * Load the list of upstream records a human has confirmed cannot be mapped.
+ *
+ * Unlike the decline list this makes NO coverage claim: every entry is a
+ * detection gap, recorded with its reason so it is visible instead of silent.
+ * It exists so that --check can be red for a NEW unmappable record without
+ * being red forever for one whose only exact form is unknown, such as a
+ * dependency-confusion record that names every version before a fix on a
+ * package the registry has since deleted. A bare-name block there would flag
+ * the victim organization's own internal package of the same name.
+ *
+ * Returns [] when the file is absent. A malformed file THROWS.
+ *
+ * @returns {Array<{id: string, reason: string}>}
+ */
+export function loadUnresolvableList(root = repoRoot) {
+  const file = join(root, UNRESOLVABLE_FILE);
+  if (!existsSync(file)) return [];
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(file, "utf8"));
+  } catch (err) {
+    throw new Error(`${UNRESOLVABLE_FILE} is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const records = parsed?.records;
+  if (!Array.isArray(records)) throw new Error(`${UNRESOLVABLE_FILE} must hold a "records" array`);
+  const seen = new Set();
+  for (const [index, record] of records.entries()) {
+    const where = `${UNRESOLVABLE_FILE} record ${index}`;
+    if (!record || typeof record !== "object") throw new Error(`${where} is not an object`);
+    for (const key of Object.keys(record)) {
+      if (key !== "id" && key !== "reason") throw new Error(`${where} has unknown key ${JSON.stringify(key)}`);
+    }
+    if (typeof record.id !== "string" || !SAFE_ADVISORY_ID.test(record.id)) {
+      throw new Error(`${where} needs an advisory id`);
+    }
+    if (typeof record.reason !== "string" || record.reason.trim().length < 20) {
+      throw new Error(`${where} (${record.id}) needs a reason of at least 20 characters`);
+    }
+    if (seen.has(record.id)) throw new Error(`${where} repeats ${record.id}`);
+    seen.add(record.id);
+  }
+  return records;
+}
+
+/** Advisory id a skip detail starts with ("MAL-2022-455 npm/x", "MAL-1 (name)"). */
+function skipAdvisoryId(item) {
+  return String(item?.detail ?? "").split(/[ (]/)[0];
+}
+
 /** Repo-root file listing publication windows a human has postponed. See loadDeferralList. */
 const DEFERRAL_FILE = "threat-feed-deferred.json";
 
@@ -285,7 +346,24 @@ const SAFE_SCOPED_NAME = /^@[A-Za-z0-9][A-Za-z0-9._+~-]*\/[A-Za-z0-9][A-Za-z0-9.
 const SAFE_MODULE_PATH = /^[A-Za-z0-9][A-Za-z0-9._+~/-]*$/;
 /** Maven coordinates are groupId:artifactId; the colon is the only addition. */
 const SAFE_MAVEN_COORDINATE = /^[A-Za-z][A-Za-z0-9_.-]*:[A-Za-z][A-Za-z0-9_.-]*$/;
-const SAFE_VERSION = /^[A-Za-z0-9][A-Za-z0-9.+~!-]*$/;
+// `_` occurs in real upstream version strings (PyPI `v_05`, MAL-2024-5408).
+const SAFE_VERSION = /^[A-Za-z0-9][A-Za-z0-9.+~!_-]*$/;
+/**
+ * npm names that START with a hyphen. The registry once accepted them, and
+ * malware squats CLI flags with them (`--legacy-peer-deps`, `--no-audit`) to
+ * catch a mistyped install. Unscoped, ASCII, no slash.
+ */
+const SAFE_NPM_DASH_NAME = /^-[A-Za-z0-9._+~-]+$/;
+/** Legacy scoped npm names whose scope or name starts with `_` or `-` (`@_wnpm/...`, `@x/-gfs`). */
+const SAFE_NPM_LEGACY_SCOPED = /^@[A-Za-z0-9_-][A-Za-z0-9._+~-]*\/[A-Za-z0-9_-][A-Za-z0-9._+~-]*$/;
+/**
+ * NuGet ids are matched case-insensitively by Unicode letter, and homoglyph
+ * typosquats spell them with Cyrillic or Greek letters (512 OpenSSF records
+ * on 2026-10-05) or hide a combining mark in them. Letters, marks, digits and
+ * the id separators only: no quotes, no whitespace, no format or bidi controls
+ * (category Cf), so nothing can terminate or visually reorder a literal.
+ */
+const SAFE_NUGET_ID = /^[\p{L}\p{N}_][\p{L}\p{M}\p{N}_.-]*$/u;
 /** Advisory ids are echoed into the `source` field. */
 const SAFE_ADVISORY_ID = /^[A-Za-z0-9-]{1,64}$/;
 
@@ -311,9 +389,15 @@ export function parseVersionRange(range) {
   return { kind: "unmappable" };
 }
 
-/** True if a package name is safe to serialize into the TypeScript feed. */
-export function isSafePackageName(name) {
+/**
+ * True if a package name is safe to serialize into the TypeScript feed.
+ * `ecosystem` (the import ecosystem key) unlocks that ecosystem's own wider
+ * shape; without it only the shared ASCII shapes apply.
+ */
+export function isSafePackageName(name, ecosystem) {
   if (typeof name !== "string" || name.length === 0 || name.length > 214) return false;
+  if (ecosystem === "npm" && (SAFE_NPM_DASH_NAME.test(name) || SAFE_NPM_LEGACY_SCOPED.test(name))) return true;
+  if (ecosystem === "nuget" && SAFE_NUGET_ID.test(name)) return true;
   return (
     SAFE_SCOPED_NAME.test(name) ||
     SAFE_PACKAGE_NAME.test(name) ||
@@ -375,7 +459,7 @@ export function mapAdvisory(advisory, { ecosystems } = {}) {
       skipped.push({ reason: "unsupported-ecosystem", detail: `${id} (${ecosystem || "none"})` });
       continue;
     }
-    if (!isSafePackageName(name)) {
+    if (!isSafePackageName(name, ecosystem)) {
       skipped.push({ reason: "unsafe-package-name", detail: `${id} (${JSON.stringify(name)})` });
       continue;
     }
@@ -491,7 +575,7 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
       skipped.push({ reason: "unsupported-ecosystem", detail: `${id} (${osvEcosystem || "none"})` });
       continue;
     }
-    if (!isSafePackageName(name)) {
+    if (!isSafePackageName(name, mappedEcosystem.ecosystem)) {
       skipped.push({ reason: "unsafe-package-name", detail: `${id} (${JSON.stringify(name)})` });
       continue;
     }
@@ -514,7 +598,23 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
     const wholePackage = ranges.some(isWholePackageOsvRange) && !pinListedVersions;
     const mappedVersions = wholePackage ? [undefined] : versions;
     if (mappedVersions.length === 0) {
-      skipped.push({ reason: "unmappable-version-range", detail: `${id} ${osvEcosystem}/${name}` });
+      const skip = { reason: "unmappable-version-range", detail: `${id} ${osvEcosystem}/${name}` };
+      // npm versions are semver, so a bounded range can be settled exactly
+      // against the registry's version history (resolveBoundedNpmRanges).
+      // Everything that resolution needs travels with the skip.
+      if (mappedEcosystem.ecosystem === "npm" && ranges.length > 0 && ranges.every(isEvaluableNpmRange)) {
+        skip.resolve = {
+          id,
+          name,
+          ranges,
+          firstSeen,
+          source,
+          confidence,
+          origins,
+          queueDate: typeof record._indexModified === "string" ? record._indexModified.slice(0, 10) : undefined,
+        };
+      }
+      skipped.push(skip);
       continue;
     }
 
@@ -546,6 +646,176 @@ export function mapOsvMalwareRecord(record, { ecosystems } = {}) {
   }
 
   return { entries, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// Bounded npm ranges, resolved against the registry
+// ---------------------------------------------------------------------------
+
+export const NPM_REGISTRY_URL = "https://registry.npmjs.org";
+
+const SEMVER_SHAPE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+
+/** Parse a semver string, or null. `0` (OSV's "from the beginning") is 0.0.0. */
+export function parseSemver(version) {
+  if (version === "0") return { nums: [0, 0, 0], pre: [] };
+  const m = typeof version === "string" ? SEMVER_SHAPE.exec(version) : null;
+  return m ? { nums: [Number(m[1]), Number(m[2]), Number(m[3])], pre: m[4] ? m[4].split(".") : [] } : null;
+}
+
+/** semver precedence (build metadata ignored), negative / zero / positive. */
+export function compareSemver(a, b) {
+  for (let i = 0; i < 3; i++) if (a.nums[i] !== b.nums[i]) return a.nums[i] - b.nums[i];
+  if (a.pre.length === 0 || b.pre.length === 0) return (b.pre.length > 0) - (a.pre.length > 0);
+  for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
+    const x = a.pre[i];
+    const y = b.pre[i];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    const xn = /^\d+$/.test(x);
+    const yn = /^\d+$/.test(y);
+    if (xn && yn) {
+      if (Number(x) !== Number(y)) return Number(x) - Number(y);
+    } else if (xn !== yn) {
+      return xn ? -1 : 1;
+    } else if (x !== y) {
+      return x < y ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
+/** True for an OSV range whose every event bound parses as semver. */
+export function isEvaluableNpmRange(range) {
+  if (!range || !["SEMVER", "ECOSYSTEM"].includes(range.type)) return false;
+  const events = Array.isArray(range.events) ? range.events : [];
+  return (
+    events.length > 0 &&
+    events.every((event) => {
+      const [key, value] = Object.entries(event ?? {})[0] ?? [];
+      return ["introduced", "fixed", "last_affected"].includes(key) && parseSemver(value) !== null;
+    })
+  );
+}
+
+/**
+ * Does an OSV range list cover this version? OSV's own evaluation: events in
+ * order open an interval at `introduced` and close it before `fixed` or at
+ * `last_affected`; an interval left open runs to infinity.
+ */
+export function osvRangesAffect(version, ranges) {
+  const v = parseSemver(version);
+  if (!v) return false;
+  for (const range of ranges) {
+    let open = null;
+    for (const event of range.events) {
+      if ("introduced" in event) {
+        open = parseSemver(event.introduced);
+      } else if (open && ("fixed" in event || "last_affected" in event)) {
+        const end = parseSemver(event.fixed ?? event.last_affected);
+        const below = "fixed" in event ? compareSemver(v, end) < 0 : compareSemver(v, end) <= 0;
+        if (compareSemver(v, open) >= 0 && below) return true;
+        open = null;
+      }
+    }
+    if (open && compareSemver(v, open) >= 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Versions a range list names explicitly as affected, without any registry:
+ * a non-zero `introduced` and every `last_affected`. Used when the registry no
+ * longer knows the package, so at least the provably malicious versions pin.
+ */
+export function explicitRangeVersions(ranges) {
+  const out = new Set();
+  for (const range of ranges) {
+    for (const event of range.events) {
+      if ("introduced" in event && event.introduced !== "0") out.add(event.introduced);
+      if ("last_affected" in event) out.add(event.last_affected);
+    }
+  }
+  return [...out];
+}
+
+/**
+ * Settle npm records whose range is bounded and that carry no `versions` list.
+ *
+ * The range is evaluated against every version the registry has ever
+ * published (the `time` map, which keeps unpublished versions too), and each
+ * affected one becomes an exact pin. NEVER a bare name: these ranges are how
+ * OpenSSF encodes a hijacked LEGITIMATE package (`@solana/web3.js` 1.95.6 and
+ * 1.95.7 among them), so a bare name would block every clean release.
+ *
+ * A package the registry no longer knows (404) pins only the versions the
+ * range names explicitly. A record that yields no version at all stays
+ * skipped. Any other registry failure rejects the run: a resolver that
+ * silently skipped on an outage would turn known malware into a skip count.
+ */
+export async function resolveBoundedNpmRanges(
+  pending,
+  { fetchImpl = globalThis.fetch, timeoutMs = 15000, concurrency = 8, registryUrl = NPM_REGISTRY_URL } = {},
+) {
+  const entries = [];
+  const unresolved = [];
+  const documents = new Map();
+  const names = [...new Set(pending.map((p) => p.name))];
+  await mapConcurrent(names, concurrency, async (name) => {
+    const url = `${registryUrl}/${name.replace("/", "%2f")}`;
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        headers: { "User-Agent": "supply-chain-guard-feed-import", Accept: "application/json" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (err) {
+      throw new Error(`npm registry request failed for ${name}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    if (response.status === 404) {
+      documents.set(name, null);
+      return;
+    }
+    if (!response.ok) throw new Error(`npm registry returned HTTP ${response.status} for ${name}`);
+    const doc = await response.json();
+    const published = Object.keys(doc?.time ?? {}).filter(
+      (key) => !["created", "modified", "unpublished"].includes(key),
+    );
+    documents.set(name, published);
+  });
+
+  for (const item of pending) {
+    const published = documents.get(item.name);
+    const versions =
+      published === null
+        ? explicitRangeVersions(item.ranges)
+        : published.filter((version) => osvRangesAffect(version, item.ranges));
+    const safe = versions.filter((version) => SAFE_VERSION.test(version));
+    if (safe.length === 0) {
+      unresolved.push({
+        reason: "unmappable-version-range",
+        detail: `${item.id} npm/${item.name}${published === null ? " (not on the registry)" : " (no published version in range)"}`,
+      });
+      continue;
+    }
+    for (const version of safe) {
+      const entry = {
+        type: "package",
+        value: feedValue("", item.name, version),
+        severity: "critical",
+        confidence: item.confidence,
+        source: item.source,
+      };
+      if (item.firstSeen) entry.firstSeen = item.firstSeen;
+      entry._ecosystemPrefix = "";
+      entry._name = item.name;
+      entry._discoverySource = DISCOVERY_SOURCE.OPENSSF;
+      entry._origins = item.origins;
+      if (item.queueDate) entry._queueDate = item.queueDate;
+      entries.push(entry);
+    }
+  }
+  return { entries, unresolved, packagesChecked: names.length };
 }
 
 /** Map several OpenSSF OSV records. */
@@ -2208,6 +2478,7 @@ export async function importUpstreamFeed({
   // --dry-run. Only its APPLICATION is conditional, so a malformed file can never
   // be hidden by happening to run a slice.
   const deferralList = loadDeferralList(root, { now });
+  const unresolvableList = loadUnresolvableList(root);
   const deferralsActive = deferralsApply({ since, until, ignoreDeferrals });
 
   // 1. Fetch every enabled discovery source. Promise.all is deliberate: any
@@ -2262,6 +2533,33 @@ export async function importUpstreamFeed({
       mapped: normalized.entries.length,
       skipped: normalized.skipped.length,
     };
+  }
+
+  // 2a. Bounded npm ranges without a versions list: settle them against the
+  // registry's version history into exact pins (resolveBoundedNpmRanges).
+  let rangeResolution = { entries: [], unresolved: [], packagesChecked: 0 };
+  const pendingRanges = skipped.filter((item) => item.resolve).map((item) => item.resolve);
+  if (pendingRanges.length > 0) {
+    rangeResolution = await resolveBoundedNpmRanges(pendingRanges, { fetchImpl, timeoutMs });
+    const rest = skipped.filter((item) => !item.resolve);
+    skipped.length = 0;
+    for (const item of rest) skipped.push(item);
+    for (const item of rangeResolution.unresolved) skipped.push(item);
+    for (const entry of rangeResolution.entries) mapped.push(entry);
+  }
+
+  // 2b. Which skips are detection gaps, and which of those a human has
+  // already recorded as unresolvable.
+  const acknowledgedIds = new Set(unresolvableList.map((record) => record.id));
+  const gapIds = new Set();
+  let unmapped = 0;
+  let acknowledgedUnresolvable = 0;
+  for (const item of skipped) {
+    if (!GAP_SKIP_REASONS.has(item.reason)) continue;
+    const id = skipAdvisoryId(item);
+    gapIds.add(id);
+    if (acknowledgedIds.has(id)) acknowledgedUnresolvable++;
+    else unmapped++;
   }
 
   const { entries: coalescedCandidates, coalesced } = coalesceCandidates(mapped);
@@ -2405,6 +2703,18 @@ export async function importUpstreamFeed({
     extensionsCollapsed: extensionShape.collapsed,
     skipped: summarize(skipped),
     skippedTotal: skipped.length,
+    // Bounded npm ranges settled into exact pins against the registry.
+    rangesResolvedToPins: rangeResolution.entries.length,
+    rangePackagesChecked: rangeResolution.packagesChecked,
+    // Gap skips (GAP_SKIP_REASONS) nobody has recorded: --check fails on these.
+    unmapped,
+    unmappedDetails: skipped
+      .filter((item) => GAP_SKIP_REASONS.has(item.reason) && !acknowledgedIds.has(skipAdvisoryId(item)))
+      .map((item) => `${item.reason}: ${item.detail}`),
+    acknowledgedUnresolvable,
+    // Recorded as unresolvable but no longer skipped. Only a snapshot sees
+    // every record, so only a snapshot can say an acknowledgement is stale.
+    acknowledgedStale: osvSnapshot ? [...acknowledgedIds].filter((id) => !gapIds.has(id)) : [],
     corroboratedByOsv: [...osv.ids.keys()].length,
     osvAvailable: osv.ok,
     osvError: osv.error ?? null,
@@ -2599,9 +2909,12 @@ function ecosystemList(raw) {
  * detects. A fresher one is import latency, which the daily run closes, and
  * counting it would turn the gate red every day until nobody reads it.
  * Deferred candidates are NOT a pass either, because a deferral is a recorded gap.
+ * Nor is an upstream record the mapping cannot take (`unmapped`): it has no
+ * date to wait for, and no later run will map it without a code change or a
+ * human recording it in threat-feed-unresolvable.json.
  */
 export function checkFailed(report) {
-  return report.overdue > 0 || report.deferred > 0;
+  return report.overdue > 0 || report.deferred > 0 || (report.unmapped ?? 0) > 0;
 }
 
 export function parseArgs(argv) {
@@ -2760,6 +3073,19 @@ if (isMain) {
       console.log(`  Holding pkgs filtered:${report.holdingPackagesFiltered} (inactive 0.0.1-security placeholders)`);
     }
     console.log(`  Skipped:              ${report.skippedTotal} ${JSON.stringify(report.skipped)}`);
+    if (report.rangePackagesChecked > 0) {
+      console.log(`  Ranges via registry:  ${report.rangesResolvedToPins} pin(s) from ${report.rangePackagesChecked} package(s)`);
+    }
+    console.log(
+      `  Unmapped gaps:        ${report.unmapped}` +
+        (report.acknowledgedUnresolvable > 0
+          ? ` (+${report.acknowledgedUnresolvable} recorded in ${UNRESOLVABLE_FILE})`
+          : ""),
+    );
+    for (const line of report.unmappedDetails.slice(0, 20)) console.log(`    ${line}`);
+    if (report.acknowledgedStale.length > 0) {
+      console.log(`  Stale in ${UNRESOLVABLE_FILE}: ${report.acknowledgedStale.join(", ")} (now mapped; remove them)`);
+    }
     console.log(`  OSV corroboration:    ${report.osvAvailable ? `${report.corroboratedByOsv} confirmed` : `unavailable (${report.osvError})`}`);
     console.log(
       `  New entries:          ${report.added} (${report.addedToBundle} to the bundle, ${report.addedToCatalog} to the catalog)${
@@ -2815,7 +3141,8 @@ if (isMain) {
     console.error(
       `\n  CHECK FAILED: ${report.overdue} upstream malware entr${report.overdue === 1 ? "y has" : "ies have"} been missing from both stores ` +
         `for more than ${report.checkGraceDays} day(s) (${report.added} missing in total: ${report.addedToBundle} bundle-bound, ` +
-        `${report.addedToCatalog} catalog-bound), plus ${report.deferred} held back by ${DEFERRAL_FILE}.\n` +
+        `${report.addedToCatalog} catalog-bound), plus ${report.deferred} held back by ${DEFERRAL_FILE} ` +
+        `and ${report.unmapped} upstream record(s) no mapping can take.\n` +
         `  Import them: npm run feed:import -- ${report.osvSnapshot ? "--osv-snapshot" : "<same window>"}\n`,
     );
     process.exit(1);

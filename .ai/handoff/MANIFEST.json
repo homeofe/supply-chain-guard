@@ -3,18 +3,18 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791200278",
-    "timestamp": "2026-10-05T11:37:58Z",
-    "commit": "2dbf1bc",
+    "session_id": "cli-1791202006",
+    "timestamp": "2026-10-05T12:06:46Z",
+    "commit": "361f11e",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:bc89564a838a3be627f5c8561e5b28536ecf33aec014f941b5251053ffef0173",
-      "updated": "2026-10-05T11:37:50Z",
-      "lines": 13575,
-      "summary": "The owner asked for every entry to be checked after the daily run found two June 2026 records in neither store."
+      "checksum": "sha256:0b85dd1639abe0f2371be649d37391c0ad4912efab8ab7b6323d1b512d730ad5",
+      "updated": "2026-10-05T12:06:36Z",
+      "lines": 13615,
+      "summary": "Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the importer skipped as unmappable are now mapped, except 21 recorded gaps."
     },
     "NEXT_ACTIONS.md": {
       "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:18c5191a4963b28d1b63652ef03358cac2e29d06dc9e8f21181d085d7f4b929c",
-      "updated": "2026-10-05T11:37:55Z",
+      "checksum": "sha256:6006b05245eb6f4ed77326ae87d1435e0e9ba8a63d919310ea139f1ae08b42a0",
+      "updated": "2026-10-05T12:06:43Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:768fd76d95cb040a97a25aa887484cc511a6d481040888d45bbcf3a476171825",
-      "updated": "2026-10-05T11:37:55Z",
+      "checksum": "sha256:28885c5818357ae42ddd7d4ce4f065ffca9124a362bdacaaf2846c88e62b2c11",
+      "updated": "2026-10-05T12:06:43Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The owner asked for every entry to be checked after the daily run found two June 2026 records in neither store. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Follow-up to the full reconcile (PR 382): the 1,077 OpenSSF records the importer skipped as unmappable are now mapped, except 21 recorded gaps. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 914,
-    "manifest_plus_core": 202330,
-    "full_read": 216044
+    "manifest_only": 930,
+    "manifest_plus_core": 202917,
+    "full_read": 216631
   }
 }

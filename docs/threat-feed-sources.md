@@ -98,10 +98,43 @@ is still in neither store. Younger records are import latency that the daily
 run closes. `.github/workflows/feed-reconcile.yml` runs it every day, so a gap
 of this kind turns red instead of staying silent.
 
-Records the mapping cannot take are reported as `skipped` and are NOT judged by
-the check yet: names outside the safe charset (NuGet homoglyph typosquats with
-Cyrillic letters) and npm records with a bounded range but no explicit version
-list. On 2026-10-05 that was 543 and 533 records.
+The check also fails on any record the mapping cannot take (`unmapped`), since
+no later run maps it without a code change. Three classes that used to be
+skipped are now mapped:
+
+- **Names outside the ASCII charset.** NuGet ids are Unicode and homoglyph
+  typosquats spell them with Cyrillic letters or hide a combining mark in them
+  (513 records); npm names squat CLI flags (`--no-audit`) or use legacy scopes
+  (30 records). Letters, combining marks and digits are accepted per
+  ecosystem; whitespace, controls and format characters (bidi overrides,
+  zero-width joiners) never are. The client's `isValidFeedIOC` accepts the same
+  set: one line it refuses makes it refuse the whole catalog.
+- **npm records with a bounded range and no `versions` list** (533 records).
+  The range is evaluated against every version the registry has ever
+  published (its `time` map keeps unpublished versions), and each affected
+  version becomes an exact pin, never a bare name: this is how OpenSSF encodes
+  a hijacked legitimate package. A package the registry has deleted pins the
+  versions the range names explicitly. Any registry failure other than 404
+  rejects the run.
+- **Version strings with `_`** (PyPI `v_05`).
+
+What still cannot be mapped is recorded in `threat-feed-unresolvable.json` (see
+below) instead of being left to turn the check red forever.
+
+## The unresolvable list
+
+`threat-feed-unresolvable.json` at the repository root lists upstream records
+that no mapping can turn into an IOC, each with its advisory `id` and a
+`reason` of at least 20 characters. Unlike the decline list it claims NO
+coverage: every entry is a detection gap, written down so it is visible rather
+than silent. `--check` fails on any unmapped record NOT on the list, and a
+snapshot run reports a listed id that has become mappable as stale. A malformed
+file throws.
+
+The first entries (2026-10-05) are 21 dependency-confusion records from 2022
+that name every version before a fix of packages the npm registry has since
+deleted. No exact version is known, and a bare-name block would flag the
+victim organization's own internal package of the same name.
 
 ### 3. OSV.dev querybatch (GitHub corroboration only)
 
