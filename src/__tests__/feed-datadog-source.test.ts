@@ -251,6 +251,7 @@ describe("the DataDog source in a full run", () => {
       "/commits?path=": [{ commit: { committer: { date: "2026-10-02T00:00:00Z" } } }],
       "samples/npm/manifest.json": { "scg-gone": null, "scg-live": null },
       "samples/pypi/manifest.json": {},
+      "samples/ide_extensions/manifest.json": {},
       // Walked per category, as the real tree API is truncated on one call.
       "git/trees/main": { tree: [{ path: "samples", type: "tree", sha: "sha-samples" }] },
       "git/trees/sha-samples": { tree: [{ path: "npm", type: "tree", sha: "sha-npm" }] },
@@ -310,5 +311,98 @@ describe("the DataDog source in a full run", () => {
     const { parseArgs } = await load();
     expect(parseArgs([]).useDatadog).toBe(true);
     expect(parseArgs(["--no-datadog"]).useDatadog).toBe(false);
+  });
+});
+
+describe("DataDog IDE extensions", () => {
+  it("parses publisher.name/version.vsix sample paths", async () => {
+    const { parseDatadogExtensionSamples } = await load();
+    const map = parseDatadogExtensionSamples([
+      "samples/ide_extensions/compromised_lib/scgpub.scg-ext/1.84.0.vsix",
+      "samples/ide_extensions/malicious_intent/scgpub.other/0.0.1.vsix",
+      "samples/ide_extensions/manifest.json",
+    ]);
+    expect([...map.get("scgpub.scg-ext")]).toEqual(["1.84.0"]);
+    expect([...map.get("scgpub.other")]).toEqual(["0.0.1"]);
+  });
+
+  // garytyler.darcula-pycharm 1.0.0: the theme's current release since 2019,
+  // 367,801 installs, still listed. A version still published anywhere is
+  // never pinned on this dataset's word alone.
+  it.each([
+    [{ inVscode: true, inOpenVsx: false }, []],
+    [{ inVscode: false, inOpenVsx: true }, []],
+    [{ inVscode: true, inOpenVsx: true }, []],
+    // Removed from both, the usual fate of a malicious release (amazon-q-vscode 1.84.0).
+    [{ inVscode: false, inOpenVsx: false }, ["vscode:", "openvsx:"]],
+  ])("places %j under %j", async (placement, prefixes) => {
+    const { extensionPrefixesFor } = await load();
+    expect(extensionPrefixesFor(placement)).toEqual(prefixes);
+  });
+
+  it("asks both marketplaces about each sampled version", async () => {
+    const { probeExtensionVersions } = await load();
+    const fetchImpl = async (url: string | URL, init?: { method?: string }) => {
+      const u = String(url);
+      if (init?.method === "POST") {
+        return json({ results: [{ extensions: [{ versions: [{ version: "1.0.0" }, { version: "2.0.0" }] }] }] });
+      }
+      return u.endsWith("/2.0.0") ? json({}) : json({}, 404);
+    };
+    expect(await probeExtensionVersions("scgpub.scg-ext", ["1.0.0", "2.0.0", "9.9.9"], { fetchImpl })).toEqual([
+      { version: "1.0.0", inVscode: true, inOpenVsx: false },
+      { version: "2.0.0", inVscode: true, inOpenVsx: true },
+      { version: "9.9.9", inVscode: false, inOpenVsx: false },
+    ]);
+  });
+
+  // One marketplace failing at a time: a test failing both would let either
+  // check be deleted while the other still throws.
+  it("rejects the run when the VS Code Marketplace answers with an error", async () => {
+    const { probeExtensionVersions } = await load();
+    const fetchImpl = async (_url: string | URL, init?: { method?: string }) =>
+      init?.method === "POST" ? json({}, 503) : json({}, 404);
+    await expect(probeExtensionVersions("scgpub.scg-ext", ["1.0.0"], { fetchImpl })).rejects.toThrow(
+      /VS Code Marketplace returned HTTP 503/,
+    );
+  });
+
+  it("rejects the run when Open VSX answers with an error", async () => {
+    const { probeExtensionVersions } = await load();
+    const fetchImpl = async (_url: string | URL, init?: { method?: string }) =>
+      init?.method === "POST" ? json({ results: [{ extensions: [] }] }) : json({}, 503);
+    await expect(probeExtensionVersions("scgpub.scg-ext", ["1.0.0"], { fetchImpl })).rejects.toThrow(
+      /Open VSX returned HTTP 503/,
+    );
+  });
+
+  it("reports a still-published version instead of pinning it", async () => {
+    const { mapDatadogDataset } = await load();
+    const { entries, stillPublished } = mapDatadogDataset(
+      {
+        manifests: {},
+        dates: new Map(),
+        extensions: [{ id: "scgpub.theme", placements: [{ version: "1.0.0", inVscode: true, inOpenVsx: false }] }],
+      },
+      { now: new Date("2026-10-05T08:00:00Z") },
+    );
+    expect(entries).toEqual([]);
+    expect(stillPublished).toEqual(["scgpub.theme@1.0.0 (vscode)"]);
+  });
+
+  it("maps a version removed from both marketplaces to a pin on each, never a whole-extension block", async () => {
+    const { mapDatadogDataset } = await load();
+    const { entries } = mapDatadogDataset(
+      {
+        manifests: {},
+        dates: new Map(),
+        extensions: [{ id: "scgpub.scg-ext", placements: [{ version: "1.84.0", inVscode: false, inOpenVsx: false }] }],
+      },
+      { now: new Date("2026-10-05T08:00:00Z") },
+    );
+    expect(entries.map((e: { value: string }) => e.value)).toEqual([
+      "vscode:scgpub.scg-ext@1.84.0",
+      "openvsx:scgpub.scg-ext@1.84.0",
+    ]);
   });
 });

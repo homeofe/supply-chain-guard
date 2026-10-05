@@ -37,6 +37,25 @@ This tool is designed to detect malicious patterns in code. If you find a way to
 - Supply-chain risks in our own dependencies
 - Correlation engine bypasses (findings that should link but don't)
 
+## Known open findings
+
+These scanner alerts on this repository are open on purpose, and why:
+
+- **OpenSSF Scorecard: Branch-Protection and Code-Review.** `main` requires
+  pull requests and green required checks, and administrators are not exempt.
+  It does not require an approving review, because the project has a single
+  maintainer and a required approval would block every merge. Both checks stay
+  below the maximum until a second maintainer can review.
+- **Dependabot alerts in `.github/publish-toolchain/`, and Scorecard's
+  Vulnerabilities check, which counts them.** They concern dependencies that
+  npm itself bundles (`undici`, `ip-address`, `brace-expansion`,
+  `http-cache-semantics`). Bundled dependencies cannot be overridden, and no
+  npm release ships fixed versions yet, so the alerts stay open rather than
+  being dismissed. That npm runs only inside the release job. Its audit gate
+  fails on high severity, and `.github/publish-toolchain/audit-exceptions.json`
+  lists each high-severity advisory with a reason and an expiry date, so the
+  gate fails again when the expiry passes.
+
 ## Recognition
 
 We appreciate responsible disclosure and will credit reporters in our release notes (unless you prefer to remain anonymous).

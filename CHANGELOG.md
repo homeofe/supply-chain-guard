@@ -9,6 +9,18 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Added
 
+- IDE extensions from the DataDog dataset: 116 extension versions that both
+  the VS Code Marketplace and Open VSX have since removed, pinned under both
+  prefixes (232 entries), among them the Amazon Q Developer extension 1.84.0,
+  which no other source carried (curated, so it stays in the offline bundle).
+  A sampled version that is still published is not pinned on this dataset's
+  word alone and is listed for review instead: six on 2026-10-05, among them a
+  theme whose listed version is its current release since 2019 with over
+  360,000 installs. The dataset's AI skills are not imported: they carry no
+  identity a scan could match, and many are proof-of-concept fixtures.
+- `SECURITY.md` lists the alerts that stay open on purpose (Scorecard
+  Branch-Protection and Code-Review for a single maintainer, and the
+  advisories in dependencies npm bundles into the publish toolchain).
 - A third discovery source: the DataDog malicious-software-packages-dataset
   (npm and PyPI, Apache-2.0), read whole on every run and part of
   `npm run feed:reconcile`. It added 6,751 entries no other source carried

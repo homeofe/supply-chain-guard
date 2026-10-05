@@ -6995,6 +6995,56 @@ describe("Campaign Signatures", () => {
   });
 
   // =================================================================
+  // Amazon Q Developer extension 1.84.0 (DataDog dataset, imported 2026-10-05)
+  // =================================================================
+
+  describe("Amazon Q Developer extension 1.84.0", () => {
+    // The release was removed from both marketplaces after the incident, which
+    // is what lets a DataDog-only verdict be pinned at all.
+    it("flags an installed copy of the 1.84.0 release", async () => {
+      const installed = path.join(tempDir, "amazonwebservices.amazon-q-vscode-1.84.0");
+      fs.mkdirSync(installed, { recursive: true });
+      fs.writeFileSync(
+        path.join(installed, "package.json"),
+        JSON.stringify({ name: "amazon-q-vscode", publisher: "amazonwebservices", version: "1.84.0", engines: { vscode: "^1.83.0" } })
+      );
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.some((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toBe(true);
+    });
+
+    // Controls: Amazon Q is a legitimate extension; any other release is clean.
+    // And a DataDog-listed version that is STILL published is not pinned:
+    // garytyler.darcula-pycharm 1.0.0 is that theme's current release since
+    // 2019, with hundreds of thousands of installs.
+    it("leaves a clean Amazon Q release and a still-published DataDog listing alone", async () => {
+      for (const [publisher, name, version] of [
+        ["amazonwebservices", "amazon-q-vscode", "1.85.0"],
+        ["garytyler", "darcula-pycharm", "1.0.0"],
+      ]) {
+        const installed = path.join(tempDir, `${publisher}.${name}-${version}`);
+        fs.mkdirSync(installed, { recursive: true });
+        fs.writeFileSync(
+          path.join(installed, "package.json"),
+          JSON.stringify({ name, publisher, version, engines: { vscode: "^1.83.0" } })
+        );
+      }
+      const report = await scan({ target: tempDir, format: "text" });
+      expect(report.findings.filter((f) => f.rule === "VSCODE_MALICIOUS_EXTENSION")).toEqual([]);
+    });
+
+    it("keeps both registry pins in the bundle", () => {
+      const values = getBundledFeed()
+        .filter((i) => i.campaign === "Amazon Q Developer extension 1.84.0")
+        .map((i) => i.value)
+        .sort();
+      expect(values).toEqual([
+        "openvsx:amazonwebservices.amazon-q-vscode@1.84.0",
+        "vscode:amazonwebservices.amazon-q-vscode@1.84.0",
+      ]);
+    });
+  });
+
+  // =================================================================
   // Nx Console nrwl.angular-console 18.95.0 extension identity (May 2026)
   // =================================================================
 

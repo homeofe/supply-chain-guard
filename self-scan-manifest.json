@@ -3,7 +3,7 @@
   "algorithm": "sha256",
   "files": {
     "src/__tests__/beacon-miner.test.ts": "123372c301f87ca318a7dfcaadb36939d6d090d65e8c69e597f18cc8fe970a72",
-    "src/__tests__/campaigns.test.ts": "e7558337f15916d714d82f2742a9708f1b02291190a274a1d714e9b2c9aef6e1",
+    "src/__tests__/campaigns.test.ts": "499e01d6b2bd2ff697786232537dc251dd289e15ab575ac11f3d36e3e7abdecd",
     "src/__tests__/core-broad-gap-matchers.test.ts": "e10baded0e872836ace16f36b367b9254d0b9e0100d0b5b73df48c1f5a1fff8c",
     "src/__tests__/file-digest.test.ts": "d243581d251ad76b89a66605a31af39276f16aabc15db005f5963ce7ac2a8ccc",
     "src/__tests__/go-scanner.test.ts": "555adcc726c461448a402b1e7b01f7597db62818fc002b13713def957c47ad73",
@@ -31,7 +31,7 @@
     "src/reporter.ts": "116d149c1d954e06b2a36ea4d79d0200441d5daaf12044d8270d4dd42704c82a",
     "src/scanner.ts": "ae9017e97f61386ba123b659caa63dad2faa2f7d577e59354aa395134dfb39bd",
     "src/secret-simulator.ts": "cd41a74b10a9e08fc0245a7d93e3c8059591c7614dc580599acd5cfe25089693",
-    "src/threat-intel.ts": "c7d9fcd47e029058fa0e703dea5372123d1b026de543a8e26948622d0467bd93",
+    "src/threat-intel.ts": "f8a11e3e76102947b197ce11b5d7ede4179aee9fb8aa96ac46f9c4e7c68db0db",
     "src/workflow-modeler.ts": "9da285d7f2e19bf800c5c4018b3469c8b66c525d50818973f7726e4d4bdd11be"
   }
 }
