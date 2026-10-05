@@ -3,30 +3,30 @@
   "project": "supply-chain-guard",
   "last_session": {
     "agent": "handoff-refresh",
-    "session_id": "cli-1791214090",
-    "timestamp": "2026-10-05T15:28:10Z",
-    "commit": "63a8da8",
+    "session_id": "cli-1791215348",
+    "timestamp": "2026-10-05T15:49:08Z",
+    "commit": "96d15d5",
     "phase": "idle",
     "duration_minutes": 0
   },
   "files": {
     "STATUS.md": {
-      "checksum": "sha256:8d58bce14d7e0554fe70bc4509b3dc6349139dfe12c73720c4897f823e456855",
-      "updated": "2026-10-05T15:27:29Z",
-      "lines": 13774,
-      "summary": "The owner asked for every remaining item to be fixed or implemented."
+      "checksum": "sha256:1035d2ef645a81c55ee77b47327f0ab43e35c2d91260bcd7fa96fdca2c0a8bf2",
+      "updated": "2026-10-05T15:48:56Z",
+      "lines": 13802,
+      "summary": "Minor release: the full reconcile of all three sources (PRs 381 to 389)."
     },
     "NEXT_ACTIONS.md": {
-      "checksum": "sha256:3c56dc9b1f39b018e6615972f7ed880250dc0c66e4018d6eff2ba88184a7bb39",
-      "updated": "2026-10-04T08:06:40Z",
+      "checksum": "sha256:f27868897c5e9bc22e60d6747ee5d4deac7d90f86f523838f42e72039d20e081",
+      "updated": "2026-10-05T15:48:24Z",
       "lines": 231,
       "summary": "Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete."
     },
     "LOG.md": {
-      "checksum": "sha256:59c3df88a2e9056394664ba2e3f91d08ae941fd0c266a22816fcccc73fc903a5",
-      "updated": "2026-10-04T08:05:28Z",
+      "checksum": "sha256:ba230d1d6f20a4dd8c785196a546e16e83459121f78703df6d43d8946ecad57a",
+      "updated": "2026-10-05T15:49:01Z",
       "lines": 90,
-      "summary": "Latest entry: [2026-10-04] v6.4.3"
+      "summary": "Latest entry: [2026-10-05] v6.5.0"
     },
     "LOG-ARCHIVE.md": {
       "checksum": "sha256:e566ec8a4b80bba4b488aa69c5bf0e2a4ef1753046f18b81afe80a6846c73149",
@@ -41,14 +41,14 @@
       "summary": "LOG archive index: 5 entries."
     },
     "DASHBOARD.md": {
-      "checksum": "sha256:cfc45f721610492576ed77112b35438a85fd64fcabe2d4be9a7c889e00c52730",
-      "updated": "2026-10-05T14:20:47Z",
+      "checksum": "sha256:d3892290000096516a8265b40c1b4d4612b97e27ecb1a6ad453556ef6319ed0c",
+      "updated": "2026-10-05T15:49:01Z",
       "lines": 76,
       "summary": "Current package inventory and CI gate wiring are generated below."
     },
     "TRUST.md": {
-      "checksum": "sha256:44aedca75f690f0048a24bed61087b515ae2cebb182369d52d07139e29efd0ec",
-      "updated": "2026-10-05T14:20:47Z",
+      "checksum": "sha256:53d42133a482af5c4dde3b80e19f740a01720e76e11e66258ff3526b2e8cd8b8",
+      "updated": "2026-10-05T15:49:01Z",
       "lines": 65,
       "summary": "Provenance and status are tracked independently."
     },
@@ -77,10 +77,10 @@
       "summary": "PII allowlist: 0 entries."
     }
   },
-  "quick_context": "The owner asked for every remaining item to be fixed or implemented. Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
+  "quick_context": "Minor release: the full reconcile of all three sources (PRs 381 to 389). Three tasks are ready (T-009, T-011, T-012), none is blocked, and T-008/T-010/T-013/T-014/T-015/T-016/T-017/T-018/T-019/T-020 are complete.",
   "token_budget": {
-    "manifest_only": 893,
-    "manifest_plus_core": 205252,
-    "full_read": 218966
+    "manifest_only": 895,
+    "manifest_plus_core": 205651,
+    "full_read": 219366
   }
 }
