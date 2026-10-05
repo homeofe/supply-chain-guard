@@ -1,0 +1,57 @@
+name: Feed completeness
+
+# Proves, every day, that the two committed stores (the bundle and the catalog)
+# hold every malicious-package record OpenSSF publishes through OSV.
+#
+# Why it exists: the daily import discovers OpenSSF records through a modified-
+# date window, so a record nobody touched after that adapter was introduced was
+# never fetched by any run. Nothing compared the stores against the complete
+# upstream snapshot, and the first full comparison on 2026-10-05 found 164,239
+# entries missing from both stores. This workflow is that comparison, run on a
+# schedule so a gap of the same kind turns red instead of staying silent.
+#
+# `npm run feed:reconcile` downloads OSV's complete per-ecosystem all.zip
+# exports, maps every MAL record with the importer's own rules and dedupes it
+# against both stores. It writes nothing and fails when any record has been
+# upstream for more than two days (--grace-days) and is still missing. Younger
+# records are import latency that the daily import closes.
+#
+# Deliberately NOT a pull-request check: upstream publishes new records every
+# day, so its verdict depends on the date, not on the change under review, and
+# it must never block a merge.
+
+on:
+  schedule:
+    - cron: "37 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feed-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: OpenSSF snapshot reconcile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Compare both stores against the complete OpenSSF snapshot
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run feed:reconcile

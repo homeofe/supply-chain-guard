@@ -71,6 +71,38 @@ discovered first. The repository and records are Apache-2.0.
 - The modified-index date controls backlog age. An older report changed today is
   newly discoverable today and is not treated as already expired.
 
+#### The complete snapshot (`--osv-snapshot`, `npm run feed:reconcile`)
+
+`GET https://storage.googleapis.com/osv-vulnerabilities/<ecosystem>/all.zip`
+
+The windowed index above only ever sees records that CHANGED inside the window.
+A record nobody touched after this adapter was introduced (2026-08-31) was
+therefore never fetched by any run, and nothing compared the stores against the
+complete upstream set. The first full comparison, on 2026-10-05, found 164,239
+entries missing from both stores, first published between 2021 and 2026,
+121,698 of them in 2025. Among them were a PyPI reverse shell and an npm
+credential stealer published in June 2026.
+
+`--osv-snapshot` reads every ecosystem's complete export instead: no date
+window, no GitHub adapter and no token. The records go through the same
+mapping, coalescing, dedupe, decline list and routing as any other run, so an
+old record lands in the catalog by its `firstSeen`. The mode is fail-closed like
+the windowed one: one unavailable archive, one malformed zip structure or one
+record whose id does not match its file name rejects the whole snapshot, and an
+npm export without a single `MAL-` record is refused as a broken export rather
+than read as "no malware".
+
+`npm run feed:reconcile` is the same run with `--check`: a dry run that exits 1
+when any record has been upstream for more than `--grace-days` (default 2) and
+is still in neither store. Younger records are import latency that the daily
+run closes. `.github/workflows/feed-reconcile.yml` runs it every day, so a gap
+of this kind turns red instead of staying silent.
+
+Records the mapping cannot take are reported as `skipped` and are NOT judged by
+the check yet: names outside the safe charset (NuGet homoglyph typosquats with
+Cyrillic letters) and npm records with a bounded range but no explicit version
+list. On 2026-10-05 that was 543 and 533 records.
+
 ### 3. OSV.dev querybatch (GitHub corroboration only)
 
 `POST https://api.osv.dev/v1/querybatch`

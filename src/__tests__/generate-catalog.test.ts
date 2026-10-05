@@ -253,6 +253,24 @@ describe("checkCatalogHygiene", () => {
     expect(v[0]).not.toContain("10.9.9.9");
   });
 
+  // Dependency-confusion malware is named like an internal module. Both are
+  // real OpenSSF records (MAL-2026-2924, MAL-2026-2925), and refusing them
+  // would drop known malware from the catalog.
+  it("accepts a package NAMED like an internal host", () => {
+    expect(checkCatalogHygiene([entry("cktool.internal"), entry("cktool.core.internal@1.0.0")])).toEqual([]);
+  });
+
+  // The control: the same text is still refused where it would be a host.
+  it("still refuses that shape as a domain value and inside source", () => {
+    expect(checkCatalogHygiene([{ ...entry("x@1"), type: "domain", value: "cktool.internal" }])).toHaveLength(1);
+    expect(checkCatalogHygiene([entry("a@1", { source: "seen on buildbox.internal" })])).toHaveLength(1);
+  });
+
+  it("still refuses an address or a path in a package value", () => {
+    expect(checkCatalogHygiene([entry("10.1.2.3")])).toHaveLength(1);
+    expect(checkCatalogHygiene([entry("x C:/Users/someone")])).toHaveLength(1);
+  });
+
   it("does not flag a public version string that merely looks numeric", () => {
     expect(checkCatalogHygiene([entry("some-pkg@10.1.2")])).toEqual([]);
   });

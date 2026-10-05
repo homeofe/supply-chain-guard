@@ -1,3 +1,57 @@
+## Full OpenSSF reconcile and backfill (2026-10-05) (claude-opus-5-5)
+
+The owner asked for every entry to be checked after the daily run found two
+June 2026 records in neither store. A complete comparison of both stores
+against OSV's `all.zip` exports (239,184 `MAL-` records, 13 ecosystems), run
+with the importer's own mapping, dedupe and decline logic, found 164,239
+entries missing: 142,610 npm, 16,180 PyPI, 4,555 NuGet, 873 RubyGems, 12
+Cargo, 9 Go. Controls in both directions: the two known gaps appeared in the
+result, an entry known to be present did not.
+
+Root cause: OpenSSF discovery (PR 253, 2026-08-31) only fetches records whose
+`modified` date falls inside the run's window, and it was introduced without an
+initial full sync. Before it, only GitHub advisories were imported, also
+windowed. The design expected GitHub's alphabetical bulk re-publication to
+bring the corpus in, and that walk never completed. Nothing compared the stores
+against the complete upstream set, so the gap was invisible.
+
+What changed:
+
+- `--osv-snapshot` in `scripts/import-threat-feed.mjs` reads the complete
+  exports (dependency-free zip reader with ZIP64, fail-closed on any structural
+  error, refuses an npm export with zero `MAL-` records).
+- `npm run feed:reconcile` (`--osv-snapshot --check`) exits 1 when a record has
+  been upstream for more than two days and is still missing.
+  `.github/workflows/feed-reconcile.yml` runs it daily. Not a PR check.
+- Backfill: 164,239 entries written, 164,235 to the catalog (257,146 entries,
+  6 shards, 41 MB JSONL) and 4 RubyGems entries first seen today to the bundle.
+  Re-running the check right after the write: 0 missing, exit 0.
+- `checkCatalogHygiene` refused `cktool.internal` and `cktool.core.internal`
+  (real npm malware, MAL-2026-2924/2925) as `.internal` hosts. The host shape
+  no longer applies to a package value.
+- `push(...array)` in the importer overflowed the stack at 150,000 candidates.
+
+Proof: `src/__tests__/feed-osv-snapshot.test.ts`, nine mutation cuts each red on
+the intended test, baseline and post-restore green. Two cuts on the hygiene
+change, red in both directions.
+
+Still open, in this order:
+
+1. 1,077 OpenSSF records the mapping cannot take and the check does not judge
+   yet: 543 NuGet homoglyph typosquats (Cyrillic letters in the id, refused by
+   the ASCII-only name charset), 533 npm records with a bounded range and no
+   version list, 1 unsafe version string. Next PR: map them, then make
+   `checkFailed` count non-withdrawn skips.
+2. The daily routine still imports through the window. It should run
+   `--osv-snapshot` too, so the gate never has to catch it.
+3. GitHub malware advisories without an OpenSSF counterpart are only reached
+   through the windowed GitHub adapter. Not yet measured how many exist.
+4. `data/threat-catalog.jsonl` is 41 MB, under GitHub's 50 MB warning. Plan to
+   shard the committed file before it crosses that.
+5. Dependabot alerts on the publish toolchain stay open (owner decision
+   2026-10-05, confirmed again): npm 11.21.0 and 12.2.0 still bundle the same
+   vulnerable undici, ip-address, brace-expansion and http-cache-semantics.
+
 ## Threat intel import (2026-10-05) (claude-opus-5-5)
 
 Daily routine run. `feed:import` (default window, published >= 2026-09-21)

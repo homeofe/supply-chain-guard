@@ -24,6 +24,7 @@
     "audit:blocklist": "node scripts/audit-blocklist.mjs",
     "feed:import": "node scripts/import-threat-feed.mjs",
     "feed:migrate": "node scripts/feed-migrate.mjs",
+    "feed:reconcile": "node scripts/import-threat-feed.mjs --osv-snapshot --check",
     "catalog:generate": "node scripts/generate-catalog.mjs",
     "check:catalog": "node scripts/generate-catalog.mjs --check",
     "release:prepare": "node scripts/release-prepare.mjs",
