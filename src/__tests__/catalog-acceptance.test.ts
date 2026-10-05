@@ -17,6 +17,7 @@ import { catalogFindings, CATALOG_MISSING_RULE } from "../feed.js";
 import { matchBareNpmIOC } from "../install-guard.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
 import { readCatalogEntries } from "../../scripts/generate-catalog.mjs";
+import { readCatalogLines } from "../../scripts/catalog-store.mjs";
 import { scanPackagesLockContent } from "../nuget-scanner.js";
 import { lockfileFeedFindings } from "../lockfile-feed.js";
 
@@ -144,10 +145,7 @@ describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
   // alone used to be.
   it("bundle plus catalog accounts for every indicator, with no overlap", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const catalogLines = fs
-      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
-      .split(/\r?\n/)
-      .filter((l) => l.trim() !== "");
+    const catalogLines = readCatalogLines(repoRoot);
 
     const bundled = getBundledFeed();
     const catalogValues = new Set(catalogLines.map((l) => JSON.parse(l).value));
@@ -176,10 +174,7 @@ describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
 
   it("the shipped digest describes the shipped catalog", () => {
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const lines = fs
-      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
-      .split(/\r?\n/)
-      .filter((l) => l.trim() !== "");
+    const lines = readCatalogLines(repoRoot);
     expect(CATALOG_DIGEST.entryCount).toBe(lines.length);
   });
 
@@ -194,10 +189,7 @@ describe("Phase 2 acceptance: the corpus is partitioned, not reduced", () => {
   it("every committed catalog line passes the real isValidFeedIOC", async () => {
     const { isValidFeedIOC } = await import("../threat-intel.js");
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const lines = fs
-      .readFileSync(path.join(repoRoot, "data", "threat-catalog.jsonl"), "utf8")
-      .split(/\r?\n/)
-      .filter((l) => l.trim() !== "");
+    const lines = readCatalogLines(repoRoot);
 
     const rejected = lines.filter((l) => !isValidFeedIOC(JSON.parse(l)));
     expect(rejected.slice(0, 3)).toEqual([]);

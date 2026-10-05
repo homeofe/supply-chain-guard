@@ -1,6 +1,6 @@
 // feed-partition.mjs - the single routing rule deciding whether an IOC belongs
 // in the compiled bundle (src/threat-intel.ts) or the downloadable catalog
-// (data/threat-catalog.jsonl).
+// (data/threat-catalog/).
 //
 // Three callers: the importer when an entry is first written, the Phase 2
 // migration when an existing bundled entry is moved, and

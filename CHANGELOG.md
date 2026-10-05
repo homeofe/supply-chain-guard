@@ -31,6 +31,14 @@ top; release tags trigger the CI publish pipeline (npm via OIDC + GitHub Release
 
 ### Changed
 
+- The committed catalog moved from one file, `data/threat-catalog.jsonl`
+  (41 MB after the reconcile, against GitHub's 50 MB per-file warning), to
+  `data/threat-catalog/part-NNN.jsonl` of 100,000 lines each, read and written
+  only through `scripts/catalog-store.mjs`. The parts concatenate to the
+  previous file byte for byte, so the digest and the release shards are
+  unchanged by the move, and `check:feed-partition` refuses a layout that is
+  not the canonical cut of its own content. The scanner's self-scan exemption
+  follows the new anchored path.
 - `isValidFeedIOC` accepts Unicode letters, combining marks and digits in a
   package value; whitespace, controls and format characters stay refused. It
   accepted printable ASCII only, and the client refuses the whole catalog over

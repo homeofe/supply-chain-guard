@@ -14,6 +14,7 @@ import {
   resetThreatIntelCache,
 } from "../threat-intel.js";
 import { CATALOG_DIGEST } from "../catalog-digest.js";
+import { readCatalogLines } from "../../scripts/catalog-store.mjs";
 import { catalogCoverageNote, catalogCoverageOf } from "../mcp-server.js";
 import { readCatalogEntries } from "../../scripts/generate-catalog.mjs";
 import type { ScanReport } from "../types.js";
@@ -257,10 +258,7 @@ describe("MCP ioc_lookup states which indicator set it answered from", () => {
   });
 
   it("indicator lookups need no caveat: the catalog carries packages only", () => {
-    const lines = fs
-      .readFileSync(path.join(__dirname, "..", "..", "data", "threat-catalog.jsonl"), "utf8")
-      .split(/\r?\n/)
-      .filter((l) => l.trim() !== "");
+    const lines = readCatalogLines(path.join(__dirname, "..", ".."));
     // Control in both directions: the catalog is not empty, and none of it is
     // a domain, IP, URL or hash, so the offline indicator lookup is complete.
     expect(lines.length).toBeGreaterThan(0);

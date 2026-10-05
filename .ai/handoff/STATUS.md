@@ -1,3 +1,21 @@
+## Catalog split into parts (2026-10-05) (claude-opus-5-5)
+
+`data/threat-catalog.jsonl` reached 41 MB with the reconcile (GitHub warns at
+50 MB per file, refuses 100 MB). It is now `data/threat-catalog/part-NNN.jsonl`,
+100,000 lines per part (about 16 MB), three parts today. The layout is a pure
+function of the content and `scripts/catalog-store.mjs` is the only reader and
+writer; importer, migration, generator, coverage table and partition gate all go
+through it, and the gate refuses a non-canonical cut or a numbering gap. The
+parts concatenate to the old file byte for byte (same SHA-256), so
+`src/catalog-digest.ts` and the release shards (`catalog-NNN.json.gz`, a
+separate 50,000-entry sharding done by CI at release time) are unchanged.
+
+The scanner's self-scan exemption was bound to the exact old path; it is now
+the anchored pattern `^data/threat-catalog/part-\d{3}\.jsonl$`, still only for
+content that is entirely valid feed entries. Six mutation cuts (surplus part
+on shrink, numbering gap, content check, gate skipping the layout, unanchored
+and unbounded exemption pattern) each turn a test red.
+
 ## Secret scanning ignores the threat catalog (2026-10-05) (claude-opus-5-5)
 
 The first secret-scanning alert ("Tencent WeChat API App ID") was an npm

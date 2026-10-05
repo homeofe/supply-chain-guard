@@ -305,7 +305,7 @@ describe("importUpstreamFeed with osvSnapshot", () => {
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-snapshot-"));
     fs.mkdirSync(path.join(root, "src"));
-    fs.mkdirSync(path.join(root, "data"));
+    fs.mkdirSync(path.join(root, "data", "threat-catalog"), { recursive: true });
     fs.writeFileSync(
       path.join(root, "src", "threat-intel.ts"),
       [
@@ -321,7 +321,7 @@ describe("importUpstreamFeed with osvSnapshot", () => {
     fs.writeFileSync(path.join(root, "feed.json"), '{"schema":1,"entries":[]}\n');
     // One record is already in the catalog: the reconcile must count it as present.
     fs.writeFileSync(
-      path.join(root, "data", "threat-catalog.jsonl"),
+      path.join(root, "data", "threat-catalog", "part-000.jsonl"),
       '{"type":"package","value":"scg-snapshot-mal-2026-2","severity":"critical","confidence":0.9,"source":"MAL-2026-2 (kam193)","firstSeen":"2026-06-05"}\n',
     );
     fs.writeFileSync(
@@ -368,7 +368,7 @@ describe("importUpstreamFeed with osvSnapshot", () => {
     expect(report.addedToCatalog).toBe(3);
     expect(report.addedToBundle).toBe(0);
     expect(report.written).toBe(true);
-    const catalog = fs.readFileSync(path.join(root, "data", "threat-catalog.jsonl"), "utf8");
+    const catalog = fs.readFileSync(path.join(root, "data", "threat-catalog", "part-000.jsonl"), "utf8");
     expect(catalog).toContain('"scg-snapshot-mal-2026-1"');
     expect(catalog).toContain('"pypi:scg-snapshot-py@0.0.1"');
     // The snapshot never asks GitHub, so it needs no token and no page budget.
@@ -447,12 +447,12 @@ describe("checkFailed (the --check verdict)", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "scg-grace-"));
     try {
       fs.mkdirSync(path.join(root, "src"));
-      fs.mkdirSync(path.join(root, "data"));
+      fs.mkdirSync(path.join(root, "data", "threat-catalog"), { recursive: true });
       fs.writeFileSync(
         path.join(root, "src", "threat-intel.ts"),
         'export interface FeedIOC { type: string }\nconst BUNDLED_FEED: FeedIOC[] = [\n  { type: "domain", value: "existing.example", severity: "critical", confidence: 1.0 },\n];\n',
       );
-      fs.writeFileSync(path.join(root, "data", "threat-catalog.jsonl"), "");
+      fs.writeFileSync(path.join(root, "data", "threat-catalog", "part-000.jsonl"), "");
       fs.writeFileSync(
         path.join(root, "feed-partition.config.json"),
         JSON.stringify({ bundleCutoffDate: "2026-09-04", maxBundledEntries: 15000, maxBundleBytes: 2097152 }),

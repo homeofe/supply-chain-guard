@@ -159,7 +159,7 @@ function fixture(
 ): string {
   const root = makeTempRoot("scg-part-");
   fs.mkdirSync(path.join(root, "src"));
-  fs.mkdirSync(path.join(root, "data"));
+  fs.mkdirSync(path.join(root, "data", "threat-catalog"), { recursive: true });
   const body = bundleEntries.map((e) => `  ${JSON.stringify(e)},`).join("\n");
   fs.writeFileSync(
     path.join(root, "src", "threat-intel.ts"),
@@ -168,7 +168,10 @@ function fixture(
     `const FEED_CHUNK_0: FeedIOC[] = [\n${body}\n];\n\n` +
       `const BUNDLED_FEED: FeedIOC[] = [\n  ...FEED_CHUNK_0,\n];\n`,
   );
-  fs.writeFileSync(path.join(root, "data", "threat-catalog.jsonl"), catalogLines.join("\n"));
+  fs.writeFileSync(
+    path.join(root, "data", "threat-catalog", "part-000.jsonl"),
+    catalogLines.length > 0 ? `${catalogLines.join("\n")}\n` : "",
+  );
   fs.writeFileSync(path.join(root, "feed-partition.config.json"), JSON.stringify(config));
   return root;
 }
@@ -237,8 +240,16 @@ describe("checkPartition", () => {
 
   it("fails when the catalog file is missing entirely", () => {
     const root = fixture([FILLER], []);
-    fs.rmSync(path.join(root, "data", "threat-catalog.jsonl"));
-    expect(checkPartition(root).join(" ")).toMatch(/is missing; it must exist, even empty/);
+    fs.rmSync(path.join(root, "data", "threat-catalog", "part-000.jsonl"));
+    expect(checkPartition(root).join(" ")).toMatch(/is missing; it must exist, even as one empty part/);
+  });
+
+  // The layout is a function of the content. A second part beside a part-000
+  // that is far from full is a hand edit or a writer that bypassed the store.
+  it("fails when the parts are not the canonical cut of the catalog", () => {
+    const root = fixture([FILLER], []);
+    fs.writeFileSync(path.join(root, "data", "threat-catalog", "part-001.jsonl"), "");
+    expect(checkPartition(root).join(" ")).toMatch(/part file\(s\) on disk, the canonical layout has 1/);
   });
 });
 
@@ -476,8 +487,8 @@ describe("the committed catalog is a valid feed document", () => {
   it("every committed catalog line passes the loader's own validator", async () => {
     const { isValidFeedIOC } = await import("../threat-intel.js");
     const repoRoot = path.resolve(__dirname, "..", "..");
-    const file = path.join(repoRoot, "data", "threat-catalog.jsonl");
-    const raw = fs.readFileSync(file, "utf8");
+    const { readCatalogText } = await import("../../scripts/catalog-store.mjs");
+    const raw = readCatalogText(repoRoot);
 
     const bad: string[] = [];
     raw.split("\n").forEach((line, i) => {
@@ -573,6 +584,6 @@ describe("suggestCutoff uses the policy's own date parser", () => {
 describe("violation paths are platform-independent", () => {
   it("names the catalog with forward slashes", () => {
     const root = fixture([FILLER], ["{ not json"]);
-    expect(checkPartition(root).join(" ")).toContain("data/threat-catalog.jsonl line 1");
+    expect(checkPartition(root).join(" ")).toContain("data/threat-catalog line 1");
   });
 });
